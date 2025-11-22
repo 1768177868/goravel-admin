@@ -1,4 +1,4 @@
-package helpers
+package utils
 
 import (
 	"time"
@@ -75,3 +75,4 @@ func GetULIDTimestamp(ulidStr string) (int64, error) {
 	}
 	return int64(id.Time()), nil
 }
+

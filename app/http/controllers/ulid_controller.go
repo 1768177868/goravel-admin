@@ -5,8 +5,8 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 
-	"goravel/app/http/helpers"
 	"goravel/app/http/response"
+	"goravel/app/utils"
 )
 
 type UlidController struct {
@@ -18,7 +18,7 @@ func NewUlidController() *UlidController {
 
 // Generate 生成 ULID
 func (r *UlidController) Generate(ctx http.Context) http.Response {
-	ulid := helpers.GenerateULID()
+	ulid := utils.GenerateULID()
 	return response.Success(ctx, "generate_success", http.Json{
 		"ulid": ulid,
 	})
@@ -32,24 +32,24 @@ func (r *UlidController) Parse(ctx http.Context) http.Response {
 	}
 
 	// 验证 ULID 是否有效
-	if !helpers.IsValidULID(ulidStr) {
+	if !utils.IsValidULID(ulidStr) {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_ulid")
 	}
 
 	// 解析时间
-	t, err := helpers.ParseULIDTime(ulidStr)
+	t, err := utils.ParseULIDTime(ulidStr)
 	if err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "parse_failed")
 	}
 
 	// 获取时间戳
-	timestamp, err := helpers.GetULIDTimestamp(ulidStr)
+	timestamp, err := utils.GetULIDTimestamp(ulidStr)
 	if err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "parse_failed")
 	}
 
 	// 格式化时间字符串
-	timeString, _ := helpers.ParseULIDTimeString(ulidStr, "2006-01-02 15:04:05")
+	timeString, _ := utils.ParseULIDTimeString(ulidStr, "2006-01-02 15:04:05")
 
 	return response.Success(ctx, "parse_success", http.Json{
 		"ulid":        ulidStr,
@@ -59,4 +59,3 @@ func (r *UlidController) Parse(ctx http.Context) http.Response {
 		"time_string": timeString,
 	})
 }
-
