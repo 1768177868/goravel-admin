@@ -98,19 +98,3 @@ func (r *SystemLogController) Clean(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "clean_success")
 }
-
-// Store 创建系统日志（不支持，返回405）
-func (r *SystemLogController) Store(ctx http.Context) http.Response {
-	return ctx.Response().Json(http.StatusMethodNotAllowed, http.Json{
-		"code":    405,
-		"message": "Method Not Allowed",
-	})
-}
-
-// Update 更新系统日志（不支持，返回405）
-func (r *SystemLogController) Update(ctx http.Context) http.Response {
-	return ctx.Response().Json(http.StatusMethodNotAllowed, http.Json{
-		"code":    405,
-		"message": "Method Not Allowed",
-	})
-}
