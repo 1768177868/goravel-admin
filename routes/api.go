@@ -25,6 +25,16 @@ func Api() {
 		route.Middleware(middleware.Session()).Get("info", authController.InfoBySession)
 	})
 
+	// User Auth (for app/h5)
+	userAuthController := controllers.NewUserAuthController()
+	facades.Route().Prefix("api/user").Middleware(middleware.Lang()).Group(func(router route.Router) {
+		router.Post("login", userAuthController.Login)
+		router.Middleware(middleware.UserJwt()).Group(func(router route.Router) {
+			router.Get("info", userAuthController.Info)
+			router.Post("logout", userAuthController.Logout)
+		})
+	})
+
 	// DB
 	dbController := controllers.NewDBController()
 	facades.Route().Get("/db", dbController.Index)
