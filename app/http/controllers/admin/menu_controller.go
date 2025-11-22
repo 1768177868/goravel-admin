@@ -1,0 +1,168 @@
+package admin
+
+import (
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
+	"github.com/spf13/cast"
+
+	"goravel/app/http/response"
+	"goravel/app/models"
+	"goravel/app/services"
+)
+
+type MenuController struct {
+	treeService services.TreeService
+}
+
+func NewMenuController() *MenuController {
+	return &MenuController{
+		treeService: services.NewTreeServiceImpl(),
+	}
+}
+
+// Index 菜单列表（树形结构）
+func (r *MenuController) Index(ctx http.Context) http.Response {
+	menus, err := r.treeService.BuildMenuTree(0)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"menus": menus,
+	})
+}
+
+// Show 菜单详情
+func (r *MenuController) Show(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+	var menu models.Menu
+	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"menu": menu,
+	})
+}
+
+// Store 创建菜单
+func (r *MenuController) Store(ctx http.Context) http.Response {
+	parentID := cast.ToUint(ctx.Request().Input("parent_id", "0"))
+	title := ctx.Request().Input("title")
+	icon := ctx.Request().Input("icon")
+	path := ctx.Request().Input("path")
+	component := ctx.Request().Input("component")
+	permission := ctx.Request().Input("permission")
+	menuType := cast.ToUint8(ctx.Request().Input("type", "1"))
+	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
+	isHidden := cast.ToUint8(ctx.Request().Input("is_hidden", "0"))
+
+	if title == "" {
+		return response.Error(ctx, http.StatusBadRequest, "menu_title_required")
+	}
+
+	menu := models.Menu{
+		ParentID:   parentID,
+		Title:      title,
+		Icon:       icon,
+		Path:       path,
+		Component:  component,
+		Permission: permission,
+		Type:       menuType,
+		Status:     status,
+		Sort:       sort,
+		IsHidden:   isHidden,
+	}
+
+	if err := facades.Orm().Query().Create(&menu); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	return response.Success(ctx, "create_success", http.Json{
+		"menu": menu,
+	})
+}
+
+// Update 更新菜单
+func (r *MenuController) Update(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+	var menu models.Menu
+	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	}
+
+	parentID := ctx.Request().Input("parent_id", "")
+	title := ctx.Request().Input("title")
+	icon := ctx.Request().Input("icon")
+	path := ctx.Request().Input("path")
+	component := ctx.Request().Input("component")
+	permission := ctx.Request().Input("permission")
+	menuType := ctx.Request().Input("type", "")
+	status := ctx.Request().Input("status", "")
+	sort := ctx.Request().Input("sort", "")
+	isHidden := ctx.Request().Input("is_hidden", "")
+
+	if title != "" {
+		menu.Title = title
+	}
+	if parentID != "" {
+		menu.ParentID = cast.ToUint(parentID)
+	}
+	if icon != "" {
+		menu.Icon = icon
+	}
+	if path != "" {
+		menu.Path = path
+	}
+	if component != "" {
+		menu.Component = component
+	}
+	if permission != "" {
+		menu.Permission = permission
+	}
+	if menuType != "" {
+		menu.Type = cast.ToUint8(menuType)
+	}
+	if status != "" {
+		menu.Status = cast.ToUint8(status)
+	}
+	if sort != "" {
+		menu.Sort = cast.ToInt(sort)
+	}
+	if isHidden != "" {
+		menu.IsHidden = cast.ToUint8(isHidden)
+	}
+
+	if err := facades.Orm().Query().Save(&menu); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+	}
+
+	return response.Success(ctx, "update_success", http.Json{
+		"menu": menu,
+	})
+}
+
+// Destroy 删除菜单
+func (r *MenuController) Destroy(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+	var menu models.Menu
+	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	}
+
+	// 检查是否有子菜单
+	hasChildren, err := r.treeService.HasMenuChildren(id)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+	if hasChildren {
+		return response.Error(ctx, http.StatusBadRequest, "menu_has_children")
+	}
+
+	if _, err := facades.Orm().Query().Delete(&menu); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+	}
+
+	return response.Success(ctx, "delete_success")
+}
