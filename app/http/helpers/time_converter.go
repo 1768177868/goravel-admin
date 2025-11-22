@@ -12,7 +12,7 @@ import (
 
 // ConvertTimesInData 递归转换数据中的时间字段到对应时区
 // 使用 JSON 序列化和反序列化来确保正确处理所有类型
-func ConvertTimesInData(ctx http.Context, data interface{}) interface{} {
+func ConvertTimesInData(ctx http.Context, data any) any {
 	if data == nil {
 		return nil
 	}
@@ -37,8 +37,8 @@ func ConvertTimesInData(ctx http.Context, data interface{}) interface{} {
 		return convertTimesInValue(reflect.ValueOf(data), timezone)
 	}
 
-	// 反序列化为 map[string]interface{}
-	var result interface{}
+	// 反序列化为 map[string]any
+	var result any
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		// 如果反序列化失败，返回原数据
 		return data
@@ -51,14 +51,14 @@ func ConvertTimesInData(ctx http.Context, data interface{}) interface{} {
 }
 
 // convertTimesInMap 递归处理 map 或 slice 中的时间字段
-func convertTimesInMap(data interface{}, timezone string) interface{} {
+func convertTimesInMap(data any, timezone string) any {
 	if data == nil {
 		return nil
 	}
 
 	switch v := data.(type) {
-	case map[string]interface{}:
-		result := make(map[string]interface{})
+	case map[string]any:
+		result := make(map[string]any)
 		for key, value := range v {
 			// 检查是否是时间字段
 			if isTimeField(key) {
@@ -85,8 +85,8 @@ func convertTimesInMap(data interface{}, timezone string) interface{} {
 		}
 		return result
 
-	case []interface{}:
-		result := make([]interface{}, len(v))
+	case []any:
+		result := make([]any, len(v))
 		for i, item := range v {
 			result[i] = convertTimesInMap(item, timezone)
 		}
@@ -99,7 +99,7 @@ func convertTimesInMap(data interface{}, timezone string) interface{} {
 
 // convertTimeString 转换时间字符串到指定时区
 // 假设数据库存储的时间是 UTC 时区（如：2025-11-22 06:21:25）
-func convertTimeString(timeStr string, timezone string) interface{} {
+func convertTimeString(timeStr string, timezone string) any {
 	if timeStr == "" || timeStr == "null" {
 		return nil
 	}
@@ -133,7 +133,7 @@ func convertTimeString(timeStr string, timezone string) interface{} {
 }
 
 // convertTimesInValue 使用反射方法处理值（作为备用方案）
-func convertTimesInValue(v reflect.Value, timezone string) interface{} {
+func convertTimesInValue(v reflect.Value, timezone string) any {
 	if !v.IsValid() {
 		return nil
 	}
@@ -189,7 +189,7 @@ func convertTimesInValue(v reflect.Value, timezone string) interface{} {
 		if v.IsNil() {
 			return nil
 		}
-		result := make([]interface{}, v.Len())
+		result := make([]any, v.Len())
 		for i := 0; i < v.Len(); i++ {
 			result[i] = convertTimesInValue(v.Index(i), timezone)
 		}
@@ -198,7 +198,7 @@ func convertTimesInValue(v reflect.Value, timezone string) interface{} {
 
 	// 处理数组
 	if v.Kind() == reflect.Array {
-		result := make([]interface{}, v.Len())
+		result := make([]any, v.Len())
 		for i := 0; i < v.Len(); i++ {
 			result[i] = convertTimesInValue(v.Index(i), timezone)
 		}
@@ -210,7 +210,7 @@ func convertTimesInValue(v reflect.Value, timezone string) interface{} {
 		if v.IsNil() {
 			return nil
 		}
-		result := make(map[string]interface{})
+		result := make(map[string]any)
 		for _, key := range v.MapKeys() {
 			keyStr := key.String()
 			if key.Kind() == reflect.Interface {
@@ -223,7 +223,7 @@ func convertTimesInValue(v reflect.Value, timezone string) interface{} {
 
 	// 处理结构体
 	if v.Kind() == reflect.Struct {
-		result := make(map[string]interface{})
+		result := make(map[string]any)
 		t := v.Type()
 		for i := 0; i < v.NumField(); i++ {
 			field := t.Field(i)

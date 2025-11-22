@@ -18,7 +18,7 @@ func Success(ctx http.Context, messageKey string, data ...http.Json) http.Respon
 	if len(data) > 0 {
 		// 转换时间字段到对应时区
 		convertedData := helpers.ConvertTimesInData(ctx, data[0])
-		if convertedMap, ok := convertedData.(map[string]interface{}); ok {
+		if convertedMap, ok := convertedData.(map[string]any); ok {
 			response["data"] = http.Json(convertedMap)
 		} else {
 			response["data"] = convertedData
@@ -38,7 +38,7 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 	if len(data) > 0 {
 		// 转换时间字段到对应时区
 		convertedData := helpers.ConvertTimesInData(ctx, data[0])
-		if convertedMap, ok := convertedData.(map[string]interface{}); ok {
+		if convertedMap, ok := convertedData.(map[string]any); ok {
 			response["data"] = http.Json(convertedMap)
 		} else {
 			response["data"] = convertedData
@@ -69,7 +69,7 @@ func ValidationError(ctx http.Context, code int, messageKey string, errors map[s
 }
 
 // Paginate 分页响应（支持多语言）
-func Paginate(ctx http.Context, messageKey string, list interface{}, total int64, page, pageSize int) http.Response {
+func Paginate(ctx http.Context, messageKey string, list any, total int64, page, pageSize int) http.Response {
 	message := trans.Get(ctx, messageKey)
 
 	// 转换列表中的时间字段到对应时区
