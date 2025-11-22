@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 )
@@ -28,6 +29,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	status := ctx.Request().Query("status", "")
 	startTime := ctx.Request().Query("start_time", "")
 	endTime := ctx.Request().Query("end_time", "")
+	orderBy := ctx.Request().Query("order_by", "")
 
 	query := facades.Orm().Query().Model(&models.OperationLog{})
 
@@ -57,8 +59,10 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.OperationLog
 	offset := (page - 1) * pageSize
+	// 应用排序（默认按创建时间倒序）
+	query = helpers.ApplySort(query, orderBy, "created_at:desc")
 	// 使用 With 预加载关联，避免 N+1 查询问题
-	if err = query.With("Admin").Offset(offset).Limit(pageSize).Order("id desc").Get(&logs); err != nil {
+	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 

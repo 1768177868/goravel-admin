@@ -59,6 +59,20 @@
     "validation_password_required": "Password cannot be empty",
     "validation_password_min": "Password length cannot be less than 6 characters",
     "validation_username": "Username",
-    "validation_password": "Password"
+    "validation_password": "Password",
+    "export_success": "Export successful",
+    "export_failed": "Export failed",
+    "export_header_id": "ID",
+    "export_header_username": "Username",
+    "export_header_nickname": "Nickname",
+    "export_header_email": "Email",
+    "export_header_phone": "Phone",
+    "export_header_status": "Status",
+    "export_header_department": "Department",
+    "export_header_roles": "Roles",
+    "export_header_created_at": "Created At",
+    "export_header_updated_at": "Updated At",
+    "export_status_enabled": "Enabled",
+    "export_status_disabled": "Disabled"
   }
 }

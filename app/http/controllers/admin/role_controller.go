@@ -5,6 +5,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -26,6 +27,7 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
+	orderBy := ctx.Request().Query("order_by", "")
 
 	query := facades.Orm().Query().Model(&models.Role{})
 
@@ -43,7 +45,9 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 
 	var roles []models.Role
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("sort asc, id desc").Get(&roles); err != nil {
+	// 应用排序（默认按排序字段升序，创建时间倒序）
+	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
+	if err := query.Offset(offset).Limit(pageSize).Get(&roles); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 

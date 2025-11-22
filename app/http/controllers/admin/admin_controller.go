@@ -3,11 +3,14 @@ package admin
 import (
 	"strconv"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
+	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
 )
@@ -22,12 +25,11 @@ func NewAdminController() *AdminController {
 	}
 }
 
-// Index 管理员列表
-func (r *AdminController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+// buildQuery 构建查询（列表和导出共用）
+func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	username := ctx.Request().Query("username", "")
 	status := ctx.Request().Query("status", "")
+	orderBy := ctx.Request().Query("order_by", "")
 
 	query := facades.Orm().Query().Model(&models.Admin{})
 
@@ -38,6 +40,20 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 		query = query.Where("status", status)
 	}
 
+	// 应用排序（默认按创建时间倒序）
+	query = helpers.ApplySort(query, orderBy, "created_at:desc")
+
+	return query
+}
+
+// Index 管理员列表
+func (r *AdminController) Index(ctx http.Context) http.Response {
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+
+	// 使用公共查询构建方法
+	query := r.buildQuery(ctx)
+
 	total, err := query.Count()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
@@ -46,7 +62,7 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 	var admins []models.Admin
 	offset := (page - 1) * pageSize
 	// 使用 With 预加载关联，避免 N+1 查询问题
-	if err := query.With("Department").With("Roles").Offset(offset).Limit(pageSize).Order("id desc").Get(&admins); err != nil {
+	if err := query.With("Department").With("Roles").Offset(offset).Limit(pageSize).Get(&admins); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
@@ -198,4 +214,83 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success")
+}
+
+// Export 导出管理员列表
+func (r *AdminController) Export(ctx http.Context) http.Response {
+	// 使用公共查询构建方法
+	query := r.buildQuery(ctx)
+
+	var admins []models.Admin
+	// 导出时获取所有数据，不分页
+	if err := query.With("Department").With("Roles").Get(&admins); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	// 准备CSV表头（使用翻译键）
+	headers := []string{
+		"export_header_id",
+		"export_header_username",
+		"export_header_nickname",
+		"export_header_email",
+		"export_header_phone",
+		"export_header_status",
+		"export_header_department",
+		"export_header_roles",
+		"export_header_created_at",
+		"export_header_updated_at",
+	}
+
+	// 准备数据行
+	var data [][]string
+	for _, admin := range admins {
+		// 状态文本（使用翻译键）
+		statusText := trans.Get(ctx, "export_status_disabled")
+		if admin.Status == 1 {
+			statusText = trans.Get(ctx, "export_status_enabled")
+		}
+
+		// 部门名称
+		departmentName := ""
+		if admin.Department.ID > 0 {
+			departmentName = admin.Department.Name
+		}
+
+		// 角色名称（多个角色用逗号分隔）
+		roleNames := ""
+		if len(admin.Roles) > 0 {
+			for i, role := range admin.Roles {
+				if i > 0 {
+					roleNames += ", "
+				}
+				roleNames += role.Name
+			}
+		}
+
+		// 时间格式化
+		createdAt := ""
+		updatedAt := ""
+		if !admin.CreatedAt.IsZero() {
+			createdAt = admin.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+		if !admin.UpdatedAt.IsZero() {
+			updatedAt = admin.UpdatedAt.Format("2006-01-02 15:04:05")
+		}
+
+		row := []string{
+			cast.ToString(admin.ID),
+			admin.Username,
+			admin.Nickname,
+			admin.Email,
+			admin.Phone,
+			statusText,
+			departmentName,
+			roleNames,
+			createdAt,
+			updatedAt,
+		}
+		data = append(data, row)
+	}
+
+	return response.Export(ctx, "export_success", headers, data, "admins")
 }

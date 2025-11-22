@@ -5,6 +5,7 @@ import (
 
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
+	"goravel/app/services"
 )
 
 // Success 成功响应（支持多语言）
@@ -83,6 +84,45 @@ func Paginate(ctx http.Context, messageKey string, list any, total int64, page, 
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
+		},
+	})
+}
+
+// Export 导出响应（支持多语言）
+// headers: CSV表头（可以是翻译键数组或字符串数组）
+// data: 数据行，每行是一个字符串切片
+// filename: 文件名（不含扩展名）
+func Export(ctx http.Context, messageKey string, headers []string, data [][]string, filename string) http.Response {
+	message := trans.Get(ctx, messageKey)
+
+	// 翻译表头（如果表头是翻译键，则翻译；如果是普通字符串，则保持原样）
+	translatedHeaders := make([]string, len(headers))
+	for i, header := range headers {
+		// 尝试翻译，如果翻译键不存在则返回原字符串
+		translated := trans.Get(ctx, header)
+		if translated == header {
+			// 如果翻译结果和原字符串相同，说明不是翻译键，直接使用原字符串
+			translatedHeaders[i] = header
+		} else {
+			// 如果翻译成功，使用翻译后的文本
+			translatedHeaders[i] = translated
+		}
+	}
+
+	exportService := services.NewExportService()
+	filePath, err := exportService.ExportToFile(translatedHeaders, data, filename)
+	if err != nil {
+		return Error(ctx, http.StatusInternalServerError, "export_failed")
+	}
+
+	exportURL := exportService.GetExportURL(filePath)
+
+	return ctx.Response().Success().Json(http.Json{
+		"code":    200,
+		"message": message,
+		"data": http.Json{
+			"file_path": filePath,
+			"file_url":  exportURL,
 		},
 	})
 }

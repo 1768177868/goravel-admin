@@ -59,6 +59,20 @@
     "validation_password_required": "密码不能为空",
     "validation_password_min": "密码长度不能少于6位",
     "validation_username": "用户名",
-    "validation_password": "密码"
+    "validation_password": "密码",
+    "export_success": "导出成功",
+    "export_failed": "导出失败",
+    "export_header_id": "ID",
+    "export_header_username": "用户名",
+    "export_header_nickname": "昵称",
+    "export_header_email": "邮箱",
+    "export_header_phone": "手机号",
+    "export_header_status": "状态",
+    "export_header_department": "部门",
+    "export_header_roles": "角色",
+    "export_header_created_at": "创建时间",
+    "export_header_updated_at": "更新时间",
+    "export_status_enabled": "启用",
+    "export_status_disabled": "禁用"
   }
 }
