@@ -22,6 +22,7 @@ require (
 	github.com/goravel/sqlserver v1.4.1-0.20251004130832-c84ae22a9d68
 	github.com/gorilla/websocket v1.5.0
 	github.com/minio/minio-go/v7 v7.0.95
+	github.com/oklog/ulid/v2 v2.1.1
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cast v1.10.0

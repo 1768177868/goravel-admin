@@ -43,6 +43,11 @@ func Api() {
 	langController := controllers.NewLangController()
 	facades.Route().Middleware(middleware.Lang()).Get("lang", langController.Index)
 
+	// ULID
+	ulidController := controllers.NewUlidController()
+	facades.Route().Get("ulid/generate", ulidController.Generate)
+	facades.Route().Get("ulid/parse", ulidController.Parse)
+
 	// Test Rate Limiter
 	facades.Route().Middleware(httpmiddleware.Throttle("ip")).Get("/throttle", func(ctx http.Context) http.Response {
 		return ctx.Response().Success().String("success")

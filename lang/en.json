@@ -73,6 +73,11 @@
     "export_header_created_at": "Created At",
     "export_header_updated_at": "Updated At",
     "export_status_enabled": "Enabled",
-    "export_status_disabled": "Disabled"
+    "export_status_disabled": "Disabled",
+    "generate_success": "Generate successful",
+    "parse_success": "Parse successful",
+    "ulid_required": "ULID cannot be empty",
+    "invalid_ulid": "Invalid ULID",
+    "parse_failed": "Parse failed"
   }
 }

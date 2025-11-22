@@ -73,6 +73,11 @@
     "export_header_created_at": "创建时间",
     "export_header_updated_at": "更新时间",
     "export_status_enabled": "启用",
-    "export_status_disabled": "禁用"
+    "export_status_disabled": "禁用",
+    "generate_success": "生成成功",
+    "parse_success": "解析成功",
+    "ulid_required": "ULID 不能为空",
+    "invalid_ulid": "无效的 ULID",
+    "parse_failed": "解析失败"
   }
 }
