@@ -21,19 +21,19 @@ func Admin() {
 	systemLogController := admin.NewSystemLogController()
 
 	// 登录相关（不需要认证，但需要多语言）
-	facades.Route().Prefix("admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
 		router.Post("login", adminAuthController.Login)
 	})
 
 	// 基础功能（需要认证和多语言，但不需要权限验证和操作日志）
-	facades.Route().Prefix("admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
 		// 认证相关
 		router.Get("info", adminAuthController.Info)
 		router.Post("logout", adminAuthController.Logout)
 	})
 
 	// 需要认证、多语言、权限验证和操作日志的路由
-	facades.Route().Prefix("admin").Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
 		// 密码管理
 		passwordController := admin.NewPasswordController()
 		router.Put("password", passwordController.UpdatePassword)
