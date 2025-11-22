@@ -3,6 +3,7 @@ package response
 import (
 	"github.com/goravel/framework/contracts/http"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 )
 
@@ -15,7 +16,13 @@ func Success(ctx http.Context, messageKey string, data ...http.Json) http.Respon
 		"message": message,
 	}
 	if len(data) > 0 {
-		response["data"] = data[0]
+		// 转换时间字段到对应时区
+		convertedData := helpers.ConvertTimesInData(ctx, data[0])
+		if convertedMap, ok := convertedData.(map[string]interface{}); ok {
+			response["data"] = http.Json(convertedMap)
+		} else {
+			response["data"] = convertedData
+		}
 	}
 	return ctx.Response().Success().Json(response)
 }
@@ -29,7 +36,13 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 		"message": message,
 	}
 	if len(data) > 0 {
-		response["data"] = data[0]
+		// 转换时间字段到对应时区
+		convertedData := helpers.ConvertTimesInData(ctx, data[0])
+		if convertedMap, ok := convertedData.(map[string]interface{}); ok {
+			response["data"] = http.Json(convertedMap)
+		} else {
+			response["data"] = convertedData
+		}
 	}
 	return ctx.Response().Header(headerKey, headerValue).Success().Json(response)
 }
@@ -59,11 +72,14 @@ func ValidationError(ctx http.Context, code int, messageKey string, errors map[s
 func Paginate(ctx http.Context, messageKey string, list interface{}, total int64, page, pageSize int) http.Response {
 	message := trans.Get(ctx, messageKey)
 
+	// 转换列表中的时间字段到对应时区
+	convertedList := helpers.ConvertTimesInData(ctx, list)
+
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": message,
 		"data": http.Json{
-			"list":      list,
+			"list":      convertedList,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
