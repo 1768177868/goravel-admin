@@ -11,8 +11,18 @@ import (
 // Permission 权限验证中间件
 func Permission() http.Middleware {
 	return func(ctx http.Context) {
-		var admin models.Admin
-		if err := facades.Auth(ctx).Guard("admin").User(&admin); err != nil {
+		// 从context中获取admin信息（由JWT中间件设置）
+		adminValue := ctx.Value("admin")
+		if adminValue == nil {
+			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"code":    401,
+				"message": trans.Get(ctx, "not_logged_in"),
+			}).Abort()
+			return
+		}
+
+		admin, ok := adminValue.(models.Admin)
+		if !ok {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    401,
 				"message": trans.Get(ctx, "not_logged_in"),

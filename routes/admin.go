@@ -25,11 +25,17 @@ func Admin() {
 		router.Post("login", adminAuthController.Login)
 	})
 
+	// 刷新token接口（允许token过期但仍在刷新窗口内的请求）
+
 	// 基础功能（需要认证和多语言，但不需要权限验证和操作日志）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
 		// 认证相关
 		router.Get("info", adminAuthController.Info)
 		router.Post("logout", adminAuthController.Logout)
+		// Token管理
+		router.Get("tokens", adminAuthController.Tokens)
+		router.Delete("tokens/{id}", adminAuthController.RevokeToken)
+		router.Delete("tokens", adminAuthController.RevokeAllTokens)
 	})
 
 	// 需要认证、多语言、权限验证和操作日志的路由
@@ -46,6 +52,7 @@ func Admin() {
 		router.Post("admins", adminController.Store)
 		router.Put("admins/{id}", adminController.Update)
 		router.Delete("admins/{id}", adminController.Destroy)
+		router.Delete("admins/{id}/tokens", adminAuthController.KickOutUser) // 踢出指定用户的所有token
 
 		// 角色管理
 		router.Get("roles", roleController.Index)

@@ -82,6 +82,8 @@
     "unauthorized": "未授权，请先登录",
     "token_expired": "Token已过期，请重新登录",
     "invalid_token": "无效的Token",
-    "user_not_found": "用户不存在"
+    "user_not_found": "用户不存在",
+    "token_refresh_success": "Token刷新成功",
+    "token_refresh_failed": "Token刷新失败"
   }
 }

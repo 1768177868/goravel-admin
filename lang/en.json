@@ -82,6 +82,8 @@
     "unauthorized": "Unauthorized, please login first",
     "token_expired": "Token has expired, please login again",
     "invalid_token": "Invalid token",
-    "user_not_found": "User not found"
+    "user_not_found": "User not found",
+    "token_refresh_success": "Token refreshed successfully",
+    "token_refresh_failed": "Token refresh failed"
   }
 }

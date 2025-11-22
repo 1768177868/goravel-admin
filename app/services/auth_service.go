@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -21,11 +22,13 @@ type AuthService interface {
 
 type AuthServiceImpl struct {
 	adminService AdminService
+	tokenService TokenService
 }
 
-func NewAuthServiceImpl(adminService AdminService) *AuthServiceImpl {
+func NewAuthServiceImpl(adminService AdminService, tokenService TokenService) *AuthServiceImpl {
 	return &AuthServiceImpl{
 		adminService: adminService,
+		tokenService: tokenService,
 	}
 }
 
@@ -47,25 +50,22 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 		return nil, "", errors.New("password_error")
 	}
 
-	// 生成JWT token
-	// 如果用户配置了永久token，使用特殊的guard配置（TTL为0）
-	var token string
-	var err error
-	if admin.TokenNeverExpires {
-		// 对于永久token，使用LoginUsingID并设置TTL为0
-		// 注意：goravel框架的Login方法使用配置的TTL，无法直接设置
-		// 这里我们先生成token，然后在中间件中处理永久token的逻辑
-		// 实际上，我们可以通过设置JWT配置来实现，但Config接口不支持Set
-		// 所以我们在中间件中通过检查TokenNeverExpires字段来跳过过期检查
-		token, err = facades.Auth(ctx).Guard("admin").Login(admin)
-		// 永久token的TTL在JWT配置中设置为0，或者通过其他方式实现
-		// 由于框架限制，我们通过中间件逻辑来处理永久token
-	} else {
-		token, err = facades.Auth(ctx).Guard("admin").Login(admin)
+	// 生成token并存入数据库（类似Laravel Sanctum）
+	// 按配置的过期时间生成token，如果需要永久token，可以在创建token时设置 expiresAt 为 nil
+	var expiresAt *time.Time
+	ttl := facades.Config().GetInt("jwt.ttl", 60) // 默认60分钟
+	if ttl > 0 {
+		// 如果配置了过期时间，设置过期时间
+		exp := time.Now().Add(time.Duration(ttl) * time.Minute)
+		expiresAt = &exp
 	}
+	// 如果 ttl 为 0 或负数，expiresAt 为 nil，表示永不过期
+
+	plainToken, _, err := s.tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt)
 	if err != nil {
 		return nil, "", err
 	}
+	token := plainToken
 
 	// 记录登录成功日志
 	s.RecordLoginLog(ctx, admin.ID, username, 1, trans.Get(ctx, "login_success"))
@@ -78,9 +78,15 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 
 // GetAdminInfo 获取管理员完整信息（包括权限和菜单）
 func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []models.Permission, []models.Menu, error) {
-	var admin models.Admin
-	if err := facades.Auth(ctx).Guard("admin").User(&admin); err != nil {
-		return nil, nil, nil, err
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return nil, nil, nil, errors.New("not_logged_in")
+	}
+
+	admin, ok := adminValue.(models.Admin)
+	if !ok {
+		return nil, nil, nil, errors.New("not_logged_in")
 	}
 
 	// 加载基本关联

@@ -118,6 +118,11 @@ func (s *AdminSeeder) Run() error {
 		{Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 44},
 		// 密码管理
 		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 45},
+		// Token管理
+		{Name: "Token列表", Slug: "token.index", Method: "GET", Path: "/api/admin/tokens", Description: "查看当前用户的token列表", Status: 1, Sort: 46},
+		{Name: "删除Token", Slug: "token.destroy", Method: "DELETE", Path: "/api/admin/tokens/*", Description: "删除指定的token", Status: 1, Sort: 47},
+		{Name: "删除所有Token", Slug: "token.destroy_all", Method: "DELETE", Path: "/api/admin/tokens", Description: "删除当前用户的所有token", Status: 1, Sort: 48},
+		{Name: "踢出用户", Slug: "admin.kick_out", Method: "DELETE", Path: "/api/admin/admins/*/tokens", Description: "踢出指定用户的所有token", Status: 1, Sort: 49},
 	}
 
 	for _, perm := range permissions {

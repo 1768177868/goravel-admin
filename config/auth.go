@@ -36,6 +36,10 @@ func init() {
 				"driver":   "jwt",
 				"provider": "user",
 			},
+			"admin-permanent": map[string]any{
+				"driver":   "admin-permanent-jwt",
+				"provider": "user",
+			},
 			"agent": map[string]any{
 				"driver":   "another-jwt",
 				"provider": "agent",

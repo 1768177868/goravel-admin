@@ -20,5 +20,6 @@ func (kernel *Kernel) Schedule() []schedule.Event {
 func (kernel *Kernel) Commands() []console.Command {
 	return []console.Command{
 		&commands.ClearLogs{},
+		&commands.CreateToken{},
 	}
 }
