@@ -14,9 +14,18 @@ func (r *M20250330911908AddColumnsToUsersTable) Signature() string {
 
 // Up Run the migrations.
 func (r *M20250330911908AddColumnsToUsersTable) Up() error {
+	if !facades.Schema().HasTable("users") {
+		return nil
+	}
+
 	return facades.Schema().Table("users", func(table schema.Blueprint) {
-		table.String("alias").Default("").After("name")
-		table.String("email").Nullable().First()
+		// 检查列是否存在，如果不存在则添加
+		if !facades.Schema().HasColumn("users", "alias") {
+			table.String("alias").Default("").After("name")
+		}
+		if !facades.Schema().HasColumn("users", "email") {
+			table.String("email").Nullable().First()
+		}
 	})
 }
 

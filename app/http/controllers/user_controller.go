@@ -58,12 +58,33 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 		})
 	}
 
+	// 如果提供了密码，则加密密码
+	hashedPassword := ""
+	if userCreate.Password != "" {
+		var err error
+		hashedPassword, err = facades.Hash().Make(userCreate.Password)
+		if err != nil {
+			return ctx.Response().Json(http.StatusBadRequest, http.Json{
+				"error": "密码加密失败",
+			})
+		}
+	}
+
+	// 设置默认状态
+	status := userCreate.Status
+	if status == 0 {
+		status = 1 // 默认为启用
+	}
+
 	user := models.User{
-		Name:   userCreate.Name,
-		Avatar: userCreate.Avatar,
-		Alias:  userCreate.Alias,
-		Mail:   userCreate.Mail,
-		Tags:   userCreate.Tags,
+		Username: userCreate.Username,
+		Password: hashedPassword,
+		Name:     userCreate.Name,
+		Avatar:   userCreate.Avatar,
+		Alias:    userCreate.Alias,
+		Mail:     userCreate.Mail,
+		Status:   status,
+		Tags:     userCreate.Tags,
 	}
 	if err := facades.Orm().Query().Create(&user); err != nil {
 		return ctx.Response().Json(http.StatusBadRequest, http.Json{
@@ -77,15 +98,49 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 }
 
 func (r *UserController) Update(ctx http.Context) http.Response {
-	if _, err := facades.Orm().Query().Where("id", ctx.Request().Input("id")).Update(models.User{
-		Name: ctx.Request().Input("name"),
-	}); err != nil {
+	var user models.User
+	if err := facades.Orm().Query().Where("id", ctx.Request().Input("id")).First(&user); err != nil {
 		return ctx.Response().Json(http.StatusBadRequest, http.Json{
-			"error": err.Error(),
+			"error": "用户不存在",
 		})
 	}
 
-	var user models.User
+	// 更新字段
+	updateData := make(map[string]interface{})
+	if name := ctx.Request().Input("name"); name != "" {
+		updateData["name"] = name
+	}
+	if avatar := ctx.Request().Input("avatar"); avatar != "" {
+		updateData["avatar"] = avatar
+	}
+	if alias := ctx.Request().Input("alias"); alias != "" {
+		updateData["alias"] = alias
+	}
+	if mail := ctx.Request().Input("mail"); mail != "" {
+		updateData["mail"] = mail
+	}
+	if status := ctx.Request().Input("status"); status != "" {
+		updateData["status"] = status
+	}
+	if password := ctx.Request().Input("password"); password != "" {
+		hashedPassword, err := facades.Hash().Make(password)
+		if err != nil {
+			return ctx.Response().Json(http.StatusBadRequest, http.Json{
+				"error": "密码加密失败",
+			})
+		}
+		updateData["password"] = hashedPassword
+	}
+
+	if len(updateData) > 0 {
+		if _, err := facades.Orm().Query().Where("id", ctx.Request().Input("id")).Update(&models.User{}, updateData); err != nil {
+			return ctx.Response().Json(http.StatusBadRequest, http.Json{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	// 重新查询用户
 	if err := facades.Orm().Query().Where("id", ctx.Request().Input("id")).First(&user); err != nil {
 		return ctx.Response().Json(http.StatusBadRequest, http.Json{
 			"error": err.Error(),

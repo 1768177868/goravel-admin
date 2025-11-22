@@ -14,10 +14,25 @@ func (r *M20250331093125AlertColumnsOfUsersTable) Signature() string {
 
 // Up Run the migrations.
 func (r *M20250331093125AlertColumnsOfUsersTable) Up() error {
-	if facades.Schema().HasTable("users") {
+	if !facades.Schema().HasTable("users") {
+		return nil
+	}
+
+	hasEmail := facades.Schema().HasColumn("users", "email")
+	hasMail := facades.Schema().HasColumn("users", "mail")
+	hasAlias := facades.Schema().HasColumn("users", "alias")
+
+	// 只有在需要修改时才执行
+	if (hasEmail && !hasMail) || hasAlias {
 		return facades.Schema().Table("users", func(table schema.Blueprint) {
-			table.String("alias").Default("test").Change()
-			table.RenameColumn("email", "mail")
+			// 如果 alias 列存在，则修改默认值
+			if hasAlias {
+				table.String("alias").Default("test").Change()
+			}
+			// 如果 email 列存在且 mail 列不存在，则重命名
+			if hasEmail && !hasMail {
+				table.RenameColumn("email", "mail")
+			}
 		})
 	}
 

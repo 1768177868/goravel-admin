@@ -13,12 +13,30 @@ func (r *M20250101000015AddUsernamePasswordToUsersTable) Signature() string {
 }
 
 func (r *M20250101000015AddUsernamePasswordToUsersTable) Up() error {
-	if facades.Schema().HasTable("users") {
+	if !facades.Schema().HasTable("users") {
+		return nil
+	}
+
+	hasUsername := facades.Schema().HasColumn("users", "username")
+	hasPassword := facades.Schema().HasColumn("users", "password")
+	hasStatus := facades.Schema().HasColumn("users", "status")
+
+	if !hasUsername || !hasPassword || !hasStatus {
 		return facades.Schema().Table("users", func(table schema.Blueprint) {
-			table.String("username", 50).Nullable().Comment("用户名")
-			table.String("password", 255).Nullable().Comment("密码")
-			table.UnsignedTinyInteger("status").Default(1).Comment("状态 1:启用 0:禁用")
-			table.Unique("username")
+			// 检查列是否存在，如果不存在则添加
+			if !hasUsername {
+				table.String("username", 50).Nullable().Comment("用户名")
+			}
+			if !hasPassword {
+				table.String("password", 255).Nullable().Comment("密码")
+			}
+			if !hasStatus {
+				table.UnsignedTinyInteger("status").Default(1).Comment("状态 1:启用 0:禁用")
+			}
+			// 只有在添加username列时才添加唯一索引
+			if !hasUsername {
+				table.Unique("username")
+			}
 		})
 	}
 

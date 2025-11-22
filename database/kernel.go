@@ -15,8 +15,6 @@ func (kernel Kernel) Migrations() []schema.Migration {
 	return []schema.Migration{
 		&migrations.M20210101000001CreateUsersTable{},
 		&migrations.M20210101000002CreateJobsTable{},
-		&migrations.M20250330911908AddColumnsToUsersTable{},
-		&migrations.M20250331093125AlertColumnsOfUsersTable{},
 		// 后台管理系统相关表
 		&migrations.M20250101000001CreateDepartmentsTable{},
 		&migrations.M20250101000002CreateAdminsTable{},
@@ -31,7 +29,10 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000011CreateLoginLogsTable{},
 		&migrations.M20250101000012CreateSystemLogsTable{},
 		&migrations.M20250101000014CreatePersonalAccessTokensTable{},
-		&migrations.M20250101000015AddUsernamePasswordToUsersTable{},
+		// 以下迁移已不需要，因为 users 表创建时已包含所有字段
+		// &migrations.M20250330911908AddColumnsToUsersTable{},
+		// &migrations.M20250331093125AlertColumnsOfUsersTable{},
+		// &migrations.M20250101000015AddUsernamePasswordToUsersTable{},
 	}
 }
 
