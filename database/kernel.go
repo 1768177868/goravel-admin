@@ -37,5 +37,6 @@ func (kernel Kernel) Migrations() []schema.Migration {
 func (kernel Kernel) Seeders() []seeder.Seeder {
 	return []seeder.Seeder{
 		&seeders.DatabaseSeeder{},
+		&seeders.AdminSeeder{},
 	}
 }
