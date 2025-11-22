@@ -45,7 +45,7 @@ func Admin() {
 		router.Put("password", passwordController.UpdatePassword)
 		router.Put("admins/{id}/password", passwordController.ResetPassword)
 
-		// 管理员管理
+		// 管理员管理（有额外路由，不能完全用 Resource）
 		router.Get("admins", adminController.Index)
 		router.Get("admins/export", adminController.Export)
 		router.Get("admins/{id}", adminController.Show)
@@ -54,40 +54,20 @@ func Admin() {
 		router.Delete("admins/{id}", adminController.Destroy)
 		router.Delete("admins/{id}/tokens", adminAuthController.KickOutUser) // 踢出指定用户的所有token
 
-		// 角色管理
-		router.Get("roles", roleController.Index)
-		router.Get("roles/{id}", roleController.Show)
-		router.Post("roles", roleController.Store)
-		router.Put("roles/{id}", roleController.Update)
-		router.Delete("roles/{id}", roleController.Destroy)
+		// 角色管理 - 使用 Resource 路由
+		router.Resource("roles", roleController)
 
-		// 权限管理
-		router.Get("permissions", permissionController.Index)
-		router.Get("permissions/{id}", permissionController.Show)
-		router.Post("permissions", permissionController.Store)
-		router.Put("permissions/{id}", permissionController.Update)
-		router.Delete("permissions/{id}", permissionController.Destroy)
+		// 权限管理 - 使用 Resource 路由
+		router.Resource("permissions", permissionController)
 
-		// 菜单管理
-		router.Get("menus", menuController.Index)
-		router.Get("menus/{id}", menuController.Show)
-		router.Post("menus", menuController.Store)
-		router.Put("menus/{id}", menuController.Update)
-		router.Delete("menus/{id}", menuController.Destroy)
+		// 菜单管理 - 使用 Resource 路由
+		router.Resource("menus", menuController)
 
-		// 部门管理
-		router.Get("departments", departmentController.Index)
-		router.Get("departments/{id}", departmentController.Show)
-		router.Post("departments", departmentController.Store)
-		router.Put("departments/{id}", departmentController.Update)
-		router.Delete("departments/{id}", departmentController.Destroy)
+		// 部门管理 - 使用 Resource 路由
+		router.Resource("departments", departmentController)
 
-		// 字典管理
-		router.Get("dictionaries", dictionaryController.Index)
-		router.Get("dictionaries/{id}", dictionaryController.Show)
-		router.Post("dictionaries", dictionaryController.Store)
-		router.Put("dictionaries/{id}", dictionaryController.Update)
-		router.Delete("dictionaries/{id}", dictionaryController.Destroy)
+		// 字典管理（有额外路由，不能完全用 Resource）
+		router.Resource("dictionaries", dictionaryController)
 		router.Get("dictionaries/type/{type}", dictionaryController.GetByType)
 
 		// 操作日志

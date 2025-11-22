@@ -112,3 +112,19 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "clean_success")
 }
+
+// Store 创建操作日志（不支持，返回405）
+func (r *OperationLogController) Store(ctx http.Context) http.Response {
+	return ctx.Response().Json(http.StatusMethodNotAllowed, http.Json{
+		"code":    405,
+		"message": "Method Not Allowed",
+	})
+}
+
+// Update 更新操作日志（不支持，返回405）
+func (r *OperationLogController) Update(ctx http.Context) http.Response {
+	return ctx.Response().Json(http.StatusMethodNotAllowed, http.Json{
+		"code":    405,
+		"message": "Method Not Allowed",
+	})
+}

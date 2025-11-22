@@ -104,3 +104,19 @@ func (r *LoginLogController) Clean(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "clean_success")
 }
+
+// Store 创建登录日志（不支持，返回405）
+func (r *LoginLogController) Store(ctx http.Context) http.Response {
+	return ctx.Response().Json(http.StatusMethodNotAllowed, http.Json{
+		"code":    405,
+		"message": "Method Not Allowed",
+	})
+}
+
+// Update 更新登录日志（不支持，返回405）
+func (r *LoginLogController) Update(ctx http.Context) http.Response {
+	return ctx.Response().Json(http.StatusMethodNotAllowed, http.Json{
+		"code":    405,
+		"message": "Method Not Allowed",
+	})
+}
