@@ -48,7 +48,21 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	}
 
 	// 生成JWT token
-	token, err := facades.Auth(ctx).Guard("admin").Login(admin)
+	// 如果用户配置了永久token，使用特殊的guard配置（TTL为0）
+	var token string
+	var err error
+	if admin.TokenNeverExpires {
+		// 对于永久token，使用LoginUsingID并设置TTL为0
+		// 注意：goravel框架的Login方法使用配置的TTL，无法直接设置
+		// 这里我们先生成token，然后在中间件中处理永久token的逻辑
+		// 实际上，我们可以通过设置JWT配置来实现，但Config接口不支持Set
+		// 所以我们在中间件中通过检查TokenNeverExpires字段来跳过过期检查
+		token, err = facades.Auth(ctx).Guard("admin").Login(admin)
+		// 永久token的TTL在JWT配置中设置为0，或者通过其他方式实现
+		// 由于框架限制，我们通过中间件逻辑来处理永久token
+	} else {
+		token, err = facades.Auth(ctx).Guard("admin").Login(admin)
+	}
 	if err != nil {
 		return nil, "", err
 	}
@@ -151,7 +165,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 	// 收集所有角色的权限和菜单（去重）
 	permissionMap := make(map[uint]models.Permission)
 	menuMap := make(map[uint]models.Menu)
-	
+
 	for _, role := range admin.Roles {
 		for _, perm := range role.Permissions {
 			permissionMap[perm.ID] = perm

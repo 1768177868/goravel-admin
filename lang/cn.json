@@ -78,6 +78,10 @@
     "parse_success": "解析成功",
     "ulid_required": "ULID 不能为空",
     "invalid_ulid": "无效的 ULID",
-    "parse_failed": "解析失败"
+    "parse_failed": "解析失败",
+    "unauthorized": "未授权，请先登录",
+    "token_expired": "Token已过期，请重新登录",
+    "invalid_token": "无效的Token",
+    "user_not_found": "用户不存在"
   }
 }

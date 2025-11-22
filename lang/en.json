@@ -78,6 +78,10 @@
     "parse_success": "Parse successful",
     "ulid_required": "ULID cannot be empty",
     "invalid_ulid": "Invalid ULID",
-    "parse_failed": "Parse failed"
+    "parse_failed": "Parse failed",
+    "unauthorized": "Unauthorized, please login first",
+    "token_expired": "Token has expired, please login again",
+    "invalid_token": "Invalid token",
+    "user_not_found": "User not found"
   }
 }

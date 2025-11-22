@@ -19,6 +19,10 @@ func init() {
 		// Specify the length of time (in minutes) that the token will be valid for.
 		// Defaults to 1 hour.
 		//
+		// Note: The system implements sliding expiration, which means the token
+		// expiration time will be automatically extended on each request.
+		// This ensures that active users won't be logged out unexpectedly.
+		//
 		// You can also set this to 0, to yield a never expiring token.
 		// Some people may want this behaviour for e.g. a mobile app.
 		// This is not particularly recommended, so make sure you have appropriate
