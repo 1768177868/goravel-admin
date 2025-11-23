@@ -12,6 +12,14 @@ import (
 	"goravel/app/services"
 )
 
+// min 返回两个整数中的较小值
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func Jwt() http.Middleware {
 	return func(ctx http.Context) {
 		// 如果路径是api/admin前缀，使用admin guard
@@ -25,7 +33,7 @@ func Jwt() http.Middleware {
 		if token == "" {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
-				"message": trans.Get(ctx, "unauthorized"),
+				"message": trans.Get(ctx, "not_logged_in"),
 			}).Abort()
 			return
 		}
@@ -33,12 +41,21 @@ func Jwt() http.Middleware {
 		// 移除Bearer前缀（如果有）
 		token = strings.TrimPrefix(token, "Bearer ")
 		token = strings.TrimSpace(token)
+		
+		if token == "" {
+			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"code":    http.StatusUnauthorized,
+				"message": trans.Get(ctx, "not_logged_in"),
+			}).Abort()
+			return
+		}
 
 		// 从数据库查找token
 		tokenService := services.NewTokenServiceImpl()
 		accessToken, err := tokenService.FindToken(token)
 		if err != nil {
 			// token查找失败或已过期
+			facades.Log().Errorf("JWT middleware: FindToken error: %v, token prefix: %s", err, token[:min(20, len(token))])
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "invalid_token"),
@@ -46,6 +63,7 @@ func Jwt() http.Middleware {
 			return
 		}
 		if accessToken == nil {
+			facades.Log().Errorf("JWT middleware: accessToken is nil, token prefix: %s", token[:min(20, len(token))])
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "invalid_token"),
@@ -90,6 +108,8 @@ func Jwt() http.Middleware {
 		// 将用户信息存储到context中，供后续中间件使用
 		ctx.WithValue("admin", admin)
 		ctx.WithValue("token", accessToken)
+		
+		facades.Log().Debugf("JWT middleware: admin set in context, ID: %d, Username: %s", admin.ID, admin.Username)
 
 		ctx.Request().Next()
 	}

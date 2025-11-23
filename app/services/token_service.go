@@ -58,9 +58,15 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 
 // FindToken 根据token值查找token记录
 func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken, error) {
+	if token == "" {
+		return nil, errors.New("token is empty")
+	}
+	
 	tokenHash := s.hashToken(token)
 	var accessToken models.PersonalAccessToken
 	if err := facades.Orm().Query().Where("token", tokenHash).First(&accessToken); err != nil {
+		// 记录调试信息
+		facades.Log().Debugf("TokenService: FindToken failed, hash: %s, error: %v", tokenHash[:min(20, len(tokenHash))], err)
 		return nil, err
 	}
 
@@ -73,6 +79,14 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 	}
 
 	return &accessToken, nil
+}
+
+// min 返回两个整数中的较小值
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // DeleteToken 删除token

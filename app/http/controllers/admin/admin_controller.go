@@ -97,9 +97,15 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "username_and_password_required")
 	}
 
-	// 检查用户名是否已存在
-	var existAdmin models.Admin
-	if err := facades.Orm().Query().Where("username", username).First(&existAdmin); err == nil {
+	// 检查用户名是否已存在（排除软删除的记录）
+	// GORM 默认会排除软删除的记录，使用 Unscoped() 可以查询包括软删除的记录
+	// 这里我们只查询未删除的记录，所以不需要 Unscoped()
+	count, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Count()
+	if err != nil {
+		// 查询出错，记录日志但不阻止创建（可能是数据库问题）
+		facades.Log().Errorf("Check username exists error: %v", err)
+	} else if count > 0 {
+		// 如果找到了记录，说明用户名已存在
 		return response.Error(ctx, http.StatusBadRequest, "username_exists")
 	}
 

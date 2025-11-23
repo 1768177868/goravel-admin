@@ -473,6 +473,14 @@ const handleSubmit = async () => {
       submitting.value = true
       try {
         const data = { ...formData }
+        
+        // 确保用户名不为空且去除首尾空格
+        if (data.username) {
+          data.username = data.username.trim()
+        }
+        
+        console.log('Submit admin data:', data)
+        
         if (formData.id) {
           // 编辑时，如果没有修改密码，不传 password
           if (!data.password) {
@@ -488,6 +496,10 @@ const handleSubmit = async () => {
         loadData()
       } catch (error) {
         console.error('Submit error:', error)
+        // 显示更详细的错误信息
+        if (error.response && error.response.data && error.response.data.message) {
+          ElMessage.error(error.response.data.message)
+        }
       } finally {
         submitting.value = false
       }

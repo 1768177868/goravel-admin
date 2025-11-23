@@ -14,7 +14,12 @@ request.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token')
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      // 确保 token 没有多余的空格
+      const cleanToken = token.trim()
+      config.headers.Authorization = `Bearer ${cleanToken}`
+      console.log('Request with token:', cleanToken.substring(0, 20) + '...')
+    } else {
+      console.log('No token found in localStorage')
     }
     return config
   },
@@ -66,39 +71,86 @@ const handle401Error = (message) => {
 request.interceptors.response.use(
   response => {
     const res = response.data
+    const url = response.config?.url || ''
+    
+    // 排除登录和退出接口，这些接口返回 401 是正常的业务错误，不应该触发自动跳转
+    const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
     
     // 如果响应头中有新的 token，更新本地存储
     const newToken = response.headers.authorization || response.headers.Authorization
     if (newToken) {
-      const token = newToken.replace('Bearer ', '')
-      localStorage.setItem('token', token)
+      const token = newToken.replace('Bearer ', '').trim()
+      if (token) {
+        localStorage.setItem('token', token)
+        // 同时更新 userStore 中的 token
+        const userStore = useUserStore()
+        userStore.setToken(token)
+      }
+    }
+    
+    // 如果响应数据中有 token（登录接口会在 data.token 中返回），也更新本地存储
+    if (res.data && res.data.token) {
+      const token = res.data.token
+      if (token) {
+        localStorage.setItem('token', token)
+        const userStore = useUserStore()
+        userStore.setToken(token)
+      }
     }
     
     // 如果 code 不是 200，说明有错误
     if (res.code !== 200) {
-      // 如果是未授权错误，也需要跳转到登录页
-      if (res.code === 401 || res.message?.includes('未登录') || res.message?.includes('登录已过期') || res.message?.includes('token') || res.message?.includes('Token')) {
-        handle401Error(res.message)
-        return Promise.reject(new Error(res.message || '未登录或登录已过期'))
+      // 如果是未授权错误，也需要跳转到登录页（但排除登录和退出接口）
+      // 检查多种可能的错误消息格式
+      const message = res.message || ''
+      const messageLower = message.toLowerCase()
+      const isAuthError = !isAuthEndpoint && (
+        res.code === 401 || 
+        messageLower.includes('未登录') || 
+        messageLower.includes('登录已过期') || 
+        messageLower.includes('token') || 
+        messageLower.includes('无效') ||
+        messageLower.includes('invalid') ||
+        messageLower.includes('unauthorized') ||
+        message === 'invalid_token' ||
+        message === 'unauthorized' ||
+        message === '无效的Token' ||
+        message === '未授权，请先登录'
+      )
+      
+      if (isAuthError) {
+        handle401Error(message || '未登录或登录已过期，请重新登录')
+        return Promise.reject(new Error(message || '未登录或登录已过期'))
       }
       
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      ElMessage.error(message || '请求失败')
+      return Promise.reject(new Error(message || '请求失败'))
     }
     
     return res
   },
   error => {
     if (error.response) {
-      const { status, data } = error.response
+      const { status, data, config } = error.response
+      const url = config?.url || ''
       
-      if (status === 401) {
+      // 排除登录和退出接口，这些接口返回 401 是正常的业务错误，不应该触发自动跳转
+      const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+      
+      if (status === 401 && !isAuthEndpoint) {
         // 未登录或登录已过期，清除所有状态并跳转到登录页
-        handle401Error(data?.message)
+        const message = data?.message || data?.data?.message || '未登录或登录已过期，请重新登录'
+        handle401Error(message)
+      } else if (status === 401 && isAuthEndpoint) {
+        // 登录或退出接口返回 401，这是正常的业务错误，只显示错误消息，不跳转
+        const message = data?.message || data?.data?.message || '登录失败'
+        ElMessage.error(message)
       } else if (status === 403) {
         ElMessage.error('没有权限访问')
       } else {
-        ElMessage.error(data?.message || '请求失败')
+        // 检查响应数据中是否包含错误信息
+        const errorMessage = data?.message || data?.data?.message || '请求失败'
+        ElMessage.error(errorMessage)
       }
     } else {
       ElMessage.error('网络错误，请检查网络连接')

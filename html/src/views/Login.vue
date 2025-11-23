@@ -85,17 +85,32 @@ const handleLogin = async () => {
       loading.value = true
       try {
         const res = await login(loginForm)
+        console.log('Login response:', res)
         if (res.data && res.data.token) {
-          userStore.setToken(res.data.token)
+          const token = res.data.token
+          console.log('Token received:', token.substring(0, 20) + '...')
+          userStore.setToken(token)
+          console.log('Token saved to localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
           if (res.data.admin) {
             userStore.setAdminInfo(res.data.admin)
           }
+          // 等待一下确保token已保存
+          await new Promise(resolve => setTimeout(resolve, 100))
           await userStore.fetchUserInfo()
           ElMessage.success(t('login.login_success'))
           router.push('/')
+        } else {
+          console.error('No token in login response:', res)
+          ElMessage.error(t('login.login_failed'))
         }
       } catch (error) {
         console.error('Login error:', error)
+        if (error.response) {
+          const message = error.response.data?.message || error.message
+          ElMessage.error(message || t('login.login_failed'))
+        } else {
+          ElMessage.error(t('login.login_failed'))
+        }
       } finally {
         loading.value = false
       }
