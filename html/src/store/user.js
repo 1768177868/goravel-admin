@@ -60,7 +60,7 @@ export const useUserStore = defineStore('user', {
         // 即使登出接口失败，也要清除本地状态
         console.error('Logout error:', error)
       } finally {
-        // 清除所有状态
+        // 清除所有状态（同步执行，不等待）
         this.token = ''
         this.adminInfo = null
         this.permissions = []
@@ -68,6 +68,8 @@ export const useUserStore = defineStore('user', {
         localStorage.removeItem('token')
         localStorage.removeItem('adminInfo')
       }
+      // 返回 resolved promise 确保调用者可以继续
+      return Promise.resolve()
     }
   }
 })

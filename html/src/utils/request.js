@@ -38,18 +38,25 @@ request.interceptors.response.use(
     // 如果 code 不是 200，说明有错误
     if (res.code !== 200) {
       // 如果是未授权错误，也需要跳转到登录页
-      if (res.code === 401 || res.message?.includes('未登录') || res.message?.includes('登录已过期')) {
+      if (res.code === 401 || res.message?.includes('未登录') || res.message?.includes('登录已过期') || res.message?.includes('token') || res.message?.includes('Token')) {
         const userStore = useUserStore()
         const tabsStore = useTabsStore()
         
-        userStore.logout(true).then(() => {
-          tabsStore.removeAllTabs()
-          if (router.currentRoute.value.path !== '/login') {
-            router.push('/login').then(() => {
-              ElMessage.error(res.message || '未登录或登录已过期，请重新登录')
-            })
-          }
-        })
+        // 立即清除用户状态
+        userStore.logout(true)
+        
+        // 清除标签页
+        tabsStore.removeAllTabs()
+        
+        // 跳转到登录页
+        if (router.currentRoute.value.path !== '/login') {
+          router.replace('/login').then(() => {
+            ElMessage.error(res.message || '未登录或登录已过期，请重新登录')
+          }).catch(() => {
+            // 如果路由跳转失败，直接使用 window.location
+            window.location.href = '/login'
+          })
+        }
         return Promise.reject(new Error(res.message || '未登录或登录已过期'))
       }
       
@@ -68,17 +75,21 @@ request.interceptors.response.use(
         const userStore = useUserStore()
         const tabsStore = useTabsStore()
         
-        // 清除用户状态（跳过 API 调用，避免循环）
-        userStore.logout(true).then(() => {
-          // 清除标签页
-          tabsStore.removeAllTabs()
-          // 跳转到登录页
-          if (router.currentRoute.value.path !== '/login') {
-            router.push('/login').then(() => {
-              ElMessage.error('未登录或登录已过期，请重新登录')
-            })
-          }
-        })
+        // 立即清除用户状态（跳过 API 调用，避免循环）
+        userStore.logout(true)
+        
+        // 清除标签页
+        tabsStore.removeAllTabs()
+        
+        // 跳转到登录页（使用 replace 避免历史记录问题）
+        if (router.currentRoute.value.path !== '/login') {
+          router.replace('/login').then(() => {
+            ElMessage.error('未登录或登录已过期，请重新登录')
+          }).catch(() => {
+            // 如果路由跳转失败，直接使用 window.location
+            window.location.href = '/login'
+          })
+        }
       } else if (status === 403) {
         ElMessage.error('没有权限访问')
       } else {

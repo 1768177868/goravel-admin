@@ -76,18 +76,21 @@ func Admin() {
 		router.Get("operation-logs", operationLogController.Index)
 		router.Get("operation-logs/{id}", operationLogController.Show)
 		router.Delete("operation-logs/{id}", operationLogController.Destroy)
+		router.Post("operation-logs/batch-delete", operationLogController.BatchDestroy)
 		router.Post("operation-logs/clean", operationLogController.Clean)
 
 		// 登录日志
 		router.Get("login-logs", loginLogController.Index)
 		router.Get("login-logs/{id}", loginLogController.Show)
 		router.Delete("login-logs/{id}", loginLogController.Destroy)
+		router.Post("login-logs/batch-delete", loginLogController.BatchDestroy)
 		router.Post("login-logs/clean", loginLogController.Clean)
 
 		// 系统日志
 		router.Get("system-logs", systemLogController.Index)
 		router.Get("system-logs/{id}", systemLogController.Show)
 		router.Delete("system-logs/{id}", systemLogController.Destroy)
+		router.Post("system-logs/batch-delete", systemLogController.BatchDestroy)
 		router.Post("system-logs/clean", systemLogController.Clean)
 
 		// Dashboard 统计

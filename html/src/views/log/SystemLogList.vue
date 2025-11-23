@@ -4,20 +4,34 @@
       <template #header>
         <div class="card-header">
           <span>系统日志</span>
-          <el-button type="danger" @click="handleClean">
-            <el-icon><Delete /></el-icon>
-            清空日志
-          </el-button>
+          <div class="header-actions">
+            <el-button 
+              type="danger" 
+              :disabled="selectedRows.length === 0"
+              @click="handleBatchDelete"
+            >
+              <el-icon><Delete /></el-icon>
+              删除选中 ({{ selectedRows.length }})
+            </el-button>
+            <el-button type="danger" @click="handleClean">
+              <el-icon><Delete /></el-icon>
+              清空日志
+            </el-button>
+          </div>
         </div>
       </template>
 
       <vxe-table
+        ref="tableRef"
         :data="tableData"
         :loading="loading"
         border
         resizable
         height="600"
+        @checkbox-change="handleSelectionChange"
+        @checkbox-all="handleSelectionChange"
       >
+        <vxe-column type="checkbox" width="60" />
         <vxe-column type="seq" width="60" title="序号" />
         <vxe-column field="id" title="ID" width="80" />
         <vxe-column field="level" title="级别" width="100">
@@ -72,12 +86,15 @@ import {
   getSystemLogList,
   getSystemLogDetail,
   deleteSystemLog,
+  batchDeleteSystemLogs,
   cleanSystemLogs
 } from '../../api/log'
 
+const tableRef = ref(null)
 const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
+const selectedRows = ref([])
 
 const pagination = reactive({
   page: 1,
@@ -151,6 +168,34 @@ const handleDelete = async (row) => {
   }
 }
 
+const handleSelectionChange = () => {
+  selectedRows.value = tableRef.value?.getCheckboxRecords() || []
+}
+
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请选择要删除的日志')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 条日志吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    const ids = selectedRows.value.map(row => row.id)
+    await batchDeleteSystemLogs(ids)
+    ElMessage.success('删除成功')
+    selectedRows.value = []
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Batch delete error:', error)
+    }
+  }
+}
+
 const handleClean = async () => {
   try {
     await ElMessageBox.confirm('确定要清空所有系统日志吗？此操作不可恢复！', '警告', {
@@ -160,6 +205,7 @@ const handleClean = async () => {
     })
     await cleanSystemLogs()
     ElMessage.success('清空成功')
+    selectedRows.value = []
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
@@ -183,6 +229,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 pre {

@@ -23,6 +23,14 @@ export function deleteOperationLog(id) {
   })
 }
 
+export function batchDeleteOperationLogs(ids) {
+  return request({
+    url: '/operation-logs/batch-delete',
+    method: 'post',
+    data: { ids: ids }
+  })
+}
+
 export function cleanOperationLogs() {
   return request({
     url: '/operation-logs/clean',
@@ -53,6 +61,14 @@ export function deleteLoginLog(id) {
   })
 }
 
+export function batchDeleteLoginLogs(ids) {
+  return request({
+    url: '/login-logs/batch-delete',
+    method: 'post',
+    data: { ids: ids }
+  })
+}
+
 export function cleanLoginLogs() {
   return request({
     url: '/login-logs/clean',
@@ -80,6 +96,14 @@ export function deleteSystemLog(id) {
   return request({
     url: `/system-logs/${id}`,
     method: 'delete'
+  })
+}
+
+export function batchDeleteSystemLogs(ids) {
+  return request({
+    url: '/system-logs/batch-delete',
+    method: 'post',
+    data: { ids: ids }
   })
 }
 

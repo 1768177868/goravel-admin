@@ -90,6 +90,39 @@ func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success")
 }
 
+// LoginLogBatchDestroyRequest 批量删除请求结构
+type LoginLogBatchDestroyRequest struct {
+	IDs []uint `json:"ids"`
+}
+
+// BatchDestroy 批量删除登录日志
+func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
+	var req LoginLogBatchDestroyRequest
+	
+	// 使用结构体绑定
+	if err := ctx.Request().Bind(&req); err != nil {
+		return response.Error(ctx, http.StatusBadRequest, "params_error")
+	}
+
+	if len(req.IDs) == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "ids_required")
+	}
+	
+	ids := req.IDs
+
+	// 转换为 []any
+	idsAny := make([]any, len(ids))
+	for i, id := range ids {
+		idsAny[i] = id
+	}
+
+	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.LoginLog{}); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+	}
+
+	return response.Success(ctx, "delete_success")
+}
+
 // Clean 清理登录日志
 func (r *LoginLogController) Clean(ctx http.Context) http.Response {
 	days := cast.ToInt(ctx.Request().Input("days", "30"))

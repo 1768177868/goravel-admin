@@ -108,7 +108,9 @@ router.beforeEach((to, from, next) => {
       if (!userStore.adminInfo) {
         userStore.fetchUserInfo().then(() => {
           next()
-        }).catch(() => {
+        }).catch((error) => {
+          // 如果获取用户信息失败（可能是401），清除状态并跳转
+          userStore.logout(true)
           next('/login')
         })
       } else {
