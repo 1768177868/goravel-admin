@@ -17,7 +17,7 @@
           <el-input v-model="searchForm.username" :placeholder="$t('form.enter_username')" clearable />
         </el-form-item>
         <el-form-item :label="$t('table.status')">
-          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable>
+          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
             <el-option :label="$t('common.enabled')" value="1" />
             <el-option :label="$t('common.disabled')" value="0" />
           </el-select>
@@ -54,14 +54,17 @@
         </vxe-column>
         <vxe-column field="department" :title="$t('table.department')">
           <template #default="{ row }">
-            {{ row.department?.name || '-' }}
+            {{ (row.Department || row.department)?.Name || (row.Department || row.department)?.name || '-' }}
           </template>
         </vxe-column>
         <vxe-column field="roles" :title="$t('table.roles')">
           <template #default="{ row }">
-            <el-tag v-for="role in row.roles" :key="role.id" style="margin-right: 5px;">
-              {{ role.name }}
-            </el-tag>
+            <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
+              <el-tag v-for="role in (row.Roles || row.roles)" :key="role.id || role.ID" style="margin-right: 5px;">
+                {{ role.Name || role.name }}
+              </el-tag>
+            </template>
+            <span v-else>-</span>
           </template>
         </vxe-column>
         <vxe-column field="created_at" :title="$t('table.created_at')" />
@@ -113,22 +116,52 @@
           <el-input v-model="formData.phone" />
         </el-form-item>
         <el-form-item :label="$t('table.department')" prop="department_id">
-          <el-select v-model="formData.department_id" :placeholder="$t('form.select_department')" clearable>
-            <el-option
-              v-for="dept in departments"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
-          </el-select>
+          <el-popover
+            placement="bottom-start"
+            :width="300"
+            trigger="click"
+            v-model="departmentSelectVisible"
+          >
+            <template #reference>
+              <el-input
+                :model-value="getDepartmentName(formData.department_id)"
+                :placeholder="$t('form.select_department')"
+                readonly
+                @click="departmentSelectVisible = !departmentSelectVisible"
+                style="cursor: pointer"
+              >
+                <template #suffix>
+                  <el-icon class="el-input__icon">
+                    <ArrowDown />
+                  </el-icon>
+                </template>
+              </el-input>
+            </template>
+            <el-tree
+              :data="departmentTree"
+              :props="{ label: 'name', children: 'children' }"
+              node-key="id"
+              :default-expand-all="false"
+              :expand-on-click-node="false"
+              :highlight-current="true"
+              @node-click="handleDepartmentSelect"
+              style="max-height: 300px; overflow-y: auto;"
+            >
+              <template #default="{ node, data }">
+                <span class="custom-tree-node" style="flex: 1; display: flex; align-items: center; justify-content: space-between; font-size: 14px; padding-right: 8px;">
+                  <span>{{ node.label }}</span>
+                </span>
+              </template>
+            </el-tree>
+          </el-popover>
         </el-form-item>
         <el-form-item :label="$t('table.roles')" prop="role_ids">
-          <el-select v-model="formData.role_ids" multiple :placeholder="$t('form.select_role')">
+          <el-select v-model="formData.role_ids" multiple :placeholder="$t('form.select_role')" style="width: 100%">
             <el-option
               v-for="role in roles"
-              :key="role.id"
-              :label="role.name"
-              :value="role.id"
+              :key="role.id || role.ID"
+              :label="role.Name || role.name"
+              :value="role.id || role.ID"
             />
           </el-select>
         </el-form-item>
@@ -151,6 +184,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import {
   getAdminList,
   createAdmin,
@@ -183,7 +217,9 @@ const pagination = reactive({
 
 const tableData = ref([])
 const departments = ref([])
+const departmentTree = ref([])
 const roles = ref([])
+const departmentSelectVisible = ref(false)
 
 const formData = reactive({
   id: null,
@@ -210,6 +246,12 @@ const loadData = async () => {
       page_size: pagination.pageSize,
       ...searchForm
     }
+    // 移除空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
     const res = await getAdminList(params)
     if (res.data) {
       tableData.value = res.data.list || []
@@ -222,11 +264,47 @@ const loadData = async () => {
   }
 }
 
+// 转换部门数据为树形结构
+const transformDepartmentToTree = (depts, parentId = 0) => {
+  const result = []
+  depts.forEach(dept => {
+    // 处理 parent_id，支持 null、0 和 undefined
+    let deptParentId = 0
+    if (dept.ParentID !== undefined && dept.ParentID !== null) {
+      deptParentId = dept.ParentID
+    } else if (dept.parent_id !== undefined && dept.parent_id !== null) {
+      deptParentId = dept.parent_id
+    }
+    
+    // 将 parentId 也转换为数字进行比较
+    const compareParentId = parentId === null ? 0 : parentId
+    
+    if (deptParentId === compareParentId) {
+      const node = {
+        id: dept.id,
+        name: dept.Name || dept.name || '',
+        children: transformDepartmentToTree(depts, dept.id)
+      }
+      if (node.children.length === 0) {
+        delete node.children
+      }
+      result.push(node)
+    }
+  })
+  return result
+}
+
 const loadDepartments = async () => {
   try {
     const res = await getDepartmentList()
     if (res.data && res.data.list) {
-      departments.value = res.data.list
+      const depts = res.data.list
+      console.log('Loaded departments:', depts)
+      // 保存原始列表（用于扁平化选择）
+      departments.value = depts
+      // 转换为树形结构
+      departmentTree.value = transformDepartmentToTree(depts)
+      console.log('Transformed department tree:', departmentTree.value)
     }
   } catch (error) {
     console.error('Load departments error:', error)
@@ -237,7 +315,12 @@ const loadRoles = async () => {
   try {
     const res = await getRoleList()
     if (res.data && res.data.list) {
-      roles.value = res.data.list
+      // 支持 PascalCase 和 snake_case
+      roles.value = res.data.list.map(role => ({
+        id: role.id || role.ID,
+        name: role.Name || role.name || '',
+        slug: role.Slug || role.slug || ''
+      }))
     }
   } catch (error) {
     console.error('Load roles error:', error)
@@ -276,17 +359,48 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
+// 获取部门名称
+const getDepartmentName = (departmentId) => {
+  if (!departmentId) return ''
+  const findDept = (depts, id) => {
+    for (const dept of depts) {
+      if (dept.id === id) {
+        return dept.name
+      }
+      if (dept.children && dept.children.length > 0) {
+        const found = findDept(dept.children, id)
+        if (found) return found
+      }
+    }
+    return ''
+  }
+  return findDept(departmentTree.value, departmentId) || ''
+}
+
+// 处理部门选择
+const handleDepartmentSelect = (data, node) => {
+  console.log('Department selected:', data, node)
+  if (data && data.id) {
+    formData.department_id = data.id
+    departmentSelectVisible.value = false
+  }
+}
+
 const handleEdit = async (row) => {
+  // 处理字段映射，支持 PascalCase 和 snake_case
+  const adminDepartment = row.Department || row.department
+  const adminRoles = row.Roles || row.roles
+  
   Object.assign(formData, {
     id: row.id,
-    username: row.username,
+    username: row.Username || row.username || '',
     password: '',
-    nickname: row.nickname || '',
-    email: row.email || '',
-    phone: row.phone || '',
-    department_id: row.department_id || null,
-    role_ids: row.roles ? row.roles.map(r => r.id) : [],
-    status: row.status
+    nickname: row.Nickname || row.nickname || '',
+    email: row.Email || row.email || '',
+    phone: row.Phone || row.phone || '',
+    department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
+    role_ids: adminRoles ? adminRoles.map(r => r.id || r.ID) : [],
+    status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)
   })
   dialogVisible.value = true
 }
