@@ -37,6 +37,7 @@
   },
   "menu": {
     "dashboard": "Dashboard",
+    "system_management": "System Management",
     "admin_management": "Admin Management",
     "role_management": "Role Management",
     "permission_management": "Permission Management",

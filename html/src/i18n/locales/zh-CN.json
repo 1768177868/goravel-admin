@@ -37,6 +37,7 @@
   },
   "menu": {
     "dashboard": "仪表盘",
+    "system_management": "系统管理",
     "admin_management": "管理员管理",
     "role_management": "角色管理",
     "permission_management": "权限管理",

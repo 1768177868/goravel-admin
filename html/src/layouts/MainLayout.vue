@@ -22,39 +22,55 @@
           <el-icon><Odometer /></el-icon>
           <template #title>{{ $t('menu.dashboard') }}</template>
         </el-menu-item>
-        <el-menu-item index="/admins">
-          <el-icon><User /></el-icon>
-          <template #title>{{ $t('menu.admin_management') }}</template>
-        </el-menu-item>
-        <el-menu-item index="/roles">
-          <el-icon><Avatar /></el-icon>
-          <template #title>{{ $t('menu.role_management') }}</template>
-        </el-menu-item>
-        <el-menu-item index="/permissions">
-          <el-icon><Key /></el-icon>
-          <template #title>{{ $t('menu.permission_management') }}</template>
-        </el-menu-item>
-        <el-menu-item index="/menus">
-          <el-icon><Menu /></el-icon>
-          <template #title>{{ $t('menu.menu_management') }}</template>
-        </el-menu-item>
-        <el-menu-item index="/departments">
-          <el-icon><OfficeBuilding /></el-icon>
-          <template #title>{{ $t('menu.department_management') }}</template>
-        </el-menu-item>
-        <el-menu-item index="/dictionaries">
-          <el-icon><Document /></el-icon>
-          <template #title>{{ $t('menu.dictionary_management') }}</template>
-        </el-menu-item>
-        <el-sub-menu index="logs">
-          <template #title>
-            <el-icon><Document /></el-icon>
-            <span>{{ $t('menu.log_management') }}</span>
-          </template>
-          <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
-          <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
-          <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
-        </el-sub-menu>
+        <template v-if="menuTree.length > 0">
+          <MenuItem
+            v-for="menu in menuTree"
+            :key="menu.id"
+            :menu="menu"
+          />
+        </template>
+        <template v-else>
+          <!-- 如果菜单数据为空，显示默认菜单 -->
+          <el-sub-menu index="system">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>{{ $t('menu.system_management') }}</span>
+            </template>
+            <el-menu-item index="/admins">
+              <el-icon><User /></el-icon>
+              <template #title>{{ $t('menu.admin_management') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/roles">
+              <el-icon><Avatar /></el-icon>
+              <template #title>{{ $t('menu.role_management') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/permissions">
+              <el-icon><Key /></el-icon>
+              <template #title>{{ $t('menu.permission_management') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/menus">
+              <el-icon><Menu /></el-icon>
+              <template #title>{{ $t('menu.menu_management') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/departments">
+              <el-icon><OfficeBuilding /></el-icon>
+              <template #title>{{ $t('menu.department_management') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/dictionaries">
+              <el-icon><Document /></el-icon>
+              <template #title>{{ $t('menu.dictionary_management') }}</template>
+            </el-menu-item>
+          </el-sub-menu>
+          <el-sub-menu index="logs">
+            <template #title>
+              <el-icon><Document /></el-icon>
+              <span>{{ $t('menu.log_management') }}</span>
+            </template>
+            <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
+            <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
+            <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
+          </el-sub-menu>
+        </template>
       </el-menu>
     </el-aside>
     
@@ -151,6 +167,7 @@ import { useAppStore } from '../store/app'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
+import MenuItem from '../components/MenuItem.vue'
 import {
   Fold,
   Expand,
@@ -160,7 +177,13 @@ import {
   ArrowDown,
   FullScreen,
   Aim,
-  Grid
+  Grid,
+  Odometer,
+  Avatar,
+  Key,
+  Menu,
+  OfficeBuilding,
+  Document
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -171,6 +194,74 @@ const appStore = useAppStore()
 const { t } = useI18n()
 
 const activeMenu = computed(() => route.path)
+
+// 路径映射：将后端路径映射到前端路由路径
+const pathMap = {
+  '/system/admin': '/admins',
+  '/system/role': '/roles',
+  '/permissions': '/permissions',
+  '/menus': '/menus',
+  '/departments': '/departments',
+  '/dictionaries': '/dictionaries',
+  '/operation-logs': '/operation-logs',
+  '/login-logs': '/login-logs',
+  '/system-logs': '/system-logs',
+  '/profile': '/profile'
+}
+
+// 转换菜单数据格式并构建树形结构
+const menuTree = computed(() => {
+  const menus = userStore.menus || []
+  
+  // 调试：输出原始菜单数据
+  console.log('Raw menus from userStore:', menus)
+  console.log('userStore.menus length:', menus.length)
+  
+  if (menus.length === 0) {
+    console.warn('No menus found in userStore.menus, userStore:', userStore)
+    return []
+  }
+  
+  // 转换数据格式（后端返回的是扁平数组，需要自己构建树形结构）
+  const transformMenu = (menu) => {
+    const originalPath = menu.Path || menu.path || ''
+    // 映射路径到前端路由
+    const mappedPath = pathMap[originalPath] || originalPath
+    
+    return {
+      id: menu.id,
+      parent_id: menu.ParentID || menu.parent_id || 0,
+      title: menu.Title || menu.title || '',
+      path: mappedPath || originalPath,
+      icon: menu.Icon || menu.icon || '',
+      type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
+      status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
+      sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
+      is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0)
+    }
+  }
+  
+  // 转换所有菜单（扁平数组）
+  const transformedMenus = menus.map(menu => transformMenu(menu))
+  console.log('Transformed menus (flat):', transformedMenus)
+  
+  // 构建树形结构（只返回顶级菜单，子菜单在children中）
+  const buildTree = (menus, parentId = 0) => {
+    const result = menus
+      .filter(menu => menu.parent_id === parentId && menu.is_hidden === 0 && menu.status === 1)
+      .map(menu => ({
+        ...menu,
+        children: buildTree(menus, menu.id)
+      }))
+      .sort((a, b) => a.sort - b.sort)
+    
+    return result
+  }
+  
+  const tree = buildTree(transformedMenus)
+  console.log('Built menu tree:', tree)
+  return tree
+})
 
 
 // 监听路由变化，自动添加标签页
@@ -270,6 +361,66 @@ const handleLayoutSize = (size) => {
 
 .sidebar-menu:not(.el-menu--collapse) {
   width: 200px;
+}
+
+/* 菜单项文字溢出处理 */
+.sidebar-menu :deep(.el-menu-item),
+.sidebar-menu :deep(.el-sub-menu__title) {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* 菜单项标题容器 */
+.sidebar-menu :deep(.el-menu-item > span),
+.sidebar-menu :deep(.el-sub-menu__title > span) {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* 确保下拉箭头不被遮挡，固定在右侧 */
+.sidebar-menu :deep(.el-sub-menu__icon-arrow) {
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 0;
+  width: 16px;
+  text-align: right;
+}
+
+/* 菜单项图标样式 */
+.sidebar-menu :deep(.el-menu-item .el-icon),
+.sidebar-menu :deep(.el-sub-menu__title .el-icon) {
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+/* 菜单项文字溢出处理 */
+.sidebar-menu :deep(.el-menu-item),
+.sidebar-menu :deep(.el-sub-menu__title) {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.sidebar-menu :deep(.el-menu-item > span),
+.sidebar-menu :deep(.el-sub-menu__title > span) {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 确保下拉箭头不被遮挡 */
+.sidebar-menu :deep(.el-sub-menu__icon-arrow) {
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .header {

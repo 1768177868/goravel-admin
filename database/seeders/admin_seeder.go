@@ -169,6 +169,126 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	var permissionMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&permissionMenu, models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "权限管理",
+		Icon:      "Lock",
+		Path:      "/permissions",
+		Component: "permission/index",
+		Type:      2,
+		Status:    1,
+		Sort:      3,
+		IsHidden:  0,
+	})
+
+	var menuMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&menuMenu, models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "菜单管理",
+		Icon:      "Menu",
+		Path:      "/menus",
+		Component: "menu/index",
+		Type:      2,
+		Status:    1,
+		Sort:      4,
+		IsHidden:  0,
+	})
+
+	var departmentMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&departmentMenu, models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "部门管理",
+		Icon:      "OfficeBuilding",
+		Path:      "/departments",
+		Component: "department/index",
+		Type:      2,
+		Status:    1,
+		Sort:      5,
+		IsHidden:  0,
+	})
+
+	var dictionaryMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&dictionaryMenu, models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "字典管理",
+		Icon:      "Document",
+		Path:      "/dictionaries",
+		Component: "dictionary/index",
+		Type:      2,
+		Status:    1,
+		Sort:      6,
+		IsHidden:  0,
+	})
+
+	// 创建日志管理父菜单
+	var logMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&logMenu, models.Menu{
+		ParentID:  0,
+		Title:     "日志管理",
+		Icon:      "Document",
+		Path:      "/logs",
+		Component: "Layout",
+		Type:      1,
+		Status:    1,
+		Sort:      2,
+		IsHidden:  0,
+	})
+
+	// 创建日志管理子菜单
+	var operationLogMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&operationLogMenu, models.Menu{
+		ParentID:  logMenu.ID,
+		Title:     "操作日志",
+		Icon:      "Document",
+		Path:      "/operation-logs",
+		Component: "log/operation/index",
+		Type:      2,
+		Status:    1,
+		Sort:      1,
+		IsHidden:  0,
+	})
+
+	var loginLogMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&loginLogMenu, models.Menu{
+		ParentID:  logMenu.ID,
+		Title:     "登录日志",
+		Icon:      "Document",
+		Path:      "/login-logs",
+		Component: "log/login/index",
+		Type:      2,
+		Status:    1,
+		Sort:      2,
+		IsHidden:  0,
+	})
+
+	var systemLogMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&systemLogMenu, models.Menu{
+		ParentID:  logMenu.ID,
+		Title:     "系统日志",
+		Icon:      "Document",
+		Path:      "/system-logs",
+		Component: "log/system/index",
+		Type:      2,
+		Status:    1,
+		Sort:      3,
+		IsHidden:  0,
+	})
+
+	// 创建个人中心菜单
+	var profileMenu models.Menu
+	facades.Orm().Query().FirstOrCreate(&profileMenu, models.Menu{
+		ParentID:  0,
+		Title:     "个人中心",
+		Icon:      "User",
+		Path:      "/profile",
+		Component: "profile/index",
+		Type:      2,
+		Status:    1,
+		Sort:      3,
+		IsHidden:  0,
+	})
+
 	// 关联超级管理员和超级角色
 	facades.Orm().Query().Model(&superAdmin).Association("Roles").Replace([]models.Role{superRole})
 
