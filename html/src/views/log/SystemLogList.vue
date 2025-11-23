@@ -101,7 +101,21 @@
           </template>
         </vxe-column>
         <vxe-column field="message" :title="$t('log.message')" />
-        <vxe-column field="context" :title="$t('log.context')" />
+        <vxe-column field="context" :title="$t('log.context')" width="200">
+          <template #default="{ row }">
+            <el-tooltip
+              v-if="row.context"
+              :content="formatContext(row.context)"
+              placement="top"
+              effect="dark"
+            >
+              <div class="context-preview">
+                {{ formatContextPreview(row.context) }}
+              </div>
+            </el-tooltip>
+            <span v-else>-</span>
+          </template>
+        </vxe-column>
         <vxe-column field="created_at" :title="$t('log.time')" width="180" />
         <vxe-column :title="$t('table.operation')" width="100" fixed="right">
           <template #default="{ row }">
@@ -130,7 +144,8 @@
         </el-descriptions-item>
         <el-descriptions-item :label="$t('log.message')" :span="2">{{ logDetail.message }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.context')" :span="2">
-          <pre>{{ JSON.stringify(logDetail.context, null, 2) }}</pre>
+          <pre v-if="logDetail.context">{{ formatContext(logDetail.context) }}</pre>
+          <span v-else>-</span>
         </el-descriptions-item>
         <el-descriptions-item :label="$t('log.time')" :span="2">{{ logDetail.created_at }}</el-descriptions-item>
       </el-descriptions>
@@ -183,6 +198,46 @@ const getLevelType = (level) => {
     'debug': 'info'
   }
   return levelMap[level?.toLowerCase()] || 'info'
+}
+
+// 格式化上下文为可读字符串（用于tooltip）
+const formatContext = (context) => {
+  if (!context) return '-'
+  try {
+    if (typeof context === 'string') {
+      const parsed = JSON.parse(context)
+      return JSON.stringify(parsed, null, 2)
+    }
+    return JSON.stringify(context, null, 2)
+  } catch (e) {
+    return String(context)
+  }
+}
+
+// 格式化上下文预览（用于列表显示）
+const formatContextPreview = (context) => {
+  if (!context) return '-'
+  try {
+    let obj = context
+    if (typeof context === 'string') {
+      obj = JSON.parse(context)
+    }
+    // 如果是对象，显示前几个键值对
+    if (typeof obj === 'object' && obj !== null) {
+      const keys = Object.keys(obj)
+      if (keys.length === 0) return '{}'
+      // 只显示前2个键值对
+      const preview = keys.slice(0, 2).map(key => {
+        const value = obj[key]
+        const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value)
+        return `${key}: ${valueStr.length > 20 ? valueStr.substring(0, 20) + '...' : valueStr}`
+      }).join(', ')
+      return keys.length > 2 ? `${preview}...` : preview
+    }
+    return String(obj)
+  } catch (e) {
+    return String(context)
+  }
 }
 
 // 转换系统日志数据（PascalCase -> snake_case）
@@ -364,6 +419,17 @@ pre {
   background: #f5f5f5;
   border-radius: 4px;
   overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.context-preview {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #409eff;
 }
 </style>
 
