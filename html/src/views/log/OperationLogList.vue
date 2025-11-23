@@ -110,7 +110,11 @@
         <vxe-column type="checkbox" width="60" />
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="admin.username" :title="$t('log.admin')" />
+        <vxe-column field="admin" :title="$t('log.admin')">
+          <template #default="{ row }">
+            {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
+          </template>
+        </vxe-column>
         <vxe-column field="method" :title="$t('log.method')" width="100" />
         <vxe-column field="path" :title="$t('log.path')" />
         <vxe-column field="ip" :title="$t('log.ip')" width="150" />
@@ -143,7 +147,7 @@
         <el-descriptions-item :label="$t('log.status_code')">{{ logDetail.status_code }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.operation_time')" :span="2">{{ logDetail.created_at }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.request_params')" :span="2">
-          <pre>{{ JSON.stringify(logDetail.params, null, 2) }}</pre>
+          <pre>{{ JSON.stringify(logDetail.params || logDetail.request || {}, null, 2) }}</pre>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -189,6 +193,41 @@ const searchForm = reactive({
   end_time: ''
 })
 
+// 转换操作日志数据（PascalCase -> snake_case）
+const transformOperationLogData = (log) => {
+  let params = null
+  try {
+    if (log.Request) {
+      params = typeof log.Request === 'string' ? JSON.parse(log.Request) : log.Request
+    } else if (log.request) {
+      params = typeof log.request === 'string' ? JSON.parse(log.request) : log.request
+    } else if (log.Params) {
+      params = typeof log.Params === 'string' ? JSON.parse(log.Params) : log.Params
+    } else if (log.params) {
+      params = typeof log.params === 'string' ? JSON.parse(log.params) : log.params
+    }
+  } catch (e) {
+    params = log.Request || log.request || log.Params || log.params || null
+  }
+  
+  return {
+    id: log.ID || log.id,
+    admin: log.Admin ? {
+      username: log.Admin.Username || log.Admin.username || ''
+    } : (log.admin ? {
+      username: log.admin.username || ''
+    } : null),
+    method: log.Method || log.method || '',
+    path: log.Path || log.path || '',
+    ip: log.IP || log.ip || '',
+    status_code: log.Status || log.status || log.StatusCode || log.status_code || 0,
+    created_at: log.CreatedAt || log.created_at || '',
+    params: params,
+    request: log.Request || log.request || null,
+    response: log.Response || log.response || null
+  }
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -205,7 +244,8 @@ const loadData = async () => {
     })
     const res = await getOperationLogList(params)
     if (res.data) {
-      tableData.value = res.data.list || []
+      const logs = res.data.list || []
+      tableData.value = logs.map(log => transformOperationLogData(log))
       pagination.total = res.data.total || 0
     }
   } catch (error) {
@@ -237,8 +277,9 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 const handleView = async (row) => {
   try {
     const res = await getOperationLogDetail(row.id)
-    if (res.data && res.data.operation_log) {
-      logDetail.value = res.data.operation_log
+    if (res.data) {
+      const log = res.data.operation_log || res.data.log || res.data
+      logDetail.value = transformOperationLogData(log)
       detailVisible.value = true
     }
   } catch (error) {

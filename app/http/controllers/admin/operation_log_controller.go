@@ -68,7 +68,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 		query = query.Where("ip", "like", "%"+ip+"%")
 	}
 	if status != "" {
-		query = query.Where("status_code", status)
+		query = query.Where("status", status)
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)

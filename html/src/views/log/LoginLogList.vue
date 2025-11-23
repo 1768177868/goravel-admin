@@ -91,7 +91,11 @@
         <vxe-column type="checkbox" width="60" />
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="admin.username" :title="$t('log.admin')" />
+        <vxe-column field="admin" :title="$t('log.admin')">
+          <template #default="{ row }">
+            {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
+          </template>
+        </vxe-column>
         <vxe-column field="ip" :title="$t('log.ip')" width="150" />
         <vxe-column field="user_agent" :title="$t('log.user_agent')" />
         <vxe-column field="status" :title="$t('table.status')" width="100">
@@ -175,6 +179,23 @@ const searchForm = reactive({
   end_time: ''
 })
 
+// 转换登录日志数据（PascalCase -> snake_case）
+const transformLoginLogData = (log) => {
+  return {
+    id: log.ID || log.id,
+    admin: log.Admin ? {
+      username: log.Admin.Username || log.Admin.username || ''
+    } : (log.admin ? {
+      username: log.admin.username || ''
+    } : null),
+    ip: log.IP || log.ip || '',
+    user_agent: log.UserAgent || log.user_agent || '',
+    status: log.Status || log.status || 0,
+    message: log.Message || log.message || '',
+    created_at: log.CreatedAt || log.created_at || ''
+  }
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -191,7 +212,8 @@ const loadData = async () => {
     })
     const res = await getLoginLogList(params)
     if (res.data) {
-      tableData.value = res.data.list || []
+      const logs = res.data.list || []
+      tableData.value = logs.map(log => transformLoginLogData(log))
       pagination.total = res.data.total || 0
     }
   } catch (error) {
@@ -223,8 +245,9 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 const handleView = async (row) => {
   try {
     const res = await getLoginLogDetail(row.id)
-    if (res.data && res.data.login_log) {
-      logDetail.value = res.data.login_log
+    if (res.data) {
+      const log = res.data.login_log || res.data.log || res.data
+      logDetail.value = transformLoginLogData(log)
       detailVisible.value = true
     }
   } catch (error) {

@@ -185,6 +185,28 @@ const getLevelType = (level) => {
   return levelMap[level?.toLowerCase()] || 'info'
 }
 
+// 转换系统日志数据（PascalCase -> snake_case）
+const transformSystemLogData = (log) => {
+  let context = null
+  try {
+    if (log.Context) {
+      context = typeof log.Context === 'string' ? JSON.parse(log.Context) : log.Context
+    } else if (log.context) {
+      context = typeof log.context === 'string' ? JSON.parse(log.context) : log.context
+    }
+  } catch (e) {
+    context = log.Context || log.context || null
+  }
+  
+  return {
+    id: log.ID || log.id,
+    level: log.Level || log.level || '',
+    message: log.Message || log.message || '',
+    context: context,
+    created_at: log.CreatedAt || log.created_at || ''
+  }
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -201,7 +223,8 @@ const loadData = async () => {
     })
     const res = await getSystemLogList(params)
     if (res.data) {
-      tableData.value = res.data.list || []
+      const logs = res.data.list || []
+      tableData.value = logs.map(log => transformSystemLogData(log))
       pagination.total = res.data.total || 0
     }
   } catch (error) {
@@ -233,8 +256,9 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 const handleView = async (row) => {
   try {
     const res = await getSystemLogDetail(row.id)
-    if (res.data && res.data.system_log) {
-      logDetail.value = res.data.system_log
+    if (res.data) {
+      const log = res.data.system_log || res.data.log || res.data
+      logDetail.value = transformSystemLogData(log)
       detailVisible.value = true
     }
   } catch (error) {
