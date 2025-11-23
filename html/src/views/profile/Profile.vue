@@ -35,14 +35,16 @@
               {{ adminInfo.department?.name || '-' }}
             </el-descriptions-item>
             <el-descriptions-item :label="$t('profile.roles')">
-              <el-tag
-                v-for="role in adminInfo.roles"
-                :key="role.id"
-                style="margin-right: 5px;"
-              >
-                {{ role.name }}
-              </el-tag>
-              <span v-if="!adminInfo.roles || adminInfo.roles.length === 0">-</span>
+              <template v-if="adminInfo.roles && adminInfo.roles.length > 0">
+                <el-tag
+                  v-for="role in adminInfo.roles"
+                  :key="role.id"
+                  style="margin-right: 5px;"
+                >
+                  {{ role.name }}
+                </el-tag>
+              </template>
+              <span v-else>-</span>
             </el-descriptions-item>
           </el-descriptions>
         </el-card>
@@ -214,12 +216,61 @@ const passwordRules = {
 const loadProfile = async () => {
   try {
     const res = await getProfile()
+    console.log('Profile response:', res)
     if (res.data && res.data.admin) {
       const admin = res.data.admin
-      infoForm.nickname = admin.nickname || ''
-      infoForm.email = admin.email || ''
-      infoForm.phone = admin.phone || ''
-      userStore.setAdminInfo(admin)
+      console.log('Admin data:', admin)
+      console.log('Department:', admin.Department || admin.department)
+      console.log('Roles:', admin.Roles || admin.roles)
+      
+      // 处理部门数据
+      let department = null
+      if (admin.Department && (admin.Department.ID || admin.Department.id)) {
+        department = {
+          id: admin.Department.ID || admin.Department.id,
+          name: admin.Department.Name || admin.Department.name || '-'
+        }
+      } else if (admin.department && admin.department.id) {
+        department = {
+          id: admin.department.id,
+          name: admin.department.name || '-'
+        }
+      }
+      
+      // 处理角色数据（去重）
+      const rolesArray = admin.Roles || admin.roles || []
+      const roleMap = new Map()
+      rolesArray.forEach(role => {
+        const roleId = role.ID || role.id
+        if (roleId && !roleMap.has(roleId)) {
+          roleMap.set(roleId, {
+            id: roleId,
+            name: role.Name || role.name,
+            slug: role.Slug || role.slug
+          })
+        }
+      })
+      const uniqueRoles = Array.from(roleMap.values())
+      
+      // 转换数据格式（PascalCase -> snake_case）
+      const transformedAdmin = {
+        id: admin.ID || admin.id,
+        username: admin.Username || admin.username,
+        nickname: admin.Nickname || admin.nickname,
+        email: admin.Email || admin.email,
+        phone: admin.Phone || admin.phone,
+        avatar: admin.Avatar || admin.avatar,
+        department_id: admin.DepartmentID || admin.department_id,
+        department: department,
+        roles: uniqueRoles
+      }
+      
+      console.log('Transformed admin:', transformedAdmin)
+      
+      infoForm.nickname = transformedAdmin.nickname || ''
+      infoForm.email = transformedAdmin.email || ''
+      infoForm.phone = transformedAdmin.phone || ''
+      userStore.setAdminInfo(transformedAdmin)
     }
   } catch (error) {
     console.error('Load profile error:', error)
@@ -235,7 +286,51 @@ const handleUpdateInfo = async () => {
       try {
         const res = await updateProfile(infoForm)
         if (res.data && res.data.admin) {
-          userStore.setAdminInfo(res.data.admin)
+          const admin = res.data.admin
+          
+          // 处理部门数据
+          let department = null
+          if (admin.Department && (admin.Department.ID || admin.Department.id)) {
+            department = {
+              id: admin.Department.ID || admin.Department.id,
+              name: admin.Department.Name || admin.Department.name || '-'
+            }
+          } else if (admin.department && admin.department.id) {
+            department = {
+              id: admin.department.id,
+              name: admin.department.name || '-'
+            }
+          }
+          
+          // 处理角色数据（去重）
+          const rolesArray = admin.Roles || admin.roles || []
+          const roleMap = new Map()
+          rolesArray.forEach(role => {
+            const roleId = role.ID || role.id
+            if (roleId && !roleMap.has(roleId)) {
+              roleMap.set(roleId, {
+                id: roleId,
+                name: role.Name || role.name,
+                slug: role.Slug || role.slug
+              })
+            }
+          })
+          const uniqueRoles = Array.from(roleMap.values())
+          
+          // 转换数据格式（PascalCase -> snake_case）
+          const transformedAdmin = {
+            id: admin.ID || admin.id,
+            username: admin.Username || admin.username,
+            nickname: admin.Nickname || admin.nickname,
+            email: admin.Email || admin.email,
+            phone: admin.Phone || admin.phone,
+            avatar: admin.Avatar || admin.avatar,
+            department_id: admin.DepartmentID || admin.department_id,
+            department: department,
+            roles: uniqueRoles
+          }
+          
+          userStore.setAdminInfo(transformedAdmin)
           ElMessage.success(t('profile.update_success'))
         }
       } catch (error) {

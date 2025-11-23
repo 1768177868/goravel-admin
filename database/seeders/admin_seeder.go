@@ -285,10 +285,8 @@ func (s *AdminSeeder) Run() error {
 		{Name: "系统日志删除", Slug: "system_log.destroy", Method: "DELETE", Path: "/api/admin/system-logs/*", Description: "删除系统日志", Status: 1, Sort: 3, MenuID: systemLogMenu.ID},
 		{Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/api/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 4, MenuID: systemLogMenu.ID},
 		// 个人中心
-		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/api/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 1, MenuID: profileMenu.ID},
-		{Name: "Token列表", Slug: "token.index", Method: "GET", Path: "/api/admin/tokens", Description: "查看当前用户的token列表", Status: 1, Sort: 2, MenuID: profileMenu.ID},
-		{Name: "删除Token", Slug: "token.destroy", Method: "DELETE", Path: "/api/admin/tokens/*", Description: "删除指定的token", Status: 1, Sort: 3, MenuID: profileMenu.ID},
-		{Name: "删除所有Token", Slug: "token.destroy_all", Method: "DELETE", Path: "/api/admin/tokens", Description: "删除当前用户的所有token", Status: 1, Sort: 4, MenuID: profileMenu.ID},
+		{Name: "修改资料", Slug: "profile.update", Method: "PUT", Path: "/api/admin/profile", Description: "修改当前登录管理员资料", Status: 1, Sort: 1, MenuID: profileMenu.ID},
+		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/api/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 2, MenuID: profileMenu.ID},
 	}
 
 	for _, perm := range permissions {

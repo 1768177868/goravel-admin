@@ -73,17 +73,28 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	name := ctx.Request().Input("name")
 	slug := ctx.Request().Input("slug")
 	description := ctx.Request().Input("description")
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	statusInput := ctx.Request().Input("status")
+	var status uint8 = 1 // 默认启用
+	if statusInput != "" {
+		status = cast.ToUint8(statusInput)
+	}
+	facades.Log().Infof("Create role - statusInput: %s, status: %d", statusInput, status)
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 
 	if name == "" || slug == "" {
 		return response.Error(ctx, http.StatusBadRequest, "role_name_and_slug_required")
 	}
 
-	// 检查名称或标识是否已存在
-	var existRole models.Role
-	if err := facades.Orm().Query().Where("name", name).OrWhere("slug", slug).First(&existRole); err == nil {
-		return response.Error(ctx, http.StatusBadRequest, "role_name_or_slug_exists")
+	// 检查名称是否已存在
+	nameCount, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Count()
+	if err == nil && nameCount > 0 {
+		return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
+	}
+	
+	// 检查标识是否已存在
+	slugCount, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Count()
+	if err == nil && slugCount > 0 {
+		return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 	}
 
 	role := models.Role{
@@ -134,17 +145,17 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	sort := ctx.Request().Input("sort", "")
 
 	if name != "" {
-		// 检查名称是否已被其他角色使用
-		var existRole models.Role
-		if err := facades.Orm().Query().Where("name", name).Where("id <> ?", id).First(&existRole); err == nil {
+		// 检查名称是否已被其他角色使用（排除当前角色）
+		count, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Where("id != ?", id).Count()
+		if err == nil && count > 0 {
 			return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
 		}
 		role.Name = name
 	}
 	if slug != "" {
-		// 检查标识是否已被其他角色使用
-		var existRole models.Role
-		if err := facades.Orm().Query().Where("slug", slug).Where("id <> ?", id).First(&existRole); err == nil {
+		// 检查标识是否已被其他角色使用（排除当前角色）
+		count, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Where("id != ?", id).Count()
+		if err == nil && count > 0 {
 			return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 		}
 		role.Slug = slug

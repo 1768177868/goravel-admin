@@ -89,9 +89,26 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 
 // UpdateProfile 更新个人信息
 func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
-	var admin models.Admin
-	if err := facades.Auth(ctx).Guard("admin").User(&admin); err != nil {
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	// 尝试值类型
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		// 尝试指针类型
+		admin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	// 重新查询admin以确保获取最新数据
+	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
 	nickname := ctx.Request().Input("nickname")
@@ -116,8 +133,15 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
-	// 重新加载关联数据
-	facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&admin)
+	// 重新加载关联数据（确保部门和角色被正确加载）
+	var adminWithRelations models.Admin
+	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
+		facades.Log().Errorf("UpdateProfile: failed to load admin with relations, error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+	}
+	admin = adminWithRelations
+
+	facades.Log().Debugf("UpdateProfile: admin ID: %d, Department: %+v, Roles count: %d", admin.ID, admin.Department, len(admin.Roles))
 
 	return response.Success(ctx, "update_success", http.Json{
 		"admin": http.Json{

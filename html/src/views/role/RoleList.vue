@@ -53,8 +53,8 @@
         </vxe-column>
         <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
-            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
-              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+            <el-tag :type="Number(row.status) === 1 ? 'success' : 'danger'">
+              {{ Number(row.status) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
@@ -142,7 +142,7 @@
           </div>
         </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
-          <el-radio-group v-model="formData.status">
+          <el-radio-group v-model.number="formData.status">
             <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
             <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
@@ -230,7 +230,18 @@ const loadData = async () => {
     console.log('Role list response:', res)
     
     if (res.data) {
-      tableData.value = res.data.list || []
+      const roles = res.data.list || []
+      // 转换数据格式，确保状态值正确
+      tableData.value = roles.map(role => ({
+        ...role,
+        id: role.ID || role.id,
+        name: role.Name || role.name,
+        slug: role.Slug || role.slug,
+        description: role.Description || role.description,
+        status: role.Status !== undefined ? Number(role.Status) : (role.status !== undefined ? Number(role.status) : 1),
+        sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0),
+        created_at: role.CreatedAt || role.created_at
+      }))
       pagination.total = res.data.total || 0
     }
   } catch (error) {
@@ -619,6 +630,12 @@ const handleAdd = () => {
     sort: 0
   })
   dialogVisible.value = true
+  // 等待树组件渲染后清空选中状态
+  setTimeout(() => {
+    if (menuPermissionTreeRef.value) {
+      menuPermissionTreeRef.value.setCheckedKeys([])
+    }
+  }, 100)
 }
 
 const handleEdit = async (row) => {
@@ -637,7 +654,7 @@ const handleEdit = async (row) => {
         description: role.Description || role.description || '',
         permission_ids: rolePermissions ? rolePermissions.map(p => p.id || p.ID).filter(id => id) : [],
         menu_ids: roleMenus ? roleMenus.map(m => m.id || m.ID).filter(id => id) : [],
-        status: role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1),
+        status: Number(role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1)),
         sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
       })
       dialogVisible.value = true
@@ -682,16 +699,31 @@ const handleSubmit = async () => {
         }
         collectIds(menuPermissionTree.value)
         
+        // 确保状态值正确：0 表示禁用，1 表示启用
+        const statusValue = formData.status !== undefined && formData.status !== null 
+          ? Number(formData.status) 
+          : 1 // 默认启用
+        
+        console.log('Form data status:', formData.status, 'Status value:', statusValue)
+        
         const data = {
-          ...formData,
+          name: formData.name,
+          slug: formData.slug,
+          description: formData.description || '',
+          status: statusValue,
+          sort: Number(formData.sort) || 0,
           permission_ids: permissionIds,
           menu_ids: menuIds
         }
+        
+        console.log('Submit data:', JSON.stringify(data, null, 2))
+        
         if (formData.id) {
           await updateRole(formData.id, data)
           ElMessage.success(t('role.update_success'))
         } else {
-          await createRole(data)
+          const res = await createRole(data)
+          console.log('Create role response:', res)
           ElMessage.success(t('role.create_success'))
         }
         dialogVisible.value = false
@@ -706,6 +738,10 @@ const handleSubmit = async () => {
 }
 
 const handleDialogClose = () => {
+  // 清空树形选择的选中状态
+  if (menuPermissionTreeRef.value) {
+    menuPermissionTreeRef.value.setCheckedKeys([])
+  }
   formRef.value?.resetFields()
 }
 
