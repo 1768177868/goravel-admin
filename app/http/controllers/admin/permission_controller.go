@@ -81,7 +81,11 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	method := ctx.Request().Input("method")
 	path := ctx.Request().Input("path")
 	description := ctx.Request().Input("description")
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	statusInput := ctx.Request().Input("status")
+	var status uint8 = 1 // 默认启用
+	if statusInput != "" {
+		status = cast.ToUint8(statusInput)
+	}
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	menuID := cast.ToUint(ctx.Request().Input("menu_id", "0"))
 
@@ -107,6 +111,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Create(&permission); err != nil {
+		facades.Log().Errorf("Create permission error: %v, permission data: %+v", err, permission)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

@@ -65,7 +65,11 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	label := ctx.Request().Input("label")
 	value := ctx.Request().Input("value")
 	description := ctx.Request().Input("description")
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	statusInput := ctx.Request().Input("status")
+	var status uint8 = 1 // 默认启用
+	if statusInput != "" {
+		status = cast.ToUint8(statusInput)
+	}
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	remark := ctx.Request().Input("remark")
 
@@ -84,6 +88,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Create(&dictionary); err != nil {
+		facades.Log().Errorf("Create dictionary error: %v, dictionary data: %+v", err, dictionary)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

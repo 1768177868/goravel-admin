@@ -11,14 +11,14 @@ import (
 )
 
 type DepartmentController struct {
-	treeService      services.TreeService
+	treeService       services.TreeService
 	departmentService services.DepartmentService
 }
 
 func NewDepartmentController() *DepartmentController {
 	treeService := services.NewTreeServiceImpl()
 	return &DepartmentController{
-		treeService:      treeService,
+		treeService:       treeService,
 		departmentService: services.NewDepartmentServiceImpl(treeService),
 	}
 }
@@ -27,11 +27,11 @@ func NewDepartmentController() *DepartmentController {
 func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
-	
+
 	// 如果有搜索条件，返回扁平列表；否则返回树形结构
 	if name != "" || status != "" {
 		query := facades.Orm().Query().Model(&models.Department{})
-		
+
 		if name != "" {
 			// 使用模型字段名，GORM 会自动转换为数据库字段名
 			// 或者直接使用数据库字段名（根据迁移文件，字段名是 name）
@@ -40,17 +40,17 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 		if status != "" {
 			query = query.Where("status", status)
 		}
-		
+
 		var departments []models.Department
 		if err := query.Order("sort asc, id asc").Get(&departments); err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 		}
-		
+
 		return response.Success(ctx, "get_success", http.Json{
 			"list": departments,
 		})
 	}
-	
+
 	// 无搜索条件时返回树形结构
 	departments, err := r.treeService.BuildDepartmentTree(0)
 	if err != nil {
@@ -83,7 +83,11 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	leader := ctx.Request().Input("leader")
 	phone := ctx.Request().Input("phone")
 	email := ctx.Request().Input("email")
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	statusInput := ctx.Request().Input("status")
+	var status uint8 = 1 // 默认启用
+	if statusInput != "" {
+		status = cast.ToUint8(statusInput)
+	}
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	remark := ctx.Request().Input("remark")
 
@@ -104,6 +108,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Create(&department); err != nil {
+		facades.Log().Errorf("Create department error: %v, department data: %+v", err, department)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

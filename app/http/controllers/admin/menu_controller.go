@@ -54,7 +54,11 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	component := ctx.Request().Input("component")
 	permission := ctx.Request().Input("permission")
 	menuType := cast.ToUint8(ctx.Request().Input("type", "1"))
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	statusInput := ctx.Request().Input("status")
+	var status uint8 = 1 // 默认启用
+	if statusInput != "" {
+		status = cast.ToUint8(statusInput)
+	}
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	isHidden := cast.ToUint8(ctx.Request().Input("is_hidden", "0"))
 
@@ -76,6 +80,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Create(&menu); err != nil {
+		facades.Log().Errorf("Create menu error: %v, menu data: %+v", err, menu)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

@@ -91,23 +91,40 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	email := ctx.Request().Input("email")
 	phone := ctx.Request().Input("phone")
 	departmentID := cast.ToUint(ctx.Request().Input("department_id", "0"))
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
+	// 处理状态字段：需要正确处理 0 值
+	// 使用 All() 获取所有输入，然后检查 status 字段是否存在
+	allInputs := ctx.Request().All()
+	var status uint8 = 1 // 默认启用
+	if statusVal, exists := allInputs["status"]; exists {
+		// 如果字段存在，转换它（包括 0 值）
+		// 需要特别处理：如果值是 0，cast.ToUint8 应该返回 0
+		if statusVal == nil {
+			// 如果值是 nil，使用默认值
+			status = 1
+		} else {
+			status = cast.ToUint8(statusVal)
+		}
+		facades.Log().Infof("Create admin - status from allInputs: %v (type: %T), converted: %d", statusVal, statusVal, status)
+	} else {
+		facades.Log().Infof("Create admin - status field not found in allInputs, using default: %d", status)
+	}
 
 	if username == "" || password == "" {
 		return response.Error(ctx, http.StatusBadRequest, "username_and_password_required")
 	}
 
 	// 检查用户名是否已存在（排除软删除的记录）
-	// GORM 默认会排除软删除的记录，使用 Unscoped() 可以查询包括软删除的记录
-	// 这里我们只查询未删除的记录，所以不需要 Unscoped()
+	// GORM 默认会排除软删除的记录，使用 Count() 方法更可靠
 	count, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Count()
 	if err != nil {
 		// 查询出错，记录日志但不阻止创建（可能是数据库问题）
 		facades.Log().Errorf("Check username exists error: %v", err)
 	} else if count > 0 {
-		// 如果找到了记录，说明用户名已存在
+		// 如果找到了记录，说明用户名已存在且未被软删除
+		facades.Log().Infof("Username '%s' already exists (count: %d)", username, count)
 		return response.Error(ctx, http.StatusBadRequest, "username_exists")
 	}
+	// 如果没有找到记录（包括软删除的记录），用户名可用，继续创建
 
 	// 加密密码
 	hashedPassword, err := facades.Hash().Make(password)
@@ -126,6 +143,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Create(&admin); err != nil {
+		facades.Log().Errorf("Create admin error: %v, admin data: %+v", err, admin)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
