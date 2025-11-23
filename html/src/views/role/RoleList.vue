@@ -119,12 +119,15 @@
             >
               <template #default="{ node, data }">
                 <span class="permission-node">
-                  <span class="permission-name">{{ data.name }}</span>
+                  <span class="permission-name">{{ data.displayDesc || data.name }}</span>
                   <span v-if="data.method" class="permission-method" :class="`method-${data.method.toLowerCase()}`">
                     {{ data.method }}
                   </span>
-                  <span v-if="data.path" class="permission-path">{{ data.path }}</span>
-                  <span v-if="data.description" class="permission-desc">{{ data.description }}</span>
+                  <el-tooltip v-if="data.path" :content="data.path" placement="top">
+                    <el-icon class="permission-path-icon">
+                      <InfoFilled />
+                    </el-icon>
+                  </el-tooltip>
                 </span>
               </template>
             </el-tree>
@@ -179,6 +182,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
@@ -253,12 +257,60 @@ const loadData = async () => {
   }
 }
 
-// 转换权限数据为树形结构（按路径分组）
+// 从路径中提取友好的模块名称
+const getModuleNameFromPath = (path) => {
+  if (!path) return t('role.other_module')
+  
+  // 移除查询参数和通配符
+  let cleanPath = path.split('?')[0].replace(/\*/g, '').replace(/\/$/, '')
+  
+  // 处理路径中的ID参数（如 /api/admin/admins/123 -> /api/admin/admins）
+  cleanPath = cleanPath.replace(/\/\d+(\/|$)/g, '/')
+  cleanPath = cleanPath.replace(/\/$/, '')
+  
+  // 路径到模块名称的映射（支持中英文）
+  const pathMap = {
+    '/api/admin/admins': t('role.module_admin'),
+    '/api/admin/roles': t('role.module_role'),
+    '/api/admin/permissions': t('role.module_permission'),
+    '/api/admin/menus': t('role.module_menu'),
+    '/api/admin/departments': t('role.module_department'),
+    '/api/admin/dictionaries': t('role.module_dictionary'),
+    '/api/admin/operation-logs': t('role.module_operation_log'),
+    '/api/admin/login-logs': t('role.module_login_log'),
+    '/api/admin/system-logs': t('role.module_system_log'),
+    '/api/admin/auth': t('role.module_auth'),
+    '/api/admin/profile': t('role.module_profile')
+  }
+  
+  // 精确匹配
+  if (pathMap[cleanPath]) {
+    return pathMap[cleanPath]
+  }
+  
+  // 模糊匹配：从路径中提取最后一个部分
+  const parts = cleanPath.split('/').filter(p => p)
+  if (parts.length >= 3) {
+    const module = parts[parts.length - 1]
+    // 将复数形式转换为单数
+    const singular = module.replace(/s$/, '').replace(/-/g, '_')
+    // 尝试从翻译中获取
+    const translationKey = `role.module_${singular}`
+    const translated = t(translationKey)
+    if (translated !== translationKey) {
+      return translated
+    }
+  }
+  
+  return t('role.other_module')
+}
+
+// 转换权限数据为树形结构（按模块分组）
 const transformPermissionToTree = (permissions) => {
   if (!permissions || !Array.isArray(permissions)) return []
   
-  // 按路径分组
-  const pathGroups = {}
+  // 按模块分组
+  const moduleGroups = {}
   permissions.forEach(perm => {
     const path = perm.Path || perm.path || '/'
     const method = perm.Method || perm.method || ''
@@ -267,33 +319,40 @@ const transformPermissionToTree = (permissions) => {
     const description = perm.Description || perm.description || ''
     const id = perm.id || perm.ID
     
-    // 提取路径前缀作为分组（例如：/api/admin/users -> /api/admin/users）
-    const pathKey = path.split('?')[0] // 移除查询参数
+    // 获取模块名称
+    const moduleName = getModuleNameFromPath(path)
     
-    if (!pathGroups[pathKey]) {
-      pathGroups[pathKey] = {
-        id: `path_${pathKey}`,
-        name: pathKey,
-        path: pathKey,
-        label: pathKey,
+    if (!moduleGroups[moduleName]) {
+      moduleGroups[moduleName] = {
+        id: `module_${moduleName}`,
+        name: moduleName,
+        label: moduleName,
         children: []
       }
     }
     
-    pathGroups[pathKey].children.push({
+    // 构建友好的显示标签
+    let displayLabel = name
+    if (description) {
+      displayLabel = description
+    }
+    
+    moduleGroups[moduleName].children.push({
       id: id,
       name: name,
       slug: slug,
       method: method,
       path: path,
       description: description,
-      label: `${method} ${name}${description ? ` - ${description}` : ''}`
+      label: displayLabel,
+      displayName: name,
+      displayDesc: description || name
     })
   })
   
-  // 转换为数组并按路径排序
-  const tree = Object.values(pathGroups).sort((a, b) => {
-    return a.path.localeCompare(b.path)
+  // 转换为数组并按模块名称排序
+  const tree = Object.values(moduleGroups).sort((a, b) => {
+    return a.name.localeCompare(b.name)
   })
   
   // 对每个分组下的权限按方法排序
@@ -656,15 +715,15 @@ onMounted(() => {
   background-color: #f56c6c;
 }
 
-.permission-path {
+.permission-path-icon {
   color: #909399;
-  font-size: 12px;
-  font-family: monospace;
+  font-size: 14px;
+  cursor: help;
+  margin-left: 4px;
 }
 
-.permission-desc {
-  color: #909399;
-  font-size: 12px;
+.permission-path-icon:hover {
+  color: #409eff;
 }
 
 .menu-node {
