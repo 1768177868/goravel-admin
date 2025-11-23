@@ -219,14 +219,15 @@ const handleEdit = async (row) => {
     const res = await getMenuDetail(row.id)
     if (res.data && res.data.menu) {
       const menu = res.data.menu
+      // 后端返回的是 PascalCase 字段，需要正确映射
       Object.assign(formData, {
         id: menu.id,
-        parent_id: menu.parent_id || 0,
-        name: menu.name,
-        path: menu.path,
-        icon: menu.icon || '',
-        status: menu.status,
-        sort: menu.sort || 0
+        parent_id: menu.ParentID !== undefined ? menu.ParentID : (menu.parent_id || 0),
+        name: menu.Title || menu.name || '',
+        path: menu.Path || menu.path || '',
+        icon: menu.Icon || menu.icon || '',
+        status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
+        sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0)
       })
       dialogVisible.value = true
     }
@@ -242,10 +243,16 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
-        const data = { ...formData }
-        if (data.parent_id === 0) {
-          data.parent_id = null
+        // 转换前端字段名为后端期望的字段名
+        const data = {
+          title: formData.name,
+          path: formData.path,
+          icon: formData.icon,
+          status: formData.status,
+          sort: formData.sort,
+          parent_id: formData.parent_id === 0 ? null : formData.parent_id
         }
+        
         if (formData.id) {
           await updateMenu(formData.id, data)
           ElMessage.success(t('menu_management.update_success'))

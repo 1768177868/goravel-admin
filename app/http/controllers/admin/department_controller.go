@@ -33,7 +33,9 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 		query := facades.Orm().Query().Model(&models.Department{})
 		
 		if name != "" {
-			query = query.Where("name", "like", "%"+name+"%")
+			// 使用模型字段名，GORM 会自动转换为数据库字段名
+			// 或者直接使用数据库字段名（根据迁移文件，字段名是 name）
+			query = query.Where("name LIKE ?", "%"+name+"%")
 		}
 		if status != "" {
 			query = query.Where("status", status)

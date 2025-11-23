@@ -53,13 +53,25 @@
         height="600"
       >
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
-        <vxe-column field="name" :title="$t('department.name')" tree-node />
-        <vxe-column field="description" :title="$t('common.description')" />
-        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="name" :title="$t('department.name')" tree-node>
+          <template #default="{ row }">
+            {{ row.Name || row.name || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="remark" :title="$t('common.description')">
+          <template #default="{ row }">
+            {{ row.Remark || row.remark || row.description || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+          <template #default="{ row }">
+            {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
+          </template>
+        </vxe-column>
         <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
+            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
+              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
@@ -165,8 +177,12 @@ const departmentOptions = computed(() => {
   const flatten = (departments, parentId = 0) => {
     const result = []
     departments.forEach(dept => {
-      if (dept.parent_id === parentId) {
-        result.push(dept)
+      const deptParentId = dept.parent_id !== undefined ? dept.parent_id : (dept.ParentID !== undefined ? dept.ParentID : 0)
+      if (deptParentId === parentId) {
+        result.push({
+          id: dept.id,
+          name: dept.name || dept.Name || ''
+        })
         const children = flatten(departments, dept.id)
         result.push(...children)
       }
@@ -176,6 +192,33 @@ const departmentOptions = computed(() => {
   return flatten(tableData.value)
 })
 
+// 转换后端数据格式为前端格式
+const transformDepartmentData = (dept) => {
+  const children = dept.Children || dept.children
+  let transformedChildren = []
+  
+  if (children && Array.isArray(children) && children.length > 0) {
+    transformedChildren = children.map(child => transformDepartmentData(child))
+  }
+  
+  const result = {
+    id: dept.id,
+    parent_id: dept.ParentID !== undefined ? dept.ParentID : (dept.parent_id !== undefined ? dept.parent_id : 0),
+    name: dept.Name || dept.name || '',
+    remark: dept.Remark || dept.remark || dept.description || '',
+    description: dept.Remark || dept.remark || dept.description || '', // 兼容字段
+    status: dept.Status !== undefined ? dept.Status : (dept.status !== undefined ? dept.status : 1),
+    sort: dept.Sort !== undefined ? dept.Sort : (dept.sort !== undefined ? dept.sort : 0),
+    created_at: dept.created_at || dept.CreatedAt || ''
+  }
+  
+  if (transformedChildren.length > 0) {
+    result.children = transformedChildren
+  }
+  
+  return result
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -183,15 +226,28 @@ const loadData = async () => {
     // 检查是否有搜索条件
     if (searchForm.name || searchForm.status) {
       hasSearch.value = true
-      if (searchForm.name) params.name = searchForm.name
-      if (searchForm.status) params.status = searchForm.status
+      if (searchForm.name && searchForm.name.trim()) {
+        params.name = searchForm.name.trim()
+      }
+      if (searchForm.status) {
+        params.status = searchForm.status
+      }
     } else {
       hasSearch.value = false
     }
     
+    console.log('Department search params:', params)
     const res = await getDepartmentList(params)
+    console.log('Department list response:', res)
+    
     if (res.data && res.data.list) {
-      tableData.value = res.data.list
+      // 转换数据格式，支持 PascalCase 和 snake_case
+      const transformed = res.data.list.map(dept => transformDepartmentData(dept))
+      console.log('Transformed department data:', transformed)
+      tableData.value = transformed
+    } else {
+      console.warn('No department data in response:', res)
+      tableData.value = []
     }
   } catch (error) {
     console.error('Load department list error:', error)
@@ -228,13 +284,14 @@ const handleEdit = async (row) => {
     const res = await getDepartmentDetail(row.id)
     if (res.data && res.data.department) {
       const dept = res.data.department
+      // 后端返回的是 PascalCase 字段，需要正确映射
       Object.assign(formData, {
         id: dept.id,
-        parent_id: dept.parent_id || 0,
-        name: dept.name,
-        description: dept.description || '',
-        status: dept.status,
-        sort: dept.sort || 0
+        parent_id: dept.ParentID !== undefined ? dept.ParentID : (dept.parent_id || 0),
+        name: dept.Name || dept.name || '',
+        description: dept.Remark || dept.remark || dept.description || '',
+        status: dept.Status !== undefined ? dept.Status : (dept.status !== undefined ? dept.status : 1),
+        sort: dept.Sort !== undefined ? dept.Sort : (dept.sort !== undefined ? dept.sort : 0)
       })
       dialogVisible.value = true
     }
@@ -250,10 +307,15 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
-        const data = { ...formData }
-        if (data.parent_id === 0) {
-          data.parent_id = null
+        // 转换前端字段名为后端期望的字段名
+        const data = {
+          name: formData.name,
+          remark: formData.description, // description 映射到 remark
+          status: formData.status,
+          sort: formData.sort,
+          parent_id: formData.parent_id === 0 ? null : formData.parent_id
         }
+        
         if (formData.id) {
           await updateDepartment(formData.id, data)
           ElMessage.success(t('department.update_success'))
