@@ -20,7 +20,8 @@
     "created_at": "创建时间",
     "updated_at": "更新时间",
     "sort": "排序",
-    "description": "描述"
+    "description": "描述",
+    "password": "密码"
   },
   "login": {
     "title": "后台管理系统",
@@ -43,7 +44,8 @@
     "log_management": "日志管理",
     "operation_log": "操作日志",
     "login_log": "登录日志",
-    "system_log": "系统日志"
+    "system_log": "系统日志",
+    "profile": "个人中心"
   },
   "admin": {
     "title": "管理员列表",
@@ -76,7 +78,10 @@
     "menus": "菜单",
     "name_required": "请输入角色名称",
     "slug_required": "请输入标识",
-    "delete_confirm": "确定要删除该角色吗？"
+    "delete_confirm": "确定要删除该角色吗？",
+    "delete_success": "删除成功",
+    "create_success": "创建成功",
+    "update_success": "更新成功"
   },
   "permission": {
     "title": "权限列表",
@@ -90,7 +95,10 @@
     "slug_required": "请输入标识",
     "method_required": "请选择请求方法",
     "path_required": "请输入路径",
-    "delete_confirm": "确定要删除该权限吗？"
+    "delete_confirm": "确定要删除该权限吗？",
+    "delete_success": "删除成功",
+    "create_success": "创建成功",
+    "update_success": "更新成功"
   },
   "menu_management": {
     "title": "菜单列表",
@@ -103,7 +111,10 @@
     "icon": "图标",
     "name_required": "请输入菜单名称",
     "path_required": "请输入路径",
-    "delete_confirm": "确定要删除该菜单吗？"
+    "delete_confirm": "确定要删除该菜单吗？",
+    "delete_success": "删除成功",
+    "create_success": "创建成功",
+    "update_success": "更新成功"
   },
   "department": {
     "title": "部门列表",
@@ -113,7 +124,10 @@
     "top_department": "顶级部门",
     "name": "部门名称",
     "name_required": "请输入部门名称",
-    "delete_confirm": "确定要删除该部门吗？"
+    "delete_confirm": "确定要删除该部门吗？",
+    "delete_success": "删除成功",
+    "create_success": "创建成功",
+    "update_success": "更新成功"
   },
   "dictionary": {
     "title": "字典列表",
@@ -125,7 +139,10 @@
     "type_required": "请输入类型",
     "label_required": "请输入标签",
     "value_required": "请输入值",
-    "delete_confirm": "确定要删除该字典吗？"
+    "delete_confirm": "确定要删除该字典吗？",
+    "delete_success": "删除成功",
+    "create_success": "创建成功",
+    "update_success": "更新成功"
   },
   "log": {
     "operation_log": "操作日志",
@@ -135,6 +152,7 @@
     "clean_confirm": "确定要清空所有日志吗？此操作不可恢复！",
     "clean_success": "清空成功",
     "delete_confirm": "确定要删除该日志吗？",
+    "delete_success": "删除成功",
     "detail": "日志详情",
     "admin": "管理员",
     "method": "请求方法",
@@ -145,7 +163,12 @@
     "message": "消息",
     "context": "上下文",
     "level": "级别",
-    "time": "时间"
+    "time": "时间",
+    "login_time": "登录时间",
+    "operation_time": "操作时间",
+    "request_params": "请求参数",
+    "success": "成功",
+    "failed": "失败"
   },
   "dashboard": {
     "total_users": "总用户数",
@@ -159,7 +182,36 @@
     "logout": "退出登录",
     "logout_confirm": "确定要退出登录吗？",
     "system_management": "管理系统",
-    "fullscreen": "全屏"
+    "fullscreen": "全屏",
+    "profile": "个人中心"
+  },
+  "profile": {
+    "basic_info": "基本信息",
+    "edit_info": "编辑信息",
+    "change_password": "修改密码",
+    "change_avatar": "更换头像",
+    "username": "用户名",
+    "nickname": "昵称",
+    "email": "邮箱",
+    "phone": "手机号",
+    "department": "部门",
+    "roles": "角色",
+    "old_password": "旧密码",
+    "new_password": "新密码",
+    "confirm_password": "确认密码",
+    "old_password_required": "请输入旧密码",
+    "new_password_required": "请输入新密码",
+    "confirm_password_required": "请确认新密码",
+    "password_not_match": "两次输入的密码不一致",
+    "password_length_error": "密码长度至少6位",
+    "email_invalid": "请输入有效的邮箱地址",
+    "phone_invalid": "请输入有效的手机号",
+    "update_success": "更新成功",
+    "password_update_success": "密码修改成功",
+    "avatar_update_success": "头像更新成功",
+    "avatar_format_error": "头像只能是图片格式",
+    "avatar_size_error": "头像大小不能超过 2MB",
+    "please_select_avatar": "请选择头像"
   },
   "tabs": {
     "refresh": "刷新",
@@ -177,6 +229,50 @@
     "small": "紧凑",
     "default": "默认",
     "large": "宽松"
+  },
+  "table": {
+    "seq": "序号",
+    "id": "ID",
+    "operation": "操作",
+    "status": "状态",
+    "created_at": "创建时间",
+    "updated_at": "更新时间",
+    "username": "用户名",
+    "nickname": "昵称",
+    "email": "邮箱",
+    "phone": "手机号",
+    "department": "部门",
+    "roles": "角色",
+    "name": "名称",
+    "slug": "标识",
+    "method": "请求方法",
+    "path": "路径",
+    "icon": "图标",
+    "parent": "父级",
+    "admin": "管理员",
+    "ip": "IP地址",
+    "user_agent": "用户代理",
+    "message": "消息",
+    "context": "上下文",
+    "level": "级别",
+    "time": "时间",
+    "login_time": "登录时间",
+    "operation_time": "操作时间",
+    "status_code": "状态码",
+    "request_params": "请求参数"
+  },
+  "form": {
+    "please_select": "请选择",
+    "please_enter": "请输入",
+    "select_method": "请选择请求方法",
+    "select_parent": "请选择父",
+    "select_department": "请选择部门",
+    "select_role": "请选择角色",
+    "select_status": "请选择状态",
+    "enter_username": "请输入用户名",
+    "top_level": "顶级",
+    "tip": "提示",
+    "warning": "警告"
   }
 }
 

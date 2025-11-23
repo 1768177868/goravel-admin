@@ -50,12 +50,17 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async logout() {
+    async logout(skipApiCall = false) {
       try {
-        await logout()
+        // 如果有 token 且不需要跳过 API 调用，尝试调用后端登出接口
+        if (this.token && !skipApiCall) {
+          await logout()
+        }
       } catch (error) {
+        // 即使登出接口失败，也要清除本地状态
         console.error('Logout error:', error)
       } finally {
+        // 清除所有状态
         this.token = ''
         this.adminInfo = null
         this.permissions = []

@@ -144,13 +144,37 @@ const getTabTitle = (tab) => {
   return tab.title || tab.name
 }
 
-const handleRemove = (path) => {
+const handleRemove = async (path) => {
+  const isCurrentTab = tabsStore.activeTab === path
+  const currentIndex = tabsStore.tabs.findIndex(t => t.path === path)
+  
+  // 先移除标签
   tabsStore.removeTab(path)
-  if (tabsStore.activeTab === path) {
+  
+  // 如果关闭的是当前激活的标签，需要跳转到其他标签
+  if (isCurrentTab) {
     if (tabsStore.tabs.length > 0) {
-      router.push(tabsStore.tabs[tabsStore.tabs.length - 1].path)
+      // 优先跳转到右侧的标签，如果没有则跳转到左侧的标签
+      let nextTab
+      if (currentIndex < tabsStore.tabs.length) {
+        // 右侧还有标签，跳转到右侧第一个
+        nextTab = tabsStore.tabs[currentIndex]
+      } else if (currentIndex > 0) {
+        // 左侧还有标签，跳转到左侧最后一个
+        nextTab = tabsStore.tabs[currentIndex - 1]
+      } else {
+        // 没有其他标签了，跳转到最后一个
+        nextTab = tabsStore.tabs[tabsStore.tabs.length - 1]
+      }
+      
+      if (nextTab) {
+        tabsStore.setActiveTab(nextTab.path)
+        await router.push(nextTab.path)
+      }
     } else {
-      router.push('/dashboard')
+      // 如果没有标签了，跳转到首页并添加标签
+      tabsStore.setActiveTab('/dashboard')
+      await router.push('/dashboard')
     }
   }
 }
@@ -161,17 +185,30 @@ const handleClick = (tab) => {
   router.push(path)
 }
 
-const handleRefresh = (path) => {
+const handleRefresh = async (path) => {
+  // 更新标签的刷新 key，触发组件重新渲染
   tabsStore.refreshTab(path)
-  // 触发路由刷新
-  router.replace({
-    path: path + '?refresh=' + Date.now()
-  }).then(() => {
-    router.replace({ path })
-  })
+  
+  // 如果刷新的是当前页面，重新加载路由
+  if (tabsStore.activeTab === path) {
+    // 先跳转到一个临时路由，再跳转回来，触发组件重新加载
+    const currentQuery = router.currentRoute.value.query
+    await router.replace({
+      path: path,
+      query: { ...currentQuery, _refresh: Date.now() }
+    })
+    // 移除临时参数
+    setTimeout(() => {
+      router.replace({ path, query: currentQuery })
+    }, 50)
+  } else {
+    // 如果刷新的是其他标签，先跳转过去
+    await router.push(path)
+    tabsStore.setActiveTab(path)
+  }
 }
 
-const handleContextMenu = (command) => {
+const handleContextMenu = async (command) => {
   const { action, path } = command
   contextMenuVisible.value = false
 
@@ -180,23 +217,36 @@ const handleContextMenu = (command) => {
       handleRefresh(path)
       break
     case 'close':
-      handleRemove(path)
+      await handleRemove(path)
       break
     case 'closeOther':
+      const isCurrentTab = tabsStore.activeTab === path
       tabsStore.removeOtherTabs(path)
-      router.push(path)
+      if (isCurrentTab || tabsStore.activeTab !== path) {
+        await router.push(path)
+        tabsStore.setActiveTab(path)
+      }
       break
     case 'closeLeft':
+      const isCurrentTabLeft = tabsStore.activeTab === path
       tabsStore.removeLeftTabs(path)
-      router.push(path)
+      if (isCurrentTabLeft || tabsStore.activeTab !== path) {
+        await router.push(path)
+        tabsStore.setActiveTab(path)
+      }
       break
     case 'closeRight':
+      const isCurrentTabRight = tabsStore.activeTab === path
       tabsStore.removeRightTabs(path)
-      router.push(path)
+      if (isCurrentTabRight || tabsStore.activeTab !== path) {
+        await router.push(path)
+        tabsStore.setActiveTab(path)
+      }
       break
     case 'closeAll':
       tabsStore.removeAllTabs()
-      router.push('/dashboard')
+      await router.push('/dashboard')
+      tabsStore.setActiveTab('/dashboard')
       break
   }
 }

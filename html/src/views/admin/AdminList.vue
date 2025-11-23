@@ -3,29 +3,29 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>管理员列表</span>
+          <span>{{ $t('admin.title') }}</span>
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
-            添加管理员
+            {{ $t('admin.add_admin') }}
           </el-button>
         </div>
       </template>
 
       <!-- 搜索表单 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="用户名">
-          <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable />
+        <el-form-item :label="$t('table.username')">
+          <el-input v-model="searchForm.username" :placeholder="$t('form.enter_username')" clearable />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="启用" value="1" />
-            <el-option label="禁用" value="0" />
+        <el-form-item :label="$t('table.status')">
+          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable>
+            <el-option :label="$t('common.enabled')" value="1" />
+            <el-option :label="$t('common.disabled')" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleExport">导出</el-button>
+          <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
+          <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
+          <el-button type="success" @click="handleExport">{{ $t('common.export') }}</el-button>
         </el-form-item>
       </el-form>
 
@@ -39,37 +39,37 @@
         height="600"
         @page-change="handlePageChange"
       >
-        <vxe-column type="seq" width="60" title="序号" />
-        <vxe-column field="id" title="ID" width="80" />
-        <vxe-column field="username" title="用户名" />
-        <vxe-column field="nickname" title="昵称" />
-        <vxe-column field="email" title="邮箱" />
-        <vxe-column field="phone" title="手机号" />
-        <vxe-column field="status" title="状态" width="80">
+        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
+        <vxe-column field="id" :title="$t('table.id')" width="80" />
+        <vxe-column field="username" :title="$t('table.username')" />
+        <vxe-column field="nickname" :title="$t('table.nickname')" />
+        <vxe-column field="email" :title="$t('table.email')" />
+        <vxe-column field="phone" :title="$t('table.phone')" />
+        <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
+              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="department" title="部门">
+        <vxe-column field="department" :title="$t('table.department')">
           <template #default="{ row }">
             {{ row.department?.name || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="roles" title="角色">
+        <vxe-column field="roles" :title="$t('table.roles')">
           <template #default="{ row }">
             <el-tag v-for="role in row.roles" :key="role.id" style="margin-right: 5px;">
               {{ role.name }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="created_at" title="创建时间" />
-        <vxe-column title="操作" width="200" fixed="right">
+        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column :title="$t('table.operation')" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="warning" link @click="handleResetPassword(row)">重置密码</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+            <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -97,23 +97,23 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item label="用户名" prop="username">
+        <el-form-item :label="$t('table.username')" prop="username">
           <el-input v-model="formData.username" :disabled="!!formData.id" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!formData.id">
+        <el-form-item :label="$t('common.password')" prop="password" v-if="!formData.id">
           <el-input v-model="formData.password" type="password" />
         </el-form-item>
-        <el-form-item label="昵称" prop="nickname">
+        <el-form-item :label="$t('table.nickname')" prop="nickname">
           <el-input v-model="formData.nickname" />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
+        <el-form-item :label="$t('table.email')" prop="email">
           <el-input v-model="formData.email" />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
+        <el-form-item :label="$t('table.phone')" prop="phone">
           <el-input v-model="formData.phone" />
         </el-form-item>
-        <el-form-item label="部门" prop="department_id">
-          <el-select v-model="formData.department_id" placeholder="请选择部门" clearable>
+        <el-form-item :label="$t('table.department')" prop="department_id">
+          <el-select v-model="formData.department_id" :placeholder="$t('form.select_department')" clearable>
             <el-option
               v-for="dept in departments"
               :key="dept.id"
@@ -122,8 +122,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="角色" prop="role_ids">
-          <el-select v-model="formData.role_ids" multiple placeholder="请选择角色">
+        <el-form-item :label="$t('table.roles')" prop="role_ids">
+          <el-select v-model="formData.role_ids" multiple :placeholder="$t('form.select_role')">
             <el-option
               v-for="role in roles"
               :key="role.id"
@@ -132,23 +132,24 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model="formData.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
+            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
+            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getAdminList,
@@ -161,12 +162,13 @@ import {
 import { getDepartmentList } from '../../api/department'
 import { getRoleList } from '../../api/role'
 
+const { t } = useI18n()
 const tableRef = ref(null)
 const formRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('添加管理员')
+const dialogTitle = computed(() => formData.id ? t('admin.edit_admin') : t('admin.add_admin'))
 
 const searchForm = reactive({
   username: '',
@@ -195,10 +197,10 @@ const formData = reactive({
   status: 1
 })
 
-const formRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
+const formRules = computed(() => ({
+  username: [{ required: true, message: t('admin.username_required'), trigger: 'blur' }],
+  password: [{ required: true, message: t('admin.password_required'), trigger: 'blur' }]
+}))
 
 const loadData = async () => {
   loading.value = true
@@ -260,7 +262,6 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '添加管理员'
   Object.assign(formData, {
     id: null,
     username: '',
@@ -276,7 +277,6 @@ const handleAdd = () => {
 }
 
 const handleEdit = async (row) => {
-  dialogTitle.value = '编辑管理员'
   Object.assign(formData, {
     id: row.id,
     username: row.username,
@@ -305,10 +305,10 @@ const handleSubmit = async () => {
             delete data.password
           }
           await updateAdmin(formData.id, data)
-          ElMessage.success('更新成功')
+          ElMessage.success(t('admin.update_success'))
         } else {
           await createAdmin(data)
-          ElMessage.success('创建成功')
+          ElMessage.success(t('admin.create_success'))
         }
         dialogVisible.value = false
         loadData()
@@ -327,13 +327,13 @@ const handleDialogClose = () => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该管理员吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('admin.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await deleteAdmin(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('admin.delete_success'))
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
@@ -344,13 +344,13 @@ const handleDelete = async (row) => {
 
 const handleResetPassword = async (row) => {
   try {
-    const { value: password } = await ElMessageBox.prompt('请输入新密码', '重置密码', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    const { value: password } = await ElMessageBox.prompt(t('admin.new_password'), t('admin.reset_password'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       inputType: 'password'
     })
     await resetPassword(row.id, { password })
-    ElMessage.success('密码重置成功')
+    ElMessage.success(t('admin.reset_password_success'))
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Reset password error:', error)
@@ -363,7 +363,7 @@ const handleExport = async () => {
     const res = await exportAdmin(searchForm)
     if (res.data && res.data.file_url) {
       window.open(res.data.file_url, '_blank')
-      ElMessage.success('导出成功')
+      ElMessage.success(t('admin.export_success'))
     }
   } catch (error) {
     console.error('Export error:', error)

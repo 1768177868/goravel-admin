@@ -3,27 +3,27 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>角色列表</span>
+          <span>{{ $t('role.title') }}</span>
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
-            添加角色
+            {{ $t('role.add_role') }}
           </el-button>
         </div>
       </template>
 
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="角色名称">
-          <el-input v-model="searchForm.name" placeholder="请输入角色名称" clearable />
+        <el-form-item :label="$t('role.name')">
+          <el-input v-model="searchForm.name" :placeholder="$t('form.please_enter') + $t('role.name')" clearable />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="启用" value="1" />
-            <el-option label="禁用" value="0" />
+        <el-form-item :label="$t('table.status')">
+          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable>
+            <el-option :label="$t('common.enabled')" value="1" />
+            <el-option :label="$t('common.disabled')" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
+          <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
         </el-form-item>
       </el-form>
 
@@ -34,24 +34,24 @@
         resizable
         height="600"
       >
-        <vxe-column type="seq" width="60" title="序号" />
-        <vxe-column field="id" title="ID" width="80" />
-        <vxe-column field="name" title="角色名称" />
-        <vxe-column field="slug" title="标识" />
-        <vxe-column field="description" title="描述" />
-        <vxe-column field="status" title="状态" width="80">
+        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
+        <vxe-column field="id" :title="$t('table.id')" width="80" />
+        <vxe-column field="name" :title="$t('role.name')" />
+        <vxe-column field="slug" :title="$t('role.slug')" />
+        <vxe-column field="description" :title="$t('common.description')" />
+        <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
+              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="sort" title="排序" width="80" />
-        <vxe-column field="created_at" title="创建时间" />
-        <vxe-column title="操作" width="200" fixed="right">
+        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column :title="$t('table.operation')" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -77,16 +77,16 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item label="角色名称" prop="name">
+        <el-form-item :label="$t('role.name')" prop="name">
           <el-input v-model="formData.name" />
         </el-form-item>
-        <el-form-item label="标识" prop="slug">
+        <el-form-item :label="$t('role.slug')" prop="slug">
           <el-input v-model="formData.slug" />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item :label="$t('common.description')">
           <el-input v-model="formData.description" type="textarea" />
         </el-form-item>
-        <el-form-item label="权限">
+        <el-form-item :label="$t('role.permissions')">
           <el-tree
             ref="permissionTreeRef"
             :data="permissionTree"
@@ -96,7 +96,7 @@
             :default-checked-keys="formData.permission_ids"
           />
         </el-form-item>
-        <el-form-item label="菜单">
+        <el-form-item :label="$t('role.menus')">
           <el-tree
             ref="menuTreeRef"
             :data="menuTree"
@@ -106,38 +106,40 @@
             :default-checked-keys="formData.menu_ids"
           />
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model="formData.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
+            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
+            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="排序">
+        <el-form-item :label="$t('common.sort')">
           <el-input-number v-model="formData.sort" :min="0" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 
+const { t } = useI18n()
 const formRef = ref(null)
 const permissionTreeRef = ref(null)
 const menuTreeRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('添加角色')
+const dialogTitle = computed(() => formData.id ? t('role.edit_role') : t('role.add_role'))
 
 const searchForm = reactive({
   name: '',
@@ -165,10 +167,10 @@ const formData = reactive({
   sort: 0
 })
 
-const formRules = {
-  name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
-  slug: [{ required: true, message: '请输入标识', trigger: 'blur' }]
-}
+const formRules = computed(() => ({
+  name: [{ required: true, message: t('role.name_required'), trigger: 'blur' }],
+  slug: [{ required: true, message: t('role.slug_required'), trigger: 'blur' }]
+}))
 
 const loadData = async () => {
   loading.value = true
@@ -230,7 +232,6 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '添加角色'
   Object.assign(formData, {
     id: null,
     name: '',
@@ -245,7 +246,6 @@ const handleAdd = () => {
 }
 
 const handleEdit = async (row) => {
-  dialogTitle.value = '编辑角色'
   try {
     const res = await getRoleDetail(row.id)
     if (res.data && res.data.role) {
@@ -290,10 +290,10 @@ const handleSubmit = async () => {
         }
         if (formData.id) {
           await updateRole(formData.id, data)
-          ElMessage.success('更新成功')
+          ElMessage.success(t('role.update_success'))
         } else {
           await createRole(data)
-          ElMessage.success('创建成功')
+          ElMessage.success(t('role.create_success'))
         }
         dialogVisible.value = false
         loadData()
@@ -312,13 +312,13 @@ const handleDialogClose = () => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该角色吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('role.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await deleteRole(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('role.delete_success'))
     loadData()
   } catch (error) {
     if (error !== 'cancel') {

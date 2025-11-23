@@ -109,7 +109,11 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">{{ $t('header.logout') }}</el-dropdown-item>
+                <el-dropdown-item command="profile">
+                  <el-icon><UserFilled /></el-icon>
+                  {{ $t('header.profile') }}
+                </el-dropdown-item>
+                <el-dropdown-item divided command="logout">{{ $t('header.logout') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -126,7 +130,7 @@
             <keep-alive>
               <component
                 :is="Component"
-                :key="routeItem.path"
+                :key="`${routeItem.path}-${routeItem.query._refresh || ''}`"
               />
             </keep-alive>
           </transition>
@@ -152,6 +156,7 @@ import {
   Expand,
   Setting,
   User,
+  UserFilled,
   ArrowDown,
   FullScreen,
   Aim,
@@ -205,7 +210,9 @@ onMounted(() => {
 })
 
 const handleCommand = async (command) => {
-  if (command === 'logout') {
+  if (command === 'profile') {
+    router.push('/profile')
+  } else if (command === 'logout') {
     try {
       await ElMessageBox.confirm(t('header.logout_confirm'), t('common.confirm'), {
         confirmButtonText: t('common.confirm'),

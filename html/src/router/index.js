@@ -73,6 +73,12 @@ const routes = [
         name: 'SystemLogs',
         component: () => import('../views/log/SystemLogList.vue'),
         meta: { titleKey: 'menu.system_log' }
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('../views/profile/Profile.vue'),
+        meta: { titleKey: 'menu.profile' }
       }
     ]
   }

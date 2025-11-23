@@ -87,6 +87,53 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 	})
 }
 
+// UpdateProfile 更新个人信息
+func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
+	var admin models.Admin
+	if err := facades.Auth(ctx).Guard("admin").User(&admin); err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	nickname := ctx.Request().Input("nickname")
+	email := ctx.Request().Input("email")
+	phone := ctx.Request().Input("phone")
+	avatar := ctx.Request().Input("avatar")
+
+	if nickname != "" {
+		admin.Nickname = nickname
+	}
+	if email != "" {
+		admin.Email = email
+	}
+	if phone != "" {
+		admin.Phone = phone
+	}
+	if avatar != "" {
+		admin.Avatar = avatar
+	}
+
+	if err := facades.Orm().Query().Save(&admin); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+	}
+
+	// 重新加载关联数据
+	facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&admin)
+
+	return response.Success(ctx, "update_success", http.Json{
+		"admin": http.Json{
+			"id":            admin.ID,
+			"username":      admin.Username,
+			"nickname":      admin.Nickname,
+			"avatar":        admin.Avatar,
+			"email":         admin.Email,
+			"phone":         admin.Phone,
+			"department_id": admin.DepartmentID,
+			"department":    admin.Department,
+			"roles":         admin.Roles,
+		},
+	})
+}
+
 // Refresh 刷新Token
 // 注意：此接口需要在JWT中间件之前调用，或者使用特殊的中间件处理
 // 因为Refresh方法需要token过期但仍在刷新窗口内才能工作

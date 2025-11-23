@@ -20,7 +20,8 @@
     "created_at": "Created At",
     "updated_at": "Updated At",
     "sort": "Sort",
-    "description": "Description"
+    "description": "Description",
+    "password": "Password"
   },
   "login": {
     "title": "Admin Management System",
@@ -43,7 +44,8 @@
     "log_management": "Log Management",
     "operation_log": "Operation Log",
     "login_log": "Login Log",
-    "system_log": "System Log"
+    "system_log": "System Log",
+    "profile": "Profile"
   },
   "admin": {
     "title": "Admin List",
@@ -76,7 +78,10 @@
     "menus": "Menus",
     "name_required": "Please enter role name",
     "slug_required": "Please enter slug",
-    "delete_confirm": "Are you sure to delete this role?"
+    "delete_confirm": "Are you sure to delete this role?",
+    "delete_success": "Delete successful",
+    "create_success": "Create successful",
+    "update_success": "Update successful"
   },
   "permission": {
     "title": "Permission List",
@@ -90,7 +95,10 @@
     "slug_required": "Please enter slug",
     "method_required": "Please select method",
     "path_required": "Please enter path",
-    "delete_confirm": "Are you sure to delete this permission?"
+    "delete_confirm": "Are you sure to delete this permission?",
+    "delete_success": "Delete successful",
+    "create_success": "Create successful",
+    "update_success": "Update successful"
   },
   "menu_management": {
     "title": "Menu List",
@@ -103,7 +111,10 @@
     "icon": "Icon",
     "name_required": "Please enter menu name",
     "path_required": "Please enter path",
-    "delete_confirm": "Are you sure to delete this menu?"
+    "delete_confirm": "Are you sure to delete this menu?",
+    "delete_success": "Delete successful",
+    "create_success": "Create successful",
+    "update_success": "Update successful"
   },
   "department": {
     "title": "Department List",
@@ -113,7 +124,10 @@
     "top_department": "Top Department",
     "name": "Department Name",
     "name_required": "Please enter department name",
-    "delete_confirm": "Are you sure to delete this department?"
+    "delete_confirm": "Are you sure to delete this department?",
+    "delete_success": "Delete successful",
+    "create_success": "Create successful",
+    "update_success": "Update successful"
   },
   "dictionary": {
     "title": "Dictionary List",
@@ -125,7 +139,10 @@
     "type_required": "Please enter type",
     "label_required": "Please enter label",
     "value_required": "Please enter value",
-    "delete_confirm": "Are you sure to delete this dictionary?"
+    "delete_confirm": "Are you sure to delete this dictionary?",
+    "delete_success": "Delete successful",
+    "create_success": "Create successful",
+    "update_success": "Update successful"
   },
   "log": {
     "operation_log": "Operation Log",
@@ -135,6 +152,7 @@
     "clean_confirm": "Are you sure to clean all logs? This operation cannot be undone!",
     "clean_success": "Clean successful",
     "delete_confirm": "Are you sure to delete this log?",
+    "delete_success": "Delete successful",
     "detail": "Log Detail",
     "admin": "Admin",
     "method": "Method",
@@ -145,7 +163,12 @@
     "message": "Message",
     "context": "Context",
     "level": "Level",
-    "time": "Time"
+    "time": "Time",
+    "login_time": "Login Time",
+    "operation_time": "Operation Time",
+    "request_params": "Request Params",
+    "success": "Success",
+    "failed": "Failed"
   },
   "dashboard": {
     "total_users": "Total Users",
@@ -159,7 +182,36 @@
     "logout": "Logout",
     "logout_confirm": "Are you sure to logout?",
     "system_management": "Management System",
-    "fullscreen": "Fullscreen"
+    "fullscreen": "Fullscreen",
+    "profile": "Profile"
+  },
+  "profile": {
+    "basic_info": "Basic Information",
+    "edit_info": "Edit Information",
+    "change_password": "Change Password",
+    "change_avatar": "Change Avatar",
+    "username": "Username",
+    "nickname": "Nickname",
+    "email": "Email",
+    "phone": "Phone",
+    "department": "Department",
+    "roles": "Roles",
+    "old_password": "Old Password",
+    "new_password": "New Password",
+    "confirm_password": "Confirm Password",
+    "old_password_required": "Please enter old password",
+    "new_password_required": "Please enter new password",
+    "confirm_password_required": "Please confirm new password",
+    "password_not_match": "Passwords do not match",
+    "password_length_error": "Password must be at least 6 characters",
+    "email_invalid": "Please enter a valid email address",
+    "phone_invalid": "Please enter a valid phone number",
+    "update_success": "Update successful",
+    "password_update_success": "Password updated successfully",
+    "avatar_update_success": "Avatar updated successfully",
+    "avatar_format_error": "Avatar must be an image",
+    "avatar_size_error": "Avatar size cannot exceed 2MB",
+    "please_select_avatar": "Please select an avatar"
   },
   "tabs": {
     "refresh": "Refresh",
@@ -177,6 +229,50 @@
     "small": "Small",
     "default": "Default",
     "large": "Large"
+  },
+  "table": {
+    "seq": "No.",
+    "id": "ID",
+    "operation": "Operation",
+    "status": "Status",
+    "created_at": "Created At",
+    "updated_at": "Updated At",
+    "username": "Username",
+    "nickname": "Nickname",
+    "email": "Email",
+    "phone": "Phone",
+    "department": "Department",
+    "roles": "Roles",
+    "name": "Name",
+    "slug": "Slug",
+    "method": "Method",
+    "path": "Path",
+    "icon": "Icon",
+    "parent": "Parent",
+    "admin": "Admin",
+    "ip": "IP Address",
+    "user_agent": "User Agent",
+    "message": "Message",
+    "context": "Context",
+    "level": "Level",
+    "time": "Time",
+    "login_time": "Login Time",
+    "operation_time": "Operation Time",
+    "status_code": "Status Code",
+    "request_params": "Request Params"
+  },
+  "form": {
+    "please_select": "Please select",
+    "please_enter": "Please enter",
+    "select_method": "Please select method",
+    "select_parent": "Please select parent",
+    "select_department": "Please select department",
+    "select_role": "Please select role",
+    "select_status": "Please select status",
+    "enter_username": "Please enter username",
+    "top_level": "Top Level",
+    "tip": "Tip",
+    "warning": "Warning"
   }
 }
 

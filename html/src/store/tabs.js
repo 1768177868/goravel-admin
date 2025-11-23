@@ -34,9 +34,22 @@ export const useTabsStore = defineStore('tabs', {
         this.tabs.splice(index, 1)
       }
 
-      // 如果删除的是当前激活的标签，切换到最后一个标签
-      if (this.activeTab === path && this.tabs.length > 0) {
-        this.activeTab = this.tabs[this.tabs.length - 1].path
+      // 如果删除的是当前激活的标签，需要外部处理路由跳转
+      // 这里不自动切换，由组件处理
+      if (this.activeTab === path) {
+        if (this.tabs.length > 0) {
+          // 优先选择右侧标签，如果没有则选择左侧
+          const nextIndex = index < this.tabs.length ? index : index - 1
+          if (nextIndex >= 0 && nextIndex < this.tabs.length) {
+            this.activeTab = this.tabs[nextIndex].path
+          } else if (this.tabs.length > 0) {
+            this.activeTab = this.tabs[this.tabs.length - 1].path
+          } else {
+            this.activeTab = null
+          }
+        } else {
+          this.activeTab = null
+        }
       }
     },
 
