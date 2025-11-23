@@ -72,10 +72,11 @@
           </template>
         </vxe-column>
         <vxe-column field="created_at" :title="$t('table.created_at')" />
-        <vxe-column :title="$t('table.operation')" width="200" fixed="right">
+        <vxe-column :title="$t('table.operation')" width="250" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
             <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
+            <el-button type="info" link @click="handleKickOut(row)">{{ $t('admin.kick_out') }}</el-button>
             <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
@@ -195,7 +196,8 @@ import {
   updateAdmin,
   deleteAdmin,
   exportAdmin,
-  resetPassword
+  resetPassword,
+  kickOutUser
 } from '../../api/admin'
 import { getDepartmentList } from '../../api/department'
 import { getRoleList } from '../../api/role'
@@ -540,6 +542,26 @@ const handleResetPassword = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Reset password error:', error)
+    }
+  }
+}
+
+const handleKickOut = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      t('admin.kick_out_confirm', { username: row.username || row.Username }),
+      t('form.tip'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    )
+    await kickOutUser(row.id)
+    ElMessage.success(t('admin.kick_out_success'))
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Kick out error:', error)
     }
   }
 }

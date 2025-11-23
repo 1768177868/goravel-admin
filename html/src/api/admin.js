@@ -61,7 +61,7 @@ export function resetPassword(id, data) {
   })
 }
 
-// 踢出用户
+// 踢出用户（删除该用户的所有token）
 export function kickOutUser(id) {
   return request({
     url: `/admins/${id}/tokens`,
