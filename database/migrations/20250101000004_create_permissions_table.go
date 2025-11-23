@@ -23,6 +23,8 @@ func (r *M20250101000004CreatePermissionsTable) Up() error {
 			table.String("description").Nullable()
 			table.UnsignedTinyInteger("status").Default(1)
 			table.Integer("sort").Default(0)
+			table.UnsignedBigInteger("menu_id").Nullable().Default(0).Comment("关联菜单ID")
+			table.Index("menu_id")
 			table.Timestamps()
 			table.Unique("name")
 			table.Unique("slug")

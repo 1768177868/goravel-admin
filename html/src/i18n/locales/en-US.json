@@ -82,6 +82,8 @@
     "slug": "Slug",
     "permissions": "Permissions",
     "menus": "Menus",
+    "menus_and_permissions": "Menus & Permissions",
+    "other_permissions": "Other Permissions",
     "select_all": "Select All",
     "unselect_all": "Unselect All",
     "module_admin": "Admin Management",

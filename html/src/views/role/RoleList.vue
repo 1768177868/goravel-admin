@@ -102,23 +102,31 @@
         <el-form-item :label="$t('common.description')">
           <el-input v-model="formData.description" type="textarea" />
         </el-form-item>
-        <el-form-item :label="$t('role.permissions')">
-          <div class="permission-container">
-            <div class="permission-header">
-              <el-button size="small" @click="handleSelectAllPermissions">{{ $t('role.select_all') }}</el-button>
-              <el-button size="small" @click="handleUnselectAllPermissions">{{ $t('role.unselect_all') }}</el-button>
+        <el-form-item :label="$t('role.menus_and_permissions')">
+          <div class="menu-permission-container">
+            <div class="menu-header">
+              <el-button size="small" @click="handleSelectAllMenusAndPermissions">{{ $t('role.select_all') }}</el-button>
+              <el-button size="small" @click="handleUnselectAllMenusAndPermissions">{{ $t('role.unselect_all') }}</el-button>
             </div>
             <el-tree
-              ref="permissionTreeRef"
-              :data="permissionTree"
+              ref="menuPermissionTreeRef"
+              :data="menuPermissionTree"
               :props="{ children: 'children', label: 'label' }"
               show-checkbox
               node-key="id"
-              :default-checked-keys="formData.permission_ids"
-              class="permission-tree"
+              :default-checked-keys="[...formData.menu_ids, ...formData.permission_ids]"
+              class="menu-permission-tree"
             >
               <template #default="{ node, data }">
-                <span class="permission-node">
+                <!-- 菜单节点 -->
+                <span v-if="data.isMenu" class="menu-node">
+                  <span class="menu-name">{{ data.name }}</span>
+                  <el-tag v-if="data.type" size="small" :type="getMenuTypeTag(data.type)">
+                    {{ getMenuTypeText(data.type) }}
+                  </el-tag>
+                </span>
+                <!-- 权限节点 -->
+                <span v-else class="permission-node">
                   <span class="permission-name">{{ data.displayDesc || data.name }}</span>
                   <span v-if="data.method" class="permission-method" :class="`method-${data.method.toLowerCase()}`">
                     {{ data.method }}
@@ -128,33 +136,6 @@
                       <InfoFilled />
                     </el-icon>
                   </el-tooltip>
-                </span>
-              </template>
-            </el-tree>
-          </div>
-        </el-form-item>
-        <el-form-item :label="$t('role.menus')">
-          <div class="menu-container">
-            <div class="menu-header">
-              <el-button size="small" @click="handleSelectAllMenus">{{ $t('role.select_all') }}</el-button>
-              <el-button size="small" @click="handleUnselectAllMenus">{{ $t('role.unselect_all') }}</el-button>
-            </div>
-            <el-tree
-              ref="menuTreeRef"
-              :data="menuTree"
-              :props="{ children: 'children', label: 'label' }"
-              show-checkbox
-              node-key="id"
-              :default-checked-keys="formData.menu_ids"
-              class="menu-tree"
-            >
-              <template #default="{ node, data }">
-                <span class="menu-node">
-                  <span class="menu-name">{{ data.name }}</span>
-                  <el-tag v-if="data.type" size="small" :type="getMenuTypeTag(data.type)">
-                    {{ getMenuTypeText(data.type) }}
-                  </el-tag>
-                  <span v-if="data.path" class="menu-path">{{ data.path }}</span>
                 </span>
               </template>
             </el-tree>
@@ -191,6 +172,7 @@ const { t } = useI18n()
 const formRef = ref(null)
 const permissionTreeRef = ref(null)
 const menuTreeRef = ref(null)
+const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
@@ -210,6 +192,7 @@ const pagination = reactive({
 const tableData = ref([])
 const permissionTree = ref([])
 const menuTree = ref([])
+const menuPermissionTree = ref([])
 
 const formData = reactive({
   id: null,
@@ -366,6 +349,7 @@ const transformPermissionToTree = (permissions) => {
   return tree
 }
 
+
 // 转换菜单数据为树形结构（支持后端返回的树形结构）
 const transformMenuToTree = (menus) => {
   if (!menus || !Array.isArray(menus)) return []
@@ -385,7 +369,8 @@ const transformMenuToTree = (menus) => {
       icon: icon,
       path: path,
       component: node.Component || node.component || '',
-      permission: node.Permission || node.permission || ''
+      permission: node.Permission || node.permission || '',
+      isMenu: true
     }
     if (children && Array.isArray(children) && children.length > 0) {
       result.children = children.map(child => convertNode(child))
@@ -394,6 +379,140 @@ const transformMenuToTree = (menus) => {
   }
   
   return menus.map(menu => convertNode(menu))
+}
+
+// 将权限挂载到菜单树中（根据 menu_id 关联）
+const attachPermissionsToMenus = (menuTree, permissions) => {
+  if (!permissions || !Array.isArray(permissions)) return menuTree
+  
+  // 创建权限ID到权限的映射
+  const permissionMap = new Map()
+  permissions.forEach(perm => {
+    const id = perm.id || perm.ID
+    const menuId = perm.MenuID || perm.menu_id || 0
+    if (!permissionMap.has(menuId)) {
+      permissionMap.set(menuId, [])
+    }
+    permissionMap.get(menuId).push(perm)
+  })
+  
+  // 递归处理菜单节点
+  const processNode = (node) => {
+    const result = { ...node }
+    
+    // 如果是菜单节点，查找关联的权限
+    if (result.isMenu && result.id) {
+      const menuId = result.id
+      const matchedPermissions = permissionMap.get(menuId) || []
+      
+      // 将权限转换为树节点格式
+      if (matchedPermissions.length > 0) {
+        if (!result.children) {
+          result.children = []
+        }
+        
+        matchedPermissions.forEach(perm => {
+          const method = perm.Method || perm.method || ''
+          const name = perm.Name || perm.name || ''
+          const description = perm.Description || perm.description || ''
+          const id = perm.id || perm.ID
+          
+          result.children.push({
+            id: id,
+            name: name,
+            slug: perm.Slug || perm.slug || '',
+            method: method,
+            path: perm.Path || perm.path || '',
+            description: description,
+            label: description || name,
+            displayDesc: description || name,
+            isMenu: false,
+            isPermission: true
+          })
+        })
+        
+        // 对权限按方法排序
+        result.children.sort((a, b) => {
+          if (a.isMenu !== b.isMenu) {
+            return a.isMenu ? -1 : 1 // 菜单在前，权限在后
+          }
+          if (!a.isMenu && !b.isMenu) {
+            const methodOrder = { 'GET': 1, 'POST': 2, 'PUT': 3, 'PATCH': 4, 'DELETE': 5 }
+            return (methodOrder[a.method] || 99) - (methodOrder[b.method] || 99)
+          }
+          return 0
+        })
+      }
+    }
+    
+    // 处理子节点
+    if (result.children && Array.isArray(result.children)) {
+      result.children = result.children.map(child => processNode(child))
+    }
+    
+    return result
+  }
+  
+  return menuTree.map(node => processNode(node))
+}
+
+// 构建菜单和权限的合并树
+const buildMenuPermissionTree = (menus, permissions) => {
+  const menuTreeData = transformMenuToTree(menus)
+  const treeWithPermissions = attachPermissionsToMenus(menuTreeData, permissions)
+  
+  // 找出未匹配的权限
+  const matchedPermissionIds = new Set()
+  const collectPermissionIds = (nodes) => {
+    nodes.forEach(node => {
+      if (node.isPermission) {
+        matchedPermissionIds.add(node.id)
+      }
+      if (node.children) {
+        collectPermissionIds(node.children)
+      }
+    })
+  }
+  collectPermissionIds(treeWithPermissions)
+  
+  const unmatchedPermissions = permissions.filter(perm => {
+    const id = perm.id || perm.ID
+    return !matchedPermissionIds.has(id)
+  })
+  
+  // 如果有未匹配的权限，创建一个"其他权限"节点
+  if (unmatchedPermissions.length > 0) {
+    const otherPermissionsNode = {
+      id: 'other_permissions',
+      name: t('role.other_permissions'),
+      label: t('role.other_permissions'),
+      isMenu: true,
+      type: 1,
+      children: unmatchedPermissions.map(perm => {
+        const method = perm.Method || perm.method || ''
+        const name = perm.Name || perm.name || ''
+        const description = perm.Description || perm.description || ''
+        const id = perm.id || perm.ID
+        
+        return {
+          id: id,
+          name: name,
+          slug: perm.Slug || perm.slug || '',
+          method: method,
+          path: perm.Path || perm.path || '',
+          description: description,
+          label: description || name,
+          displayDesc: description || name,
+          isMenu: false,
+          isPermission: true
+        }
+      })
+    }
+    
+    treeWithPermissions.push(otherPermissionsNode)
+  }
+  
+  return treeWithPermissions
 }
 
 // 获取菜单类型标签样式
@@ -421,6 +540,10 @@ const loadPermissions = async () => {
     const res = await getPermissionList({ page_size: 1000 }) // 获取所有权限
     if (res.data && res.data.list) {
       permissionTree.value = transformPermissionToTree(res.data.list)
+      // 同时更新合并树
+      if (menuTree.value.length > 0) {
+        menuPermissionTree.value = buildMenuPermissionTree(menuTree.value, res.data.list)
+      }
     }
   } catch (error) {
     console.error('Load permissions error:', error)
@@ -433,8 +556,37 @@ const loadMenus = async () => {
     // 菜单返回的是 menus 字段，不是 list
     const menus = res.data?.menus || res.data?.list || []
     menuTree.value = transformMenuToTree(menus)
+    // 同时更新合并树
+    if (permissionTree.value.length > 0 || (res.data?.list && res.data.list.length > 0)) {
+      const permissions = permissionTree.value.length > 0 
+        ? permissionTree.value.flatMap(g => g.children || [])
+        : (await getPermissionList({ page_size: 1000 })).data?.list || []
+      menuPermissionTree.value = buildMenuPermissionTree(menus, permissions)
+    }
   } catch (error) {
     console.error('Load menus error:', error)
+  }
+}
+
+// 加载菜单和权限的合并树
+const loadMenuPermissionTree = async () => {
+  try {
+    const [menuRes, permissionRes] = await Promise.all([
+      getMenuList(),
+      getPermissionList({ page_size: 1000 })
+    ])
+    
+    const menus = menuRes.data?.menus || menuRes.data?.list || []
+    const permissions = permissionRes.data?.list || []
+    
+    // 保存原始数据用于其他用途
+    menuTree.value = transformMenuToTree(menus)
+    permissionTree.value = transformPermissionToTree(permissions)
+    
+    // 构建合并树（使用原始权限数据）
+    menuPermissionTree.value = buildMenuPermissionTree(menus, permissions)
+  } catch (error) {
+    console.error('Load menu permission tree error:', error)
   }
 }
 
@@ -491,11 +643,8 @@ const handleEdit = async (row) => {
       dialogVisible.value = true
       // 等待树组件渲染后设置选中状态
       setTimeout(() => {
-        if (permissionTreeRef.value) {
-          permissionTreeRef.value.setCheckedKeys(formData.permission_ids)
-        }
-        if (menuTreeRef.value) {
-          menuTreeRef.value.setCheckedKeys(formData.menu_ids)
+        if (menuPermissionTreeRef.value) {
+          menuPermissionTreeRef.value.setCheckedKeys([...formData.menu_ids, ...formData.permission_ids])
         }
       }, 100)
     }
@@ -511,10 +660,32 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
+        // 从合并树中分离菜单ID和权限ID
+        const allCheckedKeys = menuPermissionTreeRef.value?.getCheckedKeys() || []
+        const menuIds = []
+        const permissionIds = []
+        
+        // 递归收集所有菜单ID和权限ID
+        const collectIds = (nodes) => {
+          nodes.forEach(node => {
+            if (allCheckedKeys.includes(node.id)) {
+              if (node.isMenu) {
+                menuIds.push(node.id)
+              } else if (node.isPermission) {
+                permissionIds.push(node.id)
+              }
+            }
+            if (node.children) {
+              collectIds(node.children)
+            }
+          })
+        }
+        collectIds(menuPermissionTree.value)
+        
         const data = {
           ...formData,
-          permission_ids: permissionTreeRef.value?.getCheckedKeys() || [],
-          menu_ids: menuTreeRef.value?.getCheckedKeys() || []
+          permission_ids: permissionIds,
+          menu_ids: menuIds
         }
         if (formData.id) {
           await updateRole(formData.id, data)
@@ -538,32 +709,37 @@ const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 
-// 全选/取消全选权限
-const handleSelectAllPermissions = () => {
-  if (permissionTreeRef.value && permissionTree.value) {
-    const allKeys = getAllPermissionKeys(permissionTree.value)
-    permissionTreeRef.value.setCheckedKeys(allKeys)
+// 全选/取消全选菜单和权限
+const handleSelectAllMenusAndPermissions = () => {
+  if (menuPermissionTreeRef.value && menuPermissionTree.value) {
+    const allKeys = getAllMenuAndPermissionKeys(menuPermissionTree.value)
+    menuPermissionTreeRef.value.setCheckedKeys(allKeys)
   }
 }
 
-const handleUnselectAllPermissions = () => {
-  if (permissionTreeRef.value) {
-    permissionTreeRef.value.setCheckedKeys([])
+const handleUnselectAllMenusAndPermissions = () => {
+  if (menuPermissionTreeRef.value) {
+    menuPermissionTreeRef.value.setCheckedKeys([])
   }
 }
 
-// 全选/取消全选菜单
-const handleSelectAllMenus = () => {
-  if (menuTreeRef.value) {
-    const allKeys = getAllMenuKeys(menuTree.value)
-    menuTreeRef.value.setCheckedKeys(allKeys)
+// 递归获取所有菜单和权限ID
+const getAllMenuAndPermissionKeys = (tree) => {
+  if (!tree || !Array.isArray(tree)) return []
+  const keys = []
+  const traverse = (nodes) => {
+    if (!nodes || !Array.isArray(nodes)) return
+    nodes.forEach(node => {
+      if (node.id) {
+        keys.push(node.id)
+      }
+      if (node.children) {
+        traverse(node.children)
+      }
+    })
   }
-}
-
-const handleUnselectAllMenus = () => {
-  if (menuTreeRef.value) {
-    menuTreeRef.value.setCheckedKeys([])
-  }
+  traverse(tree)
+  return keys
 }
 
 // 递归获取所有权限ID（包括子节点）
@@ -633,8 +809,7 @@ const handleDelete = async (row) => {
 
 onMounted(() => {
   loadData()
-  loadPermissions()
-  loadMenus()
+  loadMenuPermissionTree()
 })
 </script>
 
@@ -654,12 +829,11 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.permission-container,
-.menu-container {
+.menu-permission-container {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   padding: 10px;
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
 }
 

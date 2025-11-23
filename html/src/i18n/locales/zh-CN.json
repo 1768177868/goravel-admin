@@ -82,6 +82,8 @@
     "slug": "标识",
     "permissions": "权限",
     "menus": "菜单",
+    "menus_and_permissions": "菜单与权限",
+    "other_permissions": "其他权限",
     "select_all": "全选",
     "unselect_all": "取消全选",
     "module_admin": "管理员管理",

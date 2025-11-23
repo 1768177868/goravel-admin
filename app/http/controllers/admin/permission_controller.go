@@ -83,6 +83,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	description := ctx.Request().Input("description")
 	status := cast.ToUint8(ctx.Request().Input("status", "1"))
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
+	menuID := cast.ToUint(ctx.Request().Input("menu_id", "0"))
 
 	if name == "" || slug == "" {
 		return response.Error(ctx, http.StatusBadRequest, "permission_name_and_slug_required")
@@ -102,6 +103,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		Description: description,
 		Status:      status,
 		Sort:        sort,
+		MenuID:      menuID,
 	}
 
 	if err := facades.Orm().Query().Create(&permission); err != nil {
@@ -128,6 +130,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	description := ctx.Request().Input("description")
 	status := ctx.Request().Input("status", "")
 	sort := ctx.Request().Input("sort", "")
+	menuID := ctx.Request().Input("menu_id", "")
 
 	if name != "" {
 		// 检查名称是否已被其他权限使用
@@ -159,6 +162,9 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	}
 	if sort != "" {
 		permission.Sort = cast.ToInt(sort)
+	}
+	if menuID != "" {
+		permission.MenuID = cast.ToUint(menuID)
 	}
 
 	if err := facades.Orm().Query().Save(&permission); err != nil {
