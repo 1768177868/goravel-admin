@@ -48,7 +48,10 @@
     "operation_log": "操作日志",
     "login_log": "登录日志",
     "system_log": "系统日志",
-    "profile": "个人中心"
+    "profile": "个人中心",
+    "type_directory": "目录",
+    "type_menu": "菜单",
+    "type_button": "按钮"
   },
   "admin": {
     "title": "管理员列表",
@@ -79,6 +82,8 @@
     "slug": "标识",
     "permissions": "权限",
     "menus": "菜单",
+    "select_all": "全选",
+    "unselect_all": "取消全选",
     "name_required": "请输入角色名称",
     "slug_required": "请输入标识",
     "delete_confirm": "确定要删除该角色吗？",

@@ -29,10 +29,13 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 	query := facades.Orm().Query().Model(&models.Permission{})
 
 	if name != "" {
-		query = query.Where("name", "like", "%"+name+"%")
+		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
 	if slug != "" {
-		query = query.Where("slug", "like", "%"+slug+"%")
+		query = query.Where("slug LIKE ?", "%"+slug+"%")
+	}
+	if path != "" {
+		query = query.Where("path LIKE ?", "%"+path+"%")
 	}
 	if method != "" {
 		query = query.Where("method", method)

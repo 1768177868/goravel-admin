@@ -83,19 +83,43 @@
       >
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="name" :title="$t('permission.name')" />
-        <vxe-column field="slug" :title="$t('permission.slug')" />
-        <vxe-column field="method" :title="$t('permission.method')" width="100" />
-        <vxe-column field="path" :title="$t('permission.path')" />
-        <vxe-column field="description" :title="$t('common.description')" />
+        <vxe-column field="name" :title="$t('permission.name')">
+          <template #default="{ row }">
+            {{ row.Name || row.name || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="slug" :title="$t('permission.slug')">
+          <template #default="{ row }">
+            {{ row.Slug || row.slug || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="method" :title="$t('permission.method')" width="100">
+          <template #default="{ row }">
+            {{ row.Method || row.method || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="path" :title="$t('permission.path')">
+          <template #default="{ row }">
+            {{ row.Path || row.path || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="description" :title="$t('common.description')">
+          <template #default="{ row }">
+            {{ row.Description || row.description || '-' }}
+          </template>
+        </vxe-column>
         <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
+            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
+              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+          <template #default="{ row }">
+            {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
+          </template>
+        </vxe-column>
         <vxe-column field="created_at" :title="$t('table.created_at')" />
         <vxe-column :title="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
@@ -211,6 +235,18 @@ const formData = reactive({
   sort: 0
 })
 
+// 重置表单数据
+const resetFormData = () => {
+  formData.id = null
+  formData.name = ''
+  formData.slug = ''
+  formData.method = 'GET'
+  formData.path = ''
+  formData.description = ''
+  formData.status = 1
+  formData.sort = 0
+}
+
 const formRules = computed(() => ({
   name: [{ required: true, message: t('permission.name_required'), trigger: 'blur' }],
   slug: [{ required: true, message: t('permission.slug_required'), trigger: 'blur' }],
@@ -223,16 +259,29 @@ const loadData = async () => {
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm
+      page_size: pagination.pageSize
     }
-    // 移除空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
+    // 只添加有值的搜索条件
+    if (searchForm.name && searchForm.name.trim()) {
+      params.name = searchForm.name.trim()
+    }
+    if (searchForm.slug && searchForm.slug.trim()) {
+      params.slug = searchForm.slug.trim()
+    }
+    if (searchForm.method) {
+      params.method = searchForm.method
+    }
+    if (searchForm.path && searchForm.path.trim()) {
+      params.path = searchForm.path.trim()
+    }
+    if (searchForm.status) {
+      params.status = searchForm.status
+    }
+    
+    console.log('Permission search params:', params)
     const res = await getPermissionList(params)
+    console.log('Permission list response:', res)
+    
     if (res.data) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
@@ -264,35 +313,38 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 }
 
 const handleAdd = () => {
-  Object.assign(formData, {
-    id: null,
-    name: '',
-    slug: '',
-    method: 'GET',
-    path: '',
-    description: '',
-    status: 1,
-    sort: 0
-  })
+  resetFormData()
   dialogVisible.value = true
 }
 
 const handleEdit = async (row) => {
   try {
+    console.log('handleEdit - row:', row)
     const res = await getPermissionDetail(row.id)
+    console.log('handleEdit - API response:', res)
+    
     if (res.data && res.data.permission) {
       const permission = res.data.permission
-      Object.assign(formData, {
-        id: permission.id,
-        name: permission.name,
-        slug: permission.slug,
-        method: permission.method,
-        path: permission.path,
-        description: permission.description || '',
-        status: permission.status,
-        sort: permission.sort || 0
-      })
+      console.log('handleEdit - permission data:', permission)
+      
+      // 处理字段映射，支持 PascalCase 和 snake_case
+      const mappedData = {
+        id: permission.id || permission.ID,
+        name: permission.Name || permission.name || '',
+        slug: permission.Slug || permission.slug || '',
+        method: permission.Method || permission.method || 'GET',
+        path: permission.Path || permission.path || '',
+        description: permission.Description || permission.description || '',
+        status: permission.Status !== undefined ? permission.Status : (permission.status !== undefined ? permission.status : 1),
+        sort: permission.Sort !== undefined ? permission.Sort : (permission.sort !== undefined ? permission.sort : 0)
+      }
+      
+      console.log('handleEdit - mapped formData:', mappedData)
+      
+      Object.assign(formData, mappedData)
       dialogVisible.value = true
+    } else {
+      console.error('handleEdit - No permission data in response:', res)
     }
   } catch (error) {
     console.error('Load permission detail error:', error)

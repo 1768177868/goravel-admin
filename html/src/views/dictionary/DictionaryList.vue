@@ -30,14 +30,30 @@
       >
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="type" :title="$t('dictionary.type')" />
-        <vxe-column field="label" :title="$t('dictionary.label')" />
-        <vxe-column field="value" :title="$t('dictionary.value')" />
-        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="type" :title="$t('dictionary.type')">
+          <template #default="{ row }">
+            {{ row.Type || row.type || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="label" :title="$t('dictionary.label')">
+          <template #default="{ row }">
+            {{ row.Label || row.label || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="value" :title="$t('dictionary.value')">
+          <template #default="{ row }">
+            {{ row.Value || row.value || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+          <template #default="{ row }">
+            {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
+          </template>
+        </vxe-column>
         <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
+            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
+              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
@@ -149,10 +165,17 @@ const loadData = async () => {
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm
+      page_size: pagination.pageSize
     }
+    // 只添加有值的搜索条件
+    if (searchForm.type && searchForm.type.trim()) {
+      params.type = searchForm.type.trim()
+    }
+    
+    console.log('Dictionary search params:', params)
     const res = await getDictionaryList(params)
+    console.log('Dictionary list response:', res)
+    
     if (res.data) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
@@ -197,13 +220,14 @@ const handleEdit = async (row) => {
     const res = await getDictionaryDetail(row.id)
     if (res.data && res.data.dictionary) {
       const dict = res.data.dictionary
+      // 处理字段映射，支持 PascalCase 和 snake_case
       Object.assign(formData, {
         id: dict.id,
-        type: dict.type,
-        label: dict.label,
-        value: dict.value,
-        status: dict.status,
-        sort: dict.sort || 0
+        type: dict.Type || dict.type || '',
+        label: dict.Label || dict.label || '',
+        value: dict.Value || dict.value || '',
+        status: dict.Status !== undefined ? dict.Status : (dict.status !== undefined ? dict.status : 1),
+        sort: dict.Sort !== undefined ? dict.Sort : (dict.sort !== undefined ? dict.sort : 0)
       })
       dialogVisible.value = true
     }

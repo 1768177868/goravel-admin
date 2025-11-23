@@ -48,7 +48,10 @@
     "operation_log": "Operation Log",
     "login_log": "Login Log",
     "system_log": "System Log",
-    "profile": "Profile"
+    "profile": "Profile",
+    "type_directory": "Directory",
+    "type_menu": "Menu",
+    "type_button": "Button"
   },
   "admin": {
     "title": "Admin List",
@@ -79,6 +82,8 @@
     "slug": "Slug",
     "permissions": "Permissions",
     "menus": "Menus",
+    "select_all": "Select All",
+    "unselect_all": "Unselect All",
     "name_required": "Please enter role name",
     "slug_required": "Please enter slug",
     "delete_confirm": "Are you sure to delete this role?",

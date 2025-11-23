@@ -26,7 +26,7 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 	query := facades.Orm().Query().Model(&models.Dictionary{})
 
 	if dictType != "" {
-		query = query.Where("type", dictType)
+		query = query.Where("type LIKE ?", "%"+dictType+"%")
 	}
 	if status != "" {
 		query = query.Where("status", status)
