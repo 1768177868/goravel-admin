@@ -11,12 +11,45 @@
         </div>
       </template>
 
+      <!-- 搜索表单 -->
+      <el-form :model="searchForm" :inline="true" class="search-form">
+        <el-form-item :label="$t('department.name')">
+          <el-input
+            v-model="searchForm.name"
+            :placeholder="$t('form.please_enter') + $t('department.name')"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('table.status')">
+          <el-select
+            v-model="searchForm.status"
+            :placeholder="$t('form.please_select') + $t('table.status')"
+            clearable
+            style="width: 120px"
+          >
+            <el-option :label="$t('common.enabled')" value="1" />
+            <el-option :label="$t('common.disabled')" value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            {{ $t('log.search') }}
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            {{ $t('log.reset') }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+
       <vxe-table
         :data="tableData"
         :loading="loading"
         border
         resizable
-        tree-config
+        :tree-config="hasSearch ? false : { children: 'children', expandAll: false, indent: 20 }"
         height="600"
       >
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
@@ -91,6 +124,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import {
   getDepartmentList,
   getDepartmentDetail,
@@ -107,6 +141,12 @@ const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('department.edit_department') : t('department.add_department'))
 
 const tableData = ref([])
+const hasSearch = ref(false) // 标记是否有搜索条件
+
+const searchForm = reactive({
+  name: '',
+  status: ''
+})
 
 const formData = reactive({
   id: null,
@@ -139,7 +179,17 @@ const departmentOptions = computed(() => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getDepartmentList()
+    const params = {}
+    // 检查是否有搜索条件
+    if (searchForm.name || searchForm.status) {
+      hasSearch.value = true
+      if (searchForm.name) params.name = searchForm.name
+      if (searchForm.status) params.status = searchForm.status
+    } else {
+      hasSearch.value = false
+    }
+    
+    const res = await getDepartmentList(params)
     if (res.data && res.data.list) {
       tableData.value = res.data.list
     }
@@ -148,6 +198,17 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  loadData()
+}
+
+const handleReset = () => {
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = ''
+  })
+  loadData()
 }
 
 const handleAdd = () => {

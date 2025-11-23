@@ -107,6 +107,8 @@
     "title": "菜单列表",
     "add_menu": "添加菜单",
     "edit_menu": "编辑菜单",
+    "expand_all": "展开全部",
+    "collapse_all": "折叠全部",
     "parent_menu": "父菜单",
     "top_menu": "顶级菜单",
     "name": "菜单名称",
@@ -172,7 +174,14 @@
     "operation_time": "操作时间",
     "request_params": "请求参数",
     "success": "成功",
-    "failed": "失败"
+    "failed": "失败",
+    "search": "搜索",
+    "reset": "重置",
+    "username": "用户名",
+    "module": "模块",
+    "start_time": "开始时间",
+    "end_time": "结束时间",
+    "status": "状态"
   },
   "dashboard": {
     "total_users": "总用户数",

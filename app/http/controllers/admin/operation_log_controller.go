@@ -24,8 +24,10 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	adminID := ctx.Request().Query("admin_id", "")
+	username := ctx.Request().Query("username", "")
 	method := ctx.Request().Query("method", "")
 	path := ctx.Request().Query("path", "")
+	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	startTime := ctx.Request().Query("start_time", "")
 	endTime := ctx.Request().Query("end_time", "")
@@ -36,14 +38,37 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	if adminID != "" {
 		query = query.Where("admin_id", adminID)
 	}
+	if username != "" {
+		// 先查询匹配的管理员ID
+		var adminIDs []uint
+		var admins []models.Admin
+		if err := facades.Orm().Query().Where("username", "like", "%"+username+"%").Get(&admins); err == nil {
+			for _, admin := range admins {
+				adminIDs = append(adminIDs, admin.ID)
+			}
+			if len(adminIDs) > 0 {
+				idsAny := make([]any, len(adminIDs))
+				for i, id := range adminIDs {
+					idsAny[i] = id
+				}
+				query = query.WhereIn("admin_id", idsAny)
+			} else {
+				// 如果没有匹配的管理员，返回空结果
+				query = query.Where("admin_id", 0)
+			}
+		}
+	}
 	if method != "" {
 		query = query.Where("method", method)
 	}
 	if path != "" {
 		query = query.Where("path", "like", "%"+path+"%")
 	}
+	if ip != "" {
+		query = query.Where("ip", "like", "%"+ip+"%")
+	}
 	if status != "" {
-		query = query.Where("status", status)
+		query = query.Where("status_code", status)
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)

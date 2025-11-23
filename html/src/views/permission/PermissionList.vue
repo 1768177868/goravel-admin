@@ -11,6 +11,69 @@
         </div>
       </template>
 
+      <!-- 搜索表单 -->
+      <el-form :model="searchForm" :inline="true" class="search-form">
+        <el-form-item :label="$t('permission.name')">
+          <el-input
+            v-model="searchForm.name"
+            :placeholder="$t('form.please_enter') + $t('permission.name')"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('permission.slug')">
+          <el-input
+            v-model="searchForm.slug"
+            :placeholder="$t('form.please_enter') + $t('permission.slug')"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('permission.method')">
+          <el-select
+            v-model="searchForm.method"
+            :placeholder="$t('form.please_select') + $t('permission.method')"
+            clearable
+            style="width: 150px"
+          >
+            <el-option label="GET" value="GET" />
+            <el-option label="POST" value="POST" />
+            <el-option label="PUT" value="PUT" />
+            <el-option label="DELETE" value="DELETE" />
+            <el-option label="PATCH" value="PATCH" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="$t('permission.path')">
+          <el-input
+            v-model="searchForm.path"
+            :placeholder="$t('form.please_enter') + $t('permission.path')"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('table.status')">
+          <el-select
+            v-model="searchForm.status"
+            :placeholder="$t('form.please_select') + $t('table.status')"
+            clearable
+            style="width: 120px"
+          >
+            <el-option :label="$t('common.enabled')" value="1" />
+            <el-option :label="$t('common.disabled')" value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            {{ $t('log.search') }}
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            {{ $t('log.reset') }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+
       <vxe-table
         :data="tableData"
         :loading="loading"
@@ -105,6 +168,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import {
   getPermissionList,
   getPermissionDetail,
@@ -127,6 +191,14 @@ const pagination = reactive({
 })
 
 const tableData = ref([])
+
+const searchForm = reactive({
+  name: '',
+  slug: '',
+  method: '',
+  path: '',
+  status: ''
+})
 
 const formData = reactive({
   id: null,
@@ -151,8 +223,15 @@ const loadData = async () => {
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize
+      page_size: pagination.pageSize,
+      ...searchForm
     }
+    // 移除空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
     const res = await getPermissionList(params)
     if (res.data) {
       tableData.value = res.data.list || []
@@ -163,6 +242,19 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = ''
+  })
+  pagination.page = 1
+  loadData()
 }
 
 const handlePageChange = ({ currentPage, pageSize }) => {
@@ -268,6 +360,13 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.search-form {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 4px;
 }
 </style>
 

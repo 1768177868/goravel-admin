@@ -21,12 +21,24 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	name := ctx.Request().Query("name", "")
+	slug := ctx.Request().Query("slug", "")
+	method := ctx.Request().Query("method", "")
+	path := ctx.Request().Query("path", "")
 	status := ctx.Request().Query("status", "")
 
 	query := facades.Orm().Query().Model(&models.Permission{})
 
 	if name != "" {
 		query = query.Where("name", "like", "%"+name+"%")
+	}
+	if slug != "" {
+		query = query.Where("slug", "like", "%"+slug+"%")
+	}
+	if method != "" {
+		query = query.Where("method", method)
+	}
+	if path != "" {
+		query = query.Where("path", "like", "%"+path+"%")
 	}
 	if status != "" {
 		query = query.Where("status", status)

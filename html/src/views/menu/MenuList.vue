@@ -4,41 +4,50 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu_management.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            {{ $t('menu_management.add_menu') }}
-          </el-button>
+          <div class="header-actions">
+            <el-button @click="handleToggleExpand">
+              <el-icon><component :is="isExpanded ? 'Fold' : 'Expand'" /></el-icon>
+              {{ isExpanded ? $t('menu_management.collapse_all') : $t('menu_management.expand_all') }}
+            </el-button>
+            <el-button type="primary" @click="handleAdd">
+              <el-icon><Plus /></el-icon>
+              {{ $t('menu_management.add_menu') }}
+            </el-button>
+          </div>
         </div>
       </template>
 
-      <vxe-table
+      <el-table
+        ref="tableRef"
         :data="tableData"
         :loading="loading"
         border
-        resizable
-        :tree-config="{ children: 'children', expandAll: false, indent: 20 }"
+        row-key="id"
+        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+        :default-expand-all="isExpanded"
+        style="width: 100%"
         height="600"
       >
-        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
-        <vxe-column field="name" :title="$t('menu_management.name')" tree-node />
-        <vxe-column field="path" :title="$t('menu_management.path')" />
-        <vxe-column field="icon" :title="$t('menu_management.icon')" width="100" />
-        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
-        <vxe-column field="status" :title="$t('table.status')" width="80">
+        <el-table-column type="index" width="60" :label="$t('table.seq')" />
+        <el-table-column prop="name" :label="$t('menu_management.name')" min-width="200" />
+        <el-table-column prop="path" :label="$t('menu_management.path')" min-width="200" />
+        <el-table-column prop="icon" :label="$t('menu_management.icon')" width="100" />
+        <el-table-column prop="sort" :label="$t('common.sort')" width="80" />
+        <el-table-column prop="status" :label="$t('table.status')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
               {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
-        </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" />
-        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
+        </el-table-column>
+        <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" />
+        <el-table-column :label="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
             <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
-        </vxe-column>
-      </vxe-table>
+        </el-table-column>
+      </el-table>
     </el-card>
 
     <el-dialog
@@ -95,14 +104,17 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Fold, Expand, Plus } from '@element-plus/icons-vue'
 import { getMenuList, getMenuDetail, createMenu, updateMenu, deleteMenu } from '../../api/menu'
 
 const { t } = useI18n()
 const formRef = ref(null)
+const tableRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('menu_management.edit_menu') : t('menu_management.add_menu'))
+const isExpanded = ref(false)
 
 const tableData = ref([])
 
@@ -273,6 +285,31 @@ const handleDelete = async (row) => {
   }
 }
 
+const handleToggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+  
+  if (tableRef.value) {
+    // Element Plus 的 el-table 使用 toggleRowExpansion 方法
+    // 递归处理所有节点
+    const toggleNode = (rows) => {
+      if (Array.isArray(rows)) {
+        rows.forEach(row => {
+          // 切换当前节点的展开状态
+          tableRef.value.toggleRowExpansion(row, isExpanded.value)
+          
+          // 如果有子节点，递归处理
+          if (row.children && row.children.length > 0) {
+            toggleNode(row.children)
+          }
+        })
+      }
+    }
+    
+    // 处理所有顶级节点
+    toggleNode(tableData.value)
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -288,6 +325,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 </style>
 

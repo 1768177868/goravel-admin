@@ -24,6 +24,7 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	level := ctx.Request().Query("level", "")
 	module := ctx.Request().Query("module", "")
+	message := ctx.Request().Query("message", "")
 	startTime := ctx.Request().Query("start_time", "")
 	endTime := ctx.Request().Query("end_time", "")
 
@@ -34,6 +35,9 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	}
 	if module != "" {
 		query = query.Where("module", "like", "%"+module+"%")
+	}
+	if message != "" {
+		query = query.Where("message", "like", "%"+message+"%")
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)

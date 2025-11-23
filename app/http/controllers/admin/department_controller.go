@@ -25,13 +25,38 @@ func NewDepartmentController() *DepartmentController {
 
 // Index 部门列表（树形结构）
 func (r *DepartmentController) Index(ctx http.Context) http.Response {
+	name := ctx.Request().Query("name", "")
+	status := ctx.Request().Query("status", "")
+	
+	// 如果有搜索条件，返回扁平列表；否则返回树形结构
+	if name != "" || status != "" {
+		query := facades.Orm().Query().Model(&models.Department{})
+		
+		if name != "" {
+			query = query.Where("name", "like", "%"+name+"%")
+		}
+		if status != "" {
+			query = query.Where("status", status)
+		}
+		
+		var departments []models.Department
+		if err := query.Order("sort asc, id asc").Get(&departments); err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		}
+		
+		return response.Success(ctx, "get_success", http.Json{
+			"list": departments,
+		})
+	}
+	
+	// 无搜索条件时返回树形结构
 	departments, err := r.treeService.BuildDepartmentTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"departments": departments,
+		"list": departments,
 	})
 }
 

@@ -13,13 +13,72 @@
               <el-icon><Delete /></el-icon>
               {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
             </el-button>
-            <!-- <el-button type="danger" @click="handleClean">
-              <el-icon><Delete /></el-icon>
-              清空日志
-            </el-button> -->
           </div>
         </div>
       </template>
+
+      <!-- 搜索表单 -->
+      <el-form :model="searchForm" :inline="true" class="search-form">
+        <el-form-item :label="$t('log.level')">
+          <el-select
+            v-model="searchForm.level"
+            :placeholder="$t('form.please_select') + $t('log.level')"
+            clearable
+            style="width: 120px"
+          >
+            <el-option label="error" value="error" />
+            <el-option label="warning" value="warning" />
+            <el-option label="info" value="info" />
+            <el-option label="debug" value="debug" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="$t('log.module')">
+          <el-input
+            v-model="searchForm.module"
+            :placeholder="$t('form.please_enter') + $t('log.module')"
+            clearable
+            style="width: 150px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('log.message')">
+          <el-input
+            v-model="searchForm.message"
+            :placeholder="$t('form.please_enter') + $t('log.message')"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('log.start_time')">
+          <el-date-picker
+            v-model="searchForm.start_time"
+            type="datetime"
+            :placeholder="$t('form.please_select') + $t('log.start_time')"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 180px"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item :label="$t('log.end_time')">
+          <el-date-picker
+            v-model="searchForm.end_time"
+            type="datetime"
+            :placeholder="$t('form.please_select') + $t('log.end_time')"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 180px"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            {{ $t('log.search') }}
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            {{ $t('log.reset') }}
+          </el-button>
+        </el-form-item>
+      </el-form>
 
       <vxe-table
         ref="tableRef"
@@ -83,6 +142,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Delete } from '@element-plus/icons-vue'
 import {
   getSystemLogList,
   getSystemLogDetail,
@@ -107,6 +167,14 @@ const pagination = reactive({
 
 const tableData = ref([])
 
+const searchForm = reactive({
+  level: '',
+  module: '',
+  message: '',
+  start_time: '',
+  end_time: ''
+})
+
 const getLevelType = (level) => {
   const levelMap = {
     'error': 'danger',
@@ -122,8 +190,15 @@ const loadData = async () => {
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize
+      page_size: pagination.pageSize,
+      ...searchForm
     }
+    // 移除空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
     const res = await getSystemLogList(params)
     if (res.data) {
       tableData.value = res.data.list || []
@@ -134,6 +209,19 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = ''
+  })
+  pagination.page = 1
+  loadData()
 }
 
 const handlePageChange = ({ currentPage, pageSize }) => {
@@ -237,6 +325,13 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 10px;
+}
+
+.search-form {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 4px;
 }
 
 pre {

@@ -24,6 +24,7 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	adminID := ctx.Request().Query("admin_id", "")
 	username := ctx.Request().Query("username", "")
+	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	startTime := ctx.Request().Query("start_time", "")
 	endTime := ctx.Request().Query("end_time", "")
@@ -35,6 +36,9 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	}
 	if username != "" {
 		query = query.Where("username", "like", "%"+username+"%")
+	}
+	if ip != "" {
+		query = query.Where("ip", "like", "%"+ip+"%")
 	}
 	if status != "" {
 		query = query.Where("status", status)

@@ -13,13 +13,70 @@
               <el-icon><Delete /></el-icon>
               {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
             </el-button>
-            <!-- <el-button type="danger" @click="handleClean">
-              <el-icon><Delete /></el-icon>
-              清空日志
-            </el-button> -->
           </div>
         </div>
       </template>
+
+      <!-- 搜索表单 -->
+      <el-form :model="searchForm" :inline="true" class="search-form">
+        <el-form-item :label="$t('log.username')">
+          <el-input
+            v-model="searchForm.username"
+            :placeholder="$t('form.please_enter') + $t('log.username')"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('log.ip')">
+          <el-input
+            v-model="searchForm.ip"
+            :placeholder="$t('form.please_enter') + $t('log.ip')"
+            clearable
+            style="width: 150px"
+          />
+        </el-form-item>
+        <el-form-item :label="$t('log.status')">
+          <el-select
+            v-model="searchForm.status"
+            :placeholder="$t('form.please_select') + $t('log.status')"
+            clearable
+            style="width: 120px"
+          >
+            <el-option :label="$t('log.success')" value="1" />
+            <el-option :label="$t('log.failed')" value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="$t('log.start_time')">
+          <el-date-picker
+            v-model="searchForm.start_time"
+            type="datetime"
+            :placeholder="$t('form.please_select') + $t('log.start_time')"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 180px"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item :label="$t('log.end_time')">
+          <el-date-picker
+            v-model="searchForm.end_time"
+            type="datetime"
+            :placeholder="$t('form.please_select') + $t('log.end_time')"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 180px"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            {{ $t('log.search') }}
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            {{ $t('log.reset') }}
+          </el-button>
+        </el-form-item>
+      </el-form>
 
       <vxe-table
         ref="tableRef"
@@ -85,6 +142,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Delete } from '@element-plus/icons-vue'
 import {
   getLoginLogList,
   getLoginLogDetail,
@@ -109,13 +167,28 @@ const pagination = reactive({
 
 const tableData = ref([])
 
+const searchForm = reactive({
+  username: '',
+  ip: '',
+  status: '',
+  start_time: '',
+  end_time: ''
+})
+
 const loadData = async () => {
   loading.value = true
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize
+      page_size: pagination.pageSize,
+      ...searchForm
     }
+    // 移除空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
     const res = await getLoginLogList(params)
     if (res.data) {
       tableData.value = res.data.list || []
@@ -126,6 +199,19 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = ''
+  })
+  pagination.page = 1
+  loadData()
 }
 
 const handlePageChange = ({ currentPage, pageSize }) => {
@@ -229,6 +315,13 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 10px;
+}
+
+.search-form {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 4px;
 }
 </style>
 

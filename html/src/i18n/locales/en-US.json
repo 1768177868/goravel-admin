@@ -107,6 +107,8 @@
     "title": "Menu List",
     "add_menu": "Add Menu",
     "edit_menu": "Edit Menu",
+    "expand_all": "Expand All",
+    "collapse_all": "Collapse All",
     "parent_menu": "Parent Menu",
     "top_menu": "Top Menu",
     "name": "Menu Name",
@@ -172,7 +174,14 @@
     "operation_time": "Operation Time",
     "request_params": "Request Params",
     "success": "Success",
-    "failed": "Failed"
+    "failed": "Failed",
+    "search": "Search",
+    "reset": "Reset",
+    "username": "Username",
+    "module": "Module",
+    "start_time": "Start Time",
+    "end_time": "End Time",
+    "status": "Status"
   },
   "dashboard": {
     "total_users": "Total Users",
