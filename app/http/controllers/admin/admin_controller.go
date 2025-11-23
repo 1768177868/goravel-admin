@@ -34,7 +34,7 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	query := facades.Orm().Query().Model(&models.Admin{})
 
 	if username != "" {
-		query = query.Where("username", "like", "%"+username+"%")
+		query = query.Where("username LIKE ?", "%"+username+"%")
 	}
 	if status != "" {
 		query = query.Where("status", status)

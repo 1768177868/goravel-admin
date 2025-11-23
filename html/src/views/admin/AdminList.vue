@@ -60,7 +60,11 @@
         <vxe-column field="roles" :title="$t('table.roles')">
           <template #default="{ row }">
             <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
-              <el-tag v-for="role in (row.Roles || row.roles)" :key="role.id || role.ID" style="margin-right: 5px;">
+              <el-tag 
+                v-for="role in getUniqueRoles(row.Roles || row.roles)" 
+                :key="role.id || role.ID" 
+                style="margin-right: 5px;"
+              >
                 {{ role.Name || role.name }}
               </el-tag>
             </template>
@@ -243,16 +247,20 @@ const loadData = async () => {
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm
+      page_size: pagination.pageSize
     }
-    // 移除空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
+    // 只添加有值的搜索条件
+    if (searchForm.username && searchForm.username.trim()) {
+      params.username = searchForm.username.trim()
+    }
+    if (searchForm.status) {
+      params.status = searchForm.status
+    }
+    
+    console.log('Admin search params:', params)
     const res = await getAdminList(params)
+    console.log('Admin list response:', res)
+    
     if (res.data) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
@@ -264,34 +272,63 @@ const loadData = async () => {
   }
 }
 
-// 转换部门数据为树形结构
-const transformDepartmentToTree = (depts, parentId = 0) => {
-  const result = []
-  depts.forEach(dept => {
-    // 处理 parent_id，支持 null、0 和 undefined
-    let deptParentId = 0
-    if (dept.ParentID !== undefined && dept.ParentID !== null) {
-      deptParentId = dept.ParentID
-    } else if (dept.parent_id !== undefined && dept.parent_id !== null) {
-      deptParentId = dept.parent_id
-    }
-    
-    // 将 parentId 也转换为数字进行比较
-    const compareParentId = parentId === null ? 0 : parentId
-    
-    if (deptParentId === compareParentId) {
-      const node = {
-        id: dept.id,
-        name: dept.Name || dept.name || '',
-        children: transformDepartmentToTree(depts, dept.id)
+// 转换部门数据为树形结构（支持后端返回的树形结构和扁平结构）
+const transformDepartmentToTree = (depts) => {
+  if (!depts || depts.length === 0) {
+    return []
+  }
+  
+  // 检查是否已经是树形结构（有 Children 字段，即使是空数组也算）
+  const firstDept = depts[0]
+  const hasChildrenField = firstDept.Children !== undefined || firstDept.children !== undefined
+  
+  if (hasChildrenField) {
+    // 已经是树形结构，只需要转换字段名
+    const convertNode = (node) => {
+      const children = node.Children || node.children
+      const result = {
+        id: node.id,
+        name: node.Name || node.name || '',
       }
-      if (node.children.length === 0) {
-        delete node.children
+      if (children && Array.isArray(children) && children.length > 0) {
+        result.children = children.map(child => convertNode(child))
       }
-      result.push(node)
+      return result
     }
-  })
-  return result
+    return depts.map(dept => convertNode(dept))
+  }
+  
+  // 扁平结构，需要构建树形结构
+  const buildTree = (items, parentId = 0) => {
+    const result = []
+    items.forEach(item => {
+      // 处理 parent_id，支持 null、0 和 undefined
+      let itemParentId = 0
+      if (item.ParentID !== undefined && item.ParentID !== null) {
+        itemParentId = item.ParentID
+      } else if (item.parent_id !== undefined && item.parent_id !== null) {
+        itemParentId = item.parent_id
+      }
+      
+      // 将 parentId 也转换为数字进行比较
+      const compareParentId = parentId === null ? 0 : parentId
+      
+      if (itemParentId === compareParentId) {
+        const node = {
+          id: item.id,
+          name: item.Name || item.name || '',
+          children: buildTree(items, item.id)
+        }
+        if (node.children.length === 0) {
+          delete node.children
+        }
+        result.push(node)
+      }
+    })
+    return result
+  }
+  
+  return buildTree(depts)
 }
 
 const loadDepartments = async () => {
@@ -299,12 +336,12 @@ const loadDepartments = async () => {
     const res = await getDepartmentList()
     if (res.data && res.data.list) {
       const depts = res.data.list
-      console.log('Loaded departments:', depts)
+      console.log('Loaded departments (raw):', JSON.stringify(depts, null, 2))
       // 保存原始列表（用于扁平化选择）
       departments.value = depts
       // 转换为树形结构
       departmentTree.value = transformDepartmentToTree(depts)
-      console.log('Transformed department tree:', departmentTree.value)
+      console.log('Transformed department tree:', JSON.stringify(departmentTree.value, null, 2))
     }
   } catch (error) {
     console.error('Load departments error:', error)
@@ -359,6 +396,26 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
+// 获取去重后的角色列表
+const getUniqueRoles = (roles) => {
+  if (!roles || !Array.isArray(roles)) return []
+  const seen = new Set()
+  const unique = []
+  for (const role of roles) {
+    const roleId = role.id || role.ID
+    if (roleId && !seen.has(roleId)) {
+      seen.add(roleId)
+      unique.push(role)
+    } else if (roleId) {
+      console.warn('Duplicate role found:', roleId, role)
+    }
+  }
+  if (roles.length !== unique.length) {
+    console.warn(`Roles deduplicated: ${roles.length} -> ${unique.length}`, roles, unique)
+  }
+  return unique
+}
+
 // 获取部门名称
 const getDepartmentName = (departmentId) => {
   if (!departmentId) return ''
@@ -391,6 +448,9 @@ const handleEdit = async (row) => {
   const adminDepartment = row.Department || row.department
   const adminRoles = row.Roles || row.roles
   
+  // 去重角色ID
+  const uniqueRoleIds = adminRoles ? [...new Set(adminRoles.map(r => r.id || r.ID).filter(id => id))] : []
+  
   Object.assign(formData, {
     id: row.id,
     username: row.Username || row.username || '',
@@ -399,7 +459,7 @@ const handleEdit = async (row) => {
     email: row.Email || row.email || '',
     phone: row.Phone || row.phone || '',
     department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
-    role_ids: adminRoles ? adminRoles.map(r => r.id || r.ID) : [],
+    role_ids: uniqueRoleIds,
     status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)
   })
   dialogVisible.value = true
