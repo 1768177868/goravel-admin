@@ -481,8 +481,8 @@ const handleDialogClose = () => {
 
 // 全选/取消全选权限
 const handleSelectAllPermissions = () => {
-  if (permissionTreeRef.value) {
-    const allKeys = getAllPermissionKeys(permissionTree)
+  if (permissionTreeRef.value && permissionTree.value) {
+    const allKeys = getAllPermissionKeys(permissionTree.value)
     permissionTreeRef.value.setCheckedKeys(allKeys)
   }
 }
@@ -509,12 +509,20 @@ const handleUnselectAllMenus = () => {
 
 // 递归获取所有权限ID（包括子节点）
 const getAllPermissionKeys = (tree) => {
+  if (!tree || !Array.isArray(tree)) {
+    return []
+  }
   const keys = []
   const traverse = (nodes) => {
+    if (!nodes || !Array.isArray(nodes)) {
+      return
+    }
     nodes.forEach(node => {
       // 只添加叶子节点（实际权限），不添加分组节点
       if (!node.children || node.children.length === 0) {
-        keys.push(node.id)
+        if (node.id) {
+          keys.push(node.id)
+        }
       } else {
         traverse(node.children)
       }
@@ -526,10 +534,18 @@ const getAllPermissionKeys = (tree) => {
 
 // 递归获取所有菜单ID
 const getAllMenuKeys = (tree) => {
+  if (!tree || !Array.isArray(tree)) {
+    return []
+  }
   const keys = []
   const traverse = (nodes) => {
+    if (!nodes || !Array.isArray(nodes)) {
+      return
+    }
     nodes.forEach(node => {
-      keys.push(node.id)
+      if (node.id) {
+        keys.push(node.id)
+      }
       if (node.children && node.children.length > 0) {
         traverse(node.children)
       }
