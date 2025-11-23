@@ -18,9 +18,26 @@ func NewPasswordController() *PasswordController {
 
 // UpdatePassword 修改密码
 func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
-	var admin models.Admin
-	if err := facades.Auth(ctx).Guard("admin").User(&admin); err != nil {
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	// 尝试值类型
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		// 尝试指针类型
+		admin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	// 重新查询admin以确保获取最新数据（包括密码）
+	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
 	oldPassword := ctx.Request().Input("old_password")
@@ -89,4 +106,3 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "password_reset_success")
 }
-

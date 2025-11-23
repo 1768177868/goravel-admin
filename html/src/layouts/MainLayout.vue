@@ -98,29 +98,19 @@
               <Aim v-else />
             </el-icon>
           </el-button>
-          <el-dropdown @command="handleLayoutSize" trigger="click">
-            <el-button type="text" class="header-btn" :title="$t('layout.title')">
-              <el-icon><Grid /></el-icon>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="small" :class="{ 'is-active': appStore.layoutSize === 'small' }">
-                  {{ $t('layout.small') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="default" :class="{ 'is-active': appStore.layoutSize === 'default' }">
-                  {{ $t('layout.default') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="large" :class="{ 'is-active': appStore.layoutSize === 'large' }">
-                  {{ $t('layout.large') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <span class="user-info">
-              <el-icon><User /></el-icon>
-              {{ userStore.adminInfo?.nickname || userStore.adminInfo?.username }}
+              <el-avatar 
+                v-if="userStore.adminInfo?.avatar" 
+                :size="32" 
+                :src="userStore.adminInfo.avatar"
+                class="user-avatar"
+              >
+                <el-icon><User /></el-icon>
+              </el-avatar>
+              <el-icon v-else class="user-icon"><User /></el-icon>
+              <span class="user-name">{{ userStore.adminInfo?.nickname || userStore.adminInfo?.username }}</span>
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -177,7 +167,6 @@ import {
   ArrowDown,
   FullScreen,
   Aim,
-  Grid,
   Odometer,
   Avatar,
   Key,
@@ -317,10 +306,6 @@ const handleCommand = async (command) => {
       // 用户取消
     }
   }
-}
-
-const handleLayoutSize = (size) => {
-  appStore.setLayoutSize(size)
 }
 
 </script>
@@ -478,10 +463,19 @@ const handleLayoutSize = (size) => {
   align-items: center;
   cursor: pointer;
   color: #606266;
+  gap: 8px;
 }
 
-.user-info .el-icon {
-  margin: 0 5px;
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.user-icon {
+  flex-shrink: 0;
+}
+
+.user-name {
+  white-space: nowrap;
 }
 
 .tabs-wrapper {

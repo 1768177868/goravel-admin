@@ -13,7 +13,7 @@
               <el-icon><User /></el-icon>
             </el-avatar>
             <div class="avatar-actions">
-              <el-button type="primary" link @click="showAvatarDialog = true">
+              <el-button type="primary" link @click="handleOpenAvatarDialog">
                 {{ $t('profile.change_avatar') }}
               </el-button>
             </div>
@@ -121,25 +121,30 @@
       </el-col>
     </el-row>
 
-    <!-- 头像上传对话框 -->
+    <!-- 头像选择对话框 -->
     <el-dialog
       v-model="showAvatarDialog"
       :title="$t('profile.change_avatar')"
-      width="400px"
+      width="500px"
     >
-      <el-upload
-        class="avatar-uploader"
-        action="#"
-        :show-file-list="false"
-        :before-upload="beforeAvatarUpload"
-        :http-request="handleAvatarUpload"
-      >
-        <img v-if="avatarUrl" :src="avatarUrl" class="avatar-preview" />
-        <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-      </el-upload>
+      <div class="avatar-selector">
+        <div class="avatar-grid">
+          <div
+            v-for="avatar in defaultAvatars"
+            :key="avatar"
+            class="avatar-item"
+            :class="{ active: selectedAvatar === avatar }"
+            @click="selectedAvatar = avatar"
+          >
+            <el-avatar :size="60" :src="avatar">
+              <el-icon><User /></el-icon>
+            </el-avatar>
+          </div>
+        </div>
+      </div>
       <template #footer>
         <el-button @click="showAvatarDialog = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleSaveAvatar" :loading="avatarSubmitting">
+        <el-button type="primary" @click="handleSaveAvatar" :loading="avatarSubmitting" :disabled="!selectedAvatar">
           {{ $t('common.confirm') }}
         </el-button>
       </template>
@@ -164,9 +169,30 @@ const passwordFormRef = ref(null)
 const infoSubmitting = ref(false)
 const passwordSubmitting = ref(false)
 const showAvatarDialog = ref(false)
-const avatarUrl = ref('')
+const selectedAvatar = ref('')
 const avatarSubmitting = ref(false)
-const avatarFile = ref(null)
+
+// 系统默认头像列表（使用UI Avatars服务生成）
+const defaultAvatars = [
+  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&bold=true',
+  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&bold=true',
+  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&bold=true',
+  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128&bold=true',
+  'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128&bold=true',
+  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&rounded=true',
+  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&rounded=true',
+  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&rounded=true',
+  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128&rounded=true',
+  'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128&rounded=true',
+  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&bold=true&rounded=true',
+  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&bold=true&rounded=true',
+  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&bold=true&rounded=true'
+]
 
 const adminInfo = computed(() => userStore.adminInfo || {})
 
@@ -190,12 +216,38 @@ const validateConfirmPassword = (rule, value, callback) => {
   }
 }
 
+const validateEmail = (rule, value, callback) => {
+  if (value && value.trim() !== '') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      callback(new Error(t('profile.email_invalid')))
+    } else {
+      callback()
+    }
+  } else {
+    callback()
+  }
+}
+
+const validatePhone = (rule, value, callback) => {
+  if (value && value.trim() !== '') {
+    const phoneRegex = /^1[3-9]\d{9}$/
+    if (!phoneRegex.test(value)) {
+      callback(new Error(t('profile.phone_invalid')))
+    } else {
+      callback()
+    }
+  } else {
+    callback()
+  }
+}
+
 const infoRules = {
   email: [
-    { type: 'email', message: t('profile.email_invalid'), trigger: 'blur' }
+    { validator: validateEmail, trigger: 'blur' }
   ],
   phone: [
-    { pattern: /^1[3-9]\d{9}$/, message: t('profile.phone_invalid'), trigger: 'blur' }
+    { validator: validatePhone, trigger: 'blur' }
   ]
 }
 
@@ -373,54 +425,25 @@ const handleResetPassword = () => {
   passwordFormRef.value?.resetFields()
 }
 
-const beforeAvatarUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isImage) {
-    ElMessage.error(t('profile.avatar_format_error'))
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error(t('profile.avatar_size_error'))
-    return false
-  }
-
-  // 预览图片
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    avatarUrl.value = e.target.result
-  }
-  reader.readAsDataURL(file)
-  avatarFile.value = file
-
-  return false // 阻止自动上传
-}
-
-const handleAvatarUpload = () => {
-  // 这里可以实现实际上传逻辑
-  // 暂时只保存到本地预览
+const handleOpenAvatarDialog = () => {
+  // 打开对话框时，如果已有头像，设置为选中状态
+  selectedAvatar.value = adminInfo.value.avatar || ''
+  showAvatarDialog.value = true
 }
 
 const handleSaveAvatar = async () => {
-  if (!avatarFile.value) {
+  if (!selectedAvatar.value) {
     ElMessage.warning(t('profile.please_select_avatar'))
     return
   }
 
   avatarSubmitting.value = true
   try {
-    // 这里应该实际上传头像到服务器
-    // 暂时使用 base64 或 URL
-    // 假设上传后返回 URL
-    const avatar = avatarUrl.value // 实际应该是服务器返回的 URL
-
-    await updateProfile({ avatar })
+    await updateProfile({ avatar: selectedAvatar.value })
     await loadProfile()
     ElMessage.success(t('profile.avatar_update_success'))
     showAvatarDialog.value = false
-    avatarUrl.value = ''
-    avatarFile.value = null
+    selectedAvatar.value = ''
   } catch (error) {
     console.error('Update avatar error:', error)
   } finally {
@@ -464,38 +487,37 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-.avatar-uploader {
-  display: flex;
-  justify-content: center;
+.avatar-selector {
+  padding: 20px 0;
 }
 
-.avatar-uploader :deep(.el-upload) {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.avatar-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  border: 2px solid #e4e7ed;
+  border-radius: 8px;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
   transition: all 0.3s;
 }
 
-.avatar-uploader :deep(.el-upload:hover) {
+.avatar-item:hover {
   border-color: #409EFF;
+  transform: scale(1.05);
 }
 
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 178px;
-  height: 178px;
-  line-height: 178px;
-  text-align: center;
-}
-
-.avatar-preview {
-  width: 178px;
-  height: 178px;
-  display: block;
-  object-fit: cover;
+.avatar-item.active {
+  border-color: #409EFF;
+  background-color: #ecf5ff;
 }
 </style>
 
