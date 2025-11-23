@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>操作日志</span>
+          <span>{{ $t('log.operation_log') }}</span>
           <div class="header-actions">
             <el-button 
               type="danger" 
@@ -11,12 +11,12 @@
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>
-              删除选中 ({{ selectedRows.length }})
+              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
             </el-button>
-            <el-button type="danger" @click="handleClean">
+            <!-- <el-button type="danger" @click="handleClean">
               <el-icon><Delete /></el-icon>
               清空日志
-            </el-button>
+            </el-button> -->
           </div>
         </div>
       </template>
@@ -32,18 +32,18 @@
         @checkbox-all="handleSelectionChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column type="seq" width="60" title="序号" />
-        <vxe-column field="id" title="ID" width="80" />
-        <vxe-column field="admin.username" title="管理员" />
-        <vxe-column field="method" title="请求方法" width="100" />
-        <vxe-column field="path" title="请求路径" />
-        <vxe-column field="ip" title="IP地址" width="150" />
-        <vxe-column field="status_code" title="状态码" width="100" />
-        <vxe-column field="created_at" title="操作时间" width="180" />
-        <vxe-column title="操作" width="150" fixed="right">
+        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
+        <vxe-column field="id" :title="$t('table.id')" width="80" />
+        <vxe-column field="admin.username" :title="$t('log.admin')" />
+        <vxe-column field="method" :title="$t('log.method')" width="100" />
+        <vxe-column field="path" :title="$t('log.path')" />
+        <vxe-column field="ip" :title="$t('log.ip')" width="150" />
+        <vxe-column field="status_code" :title="$t('log.status_code')" width="100" />
+        <vxe-column field="created_at" :title="$t('log.operation_time')" width="180" />
+        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleView(row)">查看</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -57,16 +57,16 @@
       />
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="日志详情" width="800px">
+    <el-dialog v-model="detailVisible" :title="$t('log.detail')" width="800px">
       <el-descriptions :column="2" border v-if="logDetail">
-        <el-descriptions-item label="ID">{{ logDetail.id }}</el-descriptions-item>
-        <el-descriptions-item label="管理员">{{ logDetail.admin?.username }}</el-descriptions-item>
-        <el-descriptions-item label="请求方法">{{ logDetail.method }}</el-descriptions-item>
-        <el-descriptions-item label="请求路径">{{ logDetail.path }}</el-descriptions-item>
-        <el-descriptions-item label="IP地址">{{ logDetail.ip }}</el-descriptions-item>
-        <el-descriptions-item label="状态码">{{ logDetail.status_code }}</el-descriptions-item>
-        <el-descriptions-item label="操作时间" :span="2">{{ logDetail.created_at }}</el-descriptions-item>
-        <el-descriptions-item label="请求参数" :span="2">
+        <el-descriptions-item :label="$t('table.id')">{{ logDetail.id }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.admin')">{{ logDetail.admin?.username }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.method')">{{ logDetail.method }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.path')">{{ logDetail.path }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.ip')">{{ logDetail.ip }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.status_code')">{{ logDetail.status_code }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.operation_time')" :span="2">{{ logDetail.created_at }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.request_params')" :span="2">
           <pre>{{ JSON.stringify(logDetail.params, null, 2) }}</pre>
         </el-descriptions-item>
       </el-descriptions>
@@ -76,6 +76,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getOperationLogList,
@@ -84,6 +85,8 @@ import {
   batchDeleteOperationLogs,
   cleanOperationLogs
 } from '../../api/log'
+
+const { t } = useI18n()
 
 const tableRef = ref(null)
 const loading = ref(false)
@@ -138,13 +141,13 @@ const handleView = async (row) => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该日志吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('log.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await deleteOperationLog(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('log.delete_success'))
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
@@ -159,19 +162,19 @@ const handleSelectionChange = () => {
 
 const handleBatchDelete = async () => {
   if (selectedRows.value.length === 0) {
-    ElMessage.warning('请选择要删除的日志')
+    ElMessage.warning(t('common.please_select_items'))
     return
   }
 
   try {
-    await ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 条日志吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('log.batch_delete_confirm', { count: selectedRows.value.length }), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     const ids = selectedRows.value.map(row => row.id)
     await batchDeleteOperationLogs(ids)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('log.delete_success'))
     selectedRows.value = []
     loadData()
   } catch (error) {
@@ -183,13 +186,13 @@ const handleBatchDelete = async () => {
 
 const handleClean = async () => {
   try {
-    await ElMessageBox.confirm('确定要清空所有操作日志吗？此操作不可恢复！', '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('log.clean_confirm'), t('form.warning'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await cleanOperationLogs()
-    ElMessage.success('清空成功')
+    ElMessage.success(t('log.clean_success'))
     selectedRows.value = []
     loadData()
   } catch (error) {

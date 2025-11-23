@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>登录日志</span>
+          <span>{{ $t('log.login_log') }}</span>
           <div class="header-actions">
             <el-button 
               type="danger" 
@@ -11,12 +11,12 @@
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>
-              删除选中 ({{ selectedRows.length }})
+              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
             </el-button>
-            <el-button type="danger" @click="handleClean">
+            <!-- <el-button type="danger" @click="handleClean">
               <el-icon><Delete /></el-icon>
               清空日志
-            </el-button>
+            </el-button> -->
           </div>
         </div>
       </template>
@@ -32,24 +32,24 @@
         @checkbox-all="handleSelectionChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column type="seq" width="60" title="序号" />
-        <vxe-column field="id" title="ID" width="80" />
-        <vxe-column field="admin.username" title="管理员" />
-        <vxe-column field="ip" title="IP地址" width="150" />
-        <vxe-column field="user_agent" title="用户代理" />
-        <vxe-column field="status" title="状态" width="100">
+        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
+        <vxe-column field="id" :title="$t('table.id')" width="80" />
+        <vxe-column field="admin.username" :title="$t('log.admin')" />
+        <vxe-column field="ip" :title="$t('log.ip')" width="150" />
+        <vxe-column field="user_agent" :title="$t('log.user_agent')" />
+        <vxe-column field="status" :title="$t('table.status')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '成功' : '失败' }}
+              {{ row.status === 1 ? $t('log.success') : $t('log.failed') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="message" title="消息" />
-        <vxe-column field="created_at" title="登录时间" width="180" />
-        <vxe-column title="操作" width="100" fixed="right">
+        <vxe-column field="message" :title="$t('log.message')" />
+        <vxe-column field="created_at" :title="$t('log.login_time')" width="180" />
+        <vxe-column :title="$t('table.operation')" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleView(row)">查看</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -63,19 +63,19 @@
       />
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="日志详情" width="800px">
+    <el-dialog v-model="detailVisible" :title="$t('log.detail')" width="800px">
       <el-descriptions :column="2" border v-if="logDetail">
-        <el-descriptions-item label="ID">{{ logDetail.id }}</el-descriptions-item>
-        <el-descriptions-item label="管理员">{{ logDetail.admin?.username }}</el-descriptions-item>
-        <el-descriptions-item label="IP地址">{{ logDetail.ip }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
+        <el-descriptions-item :label="$t('table.id')">{{ logDetail.id }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.admin')">{{ logDetail.admin?.username }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.ip')">{{ logDetail.ip }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('table.status')">
           <el-tag :type="logDetail.status === 1 ? 'success' : 'danger'">
-            {{ logDetail.status === 1 ? '成功' : '失败' }}
+            {{ logDetail.status === 1 ? $t('log.success') : $t('log.failed') }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="用户代理">{{ logDetail.user_agent }}</el-descriptions-item>
-        <el-descriptions-item label="登录时间">{{ logDetail.created_at }}</el-descriptions-item>
-        <el-descriptions-item label="消息" :span="2">{{ logDetail.message }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.user_agent')">{{ logDetail.user_agent }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.login_time')">{{ logDetail.created_at }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.message')" :span="2">{{ logDetail.message }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -83,6 +83,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getLoginLogList,
@@ -91,6 +92,8 @@ import {
   batchDeleteLoginLogs,
   cleanLoginLogs
 } from '../../api/log'
+
+const { t } = useI18n()
 
 const tableRef = ref(null)
 const loading = ref(false)
@@ -145,13 +148,13 @@ const handleView = async (row) => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该日志吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('log.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await deleteLoginLog(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('log.delete_success'))
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
@@ -166,19 +169,19 @@ const handleSelectionChange = () => {
 
 const handleBatchDelete = async () => {
   if (selectedRows.value.length === 0) {
-    ElMessage.warning('请选择要删除的日志')
+    ElMessage.warning(t('common.please_select_items'))
     return
   }
 
   try {
-    await ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 条日志吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('log.batch_delete_confirm', { count: selectedRows.value.length }), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     const ids = selectedRows.value.map(row => row.id)
     await batchDeleteLoginLogs(ids)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('log.delete_success'))
     selectedRows.value = []
     loadData()
   } catch (error) {
@@ -190,13 +193,13 @@ const handleBatchDelete = async () => {
 
 const handleClean = async () => {
   try {
-    await ElMessageBox.confirm('确定要清空所有登录日志吗？此操作不可恢复！', '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('log.clean_confirm'), t('form.warning'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await cleanLoginLogs()
-    ElMessage.success('清空成功')
+    ElMessage.success(t('log.clean_success'))
     selectedRows.value = []
     loadData()
   } catch (error) {

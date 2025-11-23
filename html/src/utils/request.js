@@ -23,6 +23,45 @@ request.interceptors.request.use(
   }
 )
 
+// 防止重复跳转的标志
+let isRedirecting = false
+
+// 处理401错误的统一函数
+const handle401Error = (message) => {
+  // 如果正在跳转，直接返回
+  if (isRedirecting) {
+    return
+  }
+  
+  isRedirecting = true
+  const userStore = useUserStore()
+  const tabsStore = useTabsStore()
+  
+  // 立即清除用户状态（同步执行）
+  userStore.logout(true)
+  
+  // 清除标签页
+  tabsStore.removeAllTabs()
+  
+  // 如果当前不在登录页，立即跳转
+  const currentPath = router.currentRoute.value.path
+  if (currentPath !== '/login') {
+    // 显示错误消息
+    ElMessage.error(message || '未登录或登录已过期，请重新登录')
+    
+    // 立即使用 router.replace 跳转
+    router.replace('/login').catch(() => {
+      // 如果路由跳转失败，直接使用 window.location 强制跳转
+      window.location.href = '/login'
+    })
+  }
+  
+  // 清除跳转标志（延迟清除，避免立即重复）
+  setTimeout(() => {
+    isRedirecting = false
+  }, 2000)
+}
+
 // 响应拦截器
 request.interceptors.response.use(
   response => {
@@ -39,24 +78,7 @@ request.interceptors.response.use(
     if (res.code !== 200) {
       // 如果是未授权错误，也需要跳转到登录页
       if (res.code === 401 || res.message?.includes('未登录') || res.message?.includes('登录已过期') || res.message?.includes('token') || res.message?.includes('Token')) {
-        const userStore = useUserStore()
-        const tabsStore = useTabsStore()
-        
-        // 立即清除用户状态
-        userStore.logout(true)
-        
-        // 清除标签页
-        tabsStore.removeAllTabs()
-        
-        // 跳转到登录页
-        if (router.currentRoute.value.path !== '/login') {
-          router.replace('/login').then(() => {
-            ElMessage.error(res.message || '未登录或登录已过期，请重新登录')
-          }).catch(() => {
-            // 如果路由跳转失败，直接使用 window.location
-            window.location.href = '/login'
-          })
-        }
+        handle401Error(res.message)
         return Promise.reject(new Error(res.message || '未登录或登录已过期'))
       }
       
@@ -72,24 +94,7 @@ request.interceptors.response.use(
       
       if (status === 401) {
         // 未登录或登录已过期，清除所有状态并跳转到登录页
-        const userStore = useUserStore()
-        const tabsStore = useTabsStore()
-        
-        // 立即清除用户状态（跳过 API 调用，避免循环）
-        userStore.logout(true)
-        
-        // 清除标签页
-        tabsStore.removeAllTabs()
-        
-        // 跳转到登录页（使用 replace 避免历史记录问题）
-        if (router.currentRoute.value.path !== '/login') {
-          router.replace('/login').then(() => {
-            ElMessage.error('未登录或登录已过期，请重新登录')
-          }).catch(() => {
-            // 如果路由跳转失败，直接使用 window.location
-            window.location.href = '/login'
-          })
-        }
+        handle401Error(data?.message)
       } else if (status === 403) {
         ElMessage.error('没有权限访问')
       } else {

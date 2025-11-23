@@ -102,6 +102,7 @@ router.beforeEach((to, from, next) => {
   } else {
     // 需要认证的页面
     if (!userStore.isLoggedIn) {
+      // 如果没有token，直接跳转到登录页
       next('/login')
     } else {
       // 如果用户信息不存在，尝试获取
@@ -109,9 +110,9 @@ router.beforeEach((to, from, next) => {
         userStore.fetchUserInfo().then(() => {
           next()
         }).catch((error) => {
-          // 如果获取用户信息失败（可能是401），清除状态并跳转
-          userStore.logout(true)
-          next('/login')
+          // 如果获取用户信息失败（可能是401），拦截器会处理跳转
+          // 这里只需要阻止导航
+          next(false)
         })
       } else {
         next()

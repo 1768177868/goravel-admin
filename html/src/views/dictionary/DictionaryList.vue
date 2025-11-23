@@ -3,21 +3,21 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>字典列表</span>
+          <span>{{ $t('dictionary.title') }}</span>
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
-            添加字典
+            {{ $t('dictionary.add_dictionary') }}
           </el-button>
         </div>
       </template>
 
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="类型">
-          <el-input v-model="searchForm.type" placeholder="请输入类型" clearable />
+        <el-form-item :label="$t('dictionary.type')">
+          <el-input v-model="searchForm.type" :placeholder="$t('form.please_enter') + $t('dictionary.type')" clearable />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
+          <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
         </el-form-item>
       </el-form>
 
@@ -28,24 +28,24 @@
         resizable
         height="600"
       >
-        <vxe-column type="seq" width="60" title="序号" />
-        <vxe-column field="id" title="ID" width="80" />
-        <vxe-column field="type" title="类型" />
-        <vxe-column field="label" title="标签" />
-        <vxe-column field="value" title="值" />
-        <vxe-column field="sort" title="排序" width="80" />
-        <vxe-column field="status" title="状态" width="80">
+        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
+        <vxe-column field="id" :title="$t('table.id')" width="80" />
+        <vxe-column field="type" :title="$t('dictionary.type')" />
+        <vxe-column field="label" :title="$t('dictionary.label')" />
+        <vxe-column field="value" :title="$t('dictionary.value')" />
+        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
+              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="created_at" title="创建时间" />
-        <vxe-column title="操作" width="150" fixed="right">
+        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -71,35 +71,36 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item label="类型" prop="type">
+        <el-form-item :label="$t('dictionary.type')" prop="type">
           <el-input v-model="formData.type" />
         </el-form-item>
-        <el-form-item label="标签" prop="label">
+        <el-form-item :label="$t('dictionary.label')" prop="label">
           <el-input v-model="formData.label" />
         </el-form-item>
-        <el-form-item label="值" prop="value">
+        <el-form-item :label="$t('dictionary.value')" prop="value">
           <el-input v-model="formData.value" />
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model="formData.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
+            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
+            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="排序">
+        <el-form-item :label="$t('common.sort')">
           <el-input-number v-model="formData.sort" :min="0" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getDictionaryList,
@@ -109,11 +110,12 @@ import {
   deleteDictionary
 } from '../../api/dictionary'
 
+const { t } = useI18n()
 const formRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('添加字典')
+const dialogTitle = computed(() => formData.id ? t('dictionary.edit_dictionary') : t('dictionary.add_dictionary'))
 
 const searchForm = reactive({
   type: ''
@@ -136,11 +138,11 @@ const formData = reactive({
   sort: 0
 })
 
-const formRules = {
-  type: [{ required: true, message: '请输入类型', trigger: 'blur' }],
-  label: [{ required: true, message: '请输入标签', trigger: 'blur' }],
-  value: [{ required: true, message: '请输入值', trigger: 'blur' }]
-}
+const formRules = computed(() => ({
+  type: [{ required: true, message: t('dictionary.type_required'), trigger: 'blur' }],
+  label: [{ required: true, message: t('dictionary.label_required'), trigger: 'blur' }],
+  value: [{ required: true, message: t('dictionary.value_required'), trigger: 'blur' }]
+}))
 
 const loadData = async () => {
   loading.value = true
@@ -179,7 +181,6 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '添加字典'
   Object.assign(formData, {
     id: null,
     type: '',
@@ -192,7 +193,6 @@ const handleAdd = () => {
 }
 
 const handleEdit = async (row) => {
-  dialogTitle.value = '编辑字典'
   try {
     const res = await getDictionaryDetail(row.id)
     if (res.data && res.data.dictionary) {
@@ -221,10 +221,10 @@ const handleSubmit = async () => {
       try {
         if (formData.id) {
           await updateDictionary(formData.id, formData)
-          ElMessage.success('更新成功')
+          ElMessage.success(t('dictionary.update_success'))
         } else {
           await createDictionary(formData)
-          ElMessage.success('创建成功')
+          ElMessage.success(t('dictionary.create_success'))
         }
         dialogVisible.value = false
         loadData()
@@ -243,13 +243,13 @@ const handleDialogClose = () => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该字典吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('dictionary.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await deleteDictionary(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('dictionary.delete_success'))
     loadData()
   } catch (error) {
     if (error !== 'cancel') {

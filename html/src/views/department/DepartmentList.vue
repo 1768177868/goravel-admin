@@ -3,10 +3,10 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>部门列表</span>
+          <span>{{ $t('department.title') }}</span>
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
-            添加部门
+            {{ $t('department.add_department') }}
           </el-button>
         </div>
       </template>
@@ -19,22 +19,22 @@
         tree-config
         height="600"
       >
-        <vxe-column type="seq" width="60" title="序号" />
-        <vxe-column field="name" title="部门名称" tree-node />
-        <vxe-column field="description" title="描述" />
-        <vxe-column field="sort" title="排序" width="80" />
-        <vxe-column field="status" title="状态" width="80">
+        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
+        <vxe-column field="name" :title="$t('department.name')" tree-node />
+        <vxe-column field="description" :title="$t('common.description')" />
+        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
+              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="created_at" title="创建时间" />
-        <vxe-column title="操作" width="150" fixed="right">
+        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -52,9 +52,9 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item label="父部门">
-          <el-select v-model="formData.parent_id" placeholder="请选择父部门" clearable>
-            <el-option label="顶级部门" :value="0" />
+        <el-form-item :label="$t('department.parent_department')">
+          <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('department.parent_department')" clearable>
+            <el-option :label="$t('department.top_department')" :value="0" />
             <el-option
               v-for="dept in departmentOptions"
               :key="dept.id"
@@ -63,25 +63,25 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="部门名称" prop="name">
+        <el-form-item :label="$t('department.name')" prop="name">
           <el-input v-model="formData.name" />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item :label="$t('common.description')">
           <el-input v-model="formData.description" type="textarea" />
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model="formData.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
+            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
+            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="排序">
+        <el-form-item :label="$t('common.sort')">
           <el-input-number v-model="formData.sort" :min="0" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -89,6 +89,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getDepartmentList,
@@ -98,11 +99,12 @@ import {
   deleteDepartment
 } from '../../api/department'
 
+const { t } = useI18n()
 const formRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('添加部门')
+const dialogTitle = computed(() => formData.id ? t('department.edit_department') : t('department.add_department'))
 
 const tableData = ref([])
 
@@ -115,9 +117,9 @@ const formData = reactive({
   sort: 0
 })
 
-const formRules = {
-  name: [{ required: true, message: '请输入部门名称', trigger: 'blur' }]
-}
+const formRules = computed(() => ({
+  name: [{ required: true, message: t('department.name_required'), trigger: 'blur' }]
+}))
 
 const departmentOptions = computed(() => {
   const flatten = (departments, parentId = 0) => {
@@ -149,7 +151,6 @@ const loadData = async () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '添加部门'
   Object.assign(formData, {
     id: null,
     parent_id: 0,
@@ -162,7 +163,6 @@ const handleAdd = () => {
 }
 
 const handleEdit = async (row) => {
-  dialogTitle.value = '编辑部门'
   try {
     const res = await getDepartmentDetail(row.id)
     if (res.data && res.data.department) {
@@ -195,10 +195,10 @@ const handleSubmit = async () => {
         }
         if (formData.id) {
           await updateDepartment(formData.id, data)
-          ElMessage.success('更新成功')
+          ElMessage.success(t('department.update_success'))
         } else {
           await createDepartment(data)
-          ElMessage.success('创建成功')
+          ElMessage.success(t('department.create_success'))
         }
         dialogVisible.value = false
         loadData()
@@ -217,13 +217,13 @@ const handleDialogClose = () => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该部门吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('department.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
     await deleteDepartment(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('department.delete_success'))
     loadData()
   } catch (error) {
     if (error !== 'cancel') {

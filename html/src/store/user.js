@@ -45,7 +45,8 @@ export const useUserStore = defineStore('user', {
         }
         return res
       } catch (error) {
-        this.logout()
+        // fetchUserInfo 失败时也应该清除状态，但这里不直接跳转，由拦截器处理
+        this.logout(true)
         throw error
       }
     },
