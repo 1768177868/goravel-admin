@@ -1,0 +1,17 @@
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 依赖
+node_modules
+
+# 构建输出
+dist
+*.local
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+

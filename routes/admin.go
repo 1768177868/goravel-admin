@@ -19,6 +19,7 @@ func Admin() {
 	operationLogController := admin.NewOperationLogController()
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
+	dashboardController := admin.NewDashboardController()
 
 	// 登录相关（不需要认证，但需要多语言）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
@@ -87,5 +88,11 @@ func Admin() {
 		router.Get("system-logs/{id}", systemLogController.Show)
 		router.Delete("system-logs/{id}", systemLogController.Destroy)
 		router.Post("system-logs/clean", systemLogController.Clean)
+
+		// Dashboard 统计
+		router.Get("dashboard/count", dashboardController.GetCount)
+		router.Get("dashboard/user-access-source", dashboardController.GetUserAccessSource)
+		router.Get("dashboard/weekly-user-activity", dashboardController.GetWeeklyUserActivity)
+		router.Get("dashboard/monthly-sales", dashboardController.GetMonthlySales)
 	})
 }
