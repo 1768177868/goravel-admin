@@ -16,7 +16,7 @@
           <el-input v-model="searchForm.name" :placeholder="$t('form.please_enter') + $t('role.name')" clearable />
         </el-form-item>
         <el-form-item :label="$t('table.status')">
-          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable>
+          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
             <el-option :label="$t('common.enabled')" value="1" />
             <el-option :label="$t('common.disabled')" value="0" />
           </el-select>
@@ -36,17 +36,33 @@
       >
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="name" :title="$t('role.name')" />
-        <vxe-column field="slug" :title="$t('role.slug')" />
-        <vxe-column field="description" :title="$t('common.description')" />
+        <vxe-column field="name" :title="$t('role.name')">
+          <template #default="{ row }">
+            {{ row.Name || row.name || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="slug" :title="$t('role.slug')">
+          <template #default="{ row }">
+            {{ row.Slug || row.slug || '-' }}
+          </template>
+        </vxe-column>
+        <vxe-column field="description" :title="$t('common.description')">
+          <template #default="{ row }">
+            {{ row.Description || row.description || '-' }}
+          </template>
+        </vxe-column>
         <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
+            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
+              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80" />
+        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+          <template #default="{ row }">
+            {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
+          </template>
+        </vxe-column>
         <vxe-column field="created_at" :title="$t('table.created_at')" />
         <vxe-column :title="$t('table.operation')" width="200" fixed="right">
           <template #default="{ row }">
@@ -177,10 +193,20 @@ const loadData = async () => {
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm
+      page_size: pagination.pageSize
     }
+    // 只添加有值的搜索条件
+    if (searchForm.name && searchForm.name.trim()) {
+      params.name = searchForm.name.trim()
+    }
+    if (searchForm.status) {
+      params.status = searchForm.status
+    }
+    
+    console.log('Role search params:', params)
     const res = await getRoleList(params)
+    console.log('Role list response:', res)
+    
     if (res.data) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
@@ -192,11 +218,41 @@ const loadData = async () => {
   }
 }
 
+// 转换权限数据为树形结构（权限是扁平结构，需要转换为树形）
+const transformPermissionToTree = (permissions) => {
+  if (!permissions || !Array.isArray(permissions)) return []
+  
+  return permissions.map(perm => ({
+    id: perm.id || perm.ID,
+    name: perm.Name || perm.name || '',
+    slug: perm.Slug || perm.slug || ''
+  }))
+}
+
+// 转换菜单数据为树形结构（支持后端返回的树形结构）
+const transformMenuToTree = (menus) => {
+  if (!menus || !Array.isArray(menus)) return []
+  
+  const convertNode = (node) => {
+    const children = node.Children || node.children
+    const result = {
+      id: node.id,
+      name: node.Title || node.name || '',
+    }
+    if (children && Array.isArray(children) && children.length > 0) {
+      result.children = children.map(child => convertNode(child))
+    }
+    return result
+  }
+  
+  return menus.map(menu => convertNode(menu))
+}
+
 const loadPermissions = async () => {
   try {
-    const res = await getPermissionList()
+    const res = await getPermissionList({ page_size: 1000 }) // 获取所有权限
     if (res.data && res.data.list) {
-      permissionTree.value = res.data.list
+      permissionTree.value = transformPermissionToTree(res.data.list)
     }
   } catch (error) {
     console.error('Load permissions error:', error)
@@ -206,9 +262,9 @@ const loadPermissions = async () => {
 const loadMenus = async () => {
   try {
     const res = await getMenuList()
-    if (res.data && res.data.list) {
-      menuTree.value = res.data.list
-    }
+    // 菜单返回的是 menus 字段，不是 list
+    const menus = res.data?.menus || res.data?.list || []
+    menuTree.value = transformMenuToTree(menus)
   } catch (error) {
     console.error('Load menus error:', error)
   }
@@ -250,15 +306,19 @@ const handleEdit = async (row) => {
     const res = await getRoleDetail(row.id)
     if (res.data && res.data.role) {
       const role = res.data.role
+      // 处理字段映射，支持 PascalCase 和 snake_case
+      const rolePermissions = role.Permissions || role.permissions
+      const roleMenus = role.Menus || role.menus
+      
       Object.assign(formData, {
         id: role.id,
-        name: role.name,
-        slug: role.slug,
-        description: role.description || '',
-        permission_ids: role.permissions ? role.permissions.map(p => p.id) : [],
-        menu_ids: role.menus ? role.menus.map(m => m.id) : [],
-        status: role.status,
-        sort: role.sort || 0
+        name: role.Name || role.name || '',
+        slug: role.Slug || role.slug || '',
+        description: role.Description || role.description || '',
+        permission_ids: rolePermissions ? rolePermissions.map(p => p.id || p.ID).filter(id => id) : [],
+        menu_ids: roleMenus ? roleMenus.map(m => m.id || m.ID).filter(id => id) : [],
+        status: role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1),
+        sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
       })
       dialogVisible.value = true
       // 等待树组件渲染后设置选中状态

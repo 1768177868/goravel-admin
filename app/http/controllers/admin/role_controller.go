@@ -32,7 +32,7 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 	query := facades.Orm().Query().Model(&models.Role{})
 
 	if name != "" {
-		query = query.Where("name", "like", "%"+name+"%")
+		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
 	if status != "" {
 		query = query.Where("status", status)
