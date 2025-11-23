@@ -32,7 +32,7 @@
               {{ adminInfo.phone || '-' }}
             </el-descriptions-item>
             <el-descriptions-item :label="$t('profile.department')">
-              {{ adminInfo.department?.name || '-' }}
+              {{ (adminInfo.department && adminInfo.department.name) ? adminInfo.department.name : '-' }}
             </el-descriptions-item>
             <el-descriptions-item :label="$t('profile.roles')">
               <template v-if="adminInfo.roles && adminInfo.roles.length > 0">
@@ -182,16 +182,10 @@ const defaultAvatars = [
   'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&bold=true',
   'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&bold=true',
   'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&bold=true',
-  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128&bold=true',
-  'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128&bold=true',
   'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&rounded=true',
   'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&rounded=true',
   'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&rounded=true',
-  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128&rounded=true',
-  'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128&rounded=true',
-  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&bold=true&rounded=true',
-  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&bold=true&rounded=true',
-  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&bold=true&rounded=true'
+  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128&rounded=true'
 ]
 
 const adminInfo = computed(() => userStore.adminInfo || {})
@@ -275,19 +269,44 @@ const loadProfile = async () => {
       console.log('Department:', admin.Department || admin.department)
       console.log('Roles:', admin.Roles || admin.roles)
       
-      // 处理部门数据
+      // 处理部门数据 - 兼容多种格式
       let department = null
-      if (admin.Department && (admin.Department.ID || admin.Department.id)) {
-        department = {
-          id: admin.Department.ID || admin.Department.id,
-          name: admin.Department.Name || admin.Department.name || '-'
-        }
-      } else if (admin.department && admin.department.id) {
-        department = {
-          id: admin.department.id,
-          name: admin.department.name || '-'
+      const dept = admin.Department || admin.department
+      console.log('Raw department data:', dept)
+      
+      if (dept) {
+        // 尝试多种可能的字段名格式
+        const deptId = dept.ID || dept.id || dept.Id || (dept.ID !== undefined ? dept.ID : null)
+        const deptName = dept.Name || dept.name || dept.Name || ''
+        
+        console.log('Department ID:', deptId, 'Department Name:', deptName)
+        
+        if (deptId && deptId > 0) {
+          department = {
+            id: deptId,
+            name: deptName || '-'
+          }
+        } else if (deptName && deptName !== '') {
+          // 即使没有ID，如果有名称也显示
+          department = {
+            id: 0,
+            name: deptName
+          }
         }
       }
+      
+      // 如果部门数据为空，但 department_id 存在，尝试从 department_id 获取
+      if (!department && (admin.DepartmentID || admin.department_id)) {
+        const deptId = admin.DepartmentID || admin.department_id
+        if (deptId && deptId > 0) {
+          department = {
+            id: deptId,
+            name: '-' // 暂时显示 '-'，后续可以从部门列表获取名称
+          }
+        }
+      }
+      
+      console.log('Processed department:', department)
       
       // 处理角色数据（去重）
       const rolesArray = admin.Roles || admin.roles || []
@@ -342,15 +361,26 @@ const handleUpdateInfo = async () => {
           
           // 处理部门数据
           let department = null
-          if (admin.Department && (admin.Department.ID || admin.Department.id)) {
-            department = {
-              id: admin.Department.ID || admin.Department.id,
-              name: admin.Department.Name || admin.Department.name || '-'
+          const dept = admin.Department || admin.department
+          if (dept) {
+            const deptId = dept.ID || dept.id || dept.Id
+            const deptName = dept.Name || dept.name || dept.Name
+            if (deptId && deptId > 0) {
+              department = {
+                id: deptId,
+                name: deptName || '-'
+              }
             }
-          } else if (admin.department && admin.department.id) {
-            department = {
-              id: admin.department.id,
-              name: admin.department.name || '-'
+          }
+          
+          // 如果部门数据为空，但 department_id 存在，尝试从 department_id 获取
+          if (!department && (admin.DepartmentID || admin.department_id)) {
+            const deptId = admin.DepartmentID || admin.department_id
+            if (deptId && deptId > 0) {
+              department = {
+                id: deptId,
+                name: '-' // 暂时显示 '-'，后续可以从部门列表获取名称
+              }
             }
           }
           
