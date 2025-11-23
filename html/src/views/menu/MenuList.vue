@@ -16,7 +16,7 @@
         :loading="loading"
         border
         resizable
-        tree-config
+        :tree-config="{ children: 'children', expandAll: false, indent: 20 }"
         height="600"
       >
         <vxe-column type="seq" width="60" :title="$t('table.seq')" />
@@ -121,15 +121,18 @@ const formRules = computed(() => ({
   path: [{ required: true, message: t('menu_management.path_required'), trigger: 'blur' }]
 }))
 
-// 扁平化菜单选项
+// 扁平化菜单选项（递归处理树形结构）
 const menuOptions = computed(() => {
   const flatten = (menus, parentId = 0) => {
     const result = []
     menus.forEach(menu => {
       if (menu.parent_id === parentId) {
         result.push(menu)
-        const children = flatten(menus, menu.id)
-        result.push(...children)
+        // 递归处理子菜单
+        if (menu.children && menu.children.length > 0) {
+          const children = flatten(menu.children, menu.id)
+          result.push(...children)
+        }
       }
     })
     return result
@@ -137,12 +140,47 @@ const menuOptions = computed(() => {
   return flatten(tableData.value)
 })
 
+// 转换后端数据格式为前端格式
+const transformMenuData = (menu) => {
+  // 处理 children，确保递归转换
+  const children = menu.Children || menu.children
+  let transformedChildren = []
+  
+  if (children && Array.isArray(children) && children.length > 0) {
+    transformedChildren = children.map(child => transformMenuData(child))
+  }
+  
+  const result = {
+    id: menu.id,
+    parent_id: menu.ParentID || menu.parent_id || 0,
+    name: menu.Title || menu.name || '',
+    path: menu.Path || menu.path || '',
+    icon: menu.Icon || menu.icon || '',
+    status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
+    sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
+    created_at: menu.created_at || '',
+    updated_at: menu.updated_at || ''
+  }
+  
+  // 只有当有子节点时才添加 children 字段
+  if (transformedChildren.length > 0) {
+    result.children = transformedChildren
+  }
+  
+  return result
+}
+
 const loadData = async () => {
   loading.value = true
   try {
     const res = await getMenuList()
-    if (res.data && res.data.list) {
-      tableData.value = res.data.list
+    if (res.data) {
+      // 后端返回的是 menus 数组，不是 list
+      const menus = res.data.menus || res.data.list || []
+      // 转换数据格式
+      const transformed = menus.map(menu => transformMenuData(menu))
+      console.log('Transformed menu data:', transformed)
+      tableData.value = transformed
     }
   } catch (error) {
     console.error('Load menu list error:', error)
