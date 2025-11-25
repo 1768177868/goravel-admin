@@ -224,7 +224,8 @@
     "logout_confirm": "确定要退出登录吗？",
     "system_management": "管理系统",
     "fullscreen": "全屏",
-    "profile": "个人中心"
+    "profile": "个人中心",
+    "timezone": "时区"
   },
   "profile": {
     "basic_info": "基本信息",

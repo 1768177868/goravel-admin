@@ -224,7 +224,8 @@
     "logout_confirm": "Are you sure to logout?",
     "system_management": "Management System",
     "fullscreen": "Fullscreen",
-    "profile": "Profile"
+    "profile": "Profile",
+    "timezone": "Timezone"
   },
   "profile": {
     "basic_info": "Basic Information",

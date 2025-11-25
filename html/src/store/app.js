@@ -1,10 +1,19 @@
 import { defineStore } from 'pinia'
 
+const detectBrowserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
 export const useAppStore = defineStore('app', {
   state: () => ({
     sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
     layoutSize: localStorage.getItem('layoutSize') || 'default', // default, large, small
-    isFullscreen: false
+    isFullscreen: false,
+    timezone: localStorage.getItem('timezone') || detectBrowserTimezone()
   }),
 
   actions: {
@@ -40,6 +49,11 @@ export const useAppStore = defineStore('app', {
           console.error('无法退出全屏模式')
         })
       }
+    },
+
+    setTimezone(timezone) {
+      this.timezone = timezone || 'UTC'
+      localStorage.setItem('timezone', this.timezone)
     }
   }
 })

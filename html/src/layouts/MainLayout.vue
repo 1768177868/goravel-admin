@@ -98,6 +98,7 @@
               <Aim v-else />
             </el-icon>
           </el-button>
+          <TimezoneSwitch />
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <span class="user-info">
@@ -155,6 +156,7 @@ import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
 import { useAppStore } from '../store/app'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
+import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'

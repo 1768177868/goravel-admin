@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import router from '../router'
 import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
+import { useAppStore } from '../store/app'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_PREFIX || '/api/admin',
@@ -20,6 +21,17 @@ request.interceptors.request.use(
       console.log('Request with token:', cleanToken.substring(0, 20) + '...')
     } else {
       console.log('No token found in localStorage')
+    }
+    const appStore = useAppStore()
+    let browserTimezone = 'UTC'
+    try {
+      browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    } catch {
+      browserTimezone = 'UTC'
+    }
+    const timezone = appStore.timezone || localStorage.getItem('timezone') || browserTimezone
+    if (timezone) {
+      config.headers['X-Timezone'] = timezone
     }
     return config
   },
