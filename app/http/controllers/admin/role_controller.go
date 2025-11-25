@@ -73,15 +73,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	name := ctx.Request().Input("name")
 	slug := ctx.Request().Input("slug")
 	description := ctx.Request().Input("description")
-	// 处理状态字段：需要正确处理 0 值
-	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
-	allInputs := ctx.Request().All()
-	var status uint8 = 1 // 默认启用
-	if statusVal, exists := allInputs["status"]; exists {
-		if statusVal != nil {
-			status = cast.ToUint8(statusVal)
-		}
-	}
+	status := cast.ToUint8(ctx.Request().Input("status", "0"))
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 
 	if name == "" || slug == "" {

@@ -92,17 +92,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	email := ctx.Request().Input("email")
 	phone := ctx.Request().Input("phone")
 	departmentID := cast.ToUint(ctx.Request().Input("department_id", "0"))
-	// 处理状态字段：需要正确处理 0 值
-	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
-	allInputs := ctx.Request().All()
-	var status uint8 = 1 // 默认启用
-	if statusVal, exists := allInputs["status"]; exists {
-		// 字段存在，转换它（包括 0 值）
-		// statusVal 可能是字符串 "0" 或数字 0，都需要正确处理
-		if statusVal != nil {
-			status = cast.ToUint8(statusVal)
-		}
-	}
+	status := cast.ToUint8(ctx.Request().Input("status", "0"))
 
 	if username == "" || password == "" {
 		return response.Error(ctx, http.StatusBadRequest, "username_and_password_required")

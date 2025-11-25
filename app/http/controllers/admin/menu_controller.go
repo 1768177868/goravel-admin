@@ -54,15 +54,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	component := ctx.Request().Input("component")
 	permission := ctx.Request().Input("permission")
 	menuType := cast.ToUint8(ctx.Request().Input("type", "1"))
-	// 处理状态字段：需要正确处理 0 值
-	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
-	allInputs := ctx.Request().All()
-	var status uint8 = 1 // 默认启用
-	if statusVal, exists := allInputs["status"]; exists {
-		if statusVal != nil {
-			status = cast.ToUint8(statusVal)
-		}
-	}
+	status := cast.ToUint8(ctx.Request().Input("status", "0"))
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	isHidden := cast.ToUint8(ctx.Request().Input("is_hidden", "0"))
 
