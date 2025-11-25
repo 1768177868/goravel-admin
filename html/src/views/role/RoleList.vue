@@ -187,7 +187,7 @@ import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 
-const { t, te } = useI18n()
+const { t, te, tm } = useI18n()
 const formRef = ref(null)
 const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
@@ -293,12 +293,30 @@ const getPermissionName = (permission) => {
   }
   
   // 优先使用 slug 作为翻译键标识
+  // 尝试多种可能的字段名（支持 PascalCase 和 snake_case）
   const slug = permission.Slug || permission.slug || ''
   if (slug) {
+    // 构建翻译键：permission.${slug}
+    // 对于包含点号的 slug（如 monitor.system_info），vue-i18n 会将其解析为嵌套路径
+    // 但我们的翻译键是 permission["monitor.system_info"]，所以需要特殊处理
     const slugKey = `permission.${slug}`
-    // 使用 te() 检查翻译键是否存在
-    if (te(slugKey)) {
-      return t(slugKey)
+    
+    // 尝试直接查找翻译
+    const translated = t(slugKey, slugKey) // 第二个参数是默认值
+    // 如果翻译结果不等于键名本身，说明找到了翻译
+    if (translated && translated !== slugKey && !translated.startsWith('permission.')) {
+      return translated
+    }
+    
+    // 如果直接查找失败，尝试从翻译对象中直接获取
+    // 使用 tm() 获取翻译消息对象，然后直接访问
+    try {
+      const messages = tm('permission')
+      if (messages && messages[slug]) {
+        return messages[slug]
+      }
+    } catch (e) {
+      // 如果获取失败，继续使用回退逻辑
     }
   }
   
