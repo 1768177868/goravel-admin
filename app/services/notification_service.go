@@ -13,6 +13,7 @@ import (
 type NotificationService interface {
 	Create(title, content, notifType string, senderID *uint, receiverID *uint) (*models.Notification, error)
 	List(adminID uint, page int, pageSize int) ([]models.Notification, int64, error)
+	ListRecent(adminID uint, limit int) ([]models.Notification, error)
 	MarkRead(adminID uint, notificationID uint) error
 	MarkAllRead(adminID uint) error
 	UnreadCount(adminID uint) (int64, error)
@@ -94,6 +95,22 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int) ([]
 	}
 
 	return notifications, total, nil
+}
+
+func (s *NotificationServiceImpl) ListRecent(adminID uint, limit int) ([]models.Notification, error) {
+	var notifications []models.Notification
+	if limit <= 0 || limit > 10 {
+		limit = 5
+	}
+
+	if err := facades.Orm().Query().Model(&models.Notification{}).
+		Where("receiver_id = ?", adminID).
+		Order("created_at desc").
+		Limit(limit).
+		Find(&notifications); err != nil {
+		return nil, err
+	}
+	return notifications, nil
 }
 
 func (s *NotificationServiceImpl) MarkRead(adminID uint, notificationID uint) error {

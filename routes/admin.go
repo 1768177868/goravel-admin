@@ -46,6 +46,7 @@ func Admin() {
 		// 通知中心
 		router.Get("notifications", notificationController.Index)
 		router.Get("notifications/unread-count", notificationController.UnreadCount)
+		router.Get("notifications/recent", notificationController.Recent)
 		router.Post("notifications/{id}/read", notificationController.MarkRead)
 		router.Post("notifications/read-all", notificationController.MarkAllRead)
 	})

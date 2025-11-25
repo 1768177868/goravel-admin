@@ -4,6 +4,7 @@ import i18n from '../i18n'
 import {
   fetchNotifications,
   fetchUnreadCount,
+  fetchRecentNotifications,
   markNotificationRead,
   markAllNotificationsRead
 } from '../api/notification'
@@ -17,7 +18,9 @@ export const useNotificationStore = defineStore('notification', {
     loading: false,
     ws: null,
     wsConnected: false,
-    initializing: false
+    initializing: false,
+    retryCount: 0,
+    retryTimer: null
   }),
   actions: {
     async init() {
@@ -28,10 +31,12 @@ export const useNotificationStore = defineStore('notification', {
       await this.refresh()
       this.connect()
     },
-    async refresh() {
+    async refresh(params = {}) {
       this.loading = true
       try {
-        const { data } = await fetchNotifications({ page: 1, page_size: 20 })
+        const { data } = await fetchRecentNotifications({
+          limit: params.limit || 7
+        })
         this.items = data.notifications || []
         this.unreadCount = data.unread_count || 0
       } catch (error) {
@@ -85,6 +90,7 @@ export const useNotificationStore = defineStore('notification', {
       this.ws = new WebSocket(wsUrl)
       this.ws.onopen = () => {
         this.wsConnected = true
+        this.retryCount = 0
       }
       this.ws.onmessage = (event) => {
         try {
@@ -97,11 +103,31 @@ export const useNotificationStore = defineStore('notification', {
       this.ws.onclose = () => {
         this.wsConnected = false
         this.ws = null
-        setTimeout(() => this.connect(), 5000)
+        this.scheduleReconnect()
       }
       this.ws.onerror = () => {
-        ElMessage.error(t('notification.ws_error'))
+        this.wsConnected = false
       }
+    },
+    scheduleReconnect() {
+      if (!this.retryCount) {
+        this.retryCount = 0
+      }
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer)
+      }
+      const delay = Math.min(30000, 2000 * Math.pow(2, this.retryCount))
+      this.retryTimer = setTimeout(() => {
+        this.retryCount += 1
+        const token = localStorage.getItem('token')
+        if (!token) {
+          return
+        }
+        this.connect()
+        if (!this.wsConnected && this.retryCount === 3) {
+          ElMessage.error(t('notification.ws_error'))
+        }
+      }, delay)
     },
     disconnect() {
       if (this.ws) {
@@ -112,6 +138,11 @@ export const useNotificationStore = defineStore('notification', {
       this.initializing = false
       this.items = []
       this.unreadCount = 0
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer)
+        this.retryTimer = null
+      }
+      this.retryCount = 0
     },
     handleIncoming(notification) {
       const exists = this.items.find(item => item.id === notification.id)
@@ -120,8 +151,8 @@ export const useNotificationStore = defineStore('notification', {
         if (!notification.is_read) {
           this.unreadCount += 1
         }
-        if (this.items.length > 20) {
-          this.items = this.items.slice(0, 20)
+        if (this.items.length > 7) {
+          this.items = this.items.slice(0, 7)
         }
       } else {
         this.items = this.items.map(item => item.id === notification.id ? notification : item)

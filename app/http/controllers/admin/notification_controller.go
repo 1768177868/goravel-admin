@@ -66,6 +66,26 @@ func (r *NotificationController) UnreadCount(ctx http.Context) http.Response {
 	})
 }
 
+func (r *NotificationController) Recent(ctx http.Context) http.Response {
+	admin := r.currentAdmin(ctx)
+	if admin == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	limit := cast.ToInt(ctx.Request().Query("limit", "5"))
+	notifications, err := r.service.ListRecent(admin.ID, limit)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	count, _ := r.service.UnreadCount(admin.ID)
+
+	return response.Success(ctx, "get_success", http.Json{
+		"notifications": notifications,
+		"unread_count":  count,
+	})
+}
+
 func (r *NotificationController) MarkRead(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {

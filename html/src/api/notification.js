@@ -15,6 +15,14 @@ export function fetchUnreadCount() {
   })
 }
 
+export function fetchRecentNotifications(params = {}) {
+  return request({
+    url: '/notifications/recent',
+    method: 'get',
+    params
+  })
+}
+
 export function markNotificationRead(id) {
   return request({
     url: `/notifications/${id}/read`,

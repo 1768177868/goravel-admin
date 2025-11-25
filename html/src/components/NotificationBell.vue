@@ -1,7 +1,8 @@
 <template>
   <el-popover
+    v-model:visible="popoverVisible"
     placement="bottom-end"
-    width="360"
+    width="420"
     trigger="click"
     popper-class="notification-popover"
   >
@@ -20,20 +21,20 @@
     <div class="notification-popover__header">
       <span>{{ $t('notification.center') }}</span>
       <div class="header-actions">
-        <el-button
-          size="small"
-          text
-          @click="goList"
-        >
-          {{ $t('notification.view_all') }}
-        </el-button>
         <el-button size="small" text @click="handleMarkAll" :disabled="notificationStore.unreadCount === 0">
           {{ $t('notification.mark_all') }}
+        </el-button>
+        <el-button size="small" text @click="goList">
+          {{ $t('notification.view_all') }}
         </el-button>
       </div>
     </div>
 
-    <el-scrollbar class="notification-list">
+    <el-scrollbar
+      class="notification-list"
+      v-loading="notificationStore.loading"
+      height="360px"
+    >
       <div v-if="notificationStore.items.length === 0" class="notification-empty">
         <el-icon><Bell /></el-icon>
         <p>{{ $t('notification.empty') }}</p>
@@ -69,8 +70,8 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
@@ -82,6 +83,8 @@ dayjs.extend(relativeTime)
 
 const notificationStore = useNotificationStore()
 const router = useRouter()
+const route = useRoute()
+const popoverVisible = ref(false)
 const badgeValue = computed(() => {
   const count = notificationStore.unreadCount || 0
   return count > 99 ? '99+' : count
@@ -103,7 +106,10 @@ const handleMarkAll = () => {
 }
 
 const goList = () => {
-  router.push('/notifications')
+  popoverVisible.value = false
+  if (route.path !== '/notifications') {
+    router.push('/notifications')
+  }
 }
 
 const formatTime = (value) => {
@@ -113,7 +119,8 @@ const formatTime = (value) => {
 }
 
 onMounted(() => {
-  notificationStore.init()
+  notificationStore.refresh({ limit: 7 })
+  notificationStore.connect()
 })
 
 onBeforeUnmount(() => {
@@ -146,11 +153,11 @@ onBeforeUnmount(() => {
 }
 
 .notification-list {
-  max-height: 320px;
+  height: 360px;
 }
 
 .notification-popover :deep(.el-scrollbar__wrap) {
-  max-height: 320px;
+  max-height: 360px;
 }
 
 .notification-empty {
