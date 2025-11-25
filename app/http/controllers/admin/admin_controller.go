@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
@@ -98,19 +99,13 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "username_and_password_required")
 	}
 
-	// 检查用户名是否已存在（排除软删除的记录）
-	// 注意：数据库层面使用了 username + deleted_at 的联合唯一索引
-	// 这样可以允许软删除的用户名被重新使用，但同一时间只能有一个未删除的用户名
-	// GORM 默认会排除软删除的记录，使用 Exists() 方法检查未删除的记录
 	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Exists()
 	if err != nil {
-		// 查询出错，记录日志但不阻止创建（可能是数据库问题）
-		facades.Log().Errorf("Check username exists error: %v", err)
-	} else if exists {
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+	if exists {
 		return response.Error(ctx, http.StatusBadRequest, "username_exists")
 	}
-	// 如果没有找到记录（包括软删除的记录），用户名可用，继续创建
-	// 数据库层面的联合唯一索引会确保唯一性约束
 
 	// 加密密码
 	hashedPassword, err := facades.Hash().Make(password)
@@ -118,9 +113,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 	}
 
-	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
-	// GORM 在使用结构体创建时，可能会忽略零值字段而使用数据库默认值
-	// 使用 map 可以明确指定所有字段的值，包括零值
+	now := carbon.Now()
 	adminData := map[string]interface{}{
 		"username":      username,
 		"password":      hashedPassword,
@@ -130,18 +123,16 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		"phone":         phone,
 		"department_id": departmentID,
 		"status":        status, // 明确设置 status，即使是 0 也会被保存
+		"created_at":    now,
+		"updated_at":    now,
 	}
 
-	// 使用 Table().Create() 创建记录，这样可以确保所有字段（包括零值）都被保存
 	if err := facades.Orm().Query().Table("admins").Create(adminData); err != nil {
-		facades.Log().Errorf("Create admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
-	// 获取创建后的记录
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
-		facades.Log().Errorf("Get created admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

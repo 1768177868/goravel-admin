@@ -3,6 +3,7 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
@@ -98,24 +99,23 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 	}
 
-	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	now := carbon.Now()
 	roleData := map[string]interface{}{
 		"name":        name,
 		"slug":        slug,
 		"description": description,
 		"status":      status, // 明确设置 status，即使是 0 也会被保存
 		"sort":        sort,
+		"created_at":  now,
+		"updated_at":  now,
 	}
 
 	if err := facades.Orm().Query().Table("roles").Create(roleData); err != nil {
-		facades.Log().Errorf("Create role error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
-	// 获取创建后的记录
 	var role models.Role
 	if err := facades.Orm().Query().Where("slug", slug).First(&role); err != nil {
-		facades.Log().Errorf("Get created role error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

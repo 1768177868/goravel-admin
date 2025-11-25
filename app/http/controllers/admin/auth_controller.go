@@ -136,12 +136,9 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	// 重新加载关联数据（确保部门和角色被正确加载）
 	var adminWithRelations models.Admin
 	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
-		facades.Log().Errorf("UpdateProfile: failed to load admin with relations, error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 	admin = adminWithRelations
-
-	facades.Log().Debugf("UpdateProfile: admin ID: %d, Department: %+v, Roles count: %d", admin.ID, admin.Department, len(admin.Roles))
 
 	return response.Success(ctx, "update_success", http.Json{
 		"admin": http.Json{

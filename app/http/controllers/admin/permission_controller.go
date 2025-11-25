@@ -3,6 +3,7 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/response"
@@ -101,7 +102,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "permission_name_or_slug_exists")
 	}
 
-	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	now := carbon.Now()
 	permissionData := map[string]any{
 		"name":        name,
 		"slug":        slug,
@@ -111,17 +112,16 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		"status":      status, // 明确设置 status，即使是 0 也会被保存
 		"sort":        sort,
 		"menu_id":     menuID,
+		"created_at":  now,
+		"updated_at":  now,
 	}
 
 	if err := facades.Orm().Query().Table("permissions").Create(permissionData); err != nil {
-		facades.Log().Errorf("Create permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
-	// 获取创建后的记录
 	var permission models.Permission
 	if err := facades.Orm().Query().Where("slug", slug).First(&permission); err != nil {
-		facades.Log().Errorf("Get created permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

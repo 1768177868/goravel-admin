@@ -3,6 +3,7 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/response"
@@ -73,7 +74,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "dictionary_type_label_value_required")
 	}
 
-	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	now := carbon.Now()
 	dictionaryData := map[string]interface{}{
 		"type":        dictType,
 		"label":       label,
@@ -82,17 +83,16 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		"status":      status, // 明确设置 status，即使是 0 也会被保存
 		"sort":        sort,
 		"remark":      remark,
+		"created_at":  now,
+		"updated_at":  now,
 	}
 
 	if err := facades.Orm().Query().Table("dictionaries").Create(dictionaryData); err != nil {
-		facades.Log().Errorf("Create dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
-	// 获取创建后的记录
 	var dictionary models.Dictionary
 	if err := facades.Orm().Query().Where("type", dictType).Where("value", value).First(&dictionary); err != nil {
-		facades.Log().Errorf("Get created dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
