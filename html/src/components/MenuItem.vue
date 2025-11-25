@@ -1,7 +1,7 @@
 <template>
   <el-sub-menu v-if="menu.children && menu.children.length > 0" :index="menu.path || `menu-${menu.id}`">
     <template #title>
-      <el-icon v-if="menu.icon" class="menu-icon">
+      <el-icon v-if="getIcon(menu.icon)" class="menu-icon">
         <component :is="getIcon(menu.icon)" />
       </el-icon>
       <el-tooltip
@@ -20,7 +20,7 @@
     />
   </el-sub-menu>
   <el-menu-item v-else :index="menu.path" :disabled="menu.status === 0">
-    <el-icon v-if="menu.icon" class="menu-icon">
+    <el-icon v-if="getIcon(menu.icon)" class="menu-icon">
       <component :is="getIcon(menu.icon)" />
     </el-icon>
     <template #title>
@@ -39,10 +39,7 @@
 <script>
 import { defineComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { 
-  Setting, User, UserFilled, Lock, Menu, OfficeBuilding, Document,
-  Odometer, Avatar, Key
-} from '@element-plus/icons-vue'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 export default defineComponent({
   name: 'MenuItem',
@@ -91,39 +88,41 @@ export default defineComponent({
 
     // 获取菜单标题（优先使用翻译键，如果没有则使用原始标题）
     const getMenuTitle = (menu) => {
-      // 先尝试根据路径获取翻译键
       const pathKey = pathToTranslationKey[menu.path]
       if (pathKey) {
         return t(pathKey)
       }
       
-      // 再尝试根据标题获取翻译键
       const titleKey = titleToTranslationKey[menu.title]
       if (titleKey) {
         return t(titleKey)
       }
       
-      // 如果都没有，返回原始标题
       return menu.title
     }
     
     
-    // 图标映射
-    const iconMap = {
-      'Setting': Setting,
-      'User': User,
-      'UserFilled': UserFilled,
-      'Lock': Lock,
-      'Menu': Menu,
-      'OfficeBuilding': OfficeBuilding,
-      'Document': Document,
-      'Odometer': Odometer,
-      'Avatar': Avatar,
-      'Key': Key
+    const normalizeIconName = (iconName) => {
+      if (!iconName) {
+        return ''
+      }
+      const trimmed = iconName.trim()
+      if (!trimmed) {
+        return ''
+      }
+      if (ElementPlusIconsVue[trimmed]) {
+        return trimmed
+      }
+      const pascalCase = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+      if (ElementPlusIconsVue[pascalCase]) {
+        return pascalCase
+      }
+      return ''
     }
 
     const getIcon = (iconName) => {
-      return iconMap[iconName] || Document
+      const normalized = normalizeIconName(iconName)
+      return normalized ? ElementPlusIconsVue[normalized] : null
     }
 
     return {

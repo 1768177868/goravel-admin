@@ -31,7 +31,15 @@
         <el-table-column type="index" width="60" :label="$t('table.seq')" />
         <el-table-column prop="name" :label="$t('menu_management.name')" min-width="200" />
         <el-table-column prop="path" :label="$t('menu_management.path')" min-width="200" />
-        <el-table-column prop="icon" :label="$t('menu_management.icon')" width="100" />
+        <el-table-column prop="icon" :label="$t('menu_management.icon')" width="140">
+          <template #default="{ row }">
+            <span v-if="getIconComponent(row.icon)" class="menu-icon-preview">
+              <el-icon><component :is="getIconComponent(row.icon)" /></el-icon>
+              <span class="menu-icon-name">{{ normalizeIconName(row.icon) }}</span>
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="sort" :label="$t('common.sort')" width="80" />
         <el-table-column prop="status" :label="$t('table.status')" width="100">
           <template #default="{ row }">
@@ -80,7 +88,51 @@
           <el-input v-model="formData.path" />
         </el-form-item>
         <el-form-item :label="$t('menu_management.icon')">
-          <el-input v-model="formData.icon" />
+          <div class="icon-picker">
+            <el-input
+              v-model="formData.icon"
+              :placeholder="$t('menu_management.icon_placeholder')"
+              clearable
+              @clear="clearIcon"
+            >
+              <template #prefix>
+                <el-icon v-if="getIconComponent(formData.icon)" class="selected-icon">
+                  <component :is="getIconComponent(formData.icon)" />
+                </el-icon>
+              </template>
+            </el-input>
+            <el-popover
+              placement="bottom"
+              trigger="click"
+              width="420"
+              v-model:visible="iconPickerVisible"
+              popper-class="icon-picker-popover"
+            >
+              <div class="icon-picker-content">
+                <el-input
+                  v-model="iconSearch"
+                  :placeholder="$t('menu_management.icon_search')"
+                  size="small"
+                  clearable
+                />
+                <div class="icon-grid">
+                  <el-tooltip
+                    v-for="icon in filteredIcons"
+                    :key="icon"
+                    :content="icon"
+                    placement="top"
+                  >
+                    <el-button circle @click="selectIcon(icon)">
+                      <el-icon><component :is="iconComponents[icon]" /></el-icon>
+                    </el-button>
+                  </el-tooltip>
+                </div>
+              </div>
+              <template #reference>
+                <el-button link type="primary">{{ $t('menu_management.select_icon') }}</el-button>
+              </template>
+            </el-popover>
+          </div>
         </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model="formData.status">
@@ -105,6 +157,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Fold, Expand, Plus } from '@element-plus/icons-vue'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { getMenuList, getMenuDetail, createMenu, updateMenu, deleteMenu } from '../../api/menu'
 
 const { t } = useI18n()
@@ -127,6 +180,51 @@ const formData = reactive({
   status: 1,
   sort: 0
 })
+
+const iconComponents = ElementPlusIconsVue
+const iconPickerVisible = ref(false)
+const iconSearch = ref('')
+const iconList = Object.keys(ElementPlusIconsVue).filter(name => /^[A-Z]/.test(name)).sort()
+
+const normalizeIconName = (iconName) => {
+  if (!iconName) {
+    return ''
+  }
+  const trimmed = iconName.trim()
+  if (!trimmed) {
+    return ''
+  }
+  if (iconComponents[trimmed]) {
+    return trimmed
+  }
+  const pascalCase = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+  if (iconComponents[pascalCase]) {
+    return pascalCase
+  }
+  return ''
+}
+
+const getIconComponent = (iconName) => {
+  const normalized = normalizeIconName(iconName)
+  return normalized ? iconComponents[normalized] : null
+}
+
+const filteredIcons = computed(() => {
+  const keyword = iconSearch.value.trim().toLowerCase()
+  if (!keyword) {
+    return iconList
+  }
+  return iconList.filter(name => name.toLowerCase().includes(keyword))
+})
+
+const selectIcon = (icon) => {
+  formData.icon = icon
+  iconPickerVisible.value = false
+}
+
+const clearIcon = () => {
+  formData.icon = ''
+}
 
 const formRules = computed(() => ({
   name: [{ required: true, message: t('menu_management.name_required'), trigger: 'blur' }],
@@ -337,6 +435,47 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 10px;
+}
+
+.icon-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-picker-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.icon-grid .el-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.menu-icon-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu-icon-name {
+  font-size: 12px;
+  color: #666;
+}
+
+.selected-icon {
+  margin-right: 6px;
 }
 </style>
 

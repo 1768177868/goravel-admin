@@ -118,9 +118,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	if parentID != "" {
 		menu.ParentID = cast.ToUint(parentID)
 	}
-	if icon != "" {
-		menu.Icon = icon
-	}
+	menu.Icon = icon
 	if path != "" {
 		menu.Path = path
 	}
