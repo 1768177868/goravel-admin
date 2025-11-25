@@ -26,8 +26,8 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
-	page := cast.ToInt(ctx.Request().Input("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Input("page_size", "20"))
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
 	notifications, total, err := r.service.List(admin.ID, page, pageSize)
 	if err != nil {
 		facades.Log().Errorf("list notifications error: %v", err)
