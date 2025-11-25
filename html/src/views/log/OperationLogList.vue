@@ -102,7 +102,7 @@
         :data="tableData"
         :loading="loading"
         border
-        resizable
+        :column-config="{ resizable: true }"
         height="600"
         :sort-config="{ multiple: true, trigger: 'default' }"
         @checkbox-change="handleSelectionChange"

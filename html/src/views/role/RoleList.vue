@@ -31,7 +31,7 @@
         :data="tableData"
         :loading="loading"
         border
-        resizable
+        :column-config="{ resizable: true }"
         height="600"
       >
         <vxe-column field="id" :title="$t('table.id')" width="80" />
@@ -187,7 +187,7 @@ import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const formRef = ref(null)
 const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
@@ -274,15 +274,11 @@ const getMenuTitle = (menu) => {
   const slug = menu.Slug || menu.slug || ''
   if (slug) {
     const slugKey = `menu.${slug}`
-    // 尝试使用 slug 查找翻译键，如果存在则使用
-    try {
-      const translated = t(slugKey)
-      // 如果翻译结果不等于键名本身，说明找到了翻译
-      if (translated !== slugKey) {
-        return translated
-      }
-    } catch (e) {
-      // 翻译键不存在，继续尝试其他方式
+    // 尝试获取翻译
+    const translated = t(slugKey, slugKey) // 第二个参数是默认值
+    // 如果翻译结果不等于键名本身，说明找到了翻译
+    if (translated && translated !== slugKey) {
+      return translated
     }
   }
   
@@ -300,15 +296,9 @@ const getPermissionName = (permission) => {
   const slug = permission.Slug || permission.slug || ''
   if (slug) {
     const slugKey = `permission.${slug}`
-    // 尝试使用 slug 查找翻译键，如果存在则使用
-    try {
-      const translated = t(slugKey)
-      // 如果翻译结果不等于键名本身，说明找到了翻译
-      if (translated !== slugKey) {
-        return translated
-      }
-    } catch (e) {
-      // 翻译键不存在，继续尝试其他方式
+    // 使用 te() 检查翻译键是否存在
+    if (te(slugKey)) {
+      return t(slugKey)
     }
   }
   
@@ -527,19 +517,19 @@ const buildMenuPermissionTree = (menus, permissions) => {
       type: 1,
       children: unmatchedPermissions.map(perm => {
         const method = perm.Method || perm.method || ''
-        const name = perm.Name || perm.name || ''
-        const description = perm.Description || perm.description || ''
         const id = perm.id || perm.ID
+        const slug = perm.Slug || perm.slug || ''
+        const permissionName = getPermissionName(perm)
         
         return {
           id: id,
-          name: name,
-          slug: perm.Slug || perm.slug || '',
+          name: permissionName,
+          slug: slug,
           method: method,
           path: perm.Path || perm.path || '',
-          description: description,
-          label: description || name,
-          displayDesc: description || name,
+          description: perm.Description || perm.description || '',
+          label: permissionName,
+          displayDesc: permissionName,
           isMenu: false,
           isPermission: true
         }

@@ -158,7 +158,9 @@
     "delete_confirm": "Are you sure to delete this role?",
     "delete_success": "Delete successful",
     "create_success": "Create successful",
-    "update_success": "Update successful"
+    "update_success": "Update successful",
+    "protected_cannot_delete": "This role is protected and cannot be deleted",
+    "protected_cannot_disable": "This role is protected and cannot be disabled"
   },
   "permission": {
     "title": "Permission List",

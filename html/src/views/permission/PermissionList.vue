@@ -78,7 +78,7 @@
         :data="tableData"
         :loading="loading"
         border
-        resizable
+        :column-config="{ resizable: true }"
         height="600"
       >
         <vxe-column field="id" :title="$t('table.id')" width="80" />

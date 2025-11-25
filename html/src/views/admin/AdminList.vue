@@ -35,7 +35,7 @@
         :data="tableData"
         :loading="loading"
         border
-        resizable
+        :column-config="{ resizable: true }"
         height="600"
         @page-change="handlePageChange"
       >

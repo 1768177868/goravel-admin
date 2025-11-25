@@ -48,7 +48,7 @@
         :data="tableData"
         :loading="loading"
         border
-        resizable
+        :column-config="{ resizable: true }"
         :tree-config="hasSearch ? false : { children: 'children', expandAll: false, indent: 20 }"
         height="600"
       >
