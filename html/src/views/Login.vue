@@ -1,11 +1,9 @@
 <template>
   <div class="login-container">
-    <div class="language-switch-wrapper">
-      <LanguageSwitch />
-    </div>
     <div class="login-box">
       <div class="login-header">
-        <h2>{{ $t('login.title') }}</h2>
+      <h2>{{ $t('login.title') }}</h2>
+      <LanguageSwitch class="login-language-switch" />
       </div>
       <el-form
         ref="loginFormRef"
@@ -208,13 +206,22 @@ const handleLogin = async () => {
 }
 
 .login-header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 30px;
 }
 
 .login-header h2 {
   color: #333;
   font-size: 24px;
+  margin: 0;
+}
+
+.login-language-switch :deep(.language-switch) {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
 }
 
 .login-form {
@@ -223,12 +230,6 @@ const handleLogin = async () => {
 
 .login-button {
   width: 100%;
-}
-
-.language-switch-wrapper {
-  position: absolute;
-  top: 20px;
-  right: 20px;
 }
 
 .captcha-row {
