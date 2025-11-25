@@ -30,6 +30,7 @@
       >
         <el-table-column type="index" width="60" :label="$t('table.seq')" />
         <el-table-column prop="name" :label="$t('menu_management.name')" min-width="200" />
+        <el-table-column prop="slug" :label="$t('menu_management.slug')" min-width="150" />
         <el-table-column prop="path" :label="$t('menu_management.path')" min-width="200" />
         <el-table-column prop="icon" :label="$t('menu_management.icon')" width="140">
           <template #default="{ row }">
@@ -83,6 +84,9 @@
         </el-form-item>
         <el-form-item :label="$t('menu_management.name')" prop="name">
           <el-input v-model="formData.name" />
+        </el-form-item>
+        <el-form-item :label="$t('menu_management.slug')" prop="slug">
+          <el-input v-model="formData.slug" :placeholder="$t('menu_management.slug_placeholder')" />
         </el-form-item>
         <el-form-item :label="$t('menu_management.path')" prop="path">
           <el-input v-model="formData.path" />
@@ -175,6 +179,7 @@ const formData = reactive({
   id: null,
   parent_id: 0,
   name: '',
+  slug: '',
   path: '',
   icon: '',
   status: 1,
@@ -228,6 +233,7 @@ const clearIcon = () => {
 
 const formRules = computed(() => ({
   name: [{ required: true, message: t('menu_management.name_required'), trigger: 'blur' }],
+  slug: [{ required: true, message: t('menu_management.slug_required'), trigger: 'blur' }],
   path: [{ required: true, message: t('menu_management.path_required'), trigger: 'blur' }]
 }))
 
@@ -264,6 +270,7 @@ const transformMenuData = (menu) => {
     id: menu.id,
     parent_id: menu.ParentID || menu.parent_id || 0,
     name: menu.Title || menu.name || '',
+    slug: menu.Slug || menu.slug || '',
     path: menu.Path || menu.path || '',
     icon: menu.Icon || menu.icon || '',
     status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
@@ -304,6 +311,7 @@ const handleAdd = () => {
     id: null,
     parent_id: 0,
     name: '',
+    slug: '',
     path: '',
     icon: '',
     status: 1,
@@ -322,6 +330,7 @@ const handleEdit = async (row) => {
         id: menu.id,
         parent_id: menu.ParentID !== undefined ? menu.ParentID : (menu.parent_id || 0),
         name: menu.Title || menu.name || '',
+        slug: menu.Slug || menu.slug || '',
         path: menu.Path || menu.path || '',
         icon: menu.Icon || menu.icon || '',
         status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
@@ -344,6 +353,7 @@ const handleSubmit = async () => {
         // 转换前端字段名为后端期望的字段名
         const data = {
           title: formData.name,
+          slug: formData.slug,
           path: formData.path,
           icon: formData.icon,
           status: formData.status,

@@ -149,6 +149,15 @@ request.interceptors.response.use(
         // 登录/退出接口 401 只提示一次
         const message = data?.message || data?.data?.message || t('login.login_failed')
         ElMessage.error(message)
+      } else if (status === 403 && isAuthEndpoint) {
+        // 登录/退出接口 403（账号被禁用等）只提示一次
+        const message = data?.message || data?.data?.message || t('error.forbidden')
+        // 如果是 account_disabled，使用登录相关的翻译
+        if (message === 'account_disabled') {
+          ElMessage.error(t('login.account_disabled'))
+        } else {
+          ElMessage.error(message)
+        }
       } else if (!isAuthEndpoint) {
         if (status === 403) {
           ElMessage.error(t('error.forbidden'))

@@ -172,8 +172,15 @@ const handleLogin = async () => {
         if (error?.__handled) {
           // 已在 axios 拦截器中提示
         } else if (error.response) {
-          const message = error.response.data?.message || error.message
-          ElMessage.error(message || t('login.login_failed'))
+          const errorMessage = error.response.data?.message || ''
+          // 检查是否是账号被禁用
+          if (errorMessage === 'account_disabled') {
+            ElMessage.error(t('login.account_disabled'))
+          } else {
+            // 尝试翻译错误消息，如果翻译不存在则使用原始消息
+            const translatedMessage = t(errorMessage) !== errorMessage ? t(errorMessage) : errorMessage
+            ElMessage.error(translatedMessage || t('login.login_failed'))
+          }
         } else if (error.message) {
           ElMessage.error(error.message)
         } else {

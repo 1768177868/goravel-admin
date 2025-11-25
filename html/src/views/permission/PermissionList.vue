@@ -318,17 +318,33 @@ const titleToTranslationKey = {
   '通知中心': 'menu.notification_center'
 }
 
-// 获取菜单标题（优先使用翻译键，如果没有则使用原始标题）
+// 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
 const getMenuTitle = (menu) => {
   if (!menu || typeof menu !== 'object') {
     return '-'
+  }
+  
+  // 优先使用 slug 作为翻译键标识
+  const slug = menu.Slug || menu.slug || ''
+  if (slug) {
+    const slugKey = `menu.${slug}`
+    // 尝试使用 slug 查找翻译键，如果存在则使用
+    try {
+      const translated = t(slugKey)
+      // 如果翻译结果不等于键名本身，说明找到了翻译
+      if (translated !== slugKey) {
+        return translated
+      }
+    } catch (e) {
+      // 翻译键不存在，继续尝试其他方式
+    }
   }
   
   // 尝试多种可能的字段名（支持 PascalCase 和 snake_case）
   const path = menu.Path || menu.path || ''
   const title = menu.Title || menu.title || ''
   
-  // 先尝试通过路径匹配
+  // 回退到路径映射（向后兼容）
   if (path) {
     const pathKey = pathToTranslationKey[path]
     if (pathKey) {
@@ -336,7 +352,7 @@ const getMenuTitle = (menu) => {
     }
   }
   
-  // 再尝试通过标题匹配
+  // 回退到标题映射（向后兼容）
   if (title) {
     const titleKey = titleToTranslationKey[title]
     if (titleKey) {

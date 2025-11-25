@@ -18,6 +18,7 @@ func (r *M20250101000005CreateMenusTable) Up() error {
 			table.BigIncrements("id")
 			table.UnsignedBigInteger("parent_id").Default(0)
 			table.String("title").Default("")
+			table.String("slug").Nullable()
 			table.String("icon").Nullable()
 			table.String("path").Nullable()
 			table.String("component").Nullable()
@@ -27,6 +28,7 @@ func (r *M20250101000005CreateMenusTable) Up() error {
 			table.Integer("sort").Default(0)
 			table.UnsignedTinyInteger("is_hidden").Default(0)
 			table.Timestamps()
+			table.Unique("slug")
 			table.Comment("菜单表")
 		})
 	}

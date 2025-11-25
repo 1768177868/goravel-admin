@@ -38,6 +38,13 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 
 	query := facades.Orm().Query().Model(&models.Admin{})
 
+	// 排除开发者管理员（不显示在列表中，如机器人、脚本等账号）
+	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+	developerIDs := r.parseProtectedIDs(developerIDsStr)
+	if len(developerIDs) > 0 {
+		query = query.Where("id NOT IN ?", developerIDs)
+	}
+
 	if username != "" {
 		query = query.Where("username LIKE ?", "%"+username+"%")
 	}
@@ -171,15 +178,9 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
-	protectedIDsStr := facades.Config().GetString("admin.protected_ids", "1")
-	protectedIDs := r.parseProtectedIDs(protectedIDsStr)
-	isProtected := false
-	for _, protectedID := range protectedIDs {
-		if id == protectedID {
-			isProtected = true
-			break
-		}
-	}
+	// 检查是否是受保护的管理员ID（自动包含developer_ids）
+	allProtectedIDs := r.getAllProtectedAdminIDs()
+	isProtected := allProtectedIDs[id]
 
 	nickname := ctx.Request().Input("nickname")
 	email := ctx.Request().Input("email")
@@ -241,13 +242,10 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 
-	// 检查是否是受保护的管理员ID
-	protectedIDsStr := facades.Config().GetString("admin.protected_ids", "1")
-	protectedIDs := r.parseProtectedIDs(protectedIDsStr)
-	for _, protectedID := range protectedIDs {
-		if id == protectedID {
-			return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_delete")
-		}
+	// 检查是否是受保护的管理员ID（自动包含developer_ids）
+	allProtectedIDs := r.getAllProtectedAdminIDs()
+	if allProtectedIDs[id] {
+		return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_delete")
 	}
 
 	// 检查是否是当前登录的管理员自己
@@ -296,6 +294,20 @@ func (r *AdminController) parseProtectedIDs(idsStr string) []uint {
 	}
 
 	return ids
+}
+
+// getAllProtectedAdminIDs 获取所有受保护的管理员ID（包括超级管理员ID=1和developer_ids）
+func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
+	allProtectedIDs := make(map[uint]bool)
+	// 超级管理员（ID=1）始终受保护
+	allProtectedIDs[1] = true
+	// 包含开发者管理员ID（机器人、脚本等账号）
+	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+	developerIDs := r.parseProtectedIDs(developerIDsStr)
+	for _, did := range developerIDs {
+		allProtectedIDs[did] = true
+	}
+	return allProtectedIDs
 }
 
 // Export 导出管理员列表

@@ -24,6 +24,7 @@ func (r *M20250101000002CreateAdminsTable) Up() error {
 			table.String("phone").Nullable()
 			table.UnsignedTinyInteger("status").Default(1)
 			table.UnsignedBigInteger("department_id").Nullable()
+			table.UnsignedTinyInteger("token_never_expires").Default(0).Comment("token是否永久有效 1:永久有效 0:按配置过期")
 			table.Timestamps()
 			table.SoftDeletes()
 			// 创建 username 和 deleted_at 的联合唯一索引

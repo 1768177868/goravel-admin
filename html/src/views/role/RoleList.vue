@@ -66,7 +66,14 @@
         <vxe-column :title="$t('table.operation')" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+            <el-button 
+              v-if="!isProtectedRole(row)"
+              type="danger" 
+              link 
+              @click="handleDelete(row)"
+            >
+              {{ $t('common.delete') }}
+            </el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -152,8 +159,12 @@
         <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model.number="formData.status">
             <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
+            <el-radio :label="0" :disabled="isProtectedRole(formData)">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
+          <div v-if="isProtectedRole(formData)" class="protected-tip">
+            <el-icon><Lock /></el-icon>
+            <span>{{ $t('role.protected_cannot_disable') }}</span>
+          </div>
         </el-form-item>
         <el-form-item :label="$t('common.sort')">
           <el-input-number v-model="formData.sort" :min="0" />
@@ -171,7 +182,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, Menu, FolderOpened, Key } from '@element-plus/icons-vue'
+import { InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
@@ -199,6 +210,7 @@ const tableData = ref([])
 const menuPermissionTree = ref([])
 const checkedKeys = ref([])
 const treeKey = ref(0)
+const protectedRoleSlugs = ref(['super-admin'])
 
 const formData = reactive({
   id: null,
@@ -250,6 +262,58 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
+const getMenuTitle = (menu) => {
+  if (!menu || typeof menu !== 'object') {
+    return ''
+  }
+  
+  // 优先使用 slug 作为翻译键标识
+  const slug = menu.Slug || menu.slug || ''
+  if (slug) {
+    const slugKey = `menu.${slug}`
+    // 尝试使用 slug 查找翻译键，如果存在则使用
+    try {
+      const translated = t(slugKey)
+      // 如果翻译结果不等于键名本身，说明找到了翻译
+      if (translated !== slugKey) {
+        return translated
+      }
+    } catch (e) {
+      // 翻译键不存在，继续尝试其他方式
+    }
+  }
+  
+  // 回退到原始标题
+  return menu.Title || menu.title || ''
+}
+
+// 获取权限名称（优先使用 slug，如果没有则使用 description 或 name）
+const getPermissionName = (permission) => {
+  if (!permission || typeof permission !== 'object') {
+    return ''
+  }
+  
+  // 优先使用 slug 作为翻译键标识
+  const slug = permission.Slug || permission.slug || ''
+  if (slug) {
+    const slugKey = `permission.${slug}`
+    // 尝试使用 slug 查找翻译键，如果存在则使用
+    try {
+      const translated = t(slugKey)
+      // 如果翻译结果不等于键名本身，说明找到了翻译
+      if (translated !== slugKey) {
+        return translated
+      }
+    } catch (e) {
+      // 翻译键不存在，继续尝试其他方式
+    }
+  }
+  
+  // 回退到 description 或 name
+  return permission.Description || permission.description || permission.Name || permission.name || ''
 }
 
 const getModuleNameFromPath = (path) => {
@@ -333,15 +397,19 @@ const transformMenuToTree = (menus) => {
   
   const convertNode = (node) => {
     const children = node.Children || node.children
-    const title = node.Title || node.name || ''
     const type = node.Type !== undefined ? node.Type : (node.type !== undefined ? node.type : 1)
     const icon = node.Icon || node.icon || ''
     const path = node.Path || node.path || ''
+    const slug = node.Slug || node.slug || ''
+    
+    // 使用多语言函数获取菜单标题
+    const title = getMenuTitle(node)
     
     const result = {
       id: node.id,
       name: title,
       label: title,
+      slug: slug,
       type: type,
       icon: icon,
       path: path,
@@ -385,19 +453,21 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
         
         matchedPermissions.forEach(perm => {
           const method = perm.Method || perm.method || ''
-          const name = perm.Name || perm.name || ''
-          const description = perm.Description || perm.description || ''
           const id = perm.id || perm.ID
+          const slug = perm.Slug || perm.slug || ''
+          
+          // 使用多语言函数获取权限名称
+          const permissionName = getPermissionName(perm)
           
           result.children.push({
             id: id,
-            name: name,
-            slug: perm.Slug || perm.slug || '',
+            name: permissionName,
+            slug: slug,
             method: method,
             path: perm.Path || perm.path || '',
-            description: description,
-            label: description || name,
-            displayDesc: description || name,
+            description: perm.Description || perm.description || '',
+            label: permissionName,
+            displayDesc: permissionName,
             isMenu: false,
             isPermission: true
           })
@@ -604,6 +674,11 @@ const handleSubmit = async () => {
   
   await formRef.value.validate(async (valid) => {
     if (valid) {
+      if (formData.id && isProtectedRole(formData) && formData.status === 0) {
+        ElMessage.warning(t('role.protected_cannot_disable'))
+        return
+      }
+      
       submitting.value = true
       try {
         const allCheckedKeys = menuPermissionTreeRef.value?.getCheckedKeys() || []
@@ -651,6 +726,14 @@ const handleSubmit = async () => {
         loadData()
       } catch (error) {
         console.error('Submit error:', error)
+        if (error.response && error.response.data && error.response.data.message) {
+          const errorMsg = error.response.data.message
+          if (errorMsg === 'role_protected_cannot_disable') {
+            ElMessage.error(t('role.protected_cannot_disable'))
+          } else {
+            ElMessage.error(error.response.data.message || t('role.update_failed'))
+          }
+        }
       } finally {
         submitting.value = false
       }
@@ -685,7 +768,17 @@ const handleTreeCheck = () => {
   }
 }
 
+const isProtectedRole = (row) => {
+  const slug = row.slug || row.Slug || ''
+  return protectedRoleSlugs.value.includes(slug)
+}
+
 const handleDelete = async (row) => {
+  if (isProtectedRole(row)) {
+    ElMessage.warning(t('role.protected_cannot_delete'))
+    return
+  }
+  
   try {
     await ElMessageBox.confirm(t('role.delete_confirm'), t('form.tip'), {
       confirmButtonText: t('common.confirm'),
@@ -698,6 +791,14 @@ const handleDelete = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Delete error:', error)
+      if (error.response && error.response.data && error.response.data.message) {
+        const errorMsg = error.response.data.message
+        if (errorMsg === 'role_protected_cannot_delete') {
+          ElMessage.error(t('role.protected_cannot_delete'))
+        } else {
+          ElMessage.error(error.response.data.message || t('role.delete_failed'))
+        }
+      }
     }
   }
 }
@@ -918,5 +1019,22 @@ onMounted(() => {
 
 .permission-path-icon:hover {
   color: #409eff;
+}
+
+.protected-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fff7e6;
+  border: 1px solid #ffe58f;
+  border-radius: 4px;
+  color: #d48806;
+  font-size: 12px;
+}
+
+.protected-tip .el-icon {
+  font-size: 14px;
 }
 </style>

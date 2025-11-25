@@ -76,7 +76,14 @@
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
             <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
             <el-button type="info" link @click="handleKickOut(row)">{{ $t('admin.kick_out') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+            <el-button 
+              v-if="!isProtectedAdmin(row.id)"
+              type="danger" 
+              link 
+              @click="handleDelete(row)"
+            >
+              {{ $t('common.delete') }}
+            </el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -225,6 +232,7 @@ const departments = ref([])
 const departmentTree = ref([])
 const roles = ref([])
 const departmentSelectVisible = ref(false)
+const protectedAdminIds = ref([1, 2])
 
 const formData = reactive({
   id: null,
@@ -510,6 +518,10 @@ const handleSubmit = async () => {
 
 const handleDialogClose = () => {
   formRef.value?.resetFields()
+}
+
+const isProtectedAdmin = (adminId) => {
+  return protectedAdminIds.value.includes(adminId)
 }
 
 const handleDelete = async (row) => {

@@ -8,6 +8,7 @@ type Menu struct {
 	orm.Model
 	ParentID   uint   `gorm:"index;default:0;comment:父级ID"`
 	Title      string `gorm:"not null;size:50;comment:菜单标题"`
+	Slug       string `gorm:"uniqueIndex;size:50;comment:菜单标识"`
 	Icon       string `gorm:"size:50;comment:图标"`
 	Path       string `gorm:"size:255;comment:路由路径"`
 	Component  string `gorm:"size:255;comment:组件路径"`

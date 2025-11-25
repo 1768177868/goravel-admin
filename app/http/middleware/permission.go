@@ -83,6 +83,7 @@ func Permission() http.Middleware {
 		}
 
 		// 检查是否是超级管理员（跳过权限检查）
+		// 拥有 super-admin 角色的管理员（包括超级管理员和开发者管理员）都跳过权限检查
 		for _, role := range admin.Roles {
 			if role.Slug == "super-admin" && role.Status == 1 {
 				ctx.Request().Next()
@@ -143,4 +144,3 @@ func matchPath(pattern, path string) bool {
 	}
 	return false
 }
-

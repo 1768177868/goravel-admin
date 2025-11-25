@@ -28,8 +28,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000010CreateOperationLogsTable{},
 		&migrations.M20250101000011CreateLoginLogsTable{},
 		&migrations.M20250101000012CreateSystemLogsTable{},
-		&migrations.M20250201000003CreateNotificationsTable{},
 		&migrations.M20250101000014CreatePersonalAccessTokensTable{},
+		&migrations.M20250201000003CreateNotificationsTable{},
 	}
 }
 

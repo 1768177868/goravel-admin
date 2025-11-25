@@ -50,6 +50,7 @@ func (r *MenuController) Show(ctx http.Context) http.Response {
 func (r *MenuController) Store(ctx http.Context) http.Response {
 	parentID := cast.ToUint(ctx.Request().Input("parent_id", "0"))
 	title := ctx.Request().Input("title")
+	slug := ctx.Request().Input("slug")
 	icon := ctx.Request().Input("icon")
 	path := ctx.Request().Input("path")
 	component := ctx.Request().Input("component")
@@ -63,10 +64,24 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "menu_title_required")
 	}
 
+	if slug == "" {
+		return response.Error(ctx, http.StatusBadRequest, "menu_slug_required")
+	}
+
+	// 检查标识是否已存在
+	exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", slug).Exists()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+	if exists {
+		return response.Error(ctx, http.StatusBadRequest, "menu_slug_exists")
+	}
+
 	now := carbon.Now()
 	menuData := map[string]interface{}{
 		"parent_id":  parentID,
 		"title":      title,
+		"slug":       slug,
 		"icon":       icon,
 		"path":       path,
 		"component":  component,
@@ -84,7 +99,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	}
 
 	var menu models.Menu
-	if err := facades.Orm().Query().Where("title", title).Where("path", path).First(&menu); err != nil {
+	if err := facades.Orm().Query().Where("slug", slug).First(&menu); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
@@ -103,6 +118,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 
 	parentID := ctx.Request().Input("parent_id", "")
 	title := ctx.Request().Input("title")
+	slug := ctx.Request().Input("slug")
 	icon := ctx.Request().Input("icon")
 	path := ctx.Request().Input("path")
 	component := ctx.Request().Input("component")
@@ -114,6 +130,17 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 
 	if title != "" {
 		menu.Title = title
+	}
+	if slug != "" {
+		// 检查标识是否已被其他菜单使用（排除当前菜单）
+		exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", slug).Where("id != ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		}
+		if exists {
+			return response.Error(ctx, http.StatusBadRequest, "menu_slug_exists")
+		}
+		menu.Slug = slug
 	}
 	if parentID != "" {
 		menu.ParentID = cast.ToUint(parentID)

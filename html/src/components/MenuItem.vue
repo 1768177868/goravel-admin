@@ -87,19 +87,38 @@ export default defineComponent({
       '个人中心': 'menu.profile'
     }
 
-    // 获取菜单标题（优先使用翻译键，如果没有则使用原始标题）
+    // 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
     const getMenuTitle = (menu) => {
+      // 优先使用 slug 作为翻译键标识
+      const slug = menu.slug || menu.Slug || ''
+      if (slug) {
+        const slugKey = `menu.${slug}`
+        // 尝试使用 slug 查找翻译键，如果存在则使用
+        try {
+          const translated = t(slugKey)
+          // 如果翻译结果不等于键名本身，说明找到了翻译
+          if (translated !== slugKey) {
+            return translated
+          }
+        } catch (e) {
+          // 翻译键不存在，继续尝试其他方式
+        }
+      }
+      
+      // 回退到路径映射（向后兼容）
       const pathKey = pathToTranslationKey[menu.path]
       if (pathKey) {
         return t(pathKey)
       }
       
+      // 回退到标题映射（向后兼容）
       const titleKey = titleToTranslationKey[menu.title]
       if (titleKey) {
         return t(titleKey)
       }
       
-      return menu.title
+      // 最后使用原始标题
+      return menu.title || menu.Title || ''
     }
     
     

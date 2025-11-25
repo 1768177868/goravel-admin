@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -149,6 +151,36 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	})
 }
 
+// parseProtectedRoleSlugs 解析受保护的角色标识字符串（支持逗号分隔）
+func (r *RoleController) parseProtectedRoleSlugs(slugsStr string) []string {
+	var slugs []string
+	if slugsStr == "" {
+		return slugs
+	}
+
+	parts := strings.Split(slugsStr, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			slugs = append(slugs, part)
+		}
+	}
+
+	return slugs
+}
+
+// isProtectedRole 检查角色是否是受保护的（通过slug判断）
+func (r *RoleController) isProtectedRole(roleSlug string) bool {
+	protectedSlugsStr := facades.Config().GetString("role.protected_slugs", "super-admin")
+	protectedSlugs := r.parseProtectedRoleSlugs(protectedSlugsStr)
+	for _, protectedSlug := range protectedSlugs {
+		if roleSlug == protectedSlug {
+			return true
+		}
+	}
+	return false
+}
+
 // Update 更新角色
 func (r *RoleController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
@@ -156,6 +188,9 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Where("id", id).First(&role); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "role_not_found")
 	}
+
+	// 检查是否是受保护的角色（通过slug判断）
+	isProtected := r.isProtectedRole(role.Slug)
 
 	name := ctx.Request().Input("name")
 	slug := ctx.Request().Input("slug")
@@ -189,7 +224,12 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		role.Description = description
 	}
 	if status != "" {
-		role.Status = cast.ToUint8(status)
+		newStatus := cast.ToUint8(status)
+		// 受保护角色不能禁用
+		if isProtected && newStatus == 0 {
+			return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_disable")
+		}
+		role.Status = newStatus
 	}
 	if sort != "" {
 		role.Sort = cast.ToInt(sort)
@@ -223,9 +263,15 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 // Destroy 删除角色
 func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
+
 	var role models.Role
 	if err := facades.Orm().Query().Where("id", id).First(&role); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "role_not_found")
+	}
+
+	// 检查是否是受保护的角色（通过slug判断）
+	if r.isProtectedRole(role.Slug) {
+		return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_delete")
 	}
 
 	if _, err := facades.Orm().Query().Delete(&role); err != nil {
