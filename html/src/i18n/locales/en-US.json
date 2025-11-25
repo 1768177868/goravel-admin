@@ -69,6 +69,7 @@
     }
   },
   "menu": {
+    "title": "Menu",
     "notification_center": "Notifications",
     "service_monitor": "Service Monitor",
     "dashboard": "Dashboard",

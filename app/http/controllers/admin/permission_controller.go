@@ -65,7 +65,8 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 
 	var permissions []models.Permission
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("sort asc, id desc").Get(&permissions); err != nil {
+	// 预加载菜单关联
+	if err := query.With("Menu").Offset(offset).Limit(pageSize).Order("sort asc, id desc").Get(&permissions); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
@@ -76,7 +77,8 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 func (r *PermissionController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var permission models.Permission
-	if err := facades.Orm().Query().Where("id", id).First(&permission); err != nil {
+	// 预加载菜单关联
+	if err := facades.Orm().Query().With("Menu").Where("id", id).First(&permission); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "permission_not_found")
 	}
 
@@ -155,7 +157,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	description := ctx.Request().Input("description")
 	status := ctx.Request().Input("status", "")
 	sort := ctx.Request().Input("sort", "")
-	menuID := ctx.Request().Input("menu_id", "")
+	menuIDStr := ctx.Request().Input("menu_id", "")
 
 	if name != "" {
 		// 检查名称是否已被其他权限使用
@@ -194,9 +196,12 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	if sort != "" {
 		permission.Sort = cast.ToInt(sort)
 	}
-	if menuID != "" {
-		permission.MenuID = cast.ToUint(menuID)
+	// 处理 menu_id：如果传入了值（包括 "0"），则更新；如果为空字符串或 null，保持原值
+	if menuIDStr != "" {
+		permission.MenuID = cast.ToUint(menuIDStr)
 	}
+	// 如果前端明确传了 null，需要特殊处理。这里假设前端传 null 时不会传这个字段
+	// 如果需要支持清空菜单关联，前端应该传 menu_id: 0
 
 	if err := facades.Orm().Query().Save(&permission); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")

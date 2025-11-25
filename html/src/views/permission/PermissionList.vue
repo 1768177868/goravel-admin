@@ -107,6 +107,11 @@
             {{ row.Description || row.description || '-' }}
           </template>
         </vxe-column>
+        <vxe-column field="menu" :title="$t('menu.title')" width="150">
+          <template #default="{ row }">
+            <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
+          </template>
+        </vxe-column>
         <vxe-column field="status" :title="$t('table.status')" width="80">
           <template #default="{ row }">
             <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
@@ -169,6 +174,42 @@
         <el-form-item :label="$t('common.description')">
           <el-input v-model="formData.description" type="textarea" />
         </el-form-item>
+        <el-form-item :label="$t('menu.title')" prop="menu_id">
+          <el-popover
+            v-model:visible="menuSelectVisible"
+            placement="bottom-start"
+            :width="300"
+            trigger="click"
+          >
+            <template #reference>
+              <el-input
+                :model-value="getSelectedMenuLabel()"
+                :placeholder="$t('form.please_select') + $t('menu.title')"
+                readonly
+                clearable
+                @clear="formData.menu_id = null"
+                style="cursor: pointer"
+              >
+                <template #suffix>
+                  <el-icon class="el-input__icon"><ArrowDown /></el-icon>
+                </template>
+              </el-input>
+            </template>
+            <el-tree
+              :data="menuTreeData"
+              :props="{ label: 'label', children: 'children' }"
+              :default-expand-all="false"
+              node-key="value"
+              highlight-current
+              :current-node-key="formData.menu_id"
+              @node-click="handleMenuSelect"
+            >
+              <template #default="{ node, data }">
+                <span class="tree-node-label">{{ data.label }}</span>
+              </template>
+            </el-tree>
+          </el-popover>
+        </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
           <el-radio-group v-model="formData.status">
             <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
@@ -191,7 +232,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, ArrowDown } from '@element-plus/icons-vue'
 import {
   getPermissionList,
   getPermissionDetail,
@@ -199,6 +240,7 @@ import {
   updatePermission,
   deletePermission
 } from '../../api/permission'
+import { getMenuList } from '../../api/menu'
 
 const { t } = useI18n()
 const formRef = ref(null)
@@ -230,13 +272,161 @@ const formData = reactive({
   method: 'GET',
   path: '',
   description: '',
+  menu_id: null,
   status: 1,
   sort: 0
 })
 
+const menuTreeData = ref([])
+const menuSelectVisible = ref(false)
+
+// 路径到翻译键的映射
+const pathToTranslationKey = {
+  '/system': 'menu.system_management',
+  '/system/admin': 'menu.admin_management',
+  '/system/role': 'menu.role_management',
+  '/admins': 'menu.admin_management',
+  '/roles': 'menu.role_management',
+  '/permissions': 'menu.permission_management',
+  '/menus': 'menu.menu_management',
+  '/departments': 'menu.department_management',
+  '/dictionaries': 'menu.dictionary_management',
+  '/logs': 'menu.log_management',
+  '/operation-logs': 'menu.operation_log',
+  '/login-logs': 'menu.login_log',
+  '/system-logs': 'menu.system_log',
+  '/monitor': 'menu.service_monitor',
+  '/profile': 'menu.profile',
+  '/notifications': 'menu.notification_center'
+}
+
+// 标题到翻译键的映射（根据后端返回的中文标题）
+const titleToTranslationKey = {
+  '系统管理': 'menu.system_management',
+  '管理员管理': 'menu.admin_management',
+  '角色管理': 'menu.role_management',
+  '权限管理': 'menu.permission_management',
+  '菜单管理': 'menu.menu_management',
+  '部门管理': 'menu.department_management',
+  '字典管理': 'menu.dictionary_management',
+  '日志管理': 'menu.log_management',
+  '操作日志': 'menu.operation_log',
+  '登录日志': 'menu.login_log',
+  '系统日志': 'menu.system_log',
+  '个人中心': 'menu.profile',
+  '服务监控': 'menu.service_monitor',
+  '通知中心': 'menu.notification_center'
+}
+
+// 获取菜单标题（优先使用翻译键，如果没有则使用原始标题）
+const getMenuTitle = (menu) => {
+  if (!menu || typeof menu !== 'object') {
+    return '-'
+  }
+  
+  // 尝试多种可能的字段名（支持 PascalCase 和 snake_case）
+  const path = menu.Path || menu.path || ''
+  const title = menu.Title || menu.title || ''
+  
+  // 先尝试通过路径匹配
+  if (path) {
+    const pathKey = pathToTranslationKey[path]
+    if (pathKey) {
+      return t(pathKey)
+    }
+  }
+  
+  // 再尝试通过标题匹配
+  if (title) {
+    const titleKey = titleToTranslationKey[title]
+    if (titleKey) {
+      return t(titleKey)
+    }
+    // 如果没有匹配的翻译键，返回原始标题
+    return title
+  }
+  
+  return '-'
+}
+
+// 转换菜单数据为树形选择器格式
+const convertMenuToTreeData = (menus) => {
+  return menus.map(menu => {
+    const menuId = menu.id || menu.ID
+    const title = getMenuTitle(menu)
+    const path = menu.Path || menu.path || ''
+    const label = path ? `${title} (${path})` : title
+    
+    const node = {
+      value: menuId,
+      label: label,
+      title: title,
+      path: path
+    }
+    
+    // 递归处理子菜单
+    const children = menu.Children || menu.children || []
+    if (children.length > 0) {
+      node.children = convertMenuToTreeData(children)
+    }
+    
+    return node
+  })
+}
+
+// 获取菜单列表
+const loadMenuList = async () => {
+  try {
+    const { data } = await getMenuList()
+    // 菜单返回的是树形结构，直接转换为树形选择器格式
+    menuTreeData.value = convertMenuToTreeData(data.menus || [])
+  } catch (error) {
+    console.error('Load menu list failed:', error)
+  }
+}
+
+// 获取菜单显示标题（用于表格显示）
+const getMenuDisplayTitle = (menu) => {
+  if (!menu) return '-'
+  
+  // 尝试多种可能的字段名
+  const menuObj = menu.Menu || menu.menu || menu
+  
+  if (!menuObj || (typeof menuObj !== 'object')) {
+    return '-'
+  }
+  
+  return getMenuTitle(menuObj)
+}
+
+// 获取选中的菜单标签
+const getSelectedMenuLabel = () => {
+  if (!formData.menu_id) return ''
+  const findMenu = (menus, id) => {
+    for (const menu of menus) {
+      if (menu.value === id) {
+        return menu.label
+      }
+      if (menu.children && menu.children.length > 0) {
+        const found = findMenu(menu.children, id)
+        if (found) return found
+      }
+    }
+    return ''
+  }
+  return findMenu(menuTreeData.value, formData.menu_id) || ''
+}
+
+// 处理菜单选择
+const handleMenuSelect = (data) => {
+  formData.menu_id = data.value
+  menuSelectVisible.value = false
+}
+
 // 重置表单数据
 const resetFormData = () => {
   formData.id = null
+  formData.menu_id = null
   formData.name = ''
   formData.slug = ''
   formData.method = 'GET'
@@ -334,6 +524,7 @@ const handleEdit = async (row) => {
         method: permission.Method || permission.method || 'GET',
         path: permission.Path || permission.path || '',
         description: permission.Description || permission.description || '',
+        menu_id: permission.MenuID !== undefined ? permission.MenuID : (permission.menu_id !== undefined ? permission.menu_id : null),
         status: permission.Status !== undefined ? permission.Status : (permission.status !== undefined ? permission.status : 1),
         sort: permission.Sort !== undefined ? permission.Sort : (permission.sort !== undefined ? permission.sort : 0)
       }
@@ -357,11 +548,16 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
+        // 准备提交数据，将 null 转换为 0
+        const submitData = {
+          ...formData,
+          menu_id: formData.menu_id || 0
+        }
         if (formData.id) {
-          await updatePermission(formData.id, formData)
+          await updatePermission(formData.id, submitData)
           ElMessage.success(t('permission.update_success'))
         } else {
-          await createPermission(formData)
+          await createPermission(submitData)
           ElMessage.success(t('permission.create_success'))
         }
         dialogVisible.value = false
@@ -397,6 +593,7 @@ const handleDelete = async (row) => {
 }
 
 onMounted(() => {
+  loadMenuList()
   loadData()
 })
 </script>
@@ -418,6 +615,10 @@ onMounted(() => {
   padding: 20px;
   background: #f5f7fa;
   border-radius: 4px;
+}
+
+.tree-node-label {
+  font-size: 14px;
 }
 </style>
 

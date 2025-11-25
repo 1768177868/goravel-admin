@@ -69,6 +69,7 @@
     }
   },
   "menu": {
+    "title": "菜单",
     "notification_center": "通知中心",
     "service_monitor": "服务监控",
     "dashboard": "仪表盘",
