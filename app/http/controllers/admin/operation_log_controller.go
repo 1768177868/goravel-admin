@@ -85,8 +85,8 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.OperationLog
 	offset := (page - 1) * pageSize
-	// 应用排序（默认按创建时间倒序）
-	query = helpers.ApplySort(query, orderBy, "created_at:desc")
+	// 应用排序（默认按id倒序）
+	query = helpers.ApplySort(query, orderBy, "id:desc")
 	// 使用 With 预加载关联，避免 N+1 查询问题
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
