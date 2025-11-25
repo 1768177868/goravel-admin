@@ -81,14 +81,20 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查名称是否已存在
-	nameCount, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Count()
-	if err == nil && nameCount > 0 {
+	exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Exists()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+	if exists {
 		return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
 	}
 
 	// 检查标识是否已存在
-	slugCount, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Count()
-	if err == nil && slugCount > 0 {
+	exists, err = facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Exists()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+	if exists {
 		return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 	}
 
@@ -150,16 +156,22 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 
 	if name != "" {
 		// 检查名称是否已被其他角色使用（排除当前角色）
-		count, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Where("id != ?", id).Count()
-		if err == nil && count > 0 {
+		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Where("id != ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		}
+		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
 		}
 		role.Name = name
 	}
 	if slug != "" {
 		// 检查标识是否已被其他角色使用（排除当前角色）
-		count, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Where("id != ?", id).Count()
-		if err == nil && count > 0 {
+		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Where("id != ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		}
+		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 		}
 		role.Slug = slug

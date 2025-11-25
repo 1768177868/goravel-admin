@@ -101,12 +101,12 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	// 检查用户名是否已存在（排除软删除的记录）
 	// 注意：数据库层面使用了 username + deleted_at 的联合唯一索引
 	// 这样可以允许软删除的用户名被重新使用，但同一时间只能有一个未删除的用户名
-	// GORM 默认会排除软删除的记录，使用 Count() 方法检查未删除的记录
-	count, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Count()
+	// GORM 默认会排除软删除的记录，使用 Exists() 方法检查未删除的记录
+	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Exists()
 	if err != nil {
 		// 查询出错，记录日志但不阻止创建（可能是数据库问题）
 		facades.Log().Errorf("Check username exists error: %v", err)
-	} else if count > 0 {
+	} else if exists {
 		return response.Error(ctx, http.StatusBadRequest, "username_exists")
 	}
 	// 如果没有找到记录（包括软删除的记录），用户名可用，继续创建

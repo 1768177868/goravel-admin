@@ -90,13 +90,19 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查名称或标识是否已存在
-	var existPermission models.Permission
-	if err := facades.Orm().Query().Where("name", name).OrWhere("slug", slug).First(&existPermission); err == nil {
+	exists, err := facades.Orm().Query().Model(&models.Permission{}).
+		Where("name", name).
+		OrWhere("slug", slug).
+		Exists()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+	if exists {
 		return response.Error(ctx, http.StatusBadRequest, "permission_name_or_slug_exists")
 	}
 
 	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
-	permissionData := map[string]interface{}{
+	permissionData := map[string]any{
 		"name":        name,
 		"slug":        slug,
 		"method":      method,
@@ -143,16 +149,22 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 
 	if name != "" {
 		// 检查名称是否已被其他权限使用
-		var existPermission models.Permission
-		if err := facades.Orm().Query().Where("name", name).Where("id <> ?", id).First(&existPermission); err == nil {
+		exists, err := facades.Orm().Query().Model(&models.Permission{}).Where("name", name).Where("id <> ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		}
+		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "permission_name_exists")
 		}
 		permission.Name = name
 	}
 	if slug != "" {
 		// 检查标识是否已被其他权限使用
-		var existPermission models.Permission
-		if err := facades.Orm().Query().Where("slug", slug).Where("id <> ?", id).First(&existPermission); err == nil {
+		exists, err := facades.Orm().Query().Model(&models.Permission{}).Where("slug", slug).Where("id <> ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		}
+		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "permission_slug_exists")
 		}
 		permission.Slug = slug
