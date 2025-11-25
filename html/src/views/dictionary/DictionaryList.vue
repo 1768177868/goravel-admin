@@ -28,7 +28,6 @@
         resizable
         height="600"
       >
-        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
         <vxe-column field="type" :title="$t('dictionary.type')">
           <template #default="{ row }">

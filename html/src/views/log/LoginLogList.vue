@@ -89,7 +89,6 @@
         @checkbox-all="handleSelectionChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
         <vxe-column field="admin" :title="$t('log.admin')">
           <template #default="{ row }">

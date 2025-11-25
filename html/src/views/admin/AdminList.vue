@@ -39,7 +39,6 @@
         height="600"
         @page-change="handlePageChange"
       >
-        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="id" :title="$t('table.id')" width="80" />
         <vxe-column field="username" :title="$t('table.username')" />
         <vxe-column field="nickname" :title="$t('table.nickname')" />

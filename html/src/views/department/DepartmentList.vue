@@ -52,7 +52,6 @@
         :tree-config="hasSearch ? false : { children: 'children', expandAll: false, indent: 20 }"
         height="600"
       >
-        <vxe-column type="seq" width="60" :title="$t('table.seq')" />
         <vxe-column field="name" :title="$t('department.name')" tree-node>
           <template #default="{ row }">
             {{ row.Name || row.name || '-' }}
