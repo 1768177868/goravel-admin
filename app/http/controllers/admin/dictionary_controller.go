@@ -65,10 +65,13 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	label := ctx.Request().Input("label")
 	value := ctx.Request().Input("value")
 	description := ctx.Request().Input("description")
-	statusInput := ctx.Request().Input("status")
+	// 处理状态字段：需要正确处理 0 值
+	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
-	if statusInput != "" {
-		status = cast.ToUint8(statusInput)
+	if statusVal, exists := allInputs["status"]; exists {
+		if statusVal != nil {
+			status = cast.ToUint8(statusVal)
+		}
 	}
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	remark := ctx.Request().Input("remark")

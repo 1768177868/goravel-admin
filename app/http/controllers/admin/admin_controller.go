@@ -2,6 +2,7 @@ package admin
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
@@ -114,7 +115,9 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查用户名是否已存在（排除软删除的记录）
-	// GORM 默认会排除软删除的记录，使用 Count() 方法更可靠
+	// 注意：数据库层面使用了 username + deleted_at 的联合唯一索引
+	// 这样可以允许软删除的用户名被重新使用，但同一时间只能有一个未删除的用户名
+	// GORM 默认会排除软删除的记录，使用 Count() 方法检查未删除的记录
 	count, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Count()
 	if err != nil {
 		// 查询出错，记录日志但不阻止创建（可能是数据库问题）
@@ -125,6 +128,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "username_exists")
 	}
 	// 如果没有找到记录（包括软删除的记录），用户名可用，继续创建
+	// 数据库层面的联合唯一索引会确保唯一性约束
 
 	// 加密密码
 	hashedPassword, err := facades.Hash().Make(password)
@@ -228,6 +232,31 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 // Destroy 删除管理员
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
+
+	// 检查是否是受保护的管理员ID
+	protectedIDsStr := facades.Config().GetString("admin.protected_ids", "1")
+	protectedIDs := r.parseProtectedIDs(protectedIDsStr)
+	for _, protectedID := range protectedIDs {
+		if id == protectedID {
+			return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_delete")
+		}
+	}
+
+	// 检查是否是当前登录的管理员自己
+	adminValue := ctx.Value("admin")
+	if adminValue != nil {
+		var currentAdmin models.Admin
+		if admin, ok := adminValue.(models.Admin); ok {
+			currentAdmin = admin
+		} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+			currentAdmin = *adminPtr
+		}
+
+		if currentAdmin.ID > 0 && currentAdmin.ID == id {
+			return response.Error(ctx, http.StatusForbidden, "admin_cannot_delete_self")
+		}
+	}
+
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("id", id).First(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
@@ -238,6 +267,27 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success")
+}
+
+// parseProtectedIDs 解析受保护的管理员ID字符串（支持逗号分隔）
+func (r *AdminController) parseProtectedIDs(idsStr string) []uint {
+	var ids []uint
+	if idsStr == "" {
+		return ids
+	}
+
+	// 使用字符串分割
+	parts := strings.Split(idsStr, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			if id := cast.ToUint(part); id > 0 {
+				ids = append(ids, id)
+			}
+		}
+	}
+
+	return ids
 }
 
 // Export 导出管理员列表

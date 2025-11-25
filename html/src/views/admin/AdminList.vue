@@ -526,6 +526,19 @@ const handleDelete = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Delete error:', error)
+      // 显示后端返回的错误信息
+      if (error.response && error.response.data && error.response.data.message) {
+        const errorMsg = error.response.data.message
+        if (errorMsg === 'admin_protected_cannot_delete') {
+          ElMessage.error(t('admin.protected_cannot_delete'))
+        } else if (errorMsg === 'admin_cannot_delete_self') {
+          ElMessage.error(t('admin.cannot_delete_self'))
+        } else {
+          ElMessage.error(error.response.data.message || t('admin.delete_failed'))
+        }
+      } else {
+        ElMessage.error(t('admin.delete_failed'))
+      }
     }
   }
 }

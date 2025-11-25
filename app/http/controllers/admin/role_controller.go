@@ -73,12 +73,15 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	name := ctx.Request().Input("name")
 	slug := ctx.Request().Input("slug")
 	description := ctx.Request().Input("description")
-	statusInput := ctx.Request().Input("status")
+	// 处理状态字段：需要正确处理 0 值
+	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
-	if statusInput != "" {
-		status = cast.ToUint8(statusInput)
+	if statusVal, exists := allInputs["status"]; exists {
+		if statusVal != nil {
+			status = cast.ToUint8(statusVal)
+		}
 	}
-	facades.Log().Infof("Create role - statusInput: %s, status: %d", statusInput, status)
+	facades.Log().Infof("Create role - status from allInputs: %v (type: %T), converted: %d", allInputs["status"], allInputs["status"], status)
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 
 	if name == "" || slug == "" {
@@ -90,7 +93,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	if err == nil && nameCount > 0 {
 		return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
 	}
-	
+
 	// 检查标识是否已存在
 	slugCount, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Count()
 	if err == nil && slugCount > 0 {

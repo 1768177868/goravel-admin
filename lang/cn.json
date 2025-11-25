@@ -21,6 +21,8 @@
     "clean_failed": "清理失败",
     "validation_failed": "验证失败",
     "admin_not_found": "管理员不存在",
+    "admin_protected_cannot_delete": "该管理员受保护，无法删除",
+    "admin_cannot_delete_self": "不能删除自己",
     "username_and_password_required": "用户名和密码不能为空",
     "username_exists": "用户名已存在",
     "password_encrypt_failed": "密码加密失败",

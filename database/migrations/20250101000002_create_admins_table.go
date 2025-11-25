@@ -14,7 +14,7 @@ func (r *M20250101000002CreateAdminsTable) Signature() string {
 
 func (r *M20250101000002CreateAdminsTable) Up() error {
 	if !facades.Schema().HasTable("admins") {
-		return facades.Schema().Create("admins", func(table schema.Blueprint) {
+		if err := facades.Schema().Create("admins", func(table schema.Blueprint) {
 			table.BigIncrements("id")
 			table.String("username")
 			table.String("password").Default("")
@@ -26,9 +26,13 @@ func (r *M20250101000002CreateAdminsTable) Up() error {
 			table.UnsignedBigInteger("department_id").Nullable()
 			table.Timestamps()
 			table.SoftDeletes()
-			table.Unique("username")
+			// 创建 username 和 deleted_at 的联合唯一索引
+			// 这样软删除的记录（deleted_at 不为 NULL）不会与未删除的记录冲突
+			table.Unique("username", "deleted_at")
 			table.Comment("管理员表")
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil

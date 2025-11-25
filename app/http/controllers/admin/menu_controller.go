@@ -54,10 +54,13 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	component := ctx.Request().Input("component")
 	permission := ctx.Request().Input("permission")
 	menuType := cast.ToUint8(ctx.Request().Input("type", "1"))
-	statusInput := ctx.Request().Input("status")
+	// 处理状态字段：需要正确处理 0 值
+	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
-	if statusInput != "" {
-		status = cast.ToUint8(statusInput)
+	if statusVal, exists := allInputs["status"]; exists {
+		if statusVal != nil {
+			status = cast.ToUint8(statusVal)
+		}
 	}
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	isHidden := cast.ToUint8(ctx.Request().Input("is_hidden", "0"))

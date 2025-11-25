@@ -6,7 +6,7 @@ import (
 
 type Admin struct {
 	orm.Model
-	Username     string     `gorm:"uniqueIndex;not null;size:50;comment:用户名" json:"username"`
+	Username     string     `gorm:"not null;size:50;comment:用户名" json:"username"`
 	Password     string     `gorm:"not null;size:255;comment:密码" json:"-"` // 使用 json:"-" 隐藏密码字段
 	Nickname     string     `gorm:"size:50;comment:昵称" json:"nickname"`
 	Avatar       string     `gorm:"size:255;comment:头像" json:"avatar"`
