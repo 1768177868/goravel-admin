@@ -166,14 +166,16 @@ const handleLogin = async () => {
           ElMessage.success(t('login.login_success'))
           router.push('/')
         } else {
-          console.error('No token in login response:', res)
-          ElMessage.error(t('login.login_failed'))
+          throw new Error(t('login.login_failed'))
         }
       } catch (error) {
-        console.error('Login error:', error)
-        if (error.response) {
+        if (error?.__handled) {
+          // 已在 axios 拦截器中提示
+        } else if (error.response) {
           const message = error.response.data?.message || error.message
           ElMessage.error(message || t('login.login_failed'))
+        } else if (error.message) {
+          ElMessage.error(error.message)
         } else {
           ElMessage.error(t('login.login_failed'))
         }

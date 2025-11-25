@@ -1,9 +1,24 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { createI18n } from 'vue-i18n'
 import router from '../router'
 import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
 import { useAppStore } from '../store/app'
+import enUS from '../i18n/locales/en-US.json'
+import zhCN from '../i18n/locales/zh-CN.json'
+
+const i18n = createI18n({
+  legacy: false,
+  locale: localStorage.getItem('language') || 'zh-CN',
+  fallbackLocale: 'zh-CN',
+  messages: {
+    'en-US': enUS,
+    'zh-CN': zhCN
+  }
+})
+
+const { t } = i18n.global
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_PREFIX || '/api/admin',
@@ -113,28 +128,18 @@ request.interceptors.response.use(
     // 如果 code 不是 200，说明有错误
     if (res.code !== 200) {
       if (!isAuthEndpoint) {
-        const message = res.message || '请求失败'
-        const messageLower = message.toLowerCase()
-        const isAuthError =
-          res.code === 401 ||
-          messageLower.includes('未登录') ||
-          messageLower.includes('登录已过期') ||
-          messageLower.includes('token') ||
-          messageLower.includes('无效') ||
-          messageLower.includes('invalid') ||
-          messageLower.includes('unauthorized') ||
-          message === 'invalid_token' ||
-          message === 'unauthorized' ||
-          message === '无效的Token' ||
-          message === '未授权，请先登录'
-
-        if (isAuthError) {
-          handle401Error(message || '未登录或登录已过期，请重新登录')
+        const message = res.message || t('error.default')
+        if (res.code === 401) {
+          handle401Error(message || t('error.unauthorized'))
+        } else if (res.code === 403) {
+          ElMessage.error(message || t('error.forbidden'))
         } else {
           ElMessage.error(message)
         }
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      const err = new Error(res.message || t('error.default'))
+      err.__handled = true
+      return Promise.reject(err)
     }
     
     return res
@@ -146,23 +151,30 @@ request.interceptors.response.use(
 
       const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
 
-      if (status === 401 && !isAuthEndpoint) {
-        const message = data?.message || data?.data?.message || '未登录或登录已过期，请重新登录'
+      if (status === 429) {
+        const message = data?.message || data?.data?.message || t('error.tooManyRequests')
+        ElMessage.error(message)
+      } else if (status === 401 && !isAuthEndpoint) {
+        const message = data?.message || data?.data?.message || t('error.unauthorized')
         handle401Error(message)
       } else if (status === 401 && isAuthEndpoint) {
         // 登录/退出接口 401 只提示一次
-        const message = data?.message || data?.data?.message || '登录失败'
+        const message = data?.message || data?.data?.message || t('login.login_failed')
         ElMessage.error(message)
       } else if (!isAuthEndpoint) {
         if (status === 403) {
-          ElMessage.error('没有权限访问')
+          ElMessage.error(t('error.forbidden'))
         } else {
-          const errorMessage = data?.message || data?.data?.message || '请求失败'
+          const errorMessage = data?.message || data?.data?.message || t('error.default')
           ElMessage.error(errorMessage)
         }
       }
     } else {
-      ElMessage.error('网络错误，请检查网络连接')
+      ElMessage.error(t('error.network'))
+    }
+
+    if (typeof error === 'object') {
+      error.__handled = true
     }
     
     return Promise.reject(error)

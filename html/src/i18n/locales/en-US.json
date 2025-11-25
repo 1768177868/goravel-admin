@@ -39,6 +39,13 @@
     "login_success": "Login successful",
     "login_failed": "Login failed"
   },
+  "error": {
+    "default": "Request failed",
+    "unauthorized": "Not logged in or session expired, please login again",
+    "forbidden": "No permission to access",
+    "tooManyRequests": "Too many requests, please try again later",
+    "network": "Network error, please check your connection"
+  },
   "menu": {
     "dashboard": "Dashboard",
     "system_management": "System Management",
