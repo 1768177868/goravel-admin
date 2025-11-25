@@ -70,6 +70,7 @@
   },
   "menu": {
     "notification_center": "通知中心",
+    "service_monitor": "服务监控",
     "dashboard": "仪表盘",
     "system_management": "系统管理",
     "admin_management": "管理员管理",
@@ -351,6 +352,34 @@
     "top_level": "顶级",
     "tip": "提示",
     "warning": "警告"
+  },
+  "monitor": {
+    "cpu": "CPU",
+    "cpu_usage": "使用率",
+    "cpu_model": "型号",
+    "cpu_cores": "核心数",
+    "memory": "内存",
+    "memory_usage": "使用率",
+    "memory_total": "总内存",
+    "memory_used": "已用",
+    "memory_available": "可用",
+    "memory_free": "空闲",
+    "disk": "磁盘",
+    "disk_usage": "使用率",
+    "disk_total": "总容量",
+    "disk_used": "已用",
+    "disk_free": "空闲",
+    "disk_fstype": "文件系统",
+    "disk_path": "路径",
+    "network": "网络",
+    "net_bytes_sent": "发送字节",
+    "net_bytes_recv": "接收字节",
+    "net_packets_sent": "发送包数",
+    "net_packets_recv": "接收包数",
+    "net_errin": "接收错误",
+    "net_errout": "发送错误",
+    "net_dropin": "接收丢包",
+    "net_dropout": "发送丢包"
   }
 }
 

@@ -70,6 +70,7 @@
   },
   "menu": {
     "notification_center": "Notifications",
+    "service_monitor": "Service Monitor",
     "dashboard": "Dashboard",
     "system_management": "System Management",
     "admin_management": "Admin Management",
@@ -351,6 +352,34 @@
     "top_level": "Top Level",
     "tip": "Tip",
     "warning": "Warning"
+  },
+  "monitor": {
+    "cpu": "CPU",
+    "cpu_usage": "Usage",
+    "cpu_model": "Model",
+    "cpu_cores": "Cores",
+    "memory": "Memory",
+    "memory_usage": "Usage",
+    "memory_total": "Total",
+    "memory_used": "Used",
+    "memory_available": "Available",
+    "memory_free": "Free",
+    "disk": "Disk",
+    "disk_usage": "Usage",
+    "disk_total": "Total",
+    "disk_used": "Used",
+    "disk_free": "Free",
+    "disk_fstype": "File System",
+    "disk_path": "Path",
+    "network": "Network",
+    "net_bytes_sent": "Bytes Sent",
+    "net_bytes_recv": "Bytes Received",
+    "net_packets_sent": "Packets Sent",
+    "net_packets_recv": "Packets Received",
+    "net_errin": "Receive Errors",
+    "net_errout": "Send Errors",
+    "net_dropin": "Receive Drops",
+    "net_dropout": "Send Drops"
   }
 }
 

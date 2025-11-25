@@ -74,6 +74,10 @@
             <el-icon><Bell /></el-icon>
             <template #title>{{ $t('menu.notification_center') }}</template>
           </el-menu-item>
+          <el-menu-item index="/monitor">
+            <el-icon><Monitor /></el-icon>
+            <template #title>{{ $t('menu.service_monitor') }}</template>
+          </el-menu-item>
         </template>
       </el-menu>
     </el-aside>
@@ -183,7 +187,8 @@ import {
   Menu,
   OfficeBuilding,
   Document,
-  Bell
+  Bell,
+  Monitor
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

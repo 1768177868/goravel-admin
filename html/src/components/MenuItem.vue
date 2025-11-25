@@ -67,6 +67,7 @@ export default defineComponent({
       '/operation-logs': 'menu.operation_log',
       '/login-logs': 'menu.login_log',
       '/system-logs': 'menu.system_log',
+      '/monitor': 'menu.service_monitor',
       '/profile': 'menu.profile'
     }
     

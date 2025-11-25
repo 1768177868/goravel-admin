@@ -61,10 +61,34 @@ func (s *AdminSeeder) Run() error {
 		Sort:        1,
 	})
 
+	// 辅助函数：根据Path查找或创建菜单，如果存在则更新（保留用户修改的图标）
+	createOrUpdateMenu := func(menuData models.Menu) models.Menu {
+		var existingMenu models.Menu
+		if err := facades.Orm().Query().Where("path", menuData.Path).First(&existingMenu); err == nil {
+			// 菜单已存在，更新除图标外的其他字段（保留用户可能修改的图标）
+			existingMenu.ParentID = menuData.ParentID
+			existingMenu.Title = menuData.Title
+			// 如果现有菜单的图标为空，才更新图标；否则保留用户修改的图标
+			if existingMenu.Icon == "" {
+				existingMenu.Icon = menuData.Icon
+			}
+			existingMenu.Component = menuData.Component
+			existingMenu.Permission = menuData.Permission
+			existingMenu.Type = menuData.Type
+			existingMenu.Status = menuData.Status
+			existingMenu.Sort = menuData.Sort
+			existingMenu.IsHidden = menuData.IsHidden
+			facades.Orm().Query().Save(&existingMenu)
+			return existingMenu
+		}
+		// 菜单不存在，创建新菜单
+		facades.Orm().Query().Create(&menuData)
+		return menuData
+	}
+
 	// 先创建菜单（因为权限需要关联菜单）
 	// 创建菜单
-	var systemMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&systemMenu, models.Menu{
+	systemMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "系统管理",
 		Icon:      "Setting",
@@ -76,8 +100,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var adminMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&adminMenu, models.Menu{
+	adminMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "管理员管理",
 		Icon:      "User",
@@ -89,8 +112,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var roleMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&roleMenu, models.Menu{
+	roleMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "角色管理",
 		Icon:      "UserFilled",
@@ -102,8 +124,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var permissionMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&permissionMenu, models.Menu{
+	permissionMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "权限管理",
 		Icon:      "Lock",
@@ -115,8 +136,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var menuMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&menuMenu, models.Menu{
+	menuMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "菜单管理",
 		Icon:      "Menu",
@@ -128,8 +148,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var departmentMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&departmentMenu, models.Menu{
+	departmentMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "部门管理",
 		Icon:      "OfficeBuilding",
@@ -141,8 +160,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var dictionaryMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&dictionaryMenu, models.Menu{
+	dictionaryMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "字典管理",
 		Icon:      "Document",
@@ -155,8 +173,7 @@ func (s *AdminSeeder) Run() error {
 	})
 
 	// 创建日志管理父菜单
-	var logMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&logMenu, models.Menu{
+	logMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "日志管理",
 		Icon:      "Document",
@@ -169,8 +186,7 @@ func (s *AdminSeeder) Run() error {
 	})
 
 	// 创建日志管理子菜单
-	var operationLogMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&operationLogMenu, models.Menu{
+	operationLogMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
 		Title:     "操作日志",
 		Icon:      "Document",
@@ -182,8 +198,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var loginLogMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&loginLogMenu, models.Menu{
+	loginLogMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
 		Title:     "登录日志",
 		Icon:      "Document",
@@ -195,8 +210,7 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	var systemLogMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&systemLogMenu, models.Menu{
+	systemLogMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
 		Title:     "系统日志",
 		Icon:      "Document",
@@ -208,9 +222,21 @@ func (s *AdminSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	// 创建服务监控菜单
+	monitorMenu := createOrUpdateMenu(models.Menu{
+		ParentID:  0,
+		Title:     "服务监控",
+		Icon:      "Monitor",
+		Path:      "/monitor",
+		Component: "monitor/index",
+		Type:      2,
+		Status:    1,
+		Sort:      3,
+		IsHidden:  0,
+	})
+
 	// 创建个人中心菜单
-	var profileMenu models.Menu
-	facades.Orm().Query().FirstOrCreate(&profileMenu, models.Menu{
+	profileMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "个人中心",
 		Icon:      "User",
@@ -218,7 +244,7 @@ func (s *AdminSeeder) Run() error {
 		Component: "profile/index",
 		Type:      2,
 		Status:    1,
-		Sort:      3,
+		Sort:      4,
 		IsHidden:  0,
 	})
 
@@ -284,6 +310,8 @@ func (s *AdminSeeder) Run() error {
 		{Name: "系统日志详情", Slug: "system_log.show", Method: "GET", Path: "/api/admin/system-logs/*", Description: "查看系统日志详情", Status: 1, Sort: 2, MenuID: systemLogMenu.ID},
 		{Name: "系统日志删除", Slug: "system_log.destroy", Method: "DELETE", Path: "/api/admin/system-logs/*", Description: "删除系统日志", Status: 1, Sort: 3, MenuID: systemLogMenu.ID},
 		{Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/api/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 4, MenuID: systemLogMenu.ID},
+		// 服务监控
+		{Name: "系统监控", Slug: "monitor.system_info", Method: "GET", Path: "/api/admin/monitor/system-info", Description: "查看系统监控信息", Status: 1, Sort: 1, MenuID: monitorMenu.ID},
 		// 个人中心
 		{Name: "修改资料", Slug: "profile.update", Method: "PUT", Path: "/api/admin/profile", Description: "修改当前登录管理员资料", Status: 1, Sort: 1, MenuID: profileMenu.ID},
 		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/api/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 2, MenuID: profileMenu.ID},

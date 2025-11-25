@@ -21,6 +21,7 @@ func Admin() {
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
 	dashboardController := admin.NewDashboardController()
+	monitorController := admin.NewMonitorController()
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
 
@@ -110,6 +111,9 @@ func Admin() {
 		router.Get("dashboard/user-access-source", dashboardController.GetUserAccessSource)
 		router.Get("dashboard/weekly-user-activity", dashboardController.GetWeeklyUserActivity)
 		router.Get("dashboard/monthly-sales", dashboardController.GetMonthlySales)
+
+		// 服务监控
+		router.Get("monitor/system-info", monitorController.GetSystemInfo)
 
 		// 系统公告/通知
 		router.Post("notifications", notificationController.Store)

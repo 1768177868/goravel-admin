@@ -81,6 +81,12 @@ const routes = [
         meta: { titleKey: 'menu.notification_center' }
       },
       {
+        path: 'monitor',
+        name: 'Monitor',
+        component: () => import('../views/monitor/Monitor.vue'),
+        meta: { titleKey: 'menu.service_monitor' }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
