@@ -6,7 +6,7 @@ export const useUserStore = defineStore('user', {
     token: localStorage.getItem('token') || '',
     adminInfo: JSON.parse(localStorage.getItem('adminInfo') || 'null'),
     permissions: [],
-    menus: []
+    menus: JSON.parse(localStorage.getItem('menus') || '[]')
   }),
 
   getters: {
@@ -33,6 +33,7 @@ export const useUserStore = defineStore('user', {
 
     setMenus(menus) {
       this.menus = menus
+      localStorage.setItem('menus', JSON.stringify(menus || []))
     },
 
     async fetchUserInfo() {
@@ -68,6 +69,7 @@ export const useUserStore = defineStore('user', {
         this.menus = []
         localStorage.removeItem('token')
         localStorage.removeItem('adminInfo')
+        localStorage.removeItem('menus')
       }
       // 返回 resolved promise 确保调用者可以继续
       return Promise.resolve()
