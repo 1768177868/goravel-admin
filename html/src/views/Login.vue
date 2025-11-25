@@ -242,7 +242,7 @@ const handleLogin = async () => {
 
 .captcha-image {
   height: 48px;
-  width: 150px;
+  width: 170px;
   object-fit: cover;
   cursor: pointer;
   border-radius: 4px;
