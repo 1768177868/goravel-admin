@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
+	httpmiddleware "github.com/goravel/framework/http/middleware"
 
 	"goravel/app/http/controllers/admin"
 	"goravel/app/http/middleware"
@@ -22,7 +23,7 @@ func Admin() {
 	dashboardController := admin.NewDashboardController()
 
 	// 登录相关（不需要认证，但需要多语言）
-	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), httpmiddleware.Throttle("login")).Group(func(router route.Router) {
 		router.Post("login", adminAuthController.Login)
 	})
 

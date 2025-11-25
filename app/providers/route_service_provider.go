@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"strings"
+
 	"github.com/goravel/framework/contracts/foundation"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -42,5 +44,19 @@ func (receiver *RouteServiceProvider) configureRateLimiting() {
 			limit.PerDay(1000),
 			limit.PerMinute(2).By(ctx.Request().Ip()),
 		}
+	})
+	facades.RateLimiter().For("login", func(ctx contractshttp.Context) contractshttp.Limit {
+		username := ctx.Request().Input("username", "")
+		if username == "" {
+			username = ctx.Request().Input("email", "")
+		}
+		if username == "" {
+			username = ctx.Request().Header("X-Username", "")
+		}
+		username = strings.ToLower(strings.TrimSpace(username))
+		if username == "" {
+			username = ctx.Request().Ip()
+		}
+		return limit.PerMinute(5).By("login:" + username)
 	})
 }
