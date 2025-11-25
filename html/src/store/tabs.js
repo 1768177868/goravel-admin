@@ -80,12 +80,15 @@ export const useTabsStore = defineStore('tabs', {
     },
 
     refreshTab(path) {
-      // 触发路由刷新
       const tab = this.tabs.find(t => t.path === path)
       if (tab) {
-        // 通过更新 key 来触发组件刷新
         tab.refreshKey = Date.now()
       }
+    },
+
+    getRefreshKey(path) {
+      const tab = this.tabs.find(t => t.path === path)
+      return tab?.refreshKey || ''
     },
 
     setActiveTab(path) {

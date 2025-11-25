@@ -136,7 +136,7 @@
             <keep-alive>
               <component
                 :is="Component"
-                :key="`${routeItem.path}-${routeItem.query._refresh || ''}`"
+                :key="`${routeItem.path}-${tabsStore.getRefreshKey(routeItem.path)}`"
               />
             </keep-alive>
           </transition>

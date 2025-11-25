@@ -185,27 +185,8 @@ const handleClick = (tab) => {
   router.push(path)
 }
 
-const handleRefresh = async (path) => {
-  // 更新标签的刷新 key，触发组件重新渲染
+const handleRefresh = (path) => {
   tabsStore.refreshTab(path)
-  
-  // 如果刷新的是当前页面，重新加载路由
-  if (tabsStore.activeTab === path) {
-    // 先跳转到一个临时路由，再跳转回来，触发组件重新加载
-    const currentQuery = router.currentRoute.value.query
-    await router.replace({
-      path: path,
-      query: { ...currentQuery, _refresh: Date.now() }
-    })
-    // 移除临时参数
-    setTimeout(() => {
-      router.replace({ path, query: currentQuery })
-    }, 50)
-  } else {
-    // 如果刷新的是其他标签，先跳转过去
-    await router.push(path)
-    tabsStore.setActiveTab(path)
-  }
 }
 
 const handleContextMenu = async (command) => {

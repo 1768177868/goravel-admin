@@ -114,7 +114,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	now := carbon.Now()
-	adminData := map[string]interface{}{
+	adminData := map[string]any{
 		"username":      username,
 		"password":      hashedPassword,
 		"nickname":      nickname,
