@@ -14,7 +14,6 @@ func init() {
 	config.Add("database", map[string]any{
 		// Default database connection name
 		"default": config.Env("DB_CONNECTION", "sqlite"),
-
 		// Database connections
 		"connections": map[string]any{
 			"postgres": map[string]any{
@@ -66,7 +65,6 @@ func init() {
 				},
 			},
 		},
-
 		// Set pool configuration
 		"pool": map[string]any{
 			// Sets the maximum number of connections in the idle
@@ -100,7 +98,6 @@ func init() {
 			// Unit: Second
 			"conn_max_lifetime": 3600,
 		},
-
 		// Migration Repository Table
 		//
 		// This table keeps track of all the migrations that have already run for

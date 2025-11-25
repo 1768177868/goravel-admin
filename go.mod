@@ -23,6 +23,7 @@ require (
 	github.com/goravel/sqlserver v1.4.1-0.20251004130832-c84ae22a9d68
 	github.com/gorilla/websocket v1.5.0
 	github.com/minio/minio-go/v7 v7.0.95
+	github.com/mojocn/base64Captcha v1.3.6
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -165,7 +166,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/mojocn/base64Captcha v1.3.6 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/mozillazg/go-httpheader v0.3.1 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect

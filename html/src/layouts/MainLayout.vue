@@ -70,6 +70,10 @@
             <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
             <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
           </el-sub-menu>
+          <el-menu-item index="/notifications">
+            <el-icon><Bell /></el-icon>
+            <template #title>{{ $t('menu.notification_center') }}</template>
+          </el-menu-item>
         </template>
       </el-menu>
     </el-aside>
@@ -98,6 +102,7 @@
               <Aim v-else />
             </el-icon>
           </el-button>
+          <NotificationBell />
           <TimezoneSwitch />
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
@@ -157,6 +162,7 @@ import { useTabsStore } from '../store/tabs'
 import { useAppStore } from '../store/app'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
+import NotificationBell from '../components/NotificationBell.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'
@@ -174,7 +180,8 @@ import {
   Key,
   Menu,
   OfficeBuilding,
-  Document
+  Document,
+  Bell
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -197,6 +204,7 @@ const pathMap = {
   '/operation-logs': '/operation-logs',
   '/login-logs': '/login-logs',
   '/system-logs': '/system-logs',
+  '/notifications': '/notifications',
   '/profile': '/profile'
 }
 

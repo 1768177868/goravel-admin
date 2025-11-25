@@ -19,7 +19,6 @@ func init() {
 		// by the framework. The "local" disk, as well as a variety of cloud
 		// based disks are available to your application. Just store away!
 		"default": config.Env("FILESYSTEM_DISK", "local"),
-
 		// Filesystem Disks
 		//
 		// Here you may configure as many filesystem "disks" as you wish, and you

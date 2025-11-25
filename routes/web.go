@@ -81,6 +81,6 @@ func Web() {
 	facades.Route().Get("/ws/chat", chatController.Server)
 
 	// 3. HTTP接口发送聊天室消息（支持GET/POST）
-	facades.Route().Post("/api/chat/send", chatController.SendMsgByHttp)
-	facades.Route().Get("/api/chat/send", chatController.SendMsgByHttp)
+	// facades.Route().Post("/api/chat/send", chatController.SendMsgByHttp)
+	// facades.Route().Get("/api/chat/send", chatController.SendMsgByHttp)
 }

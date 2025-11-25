@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: env.VITE_API_BASE_URL || 'http://127.0.0.1:3008',
           changeOrigin: true
+        },
+        '/ws': {
+          target: 'http://localhost:3008',
+          changeOrigin: true,
+          ws: true
         }
       }
     },

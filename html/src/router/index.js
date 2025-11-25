@@ -75,6 +75,12 @@ const routes = [
         meta: { titleKey: 'menu.system_log' }
       },
       {
+        path: 'notifications',
+        name: 'Notifications',
+        component: () => import('../views/notification/NotificationList.vue'),
+        meta: { titleKey: 'menu.notification_center' }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),

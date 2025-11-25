@@ -11,7 +11,6 @@ func init() {
 	config.Add("queue", map[string]any{
 		// Default Queue Connection Name
 		"default": config.Env("QUEUE_CONNECTION", "sync"),
-
 		// Queue Connections
 		//
 		// Here you may configure the connection information for each server that is used by your application.
@@ -49,7 +48,6 @@ func init() {
 				},
 			},
 		},
-
 		// Failed Queue Jobs
 		//
 		// These options configure the behavior of failed queue job logging so you

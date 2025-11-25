@@ -15,7 +15,6 @@ func init() {
 		// using this caching library. This connection is used when another is
 		// not explicitly specified when executing a given caching function.
 		"default": config.Env("CACHE_STORE", "memory"),
-
 		// Cache Stores
 		//
 		// Here you may define all the cache "stores" for your application as
@@ -34,7 +33,6 @@ func init() {
 				},
 			},
 		},
-
 		// Cache Key Prefix
 		//
 		// When utilizing a RAM based store such as APC or Memcached, there might

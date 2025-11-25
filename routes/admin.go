@@ -21,6 +21,8 @@ func Admin() {
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
 	dashboardController := admin.NewDashboardController()
+	notificationController := admin.NewNotificationController()
+	notificationWsController := admin.NewNotificationWsController()
 
 	// 登录相关（不需要认证，但需要多语言）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
@@ -40,6 +42,12 @@ func Admin() {
 		router.Get("tokens", adminAuthController.Tokens)
 		router.Delete("tokens/{id}", adminAuthController.RevokeToken)
 		router.Delete("tokens", adminAuthController.RevokeAllTokens)
+
+		// 通知中心
+		router.Get("notifications", notificationController.Index)
+		router.Get("notifications/unread-count", notificationController.UnreadCount)
+		router.Post("notifications/{id}/read", notificationController.MarkRead)
+		router.Post("notifications/read-all", notificationController.MarkAllRead)
 	})
 
 	// 需要认证、多语言、权限验证和操作日志的路由
@@ -100,5 +108,11 @@ func Admin() {
 		router.Get("dashboard/user-access-source", dashboardController.GetUserAccessSource)
 		router.Get("dashboard/weekly-user-activity", dashboardController.GetWeeklyUserActivity)
 		router.Get("dashboard/monthly-sales", dashboardController.GetMonthlySales)
+
+		// 系统公告/通知
+		router.Post("notifications", notificationController.Store)
 	})
+
+	// 通知 WebSocket
+	facades.Route().Get("/ws/admin/notifications", notificationWsController.Server)
 }

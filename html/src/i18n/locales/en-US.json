@@ -46,7 +46,30 @@
     "tooManyRequests": "Too many requests, please try again later",
     "network": "Network error, please check your connection"
   },
+  "notification": {
+    "center": "Notification Center",
+    "mark_all": "Mark all read",
+    "mark_read": "Mark read",
+    "unread": "Unread",
+    "empty": "No notifications yet",
+    "ws_error": "Notification channel connection failed",
+    "view_all": "View all",
+    "read": "Read",
+    "types": {
+      "announcement": "Announcement",
+      "notice": "Notice",
+      "message": "Message"
+    },
+    "table": {
+      "title": "Title",
+      "content": "Content",
+      "type": "Type",
+      "status": "Status",
+      "created_at": "Created At"
+    }
+  },
   "menu": {
+    "notification_center": "Notifications",
     "dashboard": "Dashboard",
     "system_management": "System Management",
     "admin_management": "Admin Management",

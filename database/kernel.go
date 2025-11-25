@@ -28,11 +28,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000010CreateOperationLogsTable{},
 		&migrations.M20250101000011CreateLoginLogsTable{},
 		&migrations.M20250101000012CreateSystemLogsTable{},
+		&migrations.M20250201000003CreateNotificationsTable{},
 		&migrations.M20250101000014CreatePersonalAccessTokensTable{},
-		// 以下迁移已不需要，因为 users 表创建时已包含所有字段
-		// &migrations.M20250330911908AddColumnsToUsersTable{},
-		// &migrations.M20250331093125AlertColumnsOfUsersTable{},
-		// &migrations.M20250101000015AddUsernamePasswordToUsersTable{},
 	}
 }
 

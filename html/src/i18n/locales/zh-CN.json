@@ -46,7 +46,30 @@
     "tooManyRequests": "请求过于频繁，请稍后再试",
     "network": "网络错误，请检查网络连接"
   },
+  "notification": {
+    "center": "通知中心",
+    "mark_all": "全部标记已读",
+    "mark_read": "标记已读",
+    "unread": "未读",
+    "empty": "暂无通知",
+    "ws_error": "通知通道连接失败",
+    "view_all": "查看全部",
+    "read": "已读",
+    "types": {
+      "announcement": "公告",
+      "notice": "通知",
+      "message": "私信"
+    },
+    "table": {
+      "title": "标题",
+      "content": "内容",
+      "type": "类型",
+      "status": "状态",
+      "created_at": "创建时间"
+    }
+  },
   "menu": {
+    "notification_center": "通知中心",
     "dashboard": "仪表盘",
     "system_management": "系统管理",
     "admin_management": "管理员管理",

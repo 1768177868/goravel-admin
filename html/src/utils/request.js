@@ -1,22 +1,10 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { createI18n } from 'vue-i18n'
 import router from '../router'
 import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
 import { useAppStore } from '../store/app'
-import enUS from '../i18n/locales/en-US.json'
-import zhCN from '../i18n/locales/zh-CN.json'
-
-const i18n = createI18n({
-  legacy: false,
-  locale: localStorage.getItem('language') || 'zh-CN',
-  fallbackLocale: 'zh-CN',
-  messages: {
-    'en-US': enUS,
-    'zh-CN': zhCN
-  }
-})
+import i18n from '../i18n'
 
 const { t } = i18n.global
 
