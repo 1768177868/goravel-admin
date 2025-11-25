@@ -162,6 +162,16 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
+	protectedIDsStr := facades.Config().GetString("admin.protected_ids", "1")
+	protectedIDs := r.parseProtectedIDs(protectedIDsStr)
+	isProtected := false
+	for _, protectedID := range protectedIDs {
+		if id == protectedID {
+			isProtected = true
+			break
+		}
+	}
+
 	nickname := ctx.Request().Input("nickname")
 	email := ctx.Request().Input("email")
 	phone := ctx.Request().Input("phone")
@@ -181,7 +191,11 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		admin.DepartmentID = departmentID
 	}
 	if status != "" {
-		admin.Status = cast.ToUint8(status)
+		newStatus := cast.ToUint8(status)
+		if isProtected && newStatus == 0 {
+			return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_disable")
+		}
+		admin.Status = newStatus
 	}
 
 	// 更新密码
