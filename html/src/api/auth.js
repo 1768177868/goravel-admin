@@ -49,3 +49,11 @@ export function revokeAllTokens() {
   })
 }
 
+// 获取登录验证码
+export function getLoginCaptcha() {
+  return request({
+    url: '/login/captcha',
+    method: 'get'
+  })
+}
+

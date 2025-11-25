@@ -31,6 +31,32 @@
             @keyup.enter="handleLogin"
           />
         </el-form-item>
+        <el-form-item v-if="captchaInfo.enabled" prop="captcha_answer">
+          <div class="captcha-row">
+            <img
+              v-if="captchaInfo.image"
+              :src="captchaInfo.image"
+              class="captcha-image"
+              :alt="$t('login.captcha_alt')"
+              @click.prevent="fetchCaptcha"
+            />
+            <el-button
+              class="captcha-refresh"
+              type="primary"
+              size="small"
+              text
+              @click.prevent="fetchCaptcha"
+            >
+              {{ $t('login.refresh_captcha') }}
+            </el-button>
+          </div>
+          <el-input
+            v-model="loginForm.captcha_answer"
+            :placeholder="$t('login.captcha_placeholder')"
+            size="large"
+            @keyup.enter="handleLogin"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button
             type="primary"
@@ -48,11 +74,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { login } from '../api/auth'
+import { login, getLoginCaptcha } from '../api/auth'
 import { useUserStore } from '../store/user'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 
@@ -65,7 +91,14 @@ const loading = ref(false)
 
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  captcha_answer: ''
+})
+
+const captchaInfo = reactive({
+  enabled: false,
+  captcha_id: '',
+  image: ''
 })
 
 const loginRules = computed(() => ({
@@ -74,8 +107,35 @@ const loginRules = computed(() => ({
   ],
   password: [
     { required: true, message: t('login.password_required'), trigger: 'blur' }
-  ]
+  ],
+  captcha_answer: captchaInfo.enabled
+    ? [{ required: true, message: t('login.captcha_required'), trigger: 'blur' }]
+    : []
 }))
+
+const fetchCaptcha = async () => {
+  try {
+    const res = await getLoginCaptcha()
+    const captcha = res.data?.captcha || {}
+    captchaInfo.enabled = !!captcha.enabled
+    captchaInfo.captcha_id = captcha.captcha_id || ''
+    captchaInfo.image = captcha.captcha_image || ''
+  } catch (error) {
+    console.error('Fetch captcha error:', error)
+    captchaInfo.enabled = false
+    captchaInfo.captcha_id = ''
+    captchaInfo.image = ''
+  } finally {
+    loginForm.captcha_answer = ''
+    if (loginFormRef.value) {
+      loginFormRef.value.clearValidate(['captcha_answer'])
+    }
+  }
+}
+
+onMounted(() => {
+  fetchCaptcha()
+})
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
@@ -84,7 +144,15 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
-        const res = await login(loginForm)
+        const payload = {
+          username: loginForm.username,
+          password: loginForm.password
+        }
+        if (captchaInfo.enabled) {
+          payload.captcha_id = captchaInfo.captcha_id
+          payload.captcha_answer = loginForm.captcha_answer
+        }
+        const res = await login(payload)
         console.log('Login response:', res)
         if (res.data && res.data.token) {
           const token = res.data.token
@@ -113,6 +181,9 @@ const handleLogin = async () => {
         }
       } finally {
         loading.value = false
+        if (captchaInfo.enabled) {
+          await fetchCaptcha()
+        }
       }
     }
   })
@@ -158,6 +229,29 @@ const handleLogin = async () => {
   position: absolute;
   top: 20px;
   right: 20px;
+}
+
+.captcha-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.captcha-image {
+  height: 48px;
+  width: 150px;
+  object-fit: cover;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.captcha-refresh {
+  white-space: nowrap;
+  padding: 0 8px;
 }
 </style>
 

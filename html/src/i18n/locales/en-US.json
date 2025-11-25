@@ -32,6 +32,10 @@
     "login": "Login",
     "username_required": "Please enter username",
     "password_required": "Please enter password",
+    "captcha_placeholder": "Enter verification answer",
+    "captcha_alt": "Captcha image",
+    "captcha_required": "Please enter the verification answer",
+    "refresh_captcha": "Refresh",
     "login_success": "Login successful",
     "login_failed": "Login failed"
   },

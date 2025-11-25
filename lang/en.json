@@ -75,6 +75,7 @@
     "export_status_enabled": "Enabled",
     "export_status_disabled": "Disabled",
     "generate_success": "Generate successful",
+    "generate_failed": "Generate failed",
     "parse_success": "Parse successful",
     "ulid_required": "ULID cannot be empty",
     "invalid_ulid": "Invalid ULID",
@@ -85,6 +86,9 @@
     "user_not_found": "User not found",
     "token_refresh_success": "Token refreshed successfully",
     "token_refresh_failed": "Token refresh failed",
-    "too_many_attempts": "Too many attempts, please try again later"
+    "too_many_attempts": "Too many attempts, please try again later",
+    "captcha_required": "Please enter the verification code",
+    "captcha_invalid": "Verification code is incorrect",
+    "captcha_expired": "Verification code has expired, please refresh"
   }
 }

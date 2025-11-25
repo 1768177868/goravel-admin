@@ -23,8 +23,9 @@ func Admin() {
 	dashboardController := admin.NewDashboardController()
 
 	// 登录相关（不需要认证，但需要多语言）
-	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), httpmiddleware.Throttle("login")).Group(func(router route.Router) {
-		router.Post("login", adminAuthController.Login)
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
+		router.Middleware(httpmiddleware.Throttle("login")).Post("login", adminAuthController.Login)
+		router.Get("login/captcha", adminAuthController.Captcha)
 	})
 
 	// 刷新token接口（允许token过期但仍在刷新窗口内的请求）

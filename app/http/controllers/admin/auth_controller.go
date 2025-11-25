@@ -15,7 +15,8 @@ import (
 )
 
 type AuthController struct {
-	authService services.AuthService
+	authService    services.AuthService
+	captchaService services.CaptchaService
 }
 
 func NewAuthController() *AuthController {
@@ -23,7 +24,8 @@ func NewAuthController() *AuthController {
 	tokenService := services.NewTokenServiceImpl()
 	authService := services.NewAuthServiceImpl(adminService, tokenService)
 	return &AuthController{
-		authService: authService,
+		authService:    authService,
+		captchaService: services.NewCaptchaServiceImpl(),
 	}
 }
 
@@ -36,6 +38,17 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 	if errors != nil {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
+
+	if r.captchaService.Enabled() {
+		captchaID := ctx.Request().Input("captcha_id")
+		captchaAnswer := ctx.Request().Input("captcha_answer")
+		if ok, messageKey := r.captchaService.Verify(captchaID, captchaAnswer); !ok {
+			if messageKey == "" {
+				messageKey = "captcha_invalid"
+			}
+			return response.Error(ctx, http.StatusBadRequest, messageKey)
+		}
 	}
 
 	admin, token, err := r.authService.Login(ctx, loginRequest.Username, loginRequest.Password)
@@ -60,6 +73,29 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 			"nickname": admin.Nickname,
 			"avatar":   admin.Avatar,
 		},
+	})
+}
+
+// Captcha 获取登录验证码
+func (r *AuthController) Captcha(ctx http.Context) http.Response {
+	enabled := r.captchaService.Enabled()
+	captchaData := http.Json{
+		"enabled": enabled,
+	}
+
+	if enabled {
+		captchaID, image, err := r.captchaService.Generate()
+		if err != nil {
+			facades.Log().Errorf("Generate captcha error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
+		}
+		captchaData["captcha_id"] = captchaID
+		captchaData["captcha_image"] = image
+		// captchaData["captcha_image"] = "data:image/png;base64," + image
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"captcha": captchaData,
 	})
 }
 

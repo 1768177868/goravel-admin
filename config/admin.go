@@ -17,6 +17,8 @@ func init() {
 		//   Single ID: ADMIN_PROTECTED_IDS=1
 		//   Multiple IDs: ADMIN_PROTECTED_IDS=1,2,3
 		//   Multiple IDs with spaces: ADMIN_PROTECTED_IDS=1, 2, 3
-		"protected_ids": config.Env("ADMIN_PROTECTED_IDS", "1"), // Default: ID 1 (super admin)
+		"protected_ids":         config.Env("ADMIN_PROTECTED_IDS", "1"), // Default: ID 1 (super admin)
+		"login_captcha_enabled": config.Env("ADMIN_LOGIN_CAPTCHA_ENABLED", false),
+		"login_captcha_expire":  config.Env("ADMIN_LOGIN_CAPTCHA_EXPIRE", 120), // seconds
 	})
 }

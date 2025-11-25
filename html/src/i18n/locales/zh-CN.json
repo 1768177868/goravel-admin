@@ -32,6 +32,10 @@
     "login": "登录",
     "username_required": "请输入用户名",
     "password_required": "请输入密码",
+    "captcha_placeholder": "请输入验证码结果",
+    "captcha_alt": "验证码图片",
+    "captcha_required": "请输入验证码结果",
+    "refresh_captcha": "刷新",
     "login_success": "登录成功",
     "login_failed": "登录失败"
   },

@@ -7,8 +7,10 @@ import (
 )
 
 type Login struct {
-	Username string `form:"username" json:"username"`
-	Password string `form:"password" json:"password"`
+	Username      string `form:"username" json:"username"`
+	Password      string `form:"password" json:"password"`
+	CaptchaID     string `form:"captcha_id" json:"captcha_id"`
+	CaptchaAnswer string `form:"captcha_answer" json:"captcha_answer"`
 }
 
 func (r *Login) Authorize(ctx http.Context) error {
