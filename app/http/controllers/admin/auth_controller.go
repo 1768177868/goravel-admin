@@ -3,6 +3,7 @@ package admin
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -120,6 +121,39 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"permissions":   permissions,
 			"menus":         menus,
 		},
+	})
+}
+
+// OnlineCount 返回指定时间窗口内在线的管理员数量
+func (r *AuthController) OnlineCount(ctx http.Context) http.Response {
+	windowMinutes := facades.Config().GetInt("admin.online_window_minutes", 5)
+	if windowMinutes <= 0 {
+		windowMinutes = 5
+	}
+	cutoff := time.Now().Add(-time.Duration(windowMinutes) * time.Minute)
+
+	var adminIDs []uint
+	query := facades.Orm().Query().
+		Table("personal_access_tokens").
+		Select("tokenable_id").
+		Where("tokenable_type", "admin").
+		Where("COALESCE(last_used_at, updated_at) >= ?", cutoff)
+
+	if err := query.Pluck("tokenable_id", &adminIDs); err != nil {
+		facades.Log().Errorf("online admin count query error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	unique := make(map[uint]struct{})
+	for _, id := range adminIDs {
+		if id > 0 {
+			unique[id] = struct{}{}
+		}
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"count":          len(unique),
+		"window_minutes": windowMinutes,
 	})
 }
 

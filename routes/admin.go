@@ -36,6 +36,7 @@ func Admin() {
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
 		// 认证相关
 		router.Get("info", adminAuthController.Info)
+		router.Get("online-admins/count", adminAuthController.OnlineCount)
 		router.Put("profile", adminAuthController.UpdateProfile)
 		router.Post("logout", adminAuthController.Logout)
 		// Token管理

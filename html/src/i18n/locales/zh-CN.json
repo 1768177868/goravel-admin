@@ -259,7 +259,9 @@
     "system_management": "管理系统",
     "fullscreen": "全屏",
     "profile": "个人中心",
-    "timezone": "时区"
+    "timezone": "时区",
+    "online_admins": "在线",
+    "online_admins_tooltip": "最近 {minutes} 分钟内在线的管理员数量"
   },
   "profile": {
     "basic_info": "基本信息",
