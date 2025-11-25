@@ -112,31 +112,29 @@ request.interceptors.response.use(
     
     // 如果 code 不是 200，说明有错误
     if (res.code !== 200) {
-      // 如果是未授权错误，也需要跳转到登录页（但排除登录和退出接口）
-      // 检查多种可能的错误消息格式
-      const message = res.message || ''
-      const messageLower = message.toLowerCase()
-      const isAuthError = !isAuthEndpoint && (
-        res.code === 401 || 
-        messageLower.includes('未登录') || 
-        messageLower.includes('登录已过期') || 
-        messageLower.includes('token') || 
-        messageLower.includes('无效') ||
-        messageLower.includes('invalid') ||
-        messageLower.includes('unauthorized') ||
-        message === 'invalid_token' ||
-        message === 'unauthorized' ||
-        message === '无效的Token' ||
-        message === '未授权，请先登录'
-      )
-      
-      if (isAuthError) {
-        handle401Error(message || '未登录或登录已过期，请重新登录')
-        return Promise.reject(new Error(message || '未登录或登录已过期'))
+      if (!isAuthEndpoint) {
+        const message = res.message || '请求失败'
+        const messageLower = message.toLowerCase()
+        const isAuthError =
+          res.code === 401 ||
+          messageLower.includes('未登录') ||
+          messageLower.includes('登录已过期') ||
+          messageLower.includes('token') ||
+          messageLower.includes('无效') ||
+          messageLower.includes('invalid') ||
+          messageLower.includes('unauthorized') ||
+          message === 'invalid_token' ||
+          message === 'unauthorized' ||
+          message === '无效的Token' ||
+          message === '未授权，请先登录'
+
+        if (isAuthError) {
+          handle401Error(message || '未登录或登录已过期，请重新登录')
+        } else {
+          ElMessage.error(message)
+        }
       }
-      
-      ElMessage.error(message || '请求失败')
-      return Promise.reject(new Error(message || '请求失败'))
+      return Promise.reject(new Error(res.message || '请求失败'))
     }
     
     return res
@@ -145,24 +143,23 @@ request.interceptors.response.use(
     if (error.response) {
       const { status, data, config } = error.response
       const url = config?.url || ''
-      
-      // 排除登录和退出接口，这些接口返回 401 是正常的业务错误，不应该触发自动跳转
+
       const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
-      
+
       if (status === 401 && !isAuthEndpoint) {
-        // 未登录或登录已过期，清除所有状态并跳转到登录页
         const message = data?.message || data?.data?.message || '未登录或登录已过期，请重新登录'
         handle401Error(message)
       } else if (status === 401 && isAuthEndpoint) {
-        // 登录或退出接口返回 401，这是正常的业务错误，只显示错误消息，不跳转
+        // 登录/退出接口 401 只提示一次
         const message = data?.message || data?.data?.message || '登录失败'
         ElMessage.error(message)
-      } else if (status === 403) {
-        ElMessage.error('没有权限访问')
-      } else {
-        // 检查响应数据中是否包含错误信息
-        const errorMessage = data?.message || data?.data?.message || '请求失败'
-        ElMessage.error(errorMessage)
+      } else if (!isAuthEndpoint) {
+        if (status === 403) {
+          ElMessage.error('没有权限访问')
+        } else {
+          const errorMessage = data?.message || data?.data?.message || '请求失败'
+          ElMessage.error(errorMessage)
+        }
       }
     } else {
       ElMessage.error('网络错误，请检查网络连接')
