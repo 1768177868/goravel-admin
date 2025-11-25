@@ -85,6 +85,7 @@
       :title="dialogTitle"
       width="900px"
       @close="handleDialogClose"
+      @opened="handleDialogOpened"
     >
       <el-form
         ref="formRef"
@@ -108,16 +109,6 @@
                 <el-icon class="header-icon"><Menu /></el-icon>
                 <span class="header-title">{{ $t('role.menus_and_permissions') }}</span>
               </div>
-              <div class="header-actions">
-                <el-button size="small" type="primary" plain @click="handleSelectAllMenusAndPermissions">
-                  <el-icon><Check /></el-icon>
-                  {{ isAllSelected ? $t('role.unselect_all') : $t('role.select_all') }}
-                </el-button>
-                <el-button size="small" plain @click="handleUnselectAllMenusAndPermissions">
-                  <el-icon><Close /></el-icon>
-                  {{ $t('role.unselect_all') }}
-                </el-button>
-              </div>
             </div>
             <div class="tree-wrapper">
               <el-tree
@@ -131,10 +122,8 @@
                 :expand-on-click-node="false"
                 :default-expand-all="false"
                 @check="handleTreeCheck"
-                check-strictly
               >
                 <template #default="{ node, data }">
-                  <!-- 菜单节点 -->
                   <span v-if="data.isMenu" class="menu-node">
                     <el-icon class="node-icon menu-icon"><FolderOpened /></el-icon>
                     <span class="menu-name">{{ data.name }}</span>
@@ -142,7 +131,6 @@
                       {{ getMenuTypeText(data.type) }}
                     </el-tag>
                   </span>
-                  <!-- 权限节点 -->
                   <span v-else class="permission-node">
                     <el-icon class="node-icon permission-icon"><Key /></el-icon>
                     <span class="permission-name">{{ data.displayDesc || data.name }}</span>
@@ -182,15 +170,13 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, Menu, Check, Close, FolderOpened, Key } from '@element-plus/icons-vue'
+import { InfoFilled, Menu, FolderOpened, Key } from '@element-plus/icons-vue'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 
 const { t } = useI18n()
 const formRef = ref(null)
-const permissionTreeRef = ref(null)
-const menuTreeRef = ref(null)
 const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
@@ -209,10 +195,7 @@ const pagination = reactive({
 })
 
 const tableData = ref([])
-const permissionTree = ref([])
-const menuTree = ref([])
 const menuPermissionTree = ref([])
-const isAllSelected = ref(false)
 const checkedKeys = ref([])
 
 const formData = reactive({
@@ -238,7 +221,6 @@ const loadData = async () => {
       page: pagination.page,
       page_size: pagination.pageSize
     }
-    // 只添加有值的搜索条件
     if (searchForm.name && searchForm.name.trim()) {
       params.name = searchForm.name.trim()
     }
@@ -246,13 +228,9 @@ const loadData = async () => {
       params.status = searchForm.status
     }
     
-    console.log('Role search params:', params)
     const res = await getRoleList(params)
-    console.log('Role list response:', res)
-    
     if (res.data) {
       const roles = res.data.list || []
-      // 转换数据格式，确保状态值正确
       tableData.value = roles.map(role => ({
         ...role,
         id: role.ID || role.id,
@@ -272,59 +250,31 @@ const loadData = async () => {
   }
 }
 
-// 从路径中提取友好的模块名称
 const getModuleNameFromPath = (path) => {
   if (!path) return t('role.other_module')
   
-  // 移除查询参数和通配符
   let cleanPath = path.split('?')[0].replace(/\*/g, '').replace(/\/$/, '')
-  
-  // 处理路径中的ID参数（如 /api/admin/admins/123 -> /api/admin/admins）
   cleanPath = cleanPath.replace(/\/\d+(\/|$)/g, '/')
   cleanPath = cleanPath.replace(/\/$/, '')
   
-  // 路径到模块名称的映射（支持中英文）
-  const pathMap = {
-    '/api/admin/admins': t('role.module_admin'),
-    '/api/admin/roles': t('role.module_role'),
-    '/api/admin/permissions': t('role.module_permission'),
-    '/api/admin/menus': t('role.module_menu'),
-    '/api/admin/departments': t('role.module_department'),
-    '/api/admin/dictionaries': t('role.module_dictionary'),
-    '/api/admin/operation-logs': t('role.module_operation_log'),
-    '/api/admin/login-logs': t('role.module_login_log'),
-    '/api/admin/system-logs': t('role.module_system_log'),
-    '/api/admin/auth': t('role.module_auth'),
-    '/api/admin/profile': t('role.module_profile')
-  }
-  
-  // 精确匹配
-  if (pathMap[cleanPath]) {
-    return pathMap[cleanPath]
-  }
-  
-  // 模糊匹配：从路径中提取最后一个部分
   const parts = cleanPath.split('/').filter(p => p)
   if (parts.length >= 3) {
     const module = parts[parts.length - 1]
-    // 将复数形式转换为单数
     const singular = module.replace(/s$/, '').replace(/-/g, '_')
-    // 尝试从翻译中获取
     const translationKey = `role.module_${singular}`
     const translated = t(translationKey)
     if (translated !== translationKey) {
       return translated
     }
+    return module.charAt(0).toUpperCase() + module.slice(1).replace(/-/g, ' ')
   }
   
   return t('role.other_module')
 }
 
-// 转换权限数据为树形结构（按模块分组）
 const transformPermissionToTree = (permissions) => {
   if (!permissions || !Array.isArray(permissions)) return []
   
-  // 按模块分组
   const moduleGroups = {}
   permissions.forEach(perm => {
     const path = perm.Path || perm.path || '/'
@@ -333,8 +283,6 @@ const transformPermissionToTree = (permissions) => {
     const slug = perm.Slug || perm.slug || ''
     const description = perm.Description || perm.description || ''
     const id = perm.id || perm.ID
-    
-    // 获取模块名称
     const moduleName = getModuleNameFromPath(path)
     
     if (!moduleGroups[moduleName]) {
@@ -346,7 +294,6 @@ const transformPermissionToTree = (permissions) => {
       }
     }
     
-    // 构建友好的显示标签
     let displayLabel = name
     if (description) {
       displayLabel = description
@@ -365,12 +312,10 @@ const transformPermissionToTree = (permissions) => {
     })
   })
   
-  // 转换为数组并按模块名称排序
   const tree = Object.values(moduleGroups).sort((a, b) => {
     return a.name.localeCompare(b.name)
   })
   
-  // 对每个分组下的权限按方法排序
   tree.forEach(group => {
     group.children.sort((a, b) => {
       const methodOrder = { 'GET': 1, 'POST': 2, 'PUT': 3, 'PATCH': 4, 'DELETE': 5 }
@@ -381,8 +326,6 @@ const transformPermissionToTree = (permissions) => {
   return tree
 }
 
-
-// 转换菜单数据为树形结构（支持后端返回的树形结构）
 const transformMenuToTree = (menus) => {
   if (!menus || !Array.isArray(menus)) return []
   
@@ -413,11 +356,9 @@ const transformMenuToTree = (menus) => {
   return menus.map(menu => convertNode(menu))
 }
 
-// 将权限挂载到菜单树中（根据 menu_id 关联）
 const attachPermissionsToMenus = (menuTree, permissions) => {
   if (!permissions || !Array.isArray(permissions)) return menuTree
   
-  // 创建权限ID到权限的映射
   const permissionMap = new Map()
   permissions.forEach(perm => {
     const id = perm.id || perm.ID
@@ -428,16 +369,13 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
     permissionMap.get(menuId).push(perm)
   })
   
-  // 递归处理菜单节点
   const processNode = (node) => {
     const result = { ...node }
     
-    // 如果是菜单节点，查找关联的权限
     if (result.isMenu && result.id) {
       const menuId = result.id
       const matchedPermissions = permissionMap.get(menuId) || []
       
-      // 将权限转换为树节点格式
       if (matchedPermissions.length > 0) {
         if (!result.children) {
           result.children = []
@@ -463,10 +401,9 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
           })
         })
         
-        // 对权限按方法排序
         result.children.sort((a, b) => {
           if (a.isMenu !== b.isMenu) {
-            return a.isMenu ? -1 : 1 // 菜单在前，权限在后
+            return a.isMenu ? -1 : 1
           }
           if (!a.isMenu && !b.isMenu) {
             const methodOrder = { 'GET': 1, 'POST': 2, 'PUT': 3, 'PATCH': 4, 'DELETE': 5 }
@@ -477,7 +414,6 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
       }
     }
     
-    // 处理子节点
     if (result.children && Array.isArray(result.children)) {
       result.children = result.children.map(child => processNode(child))
     }
@@ -488,12 +424,10 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
   return menuTree.map(node => processNode(node))
 }
 
-// 构建菜单和权限的合并树
 const buildMenuPermissionTree = (menus, permissions) => {
   const menuTreeData = transformMenuToTree(menus)
   const treeWithPermissions = attachPermissionsToMenus(menuTreeData, permissions)
   
-  // 找出未匹配的权限
   const matchedPermissionIds = new Set()
   const collectPermissionIds = (nodes) => {
     nodes.forEach(node => {
@@ -512,7 +446,6 @@ const buildMenuPermissionTree = (menus, permissions) => {
     return !matchedPermissionIds.has(id)
   })
   
-  // 如果有未匹配的权限，创建一个"其他权限"节点
   if (unmatchedPermissions.length > 0) {
     const otherPermissionsNode = {
       id: 'other_permissions',
@@ -547,17 +480,15 @@ const buildMenuPermissionTree = (menus, permissions) => {
   return treeWithPermissions
 }
 
-// 获取菜单类型标签样式
 const getMenuTypeTag = (type) => {
   const typeMap = {
-    1: 'info',    // 目录
-    2: 'success', // 菜单
-    3: 'warning'  // 按钮
+    1: 'info',
+    2: 'success',
+    3: 'warning'
   }
   return typeMap[type] || 'info'
 }
 
-// 获取菜单类型文本
 const getMenuTypeText = (type) => {
   const typeMap = {
     1: t('menu.type_directory'),
@@ -567,40 +498,6 @@ const getMenuTypeText = (type) => {
   return typeMap[type] || ''
 }
 
-const loadPermissions = async () => {
-  try {
-    const res = await getPermissionList({ page_size: 1000 }) // 获取所有权限
-    if (res.data && res.data.list) {
-      permissionTree.value = transformPermissionToTree(res.data.list)
-      // 同时更新合并树
-      if (menuTree.value.length > 0) {
-        menuPermissionTree.value = buildMenuPermissionTree(menuTree.value, res.data.list)
-      }
-    }
-  } catch (error) {
-    console.error('Load permissions error:', error)
-  }
-}
-
-const loadMenus = async () => {
-  try {
-    const res = await getMenuList()
-    // 菜单返回的是 menus 字段，不是 list
-    const menus = res.data?.menus || res.data?.list || []
-    menuTree.value = transformMenuToTree(menus)
-    // 同时更新合并树
-    if (permissionTree.value.length > 0 || (res.data?.list && res.data.list.length > 0)) {
-      const permissions = permissionTree.value.length > 0 
-        ? permissionTree.value.flatMap(g => g.children || [])
-        : (await getPermissionList({ page_size: 1000 })).data?.list || []
-      menuPermissionTree.value = buildMenuPermissionTree(menus, permissions)
-    }
-  } catch (error) {
-    console.error('Load menus error:', error)
-  }
-}
-
-// 加载菜单和权限的合并树
 const loadMenuPermissionTree = async () => {
   try {
     const [menuRes, permissionRes] = await Promise.all([
@@ -611,11 +508,6 @@ const loadMenuPermissionTree = async () => {
     const menus = menuRes.data?.menus || menuRes.data?.list || []
     const permissions = permissionRes.data?.list || []
     
-    // 保存原始数据用于其他用途
-    menuTree.value = transformMenuToTree(menus)
-    permissionTree.value = transformPermissionToTree(permissions)
-    
-    // 构建合并树（使用原始权限数据）
     menuPermissionTree.value = buildMenuPermissionTree(menus, permissions)
   } catch (error) {
     console.error('Load menu permission tree error:', error)
@@ -650,18 +542,17 @@ const handleAdd = () => {
     status: 1,
     sort: 0
   })
-  // 清空选中状态
   checkedKeys.value = []
-  isAllSelected.value = false
+  if (menuPermissionTreeRef.value) {
+    menuPermissionTreeRef.value.setCheckedKeys([], false)
+  }
   dialogVisible.value = true
-  // 等待树组件渲染后确保清空选中状态
   setTimeout(() => {
     if (menuPermissionTreeRef.value) {
-      menuPermissionTreeRef.value.setCheckedKeys([])
+      menuPermissionTreeRef.value.setCheckedKeys([], false)
       checkedKeys.value = []
-      isAllSelected.value = false
     }
-  }, 100)
+  }, 150)
 }
 
 const handleEdit = async (row) => {
@@ -669,7 +560,6 @@ const handleEdit = async (row) => {
     const res = await getRoleDetail(row.id)
     if (res.data && res.data.role) {
       const role = res.data.role
-      // 处理字段映射，支持 PascalCase 和 snake_case
       const rolePermissions = role.Permissions || role.permissions
       const roleMenus = role.Menus || role.menus
       
@@ -683,18 +573,13 @@ const handleEdit = async (row) => {
         status: Number(role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1)),
         sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
       })
-      // 设置选中状态
+      
       const allCheckedKeys = [...formData.menu_ids, ...formData.permission_ids]
       checkedKeys.value = allCheckedKeys
       dialogVisible.value = true
-      // 等待树组件渲染后设置选中状态
       setTimeout(() => {
         if (menuPermissionTreeRef.value) {
           menuPermissionTreeRef.value.setCheckedKeys(allCheckedKeys, false)
-          // 延迟检查全选状态，确保树组件状态已更新
-          setTimeout(() => {
-            checkAllSelected()
-          }, 50)
         }
       }, 100)
     }
@@ -710,12 +595,10 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
-        // 从合并树中分离菜单ID和权限ID
         const allCheckedKeys = menuPermissionTreeRef.value?.getCheckedKeys() || []
         const menuIds = []
         const permissionIds = []
         
-        // 递归收集所有菜单ID和权限ID
         const collectIds = (nodes) => {
           nodes.forEach(node => {
             if (allCheckedKeys.includes(node.id)) {
@@ -732,12 +615,9 @@ const handleSubmit = async () => {
         }
         collectIds(menuPermissionTree.value)
         
-        // 确保状态值正确：0 表示禁用，1 表示启用
         const statusValue = formData.status !== undefined && formData.status !== null 
           ? Number(formData.status) 
-          : 1 // 默认启用
-        
-        console.log('Form data status:', formData.status, 'Status value:', statusValue)
+          : 1
         
         const data = {
           name: formData.name,
@@ -749,14 +629,11 @@ const handleSubmit = async () => {
           menu_ids: menuIds
         }
         
-        console.log('Submit data:', JSON.stringify(data, null, 2))
-        
         if (formData.id) {
           await updateRole(formData.id, data)
           ElMessage.success(t('role.update_success'))
         } else {
-          const res = await createRole(data)
-          console.log('Create role response:', res)
+          await createRole(data)
           ElMessage.success(t('role.create_success'))
         }
         dialogVisible.value = false
@@ -771,196 +648,26 @@ const handleSubmit = async () => {
 }
 
 const handleDialogClose = () => {
-  // 清空树形选择的选中状态
   checkedKeys.value = []
   if (menuPermissionTreeRef.value) {
-    menuPermissionTreeRef.value.setCheckedKeys([])
+    menuPermissionTreeRef.value.setCheckedKeys([], false)
   }
-  isAllSelected.value = false
   formRef.value?.resetFields()
 }
 
-// 检查是否全选
-const checkAllSelected = () => {
-  if (menuPermissionTreeRef.value && menuPermissionTree.value) {
-    const allKeys = getAllMenuAndPermissionKeys(menuPermissionTree.value)
-    const currentCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
-    isAllSelected.value = allKeys.length > 0 && 
-      allKeys.every(key => currentCheckedKeys.includes(key)) &&
-      currentCheckedKeys.length === allKeys.length
-  } else {
-    isAllSelected.value = false
-  }
-}
-
-// 全选/取消全选菜单和权限
-const handleSelectAllMenusAndPermissions = () => {
-  if (menuPermissionTreeRef.value && menuPermissionTree.value) {
-    const allKeys = getAllMenuAndPermissionKeys(menuPermissionTree.value)
-    console.log('全选 - 所有节点ID:', allKeys, '数量:', allKeys.length)
-    
-    if (allKeys.length === 0) {
-      ElMessage.warning('没有可选的菜单或权限')
-      return
-    }
-    
-    const currentCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
-    console.log('全选 - 当前已选中:', currentCheckedKeys, '数量:', currentCheckedKeys.length)
-    
-    // 检查是否已经全选（需要精确匹配，包括数量）
-    const allSelected = allKeys.length > 0 && 
-      allKeys.length === currentCheckedKeys.length &&
-      allKeys.every(key => currentCheckedKeys.includes(key))
-    
-    if (allSelected) {
-      // 如果已全选，则取消全选
-      checkedKeys.value = []
-      menuPermissionTreeRef.value.setCheckedKeys([], false)
-      isAllSelected.value = false
-    } else {
-      // 否则全选所有（包括所有节点，无论之前是否选中）
-      checkedKeys.value = allKeys
-      
-      // 使用 check-strictly 模式，直接设置所有节点（包括深层节点）
-      // 先设置一次
-      menuPermissionTreeRef.value.setCheckedKeys(allKeys, false)
-      
-      // 延迟多次检查并补全，确保所有深层节点都被选中
-      let retryCount = 0
-      const maxRetries = 5
-      const checkAndRetry = () => {
-        setTimeout(() => {
-          const afterCheckKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
-          const missingKeys = allKeys.filter(key => !afterCheckKeys.includes(key))
-          
-          console.log(`全选 - 第${retryCount + 1}次检查: 已选中${afterCheckKeys.length}个, 缺失${missingKeys.length}个`, missingKeys)
-          
-          if (missingKeys.length > 0 && retryCount < maxRetries) {
-            // 如果有缺失的节点（特别是深层权限节点），再次设置
-            const finalKeys = [...new Set([...afterCheckKeys, ...missingKeys])]
-            menuPermissionTreeRef.value.setCheckedKeys(finalKeys, false)
-            checkedKeys.value = finalKeys
-            retryCount++
-            // 继续重试
-            checkAndRetry()
-          } else {
-            // 最终检查并更新状态
-            const finalChecked = menuPermissionTreeRef.value.getCheckedKeys() || []
-            console.log('全选 - 最终结果:', finalChecked.length, '个节点被选中')
-            checkAllSelected()
-          }
-        }, 150)
-      }
-      checkAndRetry()
-      isAllSelected.value = true
-    }
-  }
-}
-
-const handleUnselectAllMenusAndPermissions = () => {
-  if (menuPermissionTreeRef.value) {
-    // 强制清空所有选中项（包括半选状态）
+const handleDialogOpened = () => {
+  if (!formData.id) {
     checkedKeys.value = []
-    menuPermissionTreeRef.value.setCheckedKeys([], false)
-    isAllSelected.value = false
+    if (menuPermissionTreeRef.value) {
+      menuPermissionTreeRef.value.setCheckedKeys([], false)
+    }
   }
 }
 
-// 处理树节点勾选变化
-const handleTreeCheck = (data, checkedInfo) => {
-  // 更新选中键数组（只获取完全选中的节点，不包括半选状态）
+const handleTreeCheck = () => {
   if (menuPermissionTreeRef.value) {
-    const checkedKeysList = menuPermissionTreeRef.value.getCheckedKeys() || []
-    // 只使用完全选中的节点
-    checkedKeys.value = checkedKeysList
+    checkedKeys.value = menuPermissionTreeRef.value.getCheckedKeys() || []
   }
-  // 延迟检查，确保状态已更新
-  setTimeout(() => {
-    checkAllSelected()
-  }, 50)
-}
-
-// 递归获取所有菜单和权限ID（包括所有层级的节点，特别是深层权限节点）
-const getAllMenuAndPermissionKeys = (tree) => {
-  if (!tree || !Array.isArray(tree)) return []
-  const keys = []
-  const visited = new Set() // 防止重复添加
-  
-  const traverse = (nodes, depth = 0) => {
-    if (!nodes || !Array.isArray(nodes)) return
-    nodes.forEach(node => {
-      // 确保节点有 id，并且不是分组节点（如 'other_permissions' 或 'module_xxx'）
-      if (node.id && !visited.has(node.id)) {
-        // 如果是数字类型，直接添加
-        if (typeof node.id === 'number') {
-          keys.push(node.id)
-          visited.add(node.id)
-        } 
-        // 如果是字符串类型，排除分组节点
-        else if (typeof node.id === 'string' && 
-                 !node.id.startsWith('module_') && 
-                 node.id !== 'other_permissions') {
-          keys.push(node.id)
-          visited.add(node.id)
-        }
-      }
-      // 递归处理子节点（确保能获取到最深层的权限节点）
-      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-        traverse(node.children, depth + 1)
-      }
-    })
-  }
-  traverse(tree)
-  console.log('获取到的所有节点ID:', keys, '总数:', keys.length)
-  return keys
-}
-
-// 递归获取所有权限ID（包括子节点）
-const getAllPermissionKeys = (tree) => {
-  if (!tree || !Array.isArray(tree)) {
-    return []
-  }
-  const keys = []
-  const traverse = (nodes) => {
-    if (!nodes || !Array.isArray(nodes)) {
-      return
-    }
-    nodes.forEach(node => {
-      // 只添加叶子节点（实际权限），不添加分组节点
-      if (!node.children || node.children.length === 0) {
-        if (node.id) {
-          keys.push(node.id)
-        }
-      } else {
-        traverse(node.children)
-      }
-    })
-  }
-  traverse(tree)
-  return keys
-}
-
-// 递归获取所有菜单ID
-const getAllMenuKeys = (tree) => {
-  if (!tree || !Array.isArray(tree)) {
-    return []
-  }
-  const keys = []
-  const traverse = (nodes) => {
-    if (!nodes || !Array.isArray(nodes)) {
-      return
-    }
-    nodes.forEach(node => {
-      if (node.id) {
-        keys.push(node.id)
-      }
-      if (node.children && node.children.length > 0) {
-        traverse(node.children)
-      }
-    })
-  }
-  traverse(tree)
-  return keys
 }
 
 const handleDelete = async (row) => {
@@ -1036,23 +743,6 @@ onMounted(() => {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.header-actions .el-button {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
-  backdrop-filter: blur(10px);
-}
-
-.header-actions .el-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .tree-wrapper {
@@ -1214,15 +904,4 @@ onMounted(() => {
 .permission-path-icon:hover {
   color: #409eff;
 }
-
-.menu-path {
-  color: #909399;
-  font-size: 12px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  background: #f5f7fa;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
 </style>
-
-
