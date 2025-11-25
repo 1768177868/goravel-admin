@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 )
@@ -26,8 +27,9 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
-	startTime := ctx.Request().Query("start_time", "")
-	endTime := ctx.Request().Query("end_time", "")
+	// 使用辅助函数自动转换时区
+	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.LoginLog{})
 
@@ -102,7 +104,7 @@ type LoginLogBatchDestroyRequest struct {
 // BatchDestroy 批量删除登录日志
 func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 	var req LoginLogBatchDestroyRequest
-	
+
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
@@ -111,7 +113,7 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 	if len(req.IDs) == 0 {
 		return response.Error(ctx, http.StatusBadRequest, "ids_required")
 	}
-	
+
 	ids := req.IDs
 
 	// 转换为 []any

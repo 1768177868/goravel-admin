@@ -32,6 +32,9 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	username := ctx.Request().Query("username", "")
 	status := ctx.Request().Query("status", "")
 	orderBy := ctx.Request().Query("order_by", "")
+	// 使用辅助函数自动转换时区
+	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.Admin{})
 
@@ -40,6 +43,12 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	}
 	if status != "" {
 		query = query.Where("status", status)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
 	}
 
 	// 应用排序（默认按创建时间倒序）

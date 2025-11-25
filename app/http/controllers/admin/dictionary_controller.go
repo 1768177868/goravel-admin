@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 )
@@ -23,6 +24,9 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	dictType := ctx.Request().Query("type", "")
 	status := ctx.Request().Query("status", "")
+	// 使用辅助函数自动转换时区
+	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.Dictionary{})
 
@@ -31,6 +35,12 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 	}
 	if status != "" {
 		query = query.Where("status", status)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
 	}
 
 	total, err := query.Count()

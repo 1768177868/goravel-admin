@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -28,9 +29,12 @@ func NewDepartmentController() *DepartmentController {
 func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
+	// 使用辅助函数自动转换时区
+	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	// 如果有搜索条件，返回扁平列表；否则返回树形结构
-	if name != "" || status != "" {
+	if name != "" || status != "" || startTime != "" || endTime != "" {
 		query := facades.Orm().Query().Model(&models.Department{})
 
 		if name != "" {
@@ -40,6 +44,12 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 		}
 		if status != "" {
 			query = query.Where("status", status)
+		}
+		if startTime != "" {
+			query = query.Where("created_at >= ?", startTime)
+		}
+		if endTime != "" {
+			query = query.Where("created_at <= ?", endTime)
 		}
 
 		var departments []models.Department

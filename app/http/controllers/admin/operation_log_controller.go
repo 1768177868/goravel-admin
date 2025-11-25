@@ -29,8 +29,9 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	path := ctx.Request().Query("path", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
-	startTime := ctx.Request().Query("start_time", "")
-	endTime := ctx.Request().Query("end_time", "")
+	// 使用辅助函数自动转换时区
+	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	query := facades.Orm().Query().Model(&models.OperationLog{})
@@ -131,7 +132,7 @@ type OperationLogBatchDestroyRequest struct {
 // BatchDestroy 批量删除操作日志
 func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 	var req OperationLogBatchDestroyRequest
-	
+
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
@@ -140,7 +141,7 @@ func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 	if len(req.IDs) == 0 {
 		return response.Error(ctx, http.StatusBadRequest, "ids_required")
 	}
-	
+
 	ids := req.IDs
 
 	// 转换为 []any

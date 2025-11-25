@@ -118,3 +118,72 @@ func ConvertTimeByContext(ctx http.Context, timeStr string) string {
 	timezone := GetCurrentTimezone(ctx)
 	return ConvertTimeToTimezone(timeStr, timezone)
 }
+
+// ConvertTimeToUTC 将本地时区的时间字符串转换为 UTC 时间字符串（用于数据库查询）
+// timeStr: 前端传入的时间字符串（本地时区格式，如 "2025-11-25 14:00:00"）
+// ctx: 请求上下文，用于获取当前时区
+// 返回: UTC 时间字符串（如 "2025-11-25 06:00:00"）
+func ConvertTimeToUTC(ctx http.Context, timeStr string) string {
+	if timeStr == "" {
+		return ""
+	}
+
+	// 获取当前请求的时区
+	timezone := GetCurrentTimezone(ctx)
+
+	// 如果已经是 UTC，直接返回
+	if timezone == carbon.UTC || timezone == "UTC" {
+		return timeStr
+	}
+
+	// 加载时区
+	targetLoc, err := time.LoadLocation(timezone)
+	if err != nil {
+		// 如果时区无效，假设是 UTC
+		return timeStr
+	}
+	utcLoc, _ := time.LoadLocation("UTC")
+
+	// 解析时间字符串（假设是本地时区格式）
+	// 尝试多种格式
+	formats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05",
+		"2006-01-02 15:04:05.000",
+		"2006-01-02T15:04:05.000Z07:00",
+		time.RFC3339,
+	}
+
+	var t time.Time
+	var parseErr error
+	for _, format := range formats {
+		t, parseErr = time.ParseInLocation(format, timeStr, targetLoc)
+		if parseErr == nil {
+			break
+		}
+	}
+
+	if parseErr != nil {
+		// 如果所有格式都失败，尝试使用 carbon 解析
+		dt := carbon.Parse(timeStr)
+		if dt.IsZero() {
+			return timeStr
+		}
+		// 假设解析的时间是本地时区，转换为 UTC
+		return dt.SetTimezone(carbon.UTC).ToDateTimeString()
+	}
+
+	// 转换为 UTC 并格式化
+	return t.In(utcLoc).Format("2006-01-02 15:04:05")
+}
+
+// GetTimeQueryParam 获取并转换时间查询参数（统一处理时间查询）
+// 自动将前端传入的本地时区时间转换为 UTC 时间用于数据库查询
+// 支持常见的时间查询参数名称：start_time, end_time, created_at_start, created_at_end, updated_at_start, updated_at_end
+func GetTimeQueryParam(ctx http.Context, paramName string) string {
+	timeStr := ctx.Request().Query(paramName, "")
+	if timeStr == "" {
+		return ""
+	}
+	return ConvertTimeToUTC(ctx, timeStr)
+}

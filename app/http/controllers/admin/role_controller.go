@@ -29,6 +29,9 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
 	orderBy := ctx.Request().Query("order_by", "")
+	// 使用辅助函数自动转换时区
+	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.Role{})
 
@@ -37,6 +40,12 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 	}
 	if status != "" {
 		query = query.Where("status", status)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
 	}
 
 	total, err := query.Count()
