@@ -104,40 +104,58 @@
         <el-form-item :label="$t('role.menus_and_permissions')">
           <div class="menu-permission-container">
             <div class="menu-header">
-              <el-button size="small" @click="handleSelectAllMenusAndPermissions">{{ $t('role.select_all') }}</el-button>
-              <el-button size="small" @click="handleUnselectAllMenusAndPermissions">{{ $t('role.unselect_all') }}</el-button>
+              <div class="header-left">
+                <el-icon class="header-icon"><Menu /></el-icon>
+                <span class="header-title">{{ $t('role.menus_and_permissions') }}</span>
+              </div>
+              <div class="header-actions">
+                <el-button size="small" type="primary" plain @click="handleSelectAllMenusAndPermissions">
+                  <el-icon><Check /></el-icon>
+                  {{ $t('role.select_all') }}
+                </el-button>
+                <el-button size="small" plain @click="handleUnselectAllMenusAndPermissions">
+                  <el-icon><Close /></el-icon>
+                  {{ $t('role.unselect_all') }}
+                </el-button>
+              </div>
             </div>
-            <el-tree
-              ref="menuPermissionTreeRef"
-              :data="menuPermissionTree"
-              :props="{ children: 'children', label: 'label' }"
-              show-checkbox
-              node-key="id"
-              :default-checked-keys="[...formData.menu_ids, ...formData.permission_ids]"
-              class="menu-permission-tree"
-            >
-              <template #default="{ node, data }">
-                <!-- 菜单节点 -->
-                <span v-if="data.isMenu" class="menu-node">
-                  <span class="menu-name">{{ data.name }}</span>
-                  <el-tag v-if="data.type" size="small" :type="getMenuTypeTag(data.type)">
-                    {{ getMenuTypeText(data.type) }}
-                  </el-tag>
-                </span>
-                <!-- 权限节点 -->
-                <span v-else class="permission-node">
-                  <span class="permission-name">{{ data.displayDesc || data.name }}</span>
-                  <span v-if="data.method" class="permission-method" :class="`method-${data.method.toLowerCase()}`">
-                    {{ data.method }}
+            <div class="tree-wrapper">
+              <el-tree
+                ref="menuPermissionTreeRef"
+                :data="menuPermissionTree"
+                :props="{ children: 'children', label: 'label' }"
+                show-checkbox
+                node-key="id"
+                :default-checked-keys="[...formData.menu_ids, ...formData.permission_ids]"
+                class="menu-permission-tree"
+                :expand-on-click-node="false"
+                :default-expand-all="false"
+              >
+                <template #default="{ node, data }">
+                  <!-- 菜单节点 -->
+                  <span v-if="data.isMenu" class="menu-node">
+                    <el-icon class="node-icon menu-icon"><FolderOpened /></el-icon>
+                    <span class="menu-name">{{ data.name }}</span>
+                    <el-tag v-if="data.type" size="small" :type="getMenuTypeTag(data.type)" class="menu-type-tag">
+                      {{ getMenuTypeText(data.type) }}
+                    </el-tag>
                   </span>
-                  <el-tooltip v-if="data.path" :content="data.path" placement="top">
-                    <el-icon class="permission-path-icon">
-                      <InfoFilled />
-                    </el-icon>
-                  </el-tooltip>
-                </span>
-              </template>
-            </el-tree>
+                  <!-- 权限节点 -->
+                  <span v-else class="permission-node">
+                    <el-icon class="node-icon permission-icon"><Key /></el-icon>
+                    <span class="permission-name">{{ data.displayDesc || data.name }}</span>
+                    <span v-if="data.method" class="permission-method" :class="`method-${data.method.toLowerCase()}`">
+                      {{ data.method }}
+                    </span>
+                    <el-tooltip v-if="data.path" :content="data.path" placement="top">
+                      <el-icon class="permission-path-icon">
+                        <InfoFilled />
+                      </el-icon>
+                    </el-tooltip>
+                  </span>
+                </template>
+              </el-tree>
+            </div>
           </div>
         </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
@@ -162,7 +180,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { InfoFilled, Menu, Check, Close, FolderOpened, Key } from '@element-plus/icons-vue'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
@@ -865,92 +883,224 @@ onMounted(() => {
 }
 
 .menu-permission-container {
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 10px;
-  max-height: 500px;
-  overflow-y: auto;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: #fafafa;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.permission-header,
 .menu-header {
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  margin: 0;
+  border-bottom: none;
 }
 
-.permission-tree,
-.menu-tree {
-  font-size: 14px;
-}
-
-.permission-node {
+.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.header-icon {
+  font-size: 18px;
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.header-actions .el-button {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  backdrop-filter: blur(10px);
+}
+
+.header-actions .el-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.tree-wrapper {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #fff;
+  min-height: 200px;
+}
+
+.tree-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tree-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.tree-wrapper::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.tree-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.menu-permission-tree {
+  font-size: 14px;
+}
+
+.menu-permission-tree :deep(.el-tree-node) {
+  margin-bottom: 2px;
+}
+
+.menu-permission-tree :deep(.el-tree-node__content) {
+  height: 32px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.menu-permission-tree :deep(.el-tree-node__content:hover) {
+  background-color: #f0f9ff;
+  border-color: #b3d8ff;
+}
+
+.menu-permission-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background-color: #e1f3ff;
+  border-color: #409eff;
+}
+
+.menu-permission-tree :deep(.el-tree-node__expand-icon) {
+  color: #909399;
+  font-size: 14px;
+}
+
+.menu-permission-tree :deep(.el-tree-node__expand-icon:hover) {
+  color: #409eff;
+}
+
+.menu-permission-tree :deep(.el-checkbox) {
+  margin-right: 8px;
+}
+
+.permission-node,
+.menu-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.node-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.menu-icon {
+  color: #409eff;
+}
+
+.permission-icon {
+  color: #67c23a;
+}
+
+.permission-name,
+.menu-name {
+  font-weight: 500;
+  color: #303133;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.menu-name {
+  font-size: 14px;
 }
 
 .permission-name {
+  font-size: 13px;
+}
+
+.menu-type-tag {
+  margin-left: 4px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
   font-weight: 500;
-  color: #303133;
 }
 
 .permission-method {
   padding: 2px 6px;
   border-radius: 3px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: #fff;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .method-get {
-  background-color: #67c23a;
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
 }
 
 .method-post {
-  background-color: #409eff;
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
 }
 
 .method-put {
-  background-color: #e6a23c;
+  background: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
 }
 
 .method-patch {
-  background-color: #f56c6c;
+  background: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
 }
 
 .method-delete {
-  background-color: #f56c6c;
+  background: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
 }
 
 .permission-path-icon {
   color: #909399;
-  font-size: 14px;
+  font-size: 12px;
   cursor: help;
-  margin-left: 4px;
+  margin-left: 2px;
+  transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .permission-path-icon:hover {
   color: #409eff;
 }
 
-.menu-node {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.menu-name {
-  font-weight: 500;
-  color: #303133;
-}
-
 .menu-path {
   color: #909399;
   font-size: 12px;
-  font-family: monospace;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 </style>
 
