@@ -84,6 +84,7 @@
     "invalid_token": "Invalid token",
     "user_not_found": "User not found",
     "token_refresh_success": "Token refreshed successfully",
-    "token_refresh_failed": "Token refresh failed"
+    "token_refresh_failed": "Token refresh failed",
+    "too_many_attempts": "Too many attempts, please try again later"
   }
 }

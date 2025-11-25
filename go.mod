@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/gofiber/template/html/v2 v2.1.3
+	github.com/golang-jwt/jwt/v5 v5.2.3
 	github.com/goravel/cos v1.4.1-0.20251020055616-03c68b78269e
 	github.com/goravel/example-proto v0.0.1
 	github.com/goravel/fiber v1.4.1-0.20250922131727-7eca52c86407
@@ -115,7 +116,6 @@ require (
 	github.com/gofiber/template v1.8.3 // indirect
 	github.com/gofiber/utils v1.1.0 // indirect
 	github.com/goforj/godump v1.5.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.3 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
