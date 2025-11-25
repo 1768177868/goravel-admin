@@ -112,6 +112,7 @@
             </div>
             <div class="tree-wrapper">
               <el-tree
+                :key="treeKey"
                 ref="menuPermissionTreeRef"
                 :data="menuPermissionTree"
                 :props="{ children: 'children', label: 'label' }"
@@ -197,6 +198,7 @@ const pagination = reactive({
 const tableData = ref([])
 const menuPermissionTree = ref([])
 const checkedKeys = ref([])
+const treeKey = ref(0)
 
 const formData = reactive({
   id: null,
@@ -532,6 +534,17 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 }
 
 const handleAdd = () => {
+  if (dialogVisible.value) {
+    dialogVisible.value = false
+    setTimeout(() => {
+      initAddForm()
+    }, 200)
+  } else {
+    initAddForm()
+  }
+}
+
+const initAddForm = () => {
   Object.assign(formData, {
     id: null,
     name: '',
@@ -543,16 +556,14 @@ const handleAdd = () => {
     sort: 0
   })
   checkedKeys.value = []
-  if (menuPermissionTreeRef.value) {
-    menuPermissionTreeRef.value.setCheckedKeys([], false)
-  }
+  treeKey.value++
   dialogVisible.value = true
   setTimeout(() => {
     if (menuPermissionTreeRef.value) {
       menuPermissionTreeRef.value.setCheckedKeys([], false)
       checkedKeys.value = []
     }
-  }, 150)
+  }, 200)
 }
 
 const handleEdit = async (row) => {
@@ -649,6 +660,7 @@ const handleSubmit = async () => {
 
 const handleDialogClose = () => {
   checkedKeys.value = []
+  treeKey.value++
   if (menuPermissionTreeRef.value) {
     menuPermissionTreeRef.value.setCheckedKeys([], false)
   }
@@ -658,9 +670,12 @@ const handleDialogClose = () => {
 const handleDialogOpened = () => {
   if (!formData.id) {
     checkedKeys.value = []
-    if (menuPermissionTreeRef.value) {
-      menuPermissionTreeRef.value.setCheckedKeys([], false)
-    }
+    setTimeout(() => {
+      if (menuPermissionTreeRef.value) {
+        menuPermissionTreeRef.value.setCheckedKeys([], false)
+        checkedKeys.value = []
+      }
+    }, 100)
   }
 }
 
