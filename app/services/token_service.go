@@ -40,13 +40,15 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 	plainToken := s.generateRandomToken()
 	tokenHash := s.hashToken(plainToken)
 
-	// 创建token记录
+	// 创建token记录，立即设置last_used_at为当前时间
+	now := time.Now()
 	accessToken := &models.PersonalAccessToken{
 		TokenableType: tokenableType,
 		TokenableID:   tokenableID,
 		Name:          name,
 		Token:         tokenHash,
 		ExpiresAt:     expiresAt,
+		LastUsedAt:    &now, // 登录时立即设置最后使用时间
 	}
 
 	if err := facades.Orm().Query().Create(accessToken); err != nil {
@@ -61,7 +63,7 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 	if token == "" {
 		return nil, errors.New("token is empty")
 	}
-	
+
 	tokenHash := s.hashToken(token)
 	var accessToken models.PersonalAccessToken
 	if err := facades.Orm().Query().Where("token", tokenHash).First(&accessToken); err != nil {
@@ -140,4 +142,3 @@ func (s *TokenServiceImpl) hashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
 }
-

@@ -106,7 +106,6 @@
               <Aim v-else />
             </el-icon>
           </el-button>
-          <OnlineAdminsIndicator />
           <NotificationBell />
           <TimezoneSwitch />
           <LanguageSwitch />
@@ -168,7 +167,6 @@ import { useAppStore } from '../store/app'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import NotificationBell from '../components/NotificationBell.vue'
-import OnlineAdminsIndicator from '../components/OnlineAdminsIndicator.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'

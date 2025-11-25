@@ -20,6 +20,5 @@ func init() {
 		"protected_ids":         config.Env("ADMIN_PROTECTED_IDS", "1"), // Default: ID 1 (super admin)
 		"login_captcha_enabled": config.Env("ADMIN_LOGIN_CAPTCHA_ENABLED", false),
 		"login_captcha_expire":  config.Env("ADMIN_LOGIN_CAPTCHA_EXPIRE", 120), // seconds
-		"online_window_minutes": config.Env("ADMIN_ONLINE_WINDOW_MINUTES", 5),
 	})
 }

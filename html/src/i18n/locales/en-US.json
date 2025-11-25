@@ -260,9 +260,7 @@
     "system_management": "Management System",
     "fullscreen": "Fullscreen",
     "profile": "Profile",
-    "timezone": "Timezone",
-    "online_admins": "Online",
-    "online_admins_tooltip": "Admins active in last {minutes} minutes"
+    "timezone": "Timezone"
   },
   "profile": {
     "basic_info": "Basic Information",
