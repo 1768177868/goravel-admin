@@ -55,6 +55,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	permission := ctx.Request().Input("permission")
 	menuType := cast.ToUint8(ctx.Request().Input("type", "1"))
 	// 处理状态字段：需要正确处理 0 值
+	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
 	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
 	if statusVal, exists := allInputs["status"]; exists {
@@ -69,21 +70,29 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "menu_title_required")
 	}
 
-	menu := models.Menu{
-		ParentID:   parentID,
-		Title:      title,
-		Icon:       icon,
-		Path:       path,
-		Component:  component,
-		Permission: permission,
-		Type:       menuType,
-		Status:     status,
-		Sort:       sort,
-		IsHidden:   isHidden,
+	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	menuData := map[string]interface{}{
+		"parent_id":  parentID,
+		"title":      title,
+		"icon":       icon,
+		"path":       path,
+		"component":  component,
+		"permission": permission,
+		"type":       menuType,
+		"status":     status, // 明确设置 status，即使是 0 也会被保存
+		"sort":       sort,
+		"is_hidden":  isHidden,
 	}
 
-	if err := facades.Orm().Query().Create(&menu); err != nil {
-		facades.Log().Errorf("Create menu error: %v, menu data: %+v", err, menu)
+	if err := facades.Orm().Query().Table("menus").Create(menuData); err != nil {
+		facades.Log().Errorf("Create menu error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	// 获取创建后的记录
+	var menu models.Menu
+	if err := facades.Orm().Query().Where("title", title).Where("path", path).First(&menu); err != nil {
+		facades.Log().Errorf("Get created menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

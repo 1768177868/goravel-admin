@@ -84,6 +84,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	phone := ctx.Request().Input("phone")
 	email := ctx.Request().Input("email")
 	// 处理状态字段：需要正确处理 0 值
+	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
 	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
 	if statusVal, exists := allInputs["status"]; exists {
@@ -91,6 +92,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 			status = cast.ToUint8(statusVal)
 		}
 	}
+
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	remark := ctx.Request().Input("remark")
 
@@ -98,20 +100,28 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "department_name_required")
 	}
 
-	department := models.Department{
-		ParentID: parentID,
-		Name:     name,
-		Code:     code,
-		Leader:   leader,
-		Phone:    phone,
-		Email:    email,
-		Status:   status,
-		Sort:     sort,
-		Remark:   remark,
+	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	departmentData := map[string]interface{}{
+		"parent_id": parentID,
+		"name":      name,
+		"code":      code,
+		"leader":    leader,
+		"phone":     phone,
+		"email":     email,
+		"status":    status, // 明确设置 status，即使是 0 也会被保存
+		"sort":      sort,
+		"remark":    remark,
 	}
 
-	if err := facades.Orm().Query().Create(&department); err != nil {
-		facades.Log().Errorf("Create department error: %v, department data: %+v", err, department)
+	if err := facades.Orm().Query().Table("departments").Create(departmentData); err != nil {
+		facades.Log().Errorf("Create department error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	// 获取创建后的记录
+	var department models.Department
+	if err := facades.Orm().Query().Where("name", name).First(&department); err != nil {
+		facades.Log().Errorf("Get created department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

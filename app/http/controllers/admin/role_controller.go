@@ -74,6 +74,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	slug := ctx.Request().Input("slug")
 	description := ctx.Request().Input("description")
 	// 处理状态字段：需要正确处理 0 值
+	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
 	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
 	if statusVal, exists := allInputs["status"]; exists {
@@ -81,7 +82,6 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 			status = cast.ToUint8(statusVal)
 		}
 	}
-	facades.Log().Infof("Create role - status from allInputs: %v (type: %T), converted: %d", allInputs["status"], allInputs["status"], status)
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 
 	if name == "" || slug == "" {
@@ -100,15 +100,24 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 	}
 
-	role := models.Role{
-		Name:        name,
-		Slug:        slug,
-		Description: description,
-		Status:      status,
-		Sort:        sort,
+	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	roleData := map[string]interface{}{
+		"name":        name,
+		"slug":        slug,
+		"description": description,
+		"status":      status, // 明确设置 status，即使是 0 也会被保存
+		"sort":        sort,
 	}
 
-	if err := facades.Orm().Query().Create(&role); err != nil {
+	if err := facades.Orm().Query().Table("roles").Create(roleData); err != nil {
+		facades.Log().Errorf("Create role error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	// 获取创建后的记录
+	var role models.Role
+	if err := facades.Orm().Query().Where("slug", slug).First(&role); err != nil {
+		facades.Log().Errorf("Get created role error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

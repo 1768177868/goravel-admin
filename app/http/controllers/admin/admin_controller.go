@@ -93,21 +93,15 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	phone := ctx.Request().Input("phone")
 	departmentID := cast.ToUint(ctx.Request().Input("department_id", "0"))
 	// 处理状态字段：需要正确处理 0 值
-	// 使用 All() 获取所有输入，然后检查 status 字段是否存在
+	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
 	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
 	if statusVal, exists := allInputs["status"]; exists {
-		// 如果字段存在，转换它（包括 0 值）
-		// 需要特别处理：如果值是 0，cast.ToUint8 应该返回 0
-		if statusVal == nil {
-			// 如果值是 nil，使用默认值
-			status = 1
-		} else {
+		// 字段存在，转换它（包括 0 值）
+		// statusVal 可能是字符串 "0" 或数字 0，都需要正确处理
+		if statusVal != nil {
 			status = cast.ToUint8(statusVal)
 		}
-		facades.Log().Infof("Create admin - status from allInputs: %v (type: %T), converted: %d", statusVal, statusVal, status)
-	} else {
-		facades.Log().Infof("Create admin - status field not found in allInputs, using default: %d", status)
 	}
 
 	if username == "" || password == "" {
@@ -123,8 +117,6 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		// 查询出错，记录日志但不阻止创建（可能是数据库问题）
 		facades.Log().Errorf("Check username exists error: %v", err)
 	} else if count > 0 {
-		// 如果找到了记录，说明用户名已存在且未被软删除
-		facades.Log().Infof("Username '%s' already exists (count: %d)", username, count)
 		return response.Error(ctx, http.StatusBadRequest, "username_exists")
 	}
 	// 如果没有找到记录（包括软删除的记录），用户名可用，继续创建
@@ -136,18 +128,30 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 	}
 
-	admin := models.Admin{
-		Username:     username,
-		Password:     hashedPassword,
-		Nickname:     nickname,
-		Email:        email,
-		Phone:        phone,
-		DepartmentID: departmentID,
-		Status:       status,
+	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	// GORM 在使用结构体创建时，可能会忽略零值字段而使用数据库默认值
+	// 使用 map 可以明确指定所有字段的值，包括零值
+	adminData := map[string]interface{}{
+		"username":      username,
+		"password":      hashedPassword,
+		"nickname":      nickname,
+		"avatar":        "",
+		"email":         email,
+		"phone":         phone,
+		"department_id": departmentID,
+		"status":        status, // 明确设置 status，即使是 0 也会被保存
 	}
 
-	if err := facades.Orm().Query().Create(&admin); err != nil {
-		facades.Log().Errorf("Create admin error: %v, admin data: %+v", err, admin)
+	// 使用 Table().Create() 创建记录，这样可以确保所有字段（包括零值）都被保存
+	if err := facades.Orm().Query().Table("admins").Create(adminData); err != nil {
+		facades.Log().Errorf("Create admin error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	// 获取创建后的记录
+	var admin models.Admin
+	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
+		facades.Log().Errorf("Get created admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

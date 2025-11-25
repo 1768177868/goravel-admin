@@ -82,6 +82,8 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	path := ctx.Request().Input("path")
 	description := ctx.Request().Input("description")
 	// 处理状态字段：需要正确处理 0 值
+	// 处理状态字段：需要正确处理 0 值
+	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
 	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
 	if statusVal, exists := allInputs["status"]; exists {
@@ -102,19 +104,27 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "permission_name_or_slug_exists")
 	}
 
-	permission := models.Permission{
-		Name:        name,
-		Slug:        slug,
-		Method:      method,
-		Path:        path,
-		Description: description,
-		Status:      status,
-		Sort:        sort,
-		MenuID:      menuID,
+	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	permissionData := map[string]interface{}{
+		"name":        name,
+		"slug":        slug,
+		"method":      method,
+		"path":        path,
+		"description": description,
+		"status":      status, // 明确设置 status，即使是 0 也会被保存
+		"sort":        sort,
+		"menu_id":     menuID,
 	}
 
-	if err := facades.Orm().Query().Create(&permission); err != nil {
-		facades.Log().Errorf("Create permission error: %v, permission data: %+v", err, permission)
+	if err := facades.Orm().Query().Table("permissions").Create(permissionData); err != nil {
+		facades.Log().Errorf("Create permission error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	// 获取创建后的记录
+	var permission models.Permission
+	if err := facades.Orm().Query().Where("slug", slug).First(&permission); err != nil {
+		facades.Log().Errorf("Get created permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 

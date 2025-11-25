@@ -66,6 +66,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	value := ctx.Request().Input("value")
 	description := ctx.Request().Input("description")
 	// 处理状态字段：需要正确处理 0 值
+	// 使用 All() 方法获取所有输入数据，确保能正确获取 JSON 数据中的 0 值
 	allInputs := ctx.Request().All()
 	var status uint8 = 1 // 默认启用
 	if statusVal, exists := allInputs["status"]; exists {
@@ -80,18 +81,26 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "dictionary_type_label_value_required")
 	}
 
-	dictionary := models.Dictionary{
-		Type:        dictType,
-		Label:       label,
-		Value:       value,
-		Description: description,
-		Status:      status,
-		Sort:        sort,
-		Remark:      remark,
+	// 使用 map 方式创建，确保零值字段（status=0）也能被正确保存
+	dictionaryData := map[string]interface{}{
+		"type":        dictType,
+		"label":       label,
+		"value":       value,
+		"description": description,
+		"status":      status, // 明确设置 status，即使是 0 也会被保存
+		"sort":        sort,
+		"remark":      remark,
 	}
 
-	if err := facades.Orm().Query().Create(&dictionary); err != nil {
-		facades.Log().Errorf("Create dictionary error: %v, dictionary data: %+v", err, dictionary)
+	if err := facades.Orm().Query().Table("dictionaries").Create(dictionaryData); err != nil {
+		facades.Log().Errorf("Create dictionary error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+	}
+
+	// 获取创建后的记录
+	var dictionary models.Dictionary
+	if err := facades.Orm().Query().Where("type", dictType).Where("value", value).First(&dictionary); err != nil {
+		facades.Log().Errorf("Get created dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
