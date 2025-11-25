@@ -111,7 +111,7 @@
               <div class="header-actions">
                 <el-button size="small" type="primary" plain @click="handleSelectAllMenusAndPermissions">
                   <el-icon><Check /></el-icon>
-                  {{ $t('role.select_all') }}
+                  {{ isAllSelected ? $t('role.unselect_all') : $t('role.select_all') }}
                 </el-button>
                 <el-button size="small" plain @click="handleUnselectAllMenusAndPermissions">
                   <el-icon><Close /></el-icon>
@@ -126,10 +126,12 @@
                 :props="{ children: 'children', label: 'label' }"
                 show-checkbox
                 node-key="id"
-                :default-checked-keys="[...formData.menu_ids, ...formData.permission_ids]"
+                :checked-keys="checkedKeys"
                 class="menu-permission-tree"
                 :expand-on-click-node="false"
                 :default-expand-all="false"
+                @check="handleTreeCheck"
+                check-strictly
               >
                 <template #default="{ node, data }">
                   <!-- 菜单节点 -->
@@ -210,6 +212,8 @@ const tableData = ref([])
 const permissionTree = ref([])
 const menuTree = ref([])
 const menuPermissionTree = ref([])
+const isAllSelected = ref(false)
+const checkedKeys = ref([])
 
 const formData = reactive({
   id: null,
@@ -646,11 +650,16 @@ const handleAdd = () => {
     status: 1,
     sort: 0
   })
+  // 清空选中状态
+  checkedKeys.value = []
+  isAllSelected.value = false
   dialogVisible.value = true
-  // 等待树组件渲染后清空选中状态
+  // 等待树组件渲染后确保清空选中状态
   setTimeout(() => {
     if (menuPermissionTreeRef.value) {
       menuPermissionTreeRef.value.setCheckedKeys([])
+      checkedKeys.value = []
+      isAllSelected.value = false
     }
   }, 100)
 }
@@ -674,11 +683,18 @@ const handleEdit = async (row) => {
         status: Number(role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1)),
         sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
       })
+      // 设置选中状态
+      const allCheckedKeys = [...formData.menu_ids, ...formData.permission_ids]
+      checkedKeys.value = allCheckedKeys
       dialogVisible.value = true
       // 等待树组件渲染后设置选中状态
       setTimeout(() => {
         if (menuPermissionTreeRef.value) {
-          menuPermissionTreeRef.value.setCheckedKeys([...formData.menu_ids, ...formData.permission_ids])
+          menuPermissionTreeRef.value.setCheckedKeys(allCheckedKeys, false)
+          // 延迟检查全选状态，确保树组件状态已更新
+          setTimeout(() => {
+            checkAllSelected()
+          }, 50)
         }
       }, 100)
     }
@@ -756,42 +772,146 @@ const handleSubmit = async () => {
 
 const handleDialogClose = () => {
   // 清空树形选择的选中状态
+  checkedKeys.value = []
   if (menuPermissionTreeRef.value) {
     menuPermissionTreeRef.value.setCheckedKeys([])
   }
+  isAllSelected.value = false
   formRef.value?.resetFields()
+}
+
+// 检查是否全选
+const checkAllSelected = () => {
+  if (menuPermissionTreeRef.value && menuPermissionTree.value) {
+    const allKeys = getAllMenuAndPermissionKeys(menuPermissionTree.value)
+    const currentCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
+    isAllSelected.value = allKeys.length > 0 && 
+      allKeys.every(key => currentCheckedKeys.includes(key)) &&
+      currentCheckedKeys.length === allKeys.length
+  } else {
+    isAllSelected.value = false
+  }
 }
 
 // 全选/取消全选菜单和权限
 const handleSelectAllMenusAndPermissions = () => {
   if (menuPermissionTreeRef.value && menuPermissionTree.value) {
     const allKeys = getAllMenuAndPermissionKeys(menuPermissionTree.value)
-    menuPermissionTreeRef.value.setCheckedKeys(allKeys)
+    console.log('全选 - 所有节点ID:', allKeys, '数量:', allKeys.length)
+    
+    if (allKeys.length === 0) {
+      ElMessage.warning('没有可选的菜单或权限')
+      return
+    }
+    
+    const currentCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
+    console.log('全选 - 当前已选中:', currentCheckedKeys, '数量:', currentCheckedKeys.length)
+    
+    // 检查是否已经全选（需要精确匹配，包括数量）
+    const allSelected = allKeys.length > 0 && 
+      allKeys.length === currentCheckedKeys.length &&
+      allKeys.every(key => currentCheckedKeys.includes(key))
+    
+    if (allSelected) {
+      // 如果已全选，则取消全选
+      checkedKeys.value = []
+      menuPermissionTreeRef.value.setCheckedKeys([], false)
+      isAllSelected.value = false
+    } else {
+      // 否则全选所有（包括所有节点，无论之前是否选中）
+      checkedKeys.value = allKeys
+      
+      // 使用 check-strictly 模式，直接设置所有节点（包括深层节点）
+      // 先设置一次
+      menuPermissionTreeRef.value.setCheckedKeys(allKeys, false)
+      
+      // 延迟多次检查并补全，确保所有深层节点都被选中
+      let retryCount = 0
+      const maxRetries = 5
+      const checkAndRetry = () => {
+        setTimeout(() => {
+          const afterCheckKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
+          const missingKeys = allKeys.filter(key => !afterCheckKeys.includes(key))
+          
+          console.log(`全选 - 第${retryCount + 1}次检查: 已选中${afterCheckKeys.length}个, 缺失${missingKeys.length}个`, missingKeys)
+          
+          if (missingKeys.length > 0 && retryCount < maxRetries) {
+            // 如果有缺失的节点（特别是深层权限节点），再次设置
+            const finalKeys = [...new Set([...afterCheckKeys, ...missingKeys])]
+            menuPermissionTreeRef.value.setCheckedKeys(finalKeys, false)
+            checkedKeys.value = finalKeys
+            retryCount++
+            // 继续重试
+            checkAndRetry()
+          } else {
+            // 最终检查并更新状态
+            const finalChecked = menuPermissionTreeRef.value.getCheckedKeys() || []
+            console.log('全选 - 最终结果:', finalChecked.length, '个节点被选中')
+            checkAllSelected()
+          }
+        }, 150)
+      }
+      checkAndRetry()
+      isAllSelected.value = true
+    }
   }
 }
 
 const handleUnselectAllMenusAndPermissions = () => {
   if (menuPermissionTreeRef.value) {
-    menuPermissionTreeRef.value.setCheckedKeys([])
+    // 强制清空所有选中项（包括半选状态）
+    checkedKeys.value = []
+    menuPermissionTreeRef.value.setCheckedKeys([], false)
+    isAllSelected.value = false
   }
 }
 
-// 递归获取所有菜单和权限ID
+// 处理树节点勾选变化
+const handleTreeCheck = (data, checkedInfo) => {
+  // 更新选中键数组（只获取完全选中的节点，不包括半选状态）
+  if (menuPermissionTreeRef.value) {
+    const checkedKeysList = menuPermissionTreeRef.value.getCheckedKeys() || []
+    // 只使用完全选中的节点
+    checkedKeys.value = checkedKeysList
+  }
+  // 延迟检查，确保状态已更新
+  setTimeout(() => {
+    checkAllSelected()
+  }, 50)
+}
+
+// 递归获取所有菜单和权限ID（包括所有层级的节点，特别是深层权限节点）
 const getAllMenuAndPermissionKeys = (tree) => {
   if (!tree || !Array.isArray(tree)) return []
   const keys = []
-  const traverse = (nodes) => {
+  const visited = new Set() // 防止重复添加
+  
+  const traverse = (nodes, depth = 0) => {
     if (!nodes || !Array.isArray(nodes)) return
     nodes.forEach(node => {
-      if (node.id) {
-        keys.push(node.id)
+      // 确保节点有 id，并且不是分组节点（如 'other_permissions' 或 'module_xxx'）
+      if (node.id && !visited.has(node.id)) {
+        // 如果是数字类型，直接添加
+        if (typeof node.id === 'number') {
+          keys.push(node.id)
+          visited.add(node.id)
+        } 
+        // 如果是字符串类型，排除分组节点
+        else if (typeof node.id === 'string' && 
+                 !node.id.startsWith('module_') && 
+                 node.id !== 'other_permissions') {
+          keys.push(node.id)
+          visited.add(node.id)
+        }
       }
-      if (node.children) {
-        traverse(node.children)
+      // 递归处理子节点（确保能获取到最深层的权限节点）
+      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+        traverse(node.children, depth + 1)
       }
     })
   }
   traverse(tree)
+  console.log('获取到的所有节点ID:', keys, '总数:', keys.length)
   return keys
 }
 
@@ -912,6 +1032,7 @@ onMounted(() => {
 }
 
 .header-title {
+  margin-right: 10px;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -1103,4 +1224,5 @@ onMounted(() => {
   border-radius: 3px;
 }
 </style>
+
 
