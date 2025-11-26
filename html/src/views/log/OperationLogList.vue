@@ -49,7 +49,8 @@
             style="width: 200px"
           />
         </el-form-item>
-        <el-form-item :label="$t('log.ip')">
+        <!-- 高级搜索项（可展开/收起） -->
+        <el-form-item v-show="searchExpanded" :label="$t('log.ip')">
           <el-input
             v-model="searchForm.ip"
             :placeholder="$t('form.please_enter') + $t('log.ip')"
@@ -57,7 +58,7 @@
             style="width: 150px"
           />
         </el-form-item>
-        <el-form-item :label="$t('log.status_code')">
+        <el-form-item v-show="searchExpanded" :label="$t('log.status_code')">
           <el-input
             v-model="searchForm.status"
             :placeholder="$t('form.please_enter') + $t('log.status_code')"
@@ -65,7 +66,7 @@
             style="width: 120px"
           />
         </el-form-item>
-        <el-form-item :label="$t('log.start_time')">
+        <el-form-item v-show="searchExpanded" :label="$t('log.start_time')">
           <el-date-picker
             v-model="searchForm.start_time"
             type="datetime"
@@ -75,7 +76,7 @@
             clearable
           />
         </el-form-item>
-        <el-form-item :label="$t('log.end_time')">
+        <el-form-item v-show="searchExpanded" :label="$t('log.end_time')">
           <el-date-picker
             v-model="searchForm.end_time"
             type="datetime"
@@ -93,6 +94,10 @@
           <el-button @click="handleReset">
             <el-icon><Refresh /></el-icon>
             {{ $t('log.reset') }}
+          </el-button>
+          <el-button @click="toggleSearchExpand">
+            <el-icon><component :is="searchExpanded ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
+            {{ searchExpanded ? $t('log.collapse') : $t('log.expand') }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -159,7 +164,7 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Delete } from '@element-plus/icons-vue'
+import { Search, Refresh, Delete, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import {
   getOperationLogList,
   getOperationLogDetail,
@@ -175,6 +180,7 @@ const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
+const searchExpanded = ref(false) // 搜索表单展开状态
 
 const pagination = reactive({
   page: 1,
@@ -314,6 +320,11 @@ const handleReset = () => {
   }
   pagination.page = 1
   loadData()
+}
+
+// 切换搜索表单展开/收起
+const toggleSearchExpand = () => {
+  searchExpanded.value = !searchExpanded.value
 }
 
 const handlePageChange = ({ currentPage, pageSize }) => {

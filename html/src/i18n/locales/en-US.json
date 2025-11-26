@@ -311,7 +311,9 @@
     "module": "Module",
     "start_time": "Start Time",
     "end_time": "End Time",
-    "status": "Status"
+    "status": "Status",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "dashboard": {
     "total_users": "Total Users",

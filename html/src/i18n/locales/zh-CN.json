@@ -311,7 +311,9 @@
     "module": "模块",
     "start_time": "开始时间",
     "end_time": "结束时间",
-    "status": "状态"
+    "status": "状态",
+    "expand": "展开",
+    "collapse": "收起"
   },
   "dashboard": {
     "total_users": "总用户数",
