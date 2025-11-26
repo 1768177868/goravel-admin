@@ -196,13 +196,32 @@ const sortConfig = ref({
   data: []
 })
 
+// 格式化日期为 YYYY-MM-DD HH:mm:ss
+const formatDateTime = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+// 获取7天前的日期时间
+const getSevenDaysAgo = () => {
+  const date = new Date()
+  date.setDate(date.getDate() - 7)
+  date.setHours(0, 0, 0, 0) // 设置为当天的00:00:00
+  return formatDateTime(date)
+}
+
 const searchForm = reactive({
   username: '',
   method: '',
   path: '',
   ip: '',
   status: '',
-  start_time: '',
+  start_time: getSevenDaysAgo(),
   end_time: ''
 })
 
@@ -310,9 +329,13 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = ''
-  })
+  searchForm.username = ''
+  searchForm.method = ''
+  searchForm.path = ''
+  searchForm.ip = ''
+  searchForm.status = ''
+  searchForm.start_time = getSevenDaysAgo()
+  searchForm.end_time = ''
   // 重置排序
   sortConfig.value.data = []
   if (tableRef.value) {
