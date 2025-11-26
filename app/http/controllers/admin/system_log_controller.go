@@ -26,6 +26,7 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	level := ctx.Request().Query("level", "")
 	module := ctx.Request().Query("module", "")
 	message := ctx.Request().Query("message", "")
+	orderBy := ctx.Request().Query("order_by", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
@@ -33,13 +34,13 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	query := facades.Orm().Query().Model(&models.SystemLog{})
 
 	if level != "" {
-		query = query.Where("level", level)
+		query = query.Where("level = ?", level)
 	}
 	if module != "" {
-		query = query.Where("module", "like", "%"+module+"%")
+		query = query.Where("module LIKE ?", "%"+module+"%")
 	}
 	if message != "" {
-		query = query.Where("message", "like", "%"+message+"%")
+		query = query.Where("message LIKE ?", "%"+message+"%")
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)
@@ -55,7 +56,9 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.SystemLog
 	offset := (page - 1) * pageSize
-	if err = query.Offset(offset).Limit(pageSize).Order("id desc").Get(&logs); err != nil {
+	// 应用排序（默认按id倒序）
+	query = helpers.ApplySort(query, orderBy, "id:desc")
+	if err = query.Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 

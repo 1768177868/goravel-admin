@@ -43,7 +43,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 		// 先查询匹配的管理员ID
 		var adminIDs []uint
 		var admins []models.Admin
-		if err := facades.Orm().Query().Where("username", "like", "%"+username+"%").Get(&admins); err == nil {
+		if err := facades.Orm().Query().Where("username LIKE ?", "%"+username+"%").Get(&admins); err == nil {
 			for _, admin := range admins {
 				adminIDs = append(adminIDs, admin.ID)
 			}
@@ -60,16 +60,16 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 		}
 	}
 	if method != "" {
-		query = query.Where("method", method)
+		query = query.Where("method = ?", method)
 	}
 	if path != "" {
-		query = query.Where("path", "like", "%"+path+"%")
+		query = query.Where("path LIKE ?", "%"+path+"%")
 	}
 	if ip != "" {
-		query = query.Where("ip", "like", "%"+ip+"%")
+		query = query.Where("ip LIKE ?", "%"+ip+"%")
 	}
 	if status != "" {
-		query = query.Where("status", status)
+		query = query.Where("status = ?", status)
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)

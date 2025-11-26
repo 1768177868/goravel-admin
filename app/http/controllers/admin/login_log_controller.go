@@ -27,6 +27,7 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
+	orderBy := ctx.Request().Query("order_by", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
@@ -37,13 +38,13 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 		query = query.Where("admin_id", adminID)
 	}
 	if username != "" {
-		query = query.Where("username", "like", "%"+username+"%")
+		query = query.Where("username LIKE ?", "%"+username+"%")
 	}
 	if ip != "" {
-		query = query.Where("ip", "like", "%"+ip+"%")
+		query = query.Where("ip LIKE ?", "%"+ip+"%")
 	}
 	if status != "" {
-		query = query.Where("status", status)
+		query = query.Where("status = ?", status)
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)
@@ -59,8 +60,10 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.LoginLog
 	offset := (page - 1) * pageSize
+	// 应用排序（默认按id倒序）
+	query = helpers.ApplySort(query, orderBy, "id:desc")
 	// 使用 With 预加载关联，避免 N+1 查询问题
-	if err = query.With("Admin").Offset(offset).Limit(pageSize).Order("id desc").Get(&logs); err != nil {
+	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
