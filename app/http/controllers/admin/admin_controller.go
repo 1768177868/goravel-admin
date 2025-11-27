@@ -33,6 +33,7 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	username := ctx.Request().Query("username", "")
 	status := ctx.Request().Query("status", "")
 	roleID := ctx.Request().Query("role_id", "")
+	departmentID := ctx.Request().Query("department_id", "")
 	orderBy := ctx.Request().Query("order_by", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
@@ -58,6 +59,13 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 		roleIDUint := cast.ToUint(roleID)
 		if roleIDUint > 0 {
 			query = query.Where("id IN (SELECT admin_id FROM admin_role WHERE role_id = ?)", roleIDUint)
+		}
+	}
+	if departmentID != "" {
+		// 查询指定部门的管理员
+		departmentIDUint := cast.ToUint(departmentID)
+		if departmentIDUint > 0 {
+			query = query.Where("department_id", departmentIDUint)
 		}
 	}
 	if startTime != "" {

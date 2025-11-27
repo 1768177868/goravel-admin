@@ -47,6 +47,79 @@
             v-bind="field.props || {}"
           />
           
+          <!-- 树形选择器（使用 el-popover + el-tree） -->
+          <el-popover
+            v-else-if="field.type === 'tree-select'"
+            placement="bottom-start"
+            :width="field.popoverWidth || 300"
+            :visible="getTreeSelectPopoverVisible(field)"
+            @update:visible="(val) => { if (val !== undefined) setTreeSelectPopoverVisible(field, val) }"
+            :popper-options="{ 
+              modifiers: [
+                { name: 'computeStyles', options: { gpuAcceleration: false } },
+                { name: 'preventOverflow', options: { boundary: 'viewport' } }
+              ]
+            }"
+          >
+            <template #reference>
+              <el-input
+                :model-value="getTreeSelectInputValue(field)"
+                :placeholder="getFieldPlaceholder(field)"
+                :clearable="field.clearable !== false"
+                :disabled="field.disabled"
+                :style="{ width: field.width || '200px' }"
+                @clear="(e) => { e?.stopPropagation(); handleTreeSelectClear(field) }"
+                @input="(val) => handleTreeSelectInput(field, val)"
+                @focus="!field.disabled && !getTreeSelectPopoverVisible(field) && toggleTreeSelectPopover(field)"
+                @click.stop.prevent="!field.disabled && toggleTreeSelectPopover(field)"
+                @mousedown.stop.prevent
+              >
+                <template #suffix>
+                  <el-icon 
+                    v-if="!field.disabled"
+                    class="el-input__icon"
+                    :class="{ 'is-reverse': getTreeSelectPopoverVisible(field) }"
+                    style="transition: transform 0.3s; pointer-events: none;"
+                  >
+                    <ArrowDown />
+                  </el-icon>
+                </template>
+              </el-input>
+            </template>
+            <div @click.stop @mousedown.stop>
+              <el-input
+                v-if="field.filterable !== false"
+                v-model="treeSelectFilterText[field.prop]"
+                :placeholder="t('common.search') || '搜索'"
+                clearable
+                size="small"
+                style="margin-bottom: 8px;"
+                @input="() => {}"
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+              <el-tree
+                ref="(el) => setTreeRef(field, el)"
+                :data="getFilteredTreeData(field)"
+                :props="field.treeProps || { label: 'name', children: 'children' }"
+                node-key="id"
+                :default-expand-all="field.filterable !== false && treeSelectFilterText[field.prop] ? true : (field.defaultExpandAll || false)"
+                :expand-on-click-node="false"
+                :highlight-current="true"
+                @node-click="(data) => handleTreeSelectNodeClick(field, data)"
+                :style="{ maxHeight: field.treeHeight || '300px', overflowY: 'auto' }"
+              >
+                <template #default="{ node, data }">
+                  <span class="custom-tree-node" style="flex: 1; display: flex; align-items: center; justify-content: space-between; font-size: 14px; padding-right: 8px;">
+                    <span>{{ node.label }}</span>
+                  </span>
+                </template>
+              </el-tree>
+            </div>
+          </el-popover>
+          
           <!-- 选择器 -->
           <el-select
             v-else-if="field.type === 'select'"
@@ -297,6 +370,8 @@ const expanded = ref(props.defaultExpanded)
 const formHeight = ref(0)
 const singleLineHeight = ref(0)
 const shouldShowExpandButton = ref(false)
+const treeSelectPopovers = ref({}) // 存储树形选择器的弹窗状态
+const treeSelectFilterText = ref({}) // 存储树形选择器的搜索文本
 let resizeObserver = null
 
 // 国际化文本
@@ -400,6 +475,141 @@ const getFieldOptions = (field) => {
 // 获取字段样式
 const getFieldStyle = (field) => {
   return field.style || {}
+}
+
+// 获取树形选择器的显示值
+const getTreeSelectDisplayValue = (field) => {
+  const value = props.model[field.prop]
+  if (!value) return ''
+  
+  const findNode = (data, targetId) => {
+    for (const node of data) {
+      const nodeId = node[field.treeProps?.value || 'id']
+      if (nodeId == value) {
+        return node[field.treeProps?.label || 'name']
+      }
+      if (node[field.treeProps?.children || 'children']) {
+        const found = findNode(node[field.treeProps?.children || 'children'], targetId)
+        if (found) return found
+      }
+    }
+    return ''
+  }
+  
+  return findNode(field.treeData || [], value) || ''
+}
+
+// 获取树形选择器输入框的值（用于搜索）
+const getTreeSelectInputValue = (field) => {
+  // 如果有选中值，显示选中值
+  const selectedValue = props.model[field.prop]
+  if (selectedValue) {
+    const displayValue = getTreeSelectDisplayValue(field)
+    // 如果正在搜索且搜索文本与显示值不同，显示搜索文本
+    const filterText = treeSelectFilterText.value[field.prop]
+    if (filterText && filterText !== displayValue) {
+      return filterText
+    }
+    return displayValue
+  }
+  // 如果没有选中值，显示搜索文本
+  const filterText = treeSelectFilterText.value[field.prop]
+  return filterText || ''
+}
+
+// 获取树形选择器弹窗的显示状态
+const getTreeSelectPopoverVisible = (field) => {
+  if (!treeSelectPopovers.value[field.prop]) {
+    treeSelectPopovers.value[field.prop] = false
+  }
+  return treeSelectPopovers.value[field.prop]
+}
+
+// 设置树形选择器弹窗的显示状态
+const setTreeSelectPopoverVisible = (field, visible) => {
+  treeSelectPopovers.value[field.prop] = visible
+}
+
+// 切换树形选择器弹窗
+const toggleTreeSelectPopover = (field) => {
+  if (!treeSelectPopovers.value.hasOwnProperty(field.prop)) {
+    treeSelectPopovers.value[field.prop] = false
+  }
+  const newState = !treeSelectPopovers.value[field.prop]
+  treeSelectPopovers.value[field.prop] = newState
+  // 如果关闭弹窗，清空搜索文本（如果没有选中值）
+  if (!newState && !props.model[field.prop]) {
+    treeSelectFilterText.value[field.prop] = ''
+  }
+}
+
+// 处理树形选择器节点点击
+const handleTreeSelectNodeClick = (field, data) => {
+  const valueKey = field.treeProps?.value || 'id'
+  const labelKey = field.treeProps?.label || 'name'
+  props.model[field.prop] = data[valueKey]
+  // 清空搜索文本，显示选中的值
+  treeSelectFilterText.value[field.prop] = ''
+  // 关闭弹窗
+  treeSelectPopovers.value[field.prop] = false
+}
+
+// 处理树形选择器清空
+const handleTreeSelectClear = (field) => {
+  props.model[field.prop] = ''
+  treeSelectFilterText.value[field.prop] = ''
+}
+
+// 处理树形选择器输入
+const handleTreeSelectInput = (field, val) => {
+  if (!treeSelectFilterText.value.hasOwnProperty(field.prop)) {
+    treeSelectFilterText.value[field.prop] = ''
+  }
+  treeSelectFilterText.value[field.prop] = val
+  // 如果输入框有值，自动展开弹窗
+  if (val && !getTreeSelectPopoverVisible(field)) {
+    toggleTreeSelectPopover(field)
+  }
+}
+
+// 获取过滤后的树形数据
+const getFilteredTreeData = (field) => {
+  const filterText = treeSelectFilterText.value[field.prop]
+  if (!filterText || filterText === '') {
+    return field.treeData || []
+  }
+  
+  const labelKey = field.treeProps?.label || 'name'
+  const childrenKey = field.treeProps?.children || 'children'
+  
+  const filterNode = (node) => {
+    const label = node[labelKey] || ''
+    const matches = label.toLowerCase().includes(filterText.toLowerCase())
+    
+    if (node[childrenKey] && Array.isArray(node[childrenKey])) {
+      const filteredChildren = node[childrenKey].map(child => filterNode(child)).filter(Boolean)
+      if (matches || filteredChildren.length > 0) {
+        return {
+          ...node,
+          [childrenKey]: filteredChildren
+        }
+      }
+    } else if (matches) {
+      return node
+    }
+    
+    return null
+  }
+  
+  return (field.treeData || []).map(node => filterNode(node)).filter(Boolean)
+}
+
+// 存储树形组件的引用
+const treeRefs = ref({})
+const setTreeRef = (field, el) => {
+  if (el) {
+    treeRefs.value[field.prop] = el
+  }
 }
 
 const searchText = computed(() => {
@@ -725,6 +935,11 @@ defineExpose({
   .action-item {
     margin-top: 0;
     margin-bottom: 0;
+  }
+
+  // 树形选择器箭头图标旋转样式
+  :deep(.el-input__icon.is-reverse) {
+    transform: rotate(180deg);
   }
 }
 </style>

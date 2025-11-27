@@ -15,7 +15,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', status: '', role_id: '' }"
+        :initial-values="{ username: '', status: '', role_id: '', department_id: '' }"
         i18n-prefix="admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -222,7 +222,8 @@ const dialogTitle = computed(() => formData.id ? t('admin.edit_admin') : t('admi
 const searchForm = reactive({
   username: '',
   status: '',
-  role_id: ''
+  role_id: '',
+  department_id: ''
 })
 
 // 表格列配置（使用 vxe-table columns）
@@ -305,10 +306,21 @@ const searchFields = computed(() => [
     label: t('role.title'),
     type: 'select',
     width: '150px',
+    filterable: true,
     options: roles.value.map(role => ({
       label: role.name || role.Name || '',
       value: String(role.id || role.ID || '')
     })),
+    advanced: false
+  },
+  {
+    prop: 'department_id',
+    label: t('table.department'),
+    type: 'tree-select',
+    width: '200px',
+    filterable: true,
+    treeData: departmentTree.value,
+    treeProps: { label: 'name', children: 'children', value: 'id' },
     advanced: false
   }
 ])
@@ -382,6 +394,9 @@ const loadData = async () => {
     }
     if (searchForm.role_id) {
       params.role_id = searchForm.role_id
+    }
+    if (searchForm.department_id) {
+      params.department_id = searchForm.department_id
     }
     
     console.log('Admin search params:', params)
@@ -500,6 +515,7 @@ const handleReset = () => {
   searchForm.username = ''
   searchForm.status = ''
   searchForm.role_id = ''
+  searchForm.department_id = ''
   resetSort()
   handleSearch()
 }
