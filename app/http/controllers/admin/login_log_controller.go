@@ -29,7 +29,6 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	orderBy := ctx.Request().Query("order_by", "")
-	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -61,9 +60,7 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.LoginLog
 	offset := (page - 1) * pageSize
-	// 应用排序（默认按id倒序）
 	query = helpers.ApplySort(query, orderBy, "id:desc")
-	// 使用 With 预加载关联，避免 N+1 查询问题
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
@@ -75,7 +72,6 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 func (r *LoginLogController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var log models.LoginLog
-	// 使用 With 预加载关联
 	if err := facades.Orm().Query().With("Admin").Where("id", id).First(&log); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
@@ -104,7 +100,6 @@ func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success")
 }
 
-// LoginLogBatchDestroyRequest 批量删除请求结构
 type LoginLogBatchDestroyRequest struct {
 	IDs []uint `json:"ids"`
 }

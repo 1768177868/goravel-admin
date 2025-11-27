@@ -25,7 +25,6 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	dictType := ctx.Request().Query("type", "")
 	status := ctx.Request().Query("status", "")
-	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -91,7 +90,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		"label":       label,
 		"value":       value,
 		"description": description,
-		"status":      status, // 明确设置 status，即使是 0 也会被保存
+		"status":      status,
 		"sort":        sort,
 		"remark":      remark,
 		"created_at":  now,
@@ -122,7 +121,6 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	})
 }
 
-// Update 更新字典
 func (r *DictionaryController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var dictionary models.Dictionary
@@ -162,7 +160,7 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 
 	if err := facades.Orm().Query().Save(&dictionary); err != nil {
 		errorlog.RecordHTTP(ctx, "dictionary", "Failed to update dictionary", map[string]any{
-			"error":        err.Error(),
+			"error":         err.Error(),
 			"dictionary_id": dictionary.ID,
 		}, "Update dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
@@ -183,7 +181,7 @@ func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 
 	if _, err := facades.Orm().Query().Delete(&dictionary); err != nil {
 		errorlog.RecordHTTP(ctx, "dictionary", "Failed to delete dictionary", map[string]any{
-			"error":        err.Error(),
+			"error":         err.Error(),
 			"dictionary_id": dictionary.ID,
 		}, "Delete dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
@@ -192,7 +190,6 @@ func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success")
 }
 
-// GetByType 根据类型获取字典
 func (r *DictionaryController) GetByType(ctx http.Context) http.Response {
 	dictType := ctx.Request().Route("type")
 	if dictType == "" {

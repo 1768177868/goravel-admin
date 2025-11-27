@@ -294,9 +294,7 @@ const loadData = async () => {
     if (res.data) {
       // 后端返回的是 menus 数组，不是 list
       const menus = res.data.menus || res.data.list || []
-      // 转换数据格式
       const transformed = menus.map(menu => transformMenuData(menu))
-      console.log('Transformed menu data:', transformed)
       tableData.value = transformed
     }
   } catch (error) {

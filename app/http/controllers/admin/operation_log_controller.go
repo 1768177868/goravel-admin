@@ -30,7 +30,6 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	path := ctx.Request().Query("path", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
-	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
@@ -41,7 +40,6 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 		query = query.Where("admin_id", adminID)
 	}
 	if username != "" {
-		// 先查询匹配的管理员ID
 		var adminIDs []uint
 		var admins []models.Admin
 		if err := facades.Orm().Query().Where("username LIKE ?", "%"+username+"%").Get(&admins); err == nil {
@@ -55,7 +53,6 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 				}
 				query = query.WhereIn("admin_id", idsAny)
 			} else {
-				// 如果没有匹配的管理员，返回空结果
 				query = query.Where("admin_id", 0)
 			}
 		}
@@ -86,9 +83,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.OperationLog
 	offset := (page - 1) * pageSize
-	// 应用排序（默认按id倒序）
 	query = helpers.ApplySort(query, orderBy, "id:desc")
-	// 使用 With 预加载关联，避免 N+1 查询问题
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
@@ -100,7 +95,6 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 func (r *OperationLogController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var log models.OperationLog
-	// 使用 With 预加载关联
 	if err := facades.Orm().Query().With("Admin").Where("id", id).First(&log); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
@@ -120,7 +114,7 @@ func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 
 	if _, err := facades.Orm().Query().Delete(&log); err != nil {
 		errorlog.RecordHTTP(ctx, "operation-log", "Failed to delete operation log", map[string]any{
-			"error": err.Error(),
+			"error":  err.Error(),
 			"log_id": log.ID,
 		}, "Delete operation log error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
@@ -129,7 +123,6 @@ func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success")
 }
 
-// OperationLogBatchDestroyRequest 批量删除请求结构
 type OperationLogBatchDestroyRequest struct {
 	IDs []uint `json:"ids"`
 }

@@ -29,7 +29,6 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	traceID := ctx.Request().Query("trace_id", "")
 	message := ctx.Request().Query("message", "")
 	orderBy := ctx.Request().Query("order_by", "")
-	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -61,7 +60,6 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.SystemLog
 	offset := (page - 1) * pageSize
-	// 应用排序（默认按id倒序）
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 	if err = query.Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
@@ -93,7 +91,7 @@ func (r *SystemLogController) Destroy(ctx http.Context) http.Response {
 
 	if _, err := facades.Orm().Query().Delete(&log); err != nil {
 		errorlog.RecordHTTP(ctx, "system-log", "Failed to delete system log", map[string]any{
-			"error": err.Error(),
+			"error":  err.Error(),
 			"log_id": log.ID,
 		}, "Delete system log error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
@@ -102,7 +100,6 @@ func (r *SystemLogController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success")
 }
 
-// SystemLogBatchDestroyRequest 批量删除请求结构
 type SystemLogBatchDestroyRequest struct {
 	IDs []uint `json:"ids"`
 }

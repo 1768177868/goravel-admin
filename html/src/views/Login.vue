@@ -151,12 +151,9 @@ const handleLogin = async () => {
           payload.captcha_answer = loginForm.captcha_answer
         }
         const res = await login(payload)
-        console.log('Login response:', res)
         if (res.data && res.data.token) {
           const token = res.data.token
-          console.log('Token received:', token.substring(0, 20) + '...')
           userStore.setToken(token)
-          console.log('Token saved to localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
           if (res.data.admin) {
             userStore.setAdminInfo(res.data.admin)
           }

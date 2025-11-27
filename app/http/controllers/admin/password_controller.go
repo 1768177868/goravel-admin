@@ -17,26 +17,21 @@ func NewPasswordController() *PasswordController {
 	return &PasswordController{}
 }
 
-// UpdatePassword 修改密码
 func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
 	var admin models.Admin
-	// 尝试值类型
 	if adminVal, ok := adminValue.(models.Admin); ok {
 		admin = adminVal
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		// 尝试指针类型
 		admin = *adminPtr
 	} else {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
-	// 重新查询admin以确保获取最新数据（包括密码）
 	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
@@ -57,12 +52,10 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "password_length_error")
 	}
 
-	// 验证旧密码
 	if !facades.Hash().Check(oldPassword, admin.Password) {
 		return response.Error(ctx, http.StatusBadRequest, "old_password_error")
 	}
 
-	// 更新密码
 	hashedPassword, err := facades.Hash().Make(newPassword)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
@@ -98,7 +91,6 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
-	// 更新密码
 	hashedPassword, err := facades.Hash().Make(newPassword)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")

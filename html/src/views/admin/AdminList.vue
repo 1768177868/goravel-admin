@@ -654,7 +654,13 @@ const handleExport = async () => {
   try {
     const res = await exportAdmin(searchForm)
     if (res.data && res.data.file_url) {
-      window.open(res.data.file_url, '_blank')
+      const link = document.createElement('a')
+      link.href = res.data.file_url
+      link.download = res.data.file_path?.split('/').pop() || 'admins.csv'
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
       ElMessage.success(t('admin.export_success'))
     }
   } catch (error) {

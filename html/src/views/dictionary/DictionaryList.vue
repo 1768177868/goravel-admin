@@ -254,9 +254,7 @@ const loadData = async () => {
       params.type = searchForm.type.trim()
     }
     
-    console.log('Dictionary search params:', params)
     const res = await getDictionaryList(params)
-    console.log('Dictionary list response:', res)
     
     if (res.data) {
       tableData.value = res.data.list || []

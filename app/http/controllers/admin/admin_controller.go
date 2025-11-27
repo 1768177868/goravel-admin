@@ -35,13 +35,11 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	roleID := ctx.Request().Query("role_id", "")
 	departmentID := ctx.Request().Query("department_id", "")
 	orderBy := ctx.Request().Query("order_by", "")
-	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.Admin{})
 
-	// 排除开发者管理员（不显示在列表中，如机器人、脚本等账号）
 	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 	developerIDs := r.parseProtectedIDs(developerIDsStr)
 	if len(developerIDs) > 0 {
@@ -55,28 +53,21 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 		query = query.Where("status", status)
 	}
 	if roleID != "" {
-		// 通过中间表查询拥有指定角色的管理员
 		roleIDUint := cast.ToUint(roleID)
 		if roleIDUint > 0 {
 			query = query.Where("id IN (SELECT admin_id FROM admin_role WHERE role_id = ?)", roleIDUint)
 		}
 	}
 	if departmentID != "" {
-		// 查询指定部门及其所有子部门的管理员
 		departmentIDUint := cast.ToUint(departmentID)
 		if departmentIDUint > 0 {
-			// 获取部门及其所有子部门的ID列表
 			departmentIDs := r.getDepartmentAndChildrenIDs(departmentIDUint)
 			if len(departmentIDs) > 0 {
-				// 使用 IN 查询，包含选中部门及其所有子部门
 				idsAny := make([]any, len(departmentIDs))
 				for i, id := range departmentIDs {
 					idsAny[i] = id
 				}
 				query = query.WhereIn("department_id", idsAny)
-			} else {
-				// 如果没有找到任何部门（理论上不会发生），使用原来的精确匹配作为备用
-				// query = query.Where("department_id", departmentIDUint)
 			}
 		}
 	}
@@ -87,7 +78,6 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
-	// 应用排序（默认按创建时间倒序）
 	query = helpers.ApplySort(query, orderBy, "created_at:desc")
 
 	return query
@@ -98,7 +88,6 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 
-	// 使用公共查询构建方法
 	query := r.buildQuery(ctx)
 
 	total, err := query.Count()
@@ -108,7 +97,6 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 
 	var admins []models.Admin
 	offset := (page - 1) * pageSize
-	// 使用 With 预加载关联，避免 N+1 查询问题
 	if err := query.With("Department").With("Roles").Offset(offset).Limit(pageSize).Get(&admins); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
@@ -120,7 +108,6 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 func (r *AdminController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var admin models.Admin
-	// 使用 With 预加载关联
 	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", id).First(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
@@ -167,7 +154,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		"email":         email,
 		"phone":         phone,
 		"department_id": departmentID,
-		"status":        status, // 明确设置 status，即使是 0 也会被保存
+		"status":        status,
 		"created_at":    now,
 		"updated_at":    now,
 	}
@@ -189,7 +176,6 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
-	// 处理角色关联
 	if roleIds := ctx.Request().Input("role_ids"); roleIds != "" {
 		var roleIDs []uint
 		for _, idStr := range ctx.Request().InputArray("role_ids") {
@@ -212,7 +198,6 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	})
 }
 
-// Update 更新管理员
 func (r *AdminController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var admin models.Admin
@@ -220,7 +205,6 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
-	// 检查是否是受保护的管理员ID（自动包含developer_ids）
 	allProtectedIDs := r.getAllProtectedAdminIDs()
 	isProtected := allProtectedIDs[id]
 
@@ -250,7 +234,6 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		admin.Status = newStatus
 	}
 
-	// 更新密码
 	if password := ctx.Request().Input("password"); password != "" {
 		hashedPassword, err := facades.Hash().Make(password)
 		if err == nil {
@@ -266,7 +249,6 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
-	// 处理角色关联
 	if roleIds := ctx.Request().Input("role_ids"); roleIds != "" {
 		var roleIDs []uint
 		for _, idStr := range ctx.Request().InputArray("role_ids") {
@@ -289,17 +271,14 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	})
 }
 
-// Destroy 删除管理员
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 
-	// 检查是否是受保护的管理员ID（自动包含developer_ids）
 	allProtectedIDs := r.getAllProtectedAdminIDs()
 	if allProtectedIDs[id] {
 		return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_delete")
 	}
 
-	// 检查是否是当前登录的管理员自己
 	adminValue := ctx.Value("admin")
 	if adminValue != nil {
 		var currentAdmin models.Admin
@@ -351,12 +330,9 @@ func (r *AdminController) parseProtectedIDs(idsStr string) []uint {
 	return ids
 }
 
-// getAllProtectedAdminIDs 获取所有受保护的管理员ID（包括超级管理员ID=1和developer_ids）
 func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 	allProtectedIDs := make(map[uint]bool)
-	// 超级管理员（ID=1）始终受保护
 	allProtectedIDs[1] = true
-	// 包含开发者管理员ID（机器人、脚本等账号）
 	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 	developerIDs := r.parseProtectedIDs(developerIDsStr)
 	for _, did := range developerIDs {
@@ -365,25 +341,18 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 	return allProtectedIDs
 }
 
-// getDepartmentAndChildrenIDs 递归获取部门及其所有子部门的ID列表
 func (r *AdminController) getDepartmentAndChildrenIDs(departmentID uint) []uint {
 	var departmentIDs []uint
-	// 先添加当前部门ID
 	departmentIDs = append(departmentIDs, departmentID)
-
-	// 递归获取所有子部门ID
 	r.getChildrenDepartmentIDs(departmentID, &departmentIDs)
-
 	return departmentIDs
 }
 
-// getChildrenDepartmentIDs 递归获取子部门ID
 func (r *AdminController) getChildrenDepartmentIDs(parentID uint, departmentIDs *[]uint) {
 	var children []models.Department
 	if err := facades.Orm().Query().Where("parent_id", parentID).Get(&children); err == nil {
 		for _, child := range children {
 			*departmentIDs = append(*departmentIDs, child.ID)
-			// 递归获取子部门的子部门
 			r.getChildrenDepartmentIDs(child.ID, departmentIDs)
 		}
 	}
@@ -391,16 +360,13 @@ func (r *AdminController) getChildrenDepartmentIDs(parentID uint, departmentIDs 
 
 // Export 导出管理员列表
 func (r *AdminController) Export(ctx http.Context) http.Response {
-	// 使用公共查询构建方法
 	query := r.buildQuery(ctx)
 
 	var admins []models.Admin
-	// 导出时获取所有数据，不分页
 	if err := query.With("Department").With("Roles").Get(&admins); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	// 准备CSV表头（使用翻译键）
 	headers := []string{
 		"export_header_id",
 		"export_header_username",
@@ -414,10 +380,8 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		"export_header_updated_at",
 	}
 
-	// 准备数据行
 	var data [][]string
 	for _, admin := range admins {
-		// 状态文本（使用翻译键）
 		statusText := trans.Get(ctx, "export_status_disabled")
 		if admin.Status == 1 {
 			statusText = trans.Get(ctx, "export_status_enabled")

@@ -563,9 +563,7 @@ const loadData = async () => {
       params.status = searchForm.status
     }
     
-    console.log('Permission search params:', params)
     const res = await getPermissionList(params)
-    console.log('Permission list response:', res)
     
     if (res.data) {
       tableData.value = res.data.list || []
@@ -605,15 +603,11 @@ const handleAdd = () => {
 
 const handleEdit = async (row) => {
   try {
-    console.log('handleEdit - row:', row)
     const res = await getPermissionDetail(row.id)
-    console.log('handleEdit - API response:', res)
     
     if (res.data && res.data.permission) {
       const permission = res.data.permission
-      console.log('handleEdit - permission data:', permission)
       
-      // 处理字段映射，支持 PascalCase 和 snake_case
       const mappedData = {
         id: permission.id || permission.ID,
         name: permission.Name || permission.name || '',
@@ -625,8 +619,6 @@ const handleEdit = async (row) => {
         status: permission.Status !== undefined ? permission.Status : (permission.status !== undefined ? permission.status : 1),
         sort: permission.Sort !== undefined ? permission.Sort : (permission.sort !== undefined ? permission.sort : 0)
       }
-      
-      console.log('handleEdit - mapped formData:', mappedData)
       
       Object.assign(formData, mappedData)
       dialogVisible.value = true

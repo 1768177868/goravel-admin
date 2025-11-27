@@ -262,24 +262,15 @@ const passwordRules = {
 const loadProfile = async () => {
   try {
     const res = await getProfile()
-    console.log('Profile response:', res)
     if (res.data && res.data.admin) {
       const admin = res.data.admin
-      console.log('Admin data:', admin)
-      console.log('Department:', admin.Department || admin.department)
-      console.log('Roles:', admin.Roles || admin.roles)
       
-      // 处理部门数据 - 兼容多种格式
       let department = null
       const dept = admin.Department || admin.department
-      console.log('Raw department data:', dept)
       
       if (dept) {
-        // 尝试多种可能的字段名格式
         const deptId = dept.ID || dept.id || dept.Id || (dept.ID !== undefined ? dept.ID : null)
         const deptName = dept.Name || dept.name || dept.Name || ''
-        
-        console.log('Department ID:', deptId, 'Department Name:', deptName)
         
         if (deptId && deptId > 0) {
           department = {
@@ -287,7 +278,6 @@ const loadProfile = async () => {
             name: deptName || '-'
           }
         } else if (deptName && deptName !== '') {
-          // 即使没有ID，如果有名称也显示
           department = {
             id: 0,
             name: deptName
@@ -295,20 +285,16 @@ const loadProfile = async () => {
         }
       }
       
-      // 如果部门数据为空，但 department_id 存在，尝试从 department_id 获取
       if (!department && (admin.DepartmentID || admin.department_id)) {
         const deptId = admin.DepartmentID || admin.department_id
         if (deptId && deptId > 0) {
           department = {
             id: deptId,
-            name: '-' // 暂时显示 '-'，后续可以从部门列表获取名称
+            name: '-'
           }
         }
       }
       
-      console.log('Processed department:', department)
-      
-      // 处理角色数据（去重）
       const rolesArray = admin.Roles || admin.roles || []
       const roleMap = new Map()
       rolesArray.forEach(role => {
@@ -323,7 +309,6 @@ const loadProfile = async () => {
       })
       const uniqueRoles = Array.from(roleMap.values())
       
-      // 转换数据格式（PascalCase -> snake_case）
       const transformedAdmin = {
         id: admin.ID || admin.id,
         username: admin.Username || admin.username,
@@ -335,8 +320,6 @@ const loadProfile = async () => {
         department: department,
         roles: uniqueRoles
       }
-      
-      console.log('Transformed admin:', transformedAdmin)
       
       infoForm.nickname = transformedAdmin.nickname || ''
       infoForm.email = transformedAdmin.email || ''

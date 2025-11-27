@@ -69,7 +69,6 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "menu_slug_required")
 	}
 
-	// 检查标识是否已存在
 	exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", slug).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
@@ -88,7 +87,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		"component":  component,
 		"permission": permission,
 		"type":       menuType,
-		"status":     status, // 明确设置 status，即使是 0 也会被保存
+		"status":     status,
 		"sort":       sort,
 		"is_hidden":  isHidden,
 		"created_at": now,
@@ -118,7 +117,6 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	})
 }
 
-// Update 更新菜单
 func (r *MenuController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var menu models.Menu
@@ -142,7 +140,6 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		menu.Title = title
 	}
 	if slug != "" {
-		// 检查标识是否已被其他菜单使用（排除当前菜单）
 		exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", slug).Where("id != ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
@@ -191,7 +188,6 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	})
 }
 
-// Destroy 删除菜单
 func (r *MenuController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var menu models.Menu
@@ -199,7 +195,6 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
 	}
 
-	// 检查是否有子菜单
 	hasChildren, err := r.treeService.HasMenuChildren(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")

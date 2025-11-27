@@ -272,17 +272,12 @@ const loadData = async () => {
       hasSearch.value = false
     }
     
-    console.log('Department search params:', params)
     const res = await getDepartmentList(params)
-    console.log('Department list response:', res)
     
     if (res.data && res.data.list) {
-      // 转换数据格式，支持 PascalCase 和 snake_case
       const transformed = res.data.list.map(dept => transformDepartmentData(dept))
-      console.log('Transformed department data:', transformed)
       tableData.value = transformed
     } else {
-      // console.warn('No department data in response:', res)
       tableData.value = []
     }
   } catch (error) {
