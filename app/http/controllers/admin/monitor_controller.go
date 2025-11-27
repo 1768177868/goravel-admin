@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
 	"goravel/app/http/response"
+	"goravel/app/utils/logger"
 )
 
 type MonitorController struct{}
@@ -26,19 +26,19 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	// CPU信息
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
-		facades.Log().Errorf("Get CPU info error: %v", err)
+		logger.ErrorfHTTP(ctx, "Get CPU info error: %v", err)
 		cpuPercent = []float64{0}
 	}
 	cpuInfo, err := cpu.Info()
 	if err != nil {
-		facades.Log().Errorf("Get CPU info error: %v", err)
+		logger.ErrorfHTTP(ctx, "Get CPU info error: %v", err)
 		cpuInfo = []cpu.InfoStat{}
 	}
 
 	// 内存信息
 	memInfo, err := mem.VirtualMemory()
 	if err != nil {
-		facades.Log().Errorf("Get memory info error: %v", err)
+		logger.ErrorfHTTP(ctx, "Get memory info error: %v", err)
 		memInfo = &mem.VirtualMemoryStat{}
 	}
 
@@ -57,14 +57,14 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	}
 	diskInfo, err := disk.Usage(diskPath)
 	if err != nil {
-		facades.Log().Errorf("Get disk info error: %v", err)
+		logger.ErrorfHTTP(ctx, "Get disk info error: %v", err)
 		diskInfo = &disk.UsageStat{}
 	}
 
 	// 网络信息
 	netIO, err := net.IOCounters(false)
 	if err != nil {
-		facades.Log().Errorf("Get network info error: %v", err)
+		logger.ErrorfHTTP(ctx, "Get network info error: %v", err)
 		netIO = []net.IOCountersStat{}
 	}
 

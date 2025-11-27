@@ -12,6 +12,7 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/logger"
 )
 
 type AuthController struct {
@@ -86,7 +87,7 @@ func (r *AuthController) Captcha(ctx http.Context) http.Response {
 	if enabled {
 		captchaID, image, err := r.captchaService.Generate()
 		if err != nil {
-			facades.Log().Errorf("Generate captcha error: %v", err)
+			logger.ErrorfHTTP(ctx, "Generate captcha error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
 		}
 		captchaData["captcha_id"] = captchaID

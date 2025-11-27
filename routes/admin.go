@@ -21,6 +21,7 @@ func Admin() {
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
 	dashboardController := admin.NewDashboardController()
+	debugController := admin.NewDebugController()
 	monitorController := admin.NewMonitorController()
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
@@ -116,6 +117,9 @@ func Admin() {
 
 		// 系统公告/通知
 		router.Post("notifications", notificationController.Store)
+
+		// 调试: trace id 日志验证
+		router.Get("debug/trace-test", debugController.TraceTest)
 	})
 
 	// 通知 WebSocket

@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/logger"
 )
 
 // min 返回两个整数中的较小值
@@ -55,7 +56,7 @@ func Jwt() http.Middleware {
 		accessToken, err := tokenService.FindToken(token)
 		if err != nil {
 			// token查找失败或已过期
-			facades.Log().Errorf("JWT middleware: FindToken error: %v, token prefix: %s", err, token[:min(20, len(token))])
+			logger.ErrorfHTTP(ctx, "JWT middleware: FindToken error: %v, token prefix: %s", err, token[:min(20, len(token))])
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "invalid_token"),
@@ -63,7 +64,7 @@ func Jwt() http.Middleware {
 			return
 		}
 		if accessToken == nil {
-			facades.Log().Errorf("JWT middleware: accessToken is nil, token prefix: %s", token[:min(20, len(token))])
+			logger.ErrorfHTTP(ctx, "JWT middleware: accessToken is nil, token prefix: %s", token[:min(20, len(token))])
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "invalid_token"),

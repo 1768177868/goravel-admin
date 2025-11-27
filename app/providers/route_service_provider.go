@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/goravel/framework/contracts/foundation"
@@ -9,6 +10,7 @@ import (
 	"github.com/goravel/framework/http/limit"
 
 	"goravel/app/http"
+	"goravel/app/services"
 	"goravel/routes"
 )
 
@@ -19,9 +21,12 @@ func (receiver *RouteServiceProvider) Register(app foundation.Application) {
 }
 
 func (receiver *RouteServiceProvider) Boot(app foundation.Application) {
+	systemLogService := services.NewSystemLogService()
+
 	// Add HTTP middleware
 	facades.Route().GlobalMiddleware(http.Kernel{}.Middleware()...)
 	facades.Route().Recover(func(ctx contractshttp.Context, err any) {
+		_ = systemLogService.RecordHTTP(ctx, "error", "recover", fmt.Sprintf("%v", err), nil)
 		facades.Log().Error(err)
 		_ = ctx.Response().String(contractshttp.StatusInternalServerError, "recover").Abort()
 	})

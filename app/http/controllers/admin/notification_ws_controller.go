@@ -10,6 +10,7 @@ import (
 
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/logger"
 	wsnotifications "goravel/app/websocket/notifications"
 )
 
@@ -61,7 +62,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 
 	conn, err := upgrader.Upgrade(ctx.Response().Writer(), ctx.Request().Origin(), nil)
 	if err != nil {
-		facades.Log().Errorf("notification ws upgrade error: %v", err)
+		logger.ErrorfHTTP(ctx, "notification ws upgrade error: %v", err)
 		return ctx.Response().String(http.StatusInternalServerError, "upgrade_failed")
 	}
 

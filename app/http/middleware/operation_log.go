@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -8,11 +9,15 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
+	"goravel/app/services"
+	"goravel/app/utils/logger"
+	"goravel/app/utils/traceid"
 )
 
 // OperationLog 操作日志中间件
 func OperationLog() http.Middleware {
 	return func(ctx http.Context) {
+		systemLogService := services.NewSystemLogService()
 		startTime := time.Now()
 
 		// 获取请求信息
@@ -105,12 +110,16 @@ func OperationLog() http.Middleware {
 			}
 
 			// 异步记录日志，避免影响响应速度
-			go func() {
+			traceCtx := traceid.DeriveContextFromHTTP(ctx)
+			go func(ctx context.Context) {
 				if err := facades.Orm().Query().Create(&operationLog); err != nil {
-					facades.Log().Errorf("Failed to create operation log: %v", err)
+					_ = systemLogService.Record(ctx, "error", "operation-log", "failed to persist operation log", map[string]any{
+						"error": err.Error(),
+						"path":  savedPath,
+					})
+					logger.ErrorfContext(ctx, "Failed to create operation log: %v", err)
 				}
-			}()
+			}(traceCtx)
 		}
 	}
 }
-

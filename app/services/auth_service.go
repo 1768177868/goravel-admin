@@ -9,6 +9,7 @@ import (
 
 	"goravel/app/http/trans"
 	"goravel/app/models"
+	"goravel/app/utils/logger"
 )
 
 type AuthService interface {
@@ -81,7 +82,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		facades.Log().Errorf("GetAdminInfo: admin value is nil in context")
+		logger.ErrorfHTTP(ctx, "GetAdminInfo: admin value is nil in context")
 		return nil, nil, nil, errors.New("not_logged_in")
 	}
 
@@ -93,7 +94,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		// 尝试指针类型
 		admin = *adminPtr
 	} else {
-		facades.Log().Errorf("GetAdminInfo: admin value type assertion failed, type: %T, value: %+v", adminValue, adminValue)
+		logger.ErrorfHTTP(ctx, "GetAdminInfo: admin value type assertion failed, type: %T, value: %+v", adminValue, adminValue)
 		return nil, nil, nil, errors.New("not_logged_in")
 	}
 	
@@ -102,7 +103,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 	// 重新查询admin并加载关联（避免使用已存在的admin对象，可能导致关联加载问题）
 	var adminWithRelations models.Admin
 	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
-		facades.Log().Errorf("GetAdminInfo: failed to load admin with relations, error: %v", err)
+		logger.ErrorfHTTP(ctx, "GetAdminInfo: failed to load admin with relations, error: %v", err)
 		return nil, nil, nil, err
 	}
 	admin = adminWithRelations

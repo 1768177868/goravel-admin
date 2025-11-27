@@ -2,12 +2,12 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/logger"
 )
 
 type NotificationController struct {
@@ -30,12 +30,12 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
 	notifications, total, err := r.service.List(admin.ID, page, pageSize)
 	if err != nil {
-		facades.Log().Errorf("list notifications error: %v", err)
+		logger.ErrorfHTTP(ctx, "list notifications error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 	count, err := r.service.UnreadCount(admin.ID)
 	if err != nil {
-		facades.Log().Errorf("unread count error: %v", err)
+		logger.ErrorfHTTP(ctx, "unread count error: %v", err)
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
