@@ -10,14 +10,19 @@
     :style="formStyle"
   >
     <!-- 通过配置生成表单 -->
-    <template v-if="fields && fields.length > 0">
-      <template v-for="field in fields" :key="field.prop">
-        <el-form-item
-          v-if="(!field.advanced || expanded) && field.prop"
-          :label="getFieldLabel(field)"
-          :prop="field.prop"
-          :style="getFieldStyle(field)"
-        >
+    <div 
+      class="form-fields-wrapper" 
+      :class="{ 'form-fields-collapsed': computedShouldShowExpandButton && !expanded }"
+      :style="computedFieldsWrapperStyle"
+    >
+      <template v-if="fields && fields.length > 0">
+        <template v-for="field in fields" :key="field.prop">
+          <el-form-item
+            v-if="(!field.advanced || expanded) && field.prop"
+            :label="getFieldLabel(field)"
+            :prop="field.prop"
+            :style="getFieldStyle(field)"
+          >
           <!-- 输入框 -->
           <el-input
             v-if="field.type === 'input' && field.prop"
@@ -106,30 +111,18 @@
           />
         </el-form-item>
       </template>
-    </template>
-    
-    <!-- 插槽方式（向后兼容） -->
-    <template v-else>
-      <!-- 基础搜索项（始终显示） -->
-      <slot />
-      <!-- 高级搜索项（可展开/收起） -->
-      <template v-if="hasAdvancedSlot">
-        <slot name="advanced" :expanded="expanded" />
       </template>
-    </template>
-    
-    <!-- 展开/收起按钮（当有高级搜索项时显示） -->
-    <el-form-item v-if="hasAdvancedFields && showExpandButton" class="expand-item">
-      <el-button
-        :type="expandButtonType"
-        :plain="expandButtonPlain"
-        :size="buttonSize"
-        @click="toggleExpand"
-      >
-        <el-icon><component :is="expanded ? ArrowUp : ArrowDown" /></el-icon>
-        {{ expanded ? collapseText : expandText }}
-      </el-button>
-    </el-form-item>
+      
+      <!-- 插槽方式（向后兼容） -->
+      <template v-else>
+        <!-- 基础搜索项（始终显示） -->
+        <slot />
+        <!-- 高级搜索项（可展开/收起） -->
+        <template v-if="hasAdvancedSlot">
+          <slot name="advanced" :expanded="expanded" />
+        </template>
+      </template>
+    </div>
     
     <!-- 操作按钮 -->
     <el-form-item class="action-item">
@@ -149,13 +142,24 @@
       >
         {{ resetText }}
       </el-button>
+      <!-- 展开/收起按钮（移到重置按钮后面，根据表单高度自动判断显示） -->
+      <el-button
+        v-if="computedShouldShowExpandButton"
+        :type="expandButtonType"
+        :plain="expandButtonPlain"
+        :size="buttonSize"
+        @click="toggleExpand"
+      >
+        <el-icon><component :is="expanded ? ArrowUp : ArrowDown" /></el-icon>
+        {{ expanded ? collapseText : expandText }}
+      </el-button>
       <slot name="extra-buttons" />
     </el-form-item>
   </el-form>
 </template>
 
 <script setup>
-import { ref, useSlots, computed, watch } from 'vue'
+import { ref, useSlots, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Search, Refresh, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
@@ -290,6 +294,10 @@ const emit = defineEmits(['search', 'reset', 'expand-change', 'validate'])
 const slots = useSlots()
 const formRef = ref(null)
 const expanded = ref(props.defaultExpanded)
+const formHeight = ref(0)
+const singleLineHeight = ref(0)
+const shouldShowExpandButton = ref(false)
+let resizeObserver = null
 
 // 国际化文本
 const { t } = useI18n()
@@ -305,6 +313,34 @@ const hasAdvancedFields = computed(() => {
     return props.fields.some(field => field.advanced === true)
   }
   return hasAdvancedSlot.value
+})
+
+// 计算是否应该显示展开按钮（根据表单高度自动判断）
+const computedShouldShowExpandButton = computed(() => {
+  // 如果手动设置了 showExpandButton 为 false，则不显示
+  if (props.showExpandButton === false) {
+    return false
+  }
+  // 如果有高级搜索字段，使用原来的逻辑
+  if (hasAdvancedFields.value) {
+    return props.showExpandButton !== false
+  }
+  // 否则根据表单高度自动判断
+  return shouldShowExpandButton.value
+})
+
+// 计算表单字段容器的样式（动态设置 max-height）
+const computedFieldsWrapperStyle = computed(() => {
+  if (computedShouldShowExpandButton.value && !expanded.value) {
+    // 收起状态：尽可能多地显示表单项，但不超过一行的高度
+    // 计算可以在一行内显示的字段数量
+    if (singleLineHeight.value > 0) {
+      return {
+        maxHeight: `${singleLineHeight.value}px`
+      }
+    }
+  }
+  return {}
 })
 
 // 获取字段标签
@@ -465,6 +501,89 @@ const handleReset = () => {
   emit('reset', props.model)
 }
 
+// 检测表单高度，判断是否需要显示展开按钮
+const checkFormHeight = () => {
+  nextTick(() => {
+    if (!formRef.value || !formRef.value.$el) return
+    
+    const formEl = formRef.value.$el
+    const formItems = Array.from(formEl.querySelectorAll('.el-form-item:not(.action-item)'))
+    
+    if (formItems.length === 0) return
+    
+    // 获取第一个表单项的高度（作为单行高度参考）
+    const firstItem = formItems[0]
+    if (firstItem) {
+      const firstItemRect = firstItem.getBoundingClientRect()
+      const computedStyle = window.getComputedStyle(firstItem)
+      const marginBottom = parseFloat(computedStyle.marginBottom) || 18
+      // 单行高度 = 表单项高度 + 底部间距
+      singleLineHeight.value = firstItemRect.height + marginBottom
+    }
+    
+    // 获取表单字段容器的高度
+    const fieldsWrapper = formEl.querySelector('.form-fields-wrapper')
+    if (fieldsWrapper) {
+      const wrapperRect = fieldsWrapper.getBoundingClientRect()
+      formHeight.value = wrapperRect.height
+      
+      // 计算可以显示多少行（根据容器宽度和表单项宽度）
+      // 获取容器宽度（减去 padding）
+      const containerPadding = 40 // 左右 padding 各 20px
+      const containerWidth = wrapperRect.width - containerPadding
+      let currentRowWidth = 0
+      let rowCount = 1
+      const rowGap = 10 // 表单项之间的间距
+      let firstRowItems = [] // 第一行能显示的字段
+      
+      formItems.forEach((item) => {
+        const itemRect = item.getBoundingClientRect()
+        const itemWidth = itemRect.width
+        const itemMarginRight = parseFloat(window.getComputedStyle(item).marginRight) || 10
+        
+        // 如果当前行放不下这个表单项，换行
+        if (currentRowWidth + itemWidth + itemMarginRight > containerWidth && currentRowWidth > 0) {
+          rowCount++
+          currentRowWidth = itemWidth + itemMarginRight
+        } else {
+          if (rowCount === 1) {
+            firstRowItems.push(item)
+          }
+          currentRowWidth += itemWidth + itemMarginRight + rowGap
+        }
+      })
+      
+      // 如果超过一行，需要显示展开按钮
+      if (rowCount > 1) {
+        shouldShowExpandButton.value = true
+        // 计算收起状态应该显示的高度（尽可能多地显示第一行的字段）
+        // 如果第一行能显示所有基础字段，则高度就是单行高度
+        // 否则需要计算第一行实际占用的高度
+        if (firstRowItems.length > 0) {
+          // 使用第一行最后一个元素的位置来计算高度
+          const lastFirstRowItem = firstRowItems[firstRowItems.length - 1]
+          const lastItemRect = lastFirstRowItem.getBoundingClientRect()
+          const firstItemRect = firstRowItems[0].getBoundingClientRect()
+          // 第一行的实际高度 = 最后一个元素底部 - 第一个元素顶部 + 底部间距
+          const firstRowHeight = lastItemRect.bottom - firstItemRect.top + 18
+          singleLineHeight.value = Math.max(singleLineHeight.value, firstRowHeight)
+        }
+        
+        // 如果默认是收起状态，且表单高度超过单行，则默认收起
+        if (!props.defaultExpanded && expanded.value === props.defaultExpanded) {
+          expanded.value = false
+        }
+      } else {
+        shouldShowExpandButton.value = false
+        // 如果不需要展开按钮，则始终展开
+        if (!hasAdvancedFields.value) {
+          expanded.value = true
+        }
+      }
+    }
+  })
+}
+
 // 监听初始值变化
 watch(() => props.initialValues, (newVal) => {
   if (newVal && Object.keys(newVal).length > 0) {
@@ -475,6 +594,44 @@ watch(() => props.initialValues, (newVal) => {
     })
   }
 }, { deep: true, immediate: true })
+
+// 监听展开状态变化，重新计算高度
+watch(() => expanded.value, () => {
+  setTimeout(() => {
+    checkFormHeight()
+  }, 300) // 等待动画完成
+})
+
+// 监听字段变化，重新计算高度
+watch(() => props.fields, () => {
+  checkFormHeight()
+}, { deep: true })
+
+// 组件挂载后检测高度
+onMounted(() => {
+  checkFormHeight()
+  
+  // 使用 ResizeObserver 监听表单大小变化
+  if (formRef.value && formRef.value.$el) {
+    resizeObserver = new ResizeObserver(() => {
+      checkFormHeight()
+    })
+    resizeObserver.observe(formRef.value.$el)
+  }
+  
+  // 延迟检测，确保DOM完全渲染
+  setTimeout(() => {
+    checkFormHeight()
+  }, 100)
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+})
 
 // 暴露方法
 defineExpose({
@@ -505,6 +662,7 @@ defineExpose({
 
   :deep(.el-form-item) {
     margin-bottom: 18px;
+    margin-right: 10px; // 添加右边距，确保表单项之间有间距
 
     &:last-child {
       margin-bottom: 0;
@@ -537,6 +695,36 @@ defineExpose({
       margin-left: 0;
       margin-top: 10px;
     }
+  }
+
+  // 表单字段容器
+  .form-fields-wrapper {
+    transition: max-height 0.3s ease, margin-bottom 0.3s ease;
+    overflow: hidden;
+    margin-bottom: 0;
+    
+    // 收起状态：尽可能多地显示表单项（max-height 通过 computedFieldsWrapperStyle 动态设置）
+    &.form-fields-collapsed {
+      // 确保表单项对齐，使用 flex 布局
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    
+    // 展开状态：显示所有内容，并添加底部间距
+    &:not(.form-fields-collapsed) {
+      max-height: none;
+      margin-bottom: 18px; // 展开后添加底部间距，避免贴着按钮
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+  }
+
+  // 操作按钮区域，确保有合适的间距
+  .action-item {
+    margin-top: 0;
+    margin-bottom: 0;
   }
 }
 </style>
