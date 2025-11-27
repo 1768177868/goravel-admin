@@ -6,6 +6,7 @@ import (
 
 	"goravel/app/http/trans"
 	"goravel/app/models"
+	"goravel/app/services"
 )
 
 // Permission 权限验证中间件
@@ -30,56 +31,15 @@ func Permission() http.Middleware {
 			return
 		}
 
-		// 加载管理员的角色
-		if err := facades.Orm().Query().Load(&admin, "Roles"); err != nil {
+		// 加载管理员的角色、权限等关联数据
+		adminService := services.NewAdminServiceImpl()
+		if err := adminService.LoadRelationsWithPermissions(&admin); err != nil {
+			facades.Log().Errorf("permission middleware load relations failed: %v", err)
 			_ = ctx.Response().Json(http.StatusInternalServerError, http.Json{
 				"code":    500,
 				"message": trans.Get(ctx, "load_permissions_failed"),
 			}).Abort()
 			return
-		}
-
-		// 批量加载所有角色的权限，避免 N+1 查询
-		if len(admin.Roles) > 0 {
-			var roleIDs []uint
-			for _, role := range admin.Roles {
-				roleIDs = append(roleIDs, role.ID)
-			}
-			// 查询角色权限中间表
-			type RolePermission struct {
-				RoleID       uint `gorm:"column:role_id"`
-				PermissionID uint `gorm:"column:permission_id"`
-			}
-			var rolePermissions []RolePermission
-			if err := facades.Orm().Query().Table("role_permission").Where("role_id IN ?", roleIDs).Find(&rolePermissions); err == nil {
-				// 收集所有权限 ID
-				var permissionIDs []uint
-				rolePermissionMap := make(map[uint][]uint) // role_id -> []permission_id
-				for _, rp := range rolePermissions {
-					rolePermissionMap[rp.RoleID] = append(rolePermissionMap[rp.RoleID], rp.PermissionID)
-					permissionIDs = append(permissionIDs, rp.PermissionID)
-				}
-				// 批量查询权限
-				if len(permissionIDs) > 0 {
-					var permissions []models.Permission
-					if err := facades.Orm().Query().Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
-						permissionMap := make(map[uint]models.Permission)
-						for _, perm := range permissions {
-							permissionMap[perm.ID] = perm
-						}
-						// 填充到角色中
-						for i := range admin.Roles {
-							if permIDs, ok := rolePermissionMap[admin.Roles[i].ID]; ok {
-								for _, permID := range permIDs {
-									if perm, ok := permissionMap[permID]; ok {
-										admin.Roles[i].Permissions = append(admin.Roles[i].Permissions, perm)
-									}
-								}
-							}
-						}
-					}
-				}
-			}
 		}
 
 		// 检查是否是超级管理员（跳过权限检查）

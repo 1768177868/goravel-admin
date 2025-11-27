@@ -31,10 +31,7 @@
         :sort-config="{ multiple: true, trigger: 'default' }"
         @sort-change="handleSortChange"
       >
-        <template
-          v-for="column in tableColumns"
-          :key="column.field || column.title || column.type"
-        >
+        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
           <vxe-column
             v-if="column.type === 'checkbox'"
             type="checkbox"
@@ -51,23 +48,19 @@
             :formatter="column.formatter"
             :tree-node="column.treeNode"
           >
-            <template v-if="column.slots?.default" #default="scope">
-              <slot :name="column.slots.default" v-bind="scope" />
+            <template v-if="column.slot === 'status'" #default="{ row }">
+              <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
+                {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'menu'" #default="{ row }">
+              <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
             </template>
           </vxe-column>
-        </template>
-
-        <template #statusTag="{ row }">
-          <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
-            {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-          </el-tag>
-        </template>
-        <template #menu="{ row }">
-          <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
-        </template>
-        <template #operation="{ row }">
-          <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-          <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
         </template>
       </vxe-table>
 
@@ -247,14 +240,14 @@ const tableColumns = computed(() => [
     field: 'menu',
     title: t('menu.title'),
     width: 150,
-    slots: { default: 'menu' }
+    slot: 'menu'
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 80,
     sortable: true,
-    slots: { default: 'statusTag' }
+    slot: 'status'
   },
   {
     field: 'sort',
@@ -273,7 +266,7 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
-    slots: { default: 'operation' }
+    slot: 'operation'
   }
 ])
 

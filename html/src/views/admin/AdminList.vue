@@ -36,10 +36,7 @@
         :sort-config="{ multiple: true, trigger: 'default' }"
         @sort-change="handleSortChange"
       >
-        <template
-          v-for="column in tableColumns"
-          :key="column.field || column.title || column.type"
-        >
+        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
           <vxe-column
             v-if="column.type === 'checkbox'"
             type="checkbox"
@@ -56,44 +53,40 @@
             :formatter="column.formatter"
             :tree-node="column.treeNode"
           >
-            <template v-if="column.slots?.default" #default="scope">
-              <slot :name="column.slots.default" v-bind="scope" />
+            <template v-if="column.slot === 'status'" #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+                {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'department'" #default="{ row }">
+              {{ getDepartmentDisplayName(row.Department || row.department) }}
+            </template>
+            <template v-else-if="column.slot === 'roles'" #default="{ row }">
+              <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
+                <el-tag
+                  v-for="role in getUniqueRoles(row.Roles || row.roles)"
+                  :key="role.id || role.ID"
+                  style="margin-right: 5px;"
+                >
+                  {{ role.Name || role.name }}
+                </el-tag>
+              </template>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+              <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
+              <el-button type="info" link @click="handleKickOut(row)">{{ $t('admin.kick_out') }}</el-button>
+              <el-button
+                v-if="!isProtectedAdmin(row.id)"
+                type="danger"
+                link
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
-        </template>
-
-        <template #statusTag="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-            {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
-          </el-tag>
-        </template>
-        <template #department="{ row }">
-          {{ (row.Department || row.department)?.Name || (row.Department || row.department)?.name || '-' }}
-        </template>
-        <template #roles="{ row }">
-          <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
-            <el-tag
-              v-for="role in getUniqueRoles(row.Roles || row.roles)"
-              :key="role.id || role.ID"
-              style="margin-right: 5px;"
-            >
-              {{ role.Name || role.name }}
-            </el-tag>
-          </template>
-          <span v-else>-</span>
-        </template>
-        <template #operation="{ row }">
-          <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-          <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
-          <el-button type="info" link @click="handleKickOut(row)">{{ $t('admin.kick_out') }}</el-button>
-          <el-button
-            v-if="!isProtectedAdmin(row.id)"
-            type="danger"
-            link
-            @click="handleDelete(row)"
-          >
-            {{ $t('common.delete') }}
-          </el-button>
         </template>
       </vxe-table>
 
@@ -263,17 +256,17 @@ const tableColumns = computed(() => [
     title: t('table.status'),
     width: 80,
     sortable: true,
-    slots: { default: 'statusTag' }
+    slot: 'status'
   },
   {
     field: 'department',
     title: t('table.department'),
-    slots: { default: 'department' }
+    slot: 'department'
   },
   {
     field: 'roles',
     title: t('table.roles'),
-    slots: { default: 'roles' }
+    slot: 'roles'
   },
   {
     field: 'created_at',
@@ -284,7 +277,7 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 250,
     fixed: 'right',
-    slots: { default: 'operation' }
+    slot: 'operation'
   }
 ])
 
@@ -536,6 +529,11 @@ const getUniqueRoles = (roles) => {
     // console.warn(`Roles deduplicated: ${roles.length} -> ${unique.length}`, roles, unique)
   }
   return unique
+}
+
+const getDepartmentDisplayName = (department) => {
+  if (!department) return '-'
+  return department.Name || department.name || '-'
 }
 
 // 获取部门名称

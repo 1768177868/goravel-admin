@@ -39,10 +39,7 @@
         @checkbox-all="handleSelectionChange"
         @sort-change="handleSortChange"
       >
-        <template
-          v-for="column in tableColumns"
-          :key="column.field || column.title || column.type"
-        >
+        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
           <vxe-column
             v-if="column.type === 'checkbox'"
             type="checkbox"
@@ -59,33 +56,29 @@
             :formatter="column.formatter"
             :tree-node="column.treeNode"
           >
-            <template v-if="column.slots?.default" #default="scope">
-              <slot :name="column.slots.default" v-bind="scope" />
+            <template v-if="column.slot === 'level'" #default="{ row }">
+              <el-tag :type="getLevelType(row.level)">
+                {{ row.level }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'context'" #default="{ row }">
+              <el-tooltip
+                v-if="row.context"
+                :content="formatContext(row.context)"
+                placement="top"
+                effect="dark"
+              >
+                <div class="context-preview">
+                  {{ formatContextPreview(row.context) }}
+                </div>
+              </el-tooltip>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
             </template>
           </vxe-column>
-        </template>
-
-        <template #levelTag="{ row }">
-          <el-tag :type="getLevelType(row.level)">
-            {{ row.level }}
-          </el-tag>
-        </template>
-        <template #context="{ row }">
-          <el-tooltip
-            v-if="row.context"
-            :content="formatContext(row.context)"
-            placement="top"
-            effect="dark"
-          >
-            <div class="context-preview">
-              {{ formatContextPreview(row.context) }}
-            </div>
-          </el-tooltip>
-          <span v-else>-</span>
-        </template>
-        <template #operation="{ row }">
-          <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-          <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
         </template>
       </vxe-table>
 
@@ -192,7 +185,7 @@ const tableColumns = computed(() => [
     title: t('log.level'),
     width: 100,
     sortable: true,
-    slots: { default: 'levelTag' }
+    slot: 'level'
   },
   {
     field: 'message',
@@ -203,7 +196,7 @@ const tableColumns = computed(() => [
     field: 'context',
     title: t('log.context'),
     width: 200,
-    slots: { default: 'context' }
+    slot: 'context'
   },
   {
     field: 'created_at',
@@ -215,7 +208,7 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 100,
     fixed: 'right',
-    slots: { default: 'operation' }
+    slot: 'operation'
   }
 ])
 

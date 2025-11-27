@@ -30,10 +30,7 @@
         :sort-config="{ multiple: true, trigger: 'default' }"
         @sort-change="handleSortChange"
       >
-        <template
-          v-for="column in tableColumns"
-          :key="column.field || column.title || column.type"
-        >
+        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
           <vxe-column
             v-if="column.type === 'checkbox'"
             type="checkbox"
@@ -50,29 +47,23 @@
             :formatter="column.formatter"
             :tree-node="column.treeNode"
           >
-            <template v-if="column.slots?.default" #default="scope">
-              <slot :name="column.slots.default" v-bind="scope" />
+            <template v-if="column.slot === 'status'" #default="{ row }">
+              <el-tag :type="Number(row.status ?? row.Status ?? 1) === 1 ? 'success' : 'danger'">
+                {{ Number(row.status ?? row.Status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+              <el-button 
+                v-if="!isProtectedRole(row)"
+                type="danger" 
+                link 
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
-        </template>
-
-        <template #statusTag="{ row }">
-          <el-tag :type="Number(row.status) === 1 ? 'success' : 'danger'">
-            {{ Number(row.status) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-          </el-tag>
-        </template>
-        <template #operation="{ row }">
-          <slot name="operation" :row="row">
-            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-            <el-button 
-              v-if="!isProtectedRole(row)"
-              type="danger" 
-              link 
-              @click="handleDelete(row)"
-            >
-              {{ $t('common.delete') }}
-            </el-button>
-          </slot>
         </template>
       </vxe-table>
 
@@ -230,7 +221,7 @@ const tableColumns = computed(() => [
     title: t('table.status'),
     width: 80,
     sortable: true,
-    slots: { default: 'statusTag' }
+    slot: 'status'
   },
   {
     field: 'sort',
@@ -249,7 +240,7 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 200,
     fixed: 'right',
-    slots: { default: 'operation' }
+    slot: 'operation'
   }
 ])
 
@@ -382,11 +373,15 @@ const getMenuTitle = (menu) => {
   const slug = menu.Slug || menu.slug || ''
   if (slug) {
     const slugKey = `menu.${slug}`
-    // 尝试获取翻译
-    const translated = t(slugKey, slugKey) // 第二个参数是默认值
-    // 如果翻译结果不等于键名本身，说明找到了翻译
-    if (translated && translated !== slugKey) {
-      return translated
+    if (typeof te === 'function' && te(slugKey)) {
+      return t(slugKey)
+    }
+    const menuMessages = typeof tm === 'function' ? tm('menu') : null
+    if (menuMessages && Object.prototype.hasOwnProperty.call(menuMessages, slug)) {
+      const value = menuMessages[slug]
+      if (typeof value === 'string') {
+        return value
+      }
     }
   }
   
@@ -404,27 +399,18 @@ const getPermissionName = (permission) => {
   // 尝试多种可能的字段名（支持 PascalCase 和 snake_case）
   const slug = permission.Slug || permission.slug || ''
   if (slug) {
-    // 构建翻译键：permission.${slug}
-    // 对于包含点号的 slug（如 monitor.system_info），vue-i18n 会将其解析为嵌套路径
-    // 但我们的翻译键是 permission["monitor.system_info"]，所以需要特殊处理
     const slugKey = `permission.${slug}`
-    
-    // 尝试直接查找翻译
-    const translated = t(slugKey, slugKey) // 第二个参数是默认值
-    // 如果翻译结果不等于键名本身，说明找到了翻译
-    if (translated && translated !== slugKey && !translated.startsWith('permission.')) {
-      return translated
+
+    if (typeof te === 'function' && te(slugKey)) {
+      return t(slugKey)
     }
-    
-    // 如果直接查找失败，尝试从翻译对象中直接获取
-    // 使用 tm() 获取翻译消息对象，然后直接访问
-    try {
-      const messages = tm('permission')
-      if (messages && messages[slug]) {
-        return messages[slug]
+
+    const messages = typeof tm === 'function' ? tm('permission') : null
+    if (messages && Object.prototype.hasOwnProperty.call(messages, slug)) {
+      const value = messages[slug]
+      if (typeof value === 'string') {
+        return value
       }
-    } catch (e) {
-      // 如果获取失败，继续使用回退逻辑
     }
   }
   

@@ -25,20 +25,62 @@ func NewAdminServiceImpl() *AdminServiceImpl {
 }
 
 // LoadRelations 加载管理员的关联数据（部门、角色）
-// 使用 Load 延迟预加载，更简洁高效
 func (s *AdminServiceImpl) LoadRelations(admin *models.Admin) error {
-	return facades.Orm().Query().Load(admin, "Department", "Roles")
+	if admin == nil {
+		return nil
+	}
+
+	// 加载部门
+	if admin.DepartmentID > 0 {
+		var department models.Department
+		if err := facades.Orm().Query().Where("id", admin.DepartmentID).First(&department); err == nil {
+			admin.Department = department
+		}
+	}
+
+	// 加载角色关联
+	type AdminRole struct {
+		AdminID uint `gorm:"column:admin_id"`
+		RoleID  uint `gorm:"column:role_id"`
+	}
+	var adminRoles []AdminRole
+	if err := facades.Orm().Query().Table("admin_role").Where("admin_id", admin.ID).Find(&adminRoles); err != nil {
+		return err
+	}
+
+	var roleIDs []uint
+	for _, ar := range adminRoles {
+		if !contains(roleIDs, ar.RoleID) {
+			roleIDs = append(roleIDs, ar.RoleID)
+		}
+	}
+
+	admin.Roles = nil
+	if len(roleIDs) > 0 {
+		var roles []models.Role
+		if err := facades.Orm().Query().Where("id IN ?", roleIDs).Find(&roles); err != nil {
+			return err
+		}
+		admin.Roles = roles
+	}
+
+	return nil
 }
 
 // LoadRelationsWithPermissions 加载管理员的关联数据（包括权限和菜单）
 func (s *AdminServiceImpl) LoadRelationsWithPermissions(admin *models.Admin) error {
 	// 先加载基本关联
-	if err := facades.Orm().Query().Load(admin, "Department", "Roles"); err != nil {
+	if err := s.LoadRelations(admin); err != nil {
 		return err
 	}
 
 	// 批量加载所有角色的权限和菜单，避免 N+1 查询
 	if len(admin.Roles) > 0 {
+		for i := range admin.Roles {
+			admin.Roles[i].Permissions = nil
+			admin.Roles[i].Menus = nil
+		}
+
 		var roleIDs []uint
 		for _, role := range admin.Roles {
 			roleIDs = append(roleIDs, role.ID)

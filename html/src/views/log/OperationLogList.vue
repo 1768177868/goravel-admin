@@ -40,10 +40,7 @@
         @checkbox-all="handleSelectionChange"
         @sort-change="handleSortChange"
       >
-        <template
-          v-for="column in tableColumns"
-          :key="column.field || column.title || column.type"
-        >
+        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
           <vxe-column
             v-if="column.type === 'checkbox'"
             type="checkbox"
@@ -60,18 +57,14 @@
             :formatter="column.formatter"
             :tree-node="column.treeNode"
           >
-            <template v-if="column.slots?.default" #default="scope">
-              <slot :name="column.slots.default" v-bind="scope" />
+            <template v-if="column.slot === 'admin'" #default="{ row }">
+              {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
             </template>
           </vxe-column>
-        </template>
-
-        <template #admin="{ row }">
-          {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
-        </template>
-        <template #operation="{ row }">
-          <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-          <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
         </template>
       </vxe-table>
 
@@ -202,7 +195,7 @@ const tableColumns = computed(() => [
     field: 'admin',
     title: t('log.admin'),
     sortable: false,
-    slots: { default: 'admin' }
+    slot: 'admin'
   },
   {
     field: 'method',
@@ -237,7 +230,7 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
-    slots: { default: 'operation' }
+    slot: 'operation'
   }
 ])
 
