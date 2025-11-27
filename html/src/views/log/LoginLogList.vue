@@ -34,27 +34,29 @@
         border
         :column-config="{ resizable: true }"
         height="600"
+        :sort-config="{ multiple: true, trigger: 'default' }"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
+        @sort-change="handleSortChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="admin" :title="$t('log.admin')">
+        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
+        <vxe-column field="admin" :title="$t('log.admin')" sortable>
           <template #default="{ row }">
             {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="ip" :title="$t('log.ip')" width="150" />
-        <vxe-column field="user_agent" :title="$t('log.user_agent')" />
-        <vxe-column field="status" :title="$t('table.status')" width="100">
+        <vxe-column field="ip" :title="$t('log.ip')" width="150" sortable />
+        <vxe-column field="user_agent" :title="$t('log.user_agent')" sortable />
+        <vxe-column field="status" :title="$t('table.status')" width="100" sortable>
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
               {{ row.status === 1 ? $t('log.success') : $t('log.failed') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="message" :title="$t('log.message')" />
-        <vxe-column field="created_at" :title="$t('log.login_time')" width="180" />
+        <vxe-column field="message" :title="$t('log.message')" sortable />
+        <vxe-column field="created_at" :title="$t('log.login_time')" width="180" sortable />
         <vxe-column :title="$t('table.operation')" width="100" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
@@ -94,6 +96,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import {
   getLoginLogList,
   getLoginLogDetail,
@@ -124,6 +127,28 @@ const searchForm = reactive({
   status: '',
   start_time: '',
   end_time: ''
+})
+
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'admin': 'admin_id',
+  'ip': 'ip',
+  'user_agent': 'user_agent',
+  'status': 'status',
+  'message': 'message',
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
 })
 
 // 搜索表单字段配置
@@ -224,6 +249,7 @@ const handleReset = () => {
   Object.keys(searchForm).forEach(key => {
     searchForm[key] = ''
   })
+  resetSort()
   pagination.page = 1
   loadData()
 }
@@ -311,6 +337,7 @@ const handleClean = async () => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadData()
 })
 </script>

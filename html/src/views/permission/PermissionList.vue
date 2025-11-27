@@ -22,34 +22,37 @@
       />
 
       <vxe-table
+        ref="tableRef"
         :data="tableData"
         :loading="loading"
         border
         :column-config="{ resizable: true }"
         height="600"
+        :sort-config="{ multiple: true, trigger: 'default' }"
+        @sort-change="handleSortChange"
       >
-        <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="name" :title="$t('permission.name')">
+        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
+        <vxe-column field="name" :title="$t('permission.name')" sortable>
           <template #default="{ row }">
             {{ row.Name || row.name || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="slug" :title="$t('permission.slug')">
+        <vxe-column field="slug" :title="$t('permission.slug')" sortable>
           <template #default="{ row }">
             {{ row.Slug || row.slug || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="method" :title="$t('permission.method')" width="100">
+        <vxe-column field="method" :title="$t('permission.method')" width="100" sortable>
           <template #default="{ row }">
             {{ row.Method || row.method || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="path" :title="$t('permission.path')">
+        <vxe-column field="path" :title="$t('permission.path')" sortable>
           <template #default="{ row }">
             {{ row.Path || row.path || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="description" :title="$t('common.description')">
+        <vxe-column field="description" :title="$t('common.description')" sortable>
           <template #default="{ row }">
             {{ row.Description || row.description || '-' }}
           </template>
@@ -59,19 +62,19 @@
             <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
           </template>
         </vxe-column>
-        <vxe-column field="status" :title="$t('table.status')" width="80">
+        <vxe-column field="status" :title="$t('table.status')" width="80" sortable>
           <template #default="{ row }">
             <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
               {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+        <vxe-column field="sort" :title="$t('common.sort')" width="80" sortable>
           <template #default="{ row }">
             {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
           </template>
         </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column field="created_at" :title="$t('table.created_at')" sortable />
         <vxe-column :title="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
@@ -179,6 +182,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import {
   getPermissionList,
   getPermissionDetail,
@@ -455,12 +459,37 @@ const formRules = computed(() => ({
   path: [{ required: true, message: t('permission.path_required'), trigger: 'blur' }]
 }))
 
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'name': 'name',
+  'slug': 'slug',
+  'method': 'method',
+  'path': 'path',
+  'description': 'description',
+  'status': 'status',
+  'sort': 'sort',
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
+})
+
 const loadData = async () => {
   loading.value = true
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize
+      page_size: pagination.pageSize,
+      order_by: buildOrderBy()
     }
     // 只添加有值的搜索条件
     if (searchForm.name && searchForm.name.trim()) {
@@ -503,6 +532,7 @@ const handleReset = () => {
   Object.keys(searchForm).forEach(key => {
     searchForm[key] = ''
   })
+  resetSort()
   pagination.page = 1
   loadData()
 }
@@ -605,6 +635,7 @@ const handleDelete = async (row) => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadMenuList()
   loadData()
 })

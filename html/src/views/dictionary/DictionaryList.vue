@@ -21,41 +21,44 @@
       />
 
       <vxe-table
+        ref="tableRef"
         :data="tableData"
         :loading="loading"
         border
         :column-config="{ resizable: true }"
         height="600"
+        :sort-config="{ multiple: true, trigger: 'default' }"
+        @sort-change="handleSortChange"
       >
-        <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="type" :title="$t('dictionary.type')">
+        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
+        <vxe-column field="type" :title="$t('dictionary.type')" sortable>
           <template #default="{ row }">
             {{ row.Type || row.type || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="label" :title="$t('dictionary.label')">
+        <vxe-column field="label" :title="$t('dictionary.label')" sortable>
           <template #default="{ row }">
             {{ row.Label || row.label || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="value" :title="$t('dictionary.value')">
+        <vxe-column field="value" :title="$t('dictionary.value')" sortable>
           <template #default="{ row }">
             {{ row.Value || row.value || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+        <vxe-column field="sort" :title="$t('common.sort')" width="80" sortable>
           <template #default="{ row }">
             {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
           </template>
         </vxe-column>
-        <vxe-column field="status" :title="$t('table.status')" width="80">
+        <vxe-column field="status" :title="$t('table.status')" width="80" sortable>
           <template #default="{ row }">
             <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
               {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column field="created_at" :title="$t('table.created_at')" sortable />
         <vxe-column :title="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
@@ -115,6 +118,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import {
   getDictionaryList,
   getDictionaryDetail,
@@ -125,6 +129,7 @@ import {
 
 const { t } = useI18n()
 const formRef = ref(null)
+const tableRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
@@ -168,12 +173,35 @@ const formRules = computed(() => ({
   value: [{ required: true, message: t('dictionary.value_required'), trigger: 'blur' }]
 }))
 
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'type': 'type',
+  'label': 'label',
+  'value': 'value',
+  'status': 'status',
+  'sort': 'sort',
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
+})
+
 const loadData = async () => {
   loading.value = true
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize
+      page_size: pagination.pageSize,
+      order_by: buildOrderBy()
     }
     // 只添加有值的搜索条件
     if (searchForm.type && searchForm.type.trim()) {
@@ -202,6 +230,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.type = ''
+  resetSort()
   handleSearch()
 }
 
@@ -291,6 +320,7 @@ const handleDelete = async (row) => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadData()
 })
 </script>

@@ -34,19 +34,21 @@
         border
         :column-config="{ resizable: true }"
         height="600"
+        :sort-config="{ multiple: true, trigger: 'default' }"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
+        @sort-change="handleSortChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="level" :title="$t('log.level')" width="100">
+        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
+        <vxe-column field="level" :title="$t('log.level')" width="100" sortable>
           <template #default="{ row }">
             <el-tag :type="getLevelType(row.level)">
               {{ row.level }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="message" :title="$t('log.message')" />
+        <vxe-column field="message" :title="$t('log.message')" sortable />
         <vxe-column field="context" :title="$t('log.context')" width="200">
           <template #default="{ row }">
             <el-tooltip
@@ -62,7 +64,7 @@
             <span v-else>-</span>
           </template>
         </vxe-column>
-        <vxe-column field="created_at" :title="$t('log.time')" width="180" />
+        <vxe-column field="created_at" :title="$t('log.time')" width="180" sortable />
         <vxe-column :title="$t('table.operation')" width="100" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
@@ -103,6 +105,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import {
   getSystemLogList,
   getSystemLogDetail,
@@ -133,6 +136,27 @@ const searchForm = reactive({
   message: '',
   start_time: '',
   end_time: ''
+})
+
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'level': 'level',
+  'module': 'module',
+  'message': 'message',
+  'context': 'context',
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
 })
 
 // 搜索表单字段配置
@@ -260,6 +284,7 @@ const loadData = async () => {
     const params = {
       page: pagination.page,
       page_size: pagination.pageSize,
+      order_by: buildOrderBy(),
       ...searchForm
     }
     // 移除空值
@@ -290,6 +315,7 @@ const handleReset = () => {
   Object.keys(searchForm).forEach(key => {
     searchForm[key] = ''
   })
+  resetSort()
   pagination.page = 1
   loadData()
 }
@@ -377,6 +403,7 @@ const handleClean = async () => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadData()
 })
 </script>

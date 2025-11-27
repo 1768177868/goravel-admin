@@ -93,6 +93,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import {
   getOperationLogList,
   getOperationLogDetail,
@@ -117,10 +118,25 @@ const pagination = reactive({
 
 const tableData = ref([])
 
-// 排序状态
-const sortConfig = ref({
-  multiple: true,
-  data: []
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'method': 'method',
+  'path': 'path',
+  'ip': 'ip',
+  'status_code': 'status', // 前端使用 status_code，数据库字段是 status
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
 })
 
 // 格式化日期为 YYYY-MM-DD HH:mm:ss
@@ -252,31 +268,6 @@ const transformOperationLogData = (log) => {
   }
 }
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'method': 'method',
-  'path': 'path',
-  'ip': 'ip',
-  'status_code': 'status', // 前端使用 status_code，数据库字段是 status
-  'created_at': 'created_at'
-}
-
-// 构建排序参数字符串
-const buildOrderBy = () => {
-  if (!sortConfig.value.data || sortConfig.value.data.length === 0) {
-    return 'id:desc' // 默认按id倒序
-  }
-  
-  return sortConfig.value.data
-    .map(sort => {
-      const direction = sort.order === 'asc' ? 'asc' : 'desc'
-      // 映射字段名到数据库字段名
-      const dbField = fieldMapping[sort.field] || sort.field
-      return `${dbField}:${direction}`
-    })
-    .join(',')
-}
 
 const loadData = async () => {
   loading.value = true
@@ -306,14 +297,6 @@ const loadData = async () => {
   }
 }
 
-// 处理排序变化
-const handleSortChange = ({ column, property, order, sortBy, sortList }) => {
-  // 更新排序配置
-  sortConfig.value.data = sortList || []
-  // 重新加载数据
-  pagination.page = 1
-  loadData()
-}
 
 const handleSearch = () => {
   pagination.page = 1
@@ -329,10 +312,7 @@ const handleReset = () => {
   searchForm.start_time = getSevenDaysAgo()
   searchForm.end_time = ''
   // 重置排序
-  sortConfig.value.data = []
-  if (tableRef.value) {
-    tableRef.value.clearSort()
-  }
+  resetSort()
   pagination.page = 1
   loadData()
 }
@@ -421,16 +401,8 @@ const handleClean = async () => {
 }
 
 onMounted(() => {
-  // 初始化默认排序（id倒序）
-  sortConfig.value.data = [{ field: 'id', order: 'desc' }]
-  // 设置表格的默认排序（使用 nextTick 确保表格已渲染）
-  nextTick(() => {
-    if (tableRef.value) {
-      tableRef.value.setSort([
-        { field: 'id', order: 'desc' }
-      ])
-    }
-  })
+  // 初始化默认排序
+  initDefaultSort()
   loadData()
 })
 </script>

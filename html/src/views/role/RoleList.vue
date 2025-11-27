@@ -21,41 +21,44 @@
       />
 
       <vxe-table
+        ref="tableRef"
         :data="tableData"
         :loading="loading"
         border
         :column-config="{ resizable: true }"
         height="600"
+        :sort-config="{ multiple: true, trigger: 'default' }"
+        @sort-change="handleSortChange"
       >
-        <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="name" :title="$t('role.name')">
+        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
+        <vxe-column field="name" :title="$t('role.name')" sortable>
           <template #default="{ row }">
             {{ row.Name || row.name || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="slug" :title="$t('role.slug')">
+        <vxe-column field="slug" :title="$t('role.slug')" sortable>
           <template #default="{ row }">
             {{ row.Slug || row.slug || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="description" :title="$t('common.description')">
+        <vxe-column field="description" :title="$t('common.description')" sortable>
           <template #default="{ row }">
             {{ row.Description || row.description || '-' }}
           </template>
         </vxe-column>
-        <vxe-column field="status" :title="$t('table.status')" width="80">
+        <vxe-column field="status" :title="$t('table.status')" width="80" sortable>
           <template #default="{ row }">
             <el-tag :type="Number(row.status) === 1 ? 'success' : 'danger'">
               {{ Number(row.status) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80">
+        <vxe-column field="sort" :title="$t('common.sort')" width="80" sortable>
           <template #default="{ row }">
             {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
           </template>
         </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column field="created_at" :title="$t('table.created_at')" sortable />
         <vxe-column :title="$t('table.operation')" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
@@ -175,12 +178,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 
 const { t, te, tm } = useI18n()
 const formRef = ref(null)
+const tableRef = ref(null)
 const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
@@ -241,6 +246,28 @@ const formRules = computed(() => ({
   name: [{ required: true, message: t('role.name_required'), trigger: 'blur' }],
   slug: [{ required: true, message: t('role.slug_required'), trigger: 'blur' }]
 }))
+
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'name': 'name',
+  'slug': 'slug',
+  'description': 'description',
+  'status': 'status',
+  'sort': 'sort',
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
+})
 
 const loadData = async () => {
   loading.value = true
@@ -616,6 +643,7 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.name = ''
   searchForm.status = ''
+  resetSort()
   handleSearch()
 }
 
@@ -826,6 +854,7 @@ const handleDelete = async (row) => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadData()
   loadMenuPermissionTree()
 })

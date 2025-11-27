@@ -33,14 +33,15 @@
         border
         :column-config="{ resizable: true }"
         height="600"
-        @page-change="handlePageChange"
+        :sort-config="{ multiple: true, trigger: 'default' }"
+        @sort-change="handleSortChange"
       >
-        <vxe-column field="id" :title="$t('table.id')" width="80" />
-        <vxe-column field="username" :title="$t('table.username')" />
-        <vxe-column field="nickname" :title="$t('table.nickname')" />
-        <vxe-column field="email" :title="$t('table.email')" />
-        <vxe-column field="phone" :title="$t('table.phone')" />
-        <vxe-column field="status" :title="$t('table.status')" width="80">
+        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
+        <vxe-column field="username" :title="$t('table.username')" sortable />
+        <vxe-column field="nickname" :title="$t('table.nickname')" sortable />
+        <vxe-column field="email" :title="$t('table.email')" sortable />
+        <vxe-column field="phone" :title="$t('table.phone')" sortable />
+        <vxe-column field="status" :title="$t('table.status')" width="80" sortable>
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
               {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
@@ -66,7 +67,7 @@
             <span v-else>-</span>
           </template>
         </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" />
+        <vxe-column field="created_at" :title="$t('table.created_at')" sortable />
         <vxe-column :title="$t('table.operation')" width="250" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
@@ -191,6 +192,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useTableSort } from '../../composables/useTableSort'
 import {
   getAdminList,
   createAdmin,
@@ -268,12 +270,35 @@ const formRules = computed(() => ({
   password: [{ required: true, message: t('admin.password_required'), trigger: 'blur' }]
 }))
 
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'username': 'username',
+  'nickname': 'nickname',
+  'email': 'email',
+  'phone': 'phone',
+  'status': 'status',
+  'created_at': 'created_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'id:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    loadData()
+  }
+})
+
 const loadData = async () => {
   loading.value = true
   try {
     const params = {
       page: pagination.page,
-      page_size: pagination.pageSize
+      page_size: pagination.pageSize,
+      order_by: buildOrderBy()
     }
     // 只添加有值的搜索条件
     if (searchForm.username && searchForm.username.trim()) {
@@ -398,6 +423,7 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.username = ''
   searchForm.status = ''
+  resetSort()
   handleSearch()
 }
 
@@ -620,6 +646,7 @@ const handleExport = async () => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadData()
   loadDepartments()
   loadRoles()
