@@ -9,9 +9,9 @@ func init() {
 	config.Add("export", map[string]any{
 		// Export Disk
 		//
-		// 指定导出文件存储的磁盘，可选值: "local", "s3", "oss", "cos", "minio"
-		// 默认使用 "local" 存储到本地
-		"disk": config.Env("EXPORT_DISK", "local"),
+		// 指定导出文件存储的磁盘，可选值: "local", "public", "s3", "oss", "cos", "minio"
+		// 默认使用 "public" 存储到公共目录，可通过 nginx 直接访问
+		"disk": config.Env("EXPORT_DISK", "public"),
 
 		// Export Path
 		//

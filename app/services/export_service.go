@@ -49,9 +49,7 @@ func NewExportService() ExportService {
 	}
 }
 
-// ExportToCSV 导出数据到CSV文件
 func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filename string) (string, error) {
-	// 生成带时间戳的文件名
 	timestamp := time.Now().Format("20060102_150405")
 	filename = fmt.Sprintf("%s_%s.csv", filename, timestamp)
 	filePath := filepath.Join(s.path, filename)
@@ -96,21 +94,18 @@ func (s *ExportServiceImpl) ExportToFile(headers []string, data [][]string, file
 	case "csv":
 		return s.ExportToCSV(headers, data, filename)
 	case "xlsx":
-		// TODO: 实现Excel导出（需要引入excel库，如github.com/xuri/excelize/v2）
 		return "", fmt.Errorf("Excel导出功能暂未实现，请使用CSV格式")
 	default:
 		return s.ExportToCSV(headers, data, filename)
 	}
 }
 
-// GetExportURL 获取导出文件的访问URL
 func (s *ExportServiceImpl) GetExportURL(filePath string) string {
 	urlPrefix := facades.Config().GetString("export.url_prefix", "")
 	if urlPrefix != "" {
 		return urlPrefix + "/" + filePath
 	}
 
-	// 如果是本地存储，尝试获取公共URL
 	if s.disk == "local" || s.disk == "public" {
 		storage := facades.Storage().Disk(s.disk)
 		url := storage.Url(filePath)
@@ -119,13 +114,10 @@ func (s *ExportServiceImpl) GetExportURL(filePath string) string {
 		}
 	}
 
-	// 如果是云存储，获取临时URL
 	storage := facades.Storage().Disk(s.disk)
 	if url, err := storage.TemporaryUrl(filePath, time.Now().Add(24*time.Hour)); err == nil {
 		return url
 	}
 
-	// 返回文件路径作为fallback
-	return filePath
+	return "/storage/" + filePath
 }
-
