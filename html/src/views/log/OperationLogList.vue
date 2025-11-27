@@ -41,23 +41,41 @@
         @sort-change="handleSortChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
-        <vxe-column field="admin" :title="$t('log.admin')">
-          <template #default="{ row }">
-            {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="method" :title="$t('log.method')" width="100" sortable />
-        <vxe-column field="path" :title="$t('log.path')" sortable />
-        <vxe-column field="ip" :title="$t('log.ip')" width="150" sortable />
-        <vxe-column field="status_code" :title="$t('log.status_code')" width="100" sortable />
-        <vxe-column field="created_at" :title="$t('log.operation_time')" width="180" sortable />
-        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
-          </template>
-        </vxe-column>
+        <template v-for="column in tableColumns" :key="column.field || column.type">
+          <vxe-column
+            v-if="column.type !== 'operation'"
+            :field="column.field"
+            :title="column.title"
+            :width="column.width"
+            :sortable="column.sortable"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <!-- 文本类型 -->
+              <template v-if="!column.type || column.type === 'text'">
+                {{ getFieldValue(row, column.field, column.formatter) || '-' }}
+              </template>
+              <!-- 自定义格式化 -->
+              <template v-else-if="column.type === 'custom' && column.formatter">
+                {{ column.formatter(row) }}
+              </template>
+            </template>
+          </vxe-column>
+          <!-- 操作列 -->
+          <vxe-column
+            v-else
+            :title="column.title"
+            :width="column.width"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <slot name="operation" :row="row">
+                <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+                <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              </slot>
+            </template>
+          </vxe-column>
+        </template>
       </vxe-table>
 
       <Pagination
@@ -170,6 +188,73 @@ const initialSearchForm = {
 }
 
 const searchForm = reactive({ ...initialSearchForm })
+
+// 表格列配置
+const tableColumns = computed(() => [
+  {
+    field: 'id',
+    title: t('table.id'),
+    width: 80,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'admin',
+    title: t('log.admin'),
+    type: 'custom',
+    formatter: (row) => (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-'
+  },
+  {
+    field: 'method',
+    title: t('log.method'),
+    width: 100,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'path',
+    title: t('log.path'),
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'ip',
+    title: t('log.ip'),
+    width: 150,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'status_code',
+    title: t('log.status_code'),
+    width: 100,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'created_at',
+    title: t('log.operation_time'),
+    width: 180,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    type: 'operation',
+    title: t('table.operation'),
+    width: 150,
+    fixed: 'right'
+  }
+])
+
+// 获取字段值（支持 PascalCase 和 snake_case，以及格式化函数）
+const getFieldValue = (row, field, formatter) => {
+  if (formatter && typeof formatter === 'function') {
+    return formatter(row)
+  }
+  if (!field) return ''
+  const pascalField = field.charAt(0).toUpperCase() + field.slice(1)
+  return row[pascalField] !== undefined ? row[pascalField] : (row[field] !== undefined ? row[field] : '')
+}
 
 // 搜索表单字段配置（JSON 方式）
 const searchFields = computed(() => [

@@ -29,35 +29,48 @@
         :tree-config="hasSearch ? false : { children: 'children', expandAll: false, indent: 20 }"
         height="600"
       >
-        <vxe-column field="name" :title="$t('department.name')" tree-node>
-          <template #default="{ row }">
-            {{ row.Name || row.name || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="remark" :title="$t('common.description')">
-          <template #default="{ row }">
-            {{ row.Remark || row.remark || row.description || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80">
-          <template #default="{ row }">
-            {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
-          </template>
-        </vxe-column>
-        <vxe-column field="status" :title="$t('table.status')" width="80">
-          <template #default="{ row }">
-            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
-              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-            </el-tag>
-          </template>
-        </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" />
-        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
-          </template>
-        </vxe-column>
+        <template v-for="column in tableColumns" :key="column.field || column.type">
+          <vxe-column
+            v-if="column.type !== 'operation'"
+            :field="column.field"
+            :title="column.title"
+            :width="column.width"
+            :sortable="column.sortable"
+            :fixed="column.fixed"
+            :tree-node="column.treeNode"
+          >
+            <template #default="{ row }">
+              <!-- 文本类型 -->
+              <template v-if="!column.type || column.type === 'text'">
+                {{ getFieldValue(row, column.field) || '-' }}
+              </template>
+              <!-- 标签类型 -->
+              <template v-else-if="column.type === 'tag'">
+                <el-tag :type="getTagType(row, column)">
+                  {{ getTagText(row, column) }}
+                </el-tag>
+              </template>
+              <!-- 自定义插槽 -->
+              <template v-else-if="column.type === 'custom' && column.slotName">
+                <slot :name="column.slotName" :row="row" :column="column" />
+              </template>
+            </template>
+          </vxe-column>
+          <!-- 操作列 -->
+          <vxe-column
+            v-else
+            :title="column.title"
+            :width="column.width"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <slot name="operation" :row="row">
+                <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+                <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              </slot>
+            </template>
+          </vxe-column>
+        </template>
       </vxe-table>
     </el-card>
 
@@ -158,6 +171,74 @@ const searchFields = computed(() => [
     advanced: false
   }
 ])
+
+// 表格列配置
+const tableColumns = computed(() => [
+  {
+    field: 'name',
+    title: t('department.name'),
+    type: 'text',
+    treeNode: true
+  },
+  {
+    field: 'remark',
+    title: t('common.description'),
+    type: 'text'
+  },
+  {
+    field: 'sort',
+    title: t('common.sort'),
+    width: 80,
+    type: 'text'
+  },
+  {
+    field: 'status',
+    title: t('table.status'),
+    width: 80,
+    type: 'tag',
+    tagConfig: {
+      value: (row) => row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
+      type: (val) => val === 1 ? 'success' : 'danger',
+      text: (val) => val === 1 ? t('common.enabled') : t('common.disabled')
+    }
+  },
+  {
+    field: 'created_at',
+    title: t('table.created_at'),
+    type: 'text'
+  },
+  {
+    type: 'operation',
+    title: t('table.operation'),
+    width: 150,
+    fixed: 'right'
+  }
+])
+
+// 获取字段值（支持 PascalCase 和 snake_case）
+const getFieldValue = (row, field) => {
+  if (!field) return ''
+  const pascalField = field.charAt(0).toUpperCase() + field.slice(1)
+  return row[pascalField] !== undefined ? row[pascalField] : (row[field] !== undefined ? row[field] : '')
+}
+
+// 获取标签类型
+const getTagType = (row, column) => {
+  if (column.tagConfig && column.tagConfig.type) {
+    const value = column.tagConfig.value(row)
+    return column.tagConfig.type(value)
+  }
+  return 'info'
+}
+
+// 获取标签文本
+const getTagText = (row, column) => {
+  if (column.tagConfig && column.tagConfig.text) {
+    const value = column.tagConfig.value(row)
+    return column.tagConfig.text(value)
+  }
+  return getFieldValue(row, column.field) || '-'
+}
 
 const formData = reactive({
   id: null,

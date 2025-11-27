@@ -40,37 +40,65 @@
         @sort-change="handleSortChange"
       >
         <vxe-column type="checkbox" width="60" />
-        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
-        <vxe-column field="level" :title="$t('log.level')" width="100" sortable>
-          <template #default="{ row }">
-            <el-tag :type="getLevelType(row.level)">
-              {{ row.level }}
-            </el-tag>
-          </template>
-        </vxe-column>
-        <vxe-column field="message" :title="$t('log.message')" sortable />
-        <vxe-column field="context" :title="$t('log.context')" width="200">
-          <template #default="{ row }">
-            <el-tooltip
-              v-if="row.context"
-              :content="formatContext(row.context)"
-              placement="top"
-              effect="dark"
-            >
-              <div class="context-preview">
-                {{ formatContextPreview(row.context) }}
-              </div>
-            </el-tooltip>
-            <span v-else>-</span>
-          </template>
-        </vxe-column>
-        <vxe-column field="created_at" :title="$t('log.time')" width="180" sortable />
-        <vxe-column :title="$t('table.operation')" width="100" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
-          </template>
-        </vxe-column>
+        <template v-for="column in tableColumns" :key="column.field || column.type">
+          <vxe-column
+            v-if="column.type !== 'operation'"
+            :field="column.field"
+            :title="column.title"
+            :width="column.width"
+            :sortable="column.sortable"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <!-- 文本类型 -->
+              <template v-if="!column.type || column.type === 'text'">
+                {{ getFieldValue(row, column.field, column.formatter) || '-' }}
+              </template>
+              <!-- 标签类型 -->
+              <template v-else-if="column.type === 'tag'">
+                <el-tag :type="getTagType(row, column)">
+                  {{ getTagText(row, column) }}
+                </el-tag>
+              </template>
+              <!-- 自定义格式化 -->
+              <template v-else-if="column.type === 'custom' && column.formatter">
+                {{ column.formatter(row) }}
+              </template>
+              <!-- 自定义插槽 - context -->
+              <template v-else-if="column.type === 'custom' && column.slotName === 'context'">
+                <el-tooltip
+                  v-if="row.context"
+                  :content="formatContext(row.context)"
+                  placement="top"
+                  effect="dark"
+                >
+                  <div class="context-preview">
+                    {{ formatContextPreview(row.context) }}
+                  </div>
+                </el-tooltip>
+                <span v-else>-</span>
+              </template>
+              <!-- 其他自定义插槽 -->
+              <template v-else-if="column.type === 'custom' && column.slotName">
+                <slot :name="column.slotName" :row="row" :column="column" />
+              </template>
+            </template>
+          </vxe-column>
+          <!-- 操作列 -->
+          <vxe-column
+            v-else
+            :title="column.title"
+            :width="column.width"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <slot name="operation" :row="row">
+                <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+                <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              </slot>
+            </template>
+          </vxe-column>
+        </template>
       </vxe-table>
 
       <Pagination
@@ -158,6 +186,83 @@ const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableS
     loadData()
   }
 })
+
+// 表格列配置
+const tableColumns = computed(() => [
+  {
+    field: 'id',
+    title: t('table.id'),
+    width: 80,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'level',
+    title: t('log.level'),
+    width: 100,
+    sortable: true,
+    type: 'tag',
+    tagConfig: {
+      value: (row) => row.level,
+      type: (val) => getLevelType(val),
+      text: (val) => val || '-'
+    }
+  },
+  {
+    field: 'message',
+    title: t('log.message'),
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'context',
+    title: t('log.context'),
+    width: 200,
+    type: 'custom',
+    slotName: 'context'
+  },
+  {
+    field: 'created_at',
+    title: t('log.time'),
+    width: 180,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    type: 'operation',
+    title: t('table.operation'),
+    width: 100,
+    fixed: 'right'
+  }
+])
+
+// 获取字段值（支持 PascalCase 和 snake_case，以及格式化函数）
+const getFieldValue = (row, field, formatter) => {
+  if (formatter && typeof formatter === 'function') {
+    return formatter(row)
+  }
+  if (!field) return ''
+  const pascalField = field.charAt(0).toUpperCase() + field.slice(1)
+  return row[pascalField] !== undefined ? row[pascalField] : (row[field] !== undefined ? row[field] : '')
+}
+
+// 获取标签类型
+const getTagType = (row, column) => {
+  if (column.tagConfig && column.tagConfig.type) {
+    const value = column.tagConfig.value(row)
+    return column.tagConfig.type(value)
+  }
+  return 'info'
+}
+
+// 获取标签文本
+const getTagText = (row, column) => {
+  if (column.tagConfig && column.tagConfig.text) {
+    const value = column.tagConfig.value(row)
+    return column.tagConfig.text(value)
+  }
+  return getFieldValue(row, column.field) || '-'
+}
 
 // 搜索表单字段配置
 const searchFields = computed(() => [
