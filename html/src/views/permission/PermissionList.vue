@@ -31,56 +31,55 @@
         :sort-config="{ multiple: true, trigger: 'default' }"
         @sort-change="handleSortChange"
       >
-        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
-        <vxe-column field="name" :title="$t('permission.name')" sortable>
-          <template #default="{ row }">
-            {{ row.Name || row.name || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="slug" :title="$t('permission.slug')" sortable>
-          <template #default="{ row }">
-            {{ row.Slug || row.slug || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="method" :title="$t('permission.method')" width="100" sortable>
-          <template #default="{ row }">
-            {{ row.Method || row.method || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="path" :title="$t('permission.path')" sortable>
-          <template #default="{ row }">
-            {{ row.Path || row.path || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="description" :title="$t('common.description')" sortable>
-          <template #default="{ row }">
-            {{ row.Description || row.description || '-' }}
-          </template>
-        </vxe-column>
-        <vxe-column field="menu" :title="$t('menu.title')" width="150">
-          <template #default="{ row }">
-            <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
-          </template>
-        </vxe-column>
-        <vxe-column field="status" :title="$t('table.status')" width="80" sortable>
-          <template #default="{ row }">
-            <el-tag :type="(row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? 'success' : 'danger'">
-              {{ (row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-            </el-tag>
-          </template>
-        </vxe-column>
-        <vxe-column field="sort" :title="$t('common.sort')" width="80" sortable>
-          <template #default="{ row }">
-            {{ row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0) }}
-          </template>
-        </vxe-column>
-        <vxe-column field="created_at" :title="$t('table.created_at')" sortable />
-        <vxe-column :title="$t('table.operation')" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
-          </template>
-        </vxe-column>
+        <template v-for="column in tableColumns" :key="column.field || column.type">
+          <vxe-column
+            v-if="column.type !== 'operation'"
+            :field="column.field"
+            :title="column.title"
+            :width="column.width"
+            :sortable="column.sortable"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <!-- 文本类型 -->
+              <template v-if="!column.type || column.type === 'text'">
+                {{ getFieldValue(row, column.field, column.formatter) || '-' }}
+              </template>
+              <!-- 标签类型 -->
+              <template v-else-if="column.type === 'tag'">
+                <el-tag :type="getTagType(row, column)">
+                  {{ getTagText(row, column) }}
+                </el-tag>
+              </template>
+              <!-- 自定义格式化 -->
+              <template v-else-if="column.type === 'custom' && column.formatter">
+                {{ column.formatter(row) }}
+              </template>
+              <!-- 自定义插槽 - menu -->
+              <template v-else-if="column.type === 'custom' && column.slotName === 'menu'">
+                <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
+              </template>
+              <!-- 其他自定义插槽 -->
+              <template v-else-if="column.type === 'custom' && column.slotName">
+                <slot :name="column.slotName" :row="row" :column="column" />
+              </template>
+            </template>
+          </vxe-column>
+          <!-- 操作列 -->
+          <vxe-column
+            v-else
+            :title="column.title"
+            :width="column.width"
+            :fixed="column.fixed"
+          >
+            <template #default="{ row }">
+              <slot name="operation" :row="row">
+                <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+                <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              </slot>
+            </template>
+          </vxe-column>
+        </template>
       </vxe-table>
 
       <Pagination
@@ -215,6 +214,120 @@ const searchForm = reactive({
   path: '',
   status: ''
 })
+
+// 表格列配置
+const tableColumns = computed(() => [
+  {
+    field: 'id',
+    title: t('table.id'),
+    width: 80,
+    sortable: true,
+    type: 'text'
+  },
+  {
+    field: 'name',
+    title: t('permission.name'),
+    sortable: true,
+    type: 'text',
+    formatter: (row) => row.Name || row.name || '-'
+  },
+  {
+    field: 'slug',
+    title: t('permission.slug'),
+    sortable: true,
+    type: 'text',
+    formatter: (row) => row.Slug || row.slug || '-'
+  },
+  {
+    field: 'method',
+    title: t('permission.method'),
+    width: 100,
+    sortable: true,
+    type: 'text',
+    formatter: (row) => row.Method || row.method || '-'
+  },
+  {
+    field: 'path',
+    title: t('permission.path'),
+    sortable: true,
+    type: 'text',
+    formatter: (row) => row.Path || row.path || '-'
+  },
+  {
+    field: 'description',
+    title: t('common.description'),
+    sortable: true,
+    type: 'text',
+    formatter: (row) => row.Description || row.description || '-'
+  },
+  {
+    field: 'menu',
+    title: t('menu.title'),
+    width: 150,
+    type: 'custom',
+    slotName: 'menu'
+  },
+  {
+    field: 'status',
+    title: t('table.status'),
+    width: 80,
+    sortable: true,
+    type: 'tag',
+    tagConfig: {
+      value: (row) => row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
+      type: (val) => val === 1 ? 'success' : 'danger',
+      text: (val) => val === 1 ? t('common.enabled') : t('common.disabled')
+    }
+  },
+  {
+    field: 'sort',
+    title: t('common.sort'),
+    width: 80,
+    sortable: true,
+    type: 'text',
+    formatter: (row) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0)
+  },
+  {
+    field: 'created_at',
+    title: t('table.created_at'),
+    sortable: true,
+    type: 'text'
+  },
+  {
+    type: 'operation',
+    title: t('table.operation'),
+    width: 150,
+    fixed: 'right'
+  }
+])
+
+// 获取字段值（支持 PascalCase 和 snake_case，以及格式化函数）
+const getFieldValue = (row, field, formatter) => {
+  if (formatter && typeof formatter === 'function') {
+    return formatter(row)
+  }
+  if (!field) return ''
+  const pascalField = field.charAt(0).toUpperCase() + field.slice(1)
+  return row[pascalField] !== undefined ? row[pascalField] : (row[field] !== undefined ? row[field] : '')
+}
+
+// 获取标签类型
+const getTagType = (row, column) => {
+  if (column.tagConfig && column.tagConfig.type) {
+    const value = column.tagConfig.value(row)
+    return column.tagConfig.type(value)
+  }
+  return 'info'
+}
+
+// 获取标签文本
+const getTagText = (row, column) => {
+  if (column.tagConfig && column.tagConfig.text) {
+    const value = column.tagConfig.value(row)
+    return column.tagConfig.text(value)
+  }
+  return getFieldValue(row, column.field) || '-'
+}
 
 // 搜索表单字段配置
 const searchFields = computed(() => [
