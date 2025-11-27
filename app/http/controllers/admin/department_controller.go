@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/errorlog"
 )
 
 type DepartmentController struct {
@@ -119,11 +120,19 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("departments").Create(departmentData); err != nil {
+		errorlog.RecordHTTP(ctx, "department", "Failed to create department", map[string]any{
+			"error": err.Error(),
+			"name":  name,
+		}, "Create department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var department models.Department
 	if err := facades.Orm().Query().Where("name", name).First(&department); err != nil {
+		errorlog.RecordHTTP(ctx, "department", "Failed to query created department", map[string]any{
+			"error": err.Error(),
+			"name":  name,
+		}, "Query created department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
@@ -179,6 +188,10 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(&department); err != nil {
+		errorlog.RecordHTTP(ctx, "department", "Failed to update department", map[string]any{
+			"error":        err.Error(),
+			"department_id": department.ID,
+		}, "Update department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
@@ -214,6 +227,10 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&department); err != nil {
+		errorlog.RecordHTTP(ctx, "department", "Failed to delete department", map[string]any{
+			"error":        err.Error(),
+			"department_id": department.ID,
+		}, "Delete department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 

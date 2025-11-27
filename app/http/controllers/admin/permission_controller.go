@@ -9,6 +9,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/utils/errorlog"
 )
 
 type PermissionController struct {
@@ -129,11 +130,20 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("permissions").Create(permissionData); err != nil {
+		errorlog.RecordHTTP(ctx, "permission", "Failed to create permission", map[string]any{
+			"error": err.Error(),
+			"name":  name,
+			"slug":  slug,
+		}, "Create permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var permission models.Permission
 	if err := facades.Orm().Query().Where("slug", slug).First(&permission); err != nil {
+		errorlog.RecordHTTP(ctx, "permission", "Failed to query created permission", map[string]any{
+			"error": err.Error(),
+			"slug":  slug,
+		}, "Query created permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
@@ -204,6 +214,10 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	// 如果需要支持清空菜单关联，前端应该传 menu_id: 0
 
 	if err := facades.Orm().Query().Save(&permission); err != nil {
+		errorlog.RecordHTTP(ctx, "permission", "Failed to update permission", map[string]any{
+			"error":        err.Error(),
+			"permission_id": permission.ID,
+		}, "Update permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
@@ -221,6 +235,10 @@ func (r *PermissionController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&permission); err != nil {
+		errorlog.RecordHTTP(ctx, "permission", "Failed to delete permission", map[string]any{
+			"error":        err.Error(),
+			"permission_id": permission.ID,
+		}, "Delete permission error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 

@@ -12,8 +12,7 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 
 	"goravel/app/http/response"
-	"goravel/app/services"
-	"goravel/app/utils/logger"
+	"goravel/app/utils/errorlog"
 )
 
 type MonitorController struct{}
@@ -24,33 +23,28 @@ func NewMonitorController() *MonitorController {
 
 // GetSystemInfo 获取系统监控信息
 func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
-	systemLogService := services.NewSystemLogService()
-
 	// CPU信息
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
-		logger.ErrorfHTTP(ctx, "Get CPU info error: %v", err)
-		_ = systemLogService.RecordHTTP(ctx, "error", "monitor", "Get CPU percent error", map[string]any{
+		errorlog.RecordHTTP(ctx, "monitor", "Get CPU percent error", map[string]any{
 			"error": err.Error(),
-		})
+		}, "Get CPU percent error: %v", err)
 		cpuPercent = []float64{0}
 	}
 	cpuInfo, err := cpu.Info()
 	if err != nil {
-		logger.ErrorfHTTP(ctx, "Get CPU info error: %v", err)
-		_ = systemLogService.RecordHTTP(ctx, "error", "monitor", "Get CPU info error", map[string]any{
+		errorlog.RecordHTTP(ctx, "monitor", "Get CPU info error", map[string]any{
 			"error": err.Error(),
-		})
+		}, "Get CPU info error: %v", err)
 		cpuInfo = []cpu.InfoStat{}
 	}
 
 	// 内存信息
 	memInfo, err := mem.VirtualMemory()
 	if err != nil {
-		logger.ErrorfHTTP(ctx, "Get memory info error: %v", err)
-		_ = systemLogService.RecordHTTP(ctx, "error", "monitor", "Get memory info error", map[string]any{
+		errorlog.RecordHTTP(ctx, "monitor", "Get memory info error", map[string]any{
 			"error": err.Error(),
-		})
+		}, "Get memory info error: %v", err)
 		memInfo = &mem.VirtualMemoryStat{}
 	}
 
@@ -69,21 +63,19 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	}
 	diskInfo, err := disk.Usage(diskPath)
 	if err != nil {
-		logger.ErrorfHTTP(ctx, "Get disk info error: %v", err)
-		_ = systemLogService.RecordHTTP(ctx, "error", "monitor", "Get disk info error", map[string]any{
+		errorlog.RecordHTTP(ctx, "monitor", "Get disk info error", map[string]any{
 			"error": err.Error(),
 			"path":  diskPath,
-		})
+		}, "Get disk info error: %v", err)
 		diskInfo = &disk.UsageStat{}
 	}
 
 	// 网络信息
 	netIO, err := net.IOCounters(false)
 	if err != nil {
-		logger.ErrorfHTTP(ctx, "Get network info error: %v", err)
-		_ = systemLogService.RecordHTTP(ctx, "error", "monitor", "Get network info error", map[string]any{
+		errorlog.RecordHTTP(ctx, "monitor", "Get network info error", map[string]any{
 			"error": err.Error(),
-		})
+		}, "Get network info error: %v", err)
 		netIO = []net.IOCountersStat{}
 	}
 

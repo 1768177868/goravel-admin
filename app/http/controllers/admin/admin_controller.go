@@ -15,6 +15,7 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/errorlog"
 )
 
 type AdminController struct {
@@ -144,11 +145,19 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("admins").Create(adminData); err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to create admin", map[string]any{
+			"error":    err.Error(),
+			"username": username,
+		}, "Create admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to query created admin", map[string]any{
+			"error":    err.Error(),
+			"username": username,
+		}, "Query created admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
@@ -161,6 +170,11 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 			}
 		}
 		if err := r.adminService.SyncRoles(&admin, roleIDs); err != nil {
+			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles", map[string]any{
+				"error":    err.Error(),
+				"admin_id": admin.ID,
+				"role_ids": roleIDs,
+			}, "Sync admin roles error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 		}
 	}
@@ -217,6 +231,10 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to update admin", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Update admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
@@ -229,6 +247,11 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 			}
 		}
 		if err := r.adminService.SyncRoles(&admin, roleIDs); err != nil {
+			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles in update", map[string]any{
+				"error":    err.Error(),
+				"admin_id": admin.ID,
+				"role_ids": roleIDs,
+			}, "Sync admin roles in update error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 		}
 	}
@@ -269,6 +292,10 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to delete admin", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Delete admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 

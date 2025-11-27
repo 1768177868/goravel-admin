@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/utils/errorlog"
 )
 
 type LoginLogController struct {
@@ -93,6 +94,10 @@ func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Failed to delete login log", map[string]any{
+			"error":  err.Error(),
+			"log_id": log.ID,
+		}, "Delete login log error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 

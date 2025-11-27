@@ -9,6 +9,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/errorlog"
 )
 
 type MenuController struct {
@@ -95,11 +96,20 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("menus").Create(menuData); err != nil {
+		errorlog.RecordHTTP(ctx, "menu", "Failed to create menu", map[string]any{
+			"error": err.Error(),
+			"title": title,
+			"slug":  slug,
+		}, "Create menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var menu models.Menu
 	if err := facades.Orm().Query().Where("slug", slug).First(&menu); err != nil {
+		errorlog.RecordHTTP(ctx, "menu", "Failed to query created menu", map[string]any{
+			"error": err.Error(),
+			"slug":  slug,
+		}, "Query created menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
@@ -169,6 +179,10 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(&menu); err != nil {
+		errorlog.RecordHTTP(ctx, "menu", "Failed to update menu", map[string]any{
+			"error":   err.Error(),
+			"menu_id": menu.ID,
+		}, "Update menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
@@ -195,6 +209,10 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&menu); err != nil {
+		errorlog.RecordHTTP(ctx, "menu", "Failed to delete menu", map[string]any{
+			"error":   err.Error(),
+			"menu_id": menu.ID,
+		}, "Delete menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 

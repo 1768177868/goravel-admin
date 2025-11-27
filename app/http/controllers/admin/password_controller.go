@@ -7,6 +7,7 @@ import (
 
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/utils/errorlog"
 )
 
 type PasswordController struct {
@@ -69,6 +70,10 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 
 	admin.Password = hashedPassword
 	if err := facades.Orm().Query().Save(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "password", "Failed to update password", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Update password error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "password_update_failed")
 	}
 
@@ -101,6 +106,10 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 
 	admin.Password = hashedPassword
 	if err := facades.Orm().Query().Save(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "password", "Failed to reset password", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Reset password error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "password_reset_failed")
 	}
 

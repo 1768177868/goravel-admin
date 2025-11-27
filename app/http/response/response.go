@@ -6,6 +6,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/services"
+	"goravel/app/utils/traceid"
 )
 
 // Success 成功响应（支持多语言）
@@ -48,25 +49,39 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 	return ctx.Response().Header(headerKey, headerValue).Success().Json(response)
 }
 
-// Error 错误响应（支持多语言）
+// Error 错误响应（支持多语言，自动包含 trace_id）
 func Error(ctx http.Context, code int, messageKey string) http.Response {
 	message := trans.Get(ctx, messageKey)
 
-	return ctx.Response().Json(code, http.Json{
+	response := http.Json{
 		"code":    code,
 		"message": message,
-	})
+	}
+
+	// 自动包含 trace_id，方便前端显示和用户报告错误
+	if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
+		response["trace_id"] = traceID
+	}
+
+	return ctx.Response().Json(code, response)
 }
 
-// ValidationError 验证错误响应（支持多语言）
+// ValidationError 验证错误响应（支持多语言，自动包含 trace_id）
 func ValidationError(ctx http.Context, code int, messageKey string, errors map[string]map[string]string) http.Response {
 	message := trans.Get(ctx, messageKey)
 
-	return ctx.Response().Json(code, http.Json{
+	response := http.Json{
 		"code":    code,
 		"message": message,
 		"errors":  errors,
-	})
+	}
+
+	// 自动包含 trace_id，方便前端显示和用户报告错误
+	if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
+		response["trace_id"] = traceID
+	}
+
+	return ctx.Response().Json(code, response)
 }
 
 // Paginate 分页响应（支持多语言）

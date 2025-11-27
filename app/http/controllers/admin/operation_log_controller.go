@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/utils/errorlog"
 )
 
 type OperationLogController struct {
@@ -118,6 +119,10 @@ func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "operation-log", "Failed to delete operation log", map[string]any{
+			"error": err.Error(),
+			"log_id": log.ID,
+		}, "Delete operation log error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 
