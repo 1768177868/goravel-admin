@@ -328,8 +328,8 @@ const pagination = reactive({
 })
 
 const tableData = ref([])
-const departmentTree = ref([]) // 用于编辑表单
-const roles = ref([]) // 用于编辑表单
+const departmentTree = ref([])
+const roles = ref([])
 const departmentSelectVisible = ref(false)
 const protectedAdminIds = ref([1, 2])
 
@@ -394,9 +394,7 @@ const loadData = async () => {
       params.department_id = searchForm.department_id
     }
     
-    console.log('Admin search params:', params)
     const res = await getAdminList(params)
-    console.log('Admin list response:', res)
     
     if (res.data) {
       tableData.value = res.data.list || []
@@ -409,27 +407,22 @@ const loadData = async () => {
   }
 }
 
-// 转换部门数据为树形结构（支持后端返回的树形结构和扁平结构）
-// 加载部门数据（用于编辑表单，API 已返回树形结构）
-const loadDepartments = async () => {
-  try {
-    const res = await getOptions('department')
-    if (res.data && res.data.options) {
-      // API 已经返回树形结构，直接使用
-      departmentTree.value = res.data.options
-    }
+  const loadDepartments = async () => {
+    try {
+      const res = await getOptions('department')
+      if (res.data && res.data.options) {
+        departmentTree.value = res.data.options
+      }
   } catch (error) {
     console.error('Load departments error:', error)
   }
 }
 
-// 加载角色数据（用于编辑表单）
-const loadRoles = async () => {
-  try {
-    const res = await getOptions('role')
-    if (res.data && res.data.options) {
-      // 转换为编辑表单需要的格式
-      roles.value = res.data.options.map(option => ({
+  const loadRoles = async () => {
+    try {
+      const res = await getOptions('role')
+      if (res.data && res.data.options) {
+        roles.value = res.data.options.map(option => ({
         id: parseInt(option.value),
         ID: parseInt(option.value),
         name: option.label,
@@ -487,11 +480,7 @@ const getUniqueRoles = (roles) => {
       seen.add(roleId)
       unique.push(role)
     } else if (roleId) {
-      // console.warn('Duplicate role found:', roleId, role)
     }
-  }
-  if (roles.length !== unique.length) {
-    // console.warn(`Roles deduplicated: ${roles.length} -> ${unique.length}`, roles, unique)
   }
   return unique
 }
@@ -521,7 +510,6 @@ const getDepartmentName = (departmentId) => {
 
 // 处理部门选择
 const handleDepartmentSelect = (data, node) => {
-  console.log('Department selected:', data, node)
   if (data && data.id) {
     formData.department_id = data.id
     departmentSelectVisible.value = false
@@ -559,15 +547,11 @@ const handleSubmit = async () => {
       try {
         const data = { ...formData }
         
-        // 确保用户名不为空且去除首尾空格
         if (data.username) {
           data.username = data.username.trim()
         }
         
-        console.log('Submit admin data:', data)
-        
         if (formData.id) {
-          // 编辑时，如果没有修改密码，不传 password
           if (!data.password) {
             delete data.password
           }

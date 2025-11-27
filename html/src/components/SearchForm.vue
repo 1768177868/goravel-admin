@@ -457,32 +457,26 @@ const getFieldPlaceholder = (field) => {
   return t('form.please_enter') + label
 }
 
-// 获取字段选项
 const getFieldOptions = (field) => {
   if (!field) return []
   
-  // 优先使用直接传入的 options
   if (field.options && Array.isArray(field.options)) {
     return field.options
   }
   
-  // 如果配置了 API 地址，从缓存中获取
   if (field.apiUrl) {
     const cacheKey = field.apiUrl
     if (fieldOptionsCache.value[cacheKey]) {
       return fieldOptionsCache.value[cacheKey]
     }
-    // 如果缓存中没有，触发加载（异步）
     loadFieldOptions(field)
     return []
   }
   
-  // 支持函数方式
   if (field.optionsFn && typeof field.optionsFn === 'function') {
     try {
       return field.optionsFn()
     } catch (e) {
-      console.warn('Error in optionsFn:', e)
       return []
     }
   }
@@ -490,21 +484,17 @@ const getFieldOptions = (field) => {
   return []
 }
 
-// 加载字段选项（通过 API）
 const loadFieldOptions = async (field) => {
   if (!field.apiUrl) return
   
   const cacheKey = field.apiUrl
-  // 如果正在加载或已加载，不重复加载
   if (fieldOptionsCache.value[cacheKey] !== undefined) {
     return
   }
   
   try {
-    // 标记为加载中（避免重复请求）
     fieldOptionsCache.value[cacheKey] = null
     
-    // 如果是统一选项接口（/options?type=xxx）
     if (field.apiUrl.startsWith('/options')) {
       const url = new URL(field.apiUrl, window.location.origin)
       const type = url.searchParams.get('type')
@@ -513,7 +503,6 @@ const loadFieldOptions = async (field) => {
         fieldOptionsCache.value[cacheKey] = res.data.options
       }
     } else {
-      // 支持自定义 API 地址
       const res = await fetch(field.apiUrl, {
         method: 'GET',
         headers: {
@@ -523,13 +512,11 @@ const loadFieldOptions = async (field) => {
       })
       if (res.ok) {
         const data = await res.json()
-        // 支持多种响应格式
         if (data.data && data.data.options) {
           fieldOptionsCache.value[cacheKey] = data.data.options
         } else if (data.options) {
           fieldOptionsCache.value[cacheKey] = data.options
         } else if (Array.isArray(data.data)) {
-          // 如果是数组，转换为 options 格式
           fieldOptionsCache.value[cacheKey] = data.data.map(item => ({
             label: item.name || item.Name || item.label || String(item.id || item.ID),
             value: String(item.id || item.ID || item.value)
@@ -548,12 +535,10 @@ const loadFieldOptions = async (field) => {
   }
 }
 
-// 获取字段样式
 const getFieldStyle = (field) => {
   return field.style || {}
 }
 
-// 获取树形选择器的显示值
 const getTreeSelectDisplayValue = (field) => {
   const value = props.model[field.prop]
   if (!value) return ''
@@ -575,25 +560,20 @@ const getTreeSelectDisplayValue = (field) => {
   return findNode(field.treeData || [], value) || ''
 }
 
-// 获取树形选择器输入框的值（用于搜索）
 const getTreeSelectInputValue = (field) => {
-  // 如果有选中值，显示选中值
   const selectedValue = props.model[field.prop]
   if (selectedValue) {
     const displayValue = getTreeSelectDisplayValue(field)
-    // 如果正在搜索且搜索文本与显示值不同，显示搜索文本
     const filterText = treeSelectFilterText.value[field.prop]
     if (filterText && filterText !== displayValue) {
       return filterText
     }
     return displayValue
   }
-  // 如果没有选中值，显示搜索文本
   const filterText = treeSelectFilterText.value[field.prop]
   return filterText || ''
 }
 
-// 获取树形选择器弹窗的显示状态
 const getTreeSelectPopoverVisible = (field) => {
   if (!treeSelectPopovers.value[field.prop]) {
     treeSelectPopovers.value[field.prop] = false
@@ -601,75 +581,58 @@ const getTreeSelectPopoverVisible = (field) => {
   return treeSelectPopovers.value[field.prop]
 }
 
-// 设置树形选择器弹窗的显示状态
 const setTreeSelectPopoverVisible = (field, visible) => {
   treeSelectPopovers.value[field.prop] = visible
 }
 
-// 切换树形选择器弹窗
 const toggleTreeSelectPopover = (field) => {
   if (!treeSelectPopovers.value.hasOwnProperty(field.prop)) {
     treeSelectPopovers.value[field.prop] = false
   }
   const newState = !treeSelectPopovers.value[field.prop]
   treeSelectPopovers.value[field.prop] = newState
-  // 如果关闭弹窗，清空搜索文本（如果没有选中值）
   if (!newState && !props.model[field.prop]) {
     treeSelectFilterText.value[field.prop] = ''
   }
 }
 
-// 处理树形选择器节点点击
 const handleTreeSelectNodeClick = (field, data) => {
   const valueKey = field.treeProps?.value || 'id'
-  const labelKey = field.treeProps?.label || 'name'
   props.model[field.prop] = data[valueKey]
-  // 清空搜索文本，显示选中的值
   treeSelectFilterText.value[field.prop] = ''
-  // 关闭弹窗
   treeSelectPopovers.value[field.prop] = false
 }
 
-// 处理树形选择器清空
 const handleTreeSelectClear = (field) => {
   props.model[field.prop] = ''
   treeSelectFilterText.value[field.prop] = ''
 }
 
-// 处理树形选择器输入
 const handleTreeSelectInput = (field, val) => {
   if (!treeSelectFilterText.value.hasOwnProperty(field.prop)) {
     treeSelectFilterText.value[field.prop] = ''
   }
   treeSelectFilterText.value[field.prop] = val
-  // 如果输入框有值，自动展开弹窗
   if (val && !getTreeSelectPopoverVisible(field)) {
     toggleTreeSelectPopover(field)
   }
 }
 
-// 获取树形选择器的数据（支持 API 加载）
 const getTreeSelectData = (field) => {
-  // 优先使用直接传入的 treeData
   if (field.treeData && Array.isArray(field.treeData)) {
     return getFilteredTreeData(field, field.treeData)
   }
   
-  // 如果配置了 API 地址，从缓存中获取
   if (field.apiUrl) {
     const cacheKey = field.apiUrl
     if (fieldOptionsCache.value[cacheKey]) {
-      // 对于部门等树形数据，API 返回的可能是 options（树形）或 list（扁平）
       const data = fieldOptionsCache.value[cacheKey]
       if (Array.isArray(data) && data.length > 0 && data[0].children !== undefined) {
-        // 已经是树形结构
         return getFilteredTreeData(field, data)
       } else if (Array.isArray(data)) {
-        // 扁平结构，需要转换为树形（这里简化处理，实际应该根据 parent_id 构建）
         return getFilteredTreeData(field, data)
       }
     }
-    // 如果缓存中没有，触发加载（异步）
     loadTreeSelectData(field)
     return []
   }
@@ -677,36 +640,29 @@ const getTreeSelectData = (field) => {
   return getFilteredTreeData(field, [])
 }
 
-// 加载树形选择器数据（通过 API）
 const loadTreeSelectData = async (field) => {
   if (!field.apiUrl) return
   
   const cacheKey = field.apiUrl
-  // 如果正在加载或已加载，不重复加载
   if (fieldOptionsCache.value[cacheKey] !== undefined) {
     return
   }
   
   try {
-    // 标记为加载中（避免重复请求）
     fieldOptionsCache.value[cacheKey] = null
     
-    // 如果是统一选项接口（/options?type=xxx）
     if (field.apiUrl.startsWith('/options')) {
       const url = new URL(field.apiUrl, window.location.origin)
       const type = url.searchParams.get('type')
       const res = await getOptions(type)
       if (res.data) {
-        // 部门等树形数据，优先使用 options（树形结构）
         if (res.data.options && Array.isArray(res.data.options)) {
           fieldOptionsCache.value[cacheKey] = res.data.options
         } else if (res.data.list && Array.isArray(res.data.list)) {
-          // 如果没有 options，使用 list（扁平结构，需要转换）
           fieldOptionsCache.value[cacheKey] = res.data.list
         }
       }
     } else {
-      // 支持自定义 API 地址
       const res = await fetch(field.apiUrl, {
         method: 'GET',
         headers: {
@@ -716,7 +672,6 @@ const loadTreeSelectData = async (field) => {
       })
       if (res.ok) {
         const data = await res.json()
-        // 支持多种响应格式
         if (data.data && data.data.options) {
           fieldOptionsCache.value[cacheKey] = data.data.options
         } else if (data.data && data.data.list) {
@@ -736,7 +691,6 @@ const loadTreeSelectData = async (field) => {
   }
 }
 
-// 获取过滤后的树形数据
 const getFilteredTreeData = (field, treeData) => {
   const filterText = treeSelectFilterText.value[field.prop]
   if (!filterText || filterText === '') {
@@ -837,7 +791,6 @@ const handleReset = () => {
       if (props.initialValues.hasOwnProperty(key)) {
         props.model[key] = props.initialValues[key]
       } else {
-        // 根据类型设置默认值
         const value = props.model[key]
         if (Array.isArray(value)) {
           props.model[key] = []
@@ -851,7 +804,6 @@ const handleReset = () => {
       }
     })
   } else {
-    // 如果没有初始值，清空所有字段
     Object.keys(props.model).forEach((key) => {
       const value = props.model[key]
       if (Array.isArray(value)) {
@@ -866,7 +818,6 @@ const handleReset = () => {
     })
   }
   
-  // 收起高级搜索
   if (expanded.value) {
     expanded.value = false
     emit('expand-change', false)
@@ -958,7 +909,6 @@ const checkFormHeight = () => {
   })
 }
 
-// 监听初始值变化
 watch(() => props.initialValues, (newVal) => {
   if (newVal && Object.keys(newVal).length > 0) {
     Object.keys(newVal).forEach((key) => {
@@ -969,18 +919,15 @@ watch(() => props.initialValues, (newVal) => {
   }
 }, { deep: true, immediate: true })
 
-// 监听展开状态变化，重新计算高度
 watch(() => expanded.value, () => {
   setTimeout(() => {
     checkFormHeight()
-  }, 300) // 等待动画完成
+  }, 300)
 })
 
-// 监听字段变化，重新计算高度并加载 API 数据
 watch(() => props.fields, (newFields) => {
   checkFormHeight()
   
-  // 加载需要 API 的选项
   if (newFields && Array.isArray(newFields)) {
     newFields.forEach(field => {
       if (field.apiUrl) {
@@ -994,11 +941,9 @@ watch(() => props.fields, (newFields) => {
   }
 }, { deep: true })
 
-// 组件挂载后检测高度并加载 API 数据
 onMounted(() => {
   checkFormHeight()
   
-  // 使用 ResizeObserver 监听表单大小变化
   if (formRef.value && formRef.value.$el) {
     resizeObserver = new ResizeObserver(() => {
       checkFormHeight()
@@ -1006,7 +951,6 @@ onMounted(() => {
     resizeObserver.observe(formRef.value.$el)
   }
   
-  // 加载需要 API 的选项
   if (props.fields && Array.isArray(props.fields)) {
     props.fields.forEach(field => {
       if (field.apiUrl) {
@@ -1019,13 +963,11 @@ onMounted(() => {
     })
   }
   
-  // 延迟检测，确保DOM完全渲染
   setTimeout(() => {
     checkFormHeight()
   }, 100)
 })
 
-// 组件卸载时清理
 onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect()
@@ -1033,7 +975,6 @@ onUnmounted(() => {
   }
 })
 
-// 暴露方法
 defineExpose({
   formRef,
   expanded,

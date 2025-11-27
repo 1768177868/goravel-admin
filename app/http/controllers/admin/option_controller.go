@@ -21,8 +21,6 @@ func NewOptionController() *OptionController {
 	}
 }
 
-// Index 获取下拉选项数据
-// 支持多种类型：role, department, status, method 等
 func (r *OptionController) Index(ctx http.Context) http.Response {
 	optionType := ctx.Request().Query("type", "")
 
@@ -42,7 +40,6 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 	}
 }
 
-// getRoleOptions 获取角色选项
 func (r *OptionController) getRoleOptions(ctx http.Context) http.Response {
 	var roles []models.Role
 	if err := facades.Orm().Query().Where("status", 1).Order("id asc").Get(&roles); err != nil {
@@ -62,24 +59,20 @@ func (r *OptionController) getRoleOptions(ctx http.Context) http.Response {
 	})
 }
 
-// getDepartmentOptions 获取部门选项（树形结构）
 func (r *OptionController) getDepartmentOptions(ctx http.Context) http.Response {
-	// 获取所有部门
 	var departments []models.Department
 	if err := facades.Orm().Query().Where("status", 1).Order("sort asc, id asc").Get(&departments); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	// 转换为树形结构
 	tree := r.buildDepartmentTree(departments, 0)
 
 	return response.Success(ctx, "get_success", http.Json{
-		"options": tree,        // 树形结构，用于 tree-select
-		"list":    departments, // 扁平列表，用于 select
+		"options": tree,
+		"list":    departments,
 	})
 }
 
-// buildDepartmentTree 构建部门树形结构
 func (r *OptionController) buildDepartmentTree(departments []models.Department, parentID uint) []map[string]any {
 	var tree []map[string]any
 	for _, dept := range departments {
@@ -98,7 +91,6 @@ func (r *OptionController) buildDepartmentTree(departments []models.Department, 
 	return tree
 }
 
-// getStatusOptions 获取状态选项
 func (r *OptionController) getStatusOptions(ctx http.Context) http.Response {
 	options := []map[string]any{
 		{"label": trans.Get(ctx, "common.enabled"), "value": "1"},
@@ -110,7 +102,6 @@ func (r *OptionController) getStatusOptions(ctx http.Context) http.Response {
 	})
 }
 
-// getMethodOptions 获取 HTTP 方法选项
 func (r *OptionController) getMethodOptions(ctx http.Context) http.Response {
 	options := []map[string]any{
 		{"label": "GET", "value": "GET"},
@@ -125,7 +116,6 @@ func (r *OptionController) getMethodOptions(ctx http.Context) http.Response {
 	})
 }
 
-// getYesNoOptions 获取是/否选项
 func (r *OptionController) getYesNoOptions(ctx http.Context) http.Response {
 	options := []map[string]any{
 		{"label": trans.Get(ctx, "common.yes"), "value": "1"},
