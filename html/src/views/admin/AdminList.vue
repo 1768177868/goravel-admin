@@ -208,8 +208,7 @@ import {
   resetPassword,
   kickOutUser
 } from '../../api/admin'
-import { getDepartmentList } from '../../api/department'
-import { getRoleList } from '../../api/role'
+import { getOptions } from '../../api/option'
 
 const { t } = useI18n()
 const tableRef = ref(null)
@@ -307,10 +306,7 @@ const searchFields = computed(() => [
     type: 'select',
     width: '150px',
     filterable: true,
-    options: roles.value.map(role => ({
-      label: role.name || role.Name || '',
-      value: String(role.id || role.ID || '')
-    })),
+    apiUrl: '/options?type=role', 
     advanced: false
   },
   {
@@ -319,7 +315,7 @@ const searchFields = computed(() => [
     type: 'tree-select',
     width: '200px',
     filterable: true,
-    treeData: departmentTree.value,
+    apiUrl: '/options?type=department', 
     treeProps: { label: 'name', children: 'children', value: 'id' },
     advanced: false
   }
@@ -332,9 +328,8 @@ const pagination = reactive({
 })
 
 const tableData = ref([])
-const departments = ref([])
-const departmentTree = ref([])
-const roles = ref([])
+const departmentTree = ref([]) // 用于编辑表单
+const roles = ref([]) // 用于编辑表单
 const departmentSelectVisible = ref(false)
 const protectedAdminIds = ref([1, 2])
 
@@ -415,90 +410,30 @@ const loadData = async () => {
 }
 
 // 转换部门数据为树形结构（支持后端返回的树形结构和扁平结构）
-const transformDepartmentToTree = (depts) => {
-  if (!depts || depts.length === 0) {
-    return []
-  }
-  
-  // 检查是否已经是树形结构（有 Children 字段，即使是空数组也算）
-  const firstDept = depts[0]
-  const hasChildrenField = firstDept.Children !== undefined || firstDept.children !== undefined
-  
-  if (hasChildrenField) {
-    // 已经是树形结构，只需要转换字段名
-    const convertNode = (node) => {
-      const children = node.Children || node.children
-      const result = {
-        id: node.id,
-        name: node.Name || node.name || '',
-      }
-      if (children && Array.isArray(children) && children.length > 0) {
-        result.children = children.map(child => convertNode(child))
-      }
-      return result
-    }
-    return depts.map(dept => convertNode(dept))
-  }
-  
-  // 扁平结构，需要构建树形结构
-  const buildTree = (items, parentId = 0) => {
-    const result = []
-    items.forEach(item => {
-      // 处理 parent_id，支持 null、0 和 undefined
-      let itemParentId = 0
-      if (item.ParentID !== undefined && item.ParentID !== null) {
-        itemParentId = item.ParentID
-      } else if (item.parent_id !== undefined && item.parent_id !== null) {
-        itemParentId = item.parent_id
-      }
-      
-      // 将 parentId 也转换为数字进行比较
-      const compareParentId = parentId === null ? 0 : parentId
-      
-      if (itemParentId === compareParentId) {
-        const node = {
-          id: item.id,
-          name: item.Name || item.name || '',
-          children: buildTree(items, item.id)
-        }
-        if (node.children.length === 0) {
-          delete node.children
-        }
-        result.push(node)
-      }
-    })
-    return result
-  }
-  
-  return buildTree(depts)
-}
-
+// 加载部门数据（用于编辑表单，API 已返回树形结构）
 const loadDepartments = async () => {
   try {
-    const res = await getDepartmentList()
-    if (res.data && res.data.list) {
-      const depts = res.data.list
-      console.log('Loaded departments (raw):', JSON.stringify(depts, null, 2))
-      // 保存原始列表（用于扁平化选择）
-      departments.value = depts
-      // 转换为树形结构
-      departmentTree.value = transformDepartmentToTree(depts)
-      console.log('Transformed department tree:', JSON.stringify(departmentTree.value, null, 2))
+    const res = await getOptions('department')
+    if (res.data && res.data.options) {
+      // API 已经返回树形结构，直接使用
+      departmentTree.value = res.data.options
     }
   } catch (error) {
     console.error('Load departments error:', error)
   }
 }
 
+// 加载角色数据（用于编辑表单）
 const loadRoles = async () => {
   try {
-    const res = await getRoleList()
-    if (res.data && res.data.list) {
-      // 支持 PascalCase 和 snake_case
-      roles.value = res.data.list.map(role => ({
-        id: role.id || role.ID,
-        name: role.Name || role.name || '',
-        slug: role.Slug || role.slug || ''
+    const res = await getOptions('role')
+    if (res.data && res.data.options) {
+      // 转换为编辑表单需要的格式
+      roles.value = res.data.options.map(option => ({
+        id: parseInt(option.value),
+        ID: parseInt(option.value),
+        name: option.label,
+        Name: option.label
       }))
     }
   } catch (error) {

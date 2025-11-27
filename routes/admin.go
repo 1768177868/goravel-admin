@@ -25,6 +25,7 @@ func Admin() {
 	monitorController := admin.NewMonitorController()
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
+	optionController := admin.NewOptionController()
 
 	// 登录相关（不需要认证，但需要多语言）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
@@ -120,6 +121,9 @@ func Admin() {
 
 		// 调试: trace id 日志验证
 		router.Get("debug/trace-test", debugController.TraceTest)
+
+		// 统一的下拉选项接口
+		router.Get("options", optionController.Index)
 	})
 
 	// 通知 WebSocket
