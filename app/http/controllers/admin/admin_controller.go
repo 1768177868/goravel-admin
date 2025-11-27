@@ -62,10 +62,22 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 		}
 	}
 	if departmentID != "" {
-		// 查询指定部门的管理员
+		// 查询指定部门及其所有子部门的管理员
 		departmentIDUint := cast.ToUint(departmentID)
 		if departmentIDUint > 0 {
-			query = query.Where("department_id", departmentIDUint)
+			// 获取部门及其所有子部门的ID列表
+			departmentIDs := r.getDepartmentAndChildrenIDs(departmentIDUint)
+			if len(departmentIDs) > 0 {
+				// 使用 IN 查询，包含选中部门及其所有子部门
+				idsAny := make([]any, len(departmentIDs))
+				for i, id := range departmentIDs {
+					idsAny[i] = id
+				}
+				query = query.WhereIn("department_id", idsAny)
+			} else {
+				// 如果没有找到任何部门（理论上不会发生），使用原来的精确匹配作为备用
+				// query = query.Where("department_id", departmentIDUint)
+			}
 		}
 	}
 	if startTime != "" {
@@ -351,6 +363,30 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 		allProtectedIDs[did] = true
 	}
 	return allProtectedIDs
+}
+
+// getDepartmentAndChildrenIDs 递归获取部门及其所有子部门的ID列表
+func (r *AdminController) getDepartmentAndChildrenIDs(departmentID uint) []uint {
+	var departmentIDs []uint
+	// 先添加当前部门ID
+	departmentIDs = append(departmentIDs, departmentID)
+
+	// 递归获取所有子部门ID
+	r.getChildrenDepartmentIDs(departmentID, &departmentIDs)
+
+	return departmentIDs
+}
+
+// getChildrenDepartmentIDs 递归获取子部门ID
+func (r *AdminController) getChildrenDepartmentIDs(parentID uint, departmentIDs *[]uint) {
+	var children []models.Department
+	if err := facades.Orm().Query().Where("parent_id", parentID).Get(&children); err == nil {
+		for _, child := range children {
+			*departmentIDs = append(*departmentIDs, child.ID)
+			// 递归获取子部门的子部门
+			r.getChildrenDepartmentIDs(child.ID, departmentIDs)
+		}
+	}
 }
 
 // Export 导出管理员列表
