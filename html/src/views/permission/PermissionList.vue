@@ -194,6 +194,7 @@ import { getMenuList } from '../../api/menu'
 
 const { t } = useI18n()
 const formRef = ref(null)
+const tableRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
