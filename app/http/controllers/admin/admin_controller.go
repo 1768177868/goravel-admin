@@ -32,6 +32,7 @@ func NewAdminController() *AdminController {
 func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	username := ctx.Request().Query("username", "")
 	status := ctx.Request().Query("status", "")
+	roleID := ctx.Request().Query("role_id", "")
 	orderBy := ctx.Request().Query("order_by", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
@@ -51,6 +52,13 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	}
 	if status != "" {
 		query = query.Where("status", status)
+	}
+	if roleID != "" {
+		// 通过中间表查询拥有指定角色的管理员
+		roleIDUint := cast.ToUint(roleID)
+		if roleIDUint > 0 {
+			query = query.Where("id IN (SELECT admin_id FROM admin_role WHERE role_id = ?)", roleIDUint)
+		}
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)
