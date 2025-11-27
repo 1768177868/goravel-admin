@@ -40,41 +40,38 @@
         @checkbox-all="handleSelectionChange"
         @sort-change="handleSortChange"
       >
-        <vxe-column type="checkbox" width="60" />
-        <template v-for="column in tableColumns" :key="column.field || column.type">
+        <template
+          v-for="column in tableColumns"
+          :key="column.field || column.title || column.type"
+        >
           <vxe-column
-            v-if="column.type !== 'operation'"
+            v-if="column.type === 'checkbox'"
+            type="checkbox"
+            :width="column.width"
+            :fixed="column.fixed"
+          />
+          <vxe-column
+            v-else
             :field="column.field"
             :title="column.title"
             :width="column.width"
             :sortable="column.sortable"
             :fixed="column.fixed"
+            :formatter="column.formatter"
+            :tree-node="column.treeNode"
           >
-            <template #default="{ row }">
-              <!-- 文本类型 -->
-              <template v-if="!column.type || column.type === 'text'">
-                {{ getFieldValue(row, column.field, column.formatter) || '-' }}
-              </template>
-              <!-- 自定义格式化 -->
-              <template v-else-if="column.type === 'custom' && column.formatter">
-                {{ column.formatter(row) }}
-              </template>
+            <template v-if="column.slots?.default" #default="scope">
+              <slot :name="column.slots.default" v-bind="scope" />
             </template>
           </vxe-column>
-          <!-- 操作列 -->
-          <vxe-column
-            v-else
-            :title="column.title"
-            :width="column.width"
-            :fixed="column.fixed"
-          >
-            <template #default="{ row }">
-              <slot name="operation" :row="row">
-                <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-                <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
-              </slot>
-            </template>
-          </vxe-column>
+        </template>
+
+        <template #admin="{ row }">
+          {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
+        </template>
+        <template #operation="{ row }">
+          <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
+          <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
         </template>
       </vxe-table>
 
@@ -189,72 +186,60 @@ const initialSearchForm = {
 
 const searchForm = reactive({ ...initialSearchForm })
 
-// 表格列配置
+// 表格列配置（使用 vxe-table columns）
 const tableColumns = computed(() => [
+  {
+    type: 'checkbox',
+    width: 60
+  },
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true,
-    type: 'text'
+    sortable: true
   },
   {
     field: 'admin',
     title: t('log.admin'),
-    type: 'custom',
-    formatter: (row) => (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-'
+    sortable: false,
+    slots: { default: 'admin' }
   },
   {
     field: 'method',
     title: t('log.method'),
     width: 100,
-    sortable: true,
-    type: 'text'
+    sortable: true
   },
   {
     field: 'path',
     title: t('log.path'),
-    sortable: true,
-    type: 'text'
+    sortable: true
   },
   {
     field: 'ip',
     title: t('log.ip'),
     width: 150,
-    sortable: true,
-    type: 'text'
+    sortable: true
   },
   {
     field: 'status_code',
     title: t('log.status_code'),
     width: 100,
-    sortable: true,
-    type: 'text'
+    sortable: true
   },
   {
     field: 'created_at',
     title: t('log.operation_time'),
     width: 180,
-    sortable: true,
-    type: 'text'
+    sortable: true
   },
   {
-    type: 'operation',
     title: t('table.operation'),
     width: 150,
-    fixed: 'right'
+    fixed: 'right',
+    slots: { default: 'operation' }
   }
 ])
-
-// 获取字段值（支持 PascalCase 和 snake_case，以及格式化函数）
-const getFieldValue = (row, field, formatter) => {
-  if (formatter && typeof formatter === 'function') {
-    return formatter(row)
-  }
-  if (!field) return ''
-  const pascalField = field.charAt(0).toUpperCase() + field.slice(1)
-  return row[pascalField] !== undefined ? row[pascalField] : (row[field] !== undefined ? row[field] : '')
-}
 
 // 搜索表单字段配置（JSON 方式）
 const searchFields = computed(() => [
