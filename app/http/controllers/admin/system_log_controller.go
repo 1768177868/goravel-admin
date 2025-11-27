@@ -25,6 +25,7 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	level := ctx.Request().Query("level", "")
 	module := ctx.Request().Query("module", "")
+	traceID := ctx.Request().Query("trace_id", "")
 	message := ctx.Request().Query("message", "")
 	orderBy := ctx.Request().Query("order_by", "")
 	// 使用辅助函数自动转换时区
@@ -38,6 +39,9 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	}
 	if module != "" {
 		query = query.Where("module LIKE ?", "%"+module+"%")
+	}
+	if traceID != "" {
+		query = query.Where("trace_id LIKE ?", "%"+traceID+"%")
 	}
 	if message != "" {
 		query = query.Where("message LIKE ?", "%"+message+"%")

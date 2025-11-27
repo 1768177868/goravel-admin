@@ -309,6 +309,7 @@
     "reset": "Reset",
     "username": "Username",
     "module": "Module",
+    "trace_id": "Trace ID",
     "start_time": "Start Time",
     "end_time": "End Time",
     "status": "Status",
@@ -405,7 +406,8 @@
     "login_time": "Login Time",
     "operation_time": "Operation Time",
     "status_code": "Status Code",
-    "request_params": "Request Params"
+    "request_params": "Request Params",
+    "trace_id": "Trace ID"
   },
   "form": {
     "please_select": "Please select",

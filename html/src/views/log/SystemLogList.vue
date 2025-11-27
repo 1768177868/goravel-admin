@@ -21,7 +21,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ level: '', module: '', message: '', start_time: '', end_time: '' }"
+        :initial-values="{ level: '', module: '', trace_id: '', message: '', start_time: '', end_time: '' }"
         i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
@@ -96,6 +96,9 @@
             {{ logDetail.level }}
           </el-tag>
         </el-descriptions-item>
+        <el-descriptions-item :label="$t('log.trace_id')" :span="2">
+          {{ logDetail.trace_id || '-' }}
+        </el-descriptions-item>
         <el-descriptions-item :label="$t('log.message')" :span="2">{{ logDetail.message }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.context')" :span="2">
           <pre v-if="logDetail.context">{{ formatContext(logDetail.context) }}</pre>
@@ -142,6 +145,7 @@ const tableData = ref([])
 const searchForm = reactive({
   level: '',
   module: '',
+  trace_id: '',
   message: '',
   start_time: '',
   end_time: ''
@@ -152,6 +156,7 @@ const fieldMapping = {
   'id': 'id',
   'level': 'level',
   'module': 'module',
+  'trace_id': 'trace_id',
   'message': 'message',
   'context': 'context',
   'created_at': 'created_at'
@@ -186,6 +191,12 @@ const tableColumns = computed(() => [
     width: 100,
     sortable: true,
     slot: 'level'
+  },
+  {
+    field: 'trace_id',
+    title: t('log.trace_id'),
+    width: 220,
+    formatter: ({ row }) => row.TraceID || row.trace_id || '-'
   },
   {
     field: 'message',
@@ -232,6 +243,13 @@ const searchFields = computed(() => [
     label: t('log.module'),
     type: 'input',
     width: '150px',
+    advanced: false
+  },
+  {
+    prop: 'trace_id',
+    label: t('log.trace_id'),
+    type: 'input',
+    width: '200px',
     advanced: false
   },
   {
@@ -325,6 +343,7 @@ const transformSystemLogData = (log) => {
   return {
     id: log.ID || log.id,
     level: log.Level || log.level || '',
+    trace_id: log.TraceID || log.trace_id || '',
     message: log.Message || log.message || '',
     context: context,
     created_at: log.CreatedAt || log.created_at || ''

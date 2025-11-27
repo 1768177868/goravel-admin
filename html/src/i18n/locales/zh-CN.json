@@ -309,6 +309,7 @@
     "reset": "重置",
     "username": "用户名",
     "module": "模块",
+    "trace_id": "链路ID",
     "start_time": "开始时间",
     "end_time": "结束时间",
     "status": "状态",
@@ -405,7 +406,8 @@
     "login_time": "登录时间",
     "operation_time": "操作时间",
     "status_code": "状态码",
-    "request_params": "请求参数"
+    "request_params": "请求参数",
+    "trace_id": "链路ID"
   },
   "form": {
     "please_select": "请选择",
