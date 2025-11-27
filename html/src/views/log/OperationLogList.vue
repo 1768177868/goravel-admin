@@ -102,6 +102,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
+import { getMethodOptions } from '../../utils/fieldOptions'
 import {
   getOperationLogList,
   getOperationLogDetail,
@@ -248,13 +249,7 @@ const searchFields = computed(() => [
     label: t('log.method'),
     type: 'select',
     width: '150px',
-    options: [
-      { label: 'GET', value: 'GET' },
-      { label: 'POST', value: 'POST' },
-      { label: 'PUT', value: 'PUT' },
-      { label: 'DELETE', value: 'DELETE' },
-      { label: 'PATCH', value: 'PATCH' }
-    ],
+    options: getMethodOptions(),
     advanced: false
   },
   {

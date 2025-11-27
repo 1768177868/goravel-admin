@@ -198,6 +198,7 @@ import { ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
+import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
   createAdmin,
@@ -295,10 +296,7 @@ const searchFields = computed(() => [
     label: t('table.status'),
     type: 'select',
     width: '150px',
-    options: [
-      { label: t('common.enabled'), value: '1' },
-      { label: t('common.disabled'), value: '0' }
-    ],
+    options: getStatusOptions(t),
     advanced: false
   }
 ])
