@@ -654,8 +654,21 @@ const handleExport = async () => {
   try {
     const res = await exportAdmin(searchForm)
     if (res.data && res.data.file_url) {
+      let fileUrl = res.data.file_url
+      
+      // 如果是相对路径，需要拼接完整的 URL
+      if (!fileUrl.startsWith('http://') && !fileUrl.startsWith('https://')) {
+        // 获取当前页面的 origin，确保在开发和生产环境都能正确工作
+        const origin = window.location.origin
+        if (fileUrl.startsWith('/')) {
+          fileUrl = origin + fileUrl
+        } else {
+          fileUrl = origin + '/' + fileUrl
+        }
+      }
+      
       const link = document.createElement('a')
-      link.href = res.data.file_url
+      link.href = fileUrl
       link.download = res.data.file_path?.split('/').pop() || 'admins.csv'
       link.style.display = 'none'
       document.body.appendChild(link)
