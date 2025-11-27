@@ -11,21 +11,23 @@
         </div>
       </template>
 
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item :label="$t('role.name')">
-          <el-input v-model="searchForm.name" :placeholder="$t('form.please_enter') + $t('role.name')" clearable />
-        </el-form-item>
-        <el-form-item :label="$t('table.status')">
-          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
-            <el-option :label="$t('common.enabled')" value="1" />
-            <el-option :label="$t('common.disabled')" value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
-          <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
-        </el-form-item>
-      </el-form>
+      <SearchForm
+        :model="searchForm"
+        @search="handleSearch"
+        @reset="handleReset"
+      >
+        <template #default>
+          <el-form-item :label="$t('role.name')">
+            <el-input v-model="searchForm.name" :placeholder="$t('form.please_enter') + $t('role.name')" clearable />
+          </el-form-item>
+          <el-form-item :label="$t('table.status')">
+            <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
+              <el-option :label="$t('common.enabled')" value="1" />
+              <el-option :label="$t('common.disabled')" value="0" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </SearchForm>
 
       <vxe-table
         :data="tableData"
@@ -78,11 +80,8 @@
         </vxe-column>
       </vxe-table>
 
-      <vxe-pager
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
+      <Pagination
+        v-model="pagination"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -183,6 +182,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
@@ -829,9 +830,6 @@ onMounted(() => {
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
-}
 
 .menu-permission-container {
   border: 1px solid #e4e7ed;

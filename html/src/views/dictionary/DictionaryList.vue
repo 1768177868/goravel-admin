@@ -11,15 +11,17 @@
         </div>
       </template>
 
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item :label="$t('dictionary.type')">
-          <el-input v-model="searchForm.type" :placeholder="$t('form.please_enter') + $t('dictionary.type')" clearable />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
-          <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
-        </el-form-item>
-      </el-form>
+      <SearchForm
+        :model="searchForm"
+        @search="handleSearch"
+        @reset="handleReset"
+      >
+        <template #default>
+          <el-form-item :label="$t('dictionary.type')">
+            <el-input v-model="searchForm.type" :placeholder="$t('form.please_enter') + $t('dictionary.type')" clearable />
+          </el-form-item>
+        </template>
+      </SearchForm>
 
       <vxe-table
         :data="tableData"
@@ -65,11 +67,8 @@
         </vxe-column>
       </vxe-table>
 
-      <vxe-pager
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
+      <Pagination
+        v-model="pagination"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -117,6 +116,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 import {
   getDictionaryList,
   getDictionaryDetail,
@@ -298,8 +299,5 @@ onMounted(() => {
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
-}
 </style>
 

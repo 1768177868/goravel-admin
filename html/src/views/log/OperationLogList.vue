@@ -18,89 +18,83 @@
       </template>
 
       <!-- 搜索表单 -->
-      <el-form :model="searchForm" :inline="true" class="search-form">
-        <el-form-item :label="$t('log.username')">
-          <el-input
-            v-model="searchForm.username"
-            :placeholder="$t('form.please_enter') + $t('log.username')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('log.method')">
-          <el-select
-            v-model="searchForm.method"
-            :placeholder="$t('form.please_select') + $t('log.method')"
-            clearable
-            style="width: 150px"
-          >
-            <el-option label="GET" value="GET" />
-            <el-option label="POST" value="POST" />
-            <el-option label="PUT" value="PUT" />
-            <el-option label="DELETE" value="DELETE" />
-            <el-option label="PATCH" value="PATCH" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="$t('log.path')">
-          <el-input
-            v-model="searchForm.path"
-            :placeholder="$t('form.please_enter') + $t('log.path')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <!-- 高级搜索项（可展开/收起） -->
-        <el-form-item v-show="searchExpanded" :label="$t('log.ip')">
-          <el-input
-            v-model="searchForm.ip"
-            :placeholder="$t('form.please_enter') + $t('log.ip')"
-            clearable
-            style="width: 150px"
-          />
-        </el-form-item>
-        <el-form-item v-show="searchExpanded" :label="$t('log.status_code')">
-          <el-input
-            v-model="searchForm.status"
-            :placeholder="$t('form.please_enter') + $t('log.status_code')"
-            clearable
-            style="width: 120px"
-          />
-        </el-form-item>
-        <el-form-item v-show="searchExpanded" :label="$t('log.start_time')">
-          <el-date-picker
-            v-model="searchForm.start_time"
-            type="datetime"
-            :placeholder="$t('form.please_select') + $t('log.start_time')"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 180px"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item v-show="searchExpanded" :label="$t('log.end_time')">
-          <el-date-picker
-            v-model="searchForm.end_time"
-            type="datetime"
-            :placeholder="$t('form.please_select') + $t('log.end_time')"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 180px"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            {{ $t('log.search') }}
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            {{ $t('log.reset') }}
-          </el-button>
-          <el-button @click="toggleSearchExpand">
-            <el-icon><component :is="searchExpanded ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
-            {{ searchExpanded ? $t('log.collapse') : $t('log.expand') }}
-          </el-button>
-        </el-form-item>
-      </el-form>
+      <SearchForm
+        :model="searchForm"
+        :show-expand="true"
+        @search="handleSearch"
+        @reset="handleReset"
+        @expand-change="searchExpanded = $event"
+      >
+        <template #default="{ expanded }">
+          <el-form-item :label="$t('log.username')">
+            <el-input
+              v-model="searchForm.username"
+              :placeholder="$t('form.please_enter') + $t('log.username')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('log.method')">
+            <el-select
+              v-model="searchForm.method"
+              :placeholder="$t('form.please_select') + $t('log.method')"
+              clearable
+              style="width: 150px"
+            >
+              <el-option label="GET" value="GET" />
+              <el-option label="POST" value="POST" />
+              <el-option label="PUT" value="PUT" />
+              <el-option label="DELETE" value="DELETE" />
+              <el-option label="PATCH" value="PATCH" />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('log.path')">
+            <el-input
+              v-model="searchForm.path"
+              :placeholder="$t('form.please_enter') + $t('log.path')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <!-- 高级搜索项（可展开/收起） -->
+          <el-form-item v-show="expanded" :label="$t('log.ip')">
+            <el-input
+              v-model="searchForm.ip"
+              :placeholder="$t('form.please_enter') + $t('log.ip')"
+              clearable
+              style="width: 150px"
+            />
+          </el-form-item>
+          <el-form-item v-show="expanded" :label="$t('log.status_code')">
+            <el-input
+              v-model="searchForm.status"
+              :placeholder="$t('form.please_enter') + $t('log.status_code')"
+              clearable
+              style="width: 120px"
+            />
+          </el-form-item>
+          <el-form-item v-show="expanded" :label="$t('log.start_time')">
+            <el-date-picker
+              v-model="searchForm.start_time"
+              type="datetime"
+              :placeholder="$t('form.please_select') + $t('log.start_time')"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 180px"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item v-show="expanded" :label="$t('log.end_time')">
+            <el-date-picker
+              v-model="searchForm.end_time"
+              type="datetime"
+              :placeholder="$t('form.please_select') + $t('log.end_time')"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 180px"
+              clearable
+            />
+          </el-form-item>
+        </template>
+      </SearchForm>
 
       <vxe-table
         ref="tableRef"
@@ -134,11 +128,8 @@
         </vxe-column>
       </vxe-table>
 
-      <vxe-pager
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
+      <Pagination
+        v-model="pagination"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -164,7 +155,9 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Delete, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import { Delete } from '@element-plus/icons-vue'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 import {
   getOperationLogList,
   getOperationLogDetail,
@@ -180,7 +173,7 @@ const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
-const searchExpanded = ref(false) // 搜索表单展开状态
+const searchExpanded = ref(false) // 搜索表单展开状态（用于控制高级搜索项的显示）
 
 const pagination = reactive({
   page: 1,
@@ -345,10 +338,6 @@ const handleReset = () => {
   loadData()
 }
 
-// 切换搜索表单展开/收起
-const toggleSearchExpand = () => {
-  searchExpanded.value = !searchExpanded.value
-}
 
 const handlePageChange = ({ currentPage, pageSize }) => {
   pagination.page = currentPage
@@ -464,12 +453,6 @@ onMounted(() => {
   gap: 10px;
 }
 
-.search-form {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 4px;
-}
 
 pre {
   margin: 0;

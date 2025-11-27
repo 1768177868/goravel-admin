@@ -12,37 +12,33 @@
       </template>
 
       <!-- 搜索表单 -->
-      <el-form :model="searchForm" :inline="true" class="search-form">
-        <el-form-item :label="$t('department.name')">
-          <el-input
-            v-model="searchForm.name"
-            :placeholder="$t('form.please_enter') + $t('department.name')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('table.status')">
-          <el-select
-            v-model="searchForm.status"
-            :placeholder="$t('form.please_select') + $t('table.status')"
-            clearable
-            style="width: 120px"
-          >
-            <el-option :label="$t('common.enabled')" value="1" />
-            <el-option :label="$t('common.disabled')" value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            {{ $t('log.search') }}
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            {{ $t('log.reset') }}
-          </el-button>
-        </el-form-item>
-      </el-form>
+      <SearchForm
+        :model="searchForm"
+        @search="handleSearch"
+        @reset="handleReset"
+      >
+        <template #default>
+          <el-form-item :label="$t('department.name')">
+            <el-input
+              v-model="searchForm.name"
+              :placeholder="$t('form.please_enter') + $t('department.name')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('table.status')">
+            <el-select
+              v-model="searchForm.status"
+              :placeholder="$t('form.please_select') + $t('table.status')"
+              clearable
+              style="width: 120px"
+            >
+              <el-option :label="$t('common.enabled')" value="1" />
+              <el-option :label="$t('common.disabled')" value="0" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </SearchForm>
 
       <vxe-table
         :data="tableData"
@@ -135,7 +131,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
+import SearchForm from '../../components/SearchForm.vue'
 import {
   getDepartmentList,
   getDepartmentDetail,
@@ -245,7 +242,7 @@ const loadData = async () => {
       console.log('Transformed department data:', transformed)
       tableData.value = transformed
     } else {
-      console.warn('No department data in response:', res)
+      // console.warn('No department data in response:', res)
       tableData.value = []
     }
   } catch (error) {

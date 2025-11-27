@@ -12,22 +12,26 @@
       </template>
 
       <!-- 搜索表单 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item :label="$t('table.username')">
-          <el-input v-model="searchForm.username" :placeholder="$t('form.enter_username')" clearable />
-        </el-form-item>
-        <el-form-item :label="$t('table.status')">
-          <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
-            <el-option :label="$t('common.enabled')" value="1" />
-            <el-option :label="$t('common.disabled')" value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
-          <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
+      <SearchForm
+        :model="searchForm"
+        @search="handleSearch"
+        @reset="handleReset"
+      >
+        <template #default>
+          <el-form-item :label="$t('table.username')">
+            <el-input v-model="searchForm.username" :placeholder="$t('form.enter_username')" clearable />
+          </el-form-item>
+          <el-form-item :label="$t('table.status')">
+            <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
+              <el-option :label="$t('common.enabled')" value="1" />
+              <el-option :label="$t('common.disabled')" value="0" />
+            </el-select>
+          </el-form-item>
+        </template>
+        <template #extra-buttons>
           <el-button type="success" @click="handleExport">{{ $t('common.export') }}</el-button>
-        </el-form-item>
-      </el-form>
+        </template>
+      </SearchForm>
 
       <!-- vxe-table -->
       <vxe-table
@@ -89,11 +93,8 @@
       </vxe-table>
 
       <!-- 分页 -->
-      <vxe-pager
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
+      <Pagination
+        v-model="pagination"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -196,6 +197,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 import {
   getAdminList,
   createAdmin,
@@ -416,11 +419,11 @@ const getUniqueRoles = (roles) => {
       seen.add(roleId)
       unique.push(role)
     } else if (roleId) {
-      console.warn('Duplicate role found:', roleId, role)
+      // console.warn('Duplicate role found:', roleId, role)
     }
   }
   if (roles.length !== unique.length) {
-    console.warn(`Roles deduplicated: ${roles.length} -> ${unique.length}`, roles, unique)
+    // console.warn(`Roles deduplicated: ${roles.length} -> ${unique.length}`, roles, unique)
   }
   return unique
 }
@@ -621,8 +624,5 @@ onMounted(() => {
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
-}
 </style>
 

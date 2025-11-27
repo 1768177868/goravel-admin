@@ -222,7 +222,7 @@ const menuTree = computed(() => {
   console.log('userStore.menus length:', menus.length)
   
   if (menus.length === 0) {
-    console.warn('No menus found in userStore.menus, userStore:', userStore)
+    // console.warn('No menus found in userStore.menus, userStore:', userStore)
     return []
   }
   

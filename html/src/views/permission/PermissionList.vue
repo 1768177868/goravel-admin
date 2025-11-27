@@ -12,67 +12,63 @@
       </template>
 
       <!-- 搜索表单 -->
-      <el-form :model="searchForm" :inline="true" class="search-form">
-        <el-form-item :label="$t('permission.name')">
-          <el-input
-            v-model="searchForm.name"
-            :placeholder="$t('form.please_enter') + $t('permission.name')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('permission.slug')">
-          <el-input
-            v-model="searchForm.slug"
-            :placeholder="$t('form.please_enter') + $t('permission.slug')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('permission.method')">
-          <el-select
-            v-model="searchForm.method"
-            :placeholder="$t('form.please_select') + $t('permission.method')"
-            clearable
-            style="width: 150px"
-          >
-            <el-option label="GET" value="GET" />
-            <el-option label="POST" value="POST" />
-            <el-option label="PUT" value="PUT" />
-            <el-option label="DELETE" value="DELETE" />
-            <el-option label="PATCH" value="PATCH" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="$t('permission.path')">
-          <el-input
-            v-model="searchForm.path"
-            :placeholder="$t('form.please_enter') + $t('permission.path')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('table.status')">
-          <el-select
-            v-model="searchForm.status"
-            :placeholder="$t('form.please_select') + $t('table.status')"
-            clearable
-            style="width: 120px"
-          >
-            <el-option :label="$t('common.enabled')" value="1" />
-            <el-option :label="$t('common.disabled')" value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            {{ $t('log.search') }}
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            {{ $t('log.reset') }}
-          </el-button>
-        </el-form-item>
-      </el-form>
+      <SearchForm
+        :model="searchForm"
+        @search="handleSearch"
+        @reset="handleReset"
+      >
+        <template #default>
+          <el-form-item :label="$t('permission.name')">
+            <el-input
+              v-model="searchForm.name"
+              :placeholder="$t('form.please_enter') + $t('permission.name')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('permission.slug')">
+            <el-input
+              v-model="searchForm.slug"
+              :placeholder="$t('form.please_enter') + $t('permission.slug')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('permission.method')">
+            <el-select
+              v-model="searchForm.method"
+              :placeholder="$t('form.please_select') + $t('permission.method')"
+              clearable
+              style="width: 150px"
+            >
+              <el-option label="GET" value="GET" />
+              <el-option label="POST" value="POST" />
+              <el-option label="PUT" value="PUT" />
+              <el-option label="DELETE" value="DELETE" />
+              <el-option label="PATCH" value="PATCH" />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('permission.path')">
+            <el-input
+              v-model="searchForm.path"
+              :placeholder="$t('form.please_enter') + $t('permission.path')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('table.status')">
+            <el-select
+              v-model="searchForm.status"
+              :placeholder="$t('form.please_select') + $t('table.status')"
+              clearable
+              style="width: 120px"
+            >
+              <el-option :label="$t('common.enabled')" value="1" />
+              <el-option :label="$t('common.disabled')" value="0" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </SearchForm>
 
       <vxe-table
         :data="tableData"
@@ -133,11 +129,8 @@
         </vxe-column>
       </vxe-table>
 
-      <vxe-pager
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
+      <Pagination
+        v-model="pagination"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -232,7 +225,9 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, ArrowDown } from '@element-plus/icons-vue'
+import { Plus, ArrowDown } from '@element-plus/icons-vue'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 import {
   getPermissionList,
   getPermissionDetail,
@@ -626,12 +621,6 @@ onMounted(() => {
   align-items: center;
 }
 
-.search-form {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 4px;
-}
 
 .tree-node-label {
   font-size: 14px;

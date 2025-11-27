@@ -18,67 +18,63 @@
       </template>
 
       <!-- 搜索表单 -->
-      <el-form :model="searchForm" :inline="true" class="search-form">
-        <el-form-item :label="$t('log.level')">
-          <el-select
-            v-model="searchForm.level"
-            :placeholder="$t('form.please_select') + $t('log.level')"
-            clearable
-            style="width: 120px"
-          >
-            <el-option label="error" value="error" />
-            <el-option label="warning" value="warning" />
-            <el-option label="info" value="info" />
-            <el-option label="debug" value="debug" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="$t('log.module')">
-          <el-input
-            v-model="searchForm.module"
-            :placeholder="$t('form.please_enter') + $t('log.module')"
-            clearable
-            style="width: 150px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('log.message')">
-          <el-input
-            v-model="searchForm.message"
-            :placeholder="$t('form.please_enter') + $t('log.message')"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('log.start_time')">
-          <el-date-picker
-            v-model="searchForm.start_time"
-            type="datetime"
-            :placeholder="$t('form.please_select') + $t('log.start_time')"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 180px"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item :label="$t('log.end_time')">
-          <el-date-picker
-            v-model="searchForm.end_time"
-            type="datetime"
-            :placeholder="$t('form.please_select') + $t('log.end_time')"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 180px"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            {{ $t('log.search') }}
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            {{ $t('log.reset') }}
-          </el-button>
-        </el-form-item>
-      </el-form>
+      <SearchForm
+        :model="searchForm"
+        @search="handleSearch"
+        @reset="handleReset"
+      >
+        <template #default>
+          <el-form-item :label="$t('log.level')">
+            <el-select
+              v-model="searchForm.level"
+              :placeholder="$t('form.please_select') + $t('log.level')"
+              clearable
+              style="width: 120px"
+            >
+              <el-option label="error" value="error" />
+              <el-option label="warning" value="warning" />
+              <el-option label="info" value="info" />
+              <el-option label="debug" value="debug" />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('log.module')">
+            <el-input
+              v-model="searchForm.module"
+              :placeholder="$t('form.please_enter') + $t('log.module')"
+              clearable
+              style="width: 150px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('log.message')">
+            <el-input
+              v-model="searchForm.message"
+              :placeholder="$t('form.please_enter') + $t('log.message')"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('log.start_time')">
+            <el-date-picker
+              v-model="searchForm.start_time"
+              type="datetime"
+              :placeholder="$t('form.please_select') + $t('log.start_time')"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 180px"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item :label="$t('log.end_time')">
+            <el-date-picker
+              v-model="searchForm.end_time"
+              type="datetime"
+              :placeholder="$t('form.please_select') + $t('log.end_time')"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 180px"
+              clearable
+            />
+          </el-form-item>
+        </template>
+      </SearchForm>
 
       <vxe-table
         ref="tableRef"
@@ -124,11 +120,8 @@
         </vxe-column>
       </vxe-table>
 
-      <vxe-pager
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
+      <Pagination
+        v-model="pagination"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -156,7 +149,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Delete } from '@element-plus/icons-vue'
+import { Delete } from '@element-plus/icons-vue'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 import {
   getSystemLogList,
   getSystemLogDetail,
@@ -405,12 +400,6 @@ onMounted(() => {
   gap: 10px;
 }
 
-.search-form {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 4px;
-}
 
 pre {
   margin: 0;
