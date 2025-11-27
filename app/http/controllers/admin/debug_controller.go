@@ -4,40 +4,75 @@ import (
 	"github.com/goravel/framework/contracts/http"
 
 	"goravel/app/http/response"
-	"goravel/app/services"
-	"goravel/app/utils/logger"
+	"goravel/app/utils/errorlog"
 	"goravel/app/utils/traceid"
 )
 
 type DebugController struct {
-	systemLog services.SystemLogService
 }
 
 func NewDebugController() *DebugController {
-	return &DebugController{
-		systemLog: services.NewSystemLogService(),
-	}
+	return &DebugController{}
 }
 
-// TraceTest 手动触发错误日志，方便校验 trace_id
+// TraceTest 手动触发不同级别的日志，方便校验 trace_id
+// 支持 query 参数：
+//   - level: 日志级别 (error/warning/info/debug)，默认 error
+//   - message: 自定义消息，默认 "manual trace log test"
+//   - trace_id: 自定义 trace_id（可选）
 func (r *DebugController) TraceTest(ctx http.Context) http.Response {
 	traceID := traceid.EnsureHTTPContext(ctx, ctx.Request().Query("trace_id", ""))
 	message := ctx.Request().Query("message", "manual trace log test")
+	level := ctx.Request().Query("level", "error")
 
-	// 普通日志文件
-	logger.ErrorfHTTP(ctx, "Trace test endpoint triggered: %s", message)
+	// 根据级别记录不同级别的日志
+	switch level {
+	case "warning":
+		errorlog.RecordHTTPWithLevel(ctx, "warning", "trace-test", "Trace test warning log", map[string]any{
+			"path":     ctx.Request().Path(),
+			"method":   ctx.Request().Method(),
+			"trace_id": traceID,
+			"message":  message,
+			"level":    "warning",
+		}, "Trace test warning: %s", message)
+		return response.Error(ctx, http.StatusBadRequest, "trace_test_warning")
 
-	// 系统日志表
-	_ = r.systemLog.RecordHTTP(ctx, "error", "trace-test", message, map[string]any{
-		"path":    ctx.Request().Path(),
-		"method":  ctx.Request().Method(),
-		"traceId": traceID,
-	})
+	case "info":
+		errorlog.RecordHTTPWithLevel(ctx, "info", "trace-test", "Trace test info log", map[string]any{
+			"path":     ctx.Request().Path(),
+			"method":   ctx.Request().Method(),
+			"trace_id": traceID,
+			"message":  message,
+			"level":    "info",
+		}, "Trace test info: %s", message)
+		return response.Success(ctx, "trace_test_info", http.Json{
+			"message": message,
+			"level":   "info",
+			"hint":    "Check system logs with this trace_id to see info level log",
+		})
 
-	return response.Success(ctx, "get_success", http.Json{
-		"trace_id": traceID,
-		"message":  message,
-		"hint":     "Use this trace_id to search system logs or grep server logs.",
-	})
+	case "debug":
+		errorlog.RecordHTTPWithLevel(ctx, "debug", "trace-test", "Trace test debug log", map[string]any{
+			"path":     ctx.Request().Path(),
+			"method":   ctx.Request().Method(),
+			"trace_id": traceID,
+			"message":  message,
+			"level":    "debug",
+		}, "Trace test debug: %s", message)
+		return response.Success(ctx, "trace_test_debug", http.Json{
+			"message": message,
+			"level":   "debug",
+			"hint":    "Check system logs with this trace_id to see debug level log",
+		})
+
+	default: // error
+		errorlog.RecordHTTP(ctx, "trace-test", "Trace test error log", map[string]any{
+			"path":     ctx.Request().Path(),
+			"method":   ctx.Request().Method(),
+			"trace_id": traceID,
+			"message":  message,
+			"level":    "error",
+		}, "Trace test error: %s", message)
+		return response.Error(ctx, http.StatusInternalServerError, "trace_test_error")
+	}
 }
-

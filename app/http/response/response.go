@@ -9,7 +9,7 @@ import (
 	"goravel/app/utils/traceid"
 )
 
-// Success 成功响应（支持多语言）
+// Success 成功响应（支持多语言，自动包含 trace_id）
 func Success(ctx http.Context, messageKey string, data ...http.Json) http.Response {
 	message := trans.Get(ctx, messageKey)
 
@@ -17,6 +17,12 @@ func Success(ctx http.Context, messageKey string, data ...http.Json) http.Respon
 		"code":    200,
 		"message": message,
 	}
+
+	// 自动包含 trace_id，方便前端追踪
+	if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
+		response["trace_id"] = traceID
+	}
+
 	if len(data) > 0 {
 		// 转换时间字段到对应时区
 		convertedData := helpers.ConvertTimesInData(ctx, data[0])
@@ -29,7 +35,7 @@ func Success(ctx http.Context, messageKey string, data ...http.Json) http.Respon
 	return ctx.Response().Success().Json(response)
 }
 
-// SuccessWithHeader 成功响应（支持多语言和自定义Header）
+// SuccessWithHeader 成功响应（支持多语言和自定义Header，自动包含 trace_id）
 func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerValue string, data ...http.Json) http.Response {
 	message := trans.Get(ctx, messageKey)
 
@@ -37,6 +43,12 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 		"code":    200,
 		"message": message,
 	}
+
+	// 自动包含 trace_id，方便前端追踪
+	if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
+		response["trace_id"] = traceID
+	}
+
 	if len(data) > 0 {
 		// 转换时间字段到对应时区
 		convertedData := helpers.ConvertTimesInData(ctx, data[0])
@@ -84,14 +96,14 @@ func ValidationError(ctx http.Context, code int, messageKey string, errors map[s
 	return ctx.Response().Json(code, response)
 }
 
-// Paginate 分页响应（支持多语言）
+// Paginate 分页响应（支持多语言，自动包含 trace_id）
 func Paginate(ctx http.Context, messageKey string, list any, total int64, page, pageSize int) http.Response {
 	message := trans.Get(ctx, messageKey)
 
 	// 转换列表中的时间字段到对应时区
 	convertedList := helpers.ConvertTimesInData(ctx, list)
 
-	return ctx.Response().Success().Json(http.Json{
+	response := http.Json{
 		"code":    200,
 		"message": message,
 		"data": http.Json{
@@ -100,7 +112,14 @@ func Paginate(ctx http.Context, messageKey string, list any, total int64, page, 
 			"page":      page,
 			"page_size": pageSize,
 		},
-	})
+	}
+
+	// 自动包含 trace_id，方便前端追踪
+	if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
+		response["trace_id"] = traceID
+	}
+
+	return ctx.Response().Success().Json(response)
 }
 
 // Export 导出响应（支持多语言）
@@ -132,12 +151,19 @@ func Export(ctx http.Context, messageKey string, headers []string, data [][]stri
 
 	exportURL := exportService.GetExportURL(filePath)
 
-	return ctx.Response().Success().Json(http.Json{
+	response := http.Json{
 		"code":    200,
 		"message": message,
 		"data": http.Json{
 			"file_path": filePath,
 			"file_url":  exportURL,
 		},
-	})
+	}
+
+	// 自动包含 trace_id，方便前端追踪
+	if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
+		response["trace_id"] = traceID
+	}
+
+	return ctx.Response().Success().Json(response)
 }
