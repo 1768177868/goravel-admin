@@ -14,20 +14,12 @@
       <!-- 搜索表单 -->
       <SearchForm
         :model="searchForm"
+        :fields="searchFields"
+        :initial-values="{ username: '', status: '' }"
+        i18n-prefix="admin"
         @search="handleSearch"
         @reset="handleReset"
       >
-        <template #default>
-          <el-form-item :label="$t('table.username')">
-            <el-input v-model="searchForm.username" :placeholder="$t('form.enter_username')" clearable />
-          </el-form-item>
-          <el-form-item :label="$t('table.status')">
-            <el-select v-model="searchForm.status" :placeholder="$t('form.select_status')" clearable style="width: 150px">
-              <el-option :label="$t('common.enabled')" value="1" />
-              <el-option :label="$t('common.disabled')" value="0" />
-            </el-select>
-          </el-form-item>
-        </template>
         <template #extra-buttons>
           <el-button type="success" @click="handleExport">{{ $t('common.export') }}</el-button>
         </template>
@@ -223,6 +215,28 @@ const searchForm = reactive({
   username: '',
   status: ''
 })
+
+// 搜索表单字段配置
+const searchFields = computed(() => [
+  {
+    prop: 'username',
+    label: t('table.username'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'status',
+    label: t('table.status'),
+    type: 'select',
+    width: '150px',
+    options: [
+      { label: t('common.enabled'), value: '1' },
+      { label: t('common.disabled'), value: '0' }
+    ],
+    advanced: false
+  }
+])
 
 const pagination = reactive({
   page: 1,

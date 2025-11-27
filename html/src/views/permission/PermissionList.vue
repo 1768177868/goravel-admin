@@ -14,61 +14,12 @@
       <!-- 搜索表单 -->
       <SearchForm
         :model="searchForm"
+        :fields="searchFields"
+        :initial-values="{ name: '', slug: '', method: '', path: '', status: '' }"
+        i18n-prefix="permission"
         @search="handleSearch"
         @reset="handleReset"
-      >
-        <template #default>
-          <el-form-item :label="$t('permission.name')">
-            <el-input
-              v-model="searchForm.name"
-              :placeholder="$t('form.please_enter') + $t('permission.name')"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item :label="$t('permission.slug')">
-            <el-input
-              v-model="searchForm.slug"
-              :placeholder="$t('form.please_enter') + $t('permission.slug')"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item :label="$t('permission.method')">
-            <el-select
-              v-model="searchForm.method"
-              :placeholder="$t('form.please_select') + $t('permission.method')"
-              clearable
-              style="width: 150px"
-            >
-              <el-option label="GET" value="GET" />
-              <el-option label="POST" value="POST" />
-              <el-option label="PUT" value="PUT" />
-              <el-option label="DELETE" value="DELETE" />
-              <el-option label="PATCH" value="PATCH" />
-            </el-select>
-          </el-form-item>
-          <el-form-item :label="$t('permission.path')">
-            <el-input
-              v-model="searchForm.path"
-              :placeholder="$t('form.please_enter') + $t('permission.path')"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item :label="$t('table.status')">
-            <el-select
-              v-model="searchForm.status"
-              :placeholder="$t('form.please_select') + $t('table.status')"
-              clearable
-              style="width: 120px"
-            >
-              <el-option :label="$t('common.enabled')" value="1" />
-              <el-option :label="$t('common.disabled')" value="0" />
-            </el-select>
-          </el-form-item>
-        </template>
-      </SearchForm>
+      />
 
       <vxe-table
         :data="tableData"
@@ -259,6 +210,56 @@ const searchForm = reactive({
   path: '',
   status: ''
 })
+
+// 搜索表单字段配置
+const searchFields = computed(() => [
+  {
+    prop: 'name',
+    label: t('permission.name'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'slug',
+    label: t('permission.slug'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'method',
+    label: t('permission.method'),
+    type: 'select',
+    width: '150px',
+    options: [
+      { label: 'GET', value: 'GET' },
+      { label: 'POST', value: 'POST' },
+      { label: 'PUT', value: 'PUT' },
+      { label: 'DELETE', value: 'DELETE' },
+      { label: 'PATCH', value: 'PATCH' }
+    ],
+    advanced: false
+  },
+  {
+    prop: 'path',
+    label: t('permission.path'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'status',
+    label: t('table.status'),
+    type: 'select',
+    width: '120px',
+    options: [
+      { label: t('common.enabled'), value: '1' },
+      { label: t('common.disabled'), value: '0' }
+    ],
+    advanced: false
+  }
+])
 
 const formData = reactive({
   id: null,

@@ -12,6 +12,16 @@ export default defineConfig(({ mode }) => {
         '@': resolve(__dirname, 'src')
       }
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: 'modern-compiler' // 使用新的 Sass API
+        },
+        sass: {
+          api: 'modern-compiler' // 使用新的 Sass API
+        }
+      }
+    },
     server: {
       port: 3007,
       proxy: {

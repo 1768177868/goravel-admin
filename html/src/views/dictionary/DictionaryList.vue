@@ -13,15 +13,12 @@
 
       <SearchForm
         :model="searchForm"
+        :fields="searchFields"
+        :initial-values="{ type: '' }"
+        i18n-prefix="dictionary"
         @search="handleSearch"
         @reset="handleReset"
-      >
-        <template #default>
-          <el-form-item :label="$t('dictionary.type')">
-            <el-input v-model="searchForm.type" :placeholder="$t('form.please_enter') + $t('dictionary.type')" clearable />
-          </el-form-item>
-        </template>
-      </SearchForm>
+      />
 
       <vxe-table
         :data="tableData"
@@ -136,6 +133,17 @@ const dialogTitle = computed(() => formData.id ? t('dictionary.edit_dictionary')
 const searchForm = reactive({
   type: ''
 })
+
+// 搜索表单字段配置
+const searchFields = computed(() => [
+  {
+    prop: 'type',
+    label: t('dictionary.type'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  }
+])
 
 const pagination = reactive({
   page: 1,

@@ -17,84 +17,16 @@
         </div>
       </template>
 
-      <!-- 搜索表单 -->
+      <!-- 搜索表单（使用 JSON 配置方式） -->
       <SearchForm
         :model="searchForm"
-        :show-expand="true"
+        :fields="searchFields"
+        :initial-values="initialSearchForm"
+        :loading="loading"
+        i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
-        @expand-change="searchExpanded = $event"
-      >
-        <template #default="{ expanded }">
-          <el-form-item :label="$t('log.username')">
-            <el-input
-              v-model="searchForm.username"
-              :placeholder="$t('form.please_enter') + $t('log.username')"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item :label="$t('log.method')">
-            <el-select
-              v-model="searchForm.method"
-              :placeholder="$t('form.please_select') + $t('log.method')"
-              clearable
-              style="width: 150px"
-            >
-              <el-option label="GET" value="GET" />
-              <el-option label="POST" value="POST" />
-              <el-option label="PUT" value="PUT" />
-              <el-option label="DELETE" value="DELETE" />
-              <el-option label="PATCH" value="PATCH" />
-            </el-select>
-          </el-form-item>
-          <el-form-item :label="$t('log.path')">
-            <el-input
-              v-model="searchForm.path"
-              :placeholder="$t('form.please_enter') + $t('log.path')"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <!-- 高级搜索项（可展开/收起） -->
-          <el-form-item v-show="expanded" :label="$t('log.ip')">
-            <el-input
-              v-model="searchForm.ip"
-              :placeholder="$t('form.please_enter') + $t('log.ip')"
-              clearable
-              style="width: 150px"
-            />
-          </el-form-item>
-          <el-form-item v-show="expanded" :label="$t('log.status_code')">
-            <el-input
-              v-model="searchForm.status"
-              :placeholder="$t('form.please_enter') + $t('log.status_code')"
-              clearable
-              style="width: 120px"
-            />
-          </el-form-item>
-          <el-form-item v-show="expanded" :label="$t('log.start_time')">
-            <el-date-picker
-              v-model="searchForm.start_time"
-              type="datetime"
-              :placeholder="$t('form.please_select') + $t('log.start_time')"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 180px"
-              clearable
-            />
-          </el-form-item>
-          <el-form-item v-show="expanded" :label="$t('log.end_time')">
-            <el-date-picker
-              v-model="searchForm.end_time"
-              type="datetime"
-              :placeholder="$t('form.please_select') + $t('log.end_time')"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 180px"
-              clearable
-            />
-          </el-form-item>
-        </template>
-      </SearchForm>
+      />
 
       <vxe-table
         ref="tableRef"
@@ -130,6 +62,9 @@
 
       <Pagination
         v-model="pagination"
+        :show-total="true"
+        :show-quick-jumper="true"
+        :align="'right'"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -152,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
@@ -173,7 +108,6 @@ const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
-const searchExpanded = ref(false) // 搜索表单展开状态（用于控制高级搜索项的显示）
 
 const pagination = reactive({
   page: 1,
@@ -208,7 +142,8 @@ const getSevenDaysAgo = () => {
   return formatDateTime(date)
 }
 
-const searchForm = reactive({
+// 搜索表单初始值
+const initialSearchForm = {
   username: '',
   method: '',
   path: '',
@@ -216,7 +151,71 @@ const searchForm = reactive({
   status: '',
   start_time: getSevenDaysAgo(),
   end_time: ''
-})
+}
+
+const searchForm = reactive({ ...initialSearchForm })
+
+// 搜索表单字段配置（JSON 方式）
+const searchFields = computed(() => [
+  {
+    prop: 'username',
+    label: t('log.username'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'method',
+    label: t('log.method'),
+    type: 'select',
+    width: '150px',
+    options: [
+      { label: 'GET', value: 'GET' },
+      { label: 'POST', value: 'POST' },
+      { label: 'PUT', value: 'PUT' },
+      { label: 'DELETE', value: 'DELETE' },
+      { label: 'PATCH', value: 'PATCH' }
+    ],
+    advanced: false
+  },
+  {
+    prop: 'path',
+    label: t('log.path'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'ip',
+    label: t('log.ip'),
+    type: 'input',
+    width: '150px',
+    advanced: true
+  },
+  {
+    prop: 'status',
+    label: t('log.status_code'),
+    type: 'input',
+    width: '120px',
+    advanced: true
+  },
+  {
+    prop: 'start_time',
+    label: t('log.start_time'),
+    type: 'datetime',
+    width: '180px',
+    valueFormat: 'YYYY-MM-DD HH:mm:ss',
+    advanced: true
+  },
+  {
+    prop: 'end_time',
+    label: t('log.end_time'),
+    type: 'datetime',
+    width: '180px',
+    valueFormat: 'YYYY-MM-DD HH:mm:ss',
+    advanced: true
+  }
+])
 
 // 转换操作日志数据（PascalCase -> snake_case）
 const transformOperationLogData = (log) => {

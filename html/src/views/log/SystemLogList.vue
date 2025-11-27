@@ -20,61 +20,12 @@
       <!-- 搜索表单 -->
       <SearchForm
         :model="searchForm"
+        :fields="searchFields"
+        :initial-values="{ level: '', module: '', message: '', start_time: '', end_time: '' }"
+        i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
-      >
-        <template #default>
-          <el-form-item :label="$t('log.level')">
-            <el-select
-              v-model="searchForm.level"
-              :placeholder="$t('form.please_select') + $t('log.level')"
-              clearable
-              style="width: 120px"
-            >
-              <el-option label="error" value="error" />
-              <el-option label="warning" value="warning" />
-              <el-option label="info" value="info" />
-              <el-option label="debug" value="debug" />
-            </el-select>
-          </el-form-item>
-          <el-form-item :label="$t('log.module')">
-            <el-input
-              v-model="searchForm.module"
-              :placeholder="$t('form.please_enter') + $t('log.module')"
-              clearable
-              style="width: 150px"
-            />
-          </el-form-item>
-          <el-form-item :label="$t('log.message')">
-            <el-input
-              v-model="searchForm.message"
-              :placeholder="$t('form.please_enter') + $t('log.message')"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item :label="$t('log.start_time')">
-            <el-date-picker
-              v-model="searchForm.start_time"
-              type="datetime"
-              :placeholder="$t('form.please_select') + $t('log.start_time')"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 180px"
-              clearable
-            />
-          </el-form-item>
-          <el-form-item :label="$t('log.end_time')">
-            <el-date-picker
-              v-model="searchForm.end_time"
-              type="datetime"
-              :placeholder="$t('form.please_select') + $t('log.end_time')"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 180px"
-              clearable
-            />
-          </el-form-item>
-        </template>
-      </SearchForm>
+      />
 
       <vxe-table
         ref="tableRef"
@@ -146,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
@@ -183,6 +134,53 @@ const searchForm = reactive({
   start_time: '',
   end_time: ''
 })
+
+// 搜索表单字段配置
+const searchFields = computed(() => [
+  {
+    prop: 'level',
+    label: t('log.level'),
+    type: 'select',
+    width: '120px',
+    options: [
+      { label: 'error', value: 'error' },
+      { label: 'warning', value: 'warning' },
+      { label: 'info', value: 'info' },
+      { label: 'debug', value: 'debug' }
+    ],
+    advanced: false
+  },
+  {
+    prop: 'module',
+    label: t('log.module'),
+    type: 'input',
+    width: '150px',
+    advanced: false
+  },
+  {
+    prop: 'message',
+    label: t('log.message'),
+    type: 'input',
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'start_time',
+    label: t('log.start_time'),
+    type: 'datetime',
+    width: '180px',
+    valueFormat: 'YYYY-MM-DD HH:mm:ss',
+    advanced: true
+  },
+  {
+    prop: 'end_time',
+    label: t('log.end_time'),
+    type: 'datetime',
+    width: '180px',
+    valueFormat: 'YYYY-MM-DD HH:mm:ss',
+    advanced: true
+  }
+])
 
 const getLevelType = (level) => {
   const levelMap = {
