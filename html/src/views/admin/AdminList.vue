@@ -263,12 +263,14 @@ const tableColumns = computed(() => [
   {
     field: 'department',
     title: t('table.department'),
-    slot: 'department'
+    slot: 'department',
+    sortable: false
   },
   {
     field: 'roles',
     title: t('table.roles'),
-    slot: 'roles'
+    slot: 'roles',
+    sortable: false
   },
   {
     field: 'created_at',

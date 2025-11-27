@@ -196,18 +196,20 @@ const tableColumns = computed(() => [
     field: 'trace_id',
     title: t('log.trace_id'),
     width: 220,
+    sortable: true,
     formatter: ({ row }) => row.TraceID || row.trace_id || '-'
   },
   {
     field: 'message',
     title: t('log.message'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'context',
     title: t('log.context'),
     width: 200,
-    slot: 'context'
+    slot: 'context',
+    sortable: false
   },
   {
     field: 'created_at',
@@ -219,7 +221,8 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 100,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    sortable: false
   }
 ])
 

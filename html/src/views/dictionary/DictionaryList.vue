@@ -181,7 +181,8 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    sortable: false
   }
 ])
 

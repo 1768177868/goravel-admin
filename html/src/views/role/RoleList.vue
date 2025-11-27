@@ -213,7 +213,7 @@ const tableColumns = computed(() => [
   {
     field: 'description',
     title: t('common.description'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => getDisplayValue(row, 'description')
   },
   {
@@ -240,7 +240,8 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 200,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    sortable: false
   }
 ])
 

@@ -233,14 +233,15 @@ const tableColumns = computed(() => [
   {
     field: 'description',
     title: t('common.description'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Description || row.description || '-'
   },
   {
     field: 'menu',
     title: t('menu.title'),
     width: 150,
-    slot: 'menu'
+    slot: 'menu',
+    sortable: false
   },
   {
     field: 'status',
@@ -266,7 +267,8 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    sortable: false
   }
 ])
 

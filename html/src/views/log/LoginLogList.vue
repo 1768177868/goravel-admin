@@ -173,8 +173,8 @@ const tableColumns = computed(() => [
   {
     field: 'admin',
     title: t('log.admin'),
-    sortable: true,
-    slot: 'admin'
+    slot: 'admin',
+    sortable: false
   },
   {
     field: 'ip',
@@ -185,7 +185,7 @@ const tableColumns = computed(() => [
   {
     field: 'user_agent',
     title: t('log.user_agent'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'status',
@@ -197,7 +197,7 @@ const tableColumns = computed(() => [
   {
     field: 'message',
     title: t('log.message'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'created_at',
@@ -209,7 +209,8 @@ const tableColumns = computed(() => [
     title: t('table.operation'),
     width: 100,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    sortable: false
   }
 ])
 

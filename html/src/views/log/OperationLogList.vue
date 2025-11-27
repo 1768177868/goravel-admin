@@ -195,8 +195,8 @@ const tableColumns = computed(() => [
   {
     field: 'admin',
     title: t('log.admin'),
-    sortable: false,
-    slot: 'admin'
+    slot: 'admin',
+    sortable: false
   },
   {
     field: 'method',
