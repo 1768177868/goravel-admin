@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/http/response"
+	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
 )
@@ -20,11 +21,11 @@ func NewOptionController() *OptionController {
 	}
 }
 
-// Index 获取下拉选项数据（统一接口）
+// Index 获取下拉选项数据
 // 支持多种类型：role, department, status, method 等
 func (r *OptionController) Index(ctx http.Context) http.Response {
 	optionType := ctx.Request().Query("type", "")
-	
+
 	switch optionType {
 	case "role":
 		return r.getRoleOptions(ctx)
@@ -73,7 +74,7 @@ func (r *OptionController) getDepartmentOptions(ctx http.Context) http.Response 
 	tree := r.buildDepartmentTree(departments, 0)
 
 	return response.Success(ctx, "get_success", http.Json{
-		"options": tree, // 树形结构，用于 tree-select
+		"options": tree,        // 树形结构，用于 tree-select
 		"list":    departments, // 扁平列表，用于 select
 	})
 }
@@ -100,8 +101,8 @@ func (r *OptionController) buildDepartmentTree(departments []models.Department, 
 // getStatusOptions 获取状态选项
 func (r *OptionController) getStatusOptions(ctx http.Context) http.Response {
 	options := []map[string]any{
-		{"label": "启用", "value": "1"},
-		{"label": "禁用", "value": "0"},
+		{"label": trans.Get(ctx, "common.enabled"), "value": "1"},
+		{"label": trans.Get(ctx, "common.disabled"), "value": "0"},
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
@@ -127,12 +128,11 @@ func (r *OptionController) getMethodOptions(ctx http.Context) http.Response {
 // getYesNoOptions 获取是/否选项
 func (r *OptionController) getYesNoOptions(ctx http.Context) http.Response {
 	options := []map[string]any{
-		{"label": "是", "value": "1"},
-		{"label": "否", "value": "0"},
+		{"label": trans.Get(ctx, "common.yes"), "value": "1"},
+		{"label": trans.Get(ctx, "common.no"), "value": "0"},
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
 		"options": options,
 	})
 }
-
