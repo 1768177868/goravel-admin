@@ -12,7 +12,7 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/logger"
+	"goravel/app/utils/errorlog"
 )
 
 type AuthController struct {
@@ -87,7 +87,9 @@ func (r *AuthController) Captcha(ctx http.Context) http.Response {
 	if enabled {
 		captchaID, image, err := r.captchaService.Generate()
 		if err != nil {
-			logger.ErrorfHTTP(ctx, "Generate captcha error: %v", err)
+			errorlog.RecordHTTP(ctx, "captcha", "Generate captcha error", map[string]any{
+				"error": err.Error(),
+			}, "Generate captcha error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
 		}
 		captchaData["captcha_id"] = captchaID
@@ -145,6 +147,10 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 
 	// 重新查询admin以确保获取最新数据
 	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to query admin in UpdateProfile", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Query admin error: %v", err)
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
@@ -167,12 +173,20 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(&admin); err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to save admin profile", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Save admin profile error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
 	// 重新加载关联数据（确保部门和角色被正确加载）
 	var adminWithRelations models.Admin
 	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to load admin relations in UpdateProfile", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Load admin relations error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 	admin = adminWithRelations
@@ -271,6 +285,10 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	tokenService := services.NewTokenServiceImpl()
 	tokens, err := tokenService.GetTokensByUser("admin", admin.ID)
 	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to get tokens by user", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Get tokens by user error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
@@ -339,6 +357,11 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 	// 删除token（直接通过ID删除，因为数据库中存储的是hash值，无法获取原始token）
 	_, err = facades.Orm().Query().Delete(&token)
 	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to delete token", map[string]any{
+			"error":    err.Error(),
+			"token_id": token.ID,
+			"admin_id": admin.ID,
+		}, "Delete token error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 
@@ -361,6 +384,10 @@ func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
 	// 删除用户的所有token
 	tokenService := services.NewTokenServiceImpl()
 	if err := tokenService.DeleteTokensByUser("admin", admin.ID); err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to delete all tokens by user", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Delete all tokens by user error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 
@@ -372,6 +399,15 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		admin = *adminPtr
+	} else {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
@@ -395,6 +431,11 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	// 删除用户的所有token
 	tokenService := services.NewTokenServiceImpl()
 	if err := tokenService.DeleteTokensByUser("admin", targetAdmin.ID); err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to kick out user tokens", map[string]any{
+			"error":          err.Error(),
+			"target_user_id": targetAdmin.ID,
+			"operator_id":    admin.ID,
+		}, "Kick out user tokens error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 
