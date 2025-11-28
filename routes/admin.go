@@ -18,6 +18,7 @@ func Admin() {
 	departmentController := admin.NewDepartmentController()
 	dictionaryController := admin.NewDictionaryController()
 	configController := admin.NewConfigController()
+	blacklistController := admin.NewBlacklistController()
 	operationLogController := admin.NewOperationLogController()
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
@@ -91,6 +92,9 @@ func Admin() {
 		router.Get("configs/group/{group}", configController.GetByGroup)
 		router.Post("configs/save", configController.Save)
 		router.Post("configs/test-email", configController.TestEmail)
+
+		// 黑名单管理
+		router.Resource("blacklists", blacklistController)
 
 		// 操作日志
 		router.Get("operation-logs", operationLogController.Index)

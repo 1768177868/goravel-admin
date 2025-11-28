@@ -189,6 +189,19 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "IP黑名单",
+		Slug:      "blacklist",
+		Icon:      "Warning",
+		Path:      "/blacklists",
+		Component: "blacklist/index",
+		Type:      2,
+		Status:    1,
+		Sort:      8,
+		IsHidden:  0,
+	})
+
 	// 创建日志管理父菜单
 	logMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,

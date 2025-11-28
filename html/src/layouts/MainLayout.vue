@@ -64,6 +64,10 @@
               <el-icon><Setting /></el-icon>
               <template #title>{{ $t('menu.config_management') }}</template>
             </el-menu-item>
+            <el-menu-item index="/blacklists">
+              <el-icon><Warning /></el-icon>
+              <template #title>{{ $t('menu.blacklist_management') }}</template>
+            </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="logs">
             <template #title>
@@ -190,7 +194,8 @@ import {
   OfficeBuilding,
   Document,
   Bell,
-  Monitor
+  Monitor,
+  Warning
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -211,6 +216,7 @@ const pathMap = {
   '/departments': '/departments',
   '/dictionaries': '/dictionaries',
   '/configs': '/configs',
+  '/blacklists': '/blacklists',
   '/operation-logs': '/operation-logs',
   '/login-logs': '/login-logs',
   '/system-logs': '/system-logs',

@@ -63,6 +63,12 @@ const routes = [
         meta: { titleKey: 'menu.config_management' }
       },
       {
+        path: 'blacklists',
+        name: 'Blacklists',
+        component: () => import('../views/blacklist/BlacklistList.vue'),
+        meta: { titleKey: 'menu.blacklist_management' }
+      },
+      {
         path: 'operation-logs',
         name: 'OperationLogs',
         component: () => import('../views/log/OperationLogList.vue'),

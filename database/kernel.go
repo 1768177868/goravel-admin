@@ -23,6 +23,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000005CreateMenusTable{},
 		&migrations.M20250101000006CreateDictionariesTable{},
 		&migrations.M20250101000015CreateConfigsTable{},
+		&migrations.M20250101000016CreateBlacklistsTable{},
 		&migrations.M20250101000007CreateAdminRoleTable{},
 		&migrations.M20250101000008CreateRolePermissionTable{},
 		&migrations.M20250101000009CreateRoleMenuTable{},

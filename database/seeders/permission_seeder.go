@@ -15,7 +15,7 @@ func (s *PermissionSeeder) Signature() string {
 
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
-	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu models.Menu
+	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
@@ -25,6 +25,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "department").First(&departmentMenu)
 	facades.Orm().Query().Where("slug", "dictionary").First(&dictionaryMenu)
 	facades.Orm().Query().Where("slug", "config").First(&configMenu)
+	facades.Orm().Query().Where("slug", "blacklist").First(&blacklistMenu)
 	facades.Orm().Query().Where("slug", "operation-log").First(&operationLogMenu)
 	facades.Orm().Query().Where("slug", "login-log").First(&loginLogMenu)
 	facades.Orm().Query().Where("slug", "system-log").First(&systemLogMenu)
@@ -75,6 +76,12 @@ func (s *PermissionSeeder) Run() error {
 		// 配置管理
 		{Name: "获取配置", Slug: "config.group", Method: "GET", Path: "/api/admin/configs/group/*", Description: "根据分组获取配置", Status: 1, Sort: 1, MenuID: configMenu.ID},
 		{Name: "保存配置", Slug: "config.save", Method: "POST", Path: "/api/admin/configs/save", Description: "保存配置", Status: 1, Sort: 2, MenuID: configMenu.ID},
+		// 黑名单管理
+		{Name: "黑名单列表", Slug: "blacklist.index", Method: "GET", Path: "/api/admin/blacklists", Description: "查看黑名单列表", Status: 1, Sort: 1, MenuID: blacklistMenu.ID},
+		{Name: "黑名单详情", Slug: "blacklist.show", Method: "GET", Path: "/api/admin/blacklists/*", Description: "查看黑名单详情", Status: 1, Sort: 2, MenuID: blacklistMenu.ID},
+		{Name: "黑名单创建", Slug: "blacklist.store", Method: "POST", Path: "/api/admin/blacklists", Description: "创建黑名单", Status: 1, Sort: 3, MenuID: blacklistMenu.ID},
+		{Name: "黑名单更新", Slug: "blacklist.update", Method: "PUT", Path: "/api/admin/blacklists/*", Description: "更新黑名单", Status: 1, Sort: 4, MenuID: blacklistMenu.ID},
+		{Name: "黑名单删除", Slug: "blacklist.destroy", Method: "DELETE", Path: "/api/admin/blacklists/*", Description: "删除黑名单", Status: 1, Sort: 5, MenuID: blacklistMenu.ID},
 		// 操作日志
 		{Name: "操作日志列表", Slug: "operation_log.index", Method: "GET", Path: "/api/admin/operation-logs", Description: "查看操作日志列表", Status: 1, Sort: 1, MenuID: operationLogMenu.ID},
 		{Name: "操作日志详情", Slug: "operation_log.show", Method: "GET", Path: "/api/admin/operation-logs/*", Description: "查看操作日志详情", Status: 1, Sort: 2, MenuID: operationLogMenu.ID},

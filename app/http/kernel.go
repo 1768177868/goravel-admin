@@ -15,6 +15,7 @@ type Kernel struct {
 // These middleware are run during every request to your application.
 func (kernel Kernel) Middleware() []http.Middleware {
 	return []http.Middleware{
+		appmiddleware.Blacklist(), // 黑名单检查（最先执行）
 		appmiddleware.Trace(),
 		httpmiddleware.Throttle("global"),
 		sessionmiddleware.StartSession(),
