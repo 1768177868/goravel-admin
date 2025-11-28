@@ -82,6 +82,7 @@
     "department": "部门管理",
     "dictionary": "字典管理",
     "config": "配置管理",
+    "config_management": "配置管理",
     "log": "日志管理",
     "operation-log": "操作日志",
     "login-log": "登录日志",

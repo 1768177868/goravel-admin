@@ -81,6 +81,8 @@
     "menu": "Menu Management",
     "department": "Department Management",
     "dictionary": "Dictionary Management",
+    "config": "Configuration Management",
+    "config_management": "Configuration Management",
     "log": "Log Management",
     "operation-log": "Operation Log",
     "login-log": "Login Log",
