@@ -44,6 +44,7 @@ func Admin() {
 		router.Get("info", adminAuthController.Info)
 		router.Put("profile", adminAuthController.UpdateProfile)
 		router.Post("logout", adminAuthController.Logout)
+		router.Get("heartbeat", adminAuthController.Heartbeat)
 		// Token管理
 		router.Get("tokens", adminAuthController.Tokens)
 		router.Delete("tokens/{id}", adminAuthController.RevokeToken)

@@ -587,7 +587,27 @@
     "net_errin": "接收错误",
     "net_errout": "发送错误",
     "net_dropin": "接收丢包",
-    "net_dropout": "发送丢包"
+    "net_dropout": "发送丢包",
+    "network_interfaces": "网卡流量",
+    "interface_name": "网卡名称",
+    "interface_bytes_sent": "发送流量",
+    "interface_bytes_recv": "接收流量",
+    "interface_packets_sent": "发送包数",
+    "interface_packets_recv": "接收包数",
+    "interface_errin": "接收错误",
+    "interface_errout": "发送错误",
+    "interface_dropin": "接收丢包",
+    "interface_dropout": "发送丢包",
+    "load": "系统负载",
+    "load_current": "当前负载",
+    "load_1min": "1分钟负载",
+    "load_5min": "5分钟负载",
+    "load_15min": "15分钟负载",
+    "file_descriptors": "文件描述符",
+    "fd_usage": "使用率",
+    "fd_used": "已占用",
+    "fd_free": "剩余",
+    "fd_max": "最大限制"
   }
 }
 

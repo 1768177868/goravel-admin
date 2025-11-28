@@ -587,7 +587,27 @@
     "net_errin": "Receive Errors",
     "net_errout": "Send Errors",
     "net_dropin": "Receive Drops",
-    "net_dropout": "Send Drops"
+    "net_dropout": "Send Drops",
+    "network_interfaces": "Network Interfaces",
+    "interface_name": "Interface Name",
+    "interface_bytes_sent": "Bytes Sent",
+    "interface_bytes_recv": "Bytes Received",
+    "interface_packets_sent": "Packets Sent",
+    "interface_packets_recv": "Packets Received",
+    "interface_errin": "Receive Errors",
+    "interface_errout": "Send Errors",
+    "interface_dropin": "Receive Drops",
+    "interface_dropout": "Send Drops",
+    "load": "System Load",
+    "load_current": "Current Load",
+    "load_1min": "1 Minute Load",
+    "load_5min": "5 Minute Load",
+    "load_15min": "15 Minute Load",
+    "file_descriptors": "File Descriptors",
+    "fd_usage": "Usage",
+    "fd_used": "Used",
+    "fd_free": "Free",
+    "fd_max": "Max Limit"
   }
 }
 

@@ -245,6 +245,13 @@ func (r *AuthController) Refresh(ctx http.Context) http.Response {
 	})
 }
 
+// Heartbeat 心跳接口，用于更新用户的最后活跃时间
+// JWT中间件会自动更新 last_used_at，这个接口只是确保用户在线状态
+func (r *AuthController) Heartbeat(ctx http.Context) http.Response {
+	// JWT中间件已经更新了 last_used_at，这里只需要返回成功即可
+	return response.Success(ctx, "heartbeat_success")
+}
+
 // Logout 退出登录
 func (r *AuthController) Logout(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）

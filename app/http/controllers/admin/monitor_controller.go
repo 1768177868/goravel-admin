@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
@@ -70,8 +72,8 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		diskInfo = &disk.UsageStat{}
 	}
 
-	// 网络信息
-	netIO, err := net.IOCounters(false)
+	// 网络信息 - 获取所有网卡的详细信息
+	netIO, err := net.IOCounters(true) // true 表示获取每个网卡的详细信息
 	if err != nil {
 		errorlog.RecordHTTP(ctx, "monitor", "Get network info error", map[string]any{
 			"error": err.Error(),
@@ -79,29 +81,51 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		netIO = []net.IOCountersStat{}
 	}
 
-	var netStats map[string]interface{}
-	if len(netIO) > 0 {
-		netStats = map[string]interface{}{
-			"bytes_sent":   netIO[0].BytesSent,
-			"bytes_recv":   netIO[0].BytesRecv,
-			"packets_sent": netIO[0].PacketsSent,
-			"packets_recv": netIO[0].PacketsRecv,
-			"errin":        netIO[0].Errin,
-			"errout":       netIO[0].Errout,
-			"dropin":       netIO[0].Dropin,
-			"dropout":      netIO[0].Dropout,
+	// 汇总所有网卡的统计信息
+	var totalBytesSent, totalBytesRecv, totalPacketsSent, totalPacketsRecv uint64
+	var totalErrin, totalErrout, totalDropin, totalDropout uint64
+
+	// 每个网卡的详细信息
+	var interfaces []map[string]interface{}
+	for _, io := range netIO {
+		// 跳过回环接口（通常以 lo 或 Loopback 开头）
+		if io.Name == "lo" || io.Name == "Loopback" || io.Name == "lo0" {
+			continue
 		}
-	} else {
-		netStats = map[string]interface{}{
-			"bytes_sent":   0,
-			"bytes_recv":   0,
-			"packets_sent": 0,
-			"packets_recv": 0,
-			"errin":        0,
-			"errout":       0,
-			"dropin":       0,
-			"dropout":      0,
-		}
+
+		totalBytesSent += io.BytesSent
+		totalBytesRecv += io.BytesRecv
+		totalPacketsSent += io.PacketsSent
+		totalPacketsRecv += io.PacketsRecv
+		totalErrin += io.Errin
+		totalErrout += io.Errout
+		totalDropin += io.Dropin
+		totalDropout += io.Dropout
+
+		interfaces = append(interfaces, map[string]interface{}{
+			"name":         io.Name,
+			"bytes_sent":   io.BytesSent,
+			"bytes_recv":   io.BytesRecv,
+			"packets_sent": io.PacketsSent,
+			"packets_recv": io.PacketsRecv,
+			"errin":        io.Errin,
+			"errout":       io.Errout,
+			"dropin":       io.Dropin,
+			"dropout":      io.Dropout,
+		})
+	}
+
+	// 汇总统计
+	netStats := map[string]interface{}{
+		"bytes_sent":   totalBytesSent,
+		"bytes_recv":   totalBytesRecv,
+		"packets_sent": totalPacketsSent,
+		"packets_recv": totalPacketsRecv,
+		"errin":        totalErrin,
+		"errout":       totalErrout,
+		"dropin":       totalDropin,
+		"dropout":      totalDropout,
+		"interfaces":   interfaces, // 所有网卡的详细信息
 	}
 
 	var cpuModel string
@@ -109,7 +133,130 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		cpuModel = cpuInfo[0].ModelName
 	}
 
+	// 负载信息（仅Linux/Unix系统）
+	var loadAvg map[string]interface{}
+	if runtime.GOOS != "windows" {
+		avg, err := load.Avg()
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "monitor", "Get load average error", map[string]any{
+				"error": err.Error(),
+			}, "Get load average error: %v", err)
+			loadAvg = map[string]interface{}{
+				"load1":  0.0,
+				"load5":  0.0,
+				"load15": 0.0,
+			}
+		} else {
+			// 计算负载百分比（相对于CPU核心数）
+			cores := float64(len(cpuInfo))
+			if cores == 0 {
+				cores = 1
+			}
+			loadPercent1 := (avg.Load1 / cores) * 100
+			loadPercent5 := (avg.Load5 / cores) * 100
+			loadPercent15 := (avg.Load15 / cores) * 100
+
+			loadAvg = map[string]interface{}{
+				"load1":          avg.Load1,
+				"load5":          avg.Load5,
+				"load15":         avg.Load15,
+				"load1_percent":  loadPercent1,
+				"load5_percent":  loadPercent5,
+				"load15_percent": loadPercent15,
+			}
+		}
+	} else {
+		// Windows系统不支持负载
+		loadAvg = map[string]interface{}{
+			"load1":          0.0,
+			"load5":          0.0,
+			"load15":         0.0,
+			"load1_percent":  0.0,
+			"load5_percent":  0.0,
+			"load15_percent": 0.0,
+		}
+	}
+
+	// 文件描述符信息（仅Linux/Unix系统，获取系统全局的）
+	var fileDescriptors map[string]interface{}
+	if runtime.GOOS != "windows" {
+		// 读取系统全局文件描述符信息 /proc/sys/fs/file-nr
+		// 格式：已分配 已使用但未释放 最大数量
+		used := uint64(0)
+		max := uint64(0)
+
+		if data, err := os.ReadFile("/proc/sys/fs/file-nr"); err == nil {
+			// 解析文件内容：例如 "1024 512 65536"
+			// 格式：已分配的文件描述符数 已分配但未使用的文件描述符数 系统最大文件描述符数
+			var allocated, unused uint64
+			n, err := fmt.Sscanf(string(data), "%d %d %d", &allocated, &unused, &max)
+			if err == nil && n == 3 {
+				// 已使用 = 已分配（第一个数字是已分配的文件描述符数，代表系统已使用的）
+				used = allocated
+			} else {
+				errorlog.RecordHTTP(ctx, "monitor", "Parse file-nr error", map[string]any{
+					"error": err.Error(),
+					"data":  string(data),
+					"n":     n,
+				}, "Parse file-nr error: %v, data: %s, n: %d", err, string(data), n)
+			}
+		} else {
+			errorlog.RecordHTTP(ctx, "monitor", "Read file-nr error", map[string]any{
+				"error": err.Error(),
+			}, "Read /proc/sys/fs/file-nr error: %v", err)
+		}
+
+		// 如果无法读取file-nr中的max，尝试单独读取最大限制
+		if max == 0 {
+			if data, err := os.ReadFile("/proc/sys/fs/file-max"); err == nil {
+				n, err := fmt.Sscanf(string(data), "%d", &max)
+				if err != nil || n != 1 {
+					errorlog.RecordHTTP(ctx, "monitor", "Parse file-max error", map[string]any{
+						"error": err.Error(),
+						"data":  string(data),
+						"n":     n,
+					}, "Parse file-max error: %v, data: %s, n: %d", err, string(data), n)
+				}
+			} else {
+				errorlog.RecordHTTP(ctx, "monitor", "Read file-max error", map[string]any{
+					"error": err.Error(),
+				}, "Read /proc/sys/fs/file-max error: %v", err)
+			}
+		}
+
+		// 如果还是无法获取，使用默认值
+		if max == 0 {
+			max = 65536 // Linux常见默认值
+		}
+
+		free := uint64(0)
+		if max > used {
+			free = max - used
+		}
+
+		percent := float64(0)
+		if max > 0 {
+			percent = (float64(used) / float64(max)) * 100
+		}
+
+		fileDescriptors = map[string]interface{}{
+			"max":     max,
+			"used":    used,
+			"free":    free,
+			"percent": percent,
+		}
+	} else {
+		// Windows系统不支持文件描述符限制
+		fileDescriptors = map[string]interface{}{
+			"max":     0,
+			"used":    0,
+			"free":    0,
+			"percent": 0.0,
+		}
+	}
+
 	return response.Success(ctx, "get_success", http.Json{
+		"os": runtime.GOOS, // 操作系统类型
 		"cpu": map[string]interface{}{
 			"percent": cpuPercent[0],
 			"model":   cpuModel,
@@ -132,6 +279,8 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			"fstype":  diskInfo.Fstype,
 			"path":    diskInfo.Path,
 		},
-		"net": netStats,
+		"net":              netStats,
+		"load":             loadAvg,
+		"file_descriptors": fileDescriptors,
 	})
 }

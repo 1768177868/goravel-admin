@@ -169,13 +169,14 @@
 </template>
 
 <script setup>
-import { computed, watch, onMounted, onUnmounted } from 'vue'
+import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
 import { useAppStore } from '../store/app'
+import request from '../utils/request'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import NotificationBell from '../components/NotificationBell.vue'
@@ -295,6 +296,21 @@ watch(
   { immediate: true }
 )
 
+// 心跳机制：每2分钟发送一次心跳请求，更新用户的最后活跃时间
+let heartbeatInterval = null
+
+const sendHeartbeat = async () => {
+  try {
+    // 只有在已登录状态下才发送心跳
+    if (userStore.token) {
+      await request.get('/heartbeat')
+    }
+  } catch (error) {
+    // 心跳失败不显示错误，静默处理
+    console.debug('Heartbeat failed:', error)
+  }
+}
+
 // 监听全屏事件
 onMounted(() => {
   // 初始化布局大小
@@ -314,9 +330,18 @@ onMounted(() => {
   }
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   
-  // 清理事件监听器
+  // 启动心跳机制：每2分钟发送一次
+  heartbeatInterval = setInterval(sendHeartbeat, 2 * 60 * 1000)
+  // 立即发送一次心跳
+  sendHeartbeat()
+  
+  // 清理事件监听器和心跳定时器
   onUnmounted(() => {
     document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval)
+      heartbeatInterval = null
+    }
   })
 })
 

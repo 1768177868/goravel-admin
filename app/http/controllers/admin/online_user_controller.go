@@ -30,9 +30,9 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 	browser := ctx.Request().Query("browser", "")
 	os := ctx.Request().Query("os", "")
 
-	// 只查询最近5分钟内有活动的token（在线用户）
+	// 只查询最近15分钟内有活动的token（在线用户）
 	// 默认只显示admin类型的token
-	onlineThreshold := time.Now().Add(-5 * time.Minute)
+	onlineThreshold := time.Now().Add(-15 * time.Minute)
 	query := facades.Orm().Query().Model(&models.PersonalAccessToken{}).
 		Where("tokenable_type", "admin").
 		Where("last_used_at IS NOT NULL").
