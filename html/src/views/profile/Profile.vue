@@ -179,13 +179,6 @@ const defaultAvatars = [
   'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128',
   'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128',
   'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128',
-  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&bold=true',
-  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&bold=true',
-  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&bold=true',
-  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128&rounded=true',
-  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128&rounded=true',
-  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128&rounded=true',
-  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128&rounded=true'
 ]
 
 const adminInfo = computed(() => userStore.adminInfo || {})
