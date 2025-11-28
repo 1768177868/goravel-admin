@@ -82,6 +82,7 @@ func UserJwt() http.Middleware {
 				newExpiresAt := time.Now().Add(time.Duration(ttl) * time.Minute)
 				// 更新token的过期时间
 				_, _ = facades.Orm().Query().
+					Model(&models.PersonalAccessToken{}).
 					Where("id", accessToken.ID).
 					Update("expires_at", newExpiresAt)
 			}
@@ -94,4 +95,3 @@ func UserJwt() http.Middleware {
 		ctx.Request().Next()
 	}
 }
-

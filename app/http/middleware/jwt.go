@@ -42,7 +42,7 @@ func Jwt() http.Middleware {
 		// 移除Bearer前缀（如果有）
 		token = strings.TrimPrefix(token, "Bearer ")
 		token = strings.TrimSpace(token)
-		
+
 		if token == "" {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
@@ -101,6 +101,7 @@ func Jwt() http.Middleware {
 				newExpiresAt := time.Now().Add(time.Duration(ttl) * time.Minute)
 				// 更新token的过期时间
 				_, _ = facades.Orm().Query().
+					Model(&models.PersonalAccessToken{}).
 					Where("id", accessToken.ID).
 					Update("expires_at", newExpiresAt)
 			}
@@ -109,7 +110,7 @@ func Jwt() http.Middleware {
 		// 将用户信息存储到context中，供后续中间件使用
 		ctx.WithValue("admin", admin)
 		ctx.WithValue("token", accessToken)
-		
+
 		facades.Log().Debugf("JWT middleware: admin set in context, ID: %d, Username: %s", admin.ID, admin.Username)
 
 		ctx.Request().Next()

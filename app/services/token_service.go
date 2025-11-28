@@ -136,6 +136,7 @@ func (s *TokenServiceImpl) UpdateLastUsedAt(token string) error {
 	tokenHash := s.hashToken(token)
 	now := time.Now()
 	_, err := facades.Orm().Query().
+		Model(&models.PersonalAccessToken{}).
 		Where("token", tokenHash).
 		Update("last_used_at", now)
 	return err
