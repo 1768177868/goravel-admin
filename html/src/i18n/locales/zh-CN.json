@@ -30,7 +30,9 @@
     "update_success": "更新成功",
     "delete_success": "删除成功",
     "column_setting": "列设置",
-    "save_success": "保存成功"
+    "column_setting_tip": "请选择要在表格中显示的列",
+    "save_success": "保存成功",
+    "required": "必选"
   },
   "login": {
     "title": "后台管理系统",

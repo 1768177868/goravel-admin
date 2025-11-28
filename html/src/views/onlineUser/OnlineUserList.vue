@@ -76,26 +76,12 @@
     </el-card>
 
     <!-- 列设置对话框 -->
-    <el-dialog
+    <ColumnSettingDialog
       v-model="showColumnSetting"
-      :title="$t('common.column_setting')"
-      width="500px"
-    >
-      <el-checkbox-group v-model="visibleColumns">
-        <el-checkbox
-          v-for="column in allColumns"
-          :key="column.key"
-          :label="column.key"
-          :disabled="column.required"
-        >
-          {{ column.title }}
-        </el-checkbox>
-      </el-checkbox-group>
-      <template #footer>
-        <el-button @click="showColumnSetting = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleSaveColumnSetting">{{ $t('common.confirm') }}</el-button>
-      </template>
-    </el-dialog>
+      :visible-columns="visibleColumns"
+      :all-columns="allColumns"
+      @confirm="handleSaveColumnSetting"
+    />
   </div>
 </template>
 
@@ -107,6 +93,8 @@ import { useI18n } from 'vue-i18n'
 import { getOnlineUserList, kickOutOnlineUser, batchKickOutOnlineUsers } from '@/api/onlineUser'
 import SearchForm from '@/components/SearchForm.vue'
 import Pagination from '@/components/Pagination.vue'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog.vue'
+import { useColumnSetting } from '@/composables/useColumnSetting'
 
 const { t } = useI18n()
 
@@ -114,12 +102,32 @@ const tableRef = ref(null)
 const loading = ref(false)
 const tableData = ref([])
 const selectedRows = ref([])
-const showColumnSetting = ref(false)
 
-// 列设置：从localStorage加载或使用默认值
-const COLUMN_SETTING_KEY = 'online_user_column_setting'
-const defaultVisibleColumns = ['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active']
-const visibleColumns = ref(JSON.parse(localStorage.getItem(COLUMN_SETTING_KEY) || JSON.stringify(defaultVisibleColumns)))
+// 所有可配置的列（不包括checkbox和operation，它们始终显示）
+const allColumnsConfig = computed(() => [
+  { key: 'username', title: t('online_user.username'), required: false },
+  { key: 'nickname', title: t('online_user.nickname'), required: false },
+  { key: 'avatar', title: t('online_user.avatar'), required: false },
+  { key: 'browser', title: t('online_user.browser'), required: false },
+  { key: 'ip', title: t('online_user.ip'), required: false },
+  { key: 'os', title: t('online_user.os'), required: false },
+  { key: 'session_id', title: t('online_user.session_id'), required: false },
+  { key: 'last_active', title: t('online_user.last_active'), required: false }
+])
+
+// 使用列设置 composable
+const {
+  showColumnSetting,
+  visibleColumns,
+  allColumns,
+  handleSaveColumnSetting,
+  getVisibleColumns
+} = useColumnSetting({
+  storageKey: 'online_user_column_setting',
+  allColumns: allColumnsConfig,
+  defaultVisibleColumns: ['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active'],
+  alwaysVisibleKeys: ['checkbox', 'operation']
+})
 
 const searchForm = reactive({
   username: '',
@@ -161,18 +169,6 @@ const searchFields = computed(() => [
     placeholder: t('online_user.os_placeholder'),
     advanced: false
   }
-])
-
-// 所有可配置的列（不包括checkbox和operation，它们始终显示）
-const allColumns = computed(() => [
-  { key: 'username', title: t('online_user.username'), required: false },
-  { key: 'nickname', title: t('online_user.nickname'), required: false },
-  { key: 'avatar', title: t('online_user.avatar'), required: false },
-  { key: 'browser', title: t('online_user.browser'), required: false },
-  { key: 'ip', title: t('online_user.ip'), required: false },
-  { key: 'os', title: t('online_user.os'), required: false },
-  { key: 'session_id', title: t('online_user.session_id'), required: false },
-  { key: 'last_active', title: t('online_user.last_active'), required: false }
 ])
 
 // 所有列的完整配置
@@ -242,16 +238,7 @@ const allTableColumns = computed(() => [
 ])
 
 // 根据visibleColumns过滤显示的列
-const tableColumns = computed(() => {
-  return allTableColumns.value.filter(column => {
-    // checkbox和operation始终显示
-    if (column.type === 'checkbox' || column.key === 'operation') {
-      return true
-    }
-    // 其他列根据visibleColumns决定
-    return visibleColumns.value.includes(column.key)
-  })
-})
+const tableColumns = getVisibleColumns(allTableColumns)
 
 const pagination = reactive({
   page: 1,
@@ -408,13 +395,6 @@ const handleBatchKickOut = async () => {
       ElMessage.error(t('online_user.batch_kick_out_failed'))
     }
   }
-}
-
-// 保存列设置
-const handleSaveColumnSetting = () => {
-  localStorage.setItem(COLUMN_SETTING_KEY, JSON.stringify(visibleColumns.value))
-  showColumnSetting.value = false
-  ElMessage.success(t('common.save_success'))
 }
 
 onMounted(() => {

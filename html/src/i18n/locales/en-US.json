@@ -30,7 +30,9 @@
     "update_success": "Update successful",
     "delete_success": "Delete successful",
     "column_setting": "Column Setting",
-    "save_success": "Save successful"
+    "column_setting_tip": "Please select the columns to display in the table",
+    "save_success": "Save successful",
+    "required": "Required"
   },
   "login": {
     "title": "Admin Management System",
