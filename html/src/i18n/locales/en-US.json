@@ -28,7 +28,9 @@
     "get_success": "Get successful",
     "create_success": "Create successful",
     "update_success": "Update successful",
-    "delete_success": "Delete successful"
+    "delete_success": "Delete successful",
+    "column_setting": "Column Setting",
+    "save_success": "Save successful"
   },
   "login": {
     "title": "Admin Management System",

@@ -4,10 +4,16 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('online_user.title') }}</span>
-          <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchKickOut">
-            <el-icon><Delete /></el-icon>
-            {{ $t('online_user.batch_kick_out') }}
-          </el-button>
+          <div>
+            <el-button type="info" @click="showColumnSetting = true">
+              <el-icon><Setting /></el-icon>
+              {{ $t('common.column_setting') }}
+            </el-button>
+            <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchKickOut">
+              <el-icon><Delete /></el-icon>
+              {{ $t('online_user.batch_kick_out') }}
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -68,13 +74,35 @@
         @page-change="handlePageChange"
       />
     </el-card>
+
+    <!-- 列设置对话框 -->
+    <el-dialog
+      v-model="showColumnSetting"
+      :title="$t('common.column_setting')"
+      width="500px"
+    >
+      <el-checkbox-group v-model="visibleColumns">
+        <el-checkbox
+          v-for="column in allColumns"
+          :key="column.key"
+          :label="column.key"
+          :disabled="column.required"
+        >
+          {{ column.title }}
+        </el-checkbox>
+      </el-checkbox-group>
+      <template #footer>
+        <el-button @click="showColumnSetting = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSaveColumnSetting">{{ $t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { Delete, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { getOnlineUserList, kickOutOnlineUser, batchKickOutOnlineUsers } from '@/api/onlineUser'
 import SearchForm from '@/components/SearchForm.vue'
@@ -86,6 +114,12 @@ const tableRef = ref(null)
 const loading = ref(false)
 const tableData = ref([])
 const selectedRows = ref([])
+const showColumnSetting = ref(false)
+
+// 列设置：从localStorage加载或使用默认值
+const COLUMN_SETTING_KEY = 'online_user_column_setting'
+const defaultVisibleColumns = ['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active']
+const visibleColumns = ref(JSON.parse(localStorage.getItem(COLUMN_SETTING_KEY) || JSON.stringify(defaultVisibleColumns)))
 
 const searchForm = reactive({
   username: '',
@@ -129,61 +163,95 @@ const searchFields = computed(() => [
   }
 ])
 
-const tableColumns = computed(() => [
-  { type: 'checkbox', width: 50, fixed: 'left' },
+// 所有可配置的列（不包括checkbox和operation，它们始终显示）
+const allColumns = computed(() => [
+  { key: 'username', title: t('online_user.username'), required: false },
+  { key: 'nickname', title: t('online_user.nickname'), required: false },
+  { key: 'avatar', title: t('online_user.avatar'), required: false },
+  { key: 'browser', title: t('online_user.browser'), required: false },
+  { key: 'ip', title: t('online_user.ip'), required: false },
+  { key: 'os', title: t('online_user.os'), required: false },
+  { key: 'session_id', title: t('online_user.session_id'), required: false },
+  { key: 'last_active', title: t('online_user.last_active'), required: false }
+])
+
+// 所有列的完整配置
+const allTableColumns = computed(() => [
+  { type: 'checkbox', width: 50, fixed: 'left', key: 'checkbox' },
   {
     field: 'username',
     title: t('online_user.username'),
     width: 120,
-    sortable: true
+    sortable: true,
+    key: 'username'
   },
   {
     field: 'nickname',
     title: t('online_user.nickname'),
     width: 120,
-    sortable: true
+    sortable: true,
+    key: 'nickname'
   },
   {
     slot: 'avatar',
     title: t('online_user.avatar'),
-    width: 80
+    width: 80,
+    key: 'avatar'
   },
   {
     field: 'browser',
     title: t('online_user.browser'),
     width: 150,
-    sortable: true
+    sortable: true,
+    key: 'browser'
   },
   {
     field: 'ip',
     title: t('online_user.ip'),
     width: 150,
-    sortable: true
+    sortable: true,
+    key: 'ip'
   },
   {
     field: 'os',
     title: t('online_user.os'),
     width: 150,
-    sortable: true
+    sortable: true,
+    key: 'os'
   },
   {
     field: 'session_id',
     title: t('online_user.session_id'),
-    width: 200
+    width: 200,
+    key: 'session_id'
   },
   {
     slot: 'last_active',
     title: t('online_user.last_active'),
     width: 180,
-    sortable: true
+    sortable: true,
+    key: 'last_active'
   },
   {
     slot: 'operation',
     title: t('common.operation'),
     width: 120,
-    fixed: 'right'
+    fixed: 'right',
+    key: 'operation'
   }
 ])
+
+// 根据visibleColumns过滤显示的列
+const tableColumns = computed(() => {
+  return allTableColumns.value.filter(column => {
+    // checkbox和operation始终显示
+    if (column.type === 'checkbox' || column.key === 'operation') {
+      return true
+    }
+    // 其他列根据visibleColumns决定
+    return visibleColumns.value.includes(column.key)
+  })
+})
 
 const pagination = reactive({
   page: 1,
@@ -340,6 +408,13 @@ const handleBatchKickOut = async () => {
       ElMessage.error(t('online_user.batch_kick_out_failed'))
     }
   }
+}
+
+// 保存列设置
+const handleSaveColumnSetting = () => {
+  localStorage.setItem(COLUMN_SETTING_KEY, JSON.stringify(visibleColumns.value))
+  showColumnSetting.value = false
+  ElMessage.success(t('common.save_success'))
 }
 
 onMounted(() => {
