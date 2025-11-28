@@ -10,6 +10,7 @@ import (
 
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 	"goravel/app/utils/logger"
 	"goravel/app/utils/traceid"
 )
@@ -34,8 +35,8 @@ func OperationLog() http.Middleware {
 			// 记录所有非敏感参数
 			allInputs := ctx.Request().All()
 			for key, value := range allInputs {
-				// 隐藏敏感字段
-				if key == "password" || key == "old_password" || key == "new_password" || key == "confirm_password" {
+				// 使用工具函数检查是否是敏感字段
+				if utils.IsSensitiveField(key) {
 					inputs[key] = "***"
 				} else {
 					inputs[key] = value
@@ -97,10 +98,18 @@ func OperationLog() http.Middleware {
 			savedRequestBody := requestBody
 			savedDuration := duration
 
+			// 生成操作标题（优先从路由信息获取）
+			title := utils.GetOperationTitleFromContext(ctx)
+			if title == "operation.unknown" {
+				// 如果无法从路由信息获取，回退到路径解析
+				title = utils.GetOperationTitle(savedMethod, savedPath)
+			}
+
 			operationLog := models.OperationLog{
 				AdminID:   savedAdminID,
 				Method:    savedMethod,
 				Path:      savedPath,
+				Title:     title,
 				IP:        savedIP,
 				UserAgent: savedUserAgent,
 				Request:   savedRequestBody,

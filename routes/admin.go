@@ -105,6 +105,7 @@ func Admin() {
 
 		// 操作日志
 		router.Get("operation-logs", operationLogController.Index)
+		router.Get("operation-logs/title-options", operationLogController.GetTitleOptions)
 		router.Get("operation-logs/{id}", operationLogController.Show)
 		router.Delete("operation-logs/{id}", operationLogController.Destroy)
 		router.Post("operation-logs/batch-delete", operationLogController.BatchDestroy)

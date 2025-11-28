@@ -28,6 +28,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	username := ctx.Request().Query("username", "")
 	method := ctx.Request().Query("method", "")
 	path := ctx.Request().Query("path", "")
+	title := ctx.Request().Query("title", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
@@ -62,6 +63,9 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	}
 	if path != "" {
 		query = query.Where("path LIKE ?", "%"+path+"%")
+	}
+	if title != "" {
+		query = query.Where("title LIKE ?", "%"+title+"%")
 	}
 	if ip != "" {
 		query = query.Where("ip LIKE ?", "%"+ip+"%")
@@ -168,4 +172,61 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "clean_success")
+}
+
+// GetTitleOptions 获取所有可用的操作标题选项
+func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response {
+	// 从数据库查询已存在的标题
+	var dbTitles []string
+	_ = facades.Orm().Query().Model(&models.OperationLog{}).
+		Select("DISTINCT title").
+		Where("title IS NOT NULL AND title != ''").
+		Order("title ASC").
+		Pluck("title", &dbTitles)
+
+	// 从配置中获取所有可能的操作标题
+	allTitleKeysInterface := facades.Config().Get("operation_log.all_title_keys", []string{})
+	var configTitles []string
+	if allTitleKeys, ok := allTitleKeysInterface.([]interface{}); ok {
+		for _, keyInterface := range allTitleKeys {
+			if key, ok := keyInterface.(string); ok {
+				configTitles = append(configTitles, key)
+			}
+		}
+	} else if allTitleKeys, ok := allTitleKeysInterface.([]string); ok {
+		configTitles = allTitleKeys
+	}
+
+	// 合并数据库标题和配置标题，去重
+	uniqueTitles := make(map[string]bool)
+	var result []string
+
+	// 先添加配置中的所有标题（确保所有可能的标题都在列表中）
+	for _, title := range configTitles {
+		if title != "" && !uniqueTitles[title] {
+			uniqueTitles[title] = true
+			result = append(result, title)
+		}
+	}
+
+	// 再添加数据库中存在的标题（可能有一些不在配置中的标题）
+	for _, title := range dbTitles {
+		if title != "" && !uniqueTitles[title] {
+			uniqueTitles[title] = true
+			result = append(result, title)
+		}
+	}
+
+	// 排序
+	for i := 0; i < len(result)-1; i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[i] > result[j] {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"titles": result,
+	})
 }

@@ -60,6 +60,9 @@
             <template v-if="column.slot === 'admin'" #default="{ row }">
               {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
             </template>
+            <template v-else-if="column.slot === 'title'" #default="{ row }">
+              {{ getOperationTitle(row.title || row.Title) }}
+            </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
               <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
               <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
@@ -108,7 +111,8 @@ import {
   getOperationLogDetail,
   deleteOperationLog,
   batchDeleteOperationLogs,
-  cleanOperationLogs
+  cleanOperationLogs,
+  getOperationLogTitleOptions
 } from '../../api/log'
 
 const { t } = useI18n()
@@ -126,6 +130,7 @@ const pagination = reactive({
 })
 
 const tableData = ref([])
+const titleOptions = ref([])
 
 // 字段名映射：前端字段名 -> 数据库字段名
 const fieldMapping = {
@@ -172,6 +177,7 @@ const initialSearchForm = {
   username: '',
   method: '',
   path: '',
+  title: '',
   ip: '',
   status: '',
   start_time: getSevenDaysAgo(),
@@ -179,6 +185,17 @@ const initialSearchForm = {
 }
 
 const searchForm = reactive({ ...initialSearchForm })
+
+// 获取操作标题的翻译
+const getOperationTitle = (titleKey) => {
+  if (!titleKey) return '-'
+  // 如果 titleKey 是 operation.xxx 格式，使用多语言
+  if (titleKey.startsWith('operation.')) {
+    return t(titleKey)
+  }
+  // 否则直接返回
+  return titleKey
+}
 
 // 表格列配置（使用 vxe-table columns）
 const tableColumns = computed(() => [
@@ -197,6 +214,13 @@ const tableColumns = computed(() => [
     title: t('log.admin'),
     slot: 'admin',
     sortable: false
+  },
+  {
+    field: 'title',
+    title: t('log.title'),
+    slot: 'title',
+    sortable: true,
+    width: 200
   },
   {
     field: 'method',
@@ -236,60 +260,84 @@ const tableColumns = computed(() => [
 ])
 
 // 搜索表单字段配置（JSON 方式）
-const searchFields = computed(() => [
-  {
-    prop: 'username',
-    label: t('log.username'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'method',
-    label: t('log.method'),
-    type: 'select',
-    width: '150px',
-    options: getMethodOptions(),
-    advanced: false
-  },
-  {
-    prop: 'path',
-    label: t('log.path'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'ip',
-    label: t('log.ip'),
-    type: 'input',
-    width: '150px',
-    advanced: true
-  },
-  {
-    prop: 'status',
-    label: t('log.status_code'),
-    type: 'input',
-    width: '120px',
-    advanced: true
-  },
-  {
-    prop: 'start_time',
-    label: t('log.start_time'),
-    type: 'datetime',
-    width: '180px',
-    valueFormat: 'YYYY-MM-DD HH:mm:ss',
-    advanced: true
-  },
-  {
-    prop: 'end_time',
-    label: t('log.end_time'),
-    type: 'datetime',
-    width: '180px',
-    valueFormat: 'YYYY-MM-DD HH:mm:ss',
-    advanced: true
-  }
-])
+const searchFields = computed(() => {
+  // 构建标题选项，添加空选项
+  const titleSelectOptions = [
+    {
+      label: t('common.all'),
+      value: ''
+    },
+    ...titleOptions.value.map(title => ({
+      label: getOperationTitle(title),
+      value: title
+    }))
+  ]
+
+  return [
+    {
+      prop: 'username',
+      label: t('log.username'),
+      type: 'input',
+      width: '200px',
+      advanced: false
+    },
+    {
+      prop: 'method',
+      label: t('log.method'),
+      type: 'select',
+      width: '150px',
+      options: getMethodOptions(),
+      advanced: false
+    },
+    {
+      prop: 'path',
+      label: t('log.path'),
+      type: 'input',
+      width: '200px',
+      advanced: false
+    },
+    {
+      prop: 'title',
+      label: t('log.title'),
+      type: 'select',
+      width: '200px',
+      options: titleSelectOptions,
+      filterable: true,
+      clearable: true,
+      advanced: false
+    },
+    {
+      prop: 'ip',
+      label: t('log.ip'),
+      type: 'input',
+      width: '150px',
+      advanced: true
+    },
+    {
+      prop: 'status',
+      label: t('log.status_code'),
+      type: 'input',
+      width: '120px',
+      advanced: true
+    },
+    {
+      prop: 'start_time',
+      label: t('log.start_time'),
+      type: 'datetime',
+      width: '180px',
+      valueFormat: 'YYYY-MM-DD HH:mm:ss',
+      advanced: true
+    },
+    {
+      prop: 'end_time',
+      label: t('log.end_time'),
+      type: 'datetime',
+      width: '180px',
+      valueFormat: 'YYYY-MM-DD HH:mm:ss',
+      advanced: true
+    }
+  ]
+})
 
 // 转换操作日志数据（PascalCase -> snake_case）
 const transformOperationLogData = (log) => {
@@ -317,6 +365,7 @@ const transformOperationLogData = (log) => {
     } : null),
     method: log.Method || log.method || '',
     path: log.Path || log.path || '',
+    title: log.Title || log.title || '',
     ip: log.IP || log.ip || '',
     status_code: log.Status || log.status || log.StatusCode || log.status_code || 0,
     created_at: log.CreatedAt || log.created_at || '',
@@ -365,6 +414,7 @@ const handleReset = () => {
   searchForm.username = ''
   searchForm.method = ''
   searchForm.path = ''
+  searchForm.title = ''
   searchForm.ip = ''
   searchForm.status = ''
   searchForm.start_time = getSevenDaysAgo()
@@ -458,9 +508,37 @@ const handleClean = async () => {
   }
 }
 
+// 加载标题选项
+const loadTitleOptions = async () => {
+  try {
+    const res = await getOperationLogTitleOptions()
+    if (res.data && res.data.titles && Array.isArray(res.data.titles)) {
+      // 去重并过滤空值
+      const uniqueTitles = [...new Set(res.data.titles.filter(title => title && title.trim()))]
+      // 按翻译后的文本排序
+      uniqueTitles.sort((a, b) => {
+        const labelA = getOperationTitle(a)
+        const labelB = getOperationTitle(b)
+        // 使用当前语言环境进行排序
+        const locale = t('common.locale') || navigator.language || 'zh-CN'
+        return labelA.localeCompare(labelB, locale)
+      })
+      titleOptions.value = uniqueTitles
+    } else {
+      titleOptions.value = []
+    }
+  } catch (error) {
+    console.error('Load title options error:', error)
+    // 如果加载失败，至少提供一个空数组，避免报错
+    titleOptions.value = []
+  }
+}
+
 onMounted(() => {
   // 初始化默认排序
   initDefaultSort()
+  // 加载标题选项
+  loadTitleOptions()
   loadData()
 })
 </script>

@@ -10,6 +10,7 @@ type OperationLog struct {
 	Admin     Admin  `gorm:"foreignKey:AdminID"`
 	Method    string `gorm:"size:10;comment:请求方法"`
 	Path      string `gorm:"size:255;comment:请求路径"`
+	Title     string `gorm:"size:255;comment:操作标题"`
 	IP        string `gorm:"size:50;comment:IP地址"`
 	UserAgent string `gorm:"size:500;comment:用户代理"`
 	Request   string `gorm:"type:text;comment:请求参数"`

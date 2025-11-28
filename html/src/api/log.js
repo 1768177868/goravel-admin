@@ -9,6 +9,13 @@ export function getOperationLogList(params) {
   })
 }
 
+export function getOperationLogTitleOptions() {
+  return request({
+    url: '/operation-logs/title-options',
+    method: 'get'
+  })
+}
+
 export function getOperationLogDetail(id) {
   return request({
     url: `/operation-logs/${id}`,
