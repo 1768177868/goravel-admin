@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
@@ -745,28 +745,39 @@ const handleEdit = async (row) => {
     const res = await getRoleDetail(row.id)
     if (res.data && res.data.role) {
       const role = res.data.role
-      const rolePermissions = role.Permissions || role.permissions
-      const roleMenus = role.Menus || role.menus
+      const rolePermissions = role.Permissions || role.permissions || []
+      const roleMenus = role.Menus || role.menus || []
+      
+      // 确保 ID 是数字类型，与树节点的 ID 类型一致
+      const permissionIds = rolePermissions.map(p => {
+        const id = p.id || p.ID
+        return id ? Number(id) : null
+      }).filter(id => id !== null)
+      
+      const menuIds = roleMenus.map(m => {
+        const id = m.id || m.ID
+        return id ? Number(id) : null
+      }).filter(id => id !== null)
       
       Object.assign(formData, {
-        id: role.id,
+        id: role.id || role.ID,
         name: role.Name || role.name || '',
         slug: role.Slug || role.slug || '',
         description: role.Description || role.description || '',
-        permission_ids: rolePermissions ? rolePermissions.map(p => p.id || p.ID).filter(id => id) : [],
-        menu_ids: roleMenus ? roleMenus.map(m => m.id || m.ID).filter(id => id) : [],
+        permission_ids: permissionIds,
+        menu_ids: menuIds,
         status: Number(role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1)),
         sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
       })
       
-      const allCheckedKeys = [...formData.menu_ids, ...formData.permission_ids]
+      // 合并所有选中的 key，确保类型一致
+      const allCheckedKeys = [...menuIds, ...permissionIds].map(id => Number(id))
       checkedKeys.value = allCheckedKeys
+      
       dialogVisible.value = true
-      setTimeout(() => {
-        if (menuPermissionTreeRef.value) {
-          menuPermissionTreeRef.value.setCheckedKeys(allCheckedKeys, false)
-        }
-      }, 100)
+      
+      // 等待对话框打开和树组件渲染完成后再设置选中状态
+      // 注意：这里不立即设置，而是在 handleDialogOpened 中设置
     }
   } catch (error) {
     console.error('Load role detail error:', error)
@@ -856,13 +867,27 @@ const handleDialogClose = () => {
 
 const handleDialogOpened = () => {
   if (!formData.id) {
+    // 新增角色，清空选中状态
     checkedKeys.value = []
-    setTimeout(() => {
-      if (menuPermissionTreeRef.value) {
-        menuPermissionTreeRef.value.setCheckedKeys([], false)
-        checkedKeys.value = []
-      }
-    }, 100)
+    nextTick(() => {
+      setTimeout(() => {
+        if (menuPermissionTreeRef.value) {
+          menuPermissionTreeRef.value.setCheckedKeys([], false)
+          checkedKeys.value = []
+        }
+      }, 100)
+    })
+  } else {
+    // 编辑角色，确保选中状态正确设置
+    const allCheckedKeys = [...formData.menu_ids, ...formData.permission_ids].map(id => Number(id))
+    nextTick(() => {
+      setTimeout(() => {
+        if (menuPermissionTreeRef.value) {
+          menuPermissionTreeRef.value.setCheckedKeys(allCheckedKeys, false)
+          checkedKeys.value = menuPermissionTreeRef.value.getCheckedKeys() || []
+        }
+      }, 200)
+    })
   }
 }
 
