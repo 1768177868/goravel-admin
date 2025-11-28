@@ -60,6 +60,10 @@
               <el-icon><Document /></el-icon>
               <template #title>{{ $t('menu.dictionary_management') }}</template>
             </el-menu-item>
+            <el-menu-item index="/configs">
+              <el-icon><Setting /></el-icon>
+              <template #title>{{ $t('menu.config_management') }}</template>
+            </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="logs">
             <template #title>
@@ -206,6 +210,7 @@ const pathMap = {
   '/menus': '/menus',
   '/departments': '/departments',
   '/dictionaries': '/dictionaries',
+  '/configs': '/configs',
   '/operation-logs': '/operation-logs',
   '/login-logs': '/login-logs',
   '/system-logs': '/system-logs',

@@ -12,6 +12,10 @@ import (
 
 func init() {
 	config := facades.Config()
+	// 注意：文件存储配置已迁移到数据库存储（configs表，group='storage'）
+	// 后台管理系统 -> 系统管理 -> 配置管理 -> 文件存储配置
+	// 如需在代码中使用文件存储配置，请从数据库读取，而不是从环境变量读取
+	// 保留此配置仅用于框架初始化，实际文件存储配置请使用数据库中的配置
 	config.Add("filesystems", map[string]any{
 		// Default Filesystem Disk
 		//

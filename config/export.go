@@ -6,28 +6,14 @@ import (
 
 func init() {
 	config := facades.Config()
+	// 注意：导出配置已迁移到数据库存储（configs表，group='storage'）
+	// 后台管理系统 -> 系统管理 -> 配置管理 -> 文件存储配置
+	// 如需在代码中使用导出配置，请从数据库读取，而不是从环境变量读取
+	// 保留此配置仅用于框架初始化，实际导出配置请使用数据库中的配置
 	config.Add("export", map[string]any{
-		// Export Disk
-		//
-		// 指定导出文件存储的磁盘，可选值: "local", "public", "s3", "oss", "cos", "minio"
-		// 默认使用 "public" 存储到公共目录，可通过 nginx 直接访问
-		"disk": config.Env("EXPORT_DISK", "public"),
-
-		// Export Path
-		//
-		// 导出文件的存储路径（相对于磁盘根目录）
-		"path": config.Env("EXPORT_PATH", "exports"),
-
-		// Export Format
-		//
-		// 导出文件格式，可选值: "csv", "xlsx"
-		// 默认使用 "csv"
-		"format": config.Env("EXPORT_FORMAT", "csv"),
-
-		// Export URL Prefix
-		//
-		// 导出文件的访问URL前缀（用于生成下载链接）
-		// 如果为空，则返回文件路径
+		"disk":      config.Env("EXPORT_DISK", "public"),
+		"path":      config.Env("EXPORT_PATH", "exports"),
+		"format":    config.Env("EXPORT_FORMAT", "csv"),
 		"url_prefix": config.Env("EXPORT_URL_PREFIX", ""),
 	})
 }

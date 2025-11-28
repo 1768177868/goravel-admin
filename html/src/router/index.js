@@ -57,6 +57,12 @@ const routes = [
         meta: { titleKey: 'menu.dictionary_management' }
       },
       {
+        path: 'configs',
+        name: 'Configs',
+        component: () => import('../views/config/ConfigList.vue'),
+        meta: { titleKey: 'menu.config_management' }
+      },
+      {
         path: 'operation-logs',
         name: 'OperationLogs',
         component: () => import('../views/log/OperationLogList.vue'),

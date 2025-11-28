@@ -22,6 +22,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000004CreatePermissionsTable{},
 		&migrations.M20250101000005CreateMenusTable{},
 		&migrations.M20250101000006CreateDictionariesTable{},
+		&migrations.M20250101000015CreateConfigsTable{},
 		&migrations.M20250101000007CreateAdminRoleTable{},
 		&migrations.M20250101000008CreateRolePermissionTable{},
 		&migrations.M20250101000009CreateRoleMenuTable{},
@@ -37,6 +38,9 @@ func (kernel Kernel) Migrations() []schema.Migration {
 func (kernel Kernel) Seeders() []seeder.Seeder {
 	return []seeder.Seeder{
 		&seeders.DatabaseSeeder{},
-		&seeders.AdminSeeder{},
+		&seeders.MenuSeeder{},       // 菜单（需要先创建，因为权限依赖）
+		&seeders.PermissionSeeder{}, // 权限（依赖菜单）
+		&seeders.AdminSeeder{},      // 管理员、部门、角色（最后执行，关联权限和菜单）
+		&seeders.DictionarySeeder{}, // 字典数据
 	}
 }

@@ -17,6 +17,7 @@ func Admin() {
 	menuController := admin.NewMenuController()
 	departmentController := admin.NewDepartmentController()
 	dictionaryController := admin.NewDictionaryController()
+	configController := admin.NewConfigController()
 	operationLogController := admin.NewOperationLogController()
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
@@ -85,6 +86,11 @@ func Admin() {
 		// 字典管理（有额外路由，不能完全用 Resource）
 		router.Resource("dictionaries", dictionaryController)
 		router.Get("dictionaries/type/{type}", dictionaryController.GetByType)
+
+		// 配置管理
+		router.Get("configs/group/{group}", configController.GetByGroup)
+		router.Post("configs/save", configController.Save)
+		router.Post("configs/test-email", configController.TestEmail)
 
 		// 操作日志
 		router.Get("operation-logs", operationLogController.Index)

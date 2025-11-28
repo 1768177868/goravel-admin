@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/goravel/framework/facades"
+
+	"goravel/app/utils"
 )
 
 type ExportService interface {
@@ -38,9 +40,10 @@ type ExportServiceImpl struct {
 }
 
 func NewExportService() ExportService {
-	disk := facades.Config().GetString("export.disk", "local")
-	path := facades.Config().GetString("export.path", "exports")
-	format := facades.Config().GetString("export.format", "csv")
+	// 从数据库读取导出配置，如果不存在则使用默认值
+	disk := utils.GetConfigValue("storage", "export_disk", "public")
+	path := utils.GetConfigValue("storage", "export_path", "exports")
+	format := utils.GetConfigValue("storage", "export_format", "csv")
 
 	return &ExportServiceImpl{
 		disk:   disk,
@@ -101,7 +104,8 @@ func (s *ExportServiceImpl) ExportToFile(headers []string, data [][]string, file
 }
 
 func (s *ExportServiceImpl) GetExportURL(filePath string) string {
-	urlPrefix := facades.Config().GetString("export.url_prefix", "")
+	// 从数据库读取导出URL前缀配置
+	urlPrefix := utils.GetConfigValue("storage", "export_url_prefix", "")
 	if urlPrefix != "" {
 		return urlPrefix + "/" + filePath
 	}

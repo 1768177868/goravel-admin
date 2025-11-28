@@ -4,8 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goravel/framework/facades"
 	"github.com/mojocn/base64Captcha"
+
+	"goravel/app/utils"
 )
 
 type CaptchaService interface {
@@ -20,7 +21,8 @@ type CaptchaServiceImpl struct {
 }
 
 func NewCaptchaServiceImpl() CaptchaService {
-	expireSeconds := facades.Config().GetInt("admin.login_captcha_expire", 120)
+	// 从数据库读取验证码配置，如果不存在则使用默认值
+	expireSeconds := utils.GetConfigValueInt("captcha", "captcha_expire", 120)
 	if expireSeconds <= 0 {
 		expireSeconds = 120
 	}
@@ -46,7 +48,8 @@ func NewCaptchaServiceImpl() CaptchaService {
 }
 
 func (s *CaptchaServiceImpl) Enabled() bool {
-	return facades.Config().GetBool("admin.login_captcha_enabled", false)
+	// 从数据库读取验证码配置，如果不存在则使用默认值
+	return utils.GetConfigValueBool("captcha", "captcha_enabled", false)
 }
 
 func (s *CaptchaServiceImpl) Generate() (string, string, error) {
