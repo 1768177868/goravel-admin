@@ -90,6 +90,14 @@
     "captcha_required": "Please enter the verification code",
     "captcha_invalid": "Verification code is incorrect",
     "captcha_expired": "Verification code has expired, please refresh",
-    "notification_not_found": "Notification not found"
+    "notification_not_found": "Notification not found",
+    "kick_out_success": "Kick out successful",
+    "kick_out_failed": "Kick out failed",
+    "batch_kick_out_success": "Batch kick out successful",
+    "batch_kick_out_failed": "Batch kick out failed",
+    "token_not_found": "Token not found",
+    "token_id_required": "Token ID is required",
+    "token_ids_required": "Token IDs are required",
+    "invalid_token_ids": "Invalid token IDs"
   }
 }

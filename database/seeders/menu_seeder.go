@@ -270,6 +270,20 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	// 创建在线用户管理菜单（在系统管理下）
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "在线用户",
+		Slug:      "online-user",
+		Icon:      "User",
+		Path:      "/online-users",
+		Component: "onlineUser/index",
+		Type:      2,
+		Status:    1,
+		Sort:      9,
+		IsHidden:  0,
+	})
+
 	// 创建个人中心菜单
 	createOrUpdateMenu(models.Menu{
 		ParentID:  0,
@@ -286,4 +300,3 @@ func (s *MenuSeeder) Run() error {
 
 	return nil
 }
-

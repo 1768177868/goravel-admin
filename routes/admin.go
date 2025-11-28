@@ -19,6 +19,7 @@ func Admin() {
 	dictionaryController := admin.NewDictionaryController()
 	configController := admin.NewConfigController()
 	blacklistController := admin.NewBlacklistController()
+	onlineUserController := admin.NewOnlineUserController()
 	operationLogController := admin.NewOperationLogController()
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
@@ -95,6 +96,11 @@ func Admin() {
 
 		// 黑名单管理
 		router.Resource("blacklists", blacklistController)
+
+		// 在线用户管理
+		router.Get("online-users", onlineUserController.Index)
+		router.Delete("online-users/{id}", onlineUserController.KickOut)
+		router.Post("online-users/batch-kick-out", onlineUserController.BatchKickOut)
 
 		// 操作日志
 		router.Get("operation-logs", operationLogController.Index)

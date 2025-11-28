@@ -23,7 +23,12 @@
     "updated_at": "Updated At",
     "sort": "Sort",
     "description": "Description",
-    "password": "Password"
+    "password": "Password",
+    "query_failed": "Query failed",
+    "get_success": "Get successful",
+    "create_success": "Create successful",
+    "update_success": "Update successful",
+    "delete_success": "Delete successful"
   },
   "login": {
     "title": "Admin Management System",
@@ -97,6 +102,7 @@
     "department_management": "Department Management",
     "dictionary_management": "Dictionary Management",
     "blacklist_management": "IP Blacklist",
+    "online_user_management": "Online Users",
     "log_management": "Log Management",
     "operation_log": "Operation Log",
     "login_log": "Login Log",
@@ -383,6 +389,30 @@
     "create_success": "Create successful",
     "update_success": "Update successful",
     "ip_blocked": "Your IP address has been blocked"
+  },
+  "online_user": {
+    "title": "Online Users",
+    "username": "Username",
+    "username_placeholder": "Please enter username",
+    "nickname": "Nickname",
+    "avatar": "Avatar",
+    "browser": "Browser",
+    "browser_placeholder": "Please enter browser",
+    "ip": "IP Address",
+    "ip_placeholder": "Please enter IP address",
+    "os": "Operating System",
+    "os_placeholder": "Please enter operating system",
+    "session_id": "Session ID",
+    "last_active": "Last Active",
+    "kick_out": "Kick Out",
+    "batch_kick_out": "Batch Kick Out",
+    "kick_out_confirm": "Are you sure to kick out user {username}?",
+    "kick_out_success": "Kick out successful",
+    "kick_out_failed": "Kick out failed",
+    "batch_kick_out_confirm": "Are you sure to kick out {count} selected users?",
+    "batch_kick_out_success": "Batch kick out successful",
+    "batch_kick_out_failed": "Batch kick out failed",
+    "select_users_first": "Please select users to kick out first"
   },
   "log": {
     "operation_log": "Operation Log",

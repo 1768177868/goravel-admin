@@ -14,7 +14,7 @@ import (
 
 type TokenService interface {
 	// CreateToken 创建token并存入数据库
-	CreateToken(tokenableType string, tokenableID uint, name string, expiresAt *time.Time) (string, *models.PersonalAccessToken, error)
+	CreateToken(tokenableType string, tokenableID uint, name string, expiresAt *time.Time, browser, ip, os, sessionID string) (string, *models.PersonalAccessToken, error)
 	// FindToken 根据token值查找token记录
 	FindToken(token string) (*models.PersonalAccessToken, error)
 	// DeleteToken 删除token
@@ -35,10 +35,19 @@ func NewTokenServiceImpl() *TokenServiceImpl {
 }
 
 // CreateToken 创建token并存入数据库
-func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, name string, expiresAt *time.Time) (string, *models.PersonalAccessToken, error) {
+func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, name string, expiresAt *time.Time, browser, ip, os, sessionID string) (string, *models.PersonalAccessToken, error) {
 	// 生成随机token（类似Laravel Sanctum）
 	plainToken := s.generateRandomToken()
 	tokenHash := s.hashToken(plainToken)
+
+	// 如果没有提供sessionID，使用tokenHash的前16位作为sessionID
+	if sessionID == "" {
+		if len(tokenHash) >= 16 {
+			sessionID = tokenHash[:16]
+		} else {
+			sessionID = tokenHash
+		}
+	}
 
 	// 创建token记录，立即设置last_used_at为当前时间
 	now := time.Now()
@@ -49,6 +58,10 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 		Token:         tokenHash,
 		ExpiresAt:     expiresAt,
 		LastUsedAt:    &now, // 登录时立即设置最后使用时间
+		Browser:       browser,
+		IP:            ip,
+		OS:            os,
+		SessionID:     sessionID,
 	}
 
 	if err := facades.Orm().Query().Create(accessToken); err != nil {

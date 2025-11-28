@@ -96,6 +96,14 @@
     "captcha_required": "请输入验证码",
     "captcha_invalid": "验证码错误",
     "captcha_expired": "验证码已过期，请刷新",
-    "notification_not_found": "通知不存在"
+    "notification_not_found": "通知不存在",
+    "kick_out_success": "踢下线成功",
+    "kick_out_failed": "踢下线失败",
+    "batch_kick_out_success": "批量踢下线成功",
+    "batch_kick_out_failed": "批量踢下线失败",
+    "token_not_found": "Token不存在",
+    "token_id_required": "Token ID不能为空",
+    "token_ids_required": "Token IDs不能为空",
+    "invalid_token_ids": "无效的Token IDs"
   }
 }

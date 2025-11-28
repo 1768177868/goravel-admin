@@ -158,7 +158,8 @@ func (receiver *CreateToken) Handle(ctx console.Context) error {
 
 	// 创建token
 	tokenService := services.NewTokenServiceImpl()
-	plainToken, accessToken, err := tokenService.CreateToken(userType, userID, tokenName, expiresAt)
+	// 命令行创建token时，浏览器、IP、操作系统信息为空
+	plainToken, accessToken, err := tokenService.CreateToken(userType, userID, tokenName, expiresAt, "", "", "", "")
 	if err != nil {
 		return errors.New("创建token失败: " + err.Error())
 	}

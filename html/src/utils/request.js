@@ -66,8 +66,8 @@ const handle401Error = (message) => {
   // 如果当前不在登录页，立即跳转
   const currentPath = router.currentRoute.value.path
   if (currentPath !== '/login') {
-    // 显示错误消息
-    ElMessage.error(message || '未登录或登录已过期，请重新登录')
+      // 显示错误消息
+      ElMessage.error(message || t('error.unauthorized'))
     
     // 立即使用 router.replace 跳转
     router.replace('/login').catch(() => {

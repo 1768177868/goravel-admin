@@ -15,9 +15,12 @@ type PersonalAccessToken struct {
 	Abilities     string     `gorm:"column:abilities;type:text;nullable;comment:权限列表（JSON）" json:"abilities"`
 	LastUsedAt    *time.Time `gorm:"column:last_used_at;type:timestamp;nullable;comment:最后使用时间" json:"last_used_at"`
 	ExpiresAt     *time.Time `gorm:"column:expires_at;type:timestamp;nullable;comment:过期时间，NULL表示永不过期" json:"expires_at"`
+	Browser       string     `gorm:"column:browser;type:varchar(100);nullable;comment:浏览器" json:"browser"`
+	IP            string     `gorm:"column:ip;type:varchar(45);nullable;comment:IP地址" json:"ip"`
+	OS            string     `gorm:"column:os;type:varchar(100);nullable;comment:操作系统" json:"os"`
+	SessionID     string     `gorm:"column:session_id;type:varchar(64);nullable;comment:会话编号" json:"session_id"`
 }
 
 func (PersonalAccessToken) TableName() string {
 	return "personal_access_tokens"
 }
-

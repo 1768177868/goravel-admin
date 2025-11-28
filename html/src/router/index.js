@@ -69,6 +69,12 @@ const routes = [
         meta: { titleKey: 'menu.blacklist_management' }
       },
       {
+        path: 'online-users',
+        name: 'OnlineUser',
+        component: () => import('../views/onlineUser/OnlineUserList.vue'),
+        meta: { titleKey: 'menu.online_user_management' }
+      },
+      {
         path: 'operation-logs',
         name: 'OperationLogs',
         component: () => import('../views/log/OperationLogList.vue'),

@@ -15,7 +15,7 @@ func (s *PermissionSeeder) Signature() string {
 
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
-	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu models.Menu
+	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
@@ -26,6 +26,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "dictionary").First(&dictionaryMenu)
 	facades.Orm().Query().Where("slug", "config").First(&configMenu)
 	facades.Orm().Query().Where("slug", "blacklist").First(&blacklistMenu)
+	facades.Orm().Query().Where("slug", "online-user").First(&onlineUserMenu)
 	facades.Orm().Query().Where("slug", "operation-log").First(&operationLogMenu)
 	facades.Orm().Query().Where("slug", "login-log").First(&loginLogMenu)
 	facades.Orm().Query().Where("slug", "system-log").First(&systemLogMenu)
@@ -82,6 +83,11 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "黑名单创建", Slug: "blacklist.store", Method: "POST", Path: "/api/admin/blacklists", Description: "创建黑名单", Status: 1, Sort: 3, MenuID: blacklistMenu.ID},
 		{Name: "黑名单更新", Slug: "blacklist.update", Method: "PUT", Path: "/api/admin/blacklists/*", Description: "更新黑名单", Status: 1, Sort: 4, MenuID: blacklistMenu.ID},
 		{Name: "黑名单删除", Slug: "blacklist.destroy", Method: "DELETE", Path: "/api/admin/blacklists/*", Description: "删除黑名单", Status: 1, Sort: 5, MenuID: blacklistMenu.ID},
+
+		// 在线用户管理
+		{Name: "在线用户列表", Slug: "online-user.index", Method: "GET", Path: "/api/admin/online-users", Description: "查看在线用户列表", Status: 1, Sort: 1, MenuID: onlineUserMenu.ID},
+		{Name: "踢下线", Slug: "online-user.kick-out", Method: "DELETE", Path: "/api/admin/online-users/*", Description: "踢下线用户", Status: 1, Sort: 2, MenuID: onlineUserMenu.ID},
+		{Name: "批量踢下线", Slug: "online-user.batch-kick-out", Method: "POST", Path: "/api/admin/online-users/batch-kick-out", Description: "批量踢下线用户", Status: 1, Sort: 3, MenuID: onlineUserMenu.ID},
 		// 操作日志
 		{Name: "操作日志列表", Slug: "operation_log.index", Method: "GET", Path: "/api/admin/operation-logs", Description: "查看操作日志列表", Status: 1, Sort: 1, MenuID: operationLogMenu.ID},
 		{Name: "操作日志详情", Slug: "operation_log.show", Method: "GET", Path: "/api/admin/operation-logs/*", Description: "查看操作日志详情", Status: 1, Sort: 2, MenuID: operationLogMenu.ID},
@@ -145,4 +151,3 @@ func (s *PermissionSeeder) Run() error {
 
 	return nil
 }
-

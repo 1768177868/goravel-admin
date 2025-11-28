@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/utils/errorlog"
@@ -63,7 +64,13 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	}
 	// 如果 ttl 为 0 或负数，expiresAt 为 nil，表示永不过期
 
-	plainToken, _, err := s.tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt)
+	// 获取浏览器和操作系统信息
+	browser, os := helpers.GetBrowserAndOS(ctx)
+	// 获取真实IP地址
+	ip := helpers.GetRealIP(ctx)
+	// sessionID将在CreateToken中自动生成
+
+	plainToken, _, err := s.tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
 	if err != nil {
 		return nil, "", err
 	}

@@ -68,6 +68,10 @@
               <el-icon><Warning /></el-icon>
               <template #title>{{ $t('menu.blacklist_management') }}</template>
             </el-menu-item>
+            <el-menu-item index="/online-users">
+              <el-icon><User /></el-icon>
+              <template #title>{{ $t('menu.online_user_management') }}</template>
+            </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="logs">
             <template #title>
@@ -217,6 +221,7 @@ const pathMap = {
   '/dictionaries': '/dictionaries',
   '/configs': '/configs',
   '/blacklists': '/blacklists',
+  '/online-users': '/online-users',
   '/operation-logs': '/operation-logs',
   '/login-logs': '/login-logs',
   '/system-logs': '/system-logs',

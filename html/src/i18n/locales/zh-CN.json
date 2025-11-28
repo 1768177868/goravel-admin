@@ -23,7 +23,12 @@
     "updated_at": "更新时间",
     "sort": "排序",
     "description": "描述",
-    "password": "密码"
+    "password": "密码",
+    "query_failed": "查询失败",
+    "get_success": "获取成功",
+    "create_success": "创建成功",
+    "update_success": "更新成功",
+    "delete_success": "删除成功"
   },
   "login": {
     "title": "后台管理系统",
@@ -97,6 +102,7 @@
     "department_management": "部门管理",
     "dictionary_management": "字典管理",
     "blacklist_management": "IP黑名单",
+    "online_user_management": "在线用户",
     "log_management": "日志管理",
     "operation_log": "操作日志",
     "login_log": "登录日志",
@@ -383,6 +389,30 @@
     "create_success": "创建成功",
     "update_success": "更新成功",
     "ip_blocked": "您的IP地址已被封禁，无法访问"
+  },
+  "online_user": {
+    "title": "在线用户",
+    "username": "用户名",
+    "username_placeholder": "请输入用户名",
+    "nickname": "昵称",
+    "avatar": "头像",
+    "browser": "浏览器",
+    "browser_placeholder": "请输入浏览器",
+    "ip": "IP地址",
+    "ip_placeholder": "请输入IP地址",
+    "os": "操作系统",
+    "os_placeholder": "请输入操作系统",
+    "session_id": "会话编号",
+    "last_active": "最后活跃",
+    "kick_out": "踢下线",
+    "batch_kick_out": "批量踢下线",
+    "kick_out_confirm": "确定要踢下线用户 {username} 吗？",
+    "kick_out_success": "踢下线成功",
+    "kick_out_failed": "踢下线失败",
+    "batch_kick_out_confirm": "确定要踢下线选中的 {count} 个用户吗？",
+    "batch_kick_out_success": "批量踢下线成功",
+    "batch_kick_out_failed": "批量踢下线失败",
+    "select_users_first": "请先选择要踢下线的用户"
   },
   "log": {
     "operation_log": "操作日志",

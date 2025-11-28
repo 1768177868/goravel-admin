@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
 
@@ -51,7 +52,12 @@ func (s *UserAuthServiceImpl) Login(ctx http.Context, username, password string)
 		expiresAt = &exp
 	}
 
-	plainToken, _, err := s.tokenService.CreateToken("user", user.ID, "user-token", expiresAt)
+	// 获取浏览器和操作系统信息
+	browser, os := helpers.GetBrowserAndOS(ctx)
+	// 获取真实IP地址
+	ip := helpers.GetRealIP(ctx)
+
+	plainToken, _, err := s.tokenService.CreateToken("user", user.ID, "user-token", expiresAt, browser, ip, os, "")
 	if err != nil {
 		return nil, "", err
 	}
@@ -74,4 +80,3 @@ func (s *UserAuthServiceImpl) GetUserInfo(ctx http.Context) (*models.User, error
 
 	return &user, nil
 }
-
