@@ -199,6 +199,7 @@
     "admin.store": "Create Admin",
     "admin.update": "Update Admin",
     "admin.destroy": "Delete Admin",
+    "admin.export": "Export Admin",
     "admin.password": "Reset Admin Password",
     "admin.kick_out": "Kick Out User",
     "role.index": "View Role List",
@@ -241,7 +242,10 @@
     "system_log.clean": "Clean System Log",
     "monitor.system_info": "View System Monitor Info",
     "profile.update": "Update Profile",
-    "password.update": "Update Password"
+    "password.update": "Update Password",
+    "export.index": "View Export List",
+    "export.destroy": "Delete Export Record",
+    "config.save": "Save Configuration"
   },
   "menu_management": {
     "title": "Menu List",

@@ -47,8 +47,8 @@ export function deleteAdmin(id) {
 export function exportAdmin(params) {
   return request({
     url: '/admins/export',
-    method: 'get',
-    params
+    method: 'post',
+    data: params
   })
 }
 

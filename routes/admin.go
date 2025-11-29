@@ -68,7 +68,7 @@ func Admin() {
 
 		// 管理员管理（有额外路由，不能完全用 Resource）
 		router.Get("admins", adminController.Index)
-		router.Get("admins/export", adminController.Export)
+		router.Post("admins/export", adminController.Export)
 		router.Get("admins/{id}", adminController.Show)
 		router.Post("admins", adminController.Store)
 		router.Put("admins/{id}", adminController.Update)

@@ -29,14 +29,25 @@ func NewAdminController() *AdminController {
 }
 
 // buildQuery 构建查询（列表和导出共用）
+// 同时支持查询参数（GET）和请求体参数（POST）
 func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
-	username := ctx.Request().Query("username", "")
-	status := ctx.Request().Query("status", "")
-	roleID := ctx.Request().Query("role_id", "")
-	departmentID := ctx.Request().Query("department_id", "")
-	orderBy := ctx.Request().Query("order_by", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	// 优先从请求体读取，如果没有则从查询参数读取（兼容 GET 和 POST）
+	username := ctx.Request().Input("username", ctx.Request().Query("username", ""))
+	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
+	roleID := ctx.Request().Input("role_id", ctx.Request().Query("role_id", ""))
+	departmentID := ctx.Request().Input("department_id", ctx.Request().Query("department_id", ""))
+	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
+	// 时间参数同时支持从请求体和查询参数读取，并转换为 UTC
+	startTimeStr := ctx.Request().Input("start_time", ctx.Request().Query("start_time", ""))
+	endTimeStr := ctx.Request().Input("end_time", ctx.Request().Query("end_time", ""))
+	startTime := ""
+	endTime := ""
+	if startTimeStr != "" {
+		startTime = helpers.ConvertTimeToUTC(ctx, startTimeStr)
+	}
+	if endTimeStr != "" {
+		endTime = helpers.ConvertTimeToUTC(ctx, endTimeStr)
+	}
 
 	query := facades.Orm().Query().Model(&models.Admin{})
 

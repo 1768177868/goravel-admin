@@ -42,8 +42,9 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "管理员创建", Slug: "admin.store", Method: "POST", Path: "/api/admin/admins", Description: "创建管理员", Status: 1, Sort: 3, MenuID: adminMenu.ID},
 		{Name: "管理员更新", Slug: "admin.update", Method: "PUT", Path: "/api/admin/admins/*", Description: "更新管理员", Status: 1, Sort: 4, MenuID: adminMenu.ID},
 		{Name: "管理员删除", Slug: "admin.destroy", Method: "DELETE", Path: "/api/admin/admins/*", Description: "删除管理员", Status: 1, Sort: 5, MenuID: adminMenu.ID},
-		{Name: "重置密码", Slug: "admin.password", Method: "PUT", Path: "/api/admin/admins/*/password", Description: "重置管理员密码", Status: 1, Sort: 6, MenuID: adminMenu.ID},
-		{Name: "踢出用户", Slug: "admin.kick_out", Method: "DELETE", Path: "/api/admin/admins/*/tokens", Description: "踢出指定用户的所有token", Status: 1, Sort: 7, MenuID: adminMenu.ID},
+		{Name: "管理员导出", Slug: "admin.export", Method: "POST", Path: "/api/admin/admins/export", Description: "导出管理员列表", Status: 1, Sort: 6, MenuID: adminMenu.ID},
+		{Name: "重置密码", Slug: "admin.password", Method: "PUT", Path: "/api/admin/admins/*/password", Description: "重置管理员密码", Status: 1, Sort: 7, MenuID: adminMenu.ID},
+		{Name: "踢出用户", Slug: "admin.kick_out", Method: "DELETE", Path: "/api/admin/admins/*/tokens", Description: "踢出指定用户的所有token", Status: 1, Sort: 8, MenuID: adminMenu.ID},
 		// 角色管理
 		{Name: "角色列表", Slug: "role.index", Method: "GET", Path: "/api/admin/roles", Description: "查看角色列表", Status: 1, Sort: 1, MenuID: roleMenu.ID},
 		{Name: "角色详情", Slug: "role.show", Method: "GET", Path: "/api/admin/roles/*", Description: "查看角色详情", Status: 1, Sort: 2, MenuID: roleMenu.ID},
