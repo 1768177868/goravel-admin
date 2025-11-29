@@ -25,7 +25,7 @@ func (s *MenuSeeder) Run() error {
 		var existingMenu models.Menu
 		// 先尝试通过 slug 查找
 		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu); err == nil {
-			// 菜单已存在，更新除图标外的其他字段（保留用户可能修改的图标）
+			// 菜单已存在，更新除图标和排序外的其他字段（保留用户可能修改的图标和排序）
 			existingMenu.ParentID = menuData.ParentID
 			existingMenu.Title = menuData.Title
 			existingMenu.Slug = menuData.Slug // 确保 slug 也被更新
@@ -38,7 +38,8 @@ func (s *MenuSeeder) Run() error {
 			existingMenu.Permission = menuData.Permission
 			existingMenu.Type = menuData.Type
 			existingMenu.Status = menuData.Status
-			existingMenu.Sort = menuData.Sort
+			// 不覆盖已有的排序，保留用户在前端或数据库中手动调整的 Sort 值
+			// existingMenu.Sort = menuData.Sort
 			existingMenu.IsHidden = menuData.IsHidden
 			facades.Orm().Query().Save(&existingMenu)
 			// 重新查询确保获取最新数据
@@ -62,7 +63,8 @@ func (s *MenuSeeder) Run() error {
 				existingByPath.Permission = menuData.Permission
 				existingByPath.Type = menuData.Type
 				existingByPath.Status = menuData.Status
-				existingByPath.Sort = menuData.Sort
+				// 同样不覆盖已有的排序
+				// existingByPath.Sort = menuData.Sort
 				existingByPath.IsHidden = menuData.IsHidden
 				facades.Orm().Query().Save(&existingByPath)
 				// 重新查询确保获取最新数据
@@ -267,6 +269,20 @@ func (s *MenuSeeder) Run() error {
 		Type:      2,
 		Status:    1,
 		Sort:      3,
+		IsHidden:  0,
+	})
+
+	// 创建导出管理菜单（放在系统管理下）
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "导出管理",
+		Slug:      "export",
+		Icon:      "Document",
+		Path:      "/exports",
+		Component: "export/index",
+		Type:      2,
+		Status:    1,
+		Sort:      6,
 		IsHidden:  0,
 	})
 

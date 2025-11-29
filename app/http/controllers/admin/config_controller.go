@@ -61,37 +61,53 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 	}
 
 	now := carbon.Now()
-	// 更新或创建配置
+
+	// 批量处理配置更新和创建
 	for key, value := range configsMap {
+		// 转换值为字符串，处理布尔值
+		var valueStr string
+		switch v := value.(type) {
+		case bool:
+			if v {
+				valueStr = "1"
+			} else {
+				valueStr = "0"
+			}
+		case nil:
+			valueStr = ""
+		default:
+			valueStr = cast.ToString(value)
+		}
+
 		if config, exists := configMap[key]; exists {
 			// 更新现有配置
-			config.Value = cast.ToString(value)
+			config.Value = valueStr
 			if err := facades.Orm().Query().Save(config); err != nil {
-				errorlog.RecordHTTP(ctx, "config", "Failed to batch update config", map[string]any{
+				errorlog.RecordHTTP(ctx, "config", "Failed to update config", map[string]any{
 					"error": err.Error(),
 					"group": group,
 					"key":   key,
-				}, "Batch update config error: %v", err)
-				return response.Error(ctx, http.StatusInternalServerError, "batch_update_failed")
+				}, "Update config error: %v", err)
+				return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 			}
 		} else {
 			// 创建新配置
 			configData := map[string]interface{}{
 				"group":      group,
 				"key":        key,
-				"value":      cast.ToString(value),
+				"value":      valueStr,
 				"type":       "input",
 				"sort":       0,
 				"created_at": now,
 				"updated_at": now,
 			}
 			if err := facades.Orm().Query().Table("configs").Create(configData); err != nil {
-				errorlog.RecordHTTP(ctx, "config", "Failed to create config in batch update", map[string]any{
+				errorlog.RecordHTTP(ctx, "config", "Failed to create config", map[string]any{
 					"error": err.Error(),
 					"group": group,
 					"key":   key,
-				}, "Create config in batch update error: %v", err)
-				return response.Error(ctx, http.StatusInternalServerError, "batch_update_failed")
+				}, "Create config error: %v", err)
+				return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 			}
 		}
 	}

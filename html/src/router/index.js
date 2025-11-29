@@ -63,6 +63,12 @@ const routes = [
         meta: { titleKey: 'menu.config_management' }
       },
       {
+        path: 'exports',
+        name: 'Exports',
+        component: () => import('../views/export/ExportList.vue'),
+        meta: { titleKey: 'menu.export_management' }
+      },
+      {
         path: 'blacklists',
         name: 'Blacklists',
         component: () => import('../views/blacklist/BlacklistList.vue'),

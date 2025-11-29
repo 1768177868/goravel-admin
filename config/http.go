@@ -56,7 +56,7 @@ func init() {
 		// HTTP Port
 		"port": config.Env("APP_PORT", "3000"),
 		// HTTP Timeout, default is 3 seconds
-		"request_timeout": 3,
+		"request_timeout": 30,
 		// HTTPS Configuration
 		"tls": map[string]any{
 			// HTTPS Host

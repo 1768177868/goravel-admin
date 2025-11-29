@@ -143,7 +143,7 @@ func Export(ctx http.Context, messageKey string, headers []string, data [][]stri
 		}
 	}
 
-	exportService := services.NewExportService()
+	exportService := services.NewExportService(ctx)
 	filePath, err := exportService.ExportToFile(translatedHeaders, data, filename)
 	if err != nil {
 		return Error(ctx, http.StatusInternalServerError, "export_failed")

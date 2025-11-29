@@ -72,6 +72,10 @@
               <el-icon><User /></el-icon>
               <template #title>{{ $t('menu.online_user_management') }}</template>
             </el-menu-item>
+            <el-menu-item index="/exports">
+              <el-icon><Document /></el-icon>
+              <template #title>{{ $t('menu.export_management') }}</template>
+            </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="logs">
             <template #title>

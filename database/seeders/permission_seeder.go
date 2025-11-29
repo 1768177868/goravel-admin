@@ -16,7 +16,7 @@ func (s *PermissionSeeder) Signature() string {
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu models.Menu
-	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu models.Menu
+	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
 	facades.Orm().Query().Where("slug", "role").First(&roleMenu)
@@ -32,6 +32,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "system-log").First(&systemLogMenu)
 	facades.Orm().Query().Where("slug", "monitor").First(&monitorMenu)
 	facades.Orm().Query().Where("slug", "profile").First(&profileMenu)
+	facades.Orm().Query().Where("slug", "export").First(&exportMenu)
 
 	// 创建权限（关联菜单ID）
 	permissions := []models.Permission{
@@ -108,6 +109,9 @@ func (s *PermissionSeeder) Run() error {
 		// 个人中心
 		{Name: "修改资料", Slug: "profile.update", Method: "PUT", Path: "/api/admin/profile", Description: "修改当前登录管理员资料", Status: 1, Sort: 1, MenuID: profileMenu.ID},
 		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/api/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 2, MenuID: profileMenu.ID},
+		// 导出管理
+		{Name: "导出列表", Slug: "export.index", Method: "GET", Path: "/api/admin/exports", Description: "查看导出记录列表", Status: 1, Sort: 1, MenuID: exportMenu.ID},
+		{Name: "删除导出", Slug: "export.destroy", Method: "DELETE", Path: "/api/admin/exports/*", Description: "删除导出记录及源文件", Status: 1, Sort: 2, MenuID: exportMenu.ID},
 	}
 
 	for _, perm := range permissions {

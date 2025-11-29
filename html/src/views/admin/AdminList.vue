@@ -193,6 +193,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
@@ -211,6 +212,7 @@ import {
 import { getOptions } from '../../api/option'
 
 const { t } = useI18n()
+const router = useRouter()
 const tableRef = ref(null)
 const formRef = ref(null)
 const loading = ref(false)
@@ -654,30 +656,11 @@ const handleKickOut = async (row) => {
 
 const handleExport = async () => {
   try {
-    const res = await exportAdmin(searchForm)
-    if (res.data && res.data.file_url) {
-      let fileUrl = res.data.file_url
-      
-      // 如果是相对路径，需要拼接完整的 URL
-      if (!fileUrl.startsWith('http://') && !fileUrl.startsWith('https://')) {
-        // 获取当前页面的 origin，确保在开发和生产环境都能正确工作
-        const origin = window.location.origin
-        if (fileUrl.startsWith('/')) {
-          fileUrl = origin + fileUrl
-        } else {
-          fileUrl = origin + '/' + fileUrl
-        }
-      }
-      
-      const link = document.createElement('a')
-      link.href = fileUrl
-      link.download = res.data.file_path?.split('/').pop() || 'admins.csv'
-      link.style.display = 'none'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      ElMessage.success(t('admin.export_success'))
-    }
+    await exportAdmin(searchForm)
+    // 不再直接触发下载，导出记录会写入导出管理列表，由用户在导出管理中查看和下载
+    ElMessage.success(t('admin.export_success'))
+    // 导出完成后跳转到导出管理列表
+    router.push('/exports')
   } catch (error) {
     console.error('Export error:', error)
   }

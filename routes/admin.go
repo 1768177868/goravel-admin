@@ -29,6 +29,7 @@ func Admin() {
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
 	optionController := admin.NewOptionController()
+	exportController := admin.NewExportController()
 
 	// 登录相关（不需要认证，但需要多语言）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
@@ -110,6 +111,11 @@ func Admin() {
 		router.Delete("operation-logs/{id}", operationLogController.Destroy)
 		router.Post("operation-logs/batch-delete", operationLogController.BatchDestroy)
 		router.Post("operation-logs/clean", operationLogController.Clean)
+
+		// 导出管理
+		router.Get("exports", exportController.Index)
+		router.Get("exports/{id}/download", exportController.Download)
+		router.Delete("exports/{id}", exportController.Destroy)
 
 		// 登录日志
 		router.Get("login-logs", loginLogController.Index)
