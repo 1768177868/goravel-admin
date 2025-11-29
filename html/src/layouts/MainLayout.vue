@@ -238,10 +238,6 @@ const pathMap = {
 const menuTree = computed(() => {
   const menus = userStore.menus || []
   
-  // 调试：输出原始菜单数据
-  console.log('Raw menus from userStore:', menus)
-  console.log('userStore.menus length:', menus.length)
-  
   if (menus.length === 0) {
     // console.warn('No menus found in userStore.menus, userStore:', userStore)
     return []
@@ -268,7 +264,6 @@ const menuTree = computed(() => {
   
   // 转换所有菜单（扁平数组）
   const transformedMenus = menus.map(menu => transformMenu(menu))
-  console.log('Transformed menus (flat):', transformedMenus)
   
   // 构建树形结构（只返回顶级菜单，子菜单在children中）
   const buildTree = (menus, parentId = 0) => {
@@ -284,7 +279,6 @@ const menuTree = computed(() => {
   }
   
   const tree = buildTree(transformedMenus)
-  console.log('Built menu tree:', tree)
   return tree
 })
 

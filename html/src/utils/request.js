@@ -21,9 +21,6 @@ request.interceptors.request.use(
       // 确保 token 没有多余的空格
       const cleanToken = token.trim()
       config.headers.Authorization = `Bearer ${cleanToken}`
-      console.log('Request with token:', cleanToken.substring(0, 20) + '...')
-    } else {
-      console.log('No token found in localStorage')
     }
     const appStore = useAppStore()
     let browserTimezone = 'UTC'
