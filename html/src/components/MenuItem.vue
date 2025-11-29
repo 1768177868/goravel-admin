@@ -40,7 +40,7 @@
 import { defineComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import { getMenuTranslation } from '../utils/menuTranslation'
+import { getMenuTitle as getMenuTitleUtil } from '../utils/menuTranslation'
 
 export default defineComponent({
   name: 'MenuItem',
@@ -53,83 +53,9 @@ export default defineComponent({
   setup(props) {
     const { t, te } = useI18n()
     
-    // 路径到翻译键的映射
-    const pathToTranslationKey = {
-      '/system': 'menu.system_management',
-      '/system/admin': 'menu.admin_management',
-      '/system/role': 'menu.role_management',
-      '/admins': 'menu.admin_management',
-      '/roles': 'menu.role_management',
-      '/permissions': 'menu.permission_management',
-      '/menus': 'menu.menu_management',
-      '/departments': 'menu.department_management',
-      '/dictionaries': 'menu.dictionary_management',
-      '/configs': 'menu.config_management',
-      '/blacklists': 'menu.blacklist_management',
-      '/online-users': 'menu.online_user_management',
-      '/exports': 'menu.export_management',
-      '/logs': 'menu.log_management',
-      '/operation-logs': 'menu.operation_log',
-      '/login-logs': 'menu.login_log',
-      '/system-logs': 'menu.system_log',
-      '/monitor': 'menu.service_monitor',
-      '/profile': 'menu.profile'
-    }
-    
-    // 标题到翻译键的映射（根据后端返回的中文标题）
-    const titleToTranslationKey = {
-      '系统管理': 'menu.system_management',
-      '管理员管理': 'menu.admin_management',
-      '角色管理': 'menu.role_management',
-      '权限管理': 'menu.permission_management',
-      '菜单管理': 'menu.menu_management',
-      '部门管理': 'menu.department_management',
-      '字典管理': 'menu.dictionary_management',
-      '配置管理': 'menu.config_management',
-      'IP黑名单': 'menu.blacklist_management',
-      '在线用户': 'menu.online_user_management',
-      '导出管理': 'menu.export_management',
-      '日志管理': 'menu.log_management',
-      '操作日志': 'menu.operation_log',
-      '登录日志': 'menu.login_log',
-      '系统日志': 'menu.system_log',
-      '服务监控': 'menu.service_monitor',
-      '个人中心': 'menu.profile'
-    }
-
-    // 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
+    // 获取菜单标题（使用工具函数，自动从 slug 或路径提取翻译）
     const getMenuTitle = (menu) => {
-      // 优先使用 slug 作为翻译键标识
-      const slug = menu.Slug || menu.slug || ''
-      if (slug) {
-        const translated = getMenuTranslation(t, te, slug)
-        if (translated) {
-          return translated
-        }
-      }
-      
-      // 回退到路径映射（向后兼容）
-      const path = menu.path || menu.Path || ''
-      if (path) {
-        const pathKey = pathToTranslationKey[path]
-        if (pathKey) {
-          return t(pathKey)
-        }
-      }
-      
-      // 回退到标题映射（向后兼容）
-      const title = menu.title || menu.Title || ''
-      if (title) {
-        const titleKey = titleToTranslationKey[title]
-        if (titleKey) {
-          return t(titleKey)
-        }
-        // 如果没有匹配的翻译键，返回原始标题
-        return title
-      }
-      
-      // 最后使用原始标题
-      return title || ''
+      return getMenuTitleUtil(t, te, menu)
     }
     
     

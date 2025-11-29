@@ -164,7 +164,7 @@ import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
-import { getMenuTranslation } from '../../utils/menuTranslation'
+import { getMenuTitle as getMenuTitleUtil } from '../../utils/menuTranslation'
 import {
   getPermissionList,
   getPermissionDetail,
@@ -338,82 +338,14 @@ const formData = reactive({
 const menuTreeData = ref([])
 const menuSelectVisible = ref(false)
 
-// 路径到翻译键的映射
-const pathToTranslationKey = {
-  '/system': 'menu.system_management',
-  '/system/admin': 'menu.admin_management',
-  '/system/role': 'menu.role_management',
-  '/admins': 'menu.admin_management',
-  '/roles': 'menu.role_management',
-  '/permissions': 'menu.permission_management',
-  '/menus': 'menu.menu_management',
-  '/departments': 'menu.department_management',
-  '/dictionaries': 'menu.dictionary_management',
-  '/logs': 'menu.log_management',
-  '/operation-logs': 'menu.operation_log',
-  '/login-logs': 'menu.login_log',
-  '/system-logs': 'menu.system_log',
-  '/monitor': 'menu.service_monitor',
-  '/profile': 'menu.profile',
-  '/notifications': 'menu.notification_center'
-}
-
-// 标题到翻译键的映射（根据后端返回的中文标题）
-const titleToTranslationKey = {
-  '系统管理': 'menu.system_management',
-  '管理员管理': 'menu.admin_management',
-  '角色管理': 'menu.role_management',
-  '权限管理': 'menu.permission_management',
-  '菜单管理': 'menu.menu_management',
-  '部门管理': 'menu.department_management',
-  '字典管理': 'menu.dictionary_management',
-  '日志管理': 'menu.log_management',
-  '操作日志': 'menu.operation_log',
-  '登录日志': 'menu.login_log',
-  '系统日志': 'menu.system_log',
-  '个人中心': 'menu.profile',
-  '服务监控': 'menu.service_monitor',
-  '通知中心': 'menu.notification_center'
-}
-
-// 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
+// 获取菜单标题（使用工具函数，自动从 slug 或路径提取翻译）
 const getMenuTitle = (menu) => {
   if (!menu || typeof menu !== 'object') {
     return '-'
   }
   
-  // 优先使用 slug 作为翻译键标识
-  const slug = menu.Slug || menu.slug || ''
-  if (slug) {
-    const translated = getMenuTranslation(t, te, slug)
-    if (translated) {
-      return translated
-    }
-  }
-  
-  // 尝试多种可能的字段名（支持 PascalCase 和 snake_case）
-  const path = menu.Path || menu.path || ''
-  const title = menu.Title || menu.title || ''
-  
-  // 回退到路径映射（向后兼容）
-  if (path) {
-    const pathKey = pathToTranslationKey[path]
-    if (pathKey) {
-      return t(pathKey)
-    }
-  }
-  
-  // 回退到标题映射（向后兼容）
-  if (title) {
-    const titleKey = titleToTranslationKey[title]
-    if (titleKey) {
-      return t(titleKey)
-    }
-    // 如果没有匹配的翻译键，返回原始标题
-    return title
-  }
-  
-  return '-'
+  const translated = getMenuTitleUtil(t, te, menu)
+  return translated || '-'
 }
 
 // 转换菜单数据为树形选择器格式
