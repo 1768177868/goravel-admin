@@ -1,20 +1,22 @@
-export function onRequest(context) {
+export async function onRequest(context) {
   const url = new URL(context.request.url)
+  const pathname = url.pathname
   
   // 如果是静态资源、API 请求或 index.html 本身，直接返回
-  if (url.pathname.startsWith('/assets/') || 
-      url.pathname.startsWith('/api/') ||
-      url.pathname.startsWith('/ws/') ||
-      url.pathname === '/index.html' ||
-      url.pathname === '/favicon.ico' ||
-      url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+  if (pathname.startsWith('/assets/') || 
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/ws/') ||
+      pathname === '/index.html' ||
+      pathname === '/favicon.ico' ||
+      pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
     return context.next()
   }
   
   // 其他所有请求都返回 index.html（SPA 路由支持）
-  // 使用 fetch 获取 index.html 并返回
+  // 重写请求 URL 为 /index.html
+  const indexUrl = new URL('/index.html', url.origin)
   return context.next({
-    request: new Request(new URL('/index.html', context.request.url), context.request)
+    request: new Request(indexUrl, context.request)
   })
 }
 

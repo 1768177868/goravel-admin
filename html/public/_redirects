@@ -1,9 +1,0 @@
-# 排除静态资源和 index.html 本身
-/assets/*    200
-/favicon.ico 200
-/index.html  200
-/api/*       200
-/ws/*        200
-# 其他所有请求都返回 index.html（SPA 路由支持）
-/*           /index.html   200
-
