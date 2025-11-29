@@ -10,6 +10,26 @@ import (
 	"goravel/bootstrap"
 )
 
+// @title           Goravel Admin API
+// @version         1.0
+// @description     这是一个基于 Goravel 框架的后台管理系统 API 文档
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:3000
+// @BasePath  /api/admin
+
+// @securityDefinitions.apikey BearerAuth
+// @in                         header
+// @name                       Authorization
+// @description                JWT 认证，格式：Bearer {token}
+
 func main() {
 	// This bootstraps the framework and gets it ready for use.
 	bootstrap.Boot()

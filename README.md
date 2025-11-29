@@ -79,6 +79,12 @@ go get -d github.com/99designs/gqlgen
 go run github.com/99designs/gqlgen generate
 ```
 
+```
+swag init
+go run .
+http://localhost:3008/swagger/
+```
+
 ## Documentation
 
 Online documentation [https://www.goravel.dev](https://www.goravel.dev)

@@ -1,6 +1,549 @@
+basePath: /api/admin
+definitions:
+  admin.AdminDetailResponse:
+    properties:
+      code:
+        description: 状态码
+        example: 200
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/admin.AdminResponse'
+        description: 管理员数据
+      message:
+        description: 消息
+        example: 获取成功
+        type: string
+      trace_id:
+        description: 追踪ID
+        example: abc123
+        type: string
+    type: object
+  admin.AdminExportRequest:
+    properties:
+      department_id:
+        description: 部门ID
+        example: "1"
+        type: string
+      end_time:
+        description: 结束时间
+        example: "2024-12-31 23:59:59"
+        type: string
+      order_by:
+        description: 排序
+        example: created_at:desc
+        type: string
+      role_id:
+        description: 角色ID
+        example: "1"
+        type: string
+      start_time:
+        description: 开始时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      status:
+        description: 状态：1-启用，0-禁用
+        example: "1"
+        type: string
+      username:
+        description: 用户名（模糊搜索）
+        example: admin
+        type: string
+    type: object
+  admin.AdminResponse:
+    properties:
+      avatar:
+        description: 头像
+        example: ""
+        type: string
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      department:
+        additionalProperties: true
+        description: 部门信息
+        type: object
+      department_id:
+        description: 部门ID
+        example: 1
+        type: integer
+      email:
+        description: 邮箱
+        example: admin@example.com
+        type: string
+      id:
+        description: 管理员ID
+        example: 1
+        type: integer
+      nickname:
+        description: 昵称
+        example: 管理员
+        type: string
+      phone:
+        description: 手机号
+        example: "13800138000"
+        type: string
+      roles:
+        description: 角色列表
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      status:
+        description: 状态：1-启用，0-禁用
+        example: 1
+        type: integer
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      username:
+        description: 用户名
+        example: admin
+        type: string
+    type: object
+  admin.PaginatedAdminResponse:
+    properties:
+      code:
+        description: 状态码
+        example: 200
+        type: integer
+      data:
+        description: 数据列表
+        items:
+          $ref: '#/definitions/admin.AdminResponse'
+        type: array
+      message:
+        description: 消息
+        example: 获取成功
+        type: string
+      page:
+        description: 当前页码
+        example: 1
+        type: integer
+      page_size:
+        description: 每页数量
+        example: 10
+        type: integer
+      total:
+        description: 总数
+        example: 100
+        type: integer
+      trace_id:
+        description: 追踪ID
+        example: abc123
+        type: string
+    type: object
+host: localhost:3000
 info:
-  contact: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 这是一个基于 Goravel 框架的后台管理系统 API 文档
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Goravel Admin API
+  version: "1.0"
 paths:
+  /api/admin/admins:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取管理员列表，支持按用户名、状态、角色、部门等条件筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 用户名（模糊搜索）
+        in: query
+        name: username
+        type: string
+      - description: 状态：1-启用，0-禁用
+        in: query
+        name: status
+        type: string
+      - description: 角色ID
+        in: query
+        name: role_id
+        type: string
+      - description: 部门ID
+        in: query
+        name: department_id
+        type: string
+      - description: 开始时间（格式：YYYY-MM-DD HH:mm:ss）
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间（格式：YYYY-MM-DD HH:mm:ss）
+        in: query
+        name: end_time
+        type: string
+      - description: 排序（格式：字段:asc/desc，如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.PaginatedAdminResponse'
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取管理员列表
+      tags:
+      - 管理员管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的管理员账号，支持设置部门、角色等信息
+      parameters:
+      - description: 用户名（必填）
+        example: admin
+        in: body
+        name: username
+        required: true
+        schema:
+          type: string
+      - description: 密码（必填）
+        example: "123456"
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      - description: 昵称
+        example: 管理员
+        in: body
+        name: nickname
+        schema:
+          type: string
+      - description: 邮箱
+        example: admin@example.com
+        in: body
+        name: email
+        schema:
+          type: string
+      - description: 手机号
+        example: "13800138000"
+        in: body
+        name: phone
+        schema:
+          type: string
+      - description: 部门ID
+        example: 1
+        in: body
+        name: department_id
+        schema:
+          type: integer
+      - description: 状态：1-启用，0-禁用
+        example: 1
+        in: body
+        name: status
+        schema:
+          type: integer
+      - description: 角色ID列表
+        in: body
+        name: role_ids
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.AdminDetailResponse'
+        "400":
+          description: 参数错误或用户名已存在
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建管理员
+      tags:
+      - 管理员管理
+  /api/admin/admins/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定的管理员账号。受保护的管理员和当前登录的管理员不能删除。
+      parameters:
+      - description: 管理员ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限、受保护管理员不能删除或不能删除自己
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 管理员不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除管理员
+      tags:
+      - 管理员管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取管理员详细信息，包括部门、角色等关联信息
+      parameters:
+      - description: 管理员ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.AdminDetailResponse'
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 管理员不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取管理员详情
+      tags:
+      - 管理员管理
+    put:
+      consumes:
+      - application/json
+      description: 更新管理员的基本信息，包括昵称、邮箱、手机号、部门、状态、角色等。受保护的管理员不能禁用。
+      parameters:
+      - description: 管理员ID
+        example: 1
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 昵称
+        example: 管理员
+        in: body
+        name: nickname
+        schema:
+          type: string
+      - description: 邮箱
+        example: admin@example.com
+        in: body
+        name: email
+        schema:
+          type: string
+      - description: 手机号
+        example: "13800138000"
+        in: body
+        name: phone
+        schema:
+          type: string
+      - description: 部门ID
+        example: 1
+        in: body
+        name: department_id
+        schema:
+          type: integer
+      - description: 状态：1-启用，0-禁用
+        example: "1"
+        in: body
+        name: status
+        schema:
+          type: string
+      - description: 密码（可选，不传则不更新）
+        example: "123456"
+        in: body
+        name: password
+        schema:
+          type: string
+      - description: 角色ID列表
+        in: body
+        name: role_ids
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.AdminDetailResponse'
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限或受保护管理员不能禁用
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 管理员不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新管理员信息
+      tags:
+      - 管理员管理
+  /api/admin/admins/export:
+    post:
+      consumes:
+      - application/json
+      description: 根据筛选条件导出管理员列表为CSV文件，支持与列表查询相同的筛选条件
+      parameters:
+      - description: 导出筛选条件（可选）
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/admin.AdminExportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出成功，返回文件下载信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 导出管理员列表
+      tags:
+      - 管理员管理
   /swagger:
     get:
       consumes:
@@ -14,4 +557,10 @@ paths:
       summary: Summary
       tags:
       - example
+securityDefinitions:
+  BearerAuth:
+    description: JWT 认证，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
