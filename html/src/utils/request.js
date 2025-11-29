@@ -8,8 +8,27 @@ import i18n from '../i18n'
 
 const { t } = i18n.global
 
+// 构建完整的 API baseURL
+// 如果配置了 VITE_API_BASE_URL，使用它 + VITE_API_PREFIX
+// 否则只使用 VITE_API_PREFIX（相对路径）
+const getBaseURL = () => {
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+  const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
+  
+  if (apiBaseURL) {
+    // 如果配置了完整的基础 URL，拼接前缀
+    // 确保 URL 格式正确（移除末尾的 /，确保前缀以 / 开头）
+    const base = apiBaseURL.replace(/\/+$/, '')
+    const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
+    return `${base}${prefix}`
+  }
+  
+  // 如果没有配置基础 URL，使用相对路径
+  return apiPrefix
+}
+
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_PREFIX || '/api/admin',
+  baseURL: getBaseURL(),
   timeout: 30000
 })
 
@@ -176,4 +195,3 @@ request.interceptors.response.use(
 )
 
 export default request
-
