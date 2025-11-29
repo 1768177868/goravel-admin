@@ -147,13 +147,20 @@ const handleSubmit = async () => {
       submitting.value = true
       try {
         // 将表单数据转换为配置对象
+        // 如果密码为空，则不发送该字段，让后端保持原有值
         const configs = {}
         Object.keys(formData).forEach(key => {
+          // 如果是密码字段且为空，则跳过
+          if (key === 'email_password' && !formData[key]) {
+            return
+          }
           configs[key] = formData[key]
         })
 
         await saveConfig('email', configs)
         ElMessage.success(t('config.update_success'))
+        // 提交成功后重新加载数据，确保密码字段保持为空
+        await loadData()
       } catch (error) {
         console.error('Submit error:', error)
       } finally {

@@ -33,6 +33,15 @@ func (r *ConfigController) GetByGroup(ctx http.Context) http.Response {
 	// 查询配置，即使没有数据也返回空数组，不返回错误
 	_ = facades.Orm().Query().Where("group", group).Order("sort asc, id asc").Get(&configs)
 
+	// 如果是邮箱配置分组，将密码字段的值设为空，不让前端看到
+	if group == "email" {
+		for i := range configs {
+			if configs[i].Key == "email_password" {
+				configs[i].Value = ""
+			}
+		}
+	}
+
 	return response.Success(ctx, "get_success", http.Json{
 		"configs": configs,
 	})
@@ -77,6 +86,14 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 			valueStr = ""
 		default:
 			valueStr = cast.ToString(value)
+		}
+
+		// 如果是邮箱配置的密码字段，且值为空，且配置已存在，则跳过更新（保持原有值）
+		if group == "email" && key == "email_password" && valueStr == "" {
+			if _, exists := configMap[key]; exists {
+				continue
+			}
+			// 如果配置不存在，则创建空值配置（允许首次创建时为空）
 		}
 
 		if config, exists := configMap[key]; exists {
