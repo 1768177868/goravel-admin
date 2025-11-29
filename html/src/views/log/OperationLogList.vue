@@ -266,9 +266,19 @@ const tableColumns = computed(() => [
   },
   {
     field: 'status_code',
-    title: t('log.status_code'),
+    title: t('log.status'),
     width: 100,
-    sortable: true
+    sortable: true,
+    formatter: ({ row }) => {
+      const v = row.status_code
+      if (v === 1 || v === '1') {
+        return t('log.success')
+      }
+      if (v === 0 || v === '0') {
+        return t('log.failed')
+      }
+      return v ?? '-'
+    }
   },
   {
     field: 'created_at',
