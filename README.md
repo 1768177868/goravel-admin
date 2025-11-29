@@ -10,6 +10,146 @@ The framework style is consistent with [Laravel](https://github.com/laravel/lara
 
 Welcome to star, PR and issues！
 
+## Admin System
+
+This project includes a complete admin management system built with Goravel framework.
+
+<p align="center"><img src="./admin.png" alt="Admin System Screenshot" width="800"></p>
+
+### Features
+
+#### Core Modules
+- **Authentication & Authorization**
+  - JWT-based authentication
+  - Role-based access control (RBAC)
+  - Permission management
+  - Multi-token management
+  - Online user monitoring and kick-out
+
+- **User Management**
+  - Admin user management
+  - Department management
+  - Role management
+  - Permission assignment
+  - Password reset
+
+- **System Configuration**
+  - Menu management (dynamic menu)
+  - Dictionary management
+  - System configuration
+  - Blacklist management
+
+- **Logging & Monitoring**
+  - Operation logs (with automatic recording)
+  - Login logs
+  - System logs (with trace ID)
+  - Service monitoring
+
+- **Additional Features**
+  - Dashboard with statistics
+  - Notification center (WebSocket real-time notifications)
+  - Data export management
+  - Multi-language support (Chinese/English)
+  - Responsive UI design
+
+### Tech Stack
+
+**Backend:**
+- Goravel Framework (Go)
+- JWT Authentication
+- RBAC Permission System
+- WebSocket Support
+- Database Migrations & Seeders
+
+**Frontend:**
+- Vue 3
+- Element Plus
+- vxe-table (Advanced table component)
+- Vue Router
+- Pinia (State management)
+- Axios
+- ECharts (Data visualization)
+- vue-i18n (Internationalization)
+
+### Quick Start
+
+1. **Backend Setup:**
+   ```bash
+   # Install dependencies
+   go mod download
+   
+   # Configure database in .env
+   # Run migrations and seeders
+   go run . artisan migrate
+   go run . artisan db:seed
+   
+   # Start server
+   go run . --no-ansi
+   # or use air for live reload
+   air
+   ```
+
+2. **Frontend Setup:**
+   ```bash
+   cd html
+   
+   # Install dependencies
+   npm install
+   
+   # Configure API address in .env
+   # VITE_API_BASE_URL=http://127.0.0.1:3008
+   # VITE_API_PREFIX=/api/admin
+   
+   # Start development server
+   npm run dev
+   ```
+
+3. **Default Login:**
+   - Username: `admin`
+   - Password: `admin123`
+   - (Please change the default password after first login)
+
+### API Documentation
+
+The admin API endpoints are prefixed with `/api/admin`. All endpoints require JWT authentication except login and captcha.
+
+For detailed API documentation, see [routes/admin.go](./routes/admin.go)
+
+### Project Structure
+
+```
+.
+├── app/
+│   ├── http/
+│   │   ├── controllers/admin/    # Admin controllers
+│   │   ├── middleware/           # Custom middleware (JWT, Permission, OperationLog)
+│   │   └── helpers/              # Helper functions
+│   ├── models/                   # Database models
+│   └── services/                 # Business logic services
+├── routes/
+│   └── admin.go                  # Admin routes
+├── database/
+│   ├── migrations/               # Database migrations
+│   └── seeders/                  # Database seeders
+├── html/                         # Frontend Vue application
+│   └── src/
+│       ├── views/                # Page components
+│       ├── components/           # Reusable components
+│       ├── api/                 # API client
+│       └── store/               # Pinia stores
+└── config/                       # Configuration files
+```
+
+### Security Features
+
+- JWT token-based authentication
+- Permission middleware for route protection
+- Automatic operation logging
+- Sensitive data filtering in logs
+- Rate limiting on login endpoints
+- Blacklist management for IP/User blocking
+- Token revocation support
+
 ## Getting Started
 
 ### Start Service
