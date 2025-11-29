@@ -6,8 +6,9 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/spf13/cast"
 
+	"goravel/app/constants"
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/utils/errorlog"
@@ -20,11 +21,15 @@ func NewOnlineUserController() *OnlineUserController {
 	return &OnlineUserController{}
 }
 
-// Index 在线用户列表
-// 只显示在线的用户（last_used_at在最近5分钟内的）
+// Index 获取在线用户列表
+// 只显示最近15分钟内有活动的用户（根据 OnlineUserThreshold 常量判断）
 func (r *OnlineUserController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+	// 验证并规范化分页参数
+	page, pageSize := helpers.ValidatePagination(
+		helpers.GetIntQuery(ctx, "page", 1),
+		helpers.GetIntQuery(ctx, "page_size", 10),
+	)
+
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
 	browser := ctx.Request().Query("browser", "")
@@ -32,7 +37,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 
 	// 只查询最近15分钟内有活动的token（在线用户）
 	// 默认只显示admin类型的token
-	onlineThreshold := time.Now().Add(-15 * time.Minute)
+	onlineThreshold := time.Now().Add(-constants.OnlineUserThreshold)
 	query := facades.Orm().Query().Model(&models.PersonalAccessToken{}).
 		Where("tokenable_type", "admin").
 		Where("last_used_at IS NOT NULL").
@@ -57,12 +62,39 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
+	// 批量查询所有 admin 信息，避免 N+1 查询
+	var adminIDs []uint
+	adminIDMap := make(map[uint]bool) // 用于去重
+	for _, token := range tokens {
+		if !adminIDMap[token.TokenableID] {
+			adminIDs = append(adminIDs, token.TokenableID)
+			adminIDMap[token.TokenableID] = true
+		}
+	}
 
-	// 查询admin信息并组装数据，同时过滤username
+	// 批量查询 admin
+	adminMap := make(map[uint]models.Admin)
+	if len(adminIDs) > 0 {
+		var admins []models.Admin
+		if err := facades.Orm().Query().Where("id IN ?", adminIDs).Find(&admins); err != nil {
+			errorlog.RecordHTTP(ctx, "online_user", "Failed to query admin list", map[string]any{
+				"error":     err.Error(),
+				"admin_ids": adminIDs,
+			}, "Query admin list error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		}
+
+		// 构建 admin map
+		for _, admin := range admins {
+			adminMap[admin.ID] = admin
+		}
+	}
+
+	// 组装数据，同时过滤 username
 	var onlineUsers []http.Json
 	for _, token := range tokens {
-		var admin models.Admin
-		if err := facades.Orm().Query().Where("id", token.TokenableID).First(&admin); err != nil {
+		admin, ok := adminMap[token.TokenableID]
+		if !ok {
 			continue
 		}
 
@@ -87,24 +119,15 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 		onlineUsers = append(onlineUsers, onlineUser)
 	}
 
-	// 手动分页
-	total := len(onlineUsers)
-	start := (page - 1) * pageSize
-	end := start + pageSize
-	if start > total {
-		onlineUsers = []http.Json{}
-	} else if end > total {
-		onlineUsers = onlineUsers[start:]
-	} else {
-		onlineUsers = onlineUsers[start:end]
-	}
+	// 使用工具函数进行分页
+	paginatedUsers, total := helpers.PaginateSlice(onlineUsers, page, pageSize)
 
-	return response.Paginate(ctx, "get_success", onlineUsers, int64(total), page, pageSize)
+	return response.Paginate(ctx, "get_success", paginatedUsers, total, page, pageSize)
 }
 
 // KickOut 踢下线（删除token）
 func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
-	tokenID := cast.ToUint(ctx.Request().Route("id"))
+	tokenID := helpers.GetUintRoute(ctx, "id")
 	if tokenID == 0 {
 		return response.Error(ctx, http.StatusBadRequest, "token_id_required")
 	}
@@ -138,25 +161,14 @@ func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "token_ids_required")
 	}
 
-	// 解析token IDs（假设是逗号分隔的字符串）
-	var ids []uint
-	idStrs := strings.Split(tokenIDs, ",")
-	for _, idStr := range idStrs {
-		idStr = strings.TrimSpace(idStr)
-		if id := cast.ToUint(idStr); id > 0 {
-			ids = append(ids, id)
-		}
-	}
-
+	// 使用工具函数解析 token IDs
+	ids := helpers.ParseIDsFromString(tokenIDs)
 	if len(ids) == 0 {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_token_ids")
 	}
 
 	// 批量删除token
-	idsAny := make([]interface{}, len(ids))
-	for i, id := range ids {
-		idsAny[i] = id
-	}
+	idsAny := helpers.ConvertUintSliceToAny(ids)
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.PersonalAccessToken{}); err != nil {
 		errorlog.RecordHTTP(ctx, "online_user", "Failed to batch kick out users", map[string]any{
 			"error":     err.Error(),

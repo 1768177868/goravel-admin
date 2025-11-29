@@ -115,7 +115,7 @@ import {
   getOperationLogTitleOptions
 } from '../../api/log'
 
-const { t } = useI18n()
+const { t, te, tm } = useI18n()
 
 const tableRef = ref(null)
 const loading = ref(false)
@@ -187,13 +187,38 @@ const initialSearchForm = {
 const searchForm = reactive({ ...initialSearchForm })
 
 // 获取操作标题的翻译
+// 标题目前存的是权限标识的 slug，例如：admin.index / admin.update / role.update 等
+// 这里沿用角色管理中菜单与权限使用的多语言识别方式
 const getOperationTitle = (titleKey) => {
   if (!titleKey) return '-'
-  // 如果 titleKey 是 operation.xxx 格式，使用多语言
-  if (titleKey.startsWith('operation.')) {
-    return t(titleKey)
+
+  // 1. 作为权限标识翻译：permission.admin.update 这种形式
+  const slug = titleKey
+  const slugKey = `permission.${slug}`
+
+  // 1.1 使用 te 检测路径是否存在（兼容嵌套路径）
+  if (typeof te === 'function' && te(slugKey)) {
+    return t(slugKey)
   }
-  // 否则直接返回
+
+  // 1.2 直接从 permission 命名空间对象里取（兼容平铺的 \"admin.update\" 键）
+  const messages = typeof tm === 'function' ? tm('permission') : null
+  if (messages && Object.prototype.hasOwnProperty.call(messages, slug)) {
+    const value = messages[slug]
+    if (typeof value === 'string') {
+      return value
+    }
+  }
+
+  // 2. 兼容旧的 operation.xxx key（如果还有残留数据）
+  if (titleKey.startsWith('operation.')) {
+    const translated = t(titleKey)
+    if (translated !== titleKey) {
+      return translated
+    }
+  }
+
+  // 3. 找不到翻译就原样返回
   return titleKey
 }
 

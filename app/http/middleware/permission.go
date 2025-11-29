@@ -49,12 +49,13 @@ func Permission() http.Middleware {
 			return
 		}
 
-		// 检查是否是超级管理员（跳过权限检查）
-		// 拥有 super-admin 角色的管理员（包括超级管理员和开发者管理员）都跳过权限检查
+		// 检查是否是超级管理员
+		// 拥有 super-admin 角色的管理员（包括超级管理员和开发者管理员）都跳过权限“拦截”，但仍然参与权限匹配，用于生成操作标题
+		isSuperAdmin := false
 		for _, role := range admin.Roles {
 			if role.Slug == "super-admin" && role.Status == 1 {
-				ctx.Request().Next()
-				return
+				isSuperAdmin = true
+				break
 			}
 		}
 
@@ -70,8 +71,9 @@ func Permission() http.Middleware {
 			}
 		}
 
-		// 检查是否有权限
+		// 检查是否有权限，并记录匹配的权限标识
 		hasPermission := false
+		var matchedPermissionSlug string
 		for _, perm := range allPermissions {
 			if perm.Status == 1 {
 				// 检查方法匹配
@@ -79,18 +81,25 @@ func Permission() http.Middleware {
 					// 检查路径匹配（支持通配符）
 					if perm.Path == "" || perm.Path == path || matchPath(perm.Path, path) {
 						hasPermission = true
+						matchedPermissionSlug = perm.Slug
 						break
 					}
 				}
 			}
 		}
 
-		if !hasPermission {
+		// 非超级管理员且无匹配权限时拦截；超级管理员即使无匹配权限也放行
+		if !hasPermission && !isSuperAdmin {
 			_ = ctx.Response().Json(http.StatusForbidden, http.Json{
 				"code":    403,
 				"message": trans.Get(ctx, "no_permission"),
 			}).Abort()
 			return
+		}
+
+		// 将匹配的权限标识存储到 context 中，供操作日志使用
+		if matchedPermissionSlug != "" {
+			ctx.WithValue("permission_slug", matchedPermissionSlug)
 		}
 
 		ctx.Request().Next()

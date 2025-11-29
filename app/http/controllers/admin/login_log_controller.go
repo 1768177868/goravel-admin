@@ -5,8 +5,8 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/spf13/cast"
 
+	"goravel/app/constants"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -20,10 +20,13 @@ func NewLoginLogController() *LoginLogController {
 	return &LoginLogController{}
 }
 
-// Index 登录日志列表
+// Index 获取登录日志列表
 func (r *LoginLogController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+	// 验证并规范化分页参数
+	page, pageSize := helpers.ValidatePagination(
+		helpers.GetIntQuery(ctx, "page", 1),
+		helpers.GetIntQuery(ctx, "page_size", 10),
+	)
 	adminID := ctx.Request().Query("admin_id", "")
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
@@ -55,6 +58,9 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 
 	total, err := query.Count()
 	if err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Failed to count login logs", map[string]any{
+			"error": err.Error(),
+		}, "Count login logs error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
@@ -62,17 +68,28 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	offset := (page - 1) * pageSize
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Failed to query login logs", map[string]any{
+			"error": err.Error(),
+		}, "Query login logs error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
 	return response.Paginate(ctx, "get_success", logs, total, page, pageSize)
 }
 
-// Show 登录日志详情
+// Show 获取登录日志详情
 func (r *LoginLogController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
+	if id == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
 	var log models.LoginLog
 	if err := facades.Orm().Query().With("Admin").Where("id", id).First(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Login log not found", map[string]any{
+			"error":  err.Error(),
+			"log_id": id,
+		}, "Login log not found: %v", err)
 		return response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
 
@@ -83,9 +100,17 @@ func (r *LoginLogController) Show(ctx http.Context) http.Response {
 
 // Destroy 删除登录日志
 func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
+	if id == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
 	var log models.LoginLog
 	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Login log not found for delete", map[string]any{
+			"error":  err.Error(),
+			"log_id": id,
+		}, "Login log not found: %v", err)
 		return response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
 
@@ -119,13 +144,14 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 
 	ids := req.IDs
 
-	// 转换为 []any
-	idsAny := make([]any, len(ids))
-	for i, id := range ids {
-		idsAny[i] = id
-	}
+	// 使用工具函数转换为 []any
+	idsAny := helpers.ConvertUintSliceToAny(ids)
 
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.LoginLog{}); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Failed to batch delete login logs", map[string]any{
+			"error": err.Error(),
+			"ids":   ids,
+		}, "Batch delete login logs error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
 	}
 
@@ -133,14 +159,19 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 }
 
 // Clean 清理登录日志
+// 删除指定天数之前的日志，默认删除30天前的日志
 func (r *LoginLogController) Clean(ctx http.Context) http.Response {
-	days := cast.ToInt(ctx.Request().Input("days", "30"))
+	days := helpers.GetIntQuery(ctx, "days", constants.DefaultCleanLogDays)
 	if days <= 0 {
-		days = 30
+		days = constants.DefaultCleanLogDays
 	}
 
 	cutoffTime := time.Now().AddDate(0, 0, -days)
 	if _, err := facades.Orm().Query().Model(&models.LoginLog{}).Where("created_at < ?", cutoffTime).Delete(&models.LoginLog{}); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Failed to clean login logs", map[string]any{
+			"error": err.Error(),
+			"days":  days,
+		}, "Clean login logs error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "clean_failed")
 	}
 

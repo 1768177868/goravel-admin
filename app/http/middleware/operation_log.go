@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -49,15 +50,8 @@ func OperationLog() http.Middleware {
 
 		// 获取管理员ID（从JWT中间件设置的context中获取）
 		var adminID uint
-		adminValue := ctx.Value("admin")
-		if adminValue != nil {
-			// 尝试值类型
-			if admin, ok := adminValue.(models.Admin); ok {
-				adminID = admin.ID
-			} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-				// 尝试指针类型
-				adminID = adminPtr.ID
-			}
+		if admin, err := helpers.GetAdminFromContext(ctx); err == nil {
+			adminID = admin.ID
 		}
 
 		// 继续处理请求
@@ -73,15 +67,8 @@ func OperationLog() http.Middleware {
 			// 在请求处理后再获取一次管理员ID（确保JWT中间件已执行）
 			// 如果之前没有获取到，再次尝试从context获取
 			if adminID == 0 {
-				adminValue := ctx.Value("admin")
-				if adminValue != nil {
-					// 尝试值类型
-					if admin, ok := adminValue.(models.Admin); ok {
-						adminID = admin.ID
-					} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-						// 尝试指针类型
-						adminID = adminPtr.ID
-					}
+				if admin, err := helpers.GetAdminFromContext(ctx); err == nil {
+					adminID = admin.ID
 				}
 			}
 
@@ -98,11 +85,14 @@ func OperationLog() http.Middleware {
 			savedRequestBody := requestBody
 			savedDuration := duration
 
-			// 生成操作标题（优先从路由信息获取）
+			// 提前获取 traceCtx，用于日志记录
+			traceCtx := traceid.DeriveContextFromHTTP(ctx)
+
+			// 生成操作标题（只使用权限标识）
 			title := utils.GetOperationTitleFromContext(ctx)
 			if title == "operation.unknown" {
-				// 如果无法从路由信息获取，回退到路径解析
-				title = utils.GetOperationTitle(savedMethod, savedPath)
+				// 如果无法生成标题，记录调试日志
+				logger.ErrorfContext(traceCtx, "Failed to generate operation title, method: %s, path: %s", savedMethod, savedPath)
 			}
 
 			operationLog := models.OperationLog{
@@ -119,7 +109,6 @@ func OperationLog() http.Middleware {
 			}
 
 			// 异步记录日志，避免影响响应速度
-			traceCtx := traceid.DeriveContextFromHTTP(ctx)
 			go func(ctx context.Context) {
 				if err := facades.Orm().Query().Create(&operationLog); err != nil {
 					_ = systemLogService.Record(ctx, "error", "operation-log", "failed to persist operation log", map[string]any{
