@@ -40,6 +40,7 @@
 import { defineComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import { getMenuTranslation } from '../utils/menuTranslation'
 
 export default defineComponent({
   name: 'MenuItem',
@@ -50,7 +51,7 @@ export default defineComponent({
     }
   },
   setup(props) {
-    const { t } = useI18n()
+    const { t, te } = useI18n()
     
     // 路径到翻译键的映射
     const pathToTranslationKey = {
@@ -92,31 +93,9 @@ export default defineComponent({
       // 优先使用 slug 作为翻译键标识
       const slug = menu.Slug || menu.slug || ''
       if (slug) {
-        // 尝试多种 slug 格式
-        const slugVariants = [
-          slug, // 原始 slug（如 online-user）
-          slug.replace(/-/g, '_'), // 连字符转下划线（如 online_user）
-          slug.replace(/_/g, '-') // 下划线转连字符（如 online-user）
-        ]
-        
-        // 去重
-        const uniqueVariants = [...new Set(slugVariants)]
-        
-        // 尝试每种格式
-        for (const variant of uniqueVariants) {
-          // 尝试简短键
-          const slugKey = `menu.${variant}`
-          const translated = t(slugKey, slugKey)
-          if (translated !== slugKey) {
-            return translated
-          }
-          
-          // 尝试添加 _management 后缀
-          const slugKeyWithSuffix = `menu.${variant}_management`
-          const translatedWithSuffix = t(slugKeyWithSuffix, slugKeyWithSuffix)
-          if (translatedWithSuffix !== slugKeyWithSuffix) {
-            return translatedWithSuffix
-          }
+        const translated = getMenuTranslation(t, te, slug)
+        if (translated) {
+          return translated
         }
       }
       

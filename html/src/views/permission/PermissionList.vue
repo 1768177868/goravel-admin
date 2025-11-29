@@ -164,6 +164,7 @@ import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
+import { getMenuTranslation } from '../../utils/menuTranslation'
 import {
   getPermissionList,
   getPermissionDetail,
@@ -173,7 +174,7 @@ import {
 } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const formRef = ref(null)
 const tableRef = ref(null)
 const loading = ref(false)
@@ -384,31 +385,9 @@ const getMenuTitle = (menu) => {
   // 优先使用 slug 作为翻译键标识
   const slug = menu.Slug || menu.slug || ''
   if (slug) {
-    // 尝试多种 slug 格式
-    const slugVariants = [
-      slug, // 原始 slug（如 online-user）
-      slug.replace(/-/g, '_'), // 连字符转下划线（如 online_user）
-      slug.replace(/_/g, '-') // 下划线转连字符（如 online-user）
-    ]
-    
-    // 去重
-    const uniqueVariants = [...new Set(slugVariants)]
-    
-    // 尝试每种格式
-    for (const variant of uniqueVariants) {
-      // 尝试简短键
-      const slugKey = `menu.${variant}`
-      const translated = t(slugKey, slugKey)
-      if (translated !== slugKey) {
-        return translated
-      }
-      
-      // 尝试添加 _management 后缀
-      const slugKeyWithSuffix = `menu.${variant}_management`
-      const translatedWithSuffix = t(slugKeyWithSuffix, slugKeyWithSuffix)
-      if (translatedWithSuffix !== slugKeyWithSuffix) {
-        return translatedWithSuffix
-      }
+    const translated = getMenuTranslation(t, te, slug)
+    if (translated) {
+      return translated
     }
   }
   
