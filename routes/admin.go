@@ -116,6 +116,7 @@ func Admin() {
 		router.Get("exports", exportController.Index)
 		router.Get("exports/{id}/download", exportController.Download)
 		router.Delete("exports/{id}", exportController.Destroy)
+		router.Post("exports/batch-delete", exportController.BatchDestroy)
 
 		// 登录日志
 		router.Get("login-logs", loginLogController.Index)

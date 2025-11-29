@@ -18,4 +18,13 @@ export function deleteExport(id) {
   })
 }
 
+// 批量删除导出记录（同时删除源文件）
+export function batchDeleteExports(ids) {
+  return request({
+    url: '/exports/batch-delete',
+    method: 'post',
+    data: { ids }
+  })
+}
+
 

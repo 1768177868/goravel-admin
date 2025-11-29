@@ -1,9 +1,21 @@
 <template>
   <div class="export-list">
     <el-card class="box-card">
-      <div class="card-header">
-        <span>{{ $t('export.title') }}</span>
-      </div>
+      <template #header>
+        <div class="card-header">
+          <span>{{ $t('export.title') }}</span>
+          <div class="header-actions">
+            <el-button 
+              type="danger" 
+              :disabled="selectedRows.length === 0"
+              @click="handleBatchDelete"
+            >
+              <el-icon><Delete /></el-icon>
+              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
+            </el-button>
+          </div>
+        </div>
+      </template>
 
       <SearchForm
         :model="searchForm"
@@ -20,6 +32,8 @@
         border
         stripe
         height="600"
+        @checkbox-change="handleSelectionChange"
+        @checkbox-all="handleSelectionChange"
       >
         <vxe-column type="checkbox" width="60" />
         <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
@@ -53,15 +67,17 @@
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { getExportList, deleteExport } from '../../api/export'
+import { getExportList, deleteExport, batchDeleteExports } from '../../api/export'
 
 const { t } = useI18n()
 
 const tableRef = ref(null)
 const loading = ref(false)
 const tableData = ref([])
+const selectedRows = ref([])
 
 const pagination = reactive({
   page: 1,
@@ -270,6 +286,38 @@ const handleDelete = async (row) => {
   }
 }
 
+const handleSelectionChange = () => {
+  selectedRows.value = tableRef.value?.getCheckboxRecords() || []
+}
+
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning(t('common.please_select_items'))
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      t('log.batch_delete_confirm', { count: selectedRows.value.length }), 
+      t('form.tip'), 
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    )
+    const ids = selectedRows.value.map(row => row.id || row.ID)
+    await batchDeleteExports(ids)
+    ElMessage.success(t('log.delete_success'))
+    selectedRows.value = []
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Batch delete error:', error)
+    }
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -290,7 +338,11 @@ onActivated(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 </style>
 

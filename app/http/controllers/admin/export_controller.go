@@ -205,3 +205,62 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 
 	return ctx.Response().String(http.StatusOK, content)
 }
+
+type ExportBatchDestroyRequest struct {
+	IDs []uint `json:"ids"`
+}
+
+// BatchDestroy 批量删除导出记录并删除源文件
+func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
+	var req ExportBatchDestroyRequest
+
+	// 使用结构体绑定
+	if err := ctx.Request().Bind(&req); err != nil {
+		errorlog.RecordHTTP(ctx, "export", "Failed to bind batch delete request", map[string]any{
+			"error": err.Error(),
+		}, "Bind batch delete request error: %v", err)
+		return response.Error(ctx, http.StatusBadRequest, "params_error")
+	}
+
+	if len(req.IDs) == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "ids_required")
+	}
+
+	ids := req.IDs
+	idsAny := helpers.ConvertUintSliceToAny(ids)
+
+	// 查询要删除的导出记录
+	var exports []models.Export
+	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&exports); err != nil {
+		errorlog.RecordHTTP(ctx, "export", "Failed to query exports for batch delete", map[string]any{
+			"error": err.Error(),
+			"ids":   ids,
+		}, "Query exports for batch delete error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	// 尝试删除源文件（忽略失败，仅记录日志）
+	for _, export := range exports {
+		if export.Path != "" && export.Disk != "" {
+			storage := facades.Storage().Disk(export.Disk)
+			if err := storage.Delete(export.Path); err != nil {
+				errorlog.RecordHTTP(ctx, "export", "Failed to delete export source file in batch delete", map[string]any{
+					"error": err.Error(),
+					"disk":  export.Disk,
+					"path":  export.Path,
+				}, "Delete export source file in batch delete error: %v", err)
+			}
+		}
+	}
+
+	// 批量删除数据库记录
+	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
+		errorlog.RecordHTTP(ctx, "export", "Failed to batch delete export records", map[string]any{
+			"error": err.Error(),
+			"ids":   ids,
+		}, "Batch delete export records error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+	}
+
+	return response.Success(ctx, "delete_success")
+}
