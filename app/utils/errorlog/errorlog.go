@@ -16,13 +16,14 @@ import (
 // 使用场景：数据库操作失败、系统服务异常、关键业务逻辑错误等
 //
 // 示例：
-//   if err != nil {
-//       errorlog.RecordHTTP(ctx, "auth", "Failed to save admin profile", map[string]any{
-//           "error": err.Error(),
-//           "admin_id": admin.ID,
-//       }, "Save admin profile error: %v", err)
-//       return response.Error(ctx, http.StatusInternalServerError, "update_failed")
-//   }
+//
+//	if err != nil {
+//	    errorlog.RecordHTTP(ctx, "auth", "Failed to save admin profile", map[string]any{
+//	        "error": err.Error(),
+//	        "admin_id": admin.ID,
+//	    }, "Save admin profile error: %v", err)
+//	    return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+//	}
 func RecordHTTP(ctx http.Context, module, message string, attributes map[string]any, format string, args ...any) {
 	RecordHTTPWithLevel(ctx, "error", module, message, attributes, format, args...)
 }
@@ -32,17 +33,18 @@ func RecordHTTP(ctx http.Context, module, message string, attributes map[string]
 // 使用场景：需要记录不同级别的系统日志
 //
 // 示例：
-//   // 记录警告
-//   errorlog.RecordHTTPWithLevel(ctx, "warning", "auth", "Unusual login pattern detected", map[string]any{
-//       "admin_id": admin.ID,
-//       "ip": ctx.Request().Ip(),
-//   }, "Unusual login pattern: %s", pattern)
 //
-//   // 记录信息
-//   errorlog.RecordHTTPWithLevel(ctx, "info", "payment", "Payment processed successfully", map[string]any{
-//       "order_id": order.ID,
-//       "amount": order.Amount,
-//   }, "Payment processed: %d", order.ID)
+//	// 记录警告
+//	errorlog.RecordHTTPWithLevel(ctx, "warning", "auth", "Unusual login pattern detected", map[string]any{
+//	    "admin_id": admin.ID,
+//	    "ip": ctx.Request().Ip(),
+//	}, "Unusual login pattern: %s", pattern)
+//
+//	// 记录信息
+//	errorlog.RecordHTTPWithLevel(ctx, "info", "payment", "Payment processed successfully", map[string]any{
+//	    "order_id": order.ID,
+//	    "amount": order.Amount,
+//	}, "Payment processed: %d", order.ID)
 func RecordHTTPWithLevel(ctx http.Context, level, module, message string, attributes map[string]any, format string, args ...any) {
 	// 根据级别选择不同的日志函数
 	switch level {
@@ -58,7 +60,7 @@ func RecordHTTPWithLevel(ctx http.Context, level, module, message string, attrib
 	default:
 		logger.ErrorfHTTP(ctx, format, args...)
 	}
-	
+
 	// 记录到数据库（所有级别都记录 trace_id）
 	if ctx != nil {
 		recordToDatabaseHTTPWithLevel(ctx, level, module, message, attributes)
@@ -69,13 +71,14 @@ func RecordHTTPWithLevel(ctx http.Context, level, module, message string, attrib
 // 使用场景：goroutine、后台任务等
 //
 // 示例：
-//   go func(ctx context.Context) {
-//       if err != nil {
-//           errorlog.Record(ctx, "operation-log", "Failed to create operation log", map[string]any{
-//               "error": err.Error(),
-//           }, "Create operation log error: %v", err)
-//       }
-//   }(traceCtx)
+//
+//	go func(ctx context.Context) {
+//	    if err != nil {
+//	        errorlog.Record(ctx, "operation-log", "Failed to create operation log", map[string]any{
+//	            "error": err.Error(),
+//	        }, "Create operation log error: %v", err)
+//	    }
+//	}(traceCtx)
 func Record(ctx context.Context, module, message string, attributes map[string]any, format string, args ...any) {
 	RecordWithLevel(ctx, "error", module, message, attributes, format, args...)
 }
@@ -85,11 +88,12 @@ func Record(ctx context.Context, module, message string, attributes map[string]a
 // 使用场景：goroutine、后台任务中需要记录不同级别的日志
 //
 // 示例：
-//   go func(ctx context.Context) {
-//       errorlog.RecordWithLevel(ctx, "info", "background-task", "Task completed", map[string]any{
-//           "task_id": taskID,
-//       }, "Background task completed: %s", taskID)
-//   }(traceCtx)
+//
+//	go func(ctx context.Context) {
+//	    errorlog.RecordWithLevel(ctx, "info", "background-task", "Task completed", map[string]any{
+//	        "task_id": taskID,
+//	    }, "Background task completed: %s", taskID)
+//	}(traceCtx)
 func RecordWithLevel(ctx context.Context, level, module, message string, attributes map[string]any, format string, args ...any) {
 	// 根据级别选择不同的日志函数
 	switch level {
@@ -102,16 +106,11 @@ func RecordWithLevel(ctx context.Context, level, module, message string, attribu
 	default:
 		logger.ErrorfContext(ctx, format, args...)
 	}
-	
+
 	// 记录到数据库（所有级别都记录 trace_id）
 	if ctx != nil {
 		recordToDatabaseWithLevel(ctx, level, module, message, attributes)
 	}
-}
-
-// recordToDatabaseHTTP 将日志记录到数据库（HTTP context，默认 error 级别）
-func recordToDatabaseHTTP(ctx http.Context, module, message string, attributes map[string]any) {
-	recordToDatabaseHTTPWithLevel(ctx, "error", module, message, attributes)
 }
 
 // recordToDatabaseHTTPWithLevel 将日志记录到数据库（HTTP context，支持所有级别）
@@ -139,11 +138,6 @@ func recordToDatabaseHTTPWithLevel(ctx http.Context, level, module, message stri
 	}
 
 	_ = facades.Orm().Query().Create(&log)
-}
-
-// recordToDatabase 将日志记录到数据库（标准 context，默认 error 级别）
-func recordToDatabase(ctx context.Context, module, message string, attributes map[string]any) {
-	recordToDatabaseWithLevel(ctx, "error", module, message, attributes)
 }
 
 // recordToDatabaseWithLevel 将日志记录到数据库（标准 context，支持所有级别）
@@ -176,4 +170,3 @@ func recordToDatabaseWithLevel(ctx context.Context, level, module, message strin
 
 	_ = facades.Orm().Query().Create(&log)
 }
-
