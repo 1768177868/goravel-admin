@@ -64,6 +64,10 @@ export default defineComponent({
       '/menus': 'menu.menu_management',
       '/departments': 'menu.department_management',
       '/dictionaries': 'menu.dictionary_management',
+      '/configs': 'menu.config_management',
+      '/blacklists': 'menu.blacklist_management',
+      '/online-users': 'menu.online_user_management',
+      '/exports': 'menu.export_management',
       '/logs': 'menu.log_management',
       '/operation-logs': 'menu.operation_log',
       '/login-logs': 'menu.login_log',
@@ -81,10 +85,15 @@ export default defineComponent({
       '菜单管理': 'menu.menu_management',
       '部门管理': 'menu.department_management',
       '字典管理': 'menu.dictionary_management',
+      '配置管理': 'menu.config_management',
+      'IP黑名单': 'menu.blacklist_management',
+      '在线用户': 'menu.online_user_management',
+      '导出管理': 'menu.export_management',
       '日志管理': 'menu.log_management',
       '操作日志': 'menu.operation_log',
       '登录日志': 'menu.login_log',
       '系统日志': 'menu.system_log',
+      '服务监控': 'menu.service_monitor',
       '个人中心': 'menu.profile'
     }
 

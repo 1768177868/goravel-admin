@@ -253,6 +253,7 @@ const menuTree = computed(() => {
       id: menu.id,
       parent_id: menu.ParentID || menu.parent_id || 0,
       title: menu.Title || menu.title || '',
+      slug: menu.Slug || menu.slug || '',
       path: mappedPath || originalPath,
       icon: menu.Icon || menu.icon || '',
       type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
