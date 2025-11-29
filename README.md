@@ -230,14 +230,15 @@ static build
 go build --ldflags "-extldflags -static" -o main .
 ```
 
-cloudflare pages
+cloudflare workers
 ```
 # 构建命令
 npm install && npm run build
-# 部署命令
+# 部署命令 (使用 worker.js 处理 SPA 路由)
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 # 根目录
 html
+# 注意: worker.js 会自动处理 SPA 路由，无需 _redirects 文件
 
 
 ## Documentation

@@ -1,3 +1,4 @@
 name = "admin"
 compatibility_date = "2025-11-29"
+main = "worker.js"
 
