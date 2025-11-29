@@ -16,18 +16,35 @@ type CaptchaService interface {
 }
 
 type CaptchaServiceImpl struct {
-	driver base64Captcha.Driver
-	store  base64Captcha.Store
+	driver        base64Captcha.Driver
+	store         base64Captcha.Store
+	expireSeconds int
+	initialized   bool
 }
 
 func NewCaptchaServiceImpl() CaptchaService {
+	// 延迟初始化，不在构造函数中查询数据库
+	// 这样可以避免在构建时访问数据库
+	return &CaptchaServiceImpl{
+		expireSeconds: 120, // 默认值
+		initialized:   false,
+	}
+}
+
+// initDriver 延迟初始化 driver 和 store
+func (s *CaptchaServiceImpl) initDriver() {
+	if s.initialized {
+		return
+	}
+
 	// 从数据库读取验证码配置，如果不存在则使用默认值
 	expireSeconds := utils.GetConfigValueInt("captcha", "captcha_expire", 120)
 	if expireSeconds <= 0 {
 		expireSeconds = 120
 	}
+	s.expireSeconds = expireSeconds
 
-	driver := base64Captcha.NewDriverString(
+	s.driver = base64Captcha.NewDriverString(
 		50,  // height
 		180, // width
 		5,   // noise count
@@ -39,12 +56,8 @@ func NewCaptchaServiceImpl() CaptchaService {
 		nil,
 	)
 
-	store := base64Captcha.NewMemoryStore(1024, time.Duration(expireSeconds)*time.Second)
-
-	return &CaptchaServiceImpl{
-		driver: driver,
-		store:  store,
-	}
+	s.store = base64Captcha.NewMemoryStore(1024, time.Duration(expireSeconds)*time.Second)
+	s.initialized = true
 }
 
 func (s *CaptchaServiceImpl) Enabled() bool {
@@ -53,6 +66,7 @@ func (s *CaptchaServiceImpl) Enabled() bool {
 }
 
 func (s *CaptchaServiceImpl) Generate() (string, string, error) {
+	s.initDriver()
 	c := base64Captcha.NewCaptcha(s.driver, s.store)
 	id, b64s, _, err := c.Generate()
 	if err != nil {
@@ -66,6 +80,7 @@ func (s *CaptchaServiceImpl) Verify(id, answer string) (bool, string) {
 		return false, "captcha_required"
 	}
 
+	s.initDriver()
 	expected := s.store.Get(id, true)
 	if expected == "" {
 		return false, "captcha_expired"
