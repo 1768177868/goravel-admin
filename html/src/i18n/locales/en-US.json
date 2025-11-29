@@ -230,14 +230,17 @@
     "operation_log.index": "View Operation Log List",
     "operation_log.show": "View Operation Log Detail",
     "operation_log.destroy": "Delete Operation Log",
+    "operation_log.batch_delete": "Batch Delete Operation Logs",
     "operation_log.clean": "Clean Operation Log",
     "login_log.index": "View Login Log List",
     "login_log.show": "View Login Log Detail",
     "login_log.destroy": "Delete Login Log",
+    "login_log.batch_delete": "Batch Delete Login Logs",
     "login_log.clean": "Clean Login Log",
     "system_log.index": "View System Log List",
     "system_log.show": "View System Log Detail",
     "system_log.destroy": "Delete System Log",
+    "system_log.batch_delete": "Batch Delete System Logs",
     "system_log.clean": "Clean System Log",
     "monitor.system_info": "View System Monitor Info",
     "profile.update": "Update Profile",
@@ -681,6 +684,7 @@
     "fd_used": "Used",
     "fd_free": "Free",
     "fd_max": "Max Limit"
-  }
+  },
+  "operation.unknown": "Unknown Operation"
 }
 

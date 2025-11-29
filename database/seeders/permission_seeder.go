@@ -94,17 +94,20 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "操作日志列表", Slug: "operation_log.index", Method: "GET", Path: "/api/admin/operation-logs", Description: "查看操作日志列表", Status: 1, Sort: 1, MenuID: operationLogMenu.ID},
 		{Name: "操作日志详情", Slug: "operation_log.show", Method: "GET", Path: "/api/admin/operation-logs/*", Description: "查看操作日志详情", Status: 1, Sort: 2, MenuID: operationLogMenu.ID},
 		{Name: "操作日志删除", Slug: "operation_log.destroy", Method: "DELETE", Path: "/api/admin/operation-logs/*", Description: "删除操作日志", Status: 1, Sort: 3, MenuID: operationLogMenu.ID},
-		{Name: "操作日志清理", Slug: "operation_log.clean", Method: "POST", Path: "/api/admin/operation-logs/clean", Description: "清理操作日志", Status: 1, Sort: 4, MenuID: operationLogMenu.ID},
+		{Name: "操作日志批量删除", Slug: "operation_log.batch_delete", Method: "POST", Path: "/api/admin/operation-logs/batch-delete", Description: "批量删除操作日志", Status: 1, Sort: 4, MenuID: operationLogMenu.ID},
+		{Name: "操作日志清理", Slug: "operation_log.clean", Method: "POST", Path: "/api/admin/operation-logs/clean", Description: "清理操作日志", Status: 1, Sort: 5, MenuID: operationLogMenu.ID},
 		// 登录日志
 		{Name: "登录日志列表", Slug: "login_log.index", Method: "GET", Path: "/api/admin/login-logs", Description: "查看登录日志列表", Status: 1, Sort: 1, MenuID: loginLogMenu.ID},
 		{Name: "登录日志详情", Slug: "login_log.show", Method: "GET", Path: "/api/admin/login-logs/*", Description: "查看登录日志详情", Status: 1, Sort: 2, MenuID: loginLogMenu.ID},
 		{Name: "登录日志删除", Slug: "login_log.destroy", Method: "DELETE", Path: "/api/admin/login-logs/*", Description: "删除登录日志", Status: 1, Sort: 3, MenuID: loginLogMenu.ID},
-		{Name: "登录日志清理", Slug: "login_log.clean", Method: "POST", Path: "/api/admin/login-logs/clean", Description: "清理登录日志", Status: 1, Sort: 4, MenuID: loginLogMenu.ID},
+		{Name: "登录日志批量删除", Slug: "login_log.batch_delete", Method: "POST", Path: "/api/admin/login-logs/batch-delete", Description: "批量删除登录日志", Status: 1, Sort: 4, MenuID: loginLogMenu.ID},
+		{Name: "登录日志清理", Slug: "login_log.clean", Method: "POST", Path: "/api/admin/login-logs/clean", Description: "清理登录日志", Status: 1, Sort: 5, MenuID: loginLogMenu.ID},
 		// 系统日志
 		{Name: "系统日志列表", Slug: "system_log.index", Method: "GET", Path: "/api/admin/system-logs", Description: "查看系统日志列表", Status: 1, Sort: 1, MenuID: systemLogMenu.ID},
 		{Name: "系统日志详情", Slug: "system_log.show", Method: "GET", Path: "/api/admin/system-logs/*", Description: "查看系统日志详情", Status: 1, Sort: 2, MenuID: systemLogMenu.ID},
 		{Name: "系统日志删除", Slug: "system_log.destroy", Method: "DELETE", Path: "/api/admin/system-logs/*", Description: "删除系统日志", Status: 1, Sort: 3, MenuID: systemLogMenu.ID},
-		{Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/api/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 4, MenuID: systemLogMenu.ID},
+		{Name: "系统日志批量删除", Slug: "system_log.batch_delete", Method: "POST", Path: "/api/admin/system-logs/batch-delete", Description: "批量删除系统日志", Status: 1, Sort: 4, MenuID: systemLogMenu.ID},
+		{Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/api/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 5, MenuID: systemLogMenu.ID},
 		// 服务监控
 		{Name: "系统监控", Slug: "monitor.system_info", Method: "GET", Path: "/api/admin/monitor/system-info", Description: "查看系统监控信息", Status: 1, Sort: 1, MenuID: monitorMenu.ID},
 		// 个人中心

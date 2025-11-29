@@ -230,14 +230,17 @@
     "operation_log.index": "查看操作日志列表",
     "operation_log.show": "查看操作日志详情",
     "operation_log.destroy": "删除操作日志",
+    "operation_log.batch_delete": "批量删除操作日志",
     "operation_log.clean": "清理操作日志",
     "login_log.index": "查看登录日志列表",
     "login_log.show": "查看登录日志详情",
     "login_log.destroy": "删除登录日志",
+    "login_log.batch_delete": "批量删除登录日志",
     "login_log.clean": "清理登录日志",
     "system_log.index": "查看系统日志列表",
     "system_log.show": "查看系统日志详情",
     "system_log.destroy": "删除系统日志",
+    "system_log.batch_delete": "批量删除系统日志",
     "system_log.clean": "清理系统日志",
     "monitor.system_info": "查看系统监控信息",
     "profile.update": "修改资料",
@@ -681,6 +684,7 @@
     "fd_used": "已占用",
     "fd_free": "剩余",
     "fd_max": "最大限制"
-  }
+  },
+  "operation.unknown": "未知操作"
 }
 

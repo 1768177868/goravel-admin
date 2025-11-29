@@ -163,14 +163,17 @@ const defaultTitleSlugs = [
   'dictionary.type',
   // 操作日志
   'operation_log.destroy',
+  'operation_log.batch_delete',
   'operation_log.clean',
   // 登录日志
   'login_log.destroy',
+  'login_log.batch_delete',
   'login_log.clean',
   // 系统日志
   'system_log.destroy',
+  'system_log.batch_delete',
   'system_log.clean',
-  // 监控 & 个人中心
+  // 个人中心
   'profile.update',
   'password.update'
 ]
