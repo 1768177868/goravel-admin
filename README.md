@@ -225,6 +225,21 @@ go run .
 http://localhost:3008/swagger/
 ```
 
+static build
+```
+go build --ldflags "-extldflags -static" -o main .
+```
+
+cloudflare pages
+```
+# 构建命令
+npm install && npm run build
+# 部署命令
+npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
+根目录
+html
+```
+
 ## Documentation
 
 Online documentation [https://www.goravel.dev](https://www.goravel.dev)
