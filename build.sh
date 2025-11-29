@@ -1,20 +1,25 @@
 #!/bin/bash
 
 # 构建脚本 - 支持指定不同的 .env 文件
-# 使用方法: ./build.sh [env_file]
+# 使用方法: ./build.sh [env_file] [output_name] [target_os] [target_arch]
 # 示例: 
-#   ./build.sh .env.local      # 使用本地配置
-#   ./build.sh .env.production # 使用生产配置
-#   ./build.sh                 # 默认使用 .env
+#   ./build.sh .env.production           # 使用生产配置，生成 Linux 二进制文件 (main)
+#   ./build.sh .env.local main linux amd64  # 指定所有参数
+#   ./build.sh .env.production main windows amd64  # 生成 Windows 可执行文件
+#   ./build.sh                           # 默认使用 .env，生成 Linux 二进制文件
 
 ENV_FILE="${1:-.env}"
 OUTPUT_NAME="${2:-main}"
+TARGET_OS="${3:-linux}"
+TARGET_ARCH="${4:-amd64}"
 
 echo "=========================================="
 echo "构建配置"
 echo "=========================================="
 echo "环境文件: $ENV_FILE"
 echo "输出文件: $OUTPUT_NAME"
+echo "目标系统: $TARGET_OS"
+echo "目标架构: $TARGET_ARCH"
 echo "=========================================="
 
 # 检查指定的环境文件是否存在
@@ -36,10 +41,39 @@ cp "$ENV_FILE" .env
 echo "已复制 $ENV_FILE 为 .env"
 echo "开始构建..."
 
-# 执行构建
+# 保存原始的 Go 环境变量
+ORIGINAL_GOOS="${GOOS:-}"
+ORIGINAL_GOARCH="${GOARCH:-}"
+ORIGINAL_CGO_ENABLED="${CGO_ENABLED:-}"
+
+# 设置跨平台编译环境变量
+export GOOS="$TARGET_OS"
+export GOARCH="$TARGET_ARCH"
+export CGO_ENABLED=0
+
+# 执行构建（Linux 二进制文件）
 go build --ldflags "-extldflags -static" -o "$OUTPUT_NAME" .
 
 BUILD_RESULT=$?
+
+# 恢复原始的 Go 环境变量
+if [ -n "$ORIGINAL_GOOS" ]; then
+    export GOOS="$ORIGINAL_GOOS"
+else
+    unset GOOS
+fi
+
+if [ -n "$ORIGINAL_GOARCH" ]; then
+    export GOARCH="$ORIGINAL_GOARCH"
+else
+    unset GOARCH
+fi
+
+if [ -n "$ORIGINAL_CGO_ENABLED" ]; then
+    export CGO_ENABLED="$ORIGINAL_CGO_ENABLED"
+else
+    unset CGO_ENABLED
+fi
 
 # 构建完成后，恢复原来的 .env 文件
 if [ -f ".env.bak" ]; then
