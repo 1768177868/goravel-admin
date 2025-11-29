@@ -90,35 +90,58 @@ export default defineComponent({
     // 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
     const getMenuTitle = (menu) => {
       // 优先使用 slug 作为翻译键标识
-      const slug = menu.slug || menu.Slug || ''
+      const slug = menu.Slug || menu.slug || ''
       if (slug) {
-        const slugKey = `menu.${slug}`
-        // 尝试使用 slug 查找翻译键，如果存在则使用
-        try {
-          const translated = t(slugKey)
-          // 如果翻译结果不等于键名本身，说明找到了翻译
+        // 尝试多种 slug 格式
+        const slugVariants = [
+          slug, // 原始 slug（如 online-user）
+          slug.replace(/-/g, '_'), // 连字符转下划线（如 online_user）
+          slug.replace(/_/g, '-') // 下划线转连字符（如 online-user）
+        ]
+        
+        // 去重
+        const uniqueVariants = [...new Set(slugVariants)]
+        
+        // 尝试每种格式
+        for (const variant of uniqueVariants) {
+          // 尝试简短键
+          const slugKey = `menu.${variant}`
+          const translated = t(slugKey, slugKey)
           if (translated !== slugKey) {
             return translated
           }
-        } catch (e) {
-          // 翻译键不存在，继续尝试其他方式
+          
+          // 尝试添加 _management 后缀
+          const slugKeyWithSuffix = `menu.${variant}_management`
+          const translatedWithSuffix = t(slugKeyWithSuffix, slugKeyWithSuffix)
+          if (translatedWithSuffix !== slugKeyWithSuffix) {
+            return translatedWithSuffix
+          }
         }
       }
       
       // 回退到路径映射（向后兼容）
-      const pathKey = pathToTranslationKey[menu.path]
-      if (pathKey) {
-        return t(pathKey)
+      const path = menu.path || menu.Path || ''
+      if (path) {
+        const pathKey = pathToTranslationKey[path]
+        if (pathKey) {
+          return t(pathKey)
+        }
       }
       
       // 回退到标题映射（向后兼容）
-      const titleKey = titleToTranslationKey[menu.title]
-      if (titleKey) {
-        return t(titleKey)
+      const title = menu.title || menu.Title || ''
+      if (title) {
+        const titleKey = titleToTranslationKey[title]
+        if (titleKey) {
+          return t(titleKey)
+        }
+        // 如果没有匹配的翻译键，返回原始标题
+        return title
       }
       
       // 最后使用原始标题
-      return menu.title || menu.Title || ''
+      return title || ''
     }
     
     

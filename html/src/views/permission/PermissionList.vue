@@ -384,16 +384,31 @@ const getMenuTitle = (menu) => {
   // 优先使用 slug 作为翻译键标识
   const slug = menu.Slug || menu.slug || ''
   if (slug) {
-    const slugKey = `menu.${slug}`
-    // 尝试使用 slug 查找翻译键，如果存在则使用
-    try {
-      const translated = t(slugKey)
-      // 如果翻译结果不等于键名本身，说明找到了翻译
+    // 尝试多种 slug 格式
+    const slugVariants = [
+      slug, // 原始 slug（如 online-user）
+      slug.replace(/-/g, '_'), // 连字符转下划线（如 online_user）
+      slug.replace(/_/g, '-') // 下划线转连字符（如 online-user）
+    ]
+    
+    // 去重
+    const uniqueVariants = [...new Set(slugVariants)]
+    
+    // 尝试每种格式
+    for (const variant of uniqueVariants) {
+      // 尝试简短键
+      const slugKey = `menu.${variant}`
+      const translated = t(slugKey, slugKey)
       if (translated !== slugKey) {
         return translated
       }
-    } catch (e) {
-      // 翻译键不存在，继续尝试其他方式
+      
+      // 尝试添加 _management 后缀
+      const slugKeyWithSuffix = `menu.${variant}_management`
+      const translatedWithSuffix = t(slugKeyWithSuffix, slugKeyWithSuffix)
+      if (translatedWithSuffix !== slugKeyWithSuffix) {
+        return translatedWithSuffix
+      }
     }
   }
   
