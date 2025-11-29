@@ -236,9 +236,49 @@ cloudflare pages
 npm install && npm run build
 # 部署命令
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
-根目录
+# 根目录
 html
 ```
+
+**重要配置：**
+
+1. **环境变量设置**（在 Cloudflare Pages 项目设置中）：
+   - `VITE_API_BASE_URL`: `https://api.xuancheng888.top`
+   - `VITE_API_PREFIX`: `/api/admin`
+
+2. **解决刷新 404 问题**：
+   
+   在 Cloudflare Pages 项目设置中，添加 **重写规则**：
+   
+   - 进入项目设置 → **Functions** → **Routes**
+   - 添加规则：`/*` → `/index.html` (Status: 200)
+   
+   或者使用 **Functions**（推荐）：
+   
+   在 `html/functions/_middleware.js` 创建文件：
+   ```javascript
+   export function onRequest(context) {
+     const url = new URL(context.request.url)
+     // 如果是静态资源，直接返回
+     if (url.pathname.startsWith('/assets/') || 
+         url.pathname.startsWith('/favicon.ico') ||
+         url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+       return context.next()
+     }
+     // 其他所有请求都返回 index.html
+     return context.next({
+       request: new Request(new URL('/index.html', context.request.url), context.request)
+     })
+   }
+   ```
+
+3. **验证环境变量**：
+   
+   构建后，环境变量会被注入到代码中。可以通过浏览器控制台检查：
+   ```javascript
+   console.log(import.meta.env.VITE_API_BASE_URL)
+   console.log(import.meta.env.VITE_API_PREFIX)
+   ```
 
 ## Documentation
 

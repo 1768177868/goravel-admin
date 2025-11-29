@@ -236,7 +236,7 @@ cloudflare pages
 npm install && npm run build
 # 部署命令
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
-根目录
+# 根目录
 html
 ```
 
