@@ -1,0 +1,35 @@
+[Unit]
+Description=Goravel Admin Application
+After=network.target mysql.service
+Requires=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/www/goravel-admin
+ExecStart=/www/goravel-admin/main
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=goravel-admin
+
+# 环境变量（可选，如果不在 .env 文件中配置）
+# Environment="APP_ENV=production"
+# Environment="APP_DEBUG=false"
+# Environment="APP_URL=https://your-domain.com"
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/www/goravel-admin/storage
+
+# 资源限制
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,209 +1,218 @@
-# 构建说明
+#### 使用 systemd 部署（推荐）
 
-## 多环境配置
+使用 systemd 可以将应用作为系统服务运行，支持开机自启、自动重启、日志管理等功能。
 
-为了避免每次构建都要手动修改 `.env` 文件，项目支持使用不同的环境配置文件。
+##### 步骤 1：准备部署文件 
 
-### 1. 创建环境配置文件
-
-在项目根目录创建不同环境的 `.env` 文件：
-
-- `.env.local` - 本地开发环境配置
-- `.env.production` - 生产环境配置
-- `.env.staging` - 测试环境配置
-
-### 2. 使用构建脚本
-
-构建脚本支持跨平台编译，默认生成 Linux 二进制文件，适合部署到服务器。
-
-#### 脚本参数
-
-```
-build.sh [env_file] [output_name] [target_os] [target_arch]
-build.bat [env_file] [output_name] [target_os] [target_arch]
-```
-
-- `env_file`: 环境配置文件（如 `.env.production`）
-- `output_name`: 输出文件名（默认：`main`）
-- `target_os`: 目标操作系统（默认：`linux`）
-- `target_arch`: 目标架构（默认：`amd64`）
-
-#### Linux/Mac
+在服务器上创建应用目录并上传必要文件：
 
 ```bash
-# 给脚本添加执行权限
-chmod +x build.sh
+# 在服务器上创建应用目录
+sudo mkdir -p /www/goravel-admin
+sudo chown -R www-data:www-data /www/goravel-admin
 
-# 使用生产配置构建 Linux 二进制文件（默认）
-./build.sh .env.production
-# 输出: main (Linux 二进制文件)
+# 上传二进制文件
+scp main user@server:/www/goravel-admin/
 
-# 使用本地配置构建
-./build.sh .env.local
-
-# 指定输出文件名
-./build.sh .env.production app
-
-# 生成 Windows 可执行文件
-./build.sh .env.production app.exe windows amd64
-
-# 生成 macOS 二进制文件
-./build.sh .env.production app darwin amd64
-
-# 生成 Linux ARM64 二进制文件
-./build.sh .env.production app linux arm64
-
-# 使用默认 .env 构建
-./build.sh
+# 上传配置文件和其他必要文件
+scp .env user@server:/www/goravel-admin/.env
+scp -r database/ user@server:/www/goravel-admin/
+scp -r storage/ user@server:/www/goravel-admin/
+scp -r resources/ user@server:/www/goravel-admin/
+scp -r public/ user@server:/www/goravel-admin/
 ```
 
-#### Windows
+##### 步骤 2：配置 systemd 服务
 
-```batch
-# 使用生产配置构建 Linux 二进制文件（默认）
-build.bat .env.production
-# 输出: main (Linux 二进制文件)
-
-# 使用本地配置构建
-build.bat .env.local
-
-# 指定输出文件名
-build.bat .env.production main
-
-# 生成 Windows 可执行文件
-build.bat .env.production main.exe windows amd64
-
-# 生成 macOS 二进制文件
-build.bat .env.production main darwin amd64
-
-# 生成 Linux ARM64 二进制文件
-build.bat .env.production main linux arm64
-
-# 使用默认 .env 构建
-build.bat
-```
-
-### 3. 跨平台编译说明
-
-构建脚本默认生成 **Linux 二进制文件**，适合部署到 Linux 服务器。脚本会自动：
-
-1. **备份本地 .env 文件**：如果存在 `.env`，会先备份为 `.env.bak`
-2. **切换环境配置**：将指定的环境文件复制为 `.env`
-3. **设置编译环境**：临时设置 `GOOS`、`GOARCH`、`CGO_ENABLED` 环境变量
-4. **执行构建**：使用静态链接编译
-5. **恢复环境**：构建完成后自动恢复 `.env` 文件和 Go 环境变量
-
-#### 支持的平台
-
-- **Linux**: `linux/amd64`, `linux/arm64`
-- **Windows**: `windows/amd64`
-- **macOS**: `darwin/amd64`, `darwin/arm64`
-
-### 4. 直接使用 Go 命令（不推荐）
-
-如果你不想使用构建脚本，也可以手动操作：
+复制 systemd 服务文件到系统目录：
 
 ```bash
-# 备份本地 .env
-cp .env .env.bak
+# 上传服务文件
+scp scripts/systemd/goravel-admin.service user@server:/tmp/
 
-# 复制生产环境配置
-cp .env.production .env
-
-# 设置跨平台编译环境变量
-export GOOS=linux
-export GOARCH=amd64
-export CGO_ENABLED=0
-
-# 构建 Linux 二进制文件
-go build --ldflags "-extldflags -static" -o main .
-
-# 恢复本地配置
-mv .env.bak .env
-
-# 恢复 Go 环境变量（如果需要）
-unset GOOS GOARCH CGO_ENABLED
+# 在服务器上安装服务文件
+sudo cp /tmp/goravel-admin.service /etc/systemd/system/
 ```
 
-### 5. 环境文件示例
+编辑服务文件，根据实际情况修改路径和用户：
 
-#### .env.local (本地开发)
+```bash
+sudo nano /etc/systemd/system/goravel-admin.service
+```
+
+主要配置项：
+- `User` 和 `Group`：运行服务的用户和组（如 `www-data`）
+- `WorkingDirectory`：应用工作目录（如 `/www/goravel-admin`）
+- `ExecStart`：二进制文件路径（如 `/www/goravel-admin/main`）
+- `ReadWritePaths`：需要写入权限的目录（如 `/www/goravel-admin/storage`）
+
+##### 步骤 3：设置文件权限
+
+```bash
+# 设置二进制文件权限
+sudo chmod +x /www/goravel-admin/main
+
+# 设置存储目录权限
+sudo chmod -R 775 /www/goravel-admin/storage
+sudo chown -R www-data:www-data /www/goravel-admin/storage
+
+# 设置配置文件权限（保护敏感信息）
+sudo chmod 600 /www/goravel-admin/.env
+sudo chown www-data:www-data /www/goravel-admin/.env
+
+```
+
+```bash
+# 你也许想将生产环境的 env 文件添加到版本控制中，但又不想将敏感信息暴露出来，这时你可以使用 env:encrypt 命令来加密 env 文件
+go run . artisan env:encrypt
+# 解密 env
+go run . artisan env:decrypt
+```
+
+```bash
+# 迁移
+./main artisan migrate
+# 填充
+./main artisan db:seed
+# 测试运行 ctrl+c 结束
+./main 
+```
+
+
+##### 步骤 4：启动和管理服务
+
+```bash
+# 重新加载 systemd 配置
+sudo systemctl daemon-reload
+
+# 启动服务
+sudo systemctl start goravel-admin
+
+# 设置开机自启
+sudo systemctl enable goravel-admin
+
+# 查看服务状态
+sudo systemctl status goravel-admin
+
+# 停止服务
+sudo systemctl stop goravel-admin
+
+# 重启服务
+sudo systemctl restart goravel-admin
+
+# 查看服务日志
+sudo journalctl -u goravel-admin -f
+
+# 查看最近 100 行日志
+sudo journalctl -u goravel-admin -n 100
+
+# 查看今天的日志
+sudo journalctl -u goravel-admin --since today
+```
+
+##### 步骤 5：验证部署
+
+```bash
+# 检查服务是否运行
+sudo systemctl is-active goravel-admin
+
+# 检查端口是否监听（假设端口是 3008）
+sudo netstat -tlnp | grep 3008
+# 或使用 ss 命令
+sudo ss -tlnp | grep 3008
+
+# 测试 API 接口（本地）
+curl http://localhost:3008/api/admin/health
+```
+
+**重要：如果无法从外部 IP 访问**
+
+默认配置中 `APP_HOST=127.0.0.1` 只允许本地访问。要允许外部访问，需要修改 `.env` 文件：
+
 ```env
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://localhost:3000
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=goravel_local
-DB_USERNAME=root
-DB_PASSWORD=
+# 修改为 0.0.0.0 允许所有网络接口访问
+APP_HOST=0.0.0.0
+APP_PORT=3008
 ```
 
-#### .env.production (生产环境)
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain.com
-DB_CONNECTION=mysql
-DB_HOST=your-db-host
-DB_PORT=3306
-DB_DATABASE=goravel_prod
-DB_USERNAME=your-username
-DB_PASSWORD=your-password
+然后重启服务：
+```bash
+sudo systemctl restart goravel-admin
 ```
 
-### 6. 注意事项
-
-1. **不要提交敏感信息**：`.env.local`、`.env.production`、`.env.bak` 等文件已在 `.gitignore` 中，不会被提交到 Git
-2. **创建 .env.example**：可以创建一个 `.env.example` 文件作为模板，包含所有配置项但不包含敏感信息
-3. **自动备份和恢复**：构建脚本会自动备份本地 `.env` 文件为 `.env.bak`，构建完成后自动恢复
-4. **环境变量自动还原**：构建脚本会自动还原 `GOOS`、`GOARCH`、`CGO_ENABLED` 环境变量，不会影响后续的 Go 命令
-5. **默认生成 Linux 二进制**：默认生成 Linux 二进制文件（`main`），适合部署到服务器
-6. **静态链接编译**：使用 `-extldflags -static` 进行静态链接，生成的二进制文件不依赖系统库
-
-### 7. 在 CI/CD 中使用
-
-在持续集成/部署中，可以通过环境变量或构建参数指定环境文件：
+**检查防火墙设置：**
 
 ```bash
-# 示例：在 CI 中构建生产版本（Linux 二进制文件）
-./build.sh .env.production
+# CentOS/RHEL 系统
+sudo firewall-cmd --list-ports
+sudo firewall-cmd --permanent --add-port=3008/tcp
+sudo firewall-cmd --reload
 
-# 示例：在 CI 中构建并指定输出文件名
-./build.sh .env.production goravel-admin
+# Ubuntu/Debian 系统
+sudo ufw status
+sudo ufw allow 3008/tcp
+sudo ufw reload
 
-# 示例：在 Windows CI 中构建 Linux 二进制文件
-build.bat .env.production main linux amd64
+# 或者临时关闭防火墙测试（不推荐生产环境）
+sudo systemctl stop firewalld  # CentOS/RHEL
+sudo ufw disable              # Ubuntu/Debian
 ```
 
-### 8. Docker 构建
-
-如果使用 Docker，可以在构建时指定环境文件：
-
-```dockerfile
-# 在 Dockerfile 中
-ARG ENV_FILE=.env.production
-COPY ${ENV_FILE} .env
-```
-
-构建时：
-```bash
-docker build --build-arg ENV_FILE=.env.production -t your-app .
-```
-
-### 9. 部署二进制文件
-
-构建完成后，将生成的二进制文件上传到服务器即可运行：
+**验证外部访问：**
 
 ```bash
-# 上传到服务器
-scp main user@server:/path/to/app/
+# 在服务器上测试
+curl http://服务器IP:3008/api/admin/health
 
-# 在服务器上运行
-chmod +x main
-./main
+# 或者从其他机器测试
+curl http://服务器IP:3008/api/admin/health
 ```
 
-**注意**：确保服务器上有所需的配置文件（`.env`）和其他必要的文件（如 `database/`、`storage/`、`resources/` 等）。
+##### systemd 服务文件示例
+
+项目已包含 systemd 服务文件模板：`scripts/systemd/goravel-admin.service`
+
+主要特性：
+- **自动重启**：服务异常退出时自动重启
+- **日志管理**：日志输出到 systemd journal
+- **安全设置**：限制文件系统访问权限
+- **资源限制**：设置文件描述符限制
+- **依赖管理**：等待网络和数据库服务启动
+
+##### 常见问题排查
+
+1. **服务无法启动**
+   ```bash
+   # 查看详细错误信息
+   sudo journalctl -u goravel-admin -n 50
+   
+   # 检查二进制文件权限
+   ls -l /www/goravel-admin/main
+   
+   # 检查配置文件
+   sudo -u www-data /www/goravel-admin/main --help
+   ```
+
+2. **权限问题**
+   ```bash
+   # 确保存储目录有写入权限
+   sudo chown -R www-data:www-data /www/goravel-admin/storage
+   sudo chmod -R 775 /www/goravel-admin/storage
+   ```
+
+3. **端口被占用**
+   ```bash
+   # 检查端口占用
+   sudo lsof -i :3000
+   # 或修改 .env 文件中的端口配置
+   ```
+
+4. **数据库连接失败**
+   ```bash
+   # 检查数据库配置
+   cat /www/goravel-admin/.env | grep DB_
+   
+   # 测试数据库连接
+   mysql -h localhost -u username -p database_name
+   ```
 
