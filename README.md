@@ -235,10 +235,13 @@ cloudflare workers
 # 构建命令
 npm install && npm run build
 # 部署命令 (使用 worker.js 处理 SPA 路由)
+# 方法1: 使用 wrangler.toml 配置 (推荐)
+npx wrangler deploy
+# 方法2: 使用命令行参数
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 # 根目录
 html
-# 注意: worker.js 会自动处理 SPA 路由，无需 _redirects 文件
+# 注意: worker.js 会自动处理 SPA 路由，当文件不存在时返回 index.html
 
 
 ## Documentation
