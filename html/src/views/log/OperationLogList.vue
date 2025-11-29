@@ -130,6 +130,51 @@ const pagination = reactive({
 })
 
 const tableData = ref([])
+
+// 预置的操作标题（权限标识），用于下拉选项，即使还没有对应的操作日志也能选择
+// 对应多语言中的 permission.* 配置
+const defaultTitleSlugs = [
+  // 管理员
+  'admin.store',
+  'admin.update',
+  'admin.destroy',
+  'admin.password',
+  'admin.kick_out',
+  // 角色
+  'role.store',
+  'role.update',
+  'role.destroy',
+  // 权限
+  'permission.store',
+  'permission.update',
+  'permission.destroy',
+  // 菜单
+  'menu.store',
+  'menu.update',
+  'menu.destroy',
+  // 部门
+  'department.store',
+  'department.update',
+  'department.destroy',
+  // 字典
+  'dictionary.store',
+  'dictionary.update',
+  'dictionary.destroy',
+  'dictionary.type',
+  // 操作日志
+  'operation_log.destroy',
+  'operation_log.clean',
+  // 登录日志
+  'login_log.destroy',
+  'login_log.clean',
+  // 系统日志
+  'system_log.destroy',
+  'system_log.clean',
+  // 监控 & 个人中心
+  'profile.update',
+  'password.update'
+]
+
 const titleOptions = ref([])
 
 // 字段名映射：前端字段名 -> 数据库字段名
@@ -321,7 +366,7 @@ const searchFields = computed(() => {
       label: t('log.method'),
       type: 'select',
       width: '150px',
-      options: getMethodOptions(),
+      options: getMethodOptions().filter(opt => String(opt.value).toUpperCase() !== 'GET'),
       advanced: false
     },
     {
@@ -350,9 +395,14 @@ const searchFields = computed(() => {
     },
     {
       prop: 'status',
-      label: t('log.status_code'),
-      type: 'input',
-      width: '120px',
+      label: t('log.status'),
+      type: 'select',
+      width: '150px',
+      options: [
+        { label: t('log.success'), value: '1' },
+        { label: t('log.failed'), value: '0' }
+      ],
+      clearable: true,
       advanced: true
     },
     {
@@ -547,25 +597,41 @@ const handleClean = async () => {
 const loadTitleOptions = async () => {
   try {
     const res = await getOperationLogTitleOptions()
+    // 使用 Set 合并后端返回的标题和预置的权限标识
+    const mergedSet = new Set(defaultTitleSlugs)
+
     if (res.data && res.data.titles && Array.isArray(res.data.titles)) {
-      // 去重并过滤空值
-      const uniqueTitles = [...new Set(res.data.titles.filter(title => title && title.trim()))]
-      // 按翻译后的文本排序
-      uniqueTitles.sort((a, b) => {
-        const labelA = getOperationTitle(a)
-        const labelB = getOperationTitle(b)
-        // 使用当前语言环境进行排序
-        const locale = t('common.locale') || navigator.language || 'zh-CN'
-        return labelA.localeCompare(labelB, locale)
+      res.data.titles.forEach(title => {
+        if (title && typeof title === 'string') {
+          const trimmed = title.trim()
+          if (trimmed && trimmed !== 'operation.unknown' && !trimmed.startsWith('operation.')) {
+            mergedSet.add(trimmed)
+          }
+        }
       })
-      titleOptions.value = uniqueTitles
-    } else {
-      titleOptions.value = []
     }
+
+    // 转成数组并排序（按翻译后的文本）
+    const uniqueTitles = Array.from(mergedSet)
+    uniqueTitles.sort((a, b) => {
+      const labelA = getOperationTitle(a)
+      const labelB = getOperationTitle(b)
+      const locale = t('common.locale') || navigator.language || 'zh-CN'
+      return labelA.localeCompare(labelB, locale)
+    })
+
+    titleOptions.value = uniqueTitles
   } catch (error) {
     console.error('Load title options error:', error)
-    // 如果加载失败，至少提供一个空数组，避免报错
-    titleOptions.value = []
+    // 如果加载失败，至少使用预置的权限标识
+    const uniqueTitles = Array.from(new Set(defaultTitleSlugs))
+    uniqueTitles.sort((a, b) => {
+      const labelA = getOperationTitle(a)
+      const labelB = getOperationTitle(b)
+      const locale = t('common.locale') || navigator.language || 'zh-CN'
+      return labelA.localeCompare(labelB, locale)
+    })
+    titleOptions.value = uniqueTitles
   }
 }
 

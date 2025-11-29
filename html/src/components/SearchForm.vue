@@ -129,7 +129,7 @@
             :disabled="field.disabled"
             :multiple="field.multiple"
             :filterable="field.filterable"
-            :style="{ width: field.width || '150px' }"
+            :style="{ width: field.width || '200px' }"
             v-bind="field.props || {}"
           >
             <el-option

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
@@ -220,42 +221,25 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 
 // GetTitleOptions 获取所有可用的操作标题选项
 func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response {
-	// 从数据库查询已存在的标题
+	// 从数据库查询已存在的标题（现在标题直接存权限标识 slug，如 admin.update）
 	var dbTitles []string
 	_ = facades.Orm().Query().Model(&models.OperationLog{}).
 		Select("DISTINCT title").
-		Where("title IS NOT NULL AND title != ''").
+		Where("title IS NOT NULL AND title != ''"). // 排除空标题
 		Order("title ASC").
 		Pluck("title", &dbTitles)
-
-	// 从配置中获取所有可能的操作标题
-	allTitleKeysInterface := facades.Config().Get("operation_log.all_title_keys", []string{})
-	var configTitles []string
-	if allTitleKeys, ok := allTitleKeysInterface.([]interface{}); ok {
-		for _, keyInterface := range allTitleKeys {
-			if key, ok := keyInterface.(string); ok {
-				configTitles = append(configTitles, key)
-			}
-		}
-	} else if allTitleKeys, ok := allTitleKeysInterface.([]string); ok {
-		configTitles = allTitleKeys
-	}
 
 	// 合并数据库标题和配置标题，去重
 	uniqueTitles := make(map[string]bool)
 	var result []string
 
-	// 先添加配置中的所有标题（确保所有可能的标题都在列表中）
-	for _, title := range configTitles {
-		if title != "" && !uniqueTitles[title] {
-			uniqueTitles[title] = true
-			result = append(result, title)
-		}
-	}
-
-	// 再添加数据库中存在的标题（可能有一些不在配置中的标题）
+	// 只使用数据库中存在的标题（权限标识），忽略旧的 operation.xxx 配置
 	for _, title := range dbTitles {
-		if title != "" && !uniqueTitles[title] {
+		// 排除空标题、未知标题以及旧的 operation.xxx 标题
+		if title == "" || title == "operation.unknown" || strings.HasPrefix(title, "operation.") {
+			continue
+		}
+		if !uniqueTitles[title] {
 			uniqueTitles[title] = true
 			result = append(result, title)
 		}
