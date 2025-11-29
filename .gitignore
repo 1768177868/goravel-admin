@@ -3,4 +3,12 @@
 storage/framework
 launch.json
 .env
+.env.local
+.env.production
+.env.staging
+.env.*.local
+.env.bak
 goravel.exe
+goravel
+main
+main.exe

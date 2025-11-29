@@ -225,6 +225,82 @@ go run .
 http://localhost:3008/swagger/
 ```
 
+static build
+```
+go build --ldflags "-extldflags -static" -o main .
+```
+
+cloudflare pages
+```
+# 构建命令
+npm install && npm run build
+# 部署命令
+npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
+# 根目录
+html
+
+**注意**：使用 `wrangler deploy --assets` 时，Functions 可能不会被部署。建议：
+1. 使用 Git 集成自动部署（推荐），Functions 会自动识别
+2. 或者使用 `_redirects` 文件（已包含在项目中）
+```
+
+
+**重要配置：**
+
+1. **环境变量设置**（在 Cloudflare Pages 项目设置中）：
+   - `VITE_API_BASE_URL`: `https://api.xuancheng888.top`
+   - `VITE_API_PREFIX`: `/api/admin`
+
+2. **解决刷新 404 问题**：
+   
+   Cloudflare Pages 支持两种方式配置伪静态规则：
+   
+   **方式 1：使用 Functions（推荐，代码方式）**
+   
+   项目已包含 `html/functions/_middleware.js` 文件，它会自动处理 SPA 路由：
+   - 排除静态资源（`/assets/*`、`.js`、`.css` 等）
+   - 排除 API 请求（`/api/*`、`/ws/*`）
+   - 其他所有请求都返回 `index.html`
+   - **无需额外配置，自动生效**
+   
+   **方式 2：使用 `_redirects` 文件（配置方式，但可能有兼容性问题）**
+   
+   如果 Functions 不工作，可以尝试创建 `html/public/_redirects` 文件：
+   ```
+   /*    /index.html   200
+   ```
+   
+   注意：`_redirects` 文件在 Cloudflare Pages Workers 中可能有无限循环检测问题，建议优先使用 Functions。
+   
+   **重要：使用 `wrangler deploy --assets ./dist` 时的问题**
+   
+   如果使用 `wrangler deploy --assets ./dist` 命令部署，Functions 可能不会被正确部署。
+   
+   **解决方案：**
+   
+   1. **使用 Git 集成自动部署（推荐）**：
+      - 在 Cloudflare Pages 中连接 Git 仓库
+      - 设置根目录为 `html`
+      - Functions 会自动识别并部署
+   
+   2. **使用 `_redirects` 文件（已包含）**：
+      - 项目已包含 `html/public/_redirects` 文件
+      - Vite 构建时会自动复制到 `dist/` 目录
+      - Cloudflare Pages 会自动识别并应用
+   
+   3. **如果仍然 404，检查：**
+      - 确认 `dist/_redirects` 文件存在
+      - 检查部署日志，查看是否有相关错误
+      - 尝试在 Cloudflare Pages 项目设置中手动添加重写规则
+
+3. **验证环境变量**：
+   
+   构建后，环境变量会被注入到代码中。可以通过浏览器控制台检查：
+   ```javascript
+   console.log(import.meta.env.VITE_API_BASE_URL)
+   console.log(import.meta.env.VITE_API_PREFIX)
+   ```
+
 ## Documentation
 
 Online documentation [https://www.goravel.dev](https://www.goravel.dev)

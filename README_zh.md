@@ -225,6 +225,21 @@ go run .
 http://localhost:3008/swagger/
 ```
 
+静态编译
+```
+go build --ldflags "-extldflags -static" -o main .
+```
+
+cloudflare pages
+```
+# 构建命令
+npm install && npm run build
+# 部署命令
+npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
+# 根目录
+html
+```
+
 ## 文档
 
 在线文档 [https://www.goravel.dev](https://www.goravel.dev)
@@ -241,3 +256,5 @@ http://localhost:3008/swagger/
 ## 许可证
 
 Goravel 框架是在 [MIT 许可证](https://opensource.org/licenses/MIT) 下发布的开源软件。
+
+
