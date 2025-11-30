@@ -9,19 +9,12 @@ import i18n from '../i18n'
 const { t } = i18n.global
 
 // 构建完整的 API baseURL
-// 开发模式：使用相对路径，通过 Vite 代理转发请求（避免 CORS 问题）
-// 生产模式：如果配置了 VITE_API_BASE_URL，使用它 + VITE_API_PREFIX，否则使用相对路径
+// 如果配置了 VITE_API_BASE_URL，使用它 + VITE_API_PREFIX，否则使用相对路径
 const getBaseURL = () => {
-  const isDev = import.meta.env.DEV
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL
   const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
   
-  // 开发模式下，始终使用相对路径，让 Vite 代理处理请求
-  if (isDev) {
-    return apiPrefix
-  }
-  
-  // 生产模式下，如果配置了完整的基础 URL，使用它
+  // 如果配置了完整的基础 URL，使用它
   if (apiBaseURL) {
     // 确保 URL 格式正确（移除末尾的 /，确保前缀以 / 开头）
     const base = apiBaseURL.replace(/\/+$/, '')
@@ -29,7 +22,7 @@ const getBaseURL = () => {
     return `${base}${prefix}`
   }
   
-  // 生产模式下，如果没有配置基础 URL，使用相对路径
+  // 如果没有配置基础 URL，使用相对路径
   return apiPrefix
 }
 
@@ -147,7 +140,11 @@ request.interceptors.response.use(
           ElMessage.error(message)
         }
       }
-      const err = new Error(res.message || t('error.default'))
+      // 创建错误对象，包含更多信息
+      const errorMessage = res.message || t('error.default') || '请求失败'
+      const err = new Error(errorMessage)
+      err.code = res.code
+      err.data = res.data
       err.__handled = true
       return Promise.reject(err)
     }
@@ -189,7 +186,21 @@ request.interceptors.response.use(
         }
       }
     } else {
-      ElMessage.error(t('error.network'))
+      // 网络错误或 CORS 错误
+      let errorMessage = t('error.network')
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        errorMessage = t('error.network') + ' (网络连接失败，请检查 API 地址配置)'
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = t('error.timeout') || '请求超时'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      // 只在非静默错误时显示消息
+      if (!error.config?.silent) {
+        ElMessage.error(errorMessage)
+      }
     }
 
     if (typeof error === 'object') {
