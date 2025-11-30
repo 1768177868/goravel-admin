@@ -116,13 +116,13 @@ sudo journalctl -u goravel-admin --since today
 # 检查服务是否运行
 sudo systemctl is-active goravel-admin
 
-# 检查端口是否监听（假设端口是 3008）
-sudo netstat -tlnp | grep 3008
+# 检查端口是否监听（假设端口是 3000）
+sudo netstat -tlnp | grep 3000
 # 或使用 ss 命令
-sudo ss -tlnp | grep 3008
+sudo ss -tlnp | grep 3000
 
 # 测试 API 接口（本地）
-curl http://localhost:3008/api/admin/health
+curl http://localhost:3000/api/admin/health
 ```
 
 **重要：如果无法从外部 IP 访问**
@@ -132,7 +132,7 @@ curl http://localhost:3008/api/admin/health
 ```env
 # 修改为 0.0.0.0 允许所有网络接口访问
 APP_HOST=0.0.0.0
-APP_PORT=3008
+APP_PORT=3000
 ```
 
 然后重启服务：
@@ -145,12 +145,12 @@ sudo systemctl restart goravel-admin
 ```bash
 # CentOS/RHEL 系统
 sudo firewall-cmd --list-ports
-sudo firewall-cmd --permanent --add-port=3008/tcp
+sudo firewall-cmd --permanent --add-port=3000/tcp
 sudo firewall-cmd --reload
 
 # Ubuntu/Debian 系统
 sudo ufw status
-sudo ufw allow 3008/tcp
+sudo ufw allow 3000/tcp
 sudo ufw reload
 
 # 或者临时关闭防火墙测试（不推荐生产环境）
@@ -162,10 +162,10 @@ sudo ufw disable              # Ubuntu/Debian
 
 ```bash
 # 在服务器上测试
-curl http://服务器IP:3008/api/admin/health
+curl http://服务器IP:3000/api/admin/health
 
 # 或者从其他机器测试
-curl http://服务器IP:3008/api/admin/health
+curl http://服务器IP:3000/api/admin/health
 ```
 
 ##### systemd 服务文件示例

@@ -97,7 +97,7 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
    npm install
    
    # 在 .env 中配置 API 地址
-   # VITE_API_BASE_URL=http://127.0.0.1:3008
+   # VITE_API_BASE_URL=http://127.0.0.1:3000
    # VITE_API_PREFIX=/api/admin
    
    # 启动开发服务器
@@ -222,7 +222,7 @@ go run github.com/99designs/gqlgen generate
 ```
 swag init
 go run .
-http://localhost:3008/swagger/
+http://localhost:3000/swagger/
 ```
 
 静态编译

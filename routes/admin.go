@@ -37,8 +37,6 @@ func Admin() {
 		router.Get("login/captcha", adminAuthController.Captcha)
 	})
 
-	// 刷新token接口（允许token过期但仍在刷新窗口内的请求）
-
 	// 基础功能（需要认证和多语言，但不需要权限验证和操作日志）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
 		// 认证相关
@@ -66,7 +64,7 @@ func Admin() {
 		router.Put("password", passwordController.UpdatePassword)
 		router.Put("admins/{id}/password", passwordController.ResetPassword)
 
-		// 管理员管理（有额外路由，不能完全用 Resource）
+		// 管理员管理
 		router.Get("admins", adminController.Index)
 		router.Post("admins/export", adminController.Export)
 		router.Get("admins/{id}", adminController.Show)
@@ -87,7 +85,7 @@ func Admin() {
 		// 部门管理 - 使用 Resource 路由
 		router.Resource("departments", departmentController)
 
-		// 字典管理（有额外路由，不能完全用 Resource）
+		// 字典管理
 		router.Resource("dictionaries", dictionaryController)
 		router.Get("dictionaries/type/{type}", dictionaryController.GetByType)
 

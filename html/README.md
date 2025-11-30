@@ -25,7 +25,7 @@ cp .env.example .env
 2. 编辑 `.env` 文件，配置 API 地址：
 ```env
 # API 基础地址
-VITE_API_BASE_URL=http://127.0.0.1:3008
+VITE_API_BASE_URL=http://127.0.0.1:3000
 
 # API 前缀
 VITE_API_PREFIX=/api/admin

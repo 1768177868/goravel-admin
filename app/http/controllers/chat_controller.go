@@ -270,8 +270,8 @@ type HttpChatMsg struct {
 }
 
 // SendMsgByHttp 处理HTTP请求发送聊天室消息
-// 全员发送消息（GET 请求）: http://localhost:3008/api/chat/send?type=all&from=系统通知&content=大家好，这是一条系统全员消息！
-// 群发送消息（POST 请求，JSON 体）: http://localhost:3008/api/chat/send
+// 全员发送消息（GET 请求）: http://localhost:3000/api/chat/send?type=all&from=系统通知&content=大家好，这是一条系统全员消息！
+// 群发送消息（POST 请求，JSON 体）: http://localhost:3000/api/chat/send
 //
 //	{
 //	    "type": "group",
@@ -280,7 +280,7 @@ type HttpChatMsg struct {
 //	    "content": "group1的各位成员，这是一条群专属通知！"
 //	}
 
-// 私人发送消息（POST 请求，JSON 体）: http://localhost:3008/api/chat/send
+// 私人发送消息（POST 请求，JSON 体）: http://localhost:3000/api/chat/send
 //
 //	{
 //	    "type": "private",

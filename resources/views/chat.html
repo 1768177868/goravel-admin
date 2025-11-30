@@ -152,7 +152,7 @@
             }
 
             // 建立新连接
-            ws = new WebSocket('ws://localhost:3008/ws/chat');
+            ws = new WebSocket('ws://localhost:3000/ws/chat');
             ws.onopen = () => {
                 clearInterval(reconnectTimer);
                 reconnectTimer = null;

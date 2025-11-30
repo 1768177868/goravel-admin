@@ -97,7 +97,7 @@ This project includes a complete admin management system built with Goravel fram
    npm install
    
    # Configure API address in .env
-   # VITE_API_BASE_URL=http://127.0.0.1:3008
+   # VITE_API_BASE_URL=http://127.0.0.1:3000
    # VITE_API_PREFIX=/api/admin
    
    # Start development server
@@ -219,10 +219,11 @@ go get -d github.com/99designs/gqlgen
 go run github.com/99designs/gqlgen generate
 ```
 
+### Other
 ```
 swag init
 go run .
-http://localhost:3008/swagger/
+http://localhost:3000/swagger/
 ```
 
 static build
@@ -243,6 +244,8 @@ npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 html
 # 注意: worker.js 会自动处理 SPA 路由，当文件不存在时返回 index.html
 
+pprof
+http://localhost:3000/debug/pprof/
 
 ## Documentation
 
