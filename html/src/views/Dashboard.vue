@@ -1,36 +1,140 @@
 <template>
   <div class="dashboard">
+    <!-- 统计卡片 -->
     <el-row :gutter="20" class="stats-row">
-      <el-col :span="6" v-for="stat in stats" :key="stat.title">
-        <el-card class="stat-card">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6" v-for="stat in stats" :key="stat.title">
+        <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-icon" :style="{ backgroundColor: stat.color }">
-              <el-icon :size="30"><component :is="stat.icon" /></el-icon>
+              <el-icon :size="28"><component :is="stat.icon" /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ stat.value }}</div>
+              <div class="stat-value">{{ formatNumber(stat.value) }}</div>
               <div class="stat-title">{{ stat.title }}</div>
+              <div class="stat-trend" v-if="stat.trend">
+                <el-icon :class="stat.trend > 0 ? 'trend-up' : 'trend-down'">
+                  <ArrowUp v-if="stat.trend > 0" />
+                  <ArrowDown v-else />
+                </el-icon>
+                <span>{{ Math.abs(stat.trend) }}%</span>
+              </div>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
+    <!-- 图表区域 -->
     <el-row :gutter="20" class="charts-row">
-      <el-col :span="12">
-        <el-card>
+      <!-- 访问趋势 -->
+      <el-col :xs="24" :sm="24" :md="12" :lg="12">
+        <el-card shadow="hover">
           <template #header>
-            <span>用户访问来源</span>
+            <div class="card-header">
+              <span>访问趋势</span>
+              <el-tag type="success" size="small">近7天</el-tag>
+            </div>
           </template>
-          <div ref="accessSourceChart" style="height: 300px;"></div>
+          <div ref="visitTrendChart" style="height: 320px;"></div>
         </el-card>
       </el-col>
-      <el-col :span="12">
-        <el-card>
+      
+      <!-- 用户访问来源 -->
+      <el-col :xs="24" :sm="24" :md="12" :lg="12">
+        <el-card shadow="hover">
           <template #header>
-            <span>每周用户活动</span>
+            <div class="card-header">
+              <span>用户访问来源</span>
+            </div>
           </template>
-          <div ref="weeklyActivityChart" style="height: 300px;"></div>
+          <div ref="accessSourceChart" style="height: 320px;"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="charts-row">
+      <!-- 设备分布 -->
+      <el-col :xs="24" :sm="24" :md="12" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>设备分布</span>
+            </div>
+          </template>
+          <div ref="deviceChart" style="height: 320px;"></div>
+        </el-card>
+      </el-col>
+      
+      <!-- 地区分布 -->
+      <el-col :xs="24" :sm="24" :md="12" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>地区分布</span>
+            </div>
+          </template>
+          <div ref="regionChart" style="height: 320px;"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 最近活动和快速操作 -->
+    <el-row :gutter="20" class="bottom-row">
+      <el-col :xs="24" :sm="24" :md="16" :lg="16">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>最近活动</span>
+              <el-button type="primary" text size="small">查看全部</el-button>
+            </div>
+          </template>
+          <el-table :data="recentActivities" style="width: 100%" :show-header="false">
+            <el-table-column width="50">
+              <template #default="{ row }">
+                <el-avatar :size="36" :style="{ backgroundColor: row.avatarColor }">
+                  {{ row.user.charAt(0) }}
+                </el-avatar>
+              </template>
+            </el-table-column>
+            <el-table-column>
+              <template #default="{ row }">
+                <div class="activity-content">
+                  <div class="activity-text">
+                    <span class="activity-user">{{ row.user }}</span>
+                    <span>{{ row.action }}</span>
+                  </div>
+                  <div class="activity-time">{{ row.time }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column width="80" align="right">
+              <template #default="{ row }">
+                <el-tag :type="row.type" size="small">{{ row.status }}</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+      
+      <el-col :xs="24" :sm="24" :md="8" :lg="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>快速操作</span>
+            </div>
+          </template>
+          <div class="quick-actions">
+            <el-button 
+              v-for="action in quickActions" 
+              :key="action.name"
+              :type="action.type"
+              :icon="action.icon"
+              class="quick-action-btn"
+              @click="handleQuickAction(action)"
+            >
+              {{ action.name }}
+            </el-button>
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -38,75 +142,393 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { getCount, getUserAccessSource, getWeeklyUserActivity } from '../api/dashboard'
+import {
+  User,
+  View,
+  ShoppingCart,
+  Money,
+  UserFilled,
+  Key,
+  Menu,
+  Document,
+  ArrowUp,
+  ArrowDown,
+  Plus,
+  Edit,
+  Delete,
+  Setting
+} from '@element-plus/icons-vue'
 
+const router = useRouter()
+
+// 统计数据 - 写死的默认数据
 const stats = ref([
-  { title: '总用户数', value: 0, icon: 'User', color: '#409EFF' },
-  { title: '今日访问', value: 0, icon: 'View', color: '#67C23A' },
-  { title: '总订单数', value: 0, icon: 'ShoppingCart', color: '#E6A23C' },
-  { title: '总收入', value: 0, icon: 'Money', color: '#F56C6C' }
+  { 
+    title: '管理员总数', 
+    value: 156, 
+    icon: UserFilled, 
+    color: '#409EFF',
+    trend: 12.5
+  },
+  { 
+    title: '今日访问', 
+    value: 2847, 
+    icon: View, 
+    color: '#67C23A',
+    trend: 8.3
+  },
+  { 
+    title: '角色数量', 
+    value: 24, 
+    icon: Key, 
+    color: '#E6A23C',
+    trend: -2.1
+  },
+  { 
+    title: '菜单数量', 
+    value: 89, 
+    icon: Menu, 
+    color: '#F56C6C',
+    trend: 5.6
+  }
 ])
 
+// 图表引用
+const visitTrendChart = ref(null)
 const accessSourceChart = ref(null)
-const weeklyActivityChart = ref(null)
+const deviceChart = ref(null)
+const regionChart = ref(null)
 
-const loadDashboardData = async () => {
-  try {
-    // 加载统计数据
-    const countRes = await getCount()
-    if (countRes.data) {
-      const data = countRes.data
-      stats.value[0].value = data.total_users || 0
-      stats.value[1].value = data.today_visits || 0
-      stats.value[2].value = data.total_orders || 0
-      stats.value[3].value = data.total_revenue || 0
-    }
+// 图表实例
+let visitTrendChartInstance = null
+let accessSourceChartInstance = null
+let deviceChartInstance = null
+let regionChartInstance = null
 
-    // 加载访问来源图表
-    const sourceRes = await getUserAccessSource()
-    if (sourceRes.data && accessSourceChart.value) {
-      const chart = echarts.init(accessSourceChart.value)
-      chart.setOption({
-        tooltip: {
-          trigger: 'item'
-        },
-        series: [{
-          type: 'pie',
-          data: sourceRes.data
-        }]
-      })
-    }
+// 访问趋势数据 - 写死的默认数据
+const visitTrendData = {
+  dates: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+  visits: [1200, 1900, 3000, 2500, 3200, 2800, 3500],
+  users: [800, 1200, 2000, 1800, 2200, 2000, 2400]
+}
 
-    // 加载每周活动图表
-    const activityRes = await getWeeklyUserActivity()
-    if (activityRes.data && weeklyActivityChart.value) {
-      const chart = echarts.init(weeklyActivityChart.value)
-      chart.setOption({
-        tooltip: {
-          trigger: 'axis'
+// 访问来源数据 - 写死的默认数据
+const accessSourceData = [
+  { value: 35, name: '直接访问' },
+  { value: 28, name: '搜索引擎' },
+  { value: 22, name: '社交媒体' },
+  { value: 15, name: '外部链接' }
+]
+
+// 设备分布数据 - 写死的默认数据
+const deviceData = [
+  { value: 45, name: '桌面端' },
+  { value: 35, name: '移动端' },
+  { value: 20, name: '平板端' }
+]
+
+// 地区分布数据 - 写死的默认数据
+const regionData = [
+  { name: '北京', value: 1250 },
+  { name: '上海', value: 980 },
+  { name: '广州', value: 750 },
+  { name: '深圳', value: 680 },
+  { name: '杭州', value: 520 },
+  { name: '其他', value: 1120 }
+]
+
+// 最近活动 - 写死的默认数据
+const recentActivities = ref([
+  {
+    user: '张三',
+    action: '创建了新角色',
+    time: '2分钟前',
+    status: '成功',
+    type: 'success',
+    avatarColor: '#409EFF'
+  },
+  {
+    user: '李四',
+    action: '修改了菜单权限',
+    time: '15分钟前',
+    status: '成功',
+    type: 'success',
+    avatarColor: '#67C23A'
+  },
+  {
+    user: '王五',
+    action: '删除了管理员',
+    time: '1小时前',
+    status: '成功',
+    type: 'success',
+    avatarColor: '#E6A23C'
+  },
+  {
+    user: '赵六',
+    action: '更新了系统配置',
+    time: '2小时前',
+    status: '成功',
+    type: 'success',
+    avatarColor: '#F56C6C'
+  },
+  {
+    user: '钱七',
+    action: '导出了用户数据',
+    time: '3小时前',
+    status: '成功',
+    type: 'success',
+    avatarColor: '#909399'
+  }
+])
+
+// 快速操作
+const quickActions = [
+  { name: '添加管理员', type: 'primary', icon: Plus, path: '/admins' },
+  { name: '创建角色', type: 'success', icon: Plus, path: '/roles' },
+  { name: '管理菜单', type: 'warning', icon: Menu, path: '/menus' },
+  { name: '系统设置', type: 'info', icon: Setting, path: '/configs' }
+]
+
+// 格式化数字
+const formatNumber = (num) => {
+  if (num >= 10000) {
+    return (num / 10000).toFixed(1) + '万'
+  }
+  return num.toLocaleString()
+}
+
+// 初始化访问趋势图表
+const initVisitTrendChart = () => {
+  if (!visitTrendChart.value) return
+  
+  visitTrendChartInstance = echarts.init(visitTrendChart.value)
+  visitTrendChartInstance.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross'
+      }
+    },
+    legend: {
+      data: ['访问量', '用户数']
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: visitTrendData.dates
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        name: '访问量',
+        type: 'line',
+        smooth: true,
+        data: visitTrendData.visits,
+        itemStyle: {
+          color: '#409EFF'
         },
-        xAxis: {
-          type: 'category',
-          data: activityRes.data.map(item => item.date)
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+              { offset: 1, color: 'rgba(64, 158, 255, 0.1)' }
+            ]
+          }
+        }
+      },
+      {
+        name: '用户数',
+        type: 'line',
+        smooth: true,
+        data: visitTrendData.users,
+        itemStyle: {
+          color: '#67C23A'
+        }
+      }
+    ]
+  })
+}
+
+// 初始化访问来源图表
+const initAccessSourceChart = () => {
+  if (!accessSourceChart.value) return
+  
+  accessSourceChartInstance = echarts.init(accessSourceChart.value)
+  accessSourceChartInstance.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c} ({d}%)'
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      top: 'middle'
+    },
+    series: [
+      {
+        name: '访问来源',
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2
         },
-        yAxis: {
-          type: 'value'
+        label: {
+          show: true,
+          formatter: '{b}: {d}%'
         },
-        series: [{
-          data: activityRes.data.map(item => item.count),
-          type: 'line'
-        }]
-      })
-    }
-  } catch (error) {
-    console.error('Load dashboard data error:', error)
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 16,
+            fontWeight: 'bold'
+          }
+        },
+        data: accessSourceData
+      }
+    ]
+  })
+}
+
+// 初始化设备分布图表
+const initDeviceChart = () => {
+  if (!deviceChart.value) return
+  
+  deviceChartInstance = echarts.init(deviceChart.value)
+  deviceChartInstance.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c}% ({d}%)'
+    },
+    legend: {
+      bottom: '5%',
+      left: 'center'
+    },
+    series: [
+      {
+        name: '设备分布',
+        type: 'pie',
+        radius: '60%',
+        center: ['50%', '45%'],
+        data: deviceData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }
+    ]
+  })
+}
+
+// 初始化地区分布图表
+const initRegionChart = () => {
+  if (!regionChart.value) return
+  
+  regionChartInstance = echarts.init(regionChart.value)
+  regionChartInstance.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value'
+    },
+    yAxis: {
+      type: 'category',
+      data: regionData.map(item => item.name)
+    },
+    series: [
+      {
+        name: '访问量',
+        type: 'bar',
+        data: regionData.map(item => item.value),
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#83bff6' },
+            { offset: 0.5, color: '#188df0' },
+            { offset: 1, color: '#188df0' }
+          ])
+        },
+        emphasis: {
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: '#2378f7' },
+              { offset: 0.7, color: '#2378f7' },
+              { offset: 1, color: '#83bff6' }
+            ])
+          }
+        }
+      }
+    ]
+  })
+}
+
+// 处理窗口大小变化
+const handleResize = () => {
+  visitTrendChartInstance?.resize()
+  accessSourceChartInstance?.resize()
+  deviceChartInstance?.resize()
+  regionChartInstance?.resize()
+}
+
+// 快速操作处理
+const handleQuickAction = (action) => {
+  if (action.path) {
+    router.push(action.path)
   }
 }
 
+// 初始化所有图表
+const initCharts = async () => {
+  await nextTick()
+  initVisitTrendChart()
+  initAccessSourceChart()
+  initDeviceChart()
+  initRegionChart()
+  
+  // 监听窗口大小变化
+  window.addEventListener('resize', handleResize)
+}
+
 onMounted(() => {
-  loadDashboardData()
+  initCharts()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  visitTrendChartInstance?.dispose()
+  accessSourceChartInstance?.dispose()
+  deviceChartInstance?.dispose()
+  regionChartInstance?.dispose()
 })
 </script>
 
@@ -121,12 +543,13 @@ onMounted(() => {
 
 .stat-card {
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  border: none;
 }
 
 .stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .stat-content {
@@ -135,34 +558,121 @@ onMounted(() => {
 }
 
 .stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  margin-right: 15px;
+  margin-right: 16px;
+  flex-shrink: 0;
 }
 
 .stat-info {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 600;
   color: #303133;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  line-height: 1.2;
 }
 
 .stat-title {
   font-size: 14px;
   color: #909399;
+  margin-bottom: 4px;
+}
+
+.stat-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.trend-up {
+  color: #67C23A;
+}
+
+.trend-down {
+  color: #F56C6C;
 }
 
 .charts-row {
+  margin-bottom: 20px;
+}
+
+.bottom-row {
   margin-top: 20px;
 }
-</style>
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+:deep(.el-card__header) {
+  padding: 18px 20px;
+  border-bottom: 1px solid #EBEEF5;
+}
+
+:deep(.el-card__body) {
+  padding: 20px;
+}
+
+.activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-text {
+  font-size: 14px;
+  color: #606266;
+}
+
+.activity-user {
+  font-weight: 600;
+  color: #303133;
+  margin-right: 6px;
+}
+
+.activity-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-action-btn {
+  width: 100%;
+  justify-content: flex-start;
+  height: 44px;
+  font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .stat-icon {
+    width: 56px;
+    height: 56px;
+    margin-right: 12px;
+  }
+}
+</style>
