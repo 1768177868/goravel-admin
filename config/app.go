@@ -12,7 +12,11 @@ import (
 	"github.com/goravel/framework/event"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/filesystem"
-	"github.com/goravel/framework/grpc"
+
+	// "github.com/goravel/framework/grpc" // gRPC 已关闭
+	"goravel/app/providers"
+	"goravel/lang_fs"
+
 	"github.com/goravel/framework/hash"
 	"github.com/goravel/framework/http"
 	"github.com/goravel/framework/log"
@@ -34,8 +38,6 @@ import (
 	"github.com/goravel/s3"
 	"github.com/goravel/sqlite"
 	"github.com/goravel/sqlserver"
-	"goravel/app/providers"
-	"goravel/lang_fs"
 )
 
 // Boot Start all init methods of the current folder to bootstrap all config.
@@ -102,7 +104,7 @@ func init() {
 			&schedule.ServiceProvider{},
 			&event.ServiceProvider{},
 			&queue.ServiceProvider{},
-			&grpc.ServiceProvider{},
+			// &grpc.ServiceProvider{}, // gRPC 已关闭
 			&mail.ServiceProvider{},
 			&auth.ServiceProvider{},
 			&hash.ServiceProvider{},
@@ -115,7 +117,7 @@ func init() {
 			&providers.AppServiceProvider{},
 			&providers.AuthServiceProvider{},
 			&providers.RouteServiceProvider{},
-			&providers.GrpcServiceProvider{},
+			// &providers.GrpcServiceProvider{}, // gRPC 已关闭
 			&providers.ConsoleServiceProvider{},
 			&providers.QueueServiceProvider{},
 			&providers.EventServiceProvider{},

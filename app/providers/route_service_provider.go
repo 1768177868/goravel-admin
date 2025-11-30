@@ -37,7 +37,7 @@ func (receiver *RouteServiceProvider) Boot(app foundation.Application) {
 	routes.Web()
 	routes.Api()
 	routes.Admin()
-	routes.Graphql()
+	// routes.Graphql() // GraphQL 已关闭
 	routes.Pprof() // 性能分析路由（仅在调试模式下启用）
 }
 
