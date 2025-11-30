@@ -216,24 +216,6 @@ const { t } = useI18n()
 
 const activeMenu = computed(() => route.path)
 
-// 路径映射：将后端路径映射到前端路由路径
-const pathMap = {
-  '/system/admin': '/admins',
-  '/system/role': '/roles',
-  '/permissions': '/permissions',
-  '/menus': '/menus',
-  '/departments': '/departments',
-  '/dictionaries': '/dictionaries',
-  '/configs': '/configs',
-  '/blacklists': '/blacklists',
-  '/online-users': '/online-users',
-  '/operation-logs': '/operation-logs',
-  '/login-logs': '/login-logs',
-  '/system-logs': '/system-logs',
-  '/notifications': '/notifications',
-  '/profile': '/profile'
-}
-
 // 转换菜单数据格式并构建树形结构
 const menuTree = computed(() => {
   const menus = userStore.menus || []
@@ -245,16 +227,15 @@ const menuTree = computed(() => {
   
   // 转换数据格式（后端返回的是扁平数组，需要自己构建树形结构）
   const transformMenu = (menu) => {
+    // 直接使用后端返回的路径，前后端路径已统一
     const originalPath = menu.Path || menu.path || ''
-    // 映射路径到前端路由
-    const mappedPath = pathMap[originalPath] || originalPath
     
     return {
       id: menu.id,
       parent_id: menu.ParentID || menu.parent_id || 0,
       title: menu.Title || menu.title || '',
       slug: menu.Slug || menu.slug || '',
-      path: mappedPath || originalPath,
+      path: originalPath,
       icon: menu.Icon || menu.icon || '',
       type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
       status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),

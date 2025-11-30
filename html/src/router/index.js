@@ -69,6 +69,12 @@ const routes = [
         meta: { titleKey: 'menu.export_management' }
       },
       {
+        path: 'attachments',
+        name: 'Attachments',
+        component: () => import('../views/attachment/AttachmentList.vue'),
+        meta: { titleKey: 'menu.attachment_management' }
+      },
+      {
         path: 'blacklists',
         name: 'Blacklists',
         component: () => import('../views/blacklist/BlacklistList.vue'),

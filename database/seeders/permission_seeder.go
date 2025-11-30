@@ -16,7 +16,7 @@ func (s *PermissionSeeder) Signature() string {
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu models.Menu
-	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu models.Menu
+	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
 	facades.Orm().Query().Where("slug", "role").First(&roleMenu)
@@ -33,6 +33,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "monitor").First(&monitorMenu)
 	facades.Orm().Query().Where("slug", "profile").First(&profileMenu)
 	facades.Orm().Query().Where("slug", "export").First(&exportMenu)
+	facades.Orm().Query().Where("slug", "attachment").First(&attachmentMenu)
 
 	// 创建权限（关联菜单ID）
 	permissions := []models.Permission{
@@ -116,6 +117,13 @@ func (s *PermissionSeeder) Run() error {
 		// 导出管理
 		{Name: "导出列表", Slug: "export.index", Method: "GET", Path: "/api/admin/exports", Description: "查看导出记录列表", Status: 1, Sort: 1, MenuID: exportMenu.ID},
 		{Name: "删除导出", Slug: "export.destroy", Method: "DELETE", Path: "/api/admin/exports/*", Description: "删除导出记录及源文件", Status: 1, Sort: 2, MenuID: exportMenu.ID},
+		// 附件管理
+		{Name: "附件列表", Slug: "attachment.index", Method: "GET", Path: "/api/admin/attachments", Description: "查看附件列表", Status: 1, Sort: 1, MenuID: attachmentMenu.ID},
+		{Name: "附件上传", Slug: "attachment.upload", Method: "POST", Path: "/api/admin/attachments/upload", Description: "上传附件", Status: 1, Sort: 2, MenuID: attachmentMenu.ID},
+		{Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
+		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
+		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
+		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
 	}
 
 	for _, perm := range permissions {

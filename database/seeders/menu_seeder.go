@@ -105,8 +105,8 @@ func (s *MenuSeeder) Run() error {
 		Title:     "管理员管理",
 		Slug:      "admin",
 		Icon:      "User",
-		Path:      "/system/admin",
-		Component: "system/admin/index",
+		Path:      "/admins",
+		Component: "admin/index",
 		Type:      2,
 		Status:    1,
 		Sort:      1,
@@ -118,8 +118,8 @@ func (s *MenuSeeder) Run() error {
 		Title:     "角色管理",
 		Slug:      "role",
 		Icon:      "UserFilled",
-		Path:      "/system/role",
-		Component: "system/role/index",
+		Path:      "/roles",
+		Component: "role/index",
 		Type:      2,
 		Status:    1,
 		Sort:      2,
@@ -283,6 +283,20 @@ func (s *MenuSeeder) Run() error {
 		Type:      2,
 		Status:    1,
 		Sort:      6,
+		IsHidden:  0,
+	})
+
+	// 创建附件管理菜单（放在系统管理下）
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "附件管理",
+		Slug:      "attachment",
+		Icon:      "Folder",
+		Path:      "/attachments",
+		Component: "attachment/index",
+		Type:      2,
+		Status:    1,
+		Sort:      10,
 		IsHidden:  0,
 	})
 

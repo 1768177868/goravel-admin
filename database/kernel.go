@@ -36,6 +36,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000017AddOnlineUserFieldsToPersonalAccessTokens{},
 		&migrations.M20250201000003CreateNotificationsTable{},
 		&migrations.M20250301000021CreateExportsTable{},
+		&migrations.M20250301000022CreateAttachmentsTable{},
+		&migrations.M20250301000023AddDisplayNameToAttachments{},
 	}
 }
 

@@ -101,6 +101,27 @@
     "token_not_found": "Token not found",
     "token_id_required": "Token ID is required",
     "token_ids_required": "Token IDs are required",
-    "invalid_token_ids": "Invalid token IDs"
+    "invalid_token_ids": "Invalid token IDs",
+    "upload_success": "Upload successful",
+    "upload_failed": "Upload failed",
+    "file_required": "Please select a file",
+    "filename_required": "Filename cannot be empty",
+    "invalid_total_size": "Invalid total file size",
+    "invalid_chunk_size": "Invalid chunk size",
+    "invalid_total_chunks": "Invalid total chunks",
+    "chunk_id_required": "Chunk ID is required",
+    "invalid_chunk_index": "Invalid chunk index",
+    "chunk_file_required": "Chunk file is required",
+    "read_chunk_failed": "Failed to read chunk",
+    "upload_chunk_failed": "Failed to upload chunk",
+    "init_chunk_upload_failed": "Failed to initialize chunk upload",
+    "merge_chunks_failed": "Failed to merge chunks",
+    "get_progress_failed": "Failed to get upload progress",
+    "file_path_required": "File path is required",
+    "file_read_failed": "Failed to read file",
+    "id_required": "ID is required",
+    "ids_required": "IDs are required",
+    "record_not_found": "Record not found",
+    "params_error": "Parameter error"
   }
 }

@@ -30,6 +30,7 @@ func Admin() {
 	notificationWsController := admin.NewNotificationWsController()
 	optionController := admin.NewOptionController()
 	exportController := admin.NewExportController()
+	attachmentController := admin.NewAttachmentController()
 
 	// 登录相关（不需要认证，但需要多语言）
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
@@ -147,6 +148,19 @@ func Admin() {
 
 		// 统一的下拉选项接口
 		router.Get("options", optionController.Index)
+
+		// 附件管理
+		router.Get("attachments", attachmentController.Index)
+		router.Post("attachments/upload", attachmentController.Upload)
+		router.Post("attachments/chunk/init", attachmentController.InitChunkUpload)
+		router.Post("attachments/chunk/upload", attachmentController.UploadChunk)
+		router.Post("attachments/chunk/merge", attachmentController.MergeChunks)
+		router.Get("attachments/chunk/progress", attachmentController.GetChunkProgress)
+		router.Get("attachments/{id}/preview", attachmentController.Preview)
+		router.Get("attachments/{id}/download", attachmentController.Download)
+		router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)
+		router.Delete("attachments/{id}", attachmentController.Destroy)
+		router.Post("attachments/batch-delete", attachmentController.BatchDestroy)
 	})
 
 	// 通知 WebSocket

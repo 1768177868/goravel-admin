@@ -107,6 +107,27 @@
     "token_not_found": "Token不存在",
     "token_id_required": "Token ID不能为空",
     "token_ids_required": "Token IDs不能为空",
-    "invalid_token_ids": "无效的Token IDs"
+    "invalid_token_ids": "无效的Token IDs",
+    "upload_success": "上传成功",
+    "upload_failed": "上传失败",
+    "file_required": "请选择文件",
+    "filename_required": "文件名不能为空",
+    "invalid_total_size": "无效的文件总大小",
+    "invalid_chunk_size": "无效的分片大小",
+    "invalid_total_chunks": "无效的分片总数",
+    "chunk_id_required": "分片ID不能为空",
+    "invalid_chunk_index": "无效的分片索引",
+    "chunk_file_required": "分片文件不能为空",
+    "read_chunk_failed": "读取分片失败",
+    "upload_chunk_failed": "上传分片失败",
+    "init_chunk_upload_failed": "初始化分片上传失败",
+    "merge_chunks_failed": "合并分片失败",
+    "get_progress_failed": "获取上传进度失败",
+    "file_path_required": "文件路径不能为空",
+    "file_read_failed": "读取文件失败",
+    "id_required": "ID不能为空",
+    "ids_required": "IDs不能为空",
+    "record_not_found": "记录不存在",
+    "params_error": "参数错误"
   }
 }
