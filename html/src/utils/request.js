@@ -40,6 +40,18 @@ request.interceptors.request.use(
       const cleanToken = token.trim()
       config.headers.Authorization = `Bearer ${cleanToken}`
     }
+    
+    // 设置语言请求头，将前端的语言代码转换为后端期望的格式
+    const currentLocale = i18n.global.locale.value || localStorage.getItem('language') || 'zh-CN'
+    // 前端使用 zh-CN/en-US，后端期望 cn/en
+    let acceptLanguage = 'zh-CN'
+    if (currentLocale === 'en-US') {
+      acceptLanguage = 'en-US'
+    } else if (currentLocale === 'zh-CN' || currentLocale === 'cn') {
+      acceptLanguage = 'zh-CN'
+    }
+    config.headers['Accept-Language'] = acceptLanguage
+    
     const appStore = useAppStore()
     let browserTimezone = 'UTC'
     try {
