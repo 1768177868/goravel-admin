@@ -14,7 +14,7 @@ go run . artisan build
 # 基础静态编译（当前平台）
 go build --ldflags "-extldflags -static" -o main .
 # 去除符号表和调试信息
-go build -ldflags "-extldflags -static -s -w" -o main .
+go build --ldflags "-extldflags -static -s -w" -o main .
 ```
 
 ```bash

@@ -24,17 +24,17 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3007,
-      // proxy: {
-      //   '/api': {
-      //     target: env.VITE_API_BASE_URL || 'http://127.0.0.1:3000',
-      //     changeOrigin: true
-      //   },
-      //   '/ws': {
-      //     target: 'http://localhost:3000',
-      //     changeOrigin: true,
-      //     ws: true
-      //   }
-      // }
+      // API 代理已禁用，使用 VITE_API_BASE_URL 直接连接
+      // 但 WebSocket 需要代理，因为浏览器无法直接跨域连接 WebSocket
+      proxy: {
+        '/ws': {
+          target: env.VITE_API_BASE_URL || 'http://127.0.0.1:3000',
+          changeOrigin: true,
+          ws: true, // 启用 WebSocket 代理
+          secure: false, // 如果是 https，设置为 false 允许自签名证书
+          rewrite: (path) => path // 保持路径不变
+        }
+      }
     },
     build: {
       outDir: './dist',
