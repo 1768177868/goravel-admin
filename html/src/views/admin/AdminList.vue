@@ -5,7 +5,7 @@
         <div class="card-header">
           <span>{{ $t('admin.title') }}</span>
           <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+            <el-icon><PlusIcon /></el-icon>
             {{ $t('admin.add_admin') }}
           </el-button>
         </div>
@@ -142,7 +142,7 @@
               >
                 <template #suffix>
                   <el-icon class="el-input__icon">
-                    <ArrowDown />
+                    <ArrowDownIcon />
                   </el-icon>
                 </template>
               </el-input>
@@ -191,11 +191,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
@@ -210,6 +210,10 @@ import {
   kickOutUser
 } from '../../api/admin'
 import { getOptions } from '../../api/option'
+
+// 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
+const PlusIcon = markRaw(Plus)
+const ArrowDownIcon = markRaw(ArrowDown)
 
 const { t } = useI18n()
 const router = useRouter()

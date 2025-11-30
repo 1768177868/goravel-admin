@@ -5,7 +5,7 @@
         <div class="card-header">
           <span>{{ $t('role.title') }}</span>
           <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+            <el-icon><PlusIcon /></el-icon>
             {{ $t('role.add_role') }}
           </el-button>
         </div>
@@ -99,7 +99,7 @@
           <div class="menu-permission-container">
             <div class="menu-header">
               <div class="header-left">
-                <el-icon class="header-icon"><Menu /></el-icon>
+                <el-icon class="header-icon"><MenuIcon /></el-icon>
                 <span class="header-title">{{ $t('role.menus_and_permissions') }}</span>
               </div>
             </div>
@@ -119,21 +119,21 @@
               >
                 <template #default="{ node, data }">
                   <span v-if="data.isMenu" class="menu-node">
-                    <el-icon class="node-icon menu-icon"><FolderOpened /></el-icon>
+                    <el-icon class="node-icon menu-icon"><FolderOpenedIcon /></el-icon>
                     <span class="menu-name">{{ data.name }}</span>
                     <el-tag v-if="data.type" size="small" :type="getMenuTypeTag(data.type)" class="menu-type-tag">
                       {{ getMenuTypeText(data.type) }}
                     </el-tag>
                   </span>
                   <span v-else class="permission-node">
-                    <el-icon class="node-icon permission-icon"><Key /></el-icon>
+                    <el-icon class="node-icon permission-icon"><KeyIcon /></el-icon>
                     <span class="permission-name">{{ data.displayDesc || data.name }}</span>
                     <span v-if="data.method" class="permission-method" :class="`method-${data.method.toLowerCase()}`">
                       {{ data.method }}
                     </span>
                     <el-tooltip v-if="data.path" :content="data.path" placement="top">
                       <el-icon class="permission-path-icon">
-                        <InfoFilled />
+                        <InfoFilledIcon />
                       </el-icon>
                     </el-tooltip>
                   </span>
@@ -148,7 +148,7 @@
             <el-radio :label="0" :disabled="isProtectedRole(formData)">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
           <div v-if="isProtectedRole(formData)" class="protected-tip">
-            <el-icon><Lock /></el-icon>
+            <el-icon><LockIcon /></el-icon>
             <span>{{ $t('role.protected_cannot_disable') }}</span>
           </div>
         </el-form-item>
@@ -165,10 +165,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
+import { Plus, InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
@@ -176,6 +176,14 @@ import { getMenuTranslation } from '../../utils/menuTranslation'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
+
+// 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
+const PlusIcon = markRaw(Plus)
+const InfoFilledIcon = markRaw(InfoFilled)
+const MenuIcon = markRaw(Menu)
+const FolderOpenedIcon = markRaw(FolderOpened)
+const KeyIcon = markRaw(Key)
+const LockIcon = markRaw(Lock)
 
 const { t, te, tm } = useI18n()
 const formRef = ref(null)
