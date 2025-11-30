@@ -2,21 +2,34 @@
 
 
 ```
+# 普通编译（当前平台）
 go run . artisan build
 ```
 
-static build
 ```
-# 基础静态编译
+# 基础静态编译（当前平台）
 go build --ldflags "-extldflags -static" -o main .
-
-# 优化版本（去除调试信息和符号表，减小文件大小）
-go build -ldflags "-extldflags -static -s -w" -o main .
-
-# 进一步优化（Linux 下使用 strip）
-go build -ldflags "-extldflags -static -s -w" -o main .
-strip main  # Linux 下进一步减小文件大小
 ```
+
+```
+# Linux 服务器交叉编译（在 Windows/Mac 上编译 Linux 版本）
+
+# Windows PowerShell:
+$env:GOOS="linux"; $env:GOARCH="amd64"; go build -ldflags "-extldflags -static -s -w" -o main .
+
+# Windows CMD (需要分开执行):
+set GOOS=linux
+set GOARCH=amd64
+go build -ldflags "-extldflags -static -s -w" -o main .
+
+# Linux/Mac:
+GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags -static -s -w" -o main .
+```
+
+**重要提示：**
+- 如果在 Windows 上编译，但要在 Linux 服务器上运行，必须使用交叉编译
+- 使用 `GOOS=linux GOARCH=amd64` 指定目标平台
+- 如果服务器是 ARM 架构，使用 `GOARCH=arm64`
 
 
 使用 systemd 可以将应用作为系统服务运行，支持开机自启、自动重启、日志管理等功能。
@@ -85,6 +98,10 @@ sudo chown www-data:www-data /www/goravel-admin/.env
 go run . artisan env:encrypt
 # 解密 env
 go run . artisan env:decrypt
+```
+
+```bash
+./main artisan key:generate
 ```
 
 ```bash
