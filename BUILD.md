@@ -1,21 +1,23 @@
 #### 使用 systemd 部署（推荐）
 
 
-```
+```bash
 # 常规编译
 go build .
 ```
-```
+```bash
 # 普通编译（当前平台）
 go run . artisan build
 ```
 
-```
+```bash
 # 基础静态编译（当前平台）
 go build --ldflags "-extldflags -static" -o main .
+# 去除符号表和调试信息
+go build -ldflags "-extldflags -static -s -w" -o main .
 ```
 
-```
+```bash
 # Linux 服务器交叉编译（在 Windows/Mac 上编译 Linux 版本）
 
 # Windows PowerShell:
