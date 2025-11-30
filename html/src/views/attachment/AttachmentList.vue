@@ -19,7 +19,7 @@
             >
               <template #trigger>
                 <el-button type="primary">
-                  <el-icon><Upload /></el-icon>
+                  <el-icon><UploadIcon /></el-icon>
                   {{ $t('attachment.upload') }}
                 </el-button>
               </template>
@@ -29,7 +29,7 @@
               :disabled="selectedRows.length === 0"
               @click="handleBatchDelete"
             >
-              <el-icon><Delete /></el-icon>
+              <el-icon><DeleteIcon /></el-icon>
               {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
             </el-button>
           </div>
@@ -177,10 +177,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Delete } from '@element-plus/icons-vue'
+
+// 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
+const UploadIcon = markRaw(Upload)
+const DeleteIcon = markRaw(Delete)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import axios from 'axios'

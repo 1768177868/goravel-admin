@@ -13,8 +13,8 @@
               <div class="stat-title">{{ stat.title }}</div>
               <div class="stat-trend" v-if="stat.trend">
                 <el-icon :class="stat.trend > 0 ? 'trend-up' : 'trend-down'">
-                  <ArrowUp v-if="stat.trend > 0" />
-                  <ArrowDown v-else />
+                  <ArrowUpIcon v-if="stat.trend > 0" />
+                  <ArrowDownIcon v-else />
                 </el-icon>
                 <span>{{ Math.abs(stat.trend) }}%</span>
               </div>
@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import {
@@ -164,33 +164,43 @@ import {
 
 const router = useRouter()
 
+// 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
+const UserFilledIcon = markRaw(UserFilled)
+const ViewIcon = markRaw(View)
+const KeyIcon = markRaw(Key)
+const MenuIcon = markRaw(Menu)
+const ArrowUpIcon = markRaw(ArrowUp)
+const ArrowDownIcon = markRaw(ArrowDown)
+const PlusIcon = markRaw(Plus)
+const SettingIcon = markRaw(Setting)
+
 // 统计数据 - 写死的默认数据
 const stats = ref([
   { 
     title: '管理员总数', 
     value: 156, 
-    icon: UserFilled, 
+    icon: UserFilledIcon, 
     color: '#409EFF',
     trend: 12.5
   },
   { 
     title: '今日访问', 
     value: 2847, 
-    icon: View, 
+    icon: ViewIcon, 
     color: '#67C23A',
     trend: 8.3
   },
   { 
     title: '角色数量', 
     value: 24, 
-    icon: Key, 
+    icon: KeyIcon, 
     color: '#E6A23C',
     trend: -2.1
   },
   { 
     title: '菜单数量', 
     value: 89, 
-    icon: Menu, 
+    icon: MenuIcon, 
     color: '#F56C6C',
     trend: 5.6
   }
@@ -286,10 +296,10 @@ const recentActivities = ref([
 
 // 快速操作
 const quickActions = [
-  { name: '添加管理员', type: 'primary', icon: Plus, path: '/admins' },
-  { name: '创建角色', type: 'success', icon: Plus, path: '/roles' },
-  { name: '管理菜单', type: 'warning', icon: Menu, path: '/menus' },
-  { name: '系统设置', type: 'info', icon: Setting, path: '/configs' }
+  { name: '添加管理员', type: 'primary', icon: PlusIcon, path: '/admins' },
+  { name: '创建角色', type: 'success', icon: PlusIcon, path: '/roles' },
+  { name: '管理菜单', type: 'warning', icon: MenuIcon, path: '/menus' },
+  { name: '系统设置', type: 'info', icon: SettingIcon, path: '/configs' }
 ]
 
 // 格式化数字
