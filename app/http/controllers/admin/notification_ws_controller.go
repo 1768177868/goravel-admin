@@ -74,7 +74,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 		return ctx.Response().String(http.StatusInternalServerError, "upgrade_failed")
 	}
 
-	logger.InfofHTTP(ctx, "WebSocket connection established for admin ID: %d", admin.ID)
+	// logger.InfofHTTP(ctx, "WebSocket connection established for admin ID: %d", admin.ID)
 	wsnotifications.Hub().RegisterConnection(conn, admin.ID)
 
 	return nil
