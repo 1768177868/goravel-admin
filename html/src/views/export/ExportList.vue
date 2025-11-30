@@ -46,7 +46,15 @@
         <vxe-column field="created_at" :title="$t('table.created_at')" width="180" sortable />
         <vxe-column :title="$t('table.operation')" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleDownload(row)">{{ $t('common.view') }}</el-button>
+            <el-button 
+              type="primary" 
+              link 
+              :disabled="downloadingIds.has(row.id || row.ID)"
+              :loading="downloadingIds.has(row.id || row.ID)"
+              @click="handleDownload(row)"
+            >
+              {{ $t('common.view') }}
+            </el-button>
             <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
           </template>
         </vxe-column>
@@ -71,13 +79,15 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { getExportList, deleteExport, batchDeleteExports } from '../../api/export'
+import i18n from '../../i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const tableRef = ref(null)
 const loading = ref(false)
 const tableData = ref([])
 const selectedRows = ref([])
+const downloadingIds = ref(new Set()) // 正在下载的文件 ID 集合
 
 const pagination = reactive({
   page: 1,
@@ -214,28 +224,55 @@ const handlePageChange = ({ currentPage, pageSize }) => {
 }
 
 const handleDownload = async (row) => {
+  // 防止重复点击
+  const exportId = row.id || row.ID
+  if (downloadingIds.value.has(exportId)) {
+    return // 如果正在下载，直接返回
+  }
+  
   const url = row.file_url || row.FileURL
   if (!url) {
     ElMessage.error(t('export.download_failed') || '无法构造下载链接')
     return
   }
   
+  // 标记为正在下载
+  downloadingIds.value.add(exportId)
+  
   try {
-    // 获取完整的 URL（如果是相对路径，加上 baseURL）
+    // 构建完整的下载 URL
     let fullUrl = url
+    
+    // 如果是相对路径，需要构建完整 URL
     if (url.startsWith('/')) {
-      const baseURL = import.meta.env.VITE_API_PREFIX || '/api/admin'
-      fullUrl = baseURL + url.replace('/api/admin', '')
+      const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+      const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
+      
+      if (apiBaseURL) {
+        // 如果配置了完整的基础 URL，使用它
+        const base = apiBaseURL.replace(/\/+$/, '')
+        // 移除 URL 中可能重复的 /api/admin 前缀
+        const cleanUrl = url.replace(/^\/api\/admin/, '')
+        fullUrl = `${base}${apiPrefix}${cleanUrl}`
+      } else {
+        // 如果没有配置基础 URL，直接使用相对路径
+        fullUrl = url
+      }
     }
     
     // 获取 token
     const token = localStorage.getItem('token') || ''
     
+    // 获取当前语言设置
+    const currentLocale = locale.value || i18n.global.locale.value || localStorage.getItem('language') || 'zh-CN'
+    const acceptLanguage = currentLocale === 'en-US' ? 'en-US' : 'zh-CN'
+    
     // 使用 fetch 请求下载文件，这样可以携带认证 token
     const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token.trim()}`
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept-Language': acceptLanguage
       }
     })
     
@@ -243,19 +280,46 @@ const handleDownload = async (row) => {
       if (response.status === 401) {
         ElMessage.error(t('error.unauthorized') || '未授权，请重新登录')
       } else {
+        const errorText = await response.text()
+        console.error('Download error response:', errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+      return
+    }
+    
+    // 检查响应类型，确保是文件而不是 HTML
+    const contentType = response.headers.get('content-type') || ''
+    if (contentType.includes('text/html')) {
+      const htmlContent = await response.text()
+      console.error('Received HTML instead of file:', htmlContent.substring(0, 200))
+      ElMessage.error(t('export.download_failed') || '下载失败：服务器返回了错误内容')
       return
     }
     
     // 获取文件内容
     const blob = await response.blob()
     
+    // 从响应头获取文件名，如果没有则使用记录中的文件名
+    const contentDisposition = response.headers.get('content-disposition') || ''
+    let filename = row.filename || row.Filename || 'export.csv'
+    
+    // 尝试从 Content-Disposition 头中提取文件名
+    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1].replace(/['"]/g, '')
+      // 处理 URL 编码的文件名
+      try {
+        filename = decodeURIComponent(filename)
+      } catch (e) {
+        // 如果解码失败，使用原始文件名
+      }
+    }
+    
     // 创建下载链接
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = row.filename || row.Filename || ''
+    link.download = filename
     link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
@@ -263,9 +327,16 @@ const handleDownload = async (row) => {
     
     // 释放 URL 对象
     window.URL.revokeObjectURL(downloadUrl)
+    
+    ElMessage.success(t('export.download_success') || '下载成功')
   } catch (error) {
     console.error('Download error:', error)
     ElMessage.error(t('export.download_failed') || '下载失败')
+  } finally {
+    // 下载完成或失败后，延迟移除标记（防止短时间内重复点击）
+    setTimeout(() => {
+      downloadingIds.value.delete(exportId)
+    }, 2000) // 2秒内不允许重复点击
   }
 }
 

@@ -68,6 +68,8 @@
     "validation_password": "密码",
     "export_success": "导出成功",
     "export_failed": "导出失败",
+    "export_download_success": "下载成功",
+    "export_download_failed": "下载失败",
     "export_header_id": "ID",
     "export_header_username": "用户名",
     "export_header_nickname": "昵称",

@@ -199,11 +199,16 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	}
 
-	ctx.Response().Header("Content-Type", contentType)
-	ctx.Response().Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-	ctx.Response().Header("Content-Length", fmt.Sprintf("%d", len(content)))
+	// 设置响应头，使用链式调用确保顺序正确
+	response := ctx.Response().
+		Header("Content-Type", contentType).
+		Header("Content-Length", fmt.Sprintf("%d", len(content))).
+		Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
+		Header("Cache-Control", "no-cache, no-store, must-revalidate").
+		Header("Pragma", "no-cache").
+		Header("Expires", "0")
 
-	return ctx.Response().String(http.StatusOK, content)
+	return response.String(http.StatusOK, content)
 }
 
 type ExportBatchDestroyRequest struct {

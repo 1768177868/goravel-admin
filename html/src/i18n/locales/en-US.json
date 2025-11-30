@@ -529,6 +529,7 @@
     "path": "File Path",
     "extension": "Extension",
     "size": "File Size",
+    "download_success": "Download successful",
     "download_failed": "Failed to build download URL"
   },
   "dashboard": {

@@ -529,6 +529,7 @@
     "path": "文件路径",
     "extension": "后缀名",
     "size": "文件大小",
+    "download_success": "下载成功",
     "download_failed": "无法构造下载链接"
   },
   "dashboard": {

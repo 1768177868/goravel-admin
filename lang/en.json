@@ -62,6 +62,8 @@
     "validation_password": "Password",
     "export_success": "Export successful",
     "export_failed": "Export failed",
+    "export_download_success": "Download successful",
+    "export_download_failed": "Download failed",
     "export_header_id": "ID",
     "export_header_username": "Username",
     "export_header_nickname": "Nickname",
