@@ -15,18 +15,18 @@ go build --ldflags "-extldflags -static" -o main .
 # Linux 服务器交叉编译（在 Windows/Mac 上编译 Linux 版本）
 
 # Windows PowerShell:
-$env:GOOS="linux"; $env:GOARCH="amd64"; go build -ldflags "-extldflags -static -s -w" -o main .
+$env:GOOS="linux"; $env:GOARCH="amd64"; go build -ldflags "-extldflags -static" -o main .
 
 # Windows CMD (需要分开执行):
 set GOOS=linux
 set GOARCH=amd64
-go build -ldflags "-extldflags -static -s -w" -o main .
+go build -ldflags "-extldflags -static" -o main .
 
 # 还原
 SET GOOS=windows
 
 # Linux/Mac:
-GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags -static -s -w" -o main .
+GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags -static" -o main .
 ```
 
 **重要提示：**
