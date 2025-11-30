@@ -57,7 +57,7 @@ npm run dev
 npm run build
 ```
 
-构建后的文件会输出到 `../public` 目录。
+构建后的文件会输出到 `dist` 目录。
 
 ## 功能模块
 
