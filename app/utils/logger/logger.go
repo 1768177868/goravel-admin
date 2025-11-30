@@ -10,6 +10,28 @@ import (
 	"goravel/app/utils/traceid"
 )
 
+// InfofHTTP logs an info message and automatically attaches trace_id from the http context.
+func InfofHTTP(ctx http.Context, format string, args ...any) {
+	if ctx == nil {
+		facades.Log().Infof(format, args...)
+		return
+	}
+
+	trace := traceid.FromHTTPContext(ctx)
+	facades.Log().Infof(prependTrace(trace, format), args...)
+}
+
+// WarnfHTTP logs a warning and automatically attaches trace_id from the http context.
+func WarnfHTTP(ctx http.Context, format string, args ...any) {
+	if ctx == nil {
+		facades.Log().Warningf(format, args...)
+		return
+	}
+
+	trace := traceid.FromHTTPContext(ctx)
+	facades.Log().Warningf(prependTrace(trace, format), args...)
+}
+
 // ErrorfHTTP logs an error and automatically attaches trace_id from the http context.
 func ErrorfHTTP(ctx http.Context, format string, args ...any) {
 	if ctx == nil {

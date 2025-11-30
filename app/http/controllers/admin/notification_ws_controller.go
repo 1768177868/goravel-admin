@@ -25,8 +25,16 @@ func NewNotificationWsController() *NotificationWsController {
 }
 
 func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response {
+	// 记录 WebSocket 连接尝试
+	logger.InfofHTTP(ctx, "WebSocket connection attempt from %s, path: %s, upgrade: %s, connection: %s",
+		ctx.Request().Ip(),
+		ctx.Request().Path(),
+		ctx.Request().Header("Upgrade", ""),
+		ctx.Request().Header("Connection", ""))
+
 	token := ctx.Request().Query("token")
 	if token == "" {
+		logger.WarnfHTTP(ctx, "WebSocket connection rejected: token required")
 		_ = ctx.Response().Json(http.StatusUnauthorized, apphttp.Json{
 			"code":    http.StatusUnauthorized,
 			"message": "token_required",
@@ -66,6 +74,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 		return ctx.Response().String(http.StatusInternalServerError, "upgrade_failed")
 	}
 
+	logger.InfofHTTP(ctx, "WebSocket connection established for admin ID: %d", admin.ID)
 	wsnotifications.Hub().RegisterConnection(conn, admin.ID)
 
 	return nil

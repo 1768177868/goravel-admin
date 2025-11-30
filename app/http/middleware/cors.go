@@ -15,6 +15,10 @@ func Cors() http.Middleware {
 		// 获取请求路径
 		path := ctx.Request().Path()
 
+		// 检查是否是 WebSocket 升级请求
+		isWebSocket := strings.ToLower(ctx.Request().Header("Upgrade", "")) == "websocket" ||
+			strings.ToLower(ctx.Request().Header("Connection", "")) == "upgrade"
+
 		// 获取 CORS 配置的路径列表
 		corsPaths := facades.Config().Get("cors.paths", []string{}).([]string)
 
@@ -37,6 +41,12 @@ func Cors() http.Middleware {
 					break
 				}
 			}
+		}
+
+		// WebSocket 请求直接放行，不需要 CORS 处理（WebSocket 有自己的协议）
+		if isWebSocket {
+			ctx.Request().Next()
+			return
 		}
 
 		if !needCors {
