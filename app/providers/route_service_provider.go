@@ -63,6 +63,6 @@ func (receiver *RouteServiceProvider) configureRateLimiting() {
 		if username == "" {
 			username = ctx.Request().Ip()
 		}
-		return limit.PerMinute(5).By("login:" + username)
+		return limit.PerMinute(10).By("login:" + username)
 	})
 }

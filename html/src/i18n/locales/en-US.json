@@ -500,6 +500,7 @@
     "path": "Path",
     "title": "Operation Title",
     "ip": "IP Address",
+    "location": "Location",
     "status_code": "Status Code",
     "user_agent": "User Agent",
     "message": "Message",

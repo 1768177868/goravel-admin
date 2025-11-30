@@ -83,6 +83,7 @@
         <el-descriptions-item :label="$t('table.id')">{{ logDetail.id }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.admin')">{{ logDetail.admin?.username }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.ip')">{{ logDetail.ip }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.location')">{{ logDetail.location || '-' }}</el-descriptions-item>
         <el-descriptions-item :label="$t('table.status')">
           <el-tag :type="logDetail.status === 1 ? 'success' : 'danger'">
             {{ logDetail.status === 1 ? $t('log.success') : $t('log.failed') }}
@@ -141,6 +142,7 @@ const fieldMapping = {
   'id': 'id',
   'admin': 'admin_id',
   'ip': 'ip',
+  'location': 'location',
   'user_agent': 'user_agent',
   'status': 'status',
   'message': 'message',
@@ -181,6 +183,12 @@ const tableColumns = computed(() => [
     title: t('log.ip'),
     width: 150,
     sortable: true
+  },
+  {
+    field: 'location',
+    title: t('log.location'),
+    width: 200,
+    sortable: false
   },
   {
     field: 'user_agent',
@@ -270,6 +278,7 @@ const transformLoginLogData = (log) => {
     } : null),
     ip: log.IP || log.ip || '',
     user_agent: log.UserAgent || log.user_agent || '',
+    location: log.Location || log.location || '',
     status: log.Status || log.status || 0,
     message: log.Message || log.message || '',
     created_at: log.CreatedAt || log.created_at || ''

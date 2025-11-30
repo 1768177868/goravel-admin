@@ -500,6 +500,7 @@
     "path": "请求路径",
     "title": "操作标题",
     "ip": "IP地址",
+    "location": "登录地点",
     "status_code": "状态码",
     "user_agent": "用户代理",
     "message": "消息",

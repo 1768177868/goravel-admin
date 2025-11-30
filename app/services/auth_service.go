@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/models"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 	"goravel/app/utils/logger"
 )
@@ -221,13 +222,35 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 
 // RecordLoginLog 记录登录日志
 func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, username string, status uint8, message string) error {
+	ip := ctx.Request().Ip()
+
+	// 先创建登录日志记录（Location 字段先为空，避免阻塞登录流程）
 	loginLog := models.LoginLog{
 		AdminID:   adminID,
 		Username:  username,
-		IP:        ctx.Request().Ip(),
+		IP:        ip,
 		UserAgent: ctx.Request().Header("User-Agent", ""),
+		Location:  "", // 先为空，异步更新
 		Status:    status,
 		Message:   message,
 	}
-	return facades.Orm().Query().Create(&loginLog)
+
+	if err := facades.Orm().Query().Create(&loginLog); err != nil {
+		return err
+	}
+
+	// 异步查询 IP 地理位置信息并更新日志记录
+	// 这样不会阻塞登录流程
+	go func() {
+		location := utils.GetIPLocation(ip)
+		if location != "" {
+			// 更新登录日志的 Location 字段
+			_, _ = facades.Orm().Query().
+				Model(&models.LoginLog{}).
+				Where("id", loginLog.ID).
+				Update("location", location)
+		}
+	}()
+
+	return nil
 }
