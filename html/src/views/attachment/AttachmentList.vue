@@ -25,6 +25,13 @@
               </template>
             </el-upload>
             <el-button 
+              type="success"
+              @click="handleLargeFileUpload"
+            >
+              <el-icon><UploadIcon /></el-icon>
+              {{ $t('attachment.large_file_upload') }}
+            </el-button>
+            <el-button 
               type="danger" 
               :disabled="selectedRows.length === 0"
               @click="handleBatchDelete"
@@ -215,6 +222,7 @@ const chunkUploadProgress = ref(0)
 const chunkUploadStatus = ref('')
 const chunkUploadChunkID = ref('')
 const chunkUploadChunks = ref([])
+const chunkUploadCancelled = ref(false) // 标记是否已取消上传
 // 图片URL缓存（key: attachment_id, value: blob_url 或 直接URL）
 const imageUrlMap = ref(new Map())
 
@@ -491,6 +499,19 @@ const handlePageChange = ({ currentPage, pageSize }) => {
   loadData()
 }
 
+// 大文件上传按钮处理
+const handleLargeFileUpload = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      handleChunkUpload(file, true) // 第二个参数表示是大文件上传按钮触发的
+    }
+  }
+  input.click()
+}
+
 const beforeUpload = (file) => {
   // 检查文件大小（限制100MB）
   const maxSize = 100 * 1024 * 1024
@@ -501,7 +522,7 @@ const beforeUpload = (file) => {
 
   // 如果是大文件，使用分片上传
   if (file.size > LARGE_FILE_THRESHOLD) {
-    handleChunkUpload(file)
+    handleChunkUpload(file, false) // 普通上传按钮触发的
     return false // 阻止默认上传
   }
 
@@ -521,64 +542,136 @@ const handleUploadError = (error, file) => {
   ElMessage.error(t('attachment.upload_failed'))
 }
 
-// 分片上传处理
-const handleChunkUpload = async (file) => {
+// 分片上传处理（支持断点续传）
+const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChunkID = false) => {
   chunkUploadFile.value = file
   chunkUploadVisible.value = true
   chunkUploadProgress.value = 0
   chunkUploadStatus.value = ''
+  chunkUploadCancelled.value = false // 重置取消标志
 
   try {
     // 计算分片信息
     const totalSize = file.size
     const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
 
-    // 初始化分片上传
-    const initRes = await initChunkUpload(
-      file.name,
-      totalSize,
-      CHUNK_SIZE,
-      totalChunks
-    )
+    // 如果使用已存在的 chunk_id（重试场景），跳过初始化
+    if (!useExistingChunkID || !chunkUploadChunkID.value) {
+      // 初始化分片上传
+      try {
+        const initRes = await initChunkUpload(
+          file.name,
+          totalSize,
+          CHUNK_SIZE,
+          totalChunks
+        )
+        chunkUploadChunkID.value = initRes.data.chunk_id
+      } catch (error) {
+        // 检查是否是存储驱动不支持的错误
+        if (error.response && error.response.data && error.response.data.message) {
+          const message = error.response.data.message
+          if (message.includes('chunk_upload_only_local_storage') || message.includes('仅支持本地存储')) {
+            ElMessage.error(t('attachment.chunk_upload_only_local_storage'))
+            chunkUploadVisible.value = false
+            chunkUploadFile.value = null
+            return
+          }
+        }
+        throw error // 重新抛出其他错误
+      }
+    }
 
-    chunkUploadChunkID.value = initRes.data.chunk_id
+    // 检查已上传的分片（断点续传）
+    let uploadedChunksSet = new Set()
+    // 只有在 chunkID 存在且未取消时才获取进度
+    if (chunkUploadChunkID.value && !chunkUploadCancelled.value) {
+      try {
+        const progressRes = await getChunkProgress(chunkUploadChunkID.value)
+        if (progressRes.data && progressRes.data.uploaded_chunks) {
+          // 后端返回已上传的分片索引数组
+          const uploadedIndices = progressRes.data.uploaded_chunks || []
+          uploadedChunksSet = new Set(uploadedIndices)
+          if (uploadedChunksSet.size > 0) {
+            ElMessage.info(t('attachment.resume_upload', { count: uploadedChunksSet.size, total: totalChunks }))
+          }
+        }
+      } catch (error) {
+        // 如果获取进度失败，继续正常上传（但不显示错误，因为可能是已取消）
+        if (!chunkUploadCancelled.value) {
+          console.warn('Failed to get chunk progress, starting fresh upload:', error)
+        }
+      }
+    }
 
-    // 上传所有分片
+    // 准备所有分片
     const chunks = []
     for (let i = 0; i < totalChunks; i++) {
       const start = i * CHUNK_SIZE
       const end = Math.min(start + CHUNK_SIZE, totalSize)
       const chunk = file.slice(start, end)
-      chunks.push({ index: i, chunk })
+      chunks.push({ index: i, chunk, uploaded: uploadedChunksSet.has(i) })
     }
 
     chunkUploadChunks.value = chunks
 
+    // 过滤出未上传的分片
+    const pendingChunks = chunks.filter(chunk => !chunk.uploaded)
+    const alreadyUploadedCount = chunks.length - pendingChunks.length
+
+    // 更新初始进度
+    if (alreadyUploadedCount > 0) {
+      chunkUploadProgress.value = Math.round((alreadyUploadedCount / totalChunks) * 100)
+    }
+
     // 并发上传分片（限制并发数为3）
     const concurrency = 3
-    let uploadedCount = 0
+    let uploadedCount = alreadyUploadedCount
 
     const uploadChunkWithProgress = async (chunkData) => {
+      // 如果已取消，停止上传
+      if (chunkUploadCancelled.value) {
+        return
+      }
+      
       try {
+        // 如果已上传，跳过
+        if (chunkData.uploaded) {
+          return
+        }
+
         await uploadChunk(
           chunkUploadChunkID.value,
           chunkData.index,
           chunkData.chunk,
           (progress) => {
-            // 单个分片的上传进度
+            // 单个分片的上传进度（可选，用于更详细的进度显示）
           }
         )
+        
+        // 再次检查是否已取消
+        if (chunkUploadCancelled.value) {
+          return
+        }
+        
         uploadedCount++
         chunkUploadProgress.value = Math.round((uploadedCount / totalChunks) * 100)
       } catch (error) {
-        throw error
+        // 如果已取消，不抛出错误
+        if (!chunkUploadCancelled.value) {
+          throw error
+        }
       }
     }
 
-    // 分批上传
-    for (let i = 0; i < chunks.length; i += concurrency) {
-      const batch = chunks.slice(i, i + concurrency)
+    // 分批上传未完成的分片
+    for (let i = 0; i < pendingChunks.length; i += concurrency) {
+      const batch = pendingChunks.slice(i, i + concurrency)
       await Promise.all(batch.map(uploadChunkWithProgress))
+    }
+
+    // 检查是否已取消
+    if (chunkUploadCancelled.value) {
+      return
     }
 
     // 所有分片上传完成，合并
@@ -589,11 +682,20 @@ const handleChunkUpload = async (file) => {
       mimeType
     )
 
+    // 再次检查是否已取消
+    if (chunkUploadCancelled.value) {
+      return
+    }
+
     chunkUploadStatus.value = 'success'
     chunkUploadProgress.value = 100
     ElMessage.success(t('attachment.upload_success'))
     loadData()
   } catch (error) {
+    // 如果已取消，不显示错误
+    if (chunkUploadCancelled.value) {
+      return
+    }
     console.error('Chunk upload error:', error)
     chunkUploadStatus.value = 'exception'
     ElMessage.error(t('attachment.upload_failed'))
@@ -601,6 +703,8 @@ const handleChunkUpload = async (file) => {
 }
 
 const handleCancelChunkUpload = () => {
+  // 标记为已取消，停止所有上传操作
+  chunkUploadCancelled.value = true
   chunkUploadVisible.value = false
   chunkUploadFile.value = null
   chunkUploadChunkID.value = ''
@@ -613,7 +717,11 @@ const handleChunkUploadClose = () => {
 }
 
 const handleRetryChunkUpload = () => {
-  if (chunkUploadFile.value) {
+  if (chunkUploadFile.value && chunkUploadChunkID.value) {
+    // 重试时使用已存在的 chunk_id，实现断点续传
+    handleChunkUpload(chunkUploadFile.value, false, true)
+  } else if (chunkUploadFile.value) {
+    // 如果没有 chunk_id，重新开始上传
     handleChunkUpload(chunkUploadFile.value)
   }
 }

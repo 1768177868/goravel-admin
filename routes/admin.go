@@ -152,10 +152,8 @@ func Admin() {
 		// 附件管理
 		router.Get("attachments", attachmentController.Index)
 		router.Post("attachments/upload", attachmentController.Upload)
-		router.Post("attachments/chunk/init", attachmentController.InitChunkUpload)
-		router.Post("attachments/chunk/upload", attachmentController.UploadChunk)
-		router.Post("attachments/chunk/merge", attachmentController.MergeChunks)
-		router.Get("attachments/chunk/progress", attachmentController.GetChunkProgress)
+		router.Post("attachments/chunk", attachmentController.ChunkUpload) // 统一的分片上传接口（POST，action参数）
+		router.Get("attachments/chunk", attachmentController.ChunkUpload)  // 获取进度（GET，action=progress）
 		router.Get("attachments/{id}/preview", attachmentController.Preview)
 		router.Get("attachments/{id}/download", attachmentController.Download)
 		router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)

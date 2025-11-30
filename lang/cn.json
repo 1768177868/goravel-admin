@@ -121,6 +121,7 @@
     "read_chunk_failed": "读取分片失败",
     "upload_chunk_failed": "上传分片失败",
     "init_chunk_upload_failed": "初始化分片上传失败",
+    "chunk_upload_only_local_storage": "大文件分片上传仅支持本地存储，当前存储驱动为云存储",
     "merge_chunks_failed": "合并分片失败",
     "get_progress_failed": "获取上传进度失败",
     "file_path_required": "文件路径不能为空",

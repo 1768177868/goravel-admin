@@ -263,7 +263,14 @@
     "blacklist.show": "View Blacklist Detail",
     "blacklist.store": "Create Blacklist",
     "blacklist.update": "Update Blacklist",
-    "blacklist.destroy": "Delete Blacklist"
+    "blacklist.destroy": "Delete Blacklist",
+    "attachment.index": "View Attachment List",
+    "attachment.upload": "Upload Attachment",
+    "attachment.chunk": "Large File Chunk Upload",
+    "attachment.preview": "Preview Attachment",
+    "attachment.download": "Download Attachment",
+    "attachment.destroy": "Delete Attachment",
+    "attachment.batch_delete": "Batch Delete Attachments"
   },
   "menu_management": {
     "title": "Menu List",
@@ -555,9 +562,12 @@
     "preview": "Preview",
     "preview_not_supported": "This file type does not support online preview",
     "chunk_upload": "Large File Upload",
+    "large_file_upload": "Large File Upload",
+    "chunk_upload_only_local_storage": "Large file chunk upload only supports local storage, please set the file storage driver to local storage in system configuration first",
     "upload_success": "Upload successful",
     "upload_failed": "Upload failed",
     "uploading": "Uploading",
+    "resume_upload": "Detected {count}/{total} chunks already uploaded, resuming upload for remaining chunks",
     "file_too_large": "File too large, maximum 100MB supported",
     "download_success": "Download successful",
     "download_failed": "Download failed",

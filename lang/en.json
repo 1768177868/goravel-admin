@@ -115,6 +115,7 @@
     "read_chunk_failed": "Failed to read chunk",
     "upload_chunk_failed": "Failed to upload chunk",
     "init_chunk_upload_failed": "Failed to initialize chunk upload",
+    "chunk_upload_only_local_storage": "Large file chunk upload only supports local storage, current storage driver is cloud storage",
     "merge_chunks_failed": "Failed to merge chunks",
     "get_progress_failed": "Failed to get upload progress",
     "file_path_required": "File path is required",

@@ -263,7 +263,14 @@
     "blacklist.show": "查看黑名单详情",
     "blacklist.store": "创建黑名单",
     "blacklist.update": "更新黑名单",
-    "blacklist.destroy": "删除黑名单"
+    "blacklist.destroy": "删除黑名单",
+    "attachment.index": "查看附件列表",
+    "attachment.upload": "上传附件",
+    "attachment.chunk": "大文件分片上传",
+    "attachment.preview": "预览附件",
+    "attachment.download": "下载附件",
+    "attachment.destroy": "删除附件",
+    "attachment.batch_delete": "批量删除附件"
   },
   "menu_management": {
     "title": "菜单列表",
@@ -555,9 +562,12 @@
     "preview": "预览",
     "preview_not_supported": "该文件类型不支持在线预览",
     "chunk_upload": "大文件上传",
+    "large_file_upload": "大文件上传",
+    "chunk_upload_only_local_storage": "大文件分片上传仅支持本地存储，请先在系统配置中将文件存储驱动设置为本地存储",
     "upload_success": "上传成功",
     "upload_failed": "上传失败",
     "uploading": "上传中",
+    "resume_upload": "检测到已上传 {count}/{total} 个分片，继续上传剩余分片",
     "file_too_large": "文件过大，最大支持100MB",
     "download_success": "下载成功",
     "download_failed": "下载失败",

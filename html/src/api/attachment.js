@@ -30,63 +30,77 @@ export function uploadFile(file, onProgress) {
   })
 }
 
+// 大文件分片上传统一接口
+// action: init（初始化）、upload（上传分片）、merge（合并分片）、progress（获取进度）
+export function chunkUpload(action, data = {}, onProgress) {
+  const isGet = action === 'progress'
+  const config = {
+    url: '/attachments/chunk',
+    method: isGet ? 'get' : 'post',
+    ...(isGet ? { params: { action, ...data } } : { data: { action, ...data } })
+  }
+
+  // 如果是上传分片，需要特殊处理 FormData
+  if (action === 'upload') {
+    const formData = new FormData()
+    formData.append('action', 'upload')
+    formData.append('chunk_id', data.chunk_id)
+    formData.append('chunk_index', data.chunk_index)
+    formData.append('chunk', data.chunk)
+    
+    config.data = formData
+    config.headers = {
+      'Content-Type': 'multipart/form-data'
+    }
+    
+    if (onProgress) {
+      config.onUploadProgress = (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress(percentCompleted)
+        }
+      }
+    }
+  }
+
+  return request(config)
+}
+
 // 初始化分片上传
 export function initChunkUpload(filename, totalSize, chunkSize, totalChunks) {
-  return request({
-    url: '/attachments/chunk/init',
-    method: 'post',
-    data: {
-      filename,
-      total_size: totalSize,
-      chunk_size: chunkSize,
-      total_chunks: totalChunks
-    }
+  return chunkUpload('init', {
+    filename,
+    total_size: totalSize,
+    chunk_size: chunkSize,
+    total_chunks: totalChunks
   })
 }
 
 // 上传分片
 export function uploadChunk(chunkID, chunkIndex, chunk, onProgress) {
-  const formData = new FormData()
-  formData.append('chunk_id', chunkID)
-  formData.append('chunk_index', chunkIndex)
-  formData.append('chunk', chunk)
-
-  return request({
-    url: '/attachments/chunk/upload',
-    method: 'post',
-    data: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    onUploadProgress: (progressEvent) => {
-      if (onProgress && progressEvent.total) {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-        onProgress(percentCompleted)
-      }
-    }
-  })
+  return chunkUpload('upload', {
+    chunk_id: chunkID,
+    chunk_index: chunkIndex,
+    chunk
+  }, onProgress)
 }
 
 // 合并分片
 export function mergeChunks(chunkID, filename, mimeType) {
-  return request({
-    url: '/attachments/chunk/merge',
-    method: 'post',
-    data: {
-      chunk_id: chunkID,
-      filename,
-      mime_type: mimeType
-    }
+  return chunkUpload('merge', {
+    chunk_id: chunkID,
+    filename,
+    mime_type: mimeType
   })
 }
 
 // 获取分片上传进度
 export function getChunkProgress(chunkID) {
-  return request({
-    url: '/attachments/chunk/progress',
-    method: 'get',
-    params: { chunk_id: chunkID }
-  })
+  // 如果 chunkID 为空，直接返回，不调用后端接口
+  if (!chunkID) {
+    return Promise.reject(new Error('Chunk ID is empty'))
+  }
+  return chunkUpload('progress', { chunk_id: chunkID })
 }
 
 // 删除附件

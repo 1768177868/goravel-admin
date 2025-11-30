@@ -5,6 +5,7 @@ import (
 	"mime"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
@@ -186,172 +187,190 @@ func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	})
 }
 
-// InitChunkUpload 初始化分片上传
-func (r *AttachmentController) InitChunkUpload(ctx http.Context) http.Response {
-	filename := ctx.Request().Input("filename", "")
-	if filename == "" {
-		return response.Error(ctx, http.StatusBadRequest, "filename_required")
-	}
-
-	totalSize, err := strconv.ParseInt(ctx.Request().Input("total_size", "0"), 10, 64)
-	if err != nil || totalSize <= 0 {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
-	}
-
-	chunkSize, err := strconv.ParseInt(ctx.Request().Input("chunk_size", "0"), 10, 64)
-	if err != nil || chunkSize <= 0 {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
-	}
-
-	totalChunks, err := strconv.Atoi(ctx.Request().Input("total_chunks", "0"))
-	if err != nil || totalChunks <= 0 {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+// ChunkUpload 大文件分片上传统一接口
+// 通过 action 参数区分不同操作：init（初始化）、upload（上传分片）、merge（合并分片）、progress（获取进度）
+func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
+	action := ctx.Request().Input("action", "")
+	if action == "" {
+		// 兼容 GET 请求获取进度
+		action = ctx.Request().Query("action", "progress")
 	}
 
 	attachmentService := services.NewAttachmentService(ctx)
-	chunkID, err := attachmentService.InitChunkUpload(filename, totalSize, chunkSize, totalChunks)
-	if err != nil {
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to init chunk upload", map[string]any{
-			"error":      err.Error(),
-			"filename":   filename,
-			"total_size": totalSize,
-		}, "Init chunk upload error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "init_chunk_upload_failed")
-	}
 
-	return response.Success(ctx, "init_chunk_upload_success", http.Json{
-		"chunk_id": chunkID,
-	})
-}
+	switch action {
+	case "init":
+		// 初始化分片上传
+		filename := ctx.Request().Input("filename", "")
+		if filename == "" {
+			return response.Error(ctx, http.StatusBadRequest, "filename_required")
+		}
 
-// UploadChunk 上传分片
-func (r *AttachmentController) UploadChunk(ctx http.Context) http.Response {
-	chunkID := ctx.Request().Input("chunk_id", "")
-	if chunkID == "" {
-		return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
-	}
+		totalSize, err := strconv.ParseInt(ctx.Request().Input("total_size", "0"), 10, 64)
+		if err != nil || totalSize <= 0 {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
+		}
 
-	chunkIndex, err := strconv.Atoi(ctx.Request().Input("chunk_index", "-1"))
-	if err != nil || chunkIndex < 0 {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_index")
-	}
+		chunkSize, err := strconv.ParseInt(ctx.Request().Input("chunk_size", "0"), 10, 64)
+		if err != nil || chunkSize <= 0 {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
+		}
 
-	file, err := ctx.Request().File("chunk")
-	if err != nil {
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to get chunk file", map[string]any{
-			"error":       err.Error(),
-			"chunk_id":    chunkID,
-			"chunk_index": chunkIndex,
-		}, "Get chunk file error: %v", err)
-		return response.Error(ctx, http.StatusBadRequest, "chunk_file_required")
-	}
+		totalChunks, err := strconv.Atoi(ctx.Request().Input("total_chunks", "0"))
+		if err != nil || totalChunks <= 0 {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+		}
 
-	// 读取分片数据：先将文件保存到临时位置，然后读取
-	storage := facades.Storage().Disk("local")
+		chunkID, err := attachmentService.InitChunkUpload(filename, totalSize, chunkSize, totalChunks)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to init chunk upload", map[string]any{
+				"error":      err.Error(),
+				"filename":   filename,
+				"total_size": totalSize,
+			}, "Init chunk upload error: %v", err)
 
-	// 保存文件到临时位置
-	savedPath, err := storage.PutFile("", file)
-	if err != nil {
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to save temp chunk file", map[string]any{
-			"error":       err.Error(),
-			"chunk_id":    chunkID,
-			"chunk_index": chunkIndex,
-		}, "Save temp chunk file error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "save_temp_chunk_failed")
-	}
+			// 检查是否是存储驱动不支持的错误
+			if strings.Contains(err.Error(), "大文件分片上传仅支持本地存储") {
+				return response.Error(ctx, http.StatusBadRequest, "chunk_upload_only_local_storage")
+			}
 
-	// 读取文件内容
-	chunkDataStr, err := storage.Get(savedPath)
-	if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "init_chunk_upload_failed")
+		}
+
+		return response.Success(ctx, "init_chunk_upload_success", http.Json{
+			"chunk_id": chunkID,
+		})
+
+	case "upload":
+		// 上传分片
+		chunkID := ctx.Request().Input("chunk_id", "")
+		if chunkID == "" {
+			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
+		}
+
+		chunkIndex, err := strconv.Atoi(ctx.Request().Input("chunk_index", "-1"))
+		if err != nil || chunkIndex < 0 {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_index")
+		}
+
+		file, err := ctx.Request().File("chunk")
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to get chunk file", map[string]any{
+				"error":       err.Error(),
+				"chunk_id":    chunkID,
+				"chunk_index": chunkIndex,
+			}, "Get chunk file error: %v", err)
+			return response.Error(ctx, http.StatusBadRequest, "chunk_file_required")
+		}
+
+		// 读取分片数据：先将文件保存到临时位置，然后读取
+		storage := facades.Storage().Disk("local")
+
+		// 保存文件到临时位置
+		savedPath, err := storage.PutFile("", file)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to save temp chunk file", map[string]any{
+				"error":       err.Error(),
+				"chunk_id":    chunkID,
+				"chunk_index": chunkIndex,
+			}, "Save temp chunk file error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "save_temp_chunk_failed")
+		}
+
+		// 读取文件内容
+		chunkDataStr, err := storage.Get(savedPath)
+		if err != nil {
+			// 清理临时文件
+			_ = storage.Delete(savedPath)
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to read chunk data", map[string]any{
+				"error":       err.Error(),
+				"chunk_id":    chunkID,
+				"chunk_index": chunkIndex,
+			}, "Read chunk data error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "read_chunk_failed")
+		}
+
 		// 清理临时文件
 		_ = storage.Delete(savedPath)
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to read chunk data", map[string]any{
-			"error":       err.Error(),
-			"chunk_id":    chunkID,
-			"chunk_index": chunkIndex,
-		}, "Read chunk data error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "read_chunk_failed")
+
+		// 转换为字节数组
+		chunkData := []byte(chunkDataStr)
+
+		if err := attachmentService.UploadChunk(chunkID, chunkIndex, chunkData); err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to upload chunk", map[string]any{
+				"error":       err.Error(),
+				"chunk_id":    chunkID,
+				"chunk_index": chunkIndex,
+			}, "Upload chunk error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "upload_chunk_failed")
+		}
+
+		return response.Success(ctx, "upload_chunk_success")
+
+	case "merge":
+		// 合并分片
+		chunkID := ctx.Request().Input("chunk_id", "")
+		if chunkID == "" {
+			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
+		}
+
+		filename := ctx.Request().Input("filename", "")
+		if filename == "" {
+			return response.Error(ctx, http.StatusBadRequest, "filename_required")
+		}
+
+		// 获取MIME类型：直接根据文件扩展名推断（前端传递的 mime_type 可能不准确）
+		ext := filepath.Ext(filename)
+		mimeType := mime.TypeByExtension(ext)
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to merge chunks", map[string]any{
+				"error":    err.Error(),
+				"chunk_id": chunkID,
+				"filename": filename,
+			}, "Merge chunks error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "merge_chunks_failed")
+		}
+
+		fileURL := attachmentService.GetFileURL(attachment)
+
+		return response.Success(ctx, "merge_chunks_success", http.Json{
+			"id":        attachment.ID,
+			"filename":  attachment.Filename,
+			"size":      attachment.Size,
+			"mime_type": attachment.MimeType,
+			"file_type": attachment.FileType,
+			"file_url":  fileURL,
+		})
+
+	case "progress":
+		// 获取分片上传进度
+		chunkID := ctx.Request().Query("chunk_id", "")
+		if chunkID == "" {
+			chunkID = ctx.Request().Input("chunk_id", "")
+		}
+		if chunkID == "" {
+			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
+		}
+
+		progress, err := attachmentService.GetChunkProgress(chunkID)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Failed to get chunk progress", map[string]any{
+				"error":    err.Error(),
+				"chunk_id": chunkID,
+			}, "Get chunk progress error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "get_progress_failed")
+		}
+
+		return response.Success(ctx, "get_success", progress)
+
+	default:
+		return response.Error(ctx, http.StatusBadRequest, "invalid_action")
 	}
-
-	// 清理临时文件
-	_ = storage.Delete(savedPath)
-
-	// 转换为字节数组
-	chunkData := []byte(chunkDataStr)
-
-	attachmentService := services.NewAttachmentService(ctx)
-	if err := attachmentService.UploadChunk(chunkID, chunkIndex, chunkData); err != nil {
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to upload chunk", map[string]any{
-			"error":       err.Error(),
-			"chunk_id":    chunkID,
-			"chunk_index": chunkIndex,
-		}, "Upload chunk error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "upload_chunk_failed")
-	}
-
-	return response.Success(ctx, "upload_chunk_success")
-}
-
-// MergeChunks 合并分片
-func (r *AttachmentController) MergeChunks(ctx http.Context) http.Response {
-	chunkID := ctx.Request().Input("chunk_id", "")
-	if chunkID == "" {
-		return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
-	}
-
-	filename := ctx.Request().Input("filename", "")
-	if filename == "" {
-		return response.Error(ctx, http.StatusBadRequest, "filename_required")
-	}
-
-	// 获取MIME类型：直接根据文件扩展名推断（前端传递的 mime_type 可能不准确）
-	ext := filepath.Ext(filename)
-	mimeType := mime.TypeByExtension(ext)
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-
-	attachmentService := services.NewAttachmentService(ctx)
-	attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType)
-	if err != nil {
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to merge chunks", map[string]any{
-			"error":    err.Error(),
-			"chunk_id": chunkID,
-			"filename": filename,
-		}, "Merge chunks error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "merge_chunks_failed")
-	}
-
-	fileURL := attachmentService.GetFileURL(attachment)
-
-	return response.Success(ctx, "merge_chunks_success", http.Json{
-		"id":        attachment.ID,
-		"filename":  attachment.Filename,
-		"size":      attachment.Size,
-		"mime_type": attachment.MimeType,
-		"file_type": attachment.FileType,
-		"file_url":  fileURL,
-	})
-}
-
-// GetChunkProgress 获取分片上传进度
-func (r *AttachmentController) GetChunkProgress(ctx http.Context) http.Response {
-	chunkID := ctx.Request().Query("chunk_id", "")
-	if chunkID == "" {
-		return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
-	}
-
-	attachmentService := services.NewAttachmentService(ctx)
-	progress, err := attachmentService.GetChunkProgress(chunkID)
-	if err != nil {
-		errorlog.RecordHTTP(ctx, "attachment", "Failed to get chunk progress", map[string]any{
-			"error":    err.Error(),
-			"chunk_id": chunkID,
-		}, "Get chunk progress error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "get_progress_failed")
-	}
-
-	return response.Success(ctx, "get_success", progress)
 }
 
 // Download 下载附件文件

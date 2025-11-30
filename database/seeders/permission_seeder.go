@@ -120,10 +120,11 @@ func (s *PermissionSeeder) Run() error {
 		// 附件管理
 		{Name: "附件列表", Slug: "attachment.index", Method: "GET", Path: "/api/admin/attachments", Description: "查看附件列表", Status: 1, Sort: 1, MenuID: attachmentMenu.ID},
 		{Name: "附件上传", Slug: "attachment.upload", Method: "POST", Path: "/api/admin/attachments/upload", Description: "上传附件", Status: 1, Sort: 2, MenuID: attachmentMenu.ID},
-		{Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
-		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
-		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
-		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
+		{Name: "大文件分片上传", Slug: "attachment.chunk", Method: "POST", Path: "/api/admin/attachments/chunk", Description: "大文件分片上传（包含初始化、上传分片、合并分片、获取进度）", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
+		{Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
+		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
+		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
+		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 7, MenuID: attachmentMenu.ID},
 	}
 
 	for _, perm := range permissions {

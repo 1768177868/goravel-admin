@@ -63,18 +63,26 @@ func NewAttachmentService(ctx http.Context) AttachmentService {
 
 // InitChunkUpload 初始化分片上传
 func (s *AttachmentServiceImpl) InitChunkUpload(filename string, totalSize int64, chunkSize int64, totalChunks int) (string, error) {
+	// 检查存储驱动：大文件分片上传仅支持本地存储
+	cloudStorageDrivers := []string{"s3", "oss", "cos", "minio", "qiniu"}
+	for _, driver := range cloudStorageDrivers {
+		if s.disk == driver {
+			return "", fmt.Errorf("大文件分片上传仅支持本地存储，当前存储驱动为: %s", driver)
+		}
+	}
+
 	// 生成唯一的分片ID
 	hash := md5.Sum([]byte(fmt.Sprintf("%s_%d_%d", filename, totalSize, time.Now().UnixNano())))
 	chunkID := hex.EncodeToString(hash[:])
 
 	// 存储分片信息到缓存
 	chunkInfo := map[string]any{
-		"filename":    filename,
-		"total_size":  totalSize,
-		"chunk_size":  chunkSize,
-		"total_chunks": totalChunks,
+		"filename":        filename,
+		"total_size":      totalSize,
+		"chunk_size":      chunkSize,
+		"total_chunks":    totalChunks,
 		"uploaded_chunks": make([]bool, totalChunks),
-		"created_at":  time.Now().Unix(),
+		"created_at":      time.Now().Unix(),
 	}
 
 	// 缓存24小时
@@ -91,12 +99,46 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 	cacheKey := fmt.Sprintf("attachment:chunk:%s", chunkID)
 	
 	// 获取分片信息
+	// 先检查缓存是否存在
+	if !facades.Cache().Has(cacheKey) {
+		return fmt.Errorf("分片信息不存在或已过期")
+	}
+	
+	// 尝试从缓存获取数据
 	var chunkInfo map[string]any
-	if err := facades.Cache().Get(cacheKey, &chunkInfo); err != nil {
-		return fmt.Errorf("分片信息不存在或已过期: %w", err)
+	cacheValue := facades.Cache().Get(cacheKey, nil)
+	if cacheValue == nil {
+		return fmt.Errorf("分片信息不存在或已过期")
+	}
+	
+	// 如果直接返回的是 map，直接使用
+	if info, ok := cacheValue.(map[string]any); ok {
+		chunkInfo = info
+	} else {
+		// 否则尝试反序列化到 chunkInfo
+		if err := facades.Cache().Get(cacheKey, &chunkInfo); err != nil {
+			return fmt.Errorf("获取分片信息失败: %v", err)
+		}
+	}
+	
+	// 检查 chunkInfo 是否为空
+	if len(chunkInfo) == 0 {
+		return fmt.Errorf("分片信息为空")
 	}
 
-	totalChunks := int(chunkInfo["total_chunks"].(int))
+	// 安全地获取 total_chunks
+	var totalChunks int
+	switch v := chunkInfo["total_chunks"].(type) {
+	case int:
+		totalChunks = v
+	case int64:
+		totalChunks = int(v)
+	case float64:
+		totalChunks = int(v)
+	default:
+		return fmt.Errorf("无效的 total_chunks 类型")
+	}
+
 	if chunkIndex < 0 || chunkIndex >= totalChunks {
 		return fmt.Errorf("分片索引超出范围")
 	}
@@ -104,13 +146,29 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 	// 保存分片到临时目录
 	storage := facades.Storage().Disk(s.disk)
 	chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, chunkIndex)
-	
+
 	if err := storage.Put(chunkPath, string(chunkData)); err != nil {
 		return fmt.Errorf("保存分片失败: %w", err)
 	}
 
-	// 更新已上传分片标记
-	uploadedChunks := chunkInfo["uploaded_chunks"].([]bool)
+	// 安全地获取和更新已上传分片标记
+	var uploadedChunks []bool
+	switch v := chunkInfo["uploaded_chunks"].(type) {
+	case []bool:
+		uploadedChunks = v
+	case []interface{}:
+		// 从 []interface{} 转换为 []bool
+		uploadedChunks = make([]bool, len(v))
+		for i, val := range v {
+			if b, ok := val.(bool); ok {
+				uploadedChunks[i] = b
+			}
+		}
+	default:
+		// 如果类型不匹配，创建新的数组
+		uploadedChunks = make([]bool, totalChunks)
+	}
+
 	if len(uploadedChunks) <= chunkIndex {
 		// 扩展数组
 		newArray := make([]bool, totalChunks)
@@ -133,13 +191,62 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	cacheKey := fmt.Sprintf("attachment:chunk:%s", chunkID)
 	
 	// 获取分片信息
+	// 先检查缓存是否存在
+	if !facades.Cache().Has(cacheKey) {
+		return nil, fmt.Errorf("分片信息不存在或已过期")
+	}
+	
+	// 尝试从缓存获取数据
 	var chunkInfo map[string]any
-	if err := facades.Cache().Get(cacheKey, &chunkInfo); err != nil {
-		return nil, fmt.Errorf("分片信息不存在或已过期: %w", err)
+	cacheValue := facades.Cache().Get(cacheKey, nil)
+	if cacheValue == nil {
+		return nil, fmt.Errorf("分片信息不存在或已过期")
+	}
+	
+	// 如果直接返回的是 map，直接使用
+	if info, ok := cacheValue.(map[string]any); ok {
+		chunkInfo = info
+	} else {
+		// 否则尝试反序列化到 chunkInfo
+		if err := facades.Cache().Get(cacheKey, &chunkInfo); err != nil {
+			return nil, fmt.Errorf("获取分片信息失败: %v", err)
+		}
+	}
+	
+	// 检查 chunkInfo 是否为空
+	if len(chunkInfo) == 0 {
+		return nil, fmt.Errorf("分片信息为空")
 	}
 
-	totalChunks := int(chunkInfo["total_chunks"].(int))
-	uploadedChunks := chunkInfo["uploaded_chunks"].([]bool)
+	// 安全地获取 total_chunks
+	var totalChunks int
+	switch v := chunkInfo["total_chunks"].(type) {
+	case int:
+		totalChunks = v
+	case int64:
+		totalChunks = int(v)
+	case float64:
+		totalChunks = int(v)
+	default:
+		return nil, fmt.Errorf("无效的 total_chunks 类型")
+	}
+
+	// 安全地获取 uploaded_chunks
+	var uploadedChunks []bool
+	switch v := chunkInfo["uploaded_chunks"].(type) {
+	case []bool:
+		uploadedChunks = v
+	case []interface{}:
+		// 从 []interface{} 转换为 []bool
+		uploadedChunks = make([]bool, len(v))
+		for i, val := range v {
+			if b, ok := val.(bool); ok {
+				uploadedChunks[i] = b
+			}
+		}
+	default:
+		return nil, fmt.Errorf("无效的 uploaded_chunks 类型")
+	}
 
 	// 检查所有分片是否都已上传
 	for i := 0; i < totalChunks; i++ {
@@ -158,7 +265,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 			ext = exts[0]
 		}
 	}
-	
+
 	// 生成唯一文件名
 	hash := md5.Sum([]byte(fmt.Sprintf("%s_%d", filename, time.Now().UnixNano())))
 	uniqueName := hex.EncodeToString(hash[:]) + ext
@@ -230,29 +337,81 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 // GetChunkProgress 获取分片上传进度
 func (s *AttachmentServiceImpl) GetChunkProgress(chunkID string) (map[string]any, error) {
 	cacheKey := fmt.Sprintf("attachment:chunk:%s", chunkID)
-	
-	var chunkInfo map[string]any
-	if err := facades.Cache().Get(cacheKey, &chunkInfo); err != nil {
-		return nil, fmt.Errorf("分片信息不存在或已过期: %w", err)
-	}
 
-	uploadedChunks := chunkInfo["uploaded_chunks"].([]bool)
-	uploadedCount := 0
-	for _, uploaded := range uploadedChunks {
-		if uploaded {
-			uploadedCount++
+	// 先检查缓存是否存在
+	if !facades.Cache().Has(cacheKey) {
+		return nil, fmt.Errorf("分片信息不存在或已过期")
+	}
+	
+	// 尝试从缓存获取数据
+	var chunkInfo map[string]any
+	cacheValue := facades.Cache().Get(cacheKey, nil)
+	if cacheValue == nil {
+		return nil, fmt.Errorf("分片信息不存在或已过期")
+	}
+	
+	// 如果直接返回的是 map，直接使用
+	if info, ok := cacheValue.(map[string]any); ok {
+		chunkInfo = info
+	} else {
+		// 否则尝试反序列化到 chunkInfo
+		if err := facades.Cache().Get(cacheKey, &chunkInfo); err != nil {
+			return nil, fmt.Errorf("获取分片信息失败: %v", err)
 		}
 	}
+	
+	// 检查 chunkInfo 是否为空
+	if len(chunkInfo) == 0 {
+		return nil, fmt.Errorf("分片信息为空")
+	}
 
-	totalChunks := int(chunkInfo["total_chunks"].(int))
+	// 安全地获取 total_chunks
+	var totalChunks int
+	switch v := chunkInfo["total_chunks"].(type) {
+	case int:
+		totalChunks = v
+	case int64:
+		totalChunks = int(v)
+	case float64:
+		totalChunks = int(v)
+	default:
+		return nil, fmt.Errorf("无效的 total_chunks 类型")
+	}
+
+	// 安全地获取 uploaded_chunks
+	var uploadedChunks []bool
+	switch v := chunkInfo["uploaded_chunks"].(type) {
+	case []bool:
+		uploadedChunks = v
+	case []interface{}:
+		// 从 []interface{} 转换为 []bool
+		uploadedChunks = make([]bool, len(v))
+		for i, val := range v {
+			if b, ok := val.(bool); ok {
+				uploadedChunks[i] = b
+			}
+		}
+	default:
+		return nil, fmt.Errorf("无效的 uploaded_chunks 类型")
+	}
+
+	uploadedCount := 0
+	uploadedIndices := []int{} // 已上传的分片索引数组
+	for i, uploaded := range uploadedChunks {
+		if uploaded {
+			uploadedCount++
+			uploadedIndices = append(uploadedIndices, i)
+		}
+	}
 	progress := float64(uploadedCount) / float64(totalChunks) * 100
 
 	return map[string]any{
-		"chunk_id":       chunkID,
-		"total_chunks":   totalChunks,
-		"uploaded_count": uploadedCount,
-		"progress":       progress,
-		"completed":      uploadedCount == totalChunks,
+		"chunk_id":        chunkID,
+		"total_chunks":    totalChunks,
+		"uploaded_count":  uploadedCount,
+		"uploaded_chunks": uploadedIndices, // 返回已上传的分片索引数组
+		"progress":        progress,
+		"completed":       uploadedCount == totalChunks,
 	}, nil
 }
 
@@ -319,7 +478,7 @@ func (s *AttachmentServiceImpl) GetFileURL(attachment *models.Attachment) string
 
 	// 对于云存储，生成临时URL或直接URL
 	storage := facades.Storage().Disk(attachment.Disk)
-	
+
 	// 尝试生成临时URL（24小时有效）
 	if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
 		return url
@@ -384,4 +543,3 @@ func (s *AttachmentServiceImpl) DeleteFile(attachment *models.Attachment) error 
 
 	return nil
 }
-
