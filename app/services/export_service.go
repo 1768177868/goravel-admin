@@ -58,7 +58,7 @@ func NewExportService(ctx http.Context) ExportService {
 	}
 
 	// 记录使用的存储驱动（用于调试）
-	facades.Log().Debugf("ExportService: using storage disk: %s", disk)
+	// facades.Log().Debugf("ExportService: using storage disk: %s", disk)
 
 	// 文件路径默认使用 exports，不再从配置读取
 	path := "exports"

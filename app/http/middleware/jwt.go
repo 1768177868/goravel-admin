@@ -111,7 +111,7 @@ func Jwt() http.Middleware {
 		ctx.WithValue("admin", admin)
 		ctx.WithValue("token", accessToken)
 
-		facades.Log().Debugf("JWT middleware: admin set in context, ID: %d, Username: %s", admin.ID, admin.Username)
+		// facades.Log().Debugf("JWT middleware: admin set in context, ID: %d, Username: %s", admin.ID, admin.Username)
 
 		ctx.Request().Next()
 	}
