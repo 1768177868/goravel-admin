@@ -670,11 +670,18 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-  loadDepartments()
-  loadRoles()
+onMounted(async () => {
+  try {
+    initDefaultSort()
+    await Promise.all([
+      loadData(),
+      loadDepartments(),
+      loadRoles()
+    ])
+  } catch (error) {
+    console.error('AdminList onMounted error:', error)
+    ElMessage.error('页面加载失败，请刷新重试')
+  }
 })
 </script>
 

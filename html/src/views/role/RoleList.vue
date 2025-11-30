@@ -934,10 +934,17 @@ const handleDelete = async (row) => {
   }
 }
 
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-  loadMenuPermissionTree()
+onMounted(async () => {
+  try {
+    initDefaultSort()
+    await Promise.all([
+      loadData(),
+      loadMenuPermissionTree()
+    ])
+  } catch (error) {
+    console.error('RoleList onMounted error:', error)
+    ElMessage.error('页面加载失败，请刷新重试')
+  }
 })
 </script>
 
