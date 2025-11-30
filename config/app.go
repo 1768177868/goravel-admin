@@ -15,7 +15,7 @@ import (
 
 	// "github.com/goravel/framework/grpc" // gRPC 已关闭
 	"goravel/app/providers"
-	"goravel/lang_fs"
+	"goravel/lang"
 
 	"github.com/goravel/framework/hash"
 	"github.com/goravel/framework/http"
@@ -81,8 +81,9 @@ func init() {
 		//
 		// The path to the language files for the application. You may change
 		// the path to a different directory if you would like to customize it.
+		// 框架会优先使用 lang_path 指定的文件系统，当文件不存在时才使用 lang_fs embed 文件系统
 		"lang_path": "lang",
-		"lang_fs":   lang_fs.Fs,
+		"lang_fs":   lang.FS,
 		// Encryption Key
 		//
 		// 32 character string, otherwise these encrypted strings
