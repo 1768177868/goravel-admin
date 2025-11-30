@@ -83,9 +83,47 @@ export const useNotificationStore = defineStore('notification', {
       if (!token) {
         return
       }
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const host = window.location.host
-      const wsUrl = `${protocol}//${host}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+      
+      // 构建 WebSocket URL
+      // 优先使用 VITE_WS_BASE_URL（单独的 WebSocket 域名）
+      // 如果没有配置，则使用 VITE_API_BASE_URL
+      let wsUrl
+      const wsBaseURL = import.meta.env.VITE_WS_BASE_URL
+      const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+      
+      if (wsBaseURL) {
+        // 如果配置了单独的 WebSocket 域名，使用它
+        const base = wsBaseURL.replace(/\/+$/, '')
+        if (base.startsWith('wss://') || base.startsWith('ws://')) {
+          // 如果已经包含协议，直接使用
+          wsUrl = base + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+        } else if (base.startsWith('https://')) {
+          wsUrl = base.replace('https://', 'wss://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+        } else if (base.startsWith('http://')) {
+          wsUrl = base.replace('http://', 'ws://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+        } else {
+          // 如果没有协议，根据当前页面协议判断
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+          wsUrl = `${protocol}//${base}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+        }
+      } else if (apiBaseURL) {
+        // 如果没有配置 WebSocket 域名，使用 API 基础 URL
+        const base = apiBaseURL.replace(/\/+$/, '')
+        if (base.startsWith('https://')) {
+          wsUrl = base.replace('https://', 'wss://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+        } else if (base.startsWith('http://')) {
+          wsUrl = base.replace('http://', 'ws://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+        } else {
+          // 如果没有协议，根据当前页面协议判断
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+          wsUrl = `${protocol}//${base}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+        }
+      } else {
+        // 如果都没有配置，使用当前页面的协议和主机（开发环境）
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        const host = window.location.host
+        wsUrl = `${protocol}//${host}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+      }
 
       this.ws = new WebSocket(wsUrl)
       this.ws.onopen = () => {

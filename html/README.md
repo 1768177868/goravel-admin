@@ -29,6 +29,12 @@ VITE_API_BASE_URL=http://127.0.0.1:3000
 
 # API 前缀
 VITE_API_PREFIX=/api/admin
+
+# WebSocket 基础地址（可选，如果配置了单独的 WebSocket 域名）
+# 如果不配置，将使用 VITE_API_BASE_URL
+# VITE_WS_BASE_URL=wss://wss.xuancheng888.top
+# 或者
+# VITE_WS_BASE_URL=https://wss.xuancheng888.top
 ```
 
 ## 安装依赖
