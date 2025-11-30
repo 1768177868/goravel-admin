@@ -226,10 +226,6 @@ go run .
 http://localhost:3000/swagger/
 ```
 
-static build
-```
-go build --ldflags "-extldflags -static" -o main .
-```
 
 cloudflare workers
 ```

@@ -225,11 +225,6 @@ go run .
 http://localhost:3000/swagger/
 ```
 
-静态编译
-```
-go build --ldflags "-extldflags -static" -o main .
-```
-
 cloudflare pages
 ```
 # 构建命令

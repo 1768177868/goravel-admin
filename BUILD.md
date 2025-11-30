@@ -1,5 +1,24 @@
 #### 使用 systemd 部署（推荐）
 
+
+```
+go run . artisan build
+```
+
+static build
+```
+# 基础静态编译
+go build --ldflags "-extldflags -static" -o main .
+
+# 优化版本（去除调试信息和符号表，减小文件大小）
+go build -ldflags "-extldflags -static -s -w" -o main .
+
+# 进一步优化（Linux 下使用 strip）
+go build -ldflags "-extldflags -static -s -w" -o main .
+strip main  # Linux 下进一步减小文件大小
+```
+
+
 使用 systemd 可以将应用作为系统服务运行，支持开机自启、自动重启、日志管理等功能。
 
 ##### 步骤 1：准备部署文件 
@@ -16,7 +35,6 @@ scp main user@server:/www/goravel-admin/
 
 # 上传配置文件和其他必要文件
 scp .env user@server:/www/goravel-admin/.env
-scp -r database/ user@server:/www/goravel-admin/
 scp -r storage/ user@server:/www/goravel-admin/
 scp -r resources/ user@server:/www/goravel-admin/
 scp -r public/ user@server:/www/goravel-admin/
