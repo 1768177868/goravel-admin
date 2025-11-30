@@ -42,15 +42,20 @@ func (receiver *RouteServiceProvider) Boot(app foundation.Application) {
 }
 
 func (receiver *RouteServiceProvider) configureRateLimiting() {
+	// 全局速率限制器
 	facades.RateLimiter().For("global", func(ctx contractshttp.Context) contractshttp.Limit {
 		return limit.PerMinute(1000)
 	})
+
+	// IP 速率限制器
 	facades.RateLimiter().ForWithLimits("ip", func(ctx contractshttp.Context) []contractshttp.Limit {
 		return []contractshttp.Limit{
 			limit.PerDay(1000),
 			limit.PerMinute(2).By(ctx.Request().Ip()),
 		}
 	})
+
+	// 登录速率限制器
 	facades.RateLimiter().For("login", func(ctx contractshttp.Context) contractshttp.Limit {
 		username := ctx.Request().Input("username", "")
 		if username == "" {

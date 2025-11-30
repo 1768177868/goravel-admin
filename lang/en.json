@@ -122,6 +122,7 @@
     "id_required": "ID is required",
     "ids_required": "IDs are required",
     "record_not_found": "Record not found",
-    "params_error": "Parameter error"
+    "params_error": "Parameter error",
+    "too_many_requests": "Too many requests, please try again later"
   }
 }

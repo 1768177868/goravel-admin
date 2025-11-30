@@ -128,6 +128,7 @@
     "id_required": "ID不能为空",
     "ids_required": "IDs不能为空",
     "record_not_found": "记录不存在",
-    "params_error": "参数错误"
+    "params_error": "参数错误",
+    "too_many_requests": "请求过于频繁，请稍后再试"
   }
 }
