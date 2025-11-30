@@ -22,6 +22,9 @@ set GOOS=linux
 set GOARCH=amd64
 go build -ldflags "-extldflags -static -s -w" -o main .
 
+# 还原
+SET GOOS=windows
+
 # Linux/Mac:
 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags -static -s -w" -o main .
 ```
