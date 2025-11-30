@@ -26,7 +26,7 @@
         :loading="loading"
         border
         :column-config="{ resizable: true }"
-        :tree-config="hasSearch ? false : { children: 'children', expandAll: false, indent: 20 }"
+        :tree-config="hasSearch ? false : { childrenField: 'children', expandAll: false, indent: 20 }"
         height="600"
       >
         <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
