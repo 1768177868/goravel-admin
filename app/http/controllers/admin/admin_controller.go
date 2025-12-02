@@ -22,42 +22,6 @@ type AdminController struct {
 	adminService services.AdminService
 }
 
-// AdminListRequest 管理员列表请求参数
-type AdminListRequest struct {
-	Page         int    `json:"page" form:"page" example:"1"`                               // 页码
-	PageSize     int    `json:"page_size" form:"page_size" example:"10"`                    // 每页数量
-	Username     string `json:"username" form:"username" example:"admin"`                   // 用户名（模糊搜索）
-	Status       string `json:"status" form:"status" example:"1"`                           // 状态：1-启用，0-禁用
-	RoleID       string `json:"role_id" form:"role_id" example:"1"`                         // 角色ID
-	DepartmentID string `json:"department_id" form:"department_id" example:"1"`             // 部门ID
-	StartTime    string `json:"start_time" form:"start_time" example:"2024-01-01 00:00:00"` // 开始时间
-	EndTime      string `json:"end_time" form:"end_time" example:"2024-12-31 23:59:59"`     // 结束时间
-	OrderBy      string `json:"order_by" form:"order_by" example:"created_at:desc"`         // 排序
-}
-
-// AdminCreateRequest 创建管理员请求参数
-type AdminCreateRequest struct {
-	Username     string `json:"username" binding:"required" example:"admin"`  // 用户名（必填）
-	Password     string `json:"password" binding:"required" example:"123456"` // 密码（必填）
-	Nickname     string `json:"nickname" example:"管理员"`                       // 昵称
-	Email        string `json:"email" example:"admin@example.com"`            // 邮箱
-	Phone        string `json:"phone" example:"13800138000"`                  // 手机号
-	DepartmentID uint   `json:"department_id" example:"1"`                    // 部门ID
-	Status       uint8  `json:"status" example:"1"`                           // 状态：1-启用，0-禁用
-	RoleIDs      []uint `json:"role_ids" example:"[1,2]"`                     // 角色ID列表
-}
-
-// AdminUpdateRequest 更新管理员请求参数
-type AdminUpdateRequest struct {
-	Nickname     string `json:"nickname" example:"管理员"`            // 昵称
-	Email        string `json:"email" example:"admin@example.com"` // 邮箱
-	Phone        string `json:"phone" example:"13800138000"`       // 手机号
-	DepartmentID uint   `json:"department_id" example:"1"`         // 部门ID
-	Status       string `json:"status" example:"1"`                // 状态：1-启用，0-禁用
-	Password     string `json:"password" example:"123456"`         // 密码（可选，不传则不更新）
-	RoleIDs      []uint `json:"role_ids" example:"[1,2]"`          // 角色ID列表
-}
-
 // AdminExportRequest 导出管理员请求参数
 type AdminExportRequest struct {
 	Username     string `json:"username" form:"username" example:"admin"`                   // 用户名（模糊搜索）

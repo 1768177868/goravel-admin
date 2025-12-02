@@ -239,6 +239,7 @@ npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 # 根目录
 html
 # 注意: worker.js 会自动处理 SPA 路由，当文件不存在时返回 index.html
+```
 
 pprof
 http://localhost:3000/debug/pprof/
