@@ -80,6 +80,7 @@ func (s *PermissionSeeder) Run() error {
 		// 配置管理
 		{Name: "获取配置", Slug: "config.group", Method: "GET", Path: "/api/admin/configs/group/*", Description: "根据分组获取配置", Status: 1, Sort: 1, MenuID: configMenu.ID},
 		{Name: "保存配置", Slug: "config.save", Method: "POST", Path: "/api/admin/configs/save", Description: "保存配置", Status: 1, Sort: 2, MenuID: configMenu.ID},
+		{Name: "测试邮箱", Slug: "config.test_email", Method: "POST", Path: "/api/admin/configs/test-email", Description: "测试邮箱配置", Status: 1, Sort: 3, MenuID: configMenu.ID},
 		// 黑名单管理
 		{Name: "黑名单列表", Slug: "blacklist.index", Method: "GET", Path: "/api/admin/blacklists", Description: "查看黑名单列表", Status: 1, Sort: 1, MenuID: blacklistMenu.ID},
 		{Name: "黑名单详情", Slug: "blacklist.show", Method: "GET", Path: "/api/admin/blacklists/*", Description: "查看黑名单详情", Status: 1, Sort: 2, MenuID: blacklistMenu.ID},
@@ -117,14 +118,16 @@ func (s *PermissionSeeder) Run() error {
 		// 导出管理
 		{Name: "导出列表", Slug: "export.index", Method: "GET", Path: "/api/admin/exports", Description: "查看导出记录列表", Status: 1, Sort: 1, MenuID: exportMenu.ID},
 		{Name: "删除导出", Slug: "export.destroy", Method: "DELETE", Path: "/api/admin/exports/*", Description: "删除导出记录及源文件", Status: 1, Sort: 2, MenuID: exportMenu.ID},
+		{Name: "导出批量删除", Slug: "export.batch_delete", Method: "POST", Path: "/api/admin/exports/batch-delete", Description: "批量删除导出记录", Status: 1, Sort: 3, MenuID: exportMenu.ID},
 		// 附件管理
 		{Name: "附件列表", Slug: "attachment.index", Method: "GET", Path: "/api/admin/attachments", Description: "查看附件列表", Status: 1, Sort: 1, MenuID: attachmentMenu.ID},
 		{Name: "附件上传", Slug: "attachment.upload", Method: "POST", Path: "/api/admin/attachments/upload", Description: "上传附件", Status: 1, Sort: 2, MenuID: attachmentMenu.ID},
 		{Name: "大文件分片上传", Slug: "attachment.chunk", Method: "POST", Path: "/api/admin/attachments/chunk", Description: "大文件分片上传（包含初始化、上传分片、合并分片、获取进度）", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
-		{Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
+		// {Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
-		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
-		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 7, MenuID: attachmentMenu.ID},
+		{Name: "附件更新显示名称", Slug: "attachment.update_display_name", Method: "PUT", Path: "/api/admin/attachments/*/display-name", Description: "更新附件显示名称", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
+		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 7, MenuID: attachmentMenu.ID},
+		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 8, MenuID: attachmentMenu.ID},
 	}
 
 	for _, perm := range permissions {

@@ -42,13 +42,14 @@ func Admin() {
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
 		// 认证相关
 		router.Get("info", adminAuthController.Info)
-		router.Put("profile", adminAuthController.UpdateProfile)
+
 		router.Post("logout", adminAuthController.Logout)
 		router.Get("heartbeat", adminAuthController.Heartbeat)
+
 		// Token管理
-		router.Get("tokens", adminAuthController.Tokens)
-		router.Delete("tokens/{id}", adminAuthController.RevokeToken)
-		router.Delete("tokens", adminAuthController.RevokeAllTokens)
+		// router.Get("tokens", adminAuthController.Tokens)
+		// router.Delete("tokens/{id}", adminAuthController.RevokeToken)
+		// router.Delete("tokens", adminAuthController.RevokeAllTokens)
 
 		// 通知中心
 		router.Get("notifications", notificationController.Index)
@@ -56,10 +57,16 @@ func Admin() {
 		router.Get("notifications/recent", notificationController.Recent)
 		router.Post("notifications/{id}/read", notificationController.MarkRead)
 		router.Post("notifications/read-all", notificationController.MarkAllRead)
+
+		// 统一的下拉选项接口（不需要权限验证）
+		router.Get("options", optionController.Index)
 	})
 
 	// 需要认证、多语言、权限验证和操作日志的路由
 	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
+
+		router.Put("profile", adminAuthController.UpdateProfile)
+
 		// 密码管理
 		passwordController := admin.NewPasswordController()
 		router.Put("password", passwordController.UpdatePassword)
@@ -145,9 +152,6 @@ func Admin() {
 
 		// 调试: trace id 日志验证
 		// router.Get("debug/trace-test", debugController.TraceTest)
-
-		// 统一的下拉选项接口
-		router.Get("options", optionController.Index)
 
 		// 附件管理
 		router.Get("attachments", attachmentController.Index)

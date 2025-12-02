@@ -480,6 +480,8 @@ sudo systemctl enable goravel-admin
 
 **重要：热更新流程**
 
+**关键点：必须先替换二进制文件，然后才能用 `reload` 热重启！**
+
 1. **重新编译代码**（在开发机器上）：
    ```bash
    go build -tags overseer -o main .
@@ -495,12 +497,24 @@ sudo systemctl enable goravel-admin
    # 在服务器上执行
    cd /www/goravel-admin
    mv main main.old          # 备份旧版本
-   mv main.new main          # 替换为新版本
+   mv main.new main          # 替换为新版本（重要：必须先替换文件！）
    chmod +x main
    
-   # 触发零停机热更新
+   # 触发零停机热更新（此时二进制文件已更新，可以用 reload）
    sudo systemctl reload goravel-admin
    ```
+
+**`reload` vs `restart` 的区别：**
+
+| 操作 | 使用场景 | 是否有中断 | 说明 |
+|------|----------|------------|------|
+| `systemctl reload` | **二进制文件已更新** | ✅ 零中断 | overseer 检测到新文件，fork 子进程实现热更新 |
+| `systemctl restart` | 二进制文件未更新，或首次启动 | ❌ 有中断（2-5秒） | 停止旧进程，启动新进程 |
+
+**重要提示：**
+- ✅ **如果二进制文件已更新**：使用 `sudo systemctl reload goravel-admin`（零停机）
+- ❌ **如果二进制文件未更新**：`reload` 不会加载新代码，必须用 `restart`（有中断）
+- ⚠️ **代码更改后**：必须先编译、上传、替换文件，然后才能 `reload`
 
 **或者使用一键部署脚本：**
 
@@ -526,14 +540,30 @@ sudo systemctl enable goravel-admin
 **热更新命令：**
 
 ```bash
-# 方法 1：使用 systemctl reload（推荐）
-sudo systemctl reload goravel-admin  # 零停机重启
+# ⚠️ 重要：必须先替换二进制文件，然后才能用 reload！
 
-# 方法 2：直接发送 SIGHUP 信号
-sudo kill -HUP $(pidof main)
+# 完整流程：
+# 1. 编译新版本
+go build -tags overseer -o main .
 
-# 方法 3：使用 systemctl（会先停止再启动，有中断）
-sudo systemctl restart goravel-admin  # 普通重启
+# 2. 上传并替换文件
+scp main user@server:/www/goravel-admin/main.new
+ssh user@server "cd /www/goravel-admin && mv main main.old && mv main.new main && chmod +x main"
+
+# 3. 热重启（零停机）
+sudo systemctl reload goravel-admin  # ✅ 零停机，因为文件已更新
+
+# 如果文件未更新，reload 不会加载新代码，必须用 restart：
+sudo systemctl restart goravel-admin  # ❌ 有中断，但会加载新代码
+```
+
+**常见错误：**
+```bash
+# ❌ 错误：代码改了，但只执行 reload，文件没更新
+sudo systemctl reload goravel-admin  # 代码还是旧的！
+
+# ✅ 正确：先更新文件，再 reload
+mv main.new main && sudo systemctl reload goravel-admin  # 代码已更新，零停机
 ```
 
 **工作原理：**
@@ -590,6 +620,23 @@ ps aux | grep main
 # 手动重启（如果热更新失败）
 sudo systemctl restart goravel-admin
 ```
+
+**关于 `cannot move binary` 警告：**
+
+如果看到以下警告：
+```
+[overseer] disabled. run failed: cannot move binary (exit status 1)
+```
+
+这是**正常现象**，原因：
+- overseer 尝试替换正在运行的文件时，文件被占用无法移动
+- overseer 会自动回退到普通模式运行
+- **服务仍然正常运行**，只是热更新功能暂时不可用
+
+解决方法：
+1. **使用正确的部署流程**：先停止服务，替换文件，再启动
+2. **或者使用多实例部署**：通过 Nginx 负载均衡实现零停机
+3. **或者忽略警告**：如果服务正常运行，可以暂时忽略
 
 ##### 其他热更新方案详解
 

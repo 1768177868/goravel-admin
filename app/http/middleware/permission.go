@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 
 	"goravel/app/http/trans"
@@ -106,17 +108,122 @@ func Permission() http.Middleware {
 	}
 }
 
-// matchPath 简单的路径匹配，支持通配符
+// matchPath 路径匹配，支持通配符
+// 支持的模式：
+// 1. 精确匹配：/api/admin/roles 匹配 /api/admin/roles
+// 2. 末尾通配符：/api/admin/roles/* 匹配 /api/admin/roles/1
+// 3. 中间通配符：/api/admin/attachments/*/display-name 匹配 /api/admin/attachments/1/display-name
 func matchPath(pattern, path string) bool {
 	if pattern == path {
 		return true
 	}
-	// 简单的通配符匹配，如 /admin/admins/* 匹配 /admin/admins/1
-	if len(pattern) > 0 && pattern[len(pattern)-1] == '*' {
+
+	// 如果模式不包含通配符，直接返回 false
+	if !contains(pattern, '*') {
+		return false
+	}
+
+	// 将模式按 * 分割成多个部分
+	parts := splitPattern(pattern)
+	if len(parts) == 0 {
+		return false
+	}
+
+	// 如果模式以 * 开头，需要特殊处理
+	if pattern[0] == '*' {
+		// 检查路径是否以模式的剩余部分结尾
+		if len(parts) > 1 {
+			suffix := parts[1]
+			return len(path) >= len(suffix) && path[len(path)-len(suffix):] == suffix
+		}
+		return true
+	}
+
+	// 如果模式以 * 结尾
+	if pattern[len(pattern)-1] == '*' {
 		prefix := pattern[:len(pattern)-1]
-		if len(path) >= len(prefix) && path[:len(prefix)] == prefix {
+		if len(path) >= len(prefix) {
+			pathPrefix := path[:len(prefix)]
+			if pathPrefix == prefix {
+				// 如果前缀以 / 结尾，路径必须比前缀长（即后面还有内容）
+				if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
+					return len(path) > len(prefix)
+				}
+				// 如果前缀不以 / 结尾，路径可以等于或长于前缀
+				return true
+			}
+		}
+		return false
+	}
+
+	// 处理中间有通配符的情况，如 /api/admin/attachments/*/display-name
+	// 将模式按 * 分割
+	patternParts := splitPattern(pattern)
+	if len(patternParts) < 2 {
+		return false
+	}
+
+	// 过滤掉 "*" 标记，只保留实际的部分
+	var actualParts []string
+	for _, part := range patternParts {
+		if part != "*" {
+			actualParts = append(actualParts, part)
+		}
+	}
+
+	if len(actualParts) < 2 {
+		return false
+	}
+
+	// 检查路径是否以第一部分开头
+	firstPart := actualParts[0]
+	if len(path) < len(firstPart) || path[:len(firstPart)] != firstPart {
+		return false
+	}
+
+	// 检查路径是否以最后一部分结尾
+	lastPart := actualParts[len(actualParts)-1]
+	if len(path) < len(lastPart) || path[len(path)-len(lastPart):] != lastPart {
+		return false
+	}
+
+	// 检查中间部分是否存在（通配符匹配任意内容）
+	// 路径应该是：firstPart + 任意内容 + lastPart
+	remainingPath := path[len(firstPart):len(path)-len(lastPart)]
+	// 确保中间部分不为空（至少有一个字符，通常是数字ID）
+	return len(remainingPath) > 0
+}
+
+// contains 检查字符串是否包含指定字符
+func contains(s string, c byte) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == c {
 			return true
 		}
 	}
 	return false
+}
+
+// splitPattern 按 * 分割模式字符串
+func splitPattern(pattern string) []string {
+	var parts []string
+	var current strings.Builder
+	
+	for i := 0; i < len(pattern); i++ {
+		if pattern[i] == '*' {
+			if current.Len() > 0 {
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+			parts = append(parts, "*")
+		} else {
+			current.WriteByte(pattern[i])
+		}
+	}
+	
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+	
+	return parts
 }

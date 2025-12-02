@@ -325,7 +325,7 @@ func (s *MenuSeeder) Run() error {
 		Type:      2,
 		Status:    1,
 		Sort:      4,
-		IsHidden:  0,
+		IsHidden:  1,
 	})
 
 	return nil
