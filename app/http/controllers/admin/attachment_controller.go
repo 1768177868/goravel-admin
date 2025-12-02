@@ -419,12 +419,16 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType, totalChunks)
 		if err != nil {
 			errorlog.RecordHTTP(ctx, "attachment", "Failed to merge chunks", map[string]any{
-				"error":    err.Error(),
-				"chunk_id": chunkID,
-				"filename": filename,
+				"error":        err.Error(),
+				"chunk_id":     chunkID,
+				"filename":     filename,
+				"total_chunks": totalChunks,
 			}, "Merge chunks error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "merge_chunks_failed")
 		}
+
+		// 合并成功后，记录日志（用于调试）
+		facades.Log().Infof("Successfully merged chunks for chunkID %s, filename: %s, total_chunks: %d", chunkID, filename, totalChunks)
 
 		fileURL := attachmentService.GetFileURL(attachment)
 

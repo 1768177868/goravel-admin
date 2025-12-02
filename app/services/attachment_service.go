@@ -126,29 +126,39 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	datePath := time.Now().Format("2006/01/02")
 	finalPath := fmt.Sprintf("attachments/%s/%s", datePath, uniqueName)
 
-	// 合并分片
+	// 合并分片（必须按顺序读取所有分片）
 	var mergedData []byte
+	var missingChunks []int // 记录缺失的分片索引
 	for i := 0; i < totalChunks; i++ {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
+		if !storage.Exists(chunkPath) {
+			missingChunks = append(missingChunks, i)
+			continue
+		}
 		chunkContent, err := storage.Get(chunkPath)
 		if err != nil {
-			return nil, fmt.Errorf("读取分片 %d 失败: %w", i, err)
+			// 读取失败，记录缺失
+			facades.Log().Warningf("Failed to read chunk %d for chunkID %s: %v", i, chunkID, err)
+			missingChunks = append(missingChunks, i)
+			continue
 		}
 		mergedData = append(mergedData, []byte(chunkContent)...)
+	}
+
+	// 检查是否有缺失的分片
+	if len(missingChunks) > 0 {
+		return nil, fmt.Errorf("分片缺失: %v (共 %d 个分片缺失)", missingChunks, len(missingChunks))
+	}
+
+	// 检查是否有数据被合并
+	if len(mergedData) == 0 {
+		return nil, fmt.Errorf("没有可合并的分片数据")
 	}
 
 	// 保存合并后的文件
 	if err := storage.Put(finalPath, string(mergedData)); err != nil {
 		return nil, fmt.Errorf("保存合并文件失败: %w", err)
 	}
-
-	// 清理分片文件
-	for i := 0; i < totalChunks; i++ {
-		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
-		_ = storage.Delete(chunkPath) // 忽略删除错误
-	}
-
-	// 不再需要清理缓存（已移除服务端缓存）
 
 	// 获取文件大小
 	fileSize := int64(len(mergedData))
@@ -182,6 +192,31 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		// 如果创建记录失败，删除已上传的文件
 		_ = storage.Delete(finalPath)
 		return nil, fmt.Errorf("创建附件记录失败: %w", err)
+	}
+
+	// 合并成功后才清理分片文件（确保数据已保存到数据库）
+	// 清理所有分片文件（包括可能缺失的）
+	cleanupSuccess := true
+	cleanupCount := 0
+	for i := 0; i < totalChunks; i++ {
+		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
+		if storage.Exists(chunkPath) {
+			if err := storage.Delete(chunkPath); err != nil {
+				// 记录删除失败，但不影响整体流程
+				facades.Log().Warningf("Failed to delete chunk file %s: %v", chunkPath, err)
+				cleanupSuccess = false
+			} else {
+				cleanupCount++
+			}
+		}
+	}
+
+	if cleanupCount > 0 {
+		facades.Log().Infof("Cleaned up %d chunk files for chunkID %s (total: %d)", cleanupCount, chunkID, totalChunks)
+	}
+	if !cleanupSuccess {
+		// 记录警告，但不影响返回结果
+		facades.Log().Warningf("Some chunk files failed to delete for chunkID %s", chunkID)
 	}
 
 	return attachment, nil
