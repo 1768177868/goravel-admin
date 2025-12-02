@@ -104,7 +104,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import { useListPage } from '../../composables/useListPage'
 import {
   getLoginLogList,
   getLoginLogDetail,
@@ -116,26 +116,9 @@ import {
 const { t } = useI18n()
 
 const tableRef = ref(null)
-const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
-
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const tableData = ref([])
-
-const searchForm = reactive({
-  username: '',
-  ip: '',
-  status: '',
-  start_time: '',
-  end_time: ''
-})
 
 // 字段名映射：前端字段名 -> 数据库字段名
 const fieldMapping = {
@@ -149,15 +132,51 @@ const fieldMapping = {
   'created_at': 'created_at'
 }
 
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
-  defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
+// 转换登录日志数据（PascalCase -> snake_case）
+const transformLoginLogData = (log) => {
+  return {
+    id: log.ID || log.id,
+    admin: log.Admin ? {
+      username: log.Admin.Username || log.Admin.username || ''
+    } : (log.admin ? {
+      username: log.admin.username || ''
+    } : null),
+    ip: log.IP || log.ip || '',
+    user_agent: log.UserAgent || log.user_agent || '',
+    location: log.Location || log.location || '',
+    status: log.Status || log.status || 0,
+    message: log.Message || log.message || '',
+    created_at: log.CreatedAt || log.created_at || ''
   }
+}
+
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getLoginLogList,
+  initialSearchForm: {
+    username: '',
+    ip: '',
+    status: '',
+    start_time: '',
+    end_time: ''
+  },
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
+  },
+  transformData: transformLoginLogData
 })
 
 // 表格列配置（使用 vxe-table columns）
@@ -267,71 +286,7 @@ const searchFields = computed(() => [
   }
 ])
 
-// 转换登录日志数据（PascalCase -> snake_case）
-const transformLoginLogData = (log) => {
-  return {
-    id: log.ID || log.id,
-    admin: log.Admin ? {
-      username: log.Admin.Username || log.Admin.username || ''
-    } : (log.admin ? {
-      username: log.admin.username || ''
-    } : null),
-    ip: log.IP || log.ip || '',
-    user_agent: log.UserAgent || log.user_agent || '',
-    location: log.Location || log.location || '',
-    status: log.Status || log.status || 0,
-    message: log.Message || log.message || '',
-    created_at: log.CreatedAt || log.created_at || ''
-  }
-}
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm,
-      order_by: buildOrderBy()
-    }
-    // 移除空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
-    const res = await getLoginLogList(params)
-    if (res.data) {
-      const logs = res.data.list || []
-      tableData.value = logs.map(log => transformLoginLogData(log))
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load login log list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = ''
-  })
-  resetSort()
-  pagination.page = 1
-  loadData()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 const handleView = async (row) => {
   try {

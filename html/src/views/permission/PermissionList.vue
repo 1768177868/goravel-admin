@@ -163,7 +163,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import { useListPage } from '../../composables/useListPage'
 import { getMenuTitle as getMenuTitleUtil } from '../../utils/menuTranslation'
 import {
   getPermissionList,
@@ -177,26 +177,49 @@ import { getMenuList } from '../../api/menu'
 const { t, te } = useI18n()
 const formRef = ref(null)
 const tableRef = ref(null)
-const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('permission.edit_permission') : t('permission.add_permission'))
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
+// 字段名映射
+const fieldMapping = {
+  'id': 'id',
+  'name': 'name',
+  'slug': 'slug',
+  'method': 'method',
+  'path': 'path',
+  'status': 'status',
+  'sort': 'sort',
+  'created_at': 'created_at'
+}
 
-const tableData = ref([])
-
-const searchForm = reactive({
-  name: '',
-  slug: '',
-  method: '',
-  path: '',
-  status: '',
-  menu_id: ''
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getPermissionList,
+  initialSearchForm: {
+    name: '',
+    slug: '',
+    method: '',
+    path: '',
+    status: '',
+    menu_id: ''
+  },
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
+  }
 })
 
 // 表格列配置
@@ -460,90 +483,7 @@ const formRules = computed(() => ({
   path: [{ required: true, message: t('permission.path_required'), trigger: 'blur' }]
 }))
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'name': 'name',
-  'slug': 'slug',
-  'method': 'method',
-  'path': 'path',
-  'description': 'description',
-  'status': 'status',
-  'sort': 'sort',
-  'created_at': 'created_at'
-}
-
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
-  defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
-  }
-})
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      order_by: buildOrderBy()
-    }
-    // 只添加有值的搜索条件
-    if (searchForm.name && searchForm.name.trim()) {
-      params.name = searchForm.name.trim()
-    }
-    if (searchForm.slug && searchForm.slug.trim()) {
-      params.slug = searchForm.slug.trim()
-    }
-    if (searchForm.method) {
-      params.method = searchForm.method
-    }
-    if (searchForm.path && searchForm.path.trim()) {
-      params.path = searchForm.path.trim()
-    }
-    if (searchForm.status) {
-      params.status = searchForm.status
-    }
-    if (searchForm.menu_id) {
-      params.menu_id = searchForm.menu_id
-    }
-    
-    const res = await getPermissionList(params)
-    
-    if (res.data) {
-      tableData.value = res.data.list || []
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load permission list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = ''
-  })
-  resetSort()
-  pagination.page = 1
-  loadData()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 const handleAdd = () => {
   resetFormData()

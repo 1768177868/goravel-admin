@@ -123,7 +123,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import { useListPage } from '../../composables/useListPage'
 import {
   getBlacklistList,
   getBlacklistDetail,
@@ -135,14 +135,42 @@ import {
 const { t } = useI18n()
 const formRef = ref(null)
 const tableRef = ref(null)
-const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('blacklist.edit_blacklist') : t('blacklist.add_blacklist'))
 
-const searchForm = reactive({
-  ip: '',
-  status: ''
+// 字段名映射
+const fieldMapping = {
+  'id': 'id',
+  'ip': 'ip',
+  'remark': 'remark',
+  'status': 'status',
+  'created_at': 'created_at'
+}
+
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getBlacklistList,
+  initialSearchForm: {
+    ip: '',
+    status: ''
+  },
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
+  }
 })
 
 // 表格列配置
@@ -209,14 +237,6 @@ const searchFields = computed(() => [
   }
 ])
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const tableData = ref([])
-
 const formData = reactive({
   id: null,
   ip: '',
@@ -262,72 +282,6 @@ const formatIP = (ip) => {
     }
   }
   return ip
-}
-
-// 字段名映射
-const fieldMapping = {
-  'id': 'id',
-  'ip': 'ip',
-  'remark': 'remark',
-  'status': 'status',
-  'created_at': 'created_at'
-}
-
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
-  defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
-  }
-})
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      order_by: buildOrderBy()
-    }
-    if (searchForm.ip && searchForm.ip.trim()) {
-      params.ip = searchForm.ip.trim()
-    }
-    if (searchForm.status) {
-      params.status = searchForm.status
-    }
-    
-    const res = await getBlacklistList(params)
-    
-    if (res.data) {
-      tableData.value = res.data.list || []
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load blacklist list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.ip = ''
-  searchForm.status = ''
-  resetSort()
-  handleSearch()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
 }
 
 const handleAdd = () => {

@@ -104,7 +104,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import { useListPage } from '../../composables/useListPage'
 import { getMethodOptions } from '../../utils/fieldOptions'
 import {
   getOperationLogList,
@@ -118,18 +118,9 @@ import {
 const { t, te, tm } = useI18n()
 
 const tableRef = ref(null)
-const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
-
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const tableData = ref([])
 
 // 预置的操作标题（权限标识），用于下拉选项，即使还没有对应的操作日志也能选择
 // 对应多语言中的 permission.* 配置

@@ -198,7 +198,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import { useListPage } from '../../composables/useListPage'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
@@ -219,16 +219,46 @@ const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
 const formRef = ref(null)
-const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('admin.edit_admin') : t('admin.add_admin'))
 
-const searchForm = reactive({
-  username: '',
-  status: '',
-  role_id: '',
-  department_id: ''
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'username': 'username',
+  'nickname': 'nickname',
+  'email': 'email',
+  'phone': 'phone',
+  'status': 'status',
+  'created_at': 'created_at'
+}
+
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getAdminList,
+  initialSearchForm: {
+    username: '',
+    status: '',
+    role_id: '',
+    department_id: ''
+  },
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
+  }
 })
 
 // 表格列配置（使用 vxe-table columns）
@@ -329,13 +359,6 @@ const searchFields = computed(() => [
   }
 ])
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const tableData = ref([])
 const departmentTree = ref([])
 const roles = ref([])
 const departmentSelectVisible = ref(false)
@@ -358,79 +381,22 @@ const formRules = computed(() => ({
   password: [{ required: true, message: t('admin.password_required'), trigger: 'blur' }]
 }))
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'username': 'username',
-  'nickname': 'nickname',
-  'email': 'email',
-  'phone': 'phone',
-  'status': 'status',
-  'created_at': 'created_at'
-}
-
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
-  defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
-  }
-})
-
-const loadData = async () => {
-  loading.value = true
+const loadDepartments = async () => {
   try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      order_by: buildOrderBy()
+    const res = await getOptions('department')
+    if (res.data && res.data.options) {
+      departmentTree.value = res.data.options
     }
-    // 只添加有值的搜索条件
-    if (searchForm.username && searchForm.username.trim()) {
-      params.username = searchForm.username.trim()
-    }
-    if (searchForm.status) {
-      params.status = searchForm.status
-    }
-    if (searchForm.role_id) {
-      params.role_id = searchForm.role_id
-    }
-    if (searchForm.department_id) {
-      params.department_id = searchForm.department_id
-    }
-    
-    const res = await getAdminList(params)
-    
-    if (res.data) {
-      tableData.value = res.data.list || []
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load admin list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-  const loadDepartments = async () => {
-    try {
-      const res = await getOptions('department')
-      if (res.data && res.data.options) {
-        departmentTree.value = res.data.options
-      }
   } catch (error) {
     console.error('Load departments error:', error)
   }
 }
 
-  const loadRoles = async () => {
-    try {
-      const res = await getOptions('role')
-      if (res.data && res.data.options) {
-        roles.value = res.data.options.map(option => ({
+const loadRoles = async () => {
+  try {
+    const res = await getOptions('role')
+    if (res.data && res.data.options) {
+      roles.value = res.data.options.map(option => ({
         id: parseInt(option.value),
         ID: parseInt(option.value),
         name: option.label,
@@ -442,25 +408,7 @@ const loadData = async () => {
   }
 }
 
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.username = ''
-  searchForm.status = ''
-  searchForm.role_id = ''
-  searchForm.department_id = ''
-  resetSort()
-  handleSearch()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 const handleAdd = () => {
   Object.assign(formData, {
@@ -487,7 +435,6 @@ const getUniqueRoles = (roles) => {
     if (roleId && !seen.has(roleId)) {
       seen.add(roleId)
       unique.push(role)
-    } else if (roleId) {
     }
   }
   return unique
@@ -517,7 +464,7 @@ const getDepartmentName = (departmentId) => {
 }
 
 // 处理部门选择
-const handleDepartmentSelect = (data, node) => {
+const handleDepartmentSelect = (data) => {
   if (data && data.id) {
     formData.department_id = data.id
     departmentSelectVisible.value = false
@@ -526,7 +473,6 @@ const handleDepartmentSelect = (data, node) => {
 
 const handleEdit = async (row) => {
   // 处理字段映射，支持 PascalCase 和 snake_case
-  const adminDepartment = row.Department || row.department
   const adminRoles = row.Roles || row.roles
   
   // 去重角色ID

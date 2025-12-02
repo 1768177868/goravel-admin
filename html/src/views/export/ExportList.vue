@@ -78,29 +78,52 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useListPage } from '../../composables/useListPage'
 import { getExportList, deleteExport, batchDeleteExports } from '../../api/export'
 import i18n from '../../i18n'
 
 const { t, locale } = useI18n()
 
 const tableRef = ref(null)
-const loading = ref(false)
-const tableData = ref([])
 const selectedRows = ref([])
 const downloadingIds = ref(new Set()) // 正在下载的文件 ID 集合
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
+// 数据转换函数
+const transformExportData = (item) => {
+  return {
+    id: item.id || item.ID,
+    Admin: item.Admin || item.admin || null,
+    filename: item.Filename || item.filename || '',
+    disk: item.Disk || item.disk || '',
+    path: item.Path || item.path || '',
+    extension: item.Extension || item.extension || '',
+    size: item.Size || item.size || 0,
+    status: item.Status || item.status || 0,
+    created_at: item.CreatedAt || item.created_at || '',
+    file_url: item.FileURL || item.file_url || ''
+  }
+}
 
-const searchForm = reactive({
-  filename: '',
-  disk: '',
-  status: '',
-  start_time: '',
-  end_time: ''
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange
+} = useListPage({
+  fetchApi: getExportList,
+  initialSearchForm: {
+    filename: '',
+    disk: '',
+    status: '',
+    start_time: '',
+    end_time: ''
+  },
+  transformData: transformExportData
 })
 
 const searchFields = computed(() => [
@@ -164,64 +187,7 @@ const formatAdmin = ({ row }) => {
   return '-'
 }
 
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm
-    }
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
-    const res = await getExportList(params)
-    if (res.data) {
-      const list = res.data.list || res.data.data || []
-      // 兼容后端返回的 PascalCase / snake_case 字段，并加入 file_url
-      tableData.value = list.map(item => ({
-        id: item.id || item.ID,
-        Admin: item.Admin || item.admin || null,
-        filename: item.Filename || item.filename || '',
-        disk: item.Disk || item.disk || '',
-        path: item.Path || item.path || '',
-        extension: item.Extension || item.extension || '',
-        size: item.Size || item.size || 0,
-        status: item.Status || item.status || 0,
-        created_at: item.CreatedAt || item.created_at || '',
-        file_url: item.FileURL || item.file_url || ''
-      }))
-      pagination.total = res.data.total || res.data.meta?.total || 0
-    }
-  } catch (error) {
-    console.error('Load export list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.filename = ''
-  searchForm.disk = ''
-  searchForm.status = ''
-  searchForm.start_time = ''
-  searchForm.end_time = ''
-  pagination.page = 1
-  loadData()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 const handleDownload = async (row) => {
   // 防止重复点击

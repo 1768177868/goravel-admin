@@ -194,6 +194,7 @@ const UploadIcon = markRaw(Upload)
 const DeleteIcon = markRaw(Delete)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import { useListPage } from '../../composables/useListPage'
 import axios from 'axios'
 import { 
   getAttachmentList, 
@@ -212,8 +213,6 @@ const { t, locale } = useI18n()
 
 const tableRef = ref(null)
 const uploadRef = ref(null)
-const loading = ref(false)
-const tableData = ref([])
 const selectedRows = ref([])
 const downloadingIds = ref(new Set()) // 正在下载的文件 ID 集合
 const chunkUploadVisible = ref(false)
@@ -230,18 +229,52 @@ const imageUrlMap = ref(new Map())
 const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB per chunk
 const LARGE_FILE_THRESHOLD = 5 * 1024 * 1024 // 5MB
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
+// 数据转换函数
+const transformAttachmentData = (item) => {
+  return {
+    id: item.id || item.ID,
+    Admin: item.Admin || item.admin || null,
+    filename: item.Filename || item.filename || '',
+    display_name: item.DisplayName || item.display_name || '',
+    file_type: item.FileType || item.file_type || 'other',
+    disk: item.Disk || item.disk || '',
+    extension: item.Extension || item.extension || '',
+    size: item.Size || item.size || 0,
+    mime_type: item.MimeType || item.mime_type || '',
+    created_at: item.CreatedAt || item.created_at || '',
+    file_url: item.FileURL || item.file_url || ''
+  }
+}
 
-const searchForm = reactive({
-  filename: '',
-  file_type: '',
-  extension: '',
-  start_time: '',
-  end_time: ''
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange
+} = useListPage({
+  fetchApi: getAttachmentList,
+  initialSearchForm: {
+    filename: '',
+    display_name: '',
+    file_type: '',
+    extension: '',
+    start_time: '',
+    end_time: ''
+  },
+  transformData: transformAttachmentData,
+  onLoadSuccess: (res, list) => {
+    // 加载所有图片的blob URL
+    list.forEach(row => {
+      if (row.file_type === 'image') {
+        loadImageAsBlob(row)
+      }
+    })
+  }
 })
 
 const searchFields = computed(() => [
@@ -432,72 +465,7 @@ const getFileTypeLabel = (fileType) => {
   return labels[fileType] || fileType
 }
 
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm
-    }
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
-    const res = await getAttachmentList(params)
-    if (res.data) {
-      const list = res.data.list || res.data.data || []
-      tableData.value = list.map(item => ({
-        id: item.id || item.ID,
-        Admin: item.Admin || item.admin || null,
-        filename: item.Filename || item.filename || '',
-        display_name: item.DisplayName || item.display_name || '',
-        file_type: item.FileType || item.file_type || 'other',
-        disk: item.Disk || item.disk || '',
-        extension: item.Extension || item.extension || '',
-        size: item.Size || item.size || 0,
-        mime_type: item.MimeType || item.mime_type || '',
-        created_at: item.CreatedAt || item.created_at || '',
-        file_url: item.FileURL || item.file_url || ''
-      }))
-      pagination.total = res.data.total || res.data.meta?.total || 0
-      
-      // 加载所有图片的blob URL
-      tableData.value.forEach(row => {
-        if (row.file_type === 'image') {
-          loadImageAsBlob(row)
-        }
-      })
-    }
-  } catch (error) {
-    console.error('Load attachment list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.filename = ''
-  searchForm.display_name = ''
-  searchForm.file_type = ''
-  searchForm.extension = ''
-  searchForm.start_time = ''
-  searchForm.end_time = ''
-  pagination.page = 1
-  loadData()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 // 大文件上传按钮处理
 const handleLargeFileUpload = () => {

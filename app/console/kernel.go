@@ -14,7 +14,7 @@ type Kernel struct {
 func (kernel *Kernel) Schedule() []schedule.Event {
 	return []schedule.Event{
 		// 每天凌晨2点执行，清理3个月前的日志
-		facades.Schedule().Command("app:clear-logs").DailyAt("02:00"),
+		facades.Schedule().Command("app:clear-logs").DailyAt("02:00").OnOneServer(),
 	}
 }
 func (kernel *Kernel) Commands() []console.Command {
