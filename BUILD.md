@@ -2,24 +2,31 @@
 
 
 ```bash
-# 常规编译
+# 常规编译（普通版本）
 go build .
 ```
+
 ```bash
 # 普通编译（当前平台）
 go run . artisan build
 ```
 
 ```bash
-# 基础静态编译（当前平台）
+# 基础静态编译（当前平台，普通版本）
 go build --ldflags "-extldflags -static" -o main .
 # 去除符号表和调试信息
 go build --ldflags "-extldflags -static -s -w" -o main .
+
+# overseer 版本（支持零停机重启）
+go build -tags overseer --ldflags "-extldflags -static" -o main .
+# 去除符号表和调试信息
+go build -tags overseer --ldflags "-extldflags -static -s -w" -o main .
 ```
 
 ```bash
 # Linux 服务器交叉编译（在 Windows/Mac 上编译 Linux 版本）
 
+# ========== 普通版本 ==========
 # Windows PowerShell:
 $env:GOOS="linux"; $env:GOARCH="amd64"; go build --ldflags "-extldflags -static" -o main .
 
@@ -28,17 +35,32 @@ set GOOS=linux
 set GOARCH=amd64
 go build --ldflags "-extldflags -static" -o main .
 
-# 还原
-SET GOOS=windows
-
 # Linux/Mac:
 GOOS=linux GOARCH=amd64 go build --ldflags "-extldflags -static" -o main .
+
+# ========== overseer 版本（推荐，支持零停机重启）==========
+# Windows PowerShell:
+$env:GOOS="linux"; $env:GOARCH="amd64"; go build -tags overseer --ldflags "-extldflags -static" -o main .
+
+# Windows CMD (需要分开执行):
+set GOOS=linux
+set GOARCH=amd64
+go build -tags overseer --ldflags "-extldflags -static" -o main .
+
+# Linux/Mac:
+GOOS=linux GOARCH=amd64 go build -tags overseer --ldflags "-extldflags -static" -o main .
+
+# 还原环境变量（Windows CMD）
+SET GOOS=windows
+SET GOARCH=amd64
 ```
 
 **重要提示：**
 - 如果在 Windows 上编译，但要在 Linux 服务器上运行，必须使用交叉编译
 - 使用 `GOOS=linux GOARCH=amd64` 指定目标平台
 - 如果服务器是 ARM 架构，使用 `GOARCH=arm64`
+- **推荐使用 overseer 版本**：添加 `-tags overseer` 参数，支持零停机重启
+- 普通版本和 overseer 版本可以共存，通过构建标签区分
 
 
 使用 systemd 可以将应用作为系统服务运行，支持开机自启、自动重启、日志管理等功能。

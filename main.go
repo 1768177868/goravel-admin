@@ -1,3 +1,6 @@
+//go:build !overseer
+// +build !overseer
+
 package main
 
 import (

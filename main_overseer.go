@@ -39,23 +39,18 @@ func main() {
 		Fetcher: &fetcher.File{
 			Path: os.Args[0], // 使用当前可执行文件
 		},
-		// 可选：健康检查
-		HealthCheck: func() error {
-			// 可以在这里实现健康检查逻辑
-			// 例如：检查数据库连接、Redis 连接等
-			return nil
-		},
-		// 可选：升级前回调
-		PreUpgrade: func() error {
+		// 可选：升级前回调（在二进制文件获取后运行，可以在这里做检查）
+		PreUpgrade: func(tempBinaryPath string) error {
 			// 注意：此时 facades 可能还未初始化，使用标准日志
-			fmt.Println("准备升级，正在完成当前请求...")
+			fmt.Printf("准备升级，新二进制文件: %s\n", tempBinaryPath)
+			// 可以在这里实现健康检查逻辑
+			// 例如：检查新二进制文件是否有效等
 			return nil
 		},
-		// 可选：升级后回调
-		PostUpgrade: func() error {
-			fmt.Println("升级完成，新进程已启动")
-			return nil
-		},
+		// 可选：重启信号，默认为 SIGUSR2
+		// RestartSignal: syscall.SIGHUP,
+		// 可选：调试模式
+		// Debug: true,
 	})
 }
 
