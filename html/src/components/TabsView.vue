@@ -19,11 +19,12 @@
             class="tab-label"
             @contextmenu.prevent="showContextMenu($event, tab.path)"
           >
-            {{ getTabTitle(tab) }}
+            <span class="tab-title">{{ getTabTitle(tab) }}</span>
             <el-icon
               v-if="tab.path === activeTab"
               class="refresh-icon"
               @click.stop="handleRefresh(tab.path)"
+              title="刷新"
             >
               <Refresh />
             </el-icon>
@@ -256,8 +257,9 @@ onMounted(() => {
 
 <style scoped>
 .tabs-view {
-  background: white;
+  background: #fff;
   border-bottom: 1px solid #e4e7ed;
+  padding: 0;
 }
 
 .tabs-container {
@@ -266,40 +268,111 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__header) {
   margin: 0;
-  border-bottom: none;
+  border-bottom: 1px solid #e4e7ed;
+  background: #fff;
+}
+
+.tabs-container :deep(.el-tabs__nav-wrap) {
+  margin-bottom: 0;
+  padding: 0 12px;
+}
+
+.tabs-container :deep(.el-tabs__nav) {
+  border: none;
 }
 
 .tabs-container :deep(.el-tabs__item) {
-  height: 40px;
-  line-height: 40px;
-  padding: 0 15px;
+  height: 36px;
+  line-height: 36px;
+  padding: 0 14px;
+  margin-right: 4px;
+  margin-top: 4px;
+  background: #f5f7fa;
   border: 1px solid #e4e7ed;
   border-bottom: none;
-  margin-right: 2px;
-  background: #f5f7fa;
+  border-radius: 4px 4px 0 0;
+  color: #606266;
+  font-size: 12px;
   user-select: none;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.tabs-container :deep(.el-tabs__item:hover) {
+  color: #409EFF;
+  background: #ecf5ff;
 }
 
 .tabs-container :deep(.el-tabs__item.is-active) {
-  background: white;
-  border-bottom: 1px solid white;
+  background: #fff;
+  border-color: #409EFF;
+  border-bottom: 2px solid #409EFF;
+  color: #409EFF;
+  font-weight: 500;
+  margin-bottom: -1px;
+}
+
+.tabs-container :deep(.el-tabs__item .el-icon-close) {
+  width: 14px;
+  height: 14px;
+  font-size: 12px;
+  margin-left: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  color: #909399;
+}
+
+.tabs-container :deep(.el-tabs__item .el-icon-close:hover) {
+  background: #f56c6c;
+  color: #fff;
+}
+
+.tabs-container :deep(.el-tabs__item.is-active .el-icon-close) {
+  color: #409EFF;
+}
+
+.tabs-container :deep(.el-tabs__item.is-active .el-icon-close:hover) {
+  background: #f56c6c;
+  color: #fff;
 }
 
 .tab-label {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .refresh-icon {
   cursor: pointer;
-  padding: 2px;
-  border-radius: 2px;
-  transition: all 0.3s;
+  padding: 3px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  color: #409EFF;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 4px;
 }
 
 .refresh-icon:hover {
-  background: #e4e7ed;
+  background: #ecf5ff;
+  color: #66B1FF;
+  transform: rotate(180deg);
 }
 
 .context-menu {

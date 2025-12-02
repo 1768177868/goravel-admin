@@ -58,7 +58,8 @@
               text
               @click.prevent="fetchCaptcha"
             >
-              {{ $t('login.refresh_captcha') }}
+              <el-icon class="refresh-icon"><Refresh /></el-icon>
+              <span>{{ $t('login.refresh_captcha') }}</span>
             </el-button>
           </div>
           <el-input
@@ -90,7 +91,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Lock } from '@element-plus/icons-vue'
+import { Lock, Refresh } from '@element-plus/icons-vue'
 import { login, getLoginCaptcha } from '../api/auth'
 import { useUserStore } from '../store/user'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
@@ -464,11 +465,28 @@ const handleLogin = async () => {
 .captcha-refresh {
   white-space: nowrap;
   padding: 0 8px;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transform: translateY(0);
 }
 
 .captcha-refresh:hover {
-  transform: rotate(180deg);
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.captcha-refresh .refresh-icon {
+  font-size: 16px;
+  transition: color 0.3s ease, transform 0.3s ease;
+  transform: scale(1);
+  display: inline-block;
+}
+
+.captcha-refresh:hover .refresh-icon {
+  color: #409EFF;
+  transform: scale(1.1);
 }
 
 /* 响应式设计 */

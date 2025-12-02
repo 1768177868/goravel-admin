@@ -540,7 +540,8 @@ const handleCommand = async (command) => {
 }
 
 .tabs-wrapper {
-  background: white;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
 }
 
 .main-content {
