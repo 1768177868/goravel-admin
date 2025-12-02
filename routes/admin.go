@@ -24,7 +24,7 @@ func Admin() {
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
 	dashboardController := admin.NewDashboardController()
-	debugController := admin.NewDebugController()
+	// debugController := admin.NewDebugController()
 	monitorController := admin.NewMonitorController()
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
@@ -144,7 +144,7 @@ func Admin() {
 		router.Post("notifications", notificationController.Store)
 
 		// 调试: trace id 日志验证
-		router.Get("debug/trace-test", debugController.TraceTest)
+		// router.Get("debug/trace-test", debugController.TraceTest)
 
 		// 统一的下拉选项接口
 		router.Get("options", optionController.Index)
