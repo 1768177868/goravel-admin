@@ -5,6 +5,10 @@
         <div class="card-header">
           <span>{{ $t('menu_management.title') }}</span>
           <div class="header-actions">
+            <el-button @click="handleRefresh">
+              <el-icon><Refresh /></el-icon>
+              {{ $t('tabs.refresh') }}
+            </el-button>
             <el-button @click="handleToggleExpand">
               <el-icon><component :is="isExpanded ? 'Fold' : 'Expand'" /></el-icon>
               {{ isExpanded ? $t('menu_management.collapse_all') : $t('menu_management.expand_all') }}
@@ -160,7 +164,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Fold, Expand, Plus } from '@element-plus/icons-vue'
+import { Fold, Expand, Plus, Refresh } from '@element-plus/icons-vue'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { getMenuList, getMenuDetail, createMenu, updateMenu, deleteMenu } from '../../api/menu'
 
@@ -396,6 +400,10 @@ const handleDelete = async (row) => {
       console.error('Delete error:', error)
     }
   }
+}
+
+const handleRefresh = () => {
+  loadData()
 }
 
 const handleToggleExpand = () => {

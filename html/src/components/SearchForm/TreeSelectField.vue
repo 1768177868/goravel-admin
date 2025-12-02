@@ -3,6 +3,7 @@
     placement="bottom-start"
     :width="field.popoverWidth || 300"
     :visible="popoverVisible"
+    trigger="manual"
     @update:visible="(val) => { if (val !== undefined) updatePopoverVisible(val) }"
     :popper-options="{ 
       modifiers: [
@@ -20,9 +21,10 @@
         :style="{ width: field.width || '200px' }"
         @clear="(e) => { e?.stopPropagation(); handleClear() }"
         @input="handleInput"
-        @focus="!field.disabled && !popoverVisible && togglePopover()"
         @click.stop.prevent="!field.disabled && togglePopover()"
         @mousedown.stop.prevent
+        readonly
+        style="cursor: pointer"
       >
         <template #suffix>
           <el-icon 
@@ -42,7 +44,6 @@
         v-model="filterText"
         :placeholder="t('common.search') || '搜索'"
         clearable
-        size="small"
         style="margin-bottom: 8px;"
         @input="() => {}"
       >
@@ -115,12 +116,24 @@ const {
   }
 })
 
-// 监听 field 变化，重新加载数据
+// 监听 field.apiUrl 变化，重新加载数据
 watch(() => props.field.apiUrl, () => {
   if (props.field.apiUrl) {
     loadData()
   }
 }, { immediate: true })
+
+// 监听 field.treeData 变化（支持 getter 函数）
+watch(() => {
+  if (typeof props.field.treeData === 'function') {
+    return props.field.treeData()
+  }
+  return props.field.treeData
+}, (newTreeData) => {
+  if (newTreeData && Array.isArray(newTreeData) && newTreeData.length > 0) {
+    loadData()
+  }
+}, { deep: true, immediate: true })
 
 const handleNodeClick = (data) => {
   handleTreeSelectNodeClick(data)
@@ -134,13 +147,6 @@ const handleClear = () => {
 const handleInput = (val) => {
   handleTreeSelectInput(val)
 }
-
-// 监听 field 变化，重新加载数据
-watch(() => props.field.apiUrl, () => {
-  if (props.field.apiUrl) {
-    loadData()
-  }
-}, { immediate: true })
 </script>
 
 <style scoped>

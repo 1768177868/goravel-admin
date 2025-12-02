@@ -15,7 +15,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', slug: '', method: '', path: '', status: '' }"
+        :initial-values="{ name: '', slug: '', method: '', path: '', status: '', menu_id: '' }"
         i18n-prefix="permission"
         @search="handleSearch"
         @reset="handleReset"
@@ -195,7 +195,8 @@ const searchForm = reactive({
   slug: '',
   method: '',
   path: '',
-  status: ''
+  status: '',
+  menu_id: ''
 })
 
 // 表格列配置
@@ -274,54 +275,71 @@ const tableColumns = computed(() => [
 ])
 
 // 搜索表单字段配置
-const searchFields = computed(() => [
-  {
-    prop: 'name',
-    label: t('permission.name'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'slug',
-    label: t('permission.slug'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'method',
-    label: t('permission.method'),
-    type: 'select',
-    width: '150px',
-    options: [
-      { label: 'GET', value: 'GET' },
-      { label: 'POST', value: 'POST' },
-      { label: 'PUT', value: 'PUT' },
-      { label: 'DELETE', value: 'DELETE' },
-      { label: 'PATCH', value: 'PATCH' }
-    ],
-    advanced: false
-  },
-  {
-    prop: 'path',
-    label: t('permission.path'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'status',
-    label: t('table.status'),
-    type: 'select',
-    width: '120px',
-    options: [
-      { label: t('common.enabled'), value: '1' },
-      { label: t('common.disabled'), value: '0' }
-    ],
-    advanced: false
-  }
-])
+const searchFields = computed(() => {
+  const fields = [
+    {
+      prop: 'name',
+      label: t('permission.name'),
+      type: 'input',
+      width: '200px',
+      advanced: false
+    },
+    {
+      prop: 'slug',
+      label: t('permission.slug'),
+      type: 'input',
+      width: '200px',
+      advanced: false
+    },
+    {
+      prop: 'method',
+      label: t('permission.method'),
+      type: 'select',
+      width: '150px',
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
+        { label: 'PATCH', value: 'PATCH' }
+      ],
+      advanced: false
+    },
+    {
+      prop: 'path',
+      label: t('permission.path'),
+      type: 'input',
+      width: '200px',
+      advanced: false
+    },
+    {
+      prop: 'status',
+      label: t('table.status'),
+      type: 'select',
+      width: '120px',
+      options: [
+        { label: t('common.enabled'), value: '1' },
+        { label: t('common.disabled'), value: '0' }
+      ],
+      advanced: false
+    },
+    {
+      prop: 'menu_id',
+      label: t('menu.title'),
+      type: 'tree-select',
+      width: '200px',
+      filterable: true,
+      apiUrl: '/options?type=menu',
+      treeProps: {
+        label: 'label',
+        value: 'value',
+        children: 'children'
+      },
+      advanced: false
+    }
+  ]
+  return fields
+})
 
 const formData = reactive({
   id: null,
@@ -489,6 +507,9 @@ const loadData = async () => {
     }
     if (searchForm.status) {
       params.status = searchForm.status
+    }
+    if (searchForm.menu_id) {
+      params.menu_id = searchForm.menu_id
     }
     
     const res = await getPermissionList(params)

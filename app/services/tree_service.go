@@ -15,6 +15,8 @@ type TreeService interface {
 	HasMenuChildren(menuID uint) (bool, error)
 	// HasDepartmentChildren 检查部门是否有子节点
 	HasDepartmentChildren(departmentID uint) (bool, error)
+	// GetMenuChildrenIDs 获取菜单及其所有子菜单的ID列表
+	GetMenuChildrenIDs(menuID uint) ([]uint, error)
 }
 
 type TreeServiceImpl struct {
@@ -78,4 +80,35 @@ func (s *TreeServiceImpl) HasDepartmentChildren(departmentID uint) (bool, error)
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// GetMenuChildrenIDs 获取菜单及其所有子菜单的ID列表（递归）
+func (s *TreeServiceImpl) GetMenuChildrenIDs(menuID uint) ([]uint, error) {
+	var menuIDs []uint
+	menuIDs = append(menuIDs, menuID)
+
+	// 递归获取所有子菜单ID
+	var getChildren func(parentID uint) error
+	getChildren = func(parentID uint) error {
+		var children []models.Menu
+		if err := facades.Orm().Query().Model(&models.Menu{}).Where("parent_id", parentID).Select("id").Get(&children); err != nil {
+			return err
+		}
+
+		for _, child := range children {
+			menuIDs = append(menuIDs, child.ID)
+			// 递归获取子菜单的子菜单
+			if err := getChildren(child.ID); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if err := getChildren(menuID); err != nil {
+		return nil, err
+	}
+
+	return menuIDs, nil
 }

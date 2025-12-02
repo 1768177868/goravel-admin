@@ -181,8 +181,9 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
 
   // 监听过滤文本变化，更新树形数据
   watch(filterText, () => {
-    if (field.treeData && Array.isArray(field.treeData)) {
-      treeData.value = getFilteredTreeData(field.treeData)
+    const currentTreeData = typeof field.treeData === 'function' ? field.treeData() : field.treeData
+    if (currentTreeData && Array.isArray(currentTreeData)) {
+      treeData.value = getFilteredTreeData(currentTreeData)
     } else if (field.apiUrl) {
       const cacheKey = field.apiUrl
       if (fieldOptionsCache.value[cacheKey]) {
@@ -191,9 +192,28 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
     }
   })
 
+  // 监听 field.treeData 变化，更新树形数据
+  // 使用 computed 来访问 treeData，这样可以正确追踪 getter 的变化
+  const treeDataGetter = computed(() => {
+    if (typeof field.treeData === 'function') {
+      return field.treeData()
+    }
+    return field.treeData
+  })
+  
+  watch(treeDataGetter, (newTreeData) => {
+    if (newTreeData && Array.isArray(newTreeData) && newTreeData.length > 0) {
+      treeData.value = getFilteredTreeData(newTreeData)
+    } else if (newTreeData && Array.isArray(newTreeData) && newTreeData.length === 0) {
+      // 如果数据被清空，也更新
+      treeData.value = []
+    }
+  }, { deep: true, immediate: true })
+
   // 初始化加载数据
-  if (field.treeData && Array.isArray(field.treeData)) {
-    treeData.value = getFilteredTreeData(field.treeData)
+  const initialTreeData = typeof field.treeData === 'function' ? field.treeData() : field.treeData
+  if (initialTreeData && Array.isArray(initialTreeData) && initialTreeData.length > 0) {
+    treeData.value = getFilteredTreeData(initialTreeData)
   } else if (field.apiUrl) {
     loadData()
   }

@@ -29,6 +29,8 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 		return r.getRoleOptions(ctx)
 	case "department":
 		return r.getDepartmentOptions(ctx)
+	case "menu":
+		return r.getMenuOptions(ctx)
 	case "status":
 		return r.getStatusOptions(ctx)
 	case "method":
@@ -87,6 +89,44 @@ func (r *OptionController) buildDepartmentTree(departments []models.Department, 
 			}
 			tree = append(tree, node)
 		}
+	}
+	return tree
+}
+
+func (r *OptionController) getMenuOptions(ctx http.Context) http.Response {
+	menus, err := r.treeService.BuildMenuTree(0)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	tree := r.buildMenuTree(menus)
+
+	return response.Success(ctx, "get_success", http.Json{
+		"options": tree,
+	})
+}
+
+func (r *OptionController) buildMenuTree(menus []models.Menu) []map[string]any {
+	var tree []map[string]any
+	for _, menu := range menus {
+		// 使用菜单标题和路径构建显示标签
+		label := menu.Title
+		if menu.Path != "" {
+			label = label + " (" + menu.Path + ")"
+		}
+		
+		node := map[string]any{
+			"id":    menu.ID,
+			"name":  menu.Title,
+			"label": label,
+			"value": menu.ID,
+		}
+		
+		if len(menu.Children) > 0 {
+			node["children"] = r.buildMenuTree(menu.Children)
+		}
+		
+		tree = append(tree, node)
 	}
 	return tree
 }

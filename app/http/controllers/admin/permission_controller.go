@@ -9,14 +9,18 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/services"
 	"goravel/app/utils/errorlog"
 )
 
 type PermissionController struct {
+	treeService services.TreeService
 }
 
 func NewPermissionController() *PermissionController {
-	return &PermissionController{}
+	return &PermissionController{
+		treeService: services.NewTreeServiceImpl(),
+	}
 }
 
 // Index 权限列表
@@ -28,6 +32,7 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 	method := ctx.Request().Query("method", "")
 	path := ctx.Request().Query("path", "")
 	status := ctx.Request().Query("status", "")
+	menuID := ctx.Request().Query("menu_id", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -45,11 +50,20 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 	if method != "" {
 		query = query.Where("method", method)
 	}
-	if path != "" {
-		query = query.Where("path", "like", "%"+path+"%")
-	}
 	if status != "" {
 		query = query.Where("status", status)
+	}
+	if menuID != "" {
+		// 获取菜单及其所有子菜单的ID列表
+		menuIDs, err := r.treeService.GetMenuChildrenIDs(cast.ToUint(menuID))
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		}
+		// 使用 IN 查询，查询该菜单及其所有子菜单的权限
+		if len(menuIDs) > 0 {
+			idsAny := helpers.ConvertUintSliceToAny(menuIDs)
+			query = query.WhereIn("menu_id", idsAny)
+		}
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)
