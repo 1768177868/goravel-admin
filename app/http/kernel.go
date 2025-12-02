@@ -3,7 +3,7 @@ package http
 import (
 	"github.com/goravel/framework/contracts/http"
 	httpmiddleware "github.com/goravel/framework/http/middleware"
-	sessionmiddleware "github.com/goravel/framework/session/middleware"
+	// sessionmiddleware "github.com/goravel/framework/session/middleware" // 已禁用
 
 	appmiddleware "goravel/app/http/middleware"
 )
@@ -19,6 +19,6 @@ func (kernel Kernel) Middleware() []http.Middleware {
 		appmiddleware.Blacklist(), // 黑名单检查
 		appmiddleware.Trace(),
 		httpmiddleware.Throttle("global"),
-		sessionmiddleware.StartSession(),
+		// sessionmiddleware.StartSession(), // 已禁用：项目使用 JWT 认证，不需要 Session
 	}
 }
