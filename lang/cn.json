@@ -42,6 +42,7 @@
     "role_slug_exists": "角色标识已存在",
     "role_protected_cannot_delete": "该角色受保护，无法删除",
     "role_protected_cannot_disable": "该角色受保护，无法禁用",
+    "role_protected_cannot_modify_slug": "该角色受保护，无法修改标识",
     "permission_not_found": "权限不存在",
     "permission_name_and_slug_required": "权限名称和标识不能为空",
     "permission_name_or_slug_exists": "权限名称或标识已存在",

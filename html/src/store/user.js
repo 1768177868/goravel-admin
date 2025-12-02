@@ -6,7 +6,7 @@ export const useUserStore = defineStore('user', {
     token: localStorage.getItem('token') || '',
     adminInfo: JSON.parse(localStorage.getItem('adminInfo') || 'null'),
     permissions: [],
-    menus: JSON.parse(localStorage.getItem('menus') || '[]')
+    menus: [] // 菜单不缓存，每次刷新都从服务器重新获取
   }),
 
   getters: {
@@ -70,16 +70,15 @@ export const useUserStore = defineStore('user', {
 
     setMenus(menus) {
       this.menus = menus
-      localStorage.setItem('menus', JSON.stringify(menus || []))
+      // 菜单不缓存到 localStorage，每次刷新都从服务器重新获取
     },
 
     async fetchUserInfo() {
       try {
-        // 清除旧的缓存，确保获取最新的数据
+        // 清除旧的数据，确保获取最新的数据
         this.menus = []
         this.adminInfo = null
         this.permissions = []
-        localStorage.removeItem('menus')
         localStorage.removeItem('adminInfo')
         
         const res = await getInfo()
@@ -113,7 +112,7 @@ export const useUserStore = defineStore('user', {
         this.menus = []
         localStorage.removeItem('token')
         localStorage.removeItem('adminInfo')
-        localStorage.removeItem('menus')
+        // 菜单不缓存，无需清除
       }
       // 返回 resolved promise 确保调用者可以继续
       return Promise.resolve()

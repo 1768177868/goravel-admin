@@ -230,6 +230,10 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		role.Name = name
 	}
 	if slug != "" {
+		// 受保护角色的标识不能修改
+		if isProtected {
+			return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_modify_slug")
+		}
 		// 检查标识是否已被其他角色使用（排除当前角色）
 		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Where("id != ?", id).Exists()
 		if err != nil {
@@ -263,8 +267,9 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
+	// super-admin 角色拥有所有权限，不需要设置菜单和权限
 	// 处理权限关联
-	if ctx.Request().Input("permission_ids") != "" {
+	if !isProtected && ctx.Request().Input("permission_ids") != "" {
 		permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
 		if err := r.roleService.SyncPermissions(&role, permissionIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role permissions in update", map[string]any{
@@ -277,7 +282,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	}
 
 	// 处理菜单关联
-	if ctx.Request().Input("menu_ids") != "" {
+	if !isProtected && ctx.Request().Input("menu_ids") != "" {
 		menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
 		if err := r.roleService.SyncMenus(&role, menuIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role menus in update", map[string]any{

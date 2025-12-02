@@ -14,6 +14,10 @@ Welcome to star, PR and issues！
 
 This project includes a complete admin management system built with Goravel framework.
 
+Demo
+https://admin.xuancheng888.top
+account:demo  
+password:demo123
 <p align="center"><img src="./admin.png" alt="Admin System Screenshot" width="800"></p>
 
 ### Features

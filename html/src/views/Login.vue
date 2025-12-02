@@ -168,11 +168,10 @@ const handleLogin = async () => {
         const res = await login(payload)
         if (res.data && res.data.token) {
           const token = res.data.token
-          // 登录时清除旧的缓存，确保获取最新的数据
+          // 登录时清除旧的数据，确保获取最新的数据
           userStore.menus = []
           userStore.adminInfo = null
           userStore.permissions = []
-          localStorage.removeItem('menus')
           localStorage.removeItem('adminInfo')
           
           userStore.setToken(token)

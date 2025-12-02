@@ -141,26 +141,26 @@ router.beforeEach((to, from, next) => {
     } else {
       next()
     }
-  } else {
-    // 需要认证的页面
-    if (!userStore.isLoggedIn) {
-      // 如果没有token，直接跳转到登录页
-      next('/login')
     } else {
-      // 如果用户信息不存在，尝试获取
-      if (!userStore.adminInfo) {
-        userStore.fetchUserInfo().then(() => {
-          next()
-        }).catch((error) => {
-          // 如果获取用户信息失败（可能是401），拦截器会处理跳转
-          // 这里只需要阻止导航
-          next(false)
-        })
+      // 需要认证的页面
+      if (!userStore.isLoggedIn) {
+        // 如果没有token，直接跳转到登录页
+        next('/login')
       } else {
-        next()
+        // 如果用户信息不存在或菜单为空（菜单不缓存，刷新后需要重新获取），尝试获取
+        if (!userStore.adminInfo || userStore.menus.length === 0) {
+          userStore.fetchUserInfo().then(() => {
+            next()
+          }).catch((error) => {
+            // 如果获取用户信息失败（可能是401），拦截器会处理跳转
+            // 这里只需要阻止导航
+            next(false)
+          })
+        } else {
+          next()
+        }
       }
     }
-  }
 })
 
 export default router

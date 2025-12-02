@@ -90,12 +90,19 @@
           <el-input v-model="formData.name" />
         </el-form-item>
         <el-form-item :label="$t('role.slug')" prop="slug">
-          <el-input v-model="formData.slug" />
+          <el-input 
+            v-model="formData.slug" 
+            :disabled="isProtectedRole(formData)"
+            :placeholder="isProtectedRole(formData) ? $t('role.protected_role_slug_disabled') : ''"
+          />
         </el-form-item>
         <el-form-item :label="$t('common.description')">
           <el-input v-model="formData.description" type="textarea" />
         </el-form-item>
-        <el-form-item :label="$t('role.menus_and_permissions')">
+        <el-form-item 
+          v-if="!isProtectedRole(formData)" 
+          :label="$t('role.menus_and_permissions')"
+        >
           <div class="menu-permission-container">
             <div class="menu-header">
               <div class="header-left">
@@ -140,6 +147,12 @@
                 </template>
               </el-tree>
             </div>
+          </div>
+        </el-form-item>
+        <el-form-item v-if="isProtectedRole(formData)" :label="$t('role.menus_and_permissions')">
+          <div class="protected-role-tip">
+            <el-icon><LockIcon /></el-icon>
+            <span>{{ $t('role.super_admin_has_all_permissions') }}</span>
           </div>
         </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
@@ -511,7 +524,8 @@ const transformMenuToTree = (menus) => {
     const title = getMenuTitle(node)
     
     const result = {
-      id: node.id,
+      id: `menu_${node.id}`, // 添加前缀避免ID冲突
+      rawId: node.id,
       name: title,
       label: title,
       slug: slug,
@@ -547,8 +561,8 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
   const processNode = (node) => {
     const result = { ...node }
     
-    if (result.isMenu && result.id) {
-      const menuId = result.id
+    if (result.isMenu && result.rawId) {
+      const menuId = result.rawId
       const matchedPermissions = permissionMap.get(menuId) || []
       
       if (matchedPermissions.length > 0) {
@@ -565,7 +579,8 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
           const permissionName = getPermissionName(perm)
           
           result.children.push({
-            id: id,
+            id: `perm_${id}`, // 添加前缀避免ID冲突
+            rawId: id,
             name: permissionName,
             slug: slug,
             method: method,
@@ -609,7 +624,7 @@ const buildMenuPermissionTree = (menus, permissions) => {
   const collectPermissionIds = (nodes) => {
     nodes.forEach(node => {
       if (node.isPermission) {
-        matchedPermissionIds.add(node.id)
+        matchedPermissionIds.add(node.rawId)
       }
       if (node.children) {
         collectPermissionIds(node.children)
@@ -637,7 +652,8 @@ const buildMenuPermissionTree = (menus, permissions) => {
         const permissionName = getPermissionName(perm)
         
         return {
-          id: id,
+          id: `perm_${id}`, // 添加前缀
+          rawId: id,
           name: permissionName,
           slug: slug,
           method: method,
@@ -761,6 +777,11 @@ const handleEdit = async (row) => {
         return id ? Number(id) : null
       }).filter(id => id !== null)
       
+      // 确保菜单权限树数据已加载
+      if (menuPermissionTree.value.length === 0) {
+        await loadMenuPermissionTree()
+      }
+      
       Object.assign(formData, {
         id: role.id || role.ID,
         name: role.Name || role.name || '',
@@ -772,9 +793,11 @@ const handleEdit = async (row) => {
         sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
       })
       
-      // 合并所有选中的 key，确保类型一致
-      const allCheckedKeys = [...menuIds, ...permissionIds].map(id => Number(id))
-      checkedKeys.value = allCheckedKeys
+      // 注意：不要在这里设置 checkedKeys，因为如果包含菜单ID，会导致菜单下的所有权限被选中
+      // 只设置权限ID，让 handleDialogOpened 来处理
+      checkedKeys.value = []
+      
+      console.log('Role edit - menuIds:', menuIds, 'permissionIds:', permissionIds)
       
       dialogVisible.value = true
       
@@ -798,26 +821,6 @@ const handleSubmit = async () => {
       
       submitting.value = true
       try {
-        const allCheckedKeys = menuPermissionTreeRef.value?.getCheckedKeys() || []
-        const menuIds = []
-        const permissionIds = []
-        
-        const collectIds = (nodes) => {
-          nodes.forEach(node => {
-            if (allCheckedKeys.includes(node.id)) {
-              if (node.isMenu) {
-                menuIds.push(node.id)
-              } else if (node.isPermission) {
-                permissionIds.push(node.id)
-              }
-            }
-            if (node.children) {
-              collectIds(node.children)
-            }
-          })
-        }
-        collectIds(menuPermissionTree.value)
-        
         const statusValue = formData.status !== undefined && formData.status !== null 
           ? Number(formData.status) 
           : 1
@@ -827,9 +830,75 @@ const handleSubmit = async () => {
           slug: formData.slug,
           description: formData.description || '',
           status: statusValue,
-          sort: Number(formData.sort) || 0,
-          permission_ids: permissionIds,
-          menu_ids: menuIds
+          sort: Number(formData.sort) || 0
+        }
+        
+        // super-admin 角色不需要设置菜单和权限，因为它拥有所有权限
+        if (!isProtectedRole(formData)) {
+          // 获取所有选中的节点（完全选中的）
+          const allCheckedKeys = menuPermissionTreeRef.value?.getCheckedKeys() || []
+          
+          // 收集菜单ID和权限ID
+          const menuIds = []
+          const permissionIds = []
+          
+          // 递归收集所有选中的菜单和权限ID
+          const collectIds = (nodes) => {
+            nodes.forEach(node => {
+              const nodeId = node.id.toString()
+              const isChecked = allCheckedKeys.includes(node.id)
+              
+              // 如果是权限节点且被选中
+              if (node.isPermission && isChecked) {
+                // 提取权限ID (去除 perm_ 前缀)
+                if (nodeId.startsWith('perm_')) {
+                  permissionIds.push(Number(nodeId.replace('perm_', '')))
+                } else {
+                  permissionIds.push(Number(nodeId))
+                }
+              }
+              
+              // 如果是菜单节点，检查是否应该保存
+              if (node.isMenu && nodeId !== 'other_permissions') {
+                // 检查该菜单下是否有权限被选中
+                const hasSelectedPermission = checkHasSelectedPermission(node, allCheckedKeys)
+                // 如果菜单被完全选中，或者有子权限被选中（半选状态），则保存该菜单
+                if (isChecked || hasSelectedPermission) {
+                  // 提取菜单ID (去除 menu_ 前缀)
+                  if (nodeId.startsWith('menu_')) {
+                    menuIds.push(Number(nodeId.replace('menu_', '')))
+                  } else {
+                    menuIds.push(Number(nodeId))
+                  }
+                }
+              }
+              
+              // 递归处理子节点
+              if (node.children) {
+                collectIds(node.children)
+              }
+            })
+          }
+          
+          // 辅助函数：检查节点下是否有权限被选中
+          const checkHasSelectedPermission = (node, checkedKeys) => {
+            if (!node.children) return false
+            for (const child of node.children) {
+              if (child.isPermission && checkedKeys.includes(child.id)) {
+                return true
+              }
+              if (child.children && checkHasSelectedPermission(child, checkedKeys)) {
+                return true
+              }
+            }
+            return false
+          }
+          
+          collectIds(menuPermissionTree.value)
+          
+          // 去重
+          data.permission_ids = [...new Set(permissionIds)]
+          data.menu_ids = [...new Set(menuIds)]
         }
         
         if (formData.id) {
@@ -867,29 +936,128 @@ const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 
-const handleDialogOpened = () => {
+const handleDialogOpened = async () => {
   if (!formData.id) {
     // 新增角色，清空选中状态
     checkedKeys.value = []
-    nextTick(() => {
-      setTimeout(() => {
-        if (menuPermissionTreeRef.value) {
-          menuPermissionTreeRef.value.setCheckedKeys([], false)
-          checkedKeys.value = []
-        }
-      }, 100)
-    })
+    await nextTick()
+    setTimeout(() => {
+      if (menuPermissionTreeRef.value) {
+        menuPermissionTreeRef.value.setCheckedKeys([], false)
+        checkedKeys.value = []
+      }
+    }, 100)
   } else {
     // 编辑角色，确保选中状态正确设置
-    const allCheckedKeys = [...formData.menu_ids, ...formData.permission_ids].map(id => Number(id))
-    nextTick(() => {
+    // 确保菜单权限树数据已加载
+    if (menuPermissionTree.value.length === 0) {
+      await loadMenuPermissionTree()
+      // 等待数据加载完成
+      await nextTick()
+    }
+    
+    // 从 formData 中获取选中的菜单和权限 ID
+    const menuIds = (formData.menu_ids || []).map(id => Number(id))
+    const permissionIds = (formData.permission_ids || []).map(id => Number(id))
+    
+    // 只设置权限ID，不设置菜单ID
+    // Element Plus 的 el-tree 会自动根据子节点的选中状态来显示父节点的半选状态
+    // 如果设置了菜单ID，会导致该菜单下的所有权限都被选中
+    const checkedPermissionKeys = permissionIds.map(id => `perm_${id}`)
+    
+    // 等待 DOM 更新
+    await nextTick()
+    
+    // 多次尝试设置选中状态，确保树组件已完全渲染
+    const setCheckedKeysWithRetry = (retries = 5) => {
+      if (retries <= 0) {
+        console.warn('Failed to set checked keys after retries')
+        return
+      }
+      
       setTimeout(() => {
-        if (menuPermissionTreeRef.value) {
-          menuPermissionTreeRef.value.setCheckedKeys(allCheckedKeys, false)
-          checkedKeys.value = menuPermissionTreeRef.value.getCheckedKeys() || []
+        if (!menuPermissionTreeRef.value) {
+          // 树组件引用不存在，重试
+          if (retries > 1) {
+            setCheckedKeysWithRetry(retries - 1)
+          }
+          return
         }
-      }, 200)
-    })
+        
+        if (menuPermissionTree.value.length === 0) {
+          // 树数据还没准备好，重试
+          if (retries > 1) {
+            setCheckedKeysWithRetry(retries - 1)
+          }
+          return
+        }
+        
+        try {
+          // 验证权限ID是否存在于树中
+          const permissionIdSet = new Set()
+          const collectPermissionIds = (nodes) => {
+            nodes.forEach(node => {
+              if (node.isPermission && node.id) {
+                permissionIdSet.add(node.id)
+              }
+              if (node.children) {
+                collectPermissionIds(node.children)
+              }
+            })
+          }
+          collectPermissionIds(menuPermissionTree.value)
+          
+          // 过滤出存在于树中的权限ID
+          const validPermissionIds = checkedPermissionKeys.filter(id => permissionIdSet.has(id))
+          
+          if (validPermissionIds.length !== checkedPermissionKeys.length) {
+            console.warn('Some permission IDs not found in tree:', {
+              requested: checkedPermissionKeys,
+              valid: validPermissionIds,
+              allInTree: Array.from(permissionIdSet)
+            })
+          }
+          
+          // 只设置权限ID，第二个参数为 false 表示不自动选中父节点
+          // Element Plus 会自动根据子节点的选中状态来显示父节点的半选状态
+          menuPermissionTreeRef.value.setCheckedKeys(validPermissionIds, false)
+          
+          // 等待一下让树组件更新
+          setTimeout(() => {
+            // 获取实际选中的 keys
+            const actualCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
+            checkedKeys.value = actualCheckedKeys
+            
+            // 验证是否设置成功
+            const allPermissionsSet = validPermissionIds.length === 0 || 
+              validPermissionIds.every(id => actualCheckedKeys.includes(id))
+            
+            console.log('Set checked keys result:', {
+              requestedPermissionIds: permissionIds,
+              validPermissionIds,
+              actualCheckedKeys,
+              allPermissionsSet,
+              checkedKeysValue: checkedKeys.value
+            })
+            
+            if (!allPermissionsSet && retries > 1) {
+              // 如果还有未选中的，重试
+              console.log(`Retrying set checked keys, remaining retries: ${retries - 1}`)
+              setCheckedKeysWithRetry(retries - 1)
+            } else {
+              console.log('Checked keys set successfully')
+            }
+          }, 100)
+        } catch (error) {
+          console.error('Set checked keys error:', error)
+          if (retries > 1) {
+            setCheckedKeysWithRetry(retries - 1)
+          }
+        }
+      }, 300)
+    }
+    
+    setCheckedKeysWithRetry()
   }
 }
 
@@ -1172,5 +1340,22 @@ onMounted(async () => {
 
 .protected-tip .el-icon {
   font-size: 14px;
+}
+
+.protected-role-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 4px;
+  color: #409eff;
+  font-size: 13px;
+}
+
+.protected-role-tip .el-icon {
+  font-size: 16px;
+  color: #409eff;
 }
 </style>

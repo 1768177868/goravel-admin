@@ -194,6 +194,15 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		}
 	}
 
+	// 检查是否是超级管理员
+	isSuperAdmin := false
+	for _, role := range admin.Roles {
+		if role.Slug == "super-admin" && role.Status == 1 {
+			isSuperAdmin = true
+			break
+		}
+	}
+
 	// 收集所有角色的权限和菜单（去重）
 	permissionMap := make(map[uint]models.Permission)
 	menuMap := make(map[uint]models.Menu)
@@ -204,6 +213,17 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		}
 		for _, menu := range role.Menus {
 			menuMap[menu.ID] = menu
+		}
+	}
+
+	// 如果是超级管理员，返回所有菜单（用于前端显示）
+	// 但不需要返回所有权限，因为权限检查在中间件中会跳过
+	if isSuperAdmin {
+		var allMenus []models.Menu
+		if err := facades.Orm().Query().Where("status", 1).Order("sort ASC").Find(&allMenus); err == nil {
+			for _, menu := range allMenus {
+				menuMap[menu.ID] = menu
+			}
 		}
 	}
 

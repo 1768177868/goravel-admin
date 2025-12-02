@@ -77,15 +77,43 @@ func (s *AdminSeeder) Run() error {
 	// 给开发者管理员分配 super-admin 角色
 	facades.Orm().Query().Model(&developerAdmin).Association("Roles").Replace([]models.Role{superRole})
 
-	// 关联超级角色和所有权限
-	var allPerms []models.Permission
-	facades.Orm().Query().Find(&allPerms)
-	facades.Orm().Query().Model(&superRole).Association("Permissions").Replace(allPerms)
+	// super-admin 角色不需要分配权限和菜单，因为它在权限中间件中会跳过权限检查
+	// 在获取用户信息时，会特殊处理 super-admin 角色，返回所有菜单用于前端显示
 
-	// 关联超级角色和所有菜单
+	// 创建演示账户角色（只允许查看，不允许编辑创建删除）
+	var demoRole models.Role
+	facades.Orm().Query().FirstOrCreate(&demoRole, models.Role{
+		Name:        "演示账户",
+		Slug:        "demo",
+		Description: "演示账户，只允许查看，不允许编辑、创建、删除",
+		Status:      1,
+		Sort:        2,
+	})
+
+	// 给演示角色分配所有查看权限（index 和 show）
+	var viewPermissions []models.Permission
+	if err := facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").Find(&viewPermissions); err == nil {
+		facades.Orm().Query().Model(&demoRole).Association("Permissions").Replace(viewPermissions)
+	}
+
+	// 给演示角色分配所有菜单（用于前端显示）
 	var allMenus []models.Menu
-	facades.Orm().Query().Find(&allMenus)
-	facades.Orm().Query().Model(&superRole).Association("Menus").Replace(allMenus)
+	if err := facades.Orm().Query().Where("status", 1).Find(&allMenus); err == nil {
+		facades.Orm().Query().Model(&demoRole).Association("Menus").Replace(allMenus)
+	}
+
+	// 创建演示账户
+	demoPassword, _ := facades.Hash().Make("demo123")
+	demoAdmin := models.Admin{
+		Username: "demo",
+		Password: demoPassword,
+		Nickname: "演示账户",
+		Status:   1,
+	}
+	facades.Orm().Query().FirstOrCreate(&demoAdmin, models.Admin{Username: "demo"})
+
+	// 给演示账户分配演示角色
+	facades.Orm().Query().Model(&demoAdmin).Association("Roles").Replace([]models.Role{demoRole})
 
 	return nil
 }
