@@ -188,11 +188,27 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		if data, err := os.ReadFile("/proc/sys/fs/file-nr"); err == nil {
 			// 解析文件内容：例如 "1024 512 65536"
 			// 格式：已分配的文件描述符数 已分配但未使用的文件描述符数 系统最大文件描述符数
-			var allocated, unused uint64
-			n, err := fmt.Sscanf(string(data), "%d %d %d", &allocated, &unused, &max)
+			var allocated, unused, tempMax uint64
+			n, err := fmt.Sscanf(string(data), "%d %d %d", &allocated, &unused, &tempMax)
 			if err == nil && n == 3 {
+				// 验证值的合理性
+				if tempMax > 0 && tempMax < 1000000000 {
+					max = tempMax
+				} else {
+					errorlog.RecordHTTP(ctx, "monitor", "Invalid max value from file-nr", map[string]any{
+						"value": tempMax,
+						"data":  string(data),
+					}, "Invalid max value from file-nr: %d, data: %s", tempMax, string(data))
+				}
 				// 已使用 = 已分配（第一个数字是已分配的文件描述符数，代表系统已使用的）
-				used = allocated
+				if allocated < 1000000000 {
+					used = allocated
+				} else {
+					errorlog.RecordHTTP(ctx, "monitor", "Invalid used value from file-nr", map[string]any{
+						"value": allocated,
+						"data":  string(data),
+					}, "Invalid used value from file-nr: %d, data: %s", allocated, string(data))
+				}
 			} else {
 				errorlog.RecordHTTP(ctx, "monitor", "Parse file-nr error", map[string]any{
 					"error": err.Error(),
@@ -209,8 +225,20 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		// 如果无法读取file-nr中的max，尝试单独读取最大限制
 		if max == 0 {
 			if data, err := os.ReadFile("/proc/sys/fs/file-max"); err == nil {
-				n, err := fmt.Sscanf(string(data), "%d", &max)
-				if err != nil || n != 1 {
+				var tempMax uint64
+				n, err := fmt.Sscanf(string(data), "%d", &tempMax)
+				if err == nil && n == 1 {
+					// 验证值的合理性：最大文件描述符数不应该超过 10^9 (1 billion)
+					// 正常的系统值通常在 65536 到几百万之间
+					if tempMax > 0 && tempMax < 1000000000 {
+						max = tempMax
+					} else {
+						errorlog.RecordHTTP(ctx, "monitor", "Invalid file-max value", map[string]any{
+							"value": tempMax,
+							"data":  string(data),
+						}, "Invalid file-max value: %d, data: %s", tempMax, string(data))
+					}
+				} else {
 					errorlog.RecordHTTP(ctx, "monitor", "Parse file-max error", map[string]any{
 						"error": err.Error(),
 						"data":  string(data),
@@ -224,11 +252,20 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			}
 		}
 
-		// 如果还是无法获取，使用默认值
+		// 验证 max 值的合理性
+		if max > 1000000000 {
+			errorlog.RecordHTTP(ctx, "monitor", "File descriptor max value too large, using default", map[string]any{
+				"max": max,
+			}, "File descriptor max value too large: %d, using default", max)
+			max = 0
+		}
+
+		// 如果还是无法获取或值异常，使用默认值
 		if max == 0 {
 			max = 65536 // Linux常见默认值
 		}
 
+		// 计算剩余文件描述符，确保不会溢出
 		free := uint64(0)
 		if max > used {
 			free = max - used

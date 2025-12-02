@@ -80,7 +80,7 @@ password:demo123
 1. **Backend Setup:**
    ```bash
    # Install dependencies
-   go mod download
+   go mod tidy
    
    # Configure database in .env
    # Run migrations and seeders
