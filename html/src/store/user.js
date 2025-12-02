@@ -38,6 +38,13 @@ export const useUserStore = defineStore('user', {
 
     async fetchUserInfo() {
       try {
+        // 清除旧的缓存，确保获取最新的数据
+        this.menus = []
+        this.adminInfo = null
+        this.permissions = []
+        localStorage.removeItem('menus')
+        localStorage.removeItem('adminInfo')
+        
         const res = await getInfo()
         if (res.data && res.data.admin) {
           this.setAdminInfo(res.data.admin)

@@ -38,8 +38,10 @@ func (s *MenuSeeder) Run() error {
 			existingMenu.Permission = menuData.Permission
 			existingMenu.Type = menuData.Type
 			existingMenu.Status = menuData.Status
-			// 不覆盖已有的排序，保留用户在前端或数据库中手动调整的 Sort 值
-			// existingMenu.Sort = menuData.Sort
+			// 如果现有菜单的排序为0，则更新为填充数据中的排序值；否则保留用户手动调整的排序值
+			if existingMenu.Sort == 0 {
+				existingMenu.Sort = menuData.Sort
+			}
 			existingMenu.IsHidden = menuData.IsHidden
 			facades.Orm().Query().Save(&existingMenu)
 			// 重新查询确保获取最新数据
@@ -63,8 +65,10 @@ func (s *MenuSeeder) Run() error {
 				existingByPath.Permission = menuData.Permission
 				existingByPath.Type = menuData.Type
 				existingByPath.Status = menuData.Status
-				// 同样不覆盖已有的排序
-				// existingByPath.Sort = menuData.Sort
+				// 如果现有菜单的排序为0，则更新为填充数据中的排序值；否则保留用户手动调整的排序值
+				if existingByPath.Sort == 0 {
+					existingByPath.Sort = menuData.Sort
+				}
 				existingByPath.IsHidden = menuData.IsHidden
 				facades.Orm().Query().Save(&existingByPath)
 				// 重新查询确保获取最新数据

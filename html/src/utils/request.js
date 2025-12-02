@@ -141,12 +141,16 @@ request.interceptors.response.use(
     }
     
     // 如果 code 不是 200，说明有错误
+    // 注意：HTTP 403 状态码会进入错误回调，不会进入这里
+    // 这里只处理 HTTP 200 但 code 不是 200 的情况
     if (res.code !== 200) {
       if (!isAuthEndpoint) {
         const message = res.message || t('error.default')
         if (res.code === 401) {
           handle401Error(message || t('error.unauthorized'))
         } else if (res.code === 403) {
+          // 403 错误会在错误回调中处理，这里不重复显示
+          // 但如果 HTTP 状态码是 200，说明是业务逻辑错误，需要显示
           ElMessage.error(message || t('error.forbidden'))
         } else {
           ElMessage.error(message)
@@ -164,6 +168,11 @@ request.interceptors.response.use(
     return res
   },
   error => {
+    // 如果错误已经被标记为已处理，不再重复处理
+    if (error.__handled) {
+      return Promise.reject(error)
+    }
+
     if (error.response) {
       const { status, data, config } = error.response
       const url = config?.url || ''
@@ -191,7 +200,9 @@ request.interceptors.response.use(
         }
       } else if (!isAuthEndpoint) {
         if (status === 403) {
-          ElMessage.error(t('error.forbidden'))
+          // 使用后端返回的错误消息，如果没有则使用默认翻译
+          const message = data?.message || data?.data?.message || t('error.forbidden')
+          ElMessage.error(message)
         } else {
           const errorMessage = data?.message || data?.data?.message || t('error.default')
           ElMessage.error(errorMessage)

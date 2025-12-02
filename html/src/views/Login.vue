@@ -168,10 +168,16 @@ const handleLogin = async () => {
         const res = await login(payload)
         if (res.data && res.data.token) {
           const token = res.data.token
+          // 登录时清除旧的缓存，确保获取最新的数据
+          userStore.menus = []
+          userStore.adminInfo = null
+          userStore.permissions = []
+          localStorage.removeItem('menus')
+          localStorage.removeItem('adminInfo')
+          
           userStore.setToken(token)
-          if (res.data.admin) {
-            userStore.setAdminInfo(res.data.admin)
-          }
+          // 注意：登录接口返回的 admin 信息可能不完整，所以先不设置
+          // 等待 fetchUserInfo() 获取完整的管理员信息（包括权限和菜单）
           // 等待一下确保token已保存
           await new Promise(resolve => setTimeout(resolve, 100))
           await userStore.fetchUserInfo()
