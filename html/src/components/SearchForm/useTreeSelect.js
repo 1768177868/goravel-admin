@@ -6,6 +6,7 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
   const filterText = ref('')
   const treeData = ref([])
   const fieldOptionsCache = ref({})
+  const selectedLabel = ref('') // 保存选中节点的标签
 
   // 获取树形选择器显示值
   const getTreeSelectDisplayValue = (fieldObj, value) => {
@@ -28,23 +29,29 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
     return findNode(fieldObj.treeData || treeData.value || [], value) || ''
   }
 
-  // 计算输入框显示值
+  // 计算输入框显示值（用于显示选中值的标签）
   const inputValue = computed(() => {
     const selectedValue = modelValue.value
     if (selectedValue) {
-      const displayValue = getTreeSelectDisplayValue(field, selectedValue)
-      if (filterText.value && filterText.value !== displayValue) {
-        return filterText.value
+      // 优先使用保存的标签，如果不存在则通过查找获取
+      if (selectedLabel.value) {
+        return selectedLabel.value
       }
-      return displayValue
+      return getTreeSelectDisplayValue(field, selectedValue)
     }
-    return filterText.value || ''
+    return ''
   })
 
   // 更新弹窗显示状态
   const updatePopoverVisible = (visible) => {
     popoverVisible.value = visible
-    if (!visible && !modelValue.value) {
+    // 关闭弹窗时，如果有选中值，清空搜索文本（恢复显示选中值）
+    // 但只有在没有输入文本时才清空，避免清空用户正在输入的内容
+    if (!visible && modelValue.value && !filterText.value) {
+      filterText.value = ''
+    }
+    // 关闭弹窗时，如果没有选中值且没有输入文本，也清空搜索文本
+    if (!visible && !modelValue.value && !filterText.value) {
       filterText.value = ''
     }
   }
@@ -52,7 +59,13 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
   // 切换弹窗显示状态
   const togglePopover = () => {
     popoverVisible.value = !popoverVisible.value
-    if (!popoverVisible.value && !modelValue.value) {
+    // 关闭弹窗时，如果有选中值，清空搜索文本（恢复显示选中值）
+    // 但只有在没有输入文本时才清空，避免清空用户正在输入的内容
+    if (!popoverVisible.value && modelValue.value && !filterText.value) {
+      filterText.value = ''
+    }
+    // 关闭弹窗时，如果没有选中值且没有输入文本，也清空搜索文本
+    if (!popoverVisible.value && !modelValue.value && !filterText.value) {
       filterText.value = ''
     }
   }
@@ -61,6 +74,10 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
   const handleNodeClick = (data) => {
     const valueKey = field.treeProps?.value || 'id'
     const value = data[valueKey]
+    // 保存选中节点的标签
+    const labelKey = field.treeProps?.label || 'label'
+    const nameKey = field.treeProps?.name || 'name'
+    selectedLabel.value = data[labelKey] || data[nameKey] || ''
     onUpdate(value)
     filterText.value = ''
   }
@@ -69,12 +86,23 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
   const handleClear = () => {
     onUpdate(null)
     filterText.value = ''
+    selectedLabel.value = '' // 清空保存的标签
   }
 
   // 处理输入
   const handleInput = (val) => {
-    filterText.value = val || ''
-    if (val && !popoverVisible.value) {
+    const inputVal = val || ''
+    filterText.value = inputVal
+    // 如果开始输入，清空选中值（允许重新选择）
+    if (inputVal && modelValue.value) {
+      // 如果输入的内容与选中值的显示文本不同，清空选中值
+      const displayValue = getTreeSelectDisplayValue(field, modelValue.value)
+      if (inputVal !== displayValue) {
+        onUpdate(null)
+      }
+    }
+    // 输入时自动打开弹窗
+    if (inputVal && !popoverVisible.value) {
       togglePopover()
     }
   }

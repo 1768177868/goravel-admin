@@ -4,7 +4,12 @@
     :width="field.popoverWidth || 300"
     :visible="popoverVisible"
     trigger="manual"
-    @update:visible="(val) => { if (val !== undefined) updatePopoverVisible(val) }"
+    @update:visible="(val) => { 
+      // 只有在明确设置为 false 时才关闭，避免点击外部时意外关闭
+      if (val === false) {
+        updatePopoverVisible(false)
+      }
+    }"
     :popper-options="{ 
       modifiers: [
         { name: 'computeStyles', options: { gpuAcceleration: false } },
@@ -14,18 +19,16 @@
   >
     <template #reference>
       <el-input
-        :model-value="inputValue"
+        :model-value="displayInputValue"
         :placeholder="placeholder"
-        :clearable="field.clearable !== false && !!modelValue"
+        :clearable="field.clearable !== false && (!!modelValue || !!filterText)"
         :disabled="field.disabled"
         :style="{ width: field.width || '200px' }"
         @clear="handleClear"
         @input="handleInput"
-        @focus.prevent="handleInputClick"
-        @click.stop.prevent="handleInputClick"
-        @mousedown.stop.prevent
-        @keydown.prevent
-        style="cursor: pointer"
+        @focus="handleInputFocus"
+        @click="handleInputClick"
+        style="cursor: text"
       >
         <template #suffix>
           <el-icon 
@@ -40,18 +43,6 @@
       </el-input>
     </template>
     <div @click.stop @mousedown.stop>
-      <el-input
-        v-if="field.filterable !== false"
-        v-model="filterText"
-        :placeholder="t('common.search') || '搜索'"
-        clearable
-        style="margin-bottom: 8px;"
-        @input="() => {}"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
       <el-tree
         :data="treeData"
         :props="field.treeProps || { label: 'name', children: 'children' }"
@@ -74,7 +65,7 @@
 
 <script setup>
 import { computed, watch } from 'vue'
-import { ArrowDown, Search } from '@element-plus/icons-vue'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useTreeSelect } from './useTreeSelect'
 
@@ -117,6 +108,19 @@ const {
   }
 })
 
+// 计算输入框显示值
+const displayInputValue = computed(() => {
+  // 如果有输入文本，优先显示输入文本
+  if (filterText.value) {
+    return filterText.value
+  }
+  // 如果有选中值，显示选中值的标签（不管弹窗是否打开）
+  if (props.modelValue) {
+    return inputValue.value
+  }
+  return ''
+})
+
 // 监听 field.apiUrl 变化，重新加载数据
 watch(() => props.field.apiUrl, () => {
   if (props.field.apiUrl) {
@@ -137,8 +141,21 @@ watch(() => {
 }, { deep: true, immediate: true })
 
 const handleNodeClick = (data) => {
+  // 获取节点的标签（优先使用 label，否则使用 name）
+  const labelKey = props.field.treeProps?.label || 'label'
+  const nameKey = props.field.treeProps?.name || 'name'
+  const nodeLabel = data[labelKey] || data[nameKey] || ''
+  
+  // 先更新值
   handleTreeSelectNodeClick(data)
-  updatePopoverVisible(false)
+  
+  // 清空 filterText，确保显示选中值
+  filterText.value = ''
+  
+  // 然后关闭弹窗（延迟一下，确保值更新完成）
+  setTimeout(() => {
+    updatePopoverVisible(false)
+  }, 10)
 }
 
 const handleClear = (e) => {
@@ -147,7 +164,32 @@ const handleClear = (e) => {
 }
 
 const handleInput = (val) => {
-  handleTreeSelectInput(val)
+  const inputVal = val || ''
+  // 直接更新 filterText（不调用 handleTreeSelectInput，避免重复设置）
+  filterText.value = inputVal
+  // 如果当前有选中值，开始输入时清空选中值
+  if (props.modelValue && inputVal) {
+    const currentDisplayValue = inputValue.value
+    if (inputVal !== currentDisplayValue) {
+      handleTreeSelectClear()
+    }
+  }
+  // 输入时自动打开弹窗
+  if (inputVal && !popoverVisible.value && !props.field.disabled) {
+    togglePopover()
+  }
+}
+
+const handleInputFocus = (e) => {
+  // 获得焦点时，如果有选中值，全选文本方便用户修改
+  if (props.modelValue && !filterText.value) {
+    // 延迟一下确保 DOM 更新
+    setTimeout(() => {
+      if (e.target && e.target.select) {
+        e.target.select()
+      }
+    }, 50)
+  }
 }
 
 const handleInputClick = (e) => {
@@ -155,8 +197,8 @@ const handleInputClick = (e) => {
   if (e.target.closest('.el-input__clear')) {
     return
   }
-  // 否则打开弹窗
-  if (!props.field.disabled) {
+  // 打开弹窗
+  if (!popoverVisible.value && !props.field.disabled) {
     togglePopover()
   }
 }
