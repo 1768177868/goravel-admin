@@ -88,7 +88,9 @@ func (s *AttachmentServiceImpl) InitChunkUpload(filename string, totalSize int64
 	// 缓存24小时
 	cacheKey := fmt.Sprintf("attachment:chunk:%s", chunkID)
 	if err := facades.Cache().Put(cacheKey, chunkInfo, 24*time.Hour); err != nil {
-		return "", fmt.Errorf("保存分片信息失败: %w", err)
+		// 记录详细的缓存错误信息
+		facades.Log().Errorf("Failed to save chunk info to cache: %v, cache_key: %s, chunk_info: %+v", err, cacheKey, chunkInfo)
+		return "", fmt.Errorf("保存分片信息失败: %w (缓存键: %s)", err, cacheKey)
 	}
 
 	return chunkID, nil

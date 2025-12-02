@@ -224,9 +224,11 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		chunkID, err := attachmentService.InitChunkUpload(filename, totalSize, chunkSize, totalChunks)
 		if err != nil {
 			errorlog.RecordHTTP(ctx, "attachment", "Failed to init chunk upload", map[string]any{
-				"error":      err.Error(),
-				"filename":   filename,
-				"total_size": totalSize,
+				"error":        err.Error(),
+				"filename":     filename,
+				"total_size":   totalSize,
+				"chunk_size":   chunkSize,
+				"total_chunks": totalChunks,
 			}, "Init chunk upload error: %v", err)
 
 			// 检查是否是存储驱动不支持的错误
@@ -234,7 +236,9 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 				return response.Error(ctx, http.StatusBadRequest, "chunk_upload_only_local_storage")
 			}
 
+			// 返回详细的错误信息
 			return response.Error(ctx, http.StatusInternalServerError, "init_chunk_upload_failed")
+
 		}
 
 		return response.Success(ctx, "init_chunk_upload_success", http.Json{

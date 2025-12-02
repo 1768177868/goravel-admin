@@ -61,7 +61,7 @@ func OperationLog() http.Middleware {
 		duration := int(time.Since(startTime).Milliseconds())
 
 		// 只记录新增、修改、删除操作（POST、PUT、PATCH、DELETE），排除 GET 请求
-		// 同时排除登录和info接口
+		// 同时排除登录和info接口，以及分片上传的进度查询（GET请求）
 		if (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE") &&
 			path != "/api/admin/login" && path != "/api/admin/info" {
 			// 在请求处理后再获取一次管理员ID（确保JWT中间件已执行）

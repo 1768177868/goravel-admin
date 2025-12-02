@@ -535,6 +535,7 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
         )
         chunkUploadChunkID.value = initRes.data.chunk_id
       } catch (error) {
+        console.error('Init chunk upload error:', error)
         // 检查是否是存储驱动不支持的错误
         if (error.response && error.response.data && error.response.data.message) {
           const message = error.response.data.message
@@ -545,6 +546,11 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
             return
           }
         }
+        // 显示更详细的错误信息
+        const errorMessage = error.response?.data?.message || error.message || t('attachment.init_chunk_upload_failed')
+        ElMessage.error(`${t('attachment.init_chunk_upload_failed')}: ${errorMessage}`)
+        chunkUploadVisible.value = false
+        chunkUploadFile.value = null
         throw error // 重新抛出其他错误
       }
     }
