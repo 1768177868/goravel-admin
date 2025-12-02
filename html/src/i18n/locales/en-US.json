@@ -255,6 +255,8 @@
     "export.destroy": "Delete Export Record",
     "config.group": "Get Configuration by Group",
     "config.save": "Save Configuration",
+    "configs.store": "Save Configuration",
+    "configs.update": "Update Configuration",
     "online-user.index": "View Online User List",
     "online-user.kick-out": "Kick Out User",
     "online-user.batch-kick-out": "Batch Kick Out Users",
@@ -272,7 +274,8 @@
     "attachment.preview": "Preview Attachment",
     "attachment.download": "Download Attachment",
     "attachment.destroy": "Delete Attachment",
-    "attachment.batch_delete": "Batch Delete Attachments"
+    "attachment.batch_delete": "Batch Delete Attachments",
+    "attachment.update_display_name": "Update Attachment Display Name"
   },
   "menu_management": {
     "title": "Menu List",
