@@ -521,7 +521,21 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
   try {
     // 计算分片信息
     const totalSize = file.size
+    if (!totalSize || totalSize <= 0) {
+      ElMessage.error(t('attachment.invalid_file_size'))
+      chunkUploadVisible.value = false
+      chunkUploadFile.value = null
+      return
+    }
+    
     const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
+    if (!totalChunks || totalChunks <= 0 || !isFinite(totalChunks)) {
+      console.error('Invalid totalChunks calculated:', { totalSize, CHUNK_SIZE, totalChunks })
+      ElMessage.error(t('attachment.invalid_chunk_calculation'))
+      chunkUploadVisible.value = false
+      chunkUploadFile.value = null
+      return
+    }
 
     // 如果使用已存在的 chunk_id（重试场景），跳过初始化
     if (!useExistingChunkID || !chunkUploadChunkID.value) {
@@ -534,6 +548,19 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
           totalChunks
         )
         chunkUploadChunkID.value = initRes.data.chunk_id
+        
+        // 保存分片信息到 localStorage（用于断点续传）
+        try {
+          localStorage.setItem(`chunk_${chunkUploadChunkID.value}`, JSON.stringify({
+            filename: file.name,
+            total_size: totalSize,
+            chunk_size: CHUNK_SIZE,
+            total_chunks: totalChunks,
+            created_at: Date.now()
+          }))
+        } catch (e) {
+          console.warn('Failed to save chunk info to localStorage:', e)
+        }
       } catch (error) {
         console.error('Init chunk upload error:', error)
         // 检查是否是存储驱动不支持的错误
@@ -560,7 +587,7 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
     // 只有在 chunkID 存在且未取消时才获取进度
     if (chunkUploadChunkID.value && !chunkUploadCancelled.value) {
       try {
-        const progressRes = await getChunkProgress(chunkUploadChunkID.value)
+        const progressRes = await getChunkProgress(chunkUploadChunkID.value, totalChunks)
         if (progressRes.data && progressRes.data.uploaded_chunks) {
           // 后端返回已上传的分片索引数组
           const uploadedIndices = progressRes.data.uploaded_chunks || []
@@ -653,7 +680,8 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
     const mergeRes = await mergeChunks(
       chunkUploadChunkID.value,
       file.name,
-      mimeType
+      mimeType,
+      totalChunks
     )
 
     // 再次检查是否已取消
@@ -664,6 +692,16 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
     chunkUploadStatus.value = 'success'
     chunkUploadProgress.value = 100
     ElMessage.success(t('attachment.upload_success'))
+    
+    // 清理 localStorage 中的分片信息
+    try {
+      if (chunkUploadChunkID.value) {
+        localStorage.removeItem(`chunk_${chunkUploadChunkID.value}`)
+      }
+    } catch (e) {
+      console.warn('Failed to remove chunk info from localStorage:', e)
+    }
+    
     loadData()
   } catch (error) {
     // 如果已取消，不显示错误

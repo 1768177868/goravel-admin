@@ -206,19 +206,76 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			return response.Error(ctx, http.StatusBadRequest, "filename_required")
 		}
 
-		totalSize, err := strconv.ParseInt(ctx.Request().Input("total_size", "0"), 10, 64)
-		if err != nil || totalSize <= 0 {
+		totalSizeStr := ctx.Request().Input("total_size", "0")
+		totalSize, err := strconv.ParseInt(totalSizeStr, 10, 64)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Invalid total_size format", map[string]any{
+				"total_size": totalSizeStr,
+				"error":      err.Error(),
+			}, "Parse total_size error: %v, value: %s", err, totalSizeStr)
+			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
+		}
+		if totalSize <= 0 {
+			errorlog.RecordHTTP(ctx, "attachment", "Invalid total_size value", map[string]any{
+				"total_size": totalSize,
+			}, "Total size must be greater than 0, got: %d", totalSize)
 			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
 		}
 
-		chunkSize, err := strconv.ParseInt(ctx.Request().Input("chunk_size", "0"), 10, 64)
-		if err != nil || chunkSize <= 0 {
+		chunkSizeStr := ctx.Request().Input("chunk_size", "0")
+		chunkSize, err := strconv.ParseInt(chunkSizeStr, 10, 64)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "attachment", "Invalid chunk_size format", map[string]any{
+				"chunk_size": chunkSizeStr,
+				"error":      err.Error(),
+			}, "Parse chunk_size error: %v, value: %s", err, chunkSizeStr)
+			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
+		}
+		if chunkSize <= 0 {
+			errorlog.RecordHTTP(ctx, "attachment", "Invalid chunk_size value", map[string]any{
+				"chunk_size": chunkSize,
+			}, "Chunk size must be greater than 0, got: %d", chunkSize)
 			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
 		}
 
-		totalChunks, err := strconv.Atoi(ctx.Request().Input("total_chunks", "0"))
-		if err != nil || totalChunks <= 0 {
+		totalChunksStr := ctx.Request().Input("total_chunks", "0")
+		totalChunks, err := strconv.Atoi(totalChunksStr)
+		if err != nil {
+			// 尝试作为浮点数解析（以防传入 "5.0" 格式）
+			if floatVal, floatErr := strconv.ParseFloat(totalChunksStr, 64); floatErr == nil {
+				totalChunks = int(floatVal)
+			} else {
+				// 记录所有参数以便调试
+				allInputs := ctx.Request().All()
+				errorlog.RecordHTTP(ctx, "attachment", "Invalid total_chunks format", map[string]any{
+					"total_chunks": totalChunksStr,
+					"all_inputs":   allInputs,
+					"error":        err.Error(),
+				}, "Parse total_chunks error: %v, value: %s", err, totalChunksStr)
+				return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+			}
+		}
+		if totalChunks <= 0 {
+			allInputs := ctx.Request().All()
+			errorlog.RecordHTTP(ctx, "attachment", "Invalid total_chunks value", map[string]any{
+				"total_chunks": totalChunks,
+				"total_size":   totalSize,
+				"chunk_size":   chunkSize,
+				"all_inputs":   allInputs,
+			}, "Total chunks must be greater than 0, got: %d (total_size: %d, chunk_size: %d)", totalChunks, totalSize, chunkSize)
 			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+		}
+
+		// 验证分片数量计算的合理性
+		expectedChunks := int((totalSize + chunkSize - 1) / chunkSize) // 向上取整
+		if totalChunks != expectedChunks {
+			errorlog.RecordHTTP(ctx, "attachment", "Total chunks mismatch", map[string]any{
+				"total_chunks":    totalChunks,
+				"expected_chunks": expectedChunks,
+				"total_size":      totalSize,
+				"chunk_size":      chunkSize,
+			}, "Total chunks mismatch: got %d, expected %d (total_size: %d, chunk_size: %d)", totalChunks, expectedChunks, totalSize, chunkSize)
+			// 不返回错误，使用客户端提供的值（可能是由于浮点数计算差异）
 		}
 
 		chunkID, err := attachmentService.InitChunkUpload(filename, totalSize, chunkSize, totalChunks)
@@ -323,6 +380,35 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			return response.Error(ctx, http.StatusBadRequest, "filename_required")
 		}
 
+		totalChunksStr := ctx.Request().Input("total_chunks", "0")
+		totalChunks, err := strconv.Atoi(totalChunksStr)
+		if err != nil {
+			// 尝试作为浮点数解析（以防传入 "5.0" 格式）
+			if floatVal, floatErr := strconv.ParseFloat(totalChunksStr, 64); floatErr == nil {
+				totalChunks = int(floatVal)
+			} else {
+				allInputs := ctx.Request().All()
+				errorlog.RecordHTTP(ctx, "attachment", "Invalid total_chunks format in merge", map[string]any{
+					"total_chunks": totalChunksStr,
+					"chunk_id":     chunkID,
+					"filename":     filename,
+					"all_inputs":   allInputs,
+					"error":        err.Error(),
+				}, "Parse total_chunks error in merge: %v, value: %s", err, totalChunksStr)
+				return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+			}
+		}
+		if totalChunks <= 0 {
+			allInputs := ctx.Request().All()
+			errorlog.RecordHTTP(ctx, "attachment", "Invalid total_chunks value in merge", map[string]any{
+				"total_chunks": totalChunks,
+				"chunk_id":     chunkID,
+				"filename":     filename,
+				"all_inputs":   allInputs,
+			}, "Total chunks must be greater than 0 in merge, got: %d", totalChunks)
+			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+		}
+
 		// 获取MIME类型：直接根据文件扩展名推断（前端传递的 mime_type 可能不准确）
 		ext := filepath.Ext(filename)
 		mimeType := mime.TypeByExtension(ext)
@@ -330,7 +416,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			mimeType = "application/octet-stream"
 		}
 
-		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType)
+		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType, totalChunks)
 		if err != nil {
 			errorlog.RecordHTTP(ctx, "attachment", "Failed to merge chunks", map[string]any{
 				"error":    err.Error(),
@@ -361,7 +447,15 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
 		}
 
-		progress, err := attachmentService.GetChunkProgress(chunkID)
+		totalChunks, err := strconv.Atoi(ctx.Request().Query("total_chunks", "0"))
+		if totalChunks == 0 {
+			totalChunks, err = strconv.Atoi(ctx.Request().Input("total_chunks", "0"))
+		}
+		if err != nil || totalChunks <= 0 {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+		}
+
+		progress, err := attachmentService.GetChunkProgress(chunkID, totalChunks)
 		if err != nil {
 			errorlog.RecordHTTP(ctx, "attachment", "Failed to get chunk progress", map[string]any{
 				"error":    err.Error(),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -187,35 +188,40 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		max := uint64(0)
 
 		if data, err := os.ReadFile("/proc/sys/fs/file-nr"); err == nil {
+			// 清理数据：去除换行符和空白字符
+			dataStr := strings.TrimSpace(string(data))
 			// 解析文件内容：例如 "1024 512 65536"
 			// 格式：已分配的文件描述符数 已分配但未使用的文件描述符数 系统最大文件描述符数
 			var allocated, unused, tempMax uint64
-			n, err := fmt.Sscanf(string(data), "%d %d %d", &allocated, &unused, &tempMax)
+			n, err := fmt.Sscanf(dataStr, "%d %d %d", &allocated, &unused, &tempMax)
 			if err == nil && n == 3 {
-				// 验证值的合理性
+				// 验证值的合理性：最大文件描述符数不应该超过 10^9 (1 billion)
+				// 9223372036854775807 是 uint64 的最大值，说明解析失败
 				if tempMax > 0 && tempMax < 1000000000 {
 					max = tempMax
 				} else {
+					// 值异常，记录警告但不中断流程
 					errorlog.RecordHTTP(ctx, "monitor", "Invalid max value from file-nr", map[string]any{
 						"value": tempMax,
-						"data":  string(data),
-					}, "Invalid max value from file-nr: %d, data: %s", tempMax, string(data))
+						"data":  dataStr,
+					}, "Invalid max value from file-nr: %d, data: %s", tempMax, dataStr)
 				}
 				// 已使用 = 已分配（第一个数字是已分配的文件描述符数，代表系统已使用的）
-				if allocated < 1000000000 {
+				if allocated > 0 && allocated < 1000000000 {
 					used = allocated
-				} else {
+				} else if allocated >= 1000000000 {
+					// 值异常，记录警告但不中断流程
 					errorlog.RecordHTTP(ctx, "monitor", "Invalid used value from file-nr", map[string]any{
 						"value": allocated,
-						"data":  string(data),
-					}, "Invalid used value from file-nr: %d, data: %s", allocated, string(data))
+						"data":  dataStr,
+					}, "Invalid used value from file-nr: %d, data: %s", allocated, dataStr)
 				}
 			} else {
 				errorlog.RecordHTTP(ctx, "monitor", "Parse file-nr error", map[string]any{
 					"error": err.Error(),
-					"data":  string(data),
+					"data":  dataStr,
 					"n":     n,
-				}, "Parse file-nr error: %v, data: %s, n: %d", err, string(data), n)
+				}, "Parse file-nr error: %v, data: %s, n: %d", err, dataStr, n)
 			}
 		} else {
 			errorlog.RecordHTTP(ctx, "monitor", "Read file-nr error", map[string]any{
@@ -226,25 +232,29 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		// 如果无法读取file-nr中的max，尝试单独读取最大限制
 		if max == 0 {
 			if data, err := os.ReadFile("/proc/sys/fs/file-max"); err == nil {
+				// 清理数据：去除换行符和空白字符
+				dataStr := strings.TrimSpace(string(data))
 				var tempMax uint64
-				n, err := fmt.Sscanf(string(data), "%d", &tempMax)
+				n, err := fmt.Sscanf(dataStr, "%d", &tempMax)
 				if err == nil && n == 1 {
 					// 验证值的合理性：最大文件描述符数不应该超过 10^9 (1 billion)
+					// 9223372036854775807 是 uint64 的最大值，说明解析失败
 					// 正常的系统值通常在 65536 到几百万之间
 					if tempMax > 0 && tempMax < 1000000000 {
 						max = tempMax
 					} else {
+						// 值异常，记录警告但不中断流程
 						errorlog.RecordHTTP(ctx, "monitor", "Invalid file-max value", map[string]any{
 							"value": tempMax,
-							"data":  string(data),
-						}, "Invalid file-max value: %d, data: %s", tempMax, string(data))
+							"data":  dataStr,
+						}, "Invalid file-max value: %d, data: %s", tempMax, dataStr)
 					}
 				} else {
 					errorlog.RecordHTTP(ctx, "monitor", "Parse file-max error", map[string]any{
 						"error": err.Error(),
-						"data":  string(data),
+						"data":  dataStr,
 						"n":     n,
-					}, "Parse file-max error: %v, data: %s, n: %d", err, string(data), n)
+					}, "Parse file-max error: %v, data: %s, n: %d", err, dataStr, n)
 				}
 			} else {
 				errorlog.RecordHTTP(ctx, "monitor", "Read file-max error", map[string]any{
@@ -321,7 +331,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		"load":             loadAvg,
 		"file_descriptors": fileDescriptors,
 		"runtime": map[string]interface{}{
-			"goroutines":      runtime.NumGoroutine(),
+			"goroutines": runtime.NumGoroutine(),
 			"total_processes": func() int {
 				processes, err := process.Processes()
 				if err != nil {
@@ -344,8 +354,8 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 				}
 				return hostname
 			}(),
-			"arch":     runtime.GOARCH,
-			"os":       runtime.GOOS,
+			"arch":       runtime.GOARCH,
+			"os":         runtime.GOOS,
 			"go_version": runtime.Version(),
 		},
 	})

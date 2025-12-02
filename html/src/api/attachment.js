@@ -86,21 +86,52 @@ export function uploadChunk(chunkID, chunkIndex, chunk, onProgress) {
 }
 
 // 合并分片
-export function mergeChunks(chunkID, filename, mimeType) {
+export function mergeChunks(chunkID, filename, mimeType, totalChunks) {
+  // 如果 totalChunks 未提供，尝试从 localStorage 获取（断点续传场景）
+  if (!totalChunks) {
+    try {
+      const chunkInfo = localStorage.getItem(`chunk_${chunkID}`)
+      if (chunkInfo) {
+        const info = JSON.parse(chunkInfo)
+        totalChunks = info.total_chunks
+      }
+    } catch (e) {
+      console.warn('Failed to get totalChunks from localStorage:', e)
+    }
+  }
+  if (!totalChunks || totalChunks <= 0) {
+    return Promise.reject(new Error('Total chunks is required'))
+  }
   return chunkUpload('merge', {
     chunk_id: chunkID,
     filename,
-    mime_type: mimeType
+    mime_type: mimeType,
+    total_chunks: totalChunks
   })
 }
 
 // 获取分片上传进度
-export function getChunkProgress(chunkID) {
+export function getChunkProgress(chunkID, totalChunks) {
   // 如果 chunkID 为空，直接返回，不调用后端接口
   if (!chunkID) {
     return Promise.reject(new Error('Chunk ID is empty'))
   }
-  return chunkUpload('progress', { chunk_id: chunkID })
+  // 如果 totalChunks 未提供，尝试从 localStorage 获取（断点续传场景）
+  if (!totalChunks) {
+    try {
+      const chunkInfo = localStorage.getItem(`chunk_${chunkID}`)
+      if (chunkInfo) {
+        const info = JSON.parse(chunkInfo)
+        totalChunks = info.total_chunks
+      }
+    } catch (e) {
+      console.warn('Failed to get totalChunks from localStorage:', e)
+    }
+  }
+  if (!totalChunks || totalChunks <= 0) {
+    return Promise.reject(new Error('Total chunks is required'))
+  }
+  return chunkUpload('progress', { chunk_id: chunkID, total_chunks: totalChunks })
 }
 
 // 删除附件
