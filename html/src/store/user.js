@@ -23,8 +23,45 @@ export const useUserStore = defineStore('user', {
     },
 
     setAdminInfo(adminInfo) {
-      this.adminInfo = adminInfo
-      localStorage.setItem('adminInfo', JSON.stringify(adminInfo))
+      // 只存储必要的基本信息，避免 localStorage 配额超限
+      // 不存储 permissions, menus 等大数据字段，它们已经单独存储
+      // roles 只存储基本信息（id 和 name），用于显示
+      const basicInfo = {
+        id: adminInfo.id || adminInfo.ID,
+        username: adminInfo.username || adminInfo.Username,
+        nickname: adminInfo.nickname || adminInfo.Nickname,
+        avatar: adminInfo.avatar || adminInfo.Avatar,
+        email: adminInfo.email || adminInfo.Email,
+        phone: adminInfo.phone || adminInfo.Phone,
+        department_id: adminInfo.department_id || adminInfo.DepartmentID,
+        department: adminInfo.department || adminInfo.Department,
+        // roles 只存储基本信息，避免存储完整的关联数据
+        roles: (adminInfo.roles || adminInfo.Roles || []).map(role => ({
+          id: role.id || role.ID,
+          name: role.name || role.Name,
+          slug: role.slug || role.Slug
+        }))
+      }
+      this.adminInfo = basicInfo
+      try {
+        localStorage.setItem('adminInfo', JSON.stringify(basicInfo))
+      } catch (error) {
+        // 如果仍然超出配额，尝试清除其他可能的缓存
+        console.warn('Failed to save adminInfo to localStorage:', error)
+        // 尝试只存储最基本信息
+        const minimalInfo = {
+          id: basicInfo.id,
+          username: basicInfo.username,
+          nickname: basicInfo.nickname,
+          avatar: basicInfo.avatar
+        }
+        try {
+          localStorage.setItem('adminInfo', JSON.stringify(minimalInfo))
+          this.adminInfo = minimalInfo
+        } catch (e) {
+          console.error('Failed to save minimal adminInfo:', e)
+        }
+      }
     },
 
     setPermissions(permissions) {

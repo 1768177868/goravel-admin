@@ -171,6 +171,19 @@ func (s *MenuSeeder) Run() error {
 
 	createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
+		Title:     "在线用户",
+		Slug:      "online-user",
+		Icon:      "User",
+		Path:      "/online-users",
+		Component: "onlineUser/index",
+		Type:      2,
+		Status:    1,
+		Sort:      6,
+		IsHidden:  0,
+	})
+
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
 		Title:     "字典管理",
 		Slug:      "dictionary",
 		Icon:      "Document",
@@ -178,7 +191,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "dictionary/index",
 		Type:      2,
 		Status:    1,
-		Sort:      6,
+		Sort:      7,
 		IsHidden:  0,
 	})
 
@@ -191,7 +204,33 @@ func (s *MenuSeeder) Run() error {
 		Component: "config/index",
 		Type:      2,
 		Status:    1,
-		Sort:      7,
+		Sort:      8,
+		IsHidden:  0,
+	})
+
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "导出管理",
+		Slug:      "export",
+		Icon:      "Document",
+		Path:      "/exports",
+		Component: "export/index",
+		Type:      2,
+		Status:    1,
+		Sort:      9,
+		IsHidden:  0,
+	})
+
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "附件管理",
+		Slug:      "attachment",
+		Icon:      "Folder",
+		Path:      "/attachments",
+		Component: "attachment/index",
+		Type:      2,
+		Status:    1,
+		Sort:      10,
 		IsHidden:  0,
 	})
 
@@ -204,7 +243,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "blacklist/index",
 		Type:      2,
 		Status:    1,
-		Sort:      8,
+		Sort:      11,
 		IsHidden:  0,
 	})
 
@@ -273,48 +312,6 @@ func (s *MenuSeeder) Run() error {
 		Type:      2,
 		Status:    1,
 		Sort:      3,
-		IsHidden:  0,
-	})
-
-	// 创建导出管理菜单（放在系统管理下）
-	createOrUpdateMenu(models.Menu{
-		ParentID:  systemMenu.ID,
-		Title:     "导出管理",
-		Slug:      "export",
-		Icon:      "Document",
-		Path:      "/exports",
-		Component: "export/index",
-		Type:      2,
-		Status:    1,
-		Sort:      6,
-		IsHidden:  0,
-	})
-
-	// 创建附件管理菜单（放在系统管理下）
-	createOrUpdateMenu(models.Menu{
-		ParentID:  systemMenu.ID,
-		Title:     "附件管理",
-		Slug:      "attachment",
-		Icon:      "Folder",
-		Path:      "/attachments",
-		Component: "attachment/index",
-		Type:      2,
-		Status:    1,
-		Sort:      10,
-		IsHidden:  0,
-	})
-
-	// 创建在线用户管理菜单（在系统管理下）
-	createOrUpdateMenu(models.Menu{
-		ParentID:  systemMenu.ID,
-		Title:     "在线用户",
-		Slug:      "online-user",
-		Icon:      "User",
-		Path:      "/online-users",
-		Component: "onlineUser/index",
-		Type:      2,
-		Status:    1,
-		Sort:      9,
 		IsHidden:  0,
 	})
 
