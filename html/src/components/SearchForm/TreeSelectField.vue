@@ -16,19 +16,20 @@
       <el-input
         :model-value="inputValue"
         :placeholder="placeholder"
-        :clearable="field.clearable !== false"
+        :clearable="field.clearable !== false && !!modelValue"
         :disabled="field.disabled"
         :style="{ width: field.width || '200px' }"
-        @clear="(e) => { e?.stopPropagation(); handleClear() }"
+        @clear="handleClear"
         @input="handleInput"
-        @click.stop.prevent="!field.disabled && togglePopover()"
+        @focus.prevent="handleInputClick"
+        @click.stop.prevent="handleInputClick"
         @mousedown.stop.prevent
-        readonly
+        @keydown.prevent
         style="cursor: pointer"
       >
         <template #suffix>
           <el-icon 
-            v-if="!field.disabled"
+            v-if="!field.disabled && !modelValue && !inputValue"
             class="el-input__icon"
             :class="{ 'is-reverse': popoverVisible }"
             style="transition: transform 0.3s; pointer-events: none;"
@@ -140,12 +141,24 @@ const handleNodeClick = (data) => {
   updatePopoverVisible(false)
 }
 
-const handleClear = () => {
+const handleClear = (e) => {
+  e?.stopPropagation()
   handleTreeSelectClear()
 }
 
 const handleInput = (val) => {
   handleTreeSelectInput(val)
+}
+
+const handleInputClick = (e) => {
+  // 如果点击的是清除按钮，不打开弹窗
+  if (e.target.closest('.el-input__clear')) {
+    return
+  }
+  // 否则打开弹窗
+  if (!props.field.disabled) {
+    togglePopover()
+  }
 }
 </script>
 
