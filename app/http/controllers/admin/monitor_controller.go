@@ -12,6 +12,7 @@ import (
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 
 	"goravel/app/http/response"
 	"goravel/app/utils/errorlog"
@@ -319,5 +320,33 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		"net":              netStats,
 		"load":             loadAvg,
 		"file_descriptors": fileDescriptors,
+		"runtime": map[string]interface{}{
+			"goroutines":      runtime.NumGoroutine(),
+			"total_processes": func() int {
+				processes, err := process.Processes()
+				if err != nil {
+					errorlog.RecordHTTP(ctx, "monitor", "Get processes error", map[string]any{
+						"error": err.Error(),
+					}, "Get processes error: %v", err)
+					return 0
+				}
+				return len(processes)
+			}(),
+		},
+		"system": map[string]interface{}{
+			"hostname": func() string {
+				hostname, err := os.Hostname()
+				if err != nil {
+					errorlog.RecordHTTP(ctx, "monitor", "Get hostname error", map[string]any{
+						"error": err.Error(),
+					}, "Get hostname error: %v", err)
+					return "unknown"
+				}
+				return hostname
+			}(),
+			"arch":     runtime.GOARCH,
+			"os":       runtime.GOOS,
+			"go_version": runtime.Version(),
+		},
 	})
 }

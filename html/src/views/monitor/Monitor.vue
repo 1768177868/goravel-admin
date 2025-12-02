@@ -263,6 +263,71 @@
       </el-col>
     </el-row>
 
+    <!-- 系统信息和运行时信息 -->
+    <el-row :gutter="20" style="margin-top: 20px">
+      <!-- 系统信息 -->
+      <el-col :span="12">
+        <el-card class="monitor-card system-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon system-icon"><Monitor /></el-icon>
+                <span>{{ $t('monitor.system_info') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div class="info-grid">
+              <div class="info-item full-width">
+                <span class="info-label">{{ $t('monitor.hostname') }}</span>
+                <span class="info-value highlight">{{ systemInfo.system?.hostname || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.os') }}</span>
+                <span class="info-value highlight">{{ systemInfo.system?.os || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.arch') }}</span>
+                <span class="info-value highlight">{{ systemInfo.system?.arch || '-' }}</span>
+              </div>
+              <div class="info-item full-width">
+                <span class="info-label">{{ $t('monitor.go_version') }}</span>
+                <span class="info-value">{{ systemInfo.system?.go_version || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- Goroutine 和进程数 -->
+      <el-col :span="12">
+        <el-card class="monitor-card runtime-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon runtime-icon"><Operation /></el-icon>
+                <span>{{ $t('monitor.runtime') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.goroutines') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.runtime?.goroutines || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.total_processes') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.runtime?.total_processes || 0) }}</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 只在Linux系统上显示负载和文件描述符 -->
     <el-row v-if="isLinux" :gutter="20" style="margin-top: 20px">
       <!-- 负载信息 -->
@@ -348,7 +413,8 @@ import {
   Monitor, 
   TrendCharts, 
   Document, 
-  Refresh 
+  Refresh,
+  Operation
 } from '@element-plus/icons-vue'
 import { getSystemInfo } from '../../api/monitor'
 
@@ -361,7 +427,9 @@ const systemInfo = ref({
   disk: {},
   net: {},
   load: {},
-  file_descriptors: {}
+  file_descriptors: {},
+  runtime: {},
+  system: {}
 })
 
 // 判断是否为Linux系统
@@ -507,6 +575,14 @@ onUnmounted(() => {
 
 .fd-card :deep(.el-card__header) {
   background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+.runtime-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.system-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
 .card-header {

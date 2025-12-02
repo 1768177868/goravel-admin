@@ -732,7 +732,15 @@
     "fd_usage": "Usage",
     "fd_used": "Used",
     "fd_free": "Free",
-    "fd_max": "Max Limit"
+    "fd_max": "Max Limit",
+    "runtime": "Runtime",
+    "goroutines": "Goroutines",
+    "total_processes": "Total Processes",
+    "system_info": "System Information",
+    "hostname": "Hostname",
+    "os": "Operating System",
+    "arch": "Architecture",
+    "go_version": "Go Version"
   },
   "operation.unknown": "Unknown Operation"
 }

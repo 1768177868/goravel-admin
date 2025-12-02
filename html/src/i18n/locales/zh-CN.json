@@ -732,7 +732,15 @@
     "fd_usage": "使用率",
     "fd_used": "已占用",
     "fd_free": "剩余",
-    "fd_max": "最大限制"
+    "fd_max": "最大限制",
+    "runtime": "运行时",
+    "goroutines": "Goroutine 数量",
+    "total_processes": "总进程数",
+    "system_info": "系统信息",
+    "hostname": "服务器名称",
+    "os": "操作系统",
+    "arch": "系统架构",
+    "go_version": "Go 版本"
   },
   "operation.unknown": "未知操作"
 }

@@ -165,15 +165,26 @@ const handleClear = (e) => {
 
 const handleInput = (val) => {
   const inputVal = val || ''
-  // 直接更新 filterText（不调用 handleTreeSelectInput，避免重复设置）
-  filterText.value = inputVal
-  // 如果当前有选中值，开始输入时清空选中值
+  
+  // 如果输入为空，且有选中值，清空选中值
+  if (props.modelValue && !inputVal) {
+    handleTreeSelectClear()
+    return
+  }
+
+  // 如果当前有选中值，且输入内容发生变化
   if (props.modelValue && inputVal) {
     const currentDisplayValue = inputValue.value
     if (inputVal !== currentDisplayValue) {
       handleTreeSelectClear()
+      filterText.value = inputVal // 恢复输入内容
+    } else {
+      filterText.value = inputVal
     }
+  } else {
+    filterText.value = inputVal
   }
+  
   // 输入时自动打开弹窗
   if (inputVal && !popoverVisible.value && !props.field.disabled) {
     togglePopover()
