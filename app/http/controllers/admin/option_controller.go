@@ -114,18 +114,18 @@ func (r *OptionController) buildMenuTree(menus []models.Menu) []map[string]any {
 		if menu.Path != "" {
 			label = label + " (" + menu.Path + ")"
 		}
-		
+
 		node := map[string]any{
 			"id":    menu.ID,
 			"name":  menu.Title,
 			"label": label,
 			"value": menu.ID,
 		}
-		
+
 		if len(menu.Children) > 0 {
 			node["children"] = r.buildMenuTree(menu.Children)
 		}
-		
+
 		tree = append(tree, node)
 	}
 	return tree

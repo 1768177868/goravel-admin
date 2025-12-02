@@ -244,8 +244,12 @@ const searchFields = computed(() => [
   {
     prop: 'module',
     label: t('log.module'),
-    type: 'input',
+    type: 'select',
     width: '150px',
+    options: getModuleOptions(t),
+    filterable: true,
+    clearable: true,
+    allowCreate: true,
     advanced: false
   },
   {
@@ -279,6 +283,20 @@ const searchFields = computed(() => [
     advanced: true
   }
 ])
+
+// 获取模块选项（带多语言）
+const getModuleOptions = (t) => {
+  return [
+    { label: t('log.module_system_log'), value: 'system-log' },
+    { label: t('log.module_attachment'), value: 'attachment' },
+    { label: t('log.module_auth'), value: 'auth' },
+    { label: t('log.module_monitor'), value: 'monitor' },
+    { label: t('log.module_operation_log'), value: 'operation-log' },
+    { label: t('log.module_recover'), value: 'recover' },
+    { label: t('log.module_payment'), value: 'payment' },
+    { label: t('log.module_background_task'), value: 'background-task' }
+  ]
+}
 
 const getLevelType = (level) => {
   const levelMap = {
