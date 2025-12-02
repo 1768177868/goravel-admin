@@ -181,17 +181,6 @@ const fieldMapping = {
   'created_at': 'created_at'
 }
 
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
-  defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
-  }
-})
-
 // 格式化日期为 YYYY-MM-DD HH:mm:ss
 const formatDateTime = (date) => {
   const year = date.getFullYear()
@@ -211,19 +200,73 @@ const getSevenDaysAgo = () => {
   return formatDateTime(date)
 }
 
-// 搜索表单初始值
-const initialSearchForm = {
-  username: '',
-  method: '',
-  path: '',
-  title: '',
-  ip: '',
-  status: '',
-  start_time: getSevenDaysAgo(),
-  end_time: ''
+// 转换操作日志数据（PascalCase -> snake_case）
+const transformOperationLogData = (log) => {
+  let params = null
+  try {
+    if (log.Request) {
+      params = typeof log.Request === 'string' ? JSON.parse(log.Request) : log.Request
+    } else if (log.request) {
+      params = typeof log.request === 'string' ? JSON.parse(log.request) : log.request
+    } else if (log.Params) {
+      params = typeof log.Params === 'string' ? JSON.parse(log.Params) : log.Params
+    } else if (log.params) {
+      params = typeof log.params === 'string' ? JSON.parse(log.params) : log.params
+    }
+  } catch (e) {
+    params = log.Request || log.request || log.Params || log.params || null
+  }
+  
+  return {
+    id: log.ID || log.id,
+    admin: log.Admin ? {
+      username: log.Admin.Username || log.Admin.username || ''
+    } : (log.admin ? {
+      username: log.admin.username || ''
+    } : null),
+    method: log.Method || log.method || '',
+    path: log.Path || log.path || '',
+    title: log.Title || log.title || '',
+    ip: log.IP || log.ip || '',
+    status_code: log.Status || log.status || log.StatusCode || log.status_code || 0,
+    created_at: log.CreatedAt || log.created_at || '',
+    params: params,
+    request: log.Request || log.request || null,
+    response: log.Response || log.response || null
+  }
 }
 
-const searchForm = reactive({ ...initialSearchForm })
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getOperationLogList,
+  initialSearchForm: {
+    username: '',
+    method: '',
+    path: '',
+    title: '',
+    ip: '',
+    status: '',
+    start_time: getSevenDaysAgo(),
+    end_time: ''
+  },
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
+  },
+  transformData: transformOperationLogData
+})
 
 // 获取操作标题的翻译
 // 标题目前存的是权限标识的 slug，例如：admin.index / admin.update / role.update 等
@@ -418,98 +461,7 @@ const searchFields = computed(() => {
   ]
 })
 
-// 转换操作日志数据（PascalCase -> snake_case）
-const transformOperationLogData = (log) => {
-  let params = null
-  try {
-    if (log.Request) {
-      params = typeof log.Request === 'string' ? JSON.parse(log.Request) : log.Request
-    } else if (log.request) {
-      params = typeof log.request === 'string' ? JSON.parse(log.request) : log.request
-    } else if (log.Params) {
-      params = typeof log.Params === 'string' ? JSON.parse(log.Params) : log.Params
-    } else if (log.params) {
-      params = typeof log.params === 'string' ? JSON.parse(log.params) : log.params
-    }
-  } catch (e) {
-    params = log.Request || log.request || log.Params || log.params || null
-  }
-  
-  return {
-    id: log.ID || log.id,
-    admin: log.Admin ? {
-      username: log.Admin.Username || log.Admin.username || ''
-    } : (log.admin ? {
-      username: log.admin.username || ''
-    } : null),
-    method: log.Method || log.method || '',
-    path: log.Path || log.path || '',
-    title: log.Title || log.title || '',
-    ip: log.IP || log.ip || '',
-    status_code: log.Status || log.status || log.StatusCode || log.status_code || 0,
-    created_at: log.CreatedAt || log.created_at || '',
-    params: params,
-    request: log.Request || log.request || null,
-    response: log.Response || log.response || null
-  }
-}
-
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      ...searchForm,
-      order_by: buildOrderBy()
-    }
-    // 移除空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
-    const res = await getOperationLogList(params)
-    if (res.data) {
-      const logs = res.data.list || []
-      tableData.value = logs.map(log => transformOperationLogData(log))
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load operation log list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.username = ''
-  searchForm.method = ''
-  searchForm.path = ''
-  searchForm.title = ''
-  searchForm.ip = ''
-  searchForm.status = ''
-  searchForm.start_time = getSevenDaysAgo()
-  searchForm.end_time = ''
-  // 重置排序
-  resetSort()
-  pagination.page = 1
-  loadData()
-}
-
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 const handleView = async (row) => {
   try {
