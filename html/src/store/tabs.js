@@ -1,10 +1,50 @@
 import { defineStore } from 'pinia'
 
-export const useTabsStore = defineStore('tabs', {
-  state: () => ({
+// 从 localStorage 加载标签页数据
+const loadTabsFromStorage = () => {
+  try {
+    const stored = localStorage.getItem('tabs')
+    if (stored) {
+      const data = JSON.parse(stored)
+      return {
+        tabs: data.tabs || [],
+        activeTab: data.activeTab || null
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load tabs from localStorage:', error)
+  }
+  return {
     tabs: [],
     activeTab: null
-  }),
+  }
+}
+
+// 保存标签页数据到 localStorage
+const saveTabsToStorage = (tabs, activeTab) => {
+  try {
+    localStorage.setItem('tabs', JSON.stringify({
+      tabs,
+      activeTab
+    }))
+    // 触发 storage 事件，通知其他标签页更新
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'tabs',
+      newValue: JSON.stringify({ tabs, activeTab })
+    }))
+  } catch (error) {
+    console.error('Failed to save tabs to localStorage:', error)
+  }
+}
+
+export const useTabsStore = defineStore('tabs', {
+  state: () => {
+    const { tabs, activeTab } = loadTabsFromStorage()
+    return {
+      tabs,
+      activeTab
+    }
+  },
 
   getters: {
     hasTabs: (state) => state.tabs.length > 0
@@ -26,6 +66,7 @@ export const useTabsStore = defineStore('tabs', {
       }
 
       this.activeTab = tab.path
+      saveTabsToStorage(this.tabs, this.activeTab)
     },
 
     removeTab(path) {
@@ -51,11 +92,13 @@ export const useTabsStore = defineStore('tabs', {
           this.activeTab = null
         }
       }
+      saveTabsToStorage(this.tabs, this.activeTab)
     },
 
     removeOtherTabs(path) {
       this.tabs = this.tabs.filter(t => t.path === path)
       this.activeTab = path
+      saveTabsToStorage(this.tabs, this.activeTab)
     },
 
     removeLeftTabs(path) {
@@ -64,6 +107,7 @@ export const useTabsStore = defineStore('tabs', {
         this.tabs = this.tabs.slice(index)
         this.activeTab = path
       }
+      saveTabsToStorage(this.tabs, this.activeTab)
     },
 
     removeRightTabs(path) {
@@ -72,17 +116,20 @@ export const useTabsStore = defineStore('tabs', {
         this.tabs = this.tabs.slice(0, index + 1)
         this.activeTab = path
       }
+      saveTabsToStorage(this.tabs, this.activeTab)
     },
 
     removeAllTabs() {
       this.tabs = []
       this.activeTab = null
+      saveTabsToStorage(this.tabs, this.activeTab)
     },
 
     refreshTab(path) {
       const tab = this.tabs.find(t => t.path === path)
       if (tab) {
         tab.refreshKey = Date.now()
+        saveTabsToStorage(this.tabs, this.activeTab)
       }
     },
 
@@ -93,7 +140,54 @@ export const useTabsStore = defineStore('tabs', {
 
     setActiveTab(path) {
       this.activeTab = path
+      saveTabsToStorage(this.tabs, this.activeTab)
+    },
+
+    // 从 localStorage 同步标签页（用于多标签页同步）
+    syncTabsFromStorage() {
+      const { tabs, activeTab } = loadTabsFromStorage()
+      this.tabs = tabs
+      this.activeTab = activeTab
     }
   }
 })
+
+// 监听 storage 事件，实现多标签页同步
+// 注意：storage 事件只在其他标签页修改 localStorage 时触发，不会在当前标签页触发
+// 这个监听器会在 store 初始化后设置
+let storageListener = null
+
+export const setupTabsStorageSync = () => {
+  if (typeof window === 'undefined' || storageListener) {
+    return
+  }
+  
+  storageListener = (e) => {
+    if (e.key === 'tabs' && e.newValue) {
+      try {
+        const data = JSON.parse(e.newValue)
+        const tabsStore = useTabsStore()
+        if (tabsStore) {
+          tabsStore.tabs = data.tabs || []
+          tabsStore.activeTab = data.activeTab || null
+        }
+      } catch (error) {
+        console.error('Failed to sync tabs from storage:', error)
+      }
+    }
+  }
+  
+  window.addEventListener('storage', storageListener)
+}
+
+// 在浏览器环境中自动设置监听器
+if (typeof window !== 'undefined') {
+  // 延迟设置，确保 Pinia 已经初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTabsStorageSync)
+  } else {
+    // DOM 已经加载完成，延迟一下确保 Pinia 初始化
+    setTimeout(setupTabsStorageSync, 100)
+  }
+}
 

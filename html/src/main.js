@@ -13,6 +13,7 @@ import en from 'element-plus/dist/locale/en.mjs'
 import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
+import { setupTabsStorageSync } from './store/tabs'
 import './style.css'
 
 const app = createApp(App)
@@ -28,7 +29,8 @@ const getElementLocale = () => {
   return savedLocale === 'zh-CN' ? zhCn : en
 }
 
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
 app.use(router)
 app.use(i18n)
 app.use(ElementPlus, { locale: getElementLocale() })
@@ -38,6 +40,9 @@ app.use(VxePcUI)
 // 初始化布局大小
 const layoutSize = localStorage.getItem('layoutSize') || 'default'
 document.body.classList.add(`layout-${layoutSize}`)
+
+// 设置多标签页同步监听器（在 Pinia 初始化后）
+setupTabsStorageSync()
 
 app.mount('#app')
 
