@@ -556,7 +556,13 @@
     "extension": "后缀名",
     "size": "文件大小",
     "download_success": "下载成功",
-    "download_failed": "无法构造下载链接"
+    "download_failed": "无法构造下载链接",
+    "monitor_progress": "监控进度",
+    "stop_monitor": "停止监控",
+    "export_completed": "导出完成",
+    "export_failed": "导出失败",
+    "monitoring_started": "开始监控导出进度",
+    "monitor_failed": "启动监控失败"
   },
   "attachment": {
     "title": "附件管理",
@@ -755,7 +761,9 @@
     "hostname": "服务器名称",
     "os": "操作系统",
     "arch": "系统架构",
-    "go_version": "Go 版本"
+    "go_version": "Go 版本",
+    "sse_connection_failed": "实时推送连接失败，已切换到定时刷新模式",
+    "sse_init_failed": "无法启动实时推送，已切换到定时刷新模式"
   },
   "operation.unknown": "未知操作"
 }

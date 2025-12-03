@@ -556,7 +556,13 @@
     "extension": "Extension",
     "size": "File Size",
     "download_success": "Download successful",
-    "download_failed": "Failed to build download URL"
+    "download_failed": "Failed to build download URL",
+    "monitor_progress": "Monitor Progress",
+    "stop_monitor": "Stop Monitor",
+    "export_completed": "Export completed",
+    "export_failed": "Export failed",
+    "monitoring_started": "Started monitoring export progress",
+    "monitor_failed": "Failed to start monitoring"
   },
   "attachment": {
     "title": "Attachment Management",
@@ -755,7 +761,9 @@
     "hostname": "Hostname",
     "os": "Operating System",
     "arch": "Architecture",
-    "go_version": "Go Version"
+    "go_version": "Go Version",
+    "sse_connection_failed": "Real-time push connection failed, switched to polling mode",
+    "sse_init_failed": "Failed to start real-time push, switched to polling mode"
   },
   "operation.unknown": "Unknown Operation"
 }
