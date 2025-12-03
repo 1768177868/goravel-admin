@@ -75,10 +75,12 @@ func generateDefaultTitle(method, path string) string {
 
 	// 批量删除（通用模式）
 	if strings.HasSuffix(path, "/batch-delete") && method == "POST" {
-		// 提取模块名
+		// 提取模块名（直接使用路径中的原始模块名，不做任何转换）
 		parts := strings.Split(strings.TrimPrefix(path, "/api/admin/"), "/")
 		if len(parts) > 0 {
 			module := parts[0]
+			// 将连字符转换为下划线（如 operation-logs -> operation_logs）
+			module = strings.ReplaceAll(module, "-", "_")
 			return module + ".batch_delete"
 		}
 	}
@@ -88,6 +90,8 @@ func generateDefaultTitle(method, path string) string {
 		parts := strings.Split(strings.TrimPrefix(path, "/api/admin/"), "/")
 		if len(parts) > 0 {
 			module := parts[0]
+			// 将连字符转换为下划线（如 operation-logs -> operation_logs）
+			module = strings.ReplaceAll(module, "-", "_")
 			return module + ".clean"
 		}
 	}
@@ -96,6 +100,8 @@ func generateDefaultTitle(method, path string) string {
 	parts := strings.Split(strings.TrimPrefix(path, "/api/admin/"), "/")
 	if len(parts) >= 1 {
 		module := parts[0]
+		// 将连字符转换为下划线（如 operation-logs -> operation_logs）
+		module = strings.ReplaceAll(module, "-", "_")
 		switch method {
 		case "POST":
 			// 创建操作

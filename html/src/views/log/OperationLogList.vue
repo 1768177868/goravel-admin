@@ -268,14 +268,108 @@ const {
   transformData: transformOperationLogData
 })
 
+// 将复数形式转换为单数形式，以匹配权限配置中的 slug
+// 支持处理：复数形式（roles）、连字符形式（operation-logs）、下划线形式（operation_logs）
+const pluralToSingular = (plural) => {
+  if (!plural) return plural
+
+  // 先处理连字符形式，转换为下划线形式统一处理
+  let normalized = plural.replace(/-/g, '_')
+
+  // 常见的复数到单数映射（使用下划线形式）
+  const singularMap = {
+    'roles': 'role',
+    'permissions': 'permission',
+    'menus': 'menu',
+    'departments': 'department',
+    'dictionaries': 'dictionary',
+    'blacklists': 'blacklist',
+    'admins': 'admin',
+    'operation_logs': 'operation_log',
+    'login_logs': 'login_log',
+    'system_logs': 'system_log',
+    'online_users': 'online-user',
+    // 连字符形式也支持
+    'operation-logs': 'operation_log',
+    'login-logs': 'login_log',
+    'system-logs': 'system_log',
+    'online-users': 'online-user'
+  }
+
+  // 先检查完整匹配
+  if (singularMap[plural]) {
+    return singularMap[plural]
+  }
+  if (singularMap[normalized]) {
+    return singularMap[normalized]
+  }
+
+  // 处理复合词（包含下划线的情况，如 operation_logs）
+  if (normalized.includes('_')) {
+    const parts = normalized.split('_')
+    const lastPart = parts[parts.length - 1]
+    // 只转换最后一个部分
+    const singularLastPart = convertPluralToSingular(lastPart)
+    if (singularLastPart !== lastPart) {
+      return parts.slice(0, -1).join('_') + '_' + singularLastPart
+    }
+  }
+
+  // 如果没有找到映射，尝试常见的复数规则
+  return convertPluralToSingular(normalized)
+}
+
+// 基础的复数转单数转换函数
+const convertPluralToSingular = (word) => {
+  if (!word || word.length <= 1) return word
+
+  // 以 -s 结尾的单词，去掉 s
+  if (word.endsWith('s')) {
+    // 特殊情况：-ies 结尾的单词（如 dictionaries -> dictionary）
+    if (word.endsWith('ies') && word.length > 3) {
+      return word.slice(0, -3) + 'y'
+    }
+    // 特殊情况：-es 结尾的单词（如 permissions -> permission）
+    if (word.endsWith('es') && word.length > 2) {
+      const beforeEs = word.slice(0, -2)
+      // 如果去掉 es 后以 ch, sh, x, s, z 结尾，保留 e
+      const lastChar = beforeEs[beforeEs.length - 1]
+      if (['c', 's', 'x', 'z'].includes(lastChar)) {
+        return beforeEs
+      }
+      return beforeEs
+    }
+    return word.slice(0, -1)
+  }
+
+  // 默认返回原值
+  return word
+}
+
 // 获取操作标题的翻译
-// 标题目前存的是权限标识的 slug，例如：admin.index / admin.update / role.update 等
-// 这里沿用角色管理中菜单与权限使用的多语言识别方式
+// 标题可能存储为：
+// 1. 权限标识（单数形式）：admin.update, role.update（优先使用，由权限中间件设置）
+// 2. 路径生成的标题（可能是复数形式）：admins.update, roles.update（当没有权限标识时）
+// 3. 连字符或下划线形式：operation-logs.update 或 operation_logs.update
+// 前端统一处理：将复数形式转换为单数形式，然后查找翻译
 const getOperationTitle = (titleKey) => {
   if (!titleKey) return '-'
 
+  // 0. 先尝试将复数形式转换为单数形式
+  // 如果包含点号，说明是 module.action 格式，需要转换 module 部分
+  let slug = titleKey
+  if (slug.includes('.')) {
+    const parts = slug.split('.')
+    if (parts.length >= 2) {
+      const module = pluralToSingular(parts[0])
+      slug = module + '.' + parts.slice(1).join('.')
+    }
+  } else {
+    // 如果没有点号，直接转换整个字符串
+    slug = pluralToSingular(slug)
+  }
+
   // 1. 作为权限标识翻译：permission.admin.update 这种形式
-  const slug = titleKey
   const slugKey = `permission.${slug}`
 
   // 1.1 使用 te 检测路径是否存在（兼容嵌套路径）
@@ -283,7 +377,7 @@ const getOperationTitle = (titleKey) => {
     return t(slugKey)
   }
 
-  // 1.2 直接从 permission 命名空间对象里取（兼容平铺的 \"admin.update\" 键）
+  // 1.2 直接从 permission 命名空间对象里取（兼容平铺的 "admin.update" 键）
   const messages = typeof tm === 'function' ? tm('permission') : null
   if (messages && Object.prototype.hasOwnProperty.call(messages, slug)) {
     const value = messages[slug]
@@ -300,7 +394,22 @@ const getOperationTitle = (titleKey) => {
     }
   }
 
-  // 3. 找不到翻译就原样返回
+  // 3. 如果转换后的 slug 和原始 titleKey 不同，再尝试用原始值查找一次（兼容旧数据）
+  if (slug !== titleKey) {
+    const originalSlugKey = `permission.${titleKey}`
+    if (typeof te === 'function' && te(originalSlugKey)) {
+      return t(originalSlugKey)
+    }
+    const originalMessages = typeof tm === 'function' ? tm('permission') : null
+    if (originalMessages && Object.prototype.hasOwnProperty.call(originalMessages, titleKey)) {
+      const value = originalMessages[titleKey]
+      if (typeof value === 'string') {
+        return value
+      }
+    }
+  }
+
+  // 4. 找不到翻译就原样返回
   return titleKey
 }
 
