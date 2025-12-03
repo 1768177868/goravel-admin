@@ -1,4 +1,4 @@
-package admin
+﻿package admin
 
 import (
 	"encoding/json"
@@ -90,7 +90,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	var totalErrin, totalErrout, totalDropin, totalDropout uint64
 
 	// 每个网卡的详细信息
-	var interfaces []map[string]interface{}
+	var interfaces []map[string]any
 	for _, io := range netIO {
 		// 跳过回环接口（通常以 lo 或 Loopback 开头）
 		if io.Name == "lo" || io.Name == "Loopback" || io.Name == "lo0" {
@@ -106,7 +106,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		totalDropin += io.Dropin
 		totalDropout += io.Dropout
 
-		interfaces = append(interfaces, map[string]interface{}{
+		interfaces = append(interfaces, map[string]any{
 			"name":         io.Name,
 			"bytes_sent":   io.BytesSent,
 			"bytes_recv":   io.BytesRecv,
@@ -120,7 +120,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	}
 
 	// 汇总统计
-	netStats := map[string]interface{}{
+	netStats := map[string]any{
 		"bytes_sent":   totalBytesSent,
 		"bytes_recv":   totalBytesRecv,
 		"packets_sent": totalPacketsSent,
@@ -138,14 +138,14 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	}
 
 	// 负载信息（仅Linux/Unix系统）
-	var loadAvg map[string]interface{}
+	var loadAvg map[string]any
 	if runtime.GOOS != "windows" {
 		avg, err := load.Avg()
 		if err != nil {
 			errorlog.RecordHTTP(ctx, "monitor", "Get load average error", map[string]any{
 				"error": err.Error(),
 			}, "Get load average error: %v", err)
-			loadAvg = map[string]interface{}{
+			loadAvg = map[string]any{
 				"load1":  0.0,
 				"load5":  0.0,
 				"load15": 0.0,
@@ -160,7 +160,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			loadPercent5 := (avg.Load5 / cores) * 100
 			loadPercent15 := (avg.Load15 / cores) * 100
 
-			loadAvg = map[string]interface{}{
+			loadAvg = map[string]any{
 				"load1":          avg.Load1,
 				"load5":          avg.Load5,
 				"load15":         avg.Load15,
@@ -171,7 +171,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		}
 	} else {
 		// Windows系统不支持负载
-		loadAvg = map[string]interface{}{
+		loadAvg = map[string]any{
 			"load1":          0.0,
 			"load5":          0.0,
 			"load15":         0.0,
@@ -182,7 +182,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	}
 
 	// 文件描述符信息（仅Linux/Unix系统，获取系统全局的）
-	var fileDescriptors map[string]interface{}
+	var fileDescriptors map[string]any
 	if runtime.GOOS != "windows" {
 		// 读取系统全局文件描述符信息 /proc/sys/fs/file-nr
 		// 格式：已分配 已使用但未释放 最大数量
@@ -198,38 +198,17 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			n, err := fmt.Sscanf(dataStr, "%d %d %d", &allocated, &unused, &tempMax)
 			if err == nil && n == 3 {
 				// 验证值的合理性：最大文件描述符数不应该超过 10^9 (1 billion)
-				// 9223372036854775807 是 uint64 的最大值，说明解析失败
 				if tempMax > 0 && tempMax < 1000000000 {
 					max = tempMax
-				} else {
-					// 值异常，记录警告但不中断流程
-					errorlog.RecordHTTP(ctx, "monitor", "Invalid max value from file-nr", map[string]any{
-						"value": tempMax,
-						"data":  dataStr,
-					}, "Invalid max value from file-nr: %d, data: %s", tempMax, dataStr)
 				}
 				// 已使用 = 已分配（第一个数字是已分配的文件描述符数，代表系统已使用的）
 				if allocated > 0 && allocated < 1000000000 {
 					used = allocated
-				} else if allocated >= 1000000000 {
-					// 值异常，记录警告但不中断流程
-					errorlog.RecordHTTP(ctx, "monitor", "Invalid used value from file-nr", map[string]any{
-						"value": allocated,
-						"data":  dataStr,
-					}, "Invalid used value from file-nr: %d, data: %s", allocated, dataStr)
 				}
-			} else {
-				errorlog.RecordHTTP(ctx, "monitor", "Parse file-nr error", map[string]any{
-					"error": err.Error(),
-					"data":  dataStr,
-					"n":     n,
-				}, "Parse file-nr error: %v, data: %s, n: %d", err, dataStr, n)
 			}
-		} else {
-			errorlog.RecordHTTP(ctx, "monitor", "Read file-nr error", map[string]any{
-				"error": err.Error(),
-			}, "Read /proc/sys/fs/file-nr error: %v", err)
+			// 解析失败或值不合理时静默处理，后续会使用默认值
 		}
+		// 读取失败时静默处理，后续会尝试读取 file-max 或使用默认值
 
 		// 如果无法读取file-nr中的max，尝试单独读取最大限制
 		if max == 0 {
@@ -240,36 +219,18 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 				n, err := fmt.Sscanf(dataStr, "%d", &tempMax)
 				if err == nil && n == 1 {
 					// 验证值的合理性：最大文件描述符数不应该超过 10^9 (1 billion)
-					// 9223372036854775807 是 uint64 的最大值，说明解析失败
 					// 正常的系统值通常在 65536 到几百万之间
 					if tempMax > 0 && tempMax < 1000000000 {
 						max = tempMax
-					} else {
-						// 值异常，记录警告但不中断流程
-						errorlog.RecordHTTP(ctx, "monitor", "Invalid file-max value", map[string]any{
-							"value": tempMax,
-							"data":  dataStr,
-						}, "Invalid file-max value: %d, data: %s", tempMax, dataStr)
 					}
-				} else {
-					errorlog.RecordHTTP(ctx, "monitor", "Parse file-max error", map[string]any{
-						"error": err.Error(),
-						"data":  dataStr,
-						"n":     n,
-					}, "Parse file-max error: %v, data: %s, n: %d", err, dataStr, n)
+					// 值异常时静默处理，后续会使用默认值
 				}
-			} else {
-				errorlog.RecordHTTP(ctx, "monitor", "Read file-max error", map[string]any{
-					"error": err.Error(),
-				}, "Read /proc/sys/fs/file-max error: %v", err)
+				// 解析失败或读取失败时静默处理，后续会使用默认值
 			}
 		}
 
-		// 验证 max 值的合理性
+		// 验证 max 值的合理性，如果异常则重置为0，后续会使用默认值
 		if max > 1000000000 {
-			errorlog.RecordHTTP(ctx, "monitor", "File descriptor max value too large, using default", map[string]any{
-				"max": max,
-			}, "File descriptor max value too large: %d, using default", max)
 			max = 0
 		}
 
@@ -289,7 +250,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			percent = (float64(used) / float64(max)) * 100
 		}
 
-		fileDescriptors = map[string]interface{}{
+		fileDescriptors = map[string]any{
 			"max":     max,
 			"used":    used,
 			"free":    free,
@@ -297,7 +258,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		}
 	} else {
 		// Windows系统不支持文件描述符限制
-		fileDescriptors = map[string]interface{}{
+		fileDescriptors = map[string]any{
 			"max":     0,
 			"used":    0,
 			"free":    0,
@@ -307,12 +268,12 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "get_success", http.Json{
 		"os": runtime.GOOS, // 操作系统类型
-		"cpu": map[string]interface{}{
+		"cpu": map[string]any{
 			"percent": cpuPercent[0],
 			"model":   cpuModel,
 			"cores":   len(cpuInfo),
 		},
-		"memory": map[string]interface{}{
+		"memory": map[string]any{
 			"total":     memInfo.Total,
 			"available": memInfo.Available,
 			"used":      memInfo.Used,
@@ -321,7 +282,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			"cached":    memInfo.Cached,
 			"buffers":   memInfo.Buffers,
 		},
-		"disk": map[string]interface{}{
+		"disk": map[string]any{
 			"total":   diskInfo.Total,
 			"free":    diskInfo.Free,
 			"used":    diskInfo.Used,
@@ -332,7 +293,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		"net":              netStats,
 		"load":             loadAvg,
 		"file_descriptors": fileDescriptors,
-		"runtime": map[string]interface{}{
+		"runtime": map[string]any{
 			"goroutines": runtime.NumGoroutine(),
 			"total_processes": func() int {
 				processes, err := process.Processes()
@@ -345,7 +306,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 				return len(processes)
 			}(),
 		},
-		"system": map[string]interface{}{
+		"system": map[string]any{
 			"hostname": func() string {
 				hostname, err := os.Hostname()
 				if err != nil {
@@ -388,7 +349,7 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 	}
 
 	// 发送初始连接消息
-	initMsg := map[string]interface{}{
+	initMsg := map[string]any{
 		"type":     "connected",
 		"message":  "SSE连接已建立，开始推送系统监控数据",
 		"interval": interval,
@@ -416,7 +377,7 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 			systemInfo := r.collectSystemInfo(ctx)
 
 			// 构造 SSE 消息
-			message := map[string]interface{}{
+			message := map[string]any{
 				"type":      "system_info",
 				"data":      systemInfo,
 				"timestamp": time.Now().Format(time.RFC3339),
@@ -442,7 +403,7 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 }
 
 // collectSystemInfo 收集系统监控信息（从 GetSystemInfo 提取的逻辑）
-func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]interface{} {
+func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	// CPU信息
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
@@ -501,7 +462,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 	// 汇总网络统计
 	var totalBytesSent, totalBytesRecv, totalPacketsSent, totalPacketsRecv uint64
 	var totalErrin, totalErrout, totalDropin, totalDropout uint64
-	var interfaces []map[string]interface{}
+	var interfaces []map[string]any
 
 	for _, io := range netIO {
 		if io.Name == "lo" || io.Name == "Loopback" || io.Name == "lo0" {
@@ -516,7 +477,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 		totalDropin += io.Dropin
 		totalDropout += io.Dropout
 
-		interfaces = append(interfaces, map[string]interface{}{
+		interfaces = append(interfaces, map[string]any{
 			"name":         io.Name,
 			"bytes_sent":   io.BytesSent,
 			"bytes_recv":   io.BytesRecv,
@@ -529,7 +490,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 		})
 	}
 
-	netStats := map[string]interface{}{
+	netStats := map[string]any{
 		"bytes_sent":   totalBytesSent,
 		"bytes_recv":   totalBytesRecv,
 		"packets_sent": totalPacketsSent,
@@ -547,11 +508,11 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 	}
 
 	// 负载信息
-	var loadAvg map[string]interface{}
+	var loadAvg map[string]any
 	if runtime.GOOS != "windows" {
 		avg, err := load.Avg()
 		if err != nil {
-			loadAvg = map[string]interface{}{
+			loadAvg = map[string]any{
 				"load1":  0.0,
 				"load5":  0.0,
 				"load15": 0.0,
@@ -565,7 +526,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 			loadPercent5 := (avg.Load5 / cores) * 100
 			loadPercent15 := (avg.Load15 / cores) * 100
 
-			loadAvg = map[string]interface{}{
+			loadAvg = map[string]any{
 				"load1":          avg.Load1,
 				"load5":          avg.Load5,
 				"load15":         avg.Load15,
@@ -575,7 +536,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 			}
 		}
 	} else {
-		loadAvg = map[string]interface{}{
+		loadAvg = map[string]any{
 			"load1":          0.0,
 			"load5":          0.0,
 			"load15":         0.0,
@@ -586,7 +547,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 	}
 
 	// 文件描述符信息（简化版，避免重复代码）
-	var fileDescriptors map[string]interface{}
+	var fileDescriptors map[string]any
 	if runtime.GOOS != "windows" {
 		used := uint64(0)
 		max := uint64(0)
@@ -595,6 +556,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 			dataStr := strings.TrimSpace(string(data))
 			var allocated, unused, tempMax uint64
 			if n, err := fmt.Sscanf(dataStr, "%d %d %d", &allocated, &unused, &tempMax); err == nil && n == 3 {
+				// 验证值的合理性
 				if tempMax > 0 && tempMax < 1000000000 {
 					max = tempMax
 				}
@@ -602,6 +564,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 					used = allocated
 				}
 			}
+			// 解析失败或值不合理时静默处理，后续会使用默认值
 		}
 
 		if max == 0 {
@@ -609,9 +572,11 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 				dataStr := strings.TrimSpace(string(data))
 				var tempMax uint64
 				if n, err := fmt.Sscanf(dataStr, "%d", &tempMax); err == nil && n == 1 {
+					// 验证值的合理性
 					if tempMax > 0 && tempMax < 1000000000 {
 						max = tempMax
 					}
+					// 值异常时静默处理，后续会使用默认值
 				}
 			}
 		}
@@ -630,14 +595,14 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 			percent = (float64(used) / float64(max)) * 100
 		}
 
-		fileDescriptors = map[string]interface{}{
+		fileDescriptors = map[string]any{
 			"max":     max,
 			"used":    used,
 			"free":    free,
 			"percent": percent,
 		}
 	} else {
-		fileDescriptors = map[string]interface{}{
+		fileDescriptors = map[string]any{
 			"max":     0,
 			"used":    0,
 			"free":    0,
@@ -645,14 +610,14 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 		}
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"os": runtime.GOOS,
-		"cpu": map[string]interface{}{
+		"cpu": map[string]any{
 			"percent": cpuPercent[0],
 			"model":   cpuModel,
 			"cores":   len(cpuInfo),
 		},
-		"memory": map[string]interface{}{
+		"memory": map[string]any{
 			"total":     memInfo.Total,
 			"available": memInfo.Available,
 			"used":      memInfo.Used,
@@ -661,7 +626,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 			"cached":    memInfo.Cached,
 			"buffers":   memInfo.Buffers,
 		},
-		"disk": map[string]interface{}{
+		"disk": map[string]any{
 			"total":   diskInfo.Total,
 			"free":    diskInfo.Free,
 			"used":    diskInfo.Used,
@@ -672,7 +637,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 		"net":              netStats,
 		"load":             loadAvg,
 		"file_descriptors": fileDescriptors,
-		"runtime": map[string]interface{}{
+		"runtime": map[string]any{
 			"goroutines": runtime.NumGoroutine(),
 			"total_processes": func() int {
 				processes, err := process.Processes()
@@ -682,7 +647,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]inter
 				return len(processes)
 			}(),
 		},
-		"system": map[string]interface{}{
+		"system": map[string]any{
 			"hostname": func() string {
 				hostname, err := os.Hostname()
 				if err != nil {
