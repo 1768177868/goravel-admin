@@ -80,6 +80,7 @@
       v-model="showColumnSetting"
       :visible-columns="visibleColumns"
       :all-columns="allColumns"
+      :default-visible-columns="['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active']"
       @confirm="handleSaveColumnSetting"
     />
   </div>

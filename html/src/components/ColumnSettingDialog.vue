@@ -40,6 +40,7 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
+        <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
         <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleConfirm">{{ $t('common.confirm') }}</el-button>
       </div>
@@ -63,6 +64,10 @@ const props = defineProps({
   allColumns: {
     type: Array,
     required: true
+  },
+  defaultVisibleColumns: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -91,6 +96,11 @@ watch(() => props.visibleColumns, (newVal) => {
     localVisibleColumns.value = [...newVal]
   }
 }, { deep: true })
+
+// 重置
+const handleReset = () => {
+  localVisibleColumns.value = [...props.defaultVisibleColumns]
+}
 
 const handleClose = () => {
   visible.value = false
@@ -135,12 +145,6 @@ const handleConfirm = () => {
 
 .column-list::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
-}
-
-.checkbox-group {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
 }
 
 .column-item {
