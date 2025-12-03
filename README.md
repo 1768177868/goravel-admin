@@ -18,7 +18,23 @@ Demo
 https://admin.xuancheng888.top
 account:demo  
 password:demo123
-<p align="center"><img src="./admin.png" alt="Admin System Screenshot" width="800"></p>
+
+### Screenshots
+
+<p align="center">
+  <img src="./images/login.png" alt="Login Page" width="800">
+  <p align="center">Login Page</p>
+</p>
+
+<p align="center">
+  <img src="./images/admin.png" alt="Admin Dashboard" width="800">
+  <p align="center">Admin Dashboard</p>
+</p>
+
+<p align="center">
+  <img src="./images/monitor.png" alt="System Monitoring" width="800">
+  <p align="center">System Monitoring</p>
+</p>
 
 ### Features
 
@@ -60,7 +76,6 @@ password:demo123
 
 **Backend:**
 - Goravel Framework (Go)
-- JWT Authentication
 - RBAC Permission System
 - WebSocket Support
 - Database Migrations & Seeders
@@ -113,6 +128,10 @@ password:demo123
    - Password: `admin123`
    - (Please change the default password after first login)
 
+### Build & Deployment
+
+For detailed build and deployment instructions, including cross-platform compilation, Docker deployment, and systemd service setup, please refer to [BUILD.md](./BUILD.md).
+
 ### API Documentation
 
 The admin API endpoints are prefixed with `/api/admin`. All endpoints require JWT authentication except login and captcha.
@@ -141,7 +160,9 @@ For detailed API documentation, see [routes/admin.go](./routes/admin.go)
 │       ├── components/           # Reusable components
 │       ├── api/                 # API client
 │       └── store/               # Pinia stores
-└── config/                       # Configuration files
+├── config/                       # Configuration files
+├── BUILD.md                      # Build and deployment documentation
+└── images/                       # Screenshots
 ```
 
 ### Security Features

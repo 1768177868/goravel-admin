@@ -14,13 +14,27 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 
 本项目包含一个基于 Goravel 框架构建的完整后台管理系统。
 
-<p align="center"><img src="./admin.png" alt="后台管理系统截图" width="800"></p>
+### 截图展示
+
+<p align="center">
+  <img src="./images/login.png" alt="登录页面" width="800">
+  <p align="center">登录页面</p>
+</p>
+
+<p align="center">
+  <img src="./images/admin.png" alt="后台管理界面" width="800">
+  <p align="center">后台管理界面</p>
+</p>
+
+<p align="center">
+  <img src="./images/monitor.png" alt="系统监控" width="800">
+  <p align="center">系统监控</p>
+</p>
 
 ### 功能特性
 
 #### 核心模块
 - **认证与授权**
-  - 基于 JWT 的认证
   - 基于角色的访问控制（RBAC）
   - 权限管理
   - 多令牌管理
@@ -109,6 +123,10 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
    - 密码：`admin123`
    - （首次登录后请修改默认密码）
 
+### 构建与部署
+
+详细的编译打包和部署说明，包括跨平台编译、Docker 部署、systemd 服务配置等，请参考 [BUILD.md](./BUILD.md)。
+
 ### API 文档
 
 后台管理 API 接口前缀为 `/api/admin`。除登录和验证码接口外，所有接口都需要 JWT 认证。
@@ -137,7 +155,9 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 │       ├── components/           # 可复用组件
 │       ├── api/                 # API 客户端
 │       └── store/               # Pinia 状态管理
-└── config/                       # 配置文件
+├── config/                       # 配置文件
+├── BUILD.md                      # 编译打包和部署文档
+└── images/                       # 截图文件
 ```
 
 ### 安全特性
