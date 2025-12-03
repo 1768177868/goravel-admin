@@ -220,6 +220,7 @@
     "admin.export": "Export Admin",
     "admin.password": "Reset Admin Password",
     "admin.kick_out": "Kick Out User",
+    "admin.unbind_google_auth": "Unbind Google Authenticator",
     "role.index": "View Role List",
     "role.show": "View Role Detail",
     "role.store": "Create Role",
@@ -266,8 +267,10 @@
     "password.update": "Update Password",
     "export.index": "View Export List",
     "export.destroy": "Delete Export Record",
+    "export.batch_delete": "Batch Delete Export Records",
     "config.group": "Get Configuration by Group",
     "config.save": "Save Configuration",
+    "config.test_email": "Test Email Configuration",
     "configs.store": "Save Configuration",
     "configs.update": "Update Configuration",
     "online-user.index": "View Online User List",
@@ -288,7 +291,8 @@
     "attachment.download": "Download Attachment",
     "attachment.destroy": "Delete Attachment",
     "attachment.batch_delete": "Batch Delete Attachments",
-    "attachment.update_display_name": "Update Attachment Display Name"
+    "attachment.update_display_name": "Update Attachment Display Name",
+    "notification.store": "Create Notification"
   },
   "menu_management": {
     "title": "Menu List",
