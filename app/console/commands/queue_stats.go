@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
+	"github.com/redis/go-redis/v9"
 )
 
 type QueueStats struct {
@@ -65,16 +67,60 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 	isRedis := r.isRedisDriver(connectionName)
 
 	if isRedis {
-		ctx.Warning("Redis 驱动暂不支持统计查询")
-		ctx.Info("提示：Redis 队列数据存储在 Redis 中，需要直接访问 Redis 客户端来查询")
-		ctx.Info("可以使用以下 Redis 命令查询：")
+		// Redis 驱动：通过 Redis 客户端查询队列大小
 		defaultQueue := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.queue", connectionName), "default")
 		if queueName == "" {
 			queueName = defaultQueue
 		}
-		ctx.Info(fmt.Sprintf("  LLEN queues:%s (待执行队列长度)", queueName))
-		ctx.Info(fmt.Sprintf("  HLEN queues:%s:reserved (正在执行队列长度)", queueName))
-		ctx.Info(fmt.Sprintf("  ZCARD queues:%s:delayed (延迟队列长度)", queueName))
+
+		// 获取 Redis 连接名称（从队列配置中获取）
+		redisConnectionName := r.getRedisConnectionName(connectionName)
+		if redisConnectionName == "" {
+			ctx.Warning("无法确定 Redis 连接名称")
+			return nil
+		}
+
+		// 查询 Redis 队列统计
+		stats, err := r.getRedisQueueStats(redisConnectionName, queueName)
+		if err != nil {
+			ctx.Error(fmt.Sprintf("查询 Redis 队列统计失败: %v", err))
+			ctx.Info("提示：请确保 Redis 连接配置正确且 Redis 服务正在运行")
+			return err
+		}
+
+		totalCount := stats.Pending + stats.Reserved
+
+		// 显示统计信息
+		ctx.Info("═══════════════════════════════════════")
+		ctx.Info("队列统计信息 (Redis)")
+		ctx.Info("═══════════════════════════════════════")
+		ctx.Info(fmt.Sprintf("待执行任务:    %d", stats.Pending))
+		ctx.Info(fmt.Sprintf("正在执行任务:  %d", stats.Reserved))
+		ctx.Info(fmt.Sprintf("延迟任务:      %d", stats.Delayed))
+		ctx.Info(fmt.Sprintf("失败任务:      %d", stats.Failed))
+		ctx.Info(fmt.Sprintf("总任务数:      %d", totalCount))
+		ctx.Info("═══════════════════════════════════════")
+
+		// 如果未指定队列名称，显示按队列分组的统计
+		if queueName == "" {
+			ctx.Info("")
+			ctx.Info("按队列分组统计:")
+			byQueue, err := r.getRedisStatsByQueue(redisConnectionName)
+			if err != nil {
+				ctx.Warning(fmt.Sprintf("获取按队列分组统计失败: %v", err))
+			} else {
+				if len(byQueue) == 0 {
+					ctx.Info("  暂无队列数据")
+				} else {
+					for qName, qStats := range byQueue {
+						ctx.Info(fmt.Sprintf("  队列 [%s]:", qName))
+						ctx.Info(fmt.Sprintf("    待执行: %d, 正在执行: %d, 延迟: %d, 失败: %d, 总计: %d",
+							qStats.Pending, qStats.Reserved, qStats.Delayed, qStats.Failed, qStats.Total))
+					}
+				}
+			}
+		}
+
 		return nil
 	}
 
@@ -179,6 +225,15 @@ type QueueStatsInfo struct {
 	Total    int64
 }
 
+// RedisQueueStatsInfo Redis 队列统计信息
+type RedisQueueStatsInfo struct {
+	Pending  int64
+	Reserved int64
+	Delayed  int64
+	Failed   int64
+	Total    int64
+}
+
 // getStatsByQueue 按队列分组获取统计信息
 func (r *QueueStats) getStatsByQueue() (map[string]QueueStatsInfo, error) {
 	// 获取所有队列名称
@@ -239,4 +294,180 @@ func (r *QueueStats) getStatsByQueue() (map[string]QueueStatsInfo, error) {
 	}
 
 	return result, nil
+}
+
+// getRedisConnectionName 从队列连接配置中获取 Redis 连接名称
+func (r *QueueStats) getRedisConnectionName(queueConnectionName string) string {
+	// 从队列配置中获取 connection 字段
+	connection := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.connection", queueConnectionName), "default")
+
+	// 如果队列连接名称包含 redis，尝试使用它
+	if strings.Contains(queueConnectionName, "redis") {
+		// 检查 Redis 配置中是否存在对应的连接
+		redisHost := facades.Config().GetString(fmt.Sprintf("database.redis.%s.host", queueConnectionName), "")
+		if redisHost != "" {
+			return queueConnectionName
+		}
+	}
+
+	// 默认使用 default
+	return connection
+}
+
+// getRedisQueueStats 获取 Redis 队列统计信息
+func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
+	// 创建 Redis 客户端
+	redisClient, err := r.createRedisClient(redisConnectionName)
+	if err != nil {
+		return nil, fmt.Errorf("创建 Redis 客户端失败: %v", err)
+	}
+	defer redisClient.Close()
+
+	ctx := context.Background()
+	stats := &RedisQueueStatsInfo{}
+
+	// 待执行队列：queues:{queueName} (List)
+	pendingKey := fmt.Sprintf("queues:%s", queueName)
+	pendingLen, err := redisClient.LLen(ctx, pendingKey).Result()
+	if err != nil {
+		return nil, fmt.Errorf("查询待执行队列失败: %v", err)
+	}
+	stats.Pending = pendingLen
+
+	// 正在执行队列：queues:{queueName}:reserved (Hash)
+	reservedKey := fmt.Sprintf("queues:%s:reserved", queueName)
+	reservedLen, err := redisClient.HLen(ctx, reservedKey).Result()
+	if err != nil {
+		return nil, fmt.Errorf("查询正在执行队列失败: %v", err)
+	}
+	stats.Reserved = reservedLen
+
+	// 延迟队列：queues:{queueName}:delayed (Sorted Set)
+	delayedKey := fmt.Sprintf("queues:%s:delayed", queueName)
+	delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
+	if err != nil {
+		return nil, fmt.Errorf("查询延迟队列失败: %v", err)
+	}
+	stats.Delayed = delayedLen
+
+	// 失败任务：从数据库 failed_jobs 表查询（Redis 队列的失败任务也存储在数据库中）
+	failedQuery := facades.Orm().Query().Table("failed_jobs")
+	if queueName != "" {
+		failedQuery = failedQuery.Where("queue", "=", queueName)
+	}
+	failedCount, err := failedQuery.Count()
+	if err != nil {
+		// 失败任务查询失败不影响其他统计
+		stats.Failed = 0
+	} else {
+		stats.Failed = failedCount
+	}
+
+	stats.Total = stats.Pending + stats.Reserved
+
+	return stats, nil
+}
+
+// getRedisStatsByQueue 按队列分组获取 Redis 队列统计信息
+func (r *QueueStats) getRedisStatsByQueue(redisConnectionName string) (map[string]*RedisQueueStatsInfo, error) {
+	// 创建 Redis 客户端
+	redisClient, err := r.createRedisClient(redisConnectionName)
+	if err != nil {
+		return nil, fmt.Errorf("创建 Redis 客户端失败: %v", err)
+	}
+	defer redisClient.Close()
+
+	ctx := context.Background()
+	result := make(map[string]*RedisQueueStatsInfo)
+
+	// 查找所有队列键（queues:* 但不包含 :reserved 和 :delayed）
+	pattern := "queues:*"
+	keys, err := redisClient.Keys(ctx, pattern).Result()
+	if err != nil {
+		return nil, fmt.Errorf("查找队列键失败: %v", err)
+	}
+
+	// 提取队列名称（排除 reserved 和 delayed 键）
+	queueMap := make(map[string]bool)
+	for _, key := range keys {
+		// 跳过 reserved 和 delayed 键
+		if strings.HasSuffix(key, ":reserved") || strings.HasSuffix(key, ":delayed") {
+			continue
+		}
+		// 提取队列名称（去掉 queues: 前缀）
+		if strings.HasPrefix(key, "queues:") {
+			queueName := strings.TrimPrefix(key, "queues:")
+			if queueName != "" {
+				queueMap[queueName] = true
+			}
+		}
+	}
+
+	// 如果没有找到队列键，尝试从失败任务表中获取队列名称
+	if len(queueMap) == 0 {
+		var failedQueues []string
+		err = facades.Orm().Query().Table("failed_jobs").
+			Select("DISTINCT queue").
+			Pluck("queue", &failedQueues)
+		if err == nil {
+			for _, q := range failedQueues {
+				if q != "" {
+					queueMap[q] = true
+				}
+			}
+		}
+	}
+
+	// 为每个队列获取统计信息
+	for queueName := range queueMap {
+		stats, err := r.getRedisQueueStats(redisConnectionName, queueName)
+		if err != nil {
+			// 单个队列查询失败不影响其他队列
+			continue
+		}
+		result[queueName] = stats
+	}
+
+	return result, nil
+}
+
+// createRedisClient 创建 Redis 客户端
+func (r *QueueStats) createRedisClient(connectionName string) (*redis.Client, error) {
+	// 获取 Redis 配置
+	host := facades.Config().GetString(fmt.Sprintf("database.redis.%s.host", connectionName), "")
+	if host == "" {
+		// 尝试使用 default 连接
+		host = facades.Config().GetString("database.redis.default.host", "127.0.0.1")
+	}
+
+	port := facades.Config().GetInt(fmt.Sprintf("database.redis.%s.port", connectionName), 0)
+	if port == 0 {
+		port = facades.Config().GetInt("database.redis.default.port", 6379)
+	}
+
+	password := facades.Config().GetString(fmt.Sprintf("database.redis.%s.password", connectionName), "")
+	if password == "" {
+		password = facades.Config().GetString("database.redis.default.password", "")
+	}
+
+	db := facades.Config().GetInt(fmt.Sprintf("database.redis.%s.database", connectionName), -1)
+	if db == -1 {
+		db = facades.Config().GetInt("database.redis.default.database", 0)
+	}
+
+	// 创建 Redis 客户端
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", host, port),
+		Password: password,
+		DB:       db,
+	})
+
+	// 测试连接
+	ctx := context.Background()
+	_, err := client.Ping(ctx).Result()
+	if err != nil {
+		return nil, fmt.Errorf("Redis 连接失败: %v", err)
+	}
+
+	return client, nil
 }
