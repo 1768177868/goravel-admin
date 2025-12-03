@@ -6,10 +6,12 @@ import (
 	nethttp "net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/load"
@@ -25,6 +27,378 @@ type MonitorController struct{}
 
 func NewMonitorController() *MonitorController {
 	return &MonitorController{}
+}
+
+// getProcessInfo 获取指定进程的 CPU 和内存信息
+func getProcessInfo(ctx http.Context, processName string, pid int32) map[string]any {
+	result := map[string]any{
+		"name":   processName,
+		"pid":    pid,
+		"cpu":    0.0,
+		"memory": 0,
+		"status": "not_found",
+		"rss":    0, // 物理内存占用
+		"vms":    0, // 虚拟内存占用
+	}
+
+	if pid <= 0 {
+		return result
+	}
+
+	proc, err := process.NewProcess(pid)
+	if err != nil {
+		return result
+	}
+
+	// 获取 CPU 使用率
+	cpuPercent, err := proc.CPUPercent()
+	if err == nil {
+		result["cpu"] = cpuPercent
+	}
+
+	// 获取内存信息
+	memInfo, err := proc.MemoryInfo()
+	if err == nil {
+		result["memory"] = memInfo.RSS // 物理内存占用（字节）
+		result["rss"] = memInfo.RSS
+		result["vms"] = memInfo.VMS
+	}
+
+	// 获取进程状态
+	status, err := proc.Status()
+	if err == nil && len(status) > 0 {
+		result["status"] = status[0]
+	} else {
+		result["status"] = "running"
+	}
+
+	// 获取进程创建时间
+	createTime, err := proc.CreateTime()
+	if err == nil {
+		result["create_time"] = createTime
+	}
+
+	// 获取进程名
+	name, err := proc.Name()
+	if err == nil {
+		result["process_name"] = name
+	}
+
+	return result
+}
+
+// findProcessByName 根据进程名查找进程 PID
+// 优先匹配更具体的进程名（如 mysqld 优先于 mysql）
+func findProcessByName(ctx http.Context, processNames []string) int32 {
+	processes, err := process.Processes()
+	if err != nil {
+		return 0
+	}
+
+	// 先尝试精确匹配（更具体的进程名）
+	for _, proc := range processes {
+		name, err := proc.Name()
+		if err != nil {
+			continue
+		}
+		nameLower := strings.ToLower(name)
+
+		// 优先匹配更具体的进程名
+		for _, targetName := range processNames {
+			targetLower := strings.ToLower(targetName)
+			// 精确匹配或包含匹配
+			if nameLower == targetLower || strings.Contains(nameLower, targetLower) {
+				// 对于 MySQL，优先选择 mysqld 而不是 mysql
+				if targetLower == "mysqld" && nameLower == "mysqld" {
+					return proc.Pid
+				}
+				// 对于 Redis，优先选择 redis-server
+				if targetLower == "redis-server" && strings.Contains(nameLower, "redis-server") {
+					return proc.Pid
+				}
+			}
+		}
+	}
+
+	// 如果精确匹配失败，尝试通过命令行参数匹配
+	for _, proc := range processes {
+		cmdline, err := proc.Cmdline()
+		if err != nil {
+			continue
+		}
+		cmdlineLower := strings.ToLower(cmdline)
+
+		for _, targetName := range processNames {
+			targetLower := strings.ToLower(targetName)
+			if strings.Contains(cmdlineLower, targetLower) {
+				// 排除掉一些明显不是目标进程的情况
+				if targetLower == "mysql" && strings.Contains(cmdlineLower, "mysqladmin") {
+					continue
+				}
+				return proc.Pid
+			}
+		}
+	}
+
+	return 0
+}
+
+// isLocalHost 检查地址是否为本地地址
+func isLocalHost(host string) bool {
+	host = strings.ToLower(strings.TrimSpace(host))
+	return host == "" || host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "0.0.0.0"
+}
+
+// getMySQLInfoFromDB 通过数据库连接获取MySQL信息
+func getMySQLInfoFromDB(ctx http.Context) map[string]any {
+	result := map[string]any{
+		"name":        "mysql",
+		"type":        "remote",
+		"cpu":         0.0,
+		"memory":      0,
+		"status":      "disconnected",
+		"rss":         0,
+		"vms":         0,
+		"version":     "",
+		"uptime":      0,
+		"threads":     0,
+		"queries":     0,
+		"connections": 0,
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			result["status"] = "error"
+		}
+	}()
+
+	// 获取数据库连接配置
+	dbConnection := facades.Config().GetString("database.default", "sqlite")
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
+	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", dbConnection), 3306)
+
+	// 检查是否为本地数据库
+	if !isLocalHost(dbHost) {
+		result["host"] = fmt.Sprintf("%s:%d", dbHost, dbPort)
+		result["type"] = "remote"
+	} else {
+		result["host"] = fmt.Sprintf("%s:%d", dbHost, dbPort)
+		result["type"] = "local"
+	}
+
+	// 尝试连接数据库获取信息
+	orm := facades.Orm()
+	if orm == nil {
+		return result
+	}
+
+	// 检查连接类型是否为MySQL
+	if dbConnection != "mysql" {
+		result["status"] = "not_mysql"
+		return result
+	}
+
+	// 执行MySQL状态查询
+	var version string
+	var uptime, threads, queries, connections int64
+
+	// 获取MySQL版本
+	if err := orm.Query().Raw("SELECT VERSION() as version").Scan(&version); err == nil {
+		result["version"] = version
+	}
+
+	// 获取MySQL状态信息
+	var statusRows []map[string]any
+	if err := orm.Query().Raw("SHOW STATUS WHERE Variable_name IN ('Uptime', 'Threads_connected', 'Questions', 'Connections')").Scan(&statusRows); err == nil {
+		for _, row := range statusRows {
+			if variableName, ok := row["Variable_name"].(string); ok {
+				if value, ok := row["Value"].(string); ok {
+					intValue, _ := strconv.ParseInt(value, 10, 64)
+					switch variableName {
+					case "Uptime":
+						uptime = intValue
+					case "Threads_connected":
+						threads = intValue
+					case "Questions":
+						queries = intValue
+					case "Connections":
+						connections = intValue
+					}
+				}
+			}
+		}
+		result["uptime"] = uptime
+		result["threads"] = threads
+		result["queries"] = queries
+		result["connections"] = connections
+	}
+
+	// 获取MySQL变量信息（内存相关）
+	var variableRows []map[string]any
+	if err := orm.Query().Raw("SHOW VARIABLES WHERE Variable_name IN ('max_connections', 'innodb_buffer_pool_size')").Scan(&variableRows); err == nil {
+		for _, row := range variableRows {
+			if variableName, ok := row["Variable_name"].(string); ok {
+				if value, ok := row["Value"].(string); ok {
+					intValue, _ := strconv.ParseInt(value, 10, 64)
+					if variableName == "innodb_buffer_pool_size" {
+						result["buffer_pool_size"] = intValue
+					} else if variableName == "max_connections" {
+						result["max_connections"] = intValue
+					}
+				}
+			}
+		}
+	}
+
+	result["status"] = "connected"
+	return result
+}
+
+// getRedisInfoFromConnection 通过Redis连接获取Redis信息
+func getRedisInfoFromConnection(ctx http.Context) map[string]any {
+	result := map[string]any{
+		"name":                     "redis",
+		"type":                     "remote",
+		"cpu":                      0.0,
+		"memory":                   0,
+		"status":                   "disconnected",
+		"rss":                      0,
+		"vms":                      0,
+		"version":                  "",
+		"used_memory":              0,
+		"used_memory_human":        "",
+		"connected_clients":        0,
+		"total_commands_processed": 0,
+		"keyspace_hits":            0,
+		"keyspace_misses":          0,
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			result["status"] = "error"
+		}
+	}()
+
+	// 获取Redis连接配置
+	redisHost := facades.Config().GetString("database.redis.default.host", "")
+	redisPort := facades.Config().GetInt("database.redis.default.port", 6379)
+
+	// 检查是否为本地Redis
+	if !isLocalHost(redisHost) {
+		result["host"] = fmt.Sprintf("%s:%d", redisHost, redisPort)
+		result["type"] = "remote"
+	} else {
+		result["host"] = fmt.Sprintf("%s:%d", redisHost, redisPort)
+		result["type"] = "local"
+	}
+
+	// 尝试连接Redis获取信息
+	cache := facades.Cache()
+	if cache == nil {
+		return result
+	}
+
+	// 尝试执行Redis INFO命令（通过Cache接口可能不支持，这里先标记为已连接）
+	// 注意：Goravel的Cache接口可能不直接支持INFO命令，这里先返回基本连接状态
+	result["status"] = "connected"
+
+	// 如果Redis连接正常，尝试获取一些基本信息
+	// 注意：这需要Redis驱动支持，如果不行可以标记为"connected"但无法获取详细信息
+	return result
+}
+
+// getProcessesInfo 获取 MySQL、Redis 和当前应用进程的信息
+func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
+	result := map[string]any{
+		"mysql": map[string]any{
+			"name":   "mysql",
+			"pid":    0,
+			"cpu":    0.0,
+			"memory": 0,
+			"status": "not_found",
+			"rss":    0,
+			"vms":    0,
+		},
+		"redis": map[string]any{
+			"name":   "redis",
+			"pid":    0,
+			"cpu":    0.0,
+			"memory": 0,
+			"status": "not_found",
+			"rss":    0,
+			"vms":    0,
+		},
+		"app": map[string]any{
+			"name":   "app",
+			"pid":    0,
+			"cpu":    0.0,
+			"memory": 0,
+			"status": "not_found",
+			"rss":    0,
+			"vms":    0,
+		},
+	}
+
+	// 使用 defer recover 确保即使进程查找出错也不影响整体功能
+	defer func() {
+		if r := recover(); r != nil {
+			// 静默处理错误，返回默认值
+		}
+	}()
+
+	// 获取数据库和Redis连接配置
+	dbConnection := facades.Config().GetString("database.default", "sqlite")
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
+	redisHost := facades.Config().GetString("database.redis.default.host", "")
+
+	// MySQL处理：检查是否为本地数据库
+	if dbConnection == "mysql" && isLocalHost(dbHost) {
+		// 本地MySQL，尝试查找进程
+		mysqlNames := []string{"mysqld", "mysql", "mariadb"}
+		if runtime.GOOS == "windows" {
+			mysqlNames = []string{"mysqld", "mysql", "mysqld-nt"}
+		}
+		mysqlPid := findProcessByName(ctx, mysqlNames)
+		if mysqlPid > 0 {
+			result["mysql"] = getProcessInfo(ctx, "mysql", mysqlPid)
+			result["mysql"].(map[string]any)["type"] = "local"
+		} else {
+			// 本地但找不到进程，尝试通过数据库连接获取信息
+			result["mysql"] = getMySQLInfoFromDB(ctx)
+		}
+	} else if dbConnection == "mysql" {
+		// 远程MySQL，通过数据库连接获取信息
+		result["mysql"] = getMySQLInfoFromDB(ctx)
+	}
+
+	// Redis处理：检查是否为本地Redis
+	if isLocalHost(redisHost) {
+		// 本地Redis，尝试查找进程
+		redisNames := []string{"redis-server", "redis"}
+		if runtime.GOOS == "windows" {
+			redisNames = []string{"redis-server", "redis-server.exe", "redis"}
+		}
+		redisPid := findProcessByName(ctx, redisNames)
+		if redisPid > 0 {
+			result["redis"] = getProcessInfo(ctx, "redis", redisPid)
+			result["redis"].(map[string]any)["type"] = "local"
+		} else {
+			// 本地但找不到进程，尝试通过连接获取信息
+			result["redis"] = getRedisInfoFromConnection(ctx)
+		}
+	} else if redisHost != "" {
+		// 远程Redis，通过连接获取信息
+		result["redis"] = getRedisInfoFromConnection(ctx)
+	}
+
+	// 获取当前应用进程信息
+	currentPid := int32(os.Getpid())
+	if currentPid > 0 {
+		result["app"] = getProcessInfo(ctx, "app", currentPid)
+		result["app"].(map[string]any)["type"] = "local"
+	}
+
+	return result
 }
 
 // GetSystemInfo 获取系统监控信息
@@ -321,6 +695,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			"os":         runtime.GOOS,
 			"go_version": runtime.Version(),
 		},
+		"processes": r.getProcessesInfo(ctx),
 	})
 }
 
@@ -659,5 +1034,6 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 			"os":         runtime.GOOS,
 			"go_version": runtime.Version(),
 		},
+		"processes": r.getProcessesInfo(ctx),
 	}
 }

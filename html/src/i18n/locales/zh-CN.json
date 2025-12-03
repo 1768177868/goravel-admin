@@ -801,7 +801,21 @@
     "arch": "系统架构",
     "go_version": "Go 版本",
     "sse_connection_failed": "实时推送连接失败，已切换到定时刷新模式",
-    "sse_init_failed": "无法启动实时推送，已切换到定时刷新模式"
+    "sse_init_failed": "无法启动实时推送，已切换到定时刷新模式",
+    "processes": "进程监控",
+    "process_mysql": "MySQL",
+    "process_redis": "Redis",
+    "process_app": "应用进程",
+    "process_local": "本地",
+    "process_remote": "远程",
+    "process_pid": "进程ID",
+    "process_cpu": "CPU使用率",
+    "process_memory": "内存占用",
+    "process_version": "版本",
+    "process_host": "连接地址",
+    "process_threads": "线程数",
+    "process_connections": "连接数",
+    "process_name": "进程名"
   },
   "operation.unknown": "未知操作"
 }

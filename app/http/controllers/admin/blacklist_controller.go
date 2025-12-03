@@ -9,8 +9,8 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
-	"goravel/app/utils/errorlog"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type BlacklistController struct {
@@ -90,7 +90,7 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 	}
 
 	now := carbon.Now()
-	blacklistData := map[string]interface{}{
+	blacklistData := map[string]any{
 		"ip":         ip,
 		"remark":     remark,
 		"status":     status,
@@ -151,7 +151,7 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 
 	if err := facades.Orm().Query().Save(&blacklist); err != nil {
 		errorlog.RecordHTTP(ctx, "blacklist", "Failed to update blacklist", map[string]any{
-			"error":         err.Error(),
+			"error":        err.Error(),
 			"blacklist_id": blacklist.ID,
 		}, "Update blacklist error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
@@ -172,7 +172,7 @@ func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 
 	if _, err := facades.Orm().Query().Delete(&blacklist); err != nil {
 		errorlog.RecordHTTP(ctx, "blacklist", "Failed to delete blacklist", map[string]any{
-			"error":         err.Error(),
+			"error":        err.Error(),
 			"blacklist_id": blacklist.ID,
 		}, "Delete blacklist error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
@@ -180,4 +180,3 @@ func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "delete_success")
 }
-

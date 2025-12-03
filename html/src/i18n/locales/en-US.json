@@ -801,7 +801,21 @@
     "arch": "Architecture",
     "go_version": "Go Version",
     "sse_connection_failed": "Real-time push connection failed, switched to polling mode",
-    "sse_init_failed": "Failed to start real-time push, switched to polling mode"
+    "sse_init_failed": "Failed to start real-time push, switched to polling mode",
+    "processes": "Process Monitor",
+    "process_mysql": "MySQL",
+    "process_redis": "Redis",
+    "process_app": "Application",
+    "process_local": "Local",
+    "process_remote": "Remote",
+    "process_pid": "PID",
+    "process_cpu": "CPU Usage",
+    "process_memory": "Memory",
+    "process_version": "Version",
+    "process_host": "Host",
+    "process_threads": "Threads",
+    "process_connections": "Connections",
+    "process_name": "Process Name"
   },
   "operation.unknown": "Unknown Operation"
 }

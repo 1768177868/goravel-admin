@@ -398,6 +398,136 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 进程监控信息 -->
+    <el-row v-if="systemInfo.processes && Object.keys(systemInfo.processes).length > 0" :gutter="20" style="margin-top: 20px">
+      <el-col :span="24">
+        <el-card class="monitor-card processes-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon processes-icon"><Operation /></el-icon>
+                <span>{{ $t('monitor.processes') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <el-row :gutter="20">
+              <!-- MySQL 进程 -->
+              <el-col :span="8" v-if="systemInfo.processes.mysql">
+                <div class="process-card">
+                  <div class="process-header">
+                    <el-tag :type="getProcessStatusType(systemInfo.processes.mysql.status)" size="large">
+                      {{ $t('monitor.process_mysql') }}
+                    </el-tag>
+                    <el-tag v-if="systemInfo.processes.mysql.type" :type="systemInfo.processes.mysql.type === 'remote' ? 'warning' : 'success'" size="small">
+                      {{ systemInfo.processes.mysql.type === 'remote' ? $t('monitor.process_remote') : $t('monitor.process_local') }}
+                    </el-tag>
+                  </div>
+                  <div class="process-content">
+                    <div class="process-item" v-if="systemInfo.processes.mysql.pid">
+                      <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.mysql.pid }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.cpu !== undefined && systemInfo.processes.mysql.cpu > 0">
+                      <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
+                      <span class="process-value highlight">{{ formatPercent(systemInfo.processes.mysql.cpu) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.memory">
+                      <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
+                      <span class="process-value highlight">{{ formatBytes(systemInfo.processes.mysql.memory) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.version">
+                      <span class="process-label">{{ $t('monitor.process_version') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.mysql.version }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.host">
+                      <span class="process-label">{{ $t('monitor.process_host') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.mysql.host }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.threads !== undefined">
+                      <span class="process-label">{{ $t('monitor.process_threads') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.threads) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.connections !== undefined">
+                      <span class="process-label">{{ $t('monitor.process_connections') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.connections) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </el-col>
+
+              <!-- Redis 进程 -->
+              <el-col :span="8" v-if="systemInfo.processes.redis">
+                <div class="process-card">
+                  <div class="process-header">
+                    <el-tag :type="getProcessStatusType(systemInfo.processes.redis.status)" size="large">
+                      {{ $t('monitor.process_redis') }}
+                    </el-tag>
+                    <el-tag v-if="systemInfo.processes.redis.type" :type="systemInfo.processes.redis.type === 'remote' ? 'warning' : 'success'" size="small">
+                      {{ systemInfo.processes.redis.type === 'remote' ? $t('monitor.process_remote') : $t('monitor.process_local') }}
+                    </el-tag>
+                  </div>
+                  <div class="process-content">
+                    <div class="process-item" v-if="systemInfo.processes.redis.pid">
+                      <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.redis.pid }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.cpu !== undefined && systemInfo.processes.redis.cpu > 0">
+                      <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
+                      <span class="process-value highlight">{{ formatPercent(systemInfo.processes.redis.cpu) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.memory">
+                      <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
+                      <span class="process-value highlight">{{ formatBytes(systemInfo.processes.redis.memory) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.version">
+                      <span class="process-label">{{ $t('monitor.process_version') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.redis.version }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.host">
+                      <span class="process-label">{{ $t('monitor.process_host') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.redis.host }}</span>
+                    </div>
+                  </div>
+                </div>
+              </el-col>
+
+              <!-- 应用进程 -->
+              <el-col :span="8" v-if="systemInfo.processes.app">
+                <div class="process-card">
+                  <div class="process-header">
+                    <el-tag :type="getProcessStatusType(systemInfo.processes.app.status)" size="large">
+                      {{ $t('monitor.process_app') }}
+                    </el-tag>
+                    <el-tag type="info" size="small">{{ $t('monitor.process_local') }}</el-tag>
+                  </div>
+                  <div class="process-content">
+                    <div class="process-item" v-if="systemInfo.processes.app.pid">
+                      <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.app.pid }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.app.cpu !== undefined && systemInfo.processes.app.cpu > 0">
+                      <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
+                      <span class="process-value highlight">{{ formatPercent(systemInfo.processes.app.cpu) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.app.memory">
+                      <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
+                      <span class="process-value highlight">{{ formatBytes(systemInfo.processes.app.memory) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.app.process_name">
+                      <span class="process-label">{{ $t('monitor.process_name') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.app.process_name }}</span>
+                    </div>
+                  </div>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -430,7 +560,8 @@ const systemInfo = ref({
   load: {},
   file_descriptors: {},
   runtime: {},
-  system: {}
+  system: {},
+  processes: {}
 })
 
 // 判断是否为Linux系统
@@ -552,6 +683,18 @@ const getProgressColor = (percentage) => {
   }
 }
 
+// 获取进程状态类型
+const getProcessStatusType = (status) => {
+  if (status === 'running' || status === 'connected') {
+    return 'success'
+  } else if (status === 'not_found' || status === 'disconnected') {
+    return 'danger'
+  } else if (status === 'error') {
+    return 'warning'
+  }
+  return 'info'
+}
+
 onMounted(() => {
   // 优先使用 SSE 实时推送
   startSSEStream()
@@ -636,6 +779,65 @@ onUnmounted(() => {
 
 .system-card :deep(.el-card__header) {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.processes-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.process-card {
+  padding: 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  height: 100%;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: linear-gradient(135deg, #e8f4f8 0%, #f0f9ff 100%);
+    border-color: #409eff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+  }
+}
+
+.process-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e4e7ed;
+}
+
+.process-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.process-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.process-label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.process-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 600;
+  
+  &.highlight {
+    color: #409eff;
+    font-size: 15px;
+  }
 }
 
 .card-header {
