@@ -73,6 +73,11 @@ func generateDefaultTitle(method, path string) string {
 		return "export.download"
 	}
 
+	// 管理员解绑谷歌验证码
+	if strings.Contains(path, "/admins/") && strings.HasSuffix(path, "/unbind-google-auth") && method == "POST" {
+		return "admin.unbind_google_auth"
+	}
+
 	// 批量删除（通用模式）
 	if strings.HasSuffix(path, "/batch-delete") && method == "POST" {
 		// 提取模块名（直接使用路径中的原始模块名，不做任何转换）

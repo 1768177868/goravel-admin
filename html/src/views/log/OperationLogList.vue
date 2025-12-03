@@ -129,8 +129,10 @@ const defaultTitleSlugs = [
   'admin.store',
   'admin.update',
   'admin.destroy',
+  'admin.export',
   'admin.password',
   'admin.kick_out',
+  'admin.unbind_google_auth',
   // 角色
   'role.store',
   'role.update',
