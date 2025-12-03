@@ -820,7 +820,9 @@
     "process_running": "运行中",
     "process_connected": "已连接",
     "process_not_found": "未找到",
-    "process_disconnected": "未连接"
+    "process_disconnected": "未连接",
+    "process_queries": "查询数",
+    "process_uptime": "运行时间"
   },
   "operation.unknown": "未知操作"
 }

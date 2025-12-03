@@ -820,7 +820,9 @@
     "process_running": "Running",
     "process_connected": "Connected",
     "process_not_found": "Not Found",
-    "process_disconnected": "Disconnected"
+    "process_disconnected": "Disconnected",
+    "process_queries": "Queries",
+    "process_uptime": "Uptime"
   },
   "operation.unknown": "Unknown Operation"
 }

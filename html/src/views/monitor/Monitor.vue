@@ -430,6 +430,7 @@
                       <span class="process-label">{{ $t('monitor.process_status') }}:</span>
                       <span class="process-value" :class="getProcessStatusType(systemInfo.processes.mysql.status) === 'success' ? 'highlight' : ''">
                         {{ systemInfo.processes.mysql.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.mysql.status === 'sleep' ? $t('monitor.process_running') :
                            systemInfo.processes.mysql.status === 'connected' ? $t('monitor.process_connected') :
                            systemInfo.processes.mysql.status === 'not_found' ? $t('monitor.process_not_found') :
                            systemInfo.processes.mysql.status === 'disconnected' ? $t('monitor.process_disconnected') :
@@ -456,13 +457,29 @@
                       <span class="process-label">{{ $t('monitor.process_host') }}:</span>
                       <span class="process-value">{{ systemInfo.processes.mysql.host }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.mysql.threads !== undefined && systemInfo.processes.mysql.threads > 0">
+                    <div class="process-item" v-if="systemInfo.processes.mysql.threads !== undefined">
                       <span class="process-label">{{ $t('monitor.process_threads') }}:</span>
-                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.threads) }}</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.threads || 0) }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.mysql.connections !== undefined && systemInfo.processes.mysql.connections > 0">
+                    <div class="process-item" v-if="systemInfo.processes.mysql.connections !== undefined">
                       <span class="process-label">{{ $t('monitor.process_connections') }}:</span>
-                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.connections) }}</span>
+                      <span class="process-value highlight">
+                        {{ formatNumber(systemInfo.processes.mysql.connections || 0) }}
+                        <span v-if="systemInfo.processes.mysql.max_connections" class="connections-info">
+                          / {{ formatNumber(systemInfo.processes.mysql.max_connections) }}
+                          <span class="connections-percent" :class="getConnectionPercentClass(systemInfo.processes.mysql.connections, systemInfo.processes.mysql.max_connections)">
+                            ({{ formatPercent((systemInfo.processes.mysql.connections || 0) / systemInfo.processes.mysql.max_connections * 100) }})
+                          </span>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.queries !== undefined && systemInfo.processes.mysql.queries > 0">
+                      <span class="process-label">{{ $t('monitor.process_queries') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.queries) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.uptime !== undefined && systemInfo.processes.mysql.uptime > 0">
+                      <span class="process-label">{{ $t('monitor.process_uptime') }}:</span>
+                      <span class="process-value">{{ formatUptime(systemInfo.processes.mysql.uptime) }}</span>
                     </div>
                   </div>
                 </div>
@@ -484,6 +501,7 @@
                       <span class="process-label">{{ $t('monitor.process_status') }}:</span>
                       <span class="process-value" :class="getProcessStatusType(systemInfo.processes.redis.status) === 'success' ? 'highlight' : ''">
                         {{ systemInfo.processes.redis.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.redis.status === 'sleep' ? $t('monitor.process_running') :
                            systemInfo.processes.redis.status === 'connected' ? $t('monitor.process_connected') :
                            systemInfo.processes.redis.status === 'not_found' ? $t('monitor.process_not_found') :
                            systemInfo.processes.redis.status === 'disconnected' ? $t('monitor.process_disconnected') :
@@ -528,6 +546,7 @@
                       <span class="process-label">{{ $t('monitor.process_status') }}:</span>
                       <span class="process-value" :class="getProcessStatusType(systemInfo.processes.app.status) === 'success' ? 'highlight' : ''">
                         {{ systemInfo.processes.app.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.app.status === 'sleep' ? $t('monitor.process_running') :
                            systemInfo.processes.app.status === 'connected' ? $t('monitor.process_connected') :
                            systemInfo.processes.app.status === 'not_found' ? $t('monitor.process_not_found') :
                            systemInfo.processes.app.status }}
@@ -712,13 +731,41 @@ const getProgressColor = (percentage) => {
   }
 }
 
+// 格式化运行时间（秒转换为友好格式）
+const formatUptime = (seconds) => {
+  if (!seconds || seconds <= 0) return '0秒'
+  
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  
+  const parts = []
+  if (days > 0) parts.push(`${days}天`)
+  if (hours > 0) parts.push(`${hours}小时`)
+  if (minutes > 0) parts.push(`${minutes}分钟`)
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}秒`)
+  
+  return parts.join(' ')
+}
+
+// 获取连接数百分比样式类
+const getConnectionPercentClass = (connections, maxConnections) => {
+  if (!maxConnections || maxConnections <= 0) return ''
+  const percent = (connections || 0) / maxConnections * 100
+  if (percent >= 90) return 'connections-danger'
+  if (percent >= 80) return 'connections-warning'
+  return 'connections-safe'
+}
+
 // 获取进程状态类型
 const getProcessStatusType = (status) => {
-  if (status === 'running' || status === 'connected') {
+  // sleep 状态对于服务进程来说是正常的，显示为 success
+  if (status === 'running' || status === 'connected' || status === 'sleep') {
     return 'success'
   } else if (status === 'not_found' || status === 'disconnected') {
     return 'danger'
-  } else if (status === 'error') {
+  } else if (status === 'error' || status === 'zombie' || status === 'stopped') {
     return 'warning'
   }
   return 'info'
@@ -866,6 +913,31 @@ onUnmounted(() => {
   &.highlight {
     color: #409eff;
     font-size: 15px;
+  }
+}
+
+.connections-info {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.connections-percent {
+  font-size: 12px;
+  margin-left: 4px;
+  
+  &.connections-safe {
+    color: #67c23a;
+  }
+  
+  &.connections-warning {
+    color: #e6a23c;
+  }
+  
+  &.connections-danger {
+    color: #f56c6c;
+    font-weight: 600;
   }
 }
 
