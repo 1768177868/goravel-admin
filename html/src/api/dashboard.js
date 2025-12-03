@@ -32,3 +32,10 @@ export function getMonthlySales() {
   })
 }
 
+// 创建 Dashboard 数据实时更新 SSE URL
+export function createDashboardSSE(options = {}) {
+  const { interval = 5 } = options
+  const url = `/dashboard/stream?interval=${interval}`
+  return url
+}
+

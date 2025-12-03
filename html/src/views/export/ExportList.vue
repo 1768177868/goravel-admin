@@ -42,14 +42,39 @@
         <vxe-column field="path" :title="$t('export.path')" min-width="260" />
         <vxe-column field="extension" :title="$t('export.extension')" width="100" />
         <vxe-column field="size" :title="$t('export.size')" width="140" :formatter="formatSize" />
+        <vxe-column field="status" :title="$t('log.status')" width="150">
+          <template #default="{ row }">
+            <div>
+              <el-tag :type="getStatusTagType(row.status || row.Status)">
+                {{ formatStatus({ row }) }}
+              </el-tag>
+              <el-progress
+                v-if="isExportProcessing(row)"
+                :percentage="getExportProgress(row)"
+                :status="getExportProgressStatus(row)"
+                :stroke-width="4"
+                style="margin-top: 4px;"
+              />
+            </div>
+          </template>
+        </vxe-column>
         <vxe-column field="admin" :title="$t('log.admin')" width="140" :formatter="formatAdmin" />
         <vxe-column field="created_at" :title="$t('table.created_at')" width="180" sortable />
-        <vxe-column :title="$t('table.operation')" width="160" fixed="right">
+        <vxe-column :title="$t('table.operation')" width="200" fixed="right">
           <template #default="{ row }">
+            <el-button 
+              v-if="isExportProcessing(row)"
+              type="info" 
+              link 
+              size="small"
+              @click="handleMonitorExport(row)"
+            >
+              {{ monitoringExports.has(row.id || row.ID) ? ($t('export.stop_monitor') || '停止监控') : ($t('export.monitor_progress') || '监控进度') }}
+            </el-button>
             <el-button 
               type="primary" 
               link 
-              :disabled="downloadingIds.has(row.id || row.ID)"
+              :disabled="downloadingIds.has(row.id || row.ID) || !isExportCompleted(row)"
               :loading="downloadingIds.has(row.id || row.ID)"
               @click="handleDownload(row)"
             >
@@ -72,14 +97,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
-import { getExportList, deleteExport, batchDeleteExports } from '../../api/export'
+import { getExportList, deleteExport, batchDeleteExports, createExportProgressSSE } from '../../api/export'
+import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 import i18n from '../../i18n'
 
 const { t, locale } = useI18n()
@@ -87,6 +113,8 @@ const { t, locale } = useI18n()
 const tableRef = ref(null)
 const selectedRows = ref([])
 const downloadingIds = ref(new Set()) // 正在下载的文件 ID 集合
+const monitoringExports = ref(new Map()) // 正在监控的导出任务 { exportId: eventSource }
+const exportProgress = ref(new Map()) // 导出任务进度 { exportId: { status, message, file_url } }
 
 // 数据转换函数
 const transformExportData = (item) => {
@@ -185,6 +213,122 @@ const formatAdmin = ({ row }) => {
     return row.admin.username
   }
   return '-'
+}
+
+const formatStatus = ({ row }) => {
+  const status = row.status || row.Status || 0
+  const progress = exportProgress.value.get(row.id || row.ID)
+  
+  if (progress) {
+    return progress.status || (status === 1 ? t('log.success') : t('log.failed'))
+  }
+  
+  return status === 1 ? t('log.success') : status === 0 ? t('log.processing') || '处理中' : t('log.failed')
+}
+
+const getStatusTagType = (status) => {
+  if (status === 1) return 'success'
+  if (status === 0) return 'warning'
+  return 'danger'
+}
+
+// 判断导出任务是否正在处理中
+const isExportProcessing = (row) => {
+  const status = row.status || row.Status || 0
+  return status === 0 // 0 表示处理中
+}
+
+// 判断导出任务是否已完成
+const isExportCompleted = (row) => {
+  const status = row.status || row.Status || 0
+  return status === 1 // 1 表示成功
+}
+
+// 获取导出进度百分比
+const getExportProgress = (row) => {
+  const exportId = row.id || row.ID
+  const progress = exportProgress.value.get(exportId)
+  if (progress && progress.progress !== undefined) {
+    return progress.progress
+  }
+  return 0
+}
+
+// 获取导出进度状态
+const getExportProgressStatus = (row) => {
+  const exportId = row.id || row.ID
+  const progress = exportProgress.value.get(exportId)
+  if (progress && progress.status === '失败') {
+    return 'exception'
+  }
+  return null
+}
+
+// 监控导出任务进度
+const handleMonitorExport = (row) => {
+  const exportId = row.id || row.ID
+  if (!exportId) return
+  
+  // 如果已经在监控，先停止
+  if (monitoringExports.value.has(exportId)) {
+    stopMonitorExport(exportId)
+    return
+  }
+  
+  try {
+    const url = createExportProgressSSE(exportId, { interval: 1000 })
+    const eventSource = createSSEConnection(url, {
+      onMessage: (data) => {
+        if (data.type === 'progress') {
+          exportProgress.value.set(exportId, {
+            status: data.status_text || '处理中',
+            message: data.message || '',
+            progress: data.progress || 0
+          })
+        } else if (data.type === 'completed') {
+          exportProgress.value.set(exportId, {
+            status: '成功',
+            message: '导出完成',
+            file_url: data.file_url,
+            filename: data.filename,
+            progress: 100
+          })
+          // 停止监控并刷新列表
+          stopMonitorExport(exportId)
+          loadData()
+          ElMessage.success(t('export.export_completed') || '导出完成')
+        } else if (data.type === 'failed') {
+          exportProgress.value.set(exportId, {
+            status: '失败',
+            message: data.message || '导出失败',
+            progress: 0
+          })
+          stopMonitorExport(exportId)
+          ElMessage.error(data.message || t('export.export_failed') || '导出失败')
+        }
+      },
+      onError: (error) => {
+        console.error('Export progress SSE error:', error)
+        stopMonitorExport(exportId)
+      }
+    })
+    
+    monitoringExports.value.set(exportId, eventSource)
+    ElMessage.info(t('export.monitoring_started') || '开始监控导出进度')
+  } catch (error) {
+    console.error('Failed to start export progress monitoring:', error)
+    ElMessage.error(t('export.monitor_failed') || '启动监控失败')
+  }
+}
+
+// 停止监控导出任务
+const stopMonitorExport = (exportId) => {
+  const eventSource = monitoringExports.value.get(exportId)
+  if (eventSource) {
+    closeSSEConnection(eventSource)
+    monitoringExports.value.delete(exportId)
+  }
+  // 不清除进度信息，保留显示
 }
 
 // loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
@@ -362,6 +506,15 @@ onMounted(() => {
 // 当组件被激活时（包括从缓存恢复）自动刷新数据
 onActivated(() => {
   loadData()
+})
+
+// 组件卸载时清理所有 SSE 连接
+onUnmounted(() => {
+  monitoringExports.value.forEach((eventSource, exportId) => {
+    closeSSEConnection(eventSource)
+  })
+  monitoringExports.value.clear()
+  exportProgress.value.clear()
 })
 </script>
 

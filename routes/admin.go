@@ -121,6 +121,8 @@ func Admin() {
 		// 导出管理
 		router.Get("exports", exportController.Index)
 		router.Get("exports/{id}/download", exportController.Download)
+		// SSE 路由：实时推送导出任务进度（之前没有进度查询接口，直接使用 SSE）
+		router.Get("exports/{id}/progress", exportController.StreamExportProgress)
 		router.Delete("exports/{id}", exportController.Destroy)
 		router.Post("exports/batch-delete", exportController.BatchDestroy)
 
@@ -139,13 +141,19 @@ func Admin() {
 		router.Post("system-logs/clean", systemLogController.Clean)
 
 		// Dashboard 统计
+		// 原路由：按需查询特定数据（适合一次性查询或按需刷新）
 		router.Get("dashboard/count", dashboardController.GetCount)
 		router.Get("dashboard/user-access-source", dashboardController.GetUserAccessSource)
 		router.Get("dashboard/weekly-user-activity", dashboardController.GetWeeklyUserActivity)
 		router.Get("dashboard/monthly-sales", dashboardController.GetMonthlySales)
+		// SSE 路由：实时推送所有 Dashboard 数据（适合实时 Dashboard 页面，自动更新）
+		router.Get("dashboard/stream", dashboardController.StreamDashboardData)
 
 		// 服务监控
+		// 原路由：手动刷新、一次性查询（适合按需查看或定时刷新）
 		router.Get("monitor/system-info", monitorController.GetSystemInfo)
+		// SSE 路由：实时推送系统监控数据（适合实时监控页面，自动更新）
+		router.Get("monitor/system-info/stream", monitorController.StreamSystemInfo)
 
 		// 系统公告/通知
 		router.Post("notifications", notificationController.Store)
@@ -156,8 +164,12 @@ func Admin() {
 		// 附件管理
 		router.Get("attachments", attachmentController.Index)
 		router.Post("attachments/upload", attachmentController.Upload)
-		router.Post("attachments/chunk", attachmentController.ChunkUpload) // 统一的分片上传接口（POST，action参数）
-		router.Get("attachments/chunk", attachmentController.ChunkUpload)  // 获取进度（GET，action=progress）
+		// 统一的分片上传接口（POST，action参数：init/upload/merge）
+		router.Post("attachments/chunk", attachmentController.ChunkUpload)
+		// 原路由：获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
+		router.Get("attachments/chunk", attachmentController.ChunkUpload)
+		// SSE 路由：实时推送上传进度（适合上传过程中的实时进度显示）
+		router.Get("attachments/upload/progress", attachmentController.StreamUploadProgress)
 		router.Get("attachments/{id}/preview", attachmentController.Preview)
 		router.Get("attachments/{id}/download", attachmentController.Download)
 		router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)

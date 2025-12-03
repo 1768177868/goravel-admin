@@ -27,4 +27,11 @@ export function batchDeleteExports(ids) {
   })
 }
 
+// 创建导出任务进度推送 SSE URL
+export function createExportProgressSSE(exportID, options = {}) {
+  const { interval = 1000 } = options
+  const url = `/exports/${exportID}/progress?interval=${interval}`
+  return url
+}
+
 

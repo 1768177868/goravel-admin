@@ -160,3 +160,10 @@ export function updateDisplayName(id, displayName) {
   })
 }
 
+// 创建上传进度 SSE URL
+export function createUploadProgressSSE(chunkID, totalChunks, options = {}) {
+  const { interval = 500 } = options
+  const url = `/attachments/upload/progress?chunk_id=${chunkID}&total_chunks=${totalChunks}&interval=${interval}`
+  return url
+}
+

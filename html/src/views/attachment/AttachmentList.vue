@@ -147,14 +147,14 @@
           <p><strong>{{ $t('attachment.size') }}:</strong> {{ formatFileSize(chunkUploadFile.size) }}</p>
         </div>
         <el-progress 
-          :percentage="chunkUploadProgress" 
+          :percentage="Math.round(chunkUploadProgress)" 
           :status="chunkUploadStatus"
           :stroke-width="20"
         />
         <div class="upload-status">
           <p v-if="chunkUploadStatus === 'success'">{{ $t('attachment.upload_success') }}</p>
           <p v-else-if="chunkUploadStatus === 'exception'">{{ $t('attachment.upload_failed') }}</p>
-          <p v-else>{{ $t('attachment.uploading') }}: {{ chunkUploadProgress }}%</p>
+          <p v-else>{{ $t('attachment.uploading') }}: {{ Math.round(chunkUploadProgress) }}%</p>
         </div>
         <div class="upload-actions" style="margin-top: 20px; text-align: right;">
           <el-button 
@@ -205,8 +205,10 @@ import {
   uploadChunk,
   mergeChunks,
   getChunkProgress,
-  updateDisplayName
+  updateDisplayName,
+  createUploadProgressSSE
 } from '../../api/attachment'
+import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 import i18n from '../../i18n'
 
 const { t, locale } = useI18n()
@@ -222,6 +224,7 @@ const chunkUploadStatus = ref('')
 const chunkUploadChunkID = ref('')
 const chunkUploadChunks = ref([])
 const chunkUploadCancelled = ref(false) // 标记是否已取消上传
+let uploadProgressEventSource = null // SSE 连接实例
 // 图片URL缓存（key: attachment_id, value: blob_url 或 直接URL）
 const imageUrlMap = ref(new Map())
 
@@ -604,6 +607,46 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
       }
     }
 
+    // 启动 SSE 实时进度推送
+    if (chunkUploadChunkID.value && !chunkUploadCancelled.value) {
+      try {
+        const url = createUploadProgressSSE(chunkUploadChunkID.value, totalChunks, { interval: 500 })
+        uploadProgressEventSource = createSSEConnection(url, {
+          onMessage: (data) => {
+            if (chunkUploadCancelled.value) {
+              return // 如果已取消，忽略消息
+            }
+            
+            if (data.type === 'progress') {
+              // 更新进度
+              chunkUploadProgress.value = data.progress || 0
+            } else if (data.type === 'completed') {
+              // 上传完成
+              chunkUploadProgress.value = 100
+              chunkUploadStatus.value = 'success'
+              closeSSEConnection(uploadProgressEventSource)
+              uploadProgressEventSource = null
+              ElMessage.success(t('attachment.upload_success'))
+              loadData()
+            } else if (data.type === 'error') {
+              // 上传错误
+              chunkUploadStatus.value = 'exception'
+              closeSSEConnection(uploadProgressEventSource)
+              uploadProgressEventSource = null
+              ElMessage.error(data.message || t('attachment.upload_failed'))
+            }
+          },
+          onError: (error) => {
+            console.error('Upload progress SSE error:', error)
+            // SSE 错误不影响上传流程，只是进度更新可能不准确
+          }
+        })
+      } catch (error) {
+        console.warn('Failed to start upload progress SSE:', error)
+        // SSE 启动失败不影响上传，只是没有实时进度推送
+      }
+    }
+
     // 准备所有分片
     const chunks = []
     for (let i = 0; i < totalChunks; i++) {
@@ -655,7 +698,10 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
         }
         
         uploadedCount++
-        chunkUploadProgress.value = Math.round((uploadedCount / totalChunks) * 100)
+        // 如果 SSE 未启动或失败，手动更新进度
+        if (!uploadProgressEventSource || uploadProgressEventSource.readyState !== EventSource.OPEN) {
+          chunkUploadProgress.value = Math.round((uploadedCount / totalChunks) * 100)
+        }
       } catch (error) {
         // 如果已取消，不抛出错误
         if (!chunkUploadCancelled.value) {
@@ -689,9 +735,12 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
       return
     }
 
-    chunkUploadStatus.value = 'success'
-    chunkUploadProgress.value = 100
-    ElMessage.success(t('attachment.upload_success'))
+    // 如果 SSE 未处理完成状态，手动设置
+    if (!uploadProgressEventSource || uploadProgressEventSource.readyState !== EventSource.OPEN) {
+      chunkUploadStatus.value = 'success'
+      chunkUploadProgress.value = 100
+      ElMessage.success(t('attachment.upload_success'))
+    }
     
     // 清理 localStorage 中的分片信息
     try {
@@ -702,7 +751,10 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
       console.warn('Failed to remove chunk info from localStorage:', e)
     }
     
-    loadData()
+    // 如果 SSE 还在运行，等待它自动关闭，否则立即刷新
+    if (!uploadProgressEventSource || uploadProgressEventSource.readyState !== EventSource.OPEN) {
+      loadData()
+    }
   } catch (error) {
     // 如果已取消，不显示错误
     if (chunkUploadCancelled.value) {
@@ -717,6 +769,11 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
 const handleCancelChunkUpload = () => {
   // 标记为已取消，停止所有上传操作
   chunkUploadCancelled.value = true
+  // 关闭 SSE 连接
+  if (uploadProgressEventSource) {
+    closeSSEConnection(uploadProgressEventSource)
+    uploadProgressEventSource = null
+  }
   chunkUploadVisible.value = false
   chunkUploadFile.value = null
   chunkUploadChunkID.value = ''

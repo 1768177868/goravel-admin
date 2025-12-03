@@ -1,7 +1,10 @@
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
+	nethttp "net/http"
+	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
@@ -268,4 +271,181 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success")
+}
+
+// StreamExportProgress SSE 实时推送导出任务进度
+// 监控导出任务的状态变化，实时推送进度信息
+func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response {
+	// 获取参数
+	exportID := helpers.GetUintRoute(ctx, "id")
+	if exportID == 0 {
+		// 尝试从查询参数获取
+		exportID = helpers.GetUintQuery(ctx, "id", 0)
+		if exportID == 0 {
+			return response.Error(ctx, http.StatusBadRequest, "id_required")
+		}
+	}
+
+	// 获取推送间隔（毫秒），默认 1 秒
+	interval := 1000
+	if intervalStr := ctx.Request().Query("interval", ""); intervalStr != "" {
+		if parsed, err := time.ParseDuration(intervalStr + "ms"); err == nil {
+			interval = int(parsed.Milliseconds())
+			if interval < 500 {
+				interval = 500
+			}
+			if interval > 5000 {
+				interval = 5000
+			}
+		}
+	}
+
+	// 设置 SSE 响应头
+	writer := ctx.Response().Writer()
+	writer.Header().Set("Content-Type", "text/event-stream")
+	writer.Header().Set("Cache-Control", "no-cache")
+	writer.Header().Set("Connection", "keep-alive")
+	writer.Header().Set("X-Accel-Buffering", "no") // 禁用 Nginx 缓冲
+
+	// 发送初始连接消息
+	initMsg := map[string]interface{}{
+		"type":      "connected",
+		"message":   "SSE连接已建立，开始监控导出任务进度",
+		"export_id": exportID,
+		"interval":  interval,
+	}
+	initData, _ := json.Marshal(initMsg)
+	fmt.Fprintf(writer, "data: %s\n\n", string(initData))
+	if flusher, ok := writer.(nethttp.Flusher); ok {
+		flusher.Flush()
+	}
+
+	// 创建 ticker，定期检查导出任务状态
+	ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
+	defer ticker.Stop()
+
+	// 检测客户端断开连接
+	clientGone := ctx.Request().Origin().Context().Done()
+
+	// 记录上次的状态，避免重复推送
+	lastStatus := uint8(255) // 使用一个不可能的值作为初始值
+	lastPath := ""
+
+	exportService := services.NewExportService(ctx)
+
+	for {
+		select {
+		case <-clientGone:
+			// 客户端断开连接
+			return nil
+		case <-ticker.C:
+			// 查询导出任务
+			var export models.Export
+			if err := facades.Orm().Query().Where("id", exportID).First(&export); err != nil {
+				// 导出任务不存在或已删除
+				errorMsg := map[string]interface{}{
+					"type":    "error",
+					"message": "导出任务不存在或已删除",
+					"error":   err.Error(),
+				}
+				errorData, _ := json.Marshal(errorMsg)
+				fmt.Fprintf(writer, "data: %s\n\n", string(errorData))
+				if flusher, ok := writer.(nethttp.Flusher); ok {
+					flusher.Flush()
+				}
+				// 继续监控，可能任务还在创建中
+				continue
+			}
+
+			// 检查状态是否有变化
+			if export.Status == lastStatus && export.Path == lastPath {
+				// 状态和路径都没有变化，跳过本次推送
+				// 但如果已完成，可以继续推送完成状态
+				if export.Status == 1 && lastStatus == 1 {
+					continue
+				}
+			}
+
+			// 更新记录
+			lastStatus = export.Status
+			lastPath = export.Path
+
+			// 构造进度消息
+			message := map[string]interface{}{
+				"type":      "progress",
+				"export_id": export.ID,
+				"status":    export.Status,
+				"timestamp": time.Now().Format(time.RFC3339),
+			}
+
+			// 根据状态设置不同的消息
+			if export.Status == 1 {
+				// 导出成功
+				message["type"] = "completed"
+				message["message"] = "导出任务已完成"
+				message["status_text"] = "成功"
+
+				// 生成下载链接
+				fileURL := ""
+				if export.Path != "" {
+					if export.Disk == "local" || export.Disk == "public" {
+						fileURL = fmt.Sprintf("/api/admin/exports/%d/download", export.ID)
+					} else {
+						fileURL = exportService.GetExportURL(export.Path)
+					}
+				}
+
+				message["file_url"] = fileURL
+				message["filename"] = export.Filename
+				message["size"] = export.Size
+			} else if export.Status == 0 {
+				// 导出失败
+				message["type"] = "failed"
+				message["message"] = "导出任务失败"
+				message["status_text"] = "失败"
+			} else {
+				// 处理中（Status 可能是其他值，或者我们不知道的状态）
+				message["message"] = "导出任务处理中"
+				message["status_text"] = "处理中"
+			}
+
+			// 如果文件路径已存在，说明正在生成文件
+			if export.Path != "" && export.Status != 1 {
+				message["message"] = "正在生成导出文件"
+				// 可以尝试检查文件大小来判断进度（如果存储驱动支持）
+				if export.Disk != "" {
+					storage := facades.Storage().Disk(export.Disk)
+					if size, err := storage.Size(export.Path); err == nil {
+						message["file_size"] = size
+						if export.Size > 0 {
+							progress := float64(size) / float64(export.Size) * 100
+							if progress > 100 {
+								progress = 100
+							}
+							message["progress"] = progress
+						}
+					}
+				}
+			}
+
+			messageData, err := json.Marshal(message)
+			if err != nil {
+				errorlog.RecordHTTP(ctx, "export", "Failed to marshal progress", map[string]any{
+					"error": err.Error(),
+				}, "Marshal progress error: %v", err)
+				continue
+			}
+
+			// 发送 SSE 消息
+			fmt.Fprintf(writer, "data: %s\n\n", string(messageData))
+
+			// 刷新缓冲区
+			if flusher, ok := writer.(nethttp.Flusher); ok {
+				flusher.Flush()
+			}
+
+			// 如果已完成或失败，可以选择继续推送一段时间后关闭，或者保持连接
+			// 这里选择继续推送，让前端决定何时关闭
+		}
+	}
 }

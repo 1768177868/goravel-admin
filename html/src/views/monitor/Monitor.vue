@@ -416,7 +416,8 @@ import {
   Refresh,
   Operation
 } from '@element-plus/icons-vue'
-import { getSystemInfo } from '../../api/monitor'
+import { getSystemInfo, createSystemInfoSSE } from '../../api/monitor'
+import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 
 const { t } = useI18n()
 
@@ -438,8 +439,56 @@ const isLinux = computed(() => {
 })
 
 const loading = ref(false)
+let eventSource = null
 let refreshTimer = null
 
+// 使用 SSE 实时推送
+const startSSEStream = () => {
+  try {
+    const url = createSystemInfoSSE({ interval: 2 })
+    eventSource = createSSEConnection(url, {
+      onMessage: (data) => {
+        if (data.type === 'system_info') {
+          systemInfo.value = data.data || {}
+          loading.value = false
+        }
+      },
+      onError: (error) => {
+        console.error('SSE connection error:', error)
+        // SSE 连接失败时，降级到定时刷新
+        if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+          ElMessage.warning(t('monitor.sse_connection_failed') || '实时推送连接失败，已切换到定时刷新模式')
+          // 关闭 SSE 连接
+          closeSSEConnection(eventSource)
+          eventSource = null
+          // 启动定时刷新作为降级方案
+          startPolling()
+        }
+      },
+      onOpen: () => {
+        console.log('SSE connected for system info')
+        loading.value = false
+      }
+    })
+  } catch (error) {
+    console.error('Failed to start SSE stream:', error)
+    ElMessage.warning(t('monitor.sse_init_failed') || '无法启动实时推送，已切换到定时刷新模式')
+    // 降级到定时刷新
+    startPolling()
+  }
+}
+
+// 定时刷新（降级方案）
+const startPolling = () => {
+  // 先立即加载一次
+  loadData()
+  // 每30秒自动刷新
+  refreshTimer = setInterval(() => {
+    loadData()
+  }, 30000)
+}
+
+// 手动刷新（兼容原有功能）
 const loadData = async () => {
   loading.value = true
   try {
@@ -504,16 +553,20 @@ const getProgressColor = (percentage) => {
 }
 
 onMounted(() => {
-  loadData()
-  // 每30秒自动刷新
-  refreshTimer = setInterval(() => {
-    loadData()
-  }, 30000)
+  // 优先使用 SSE 实时推送
+  startSSEStream()
 })
 
 onUnmounted(() => {
+  // 关闭 SSE 连接
+  if (eventSource) {
+    closeSSEConnection(eventSource)
+    eventSource = null
+  }
+  // 清除定时器
   if (refreshTimer) {
     clearInterval(refreshTimer)
+    refreshTimer = null
   }
 })
 </script>

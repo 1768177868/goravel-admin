@@ -142,9 +142,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount, markRaw } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, onUnmounted, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
+import { 
+  getCount, 
+  getUserAccessSource, 
+  getWeeklyUserActivity, 
+  getMonthlySales,
+  createDashboardSSE 
+} from '../api/dashboard'
+import { createSSEConnection, closeSSEConnection } from '../utils/sse'
 import {
   User,
   View,
@@ -174,35 +182,35 @@ const ArrowDownIcon = markRaw(ArrowDown)
 const PlusIcon = markRaw(Plus)
 const SettingIcon = markRaw(Setting)
 
-// 统计数据 - 写死的默认数据
+// 统计数据
 const stats = ref([
   { 
     title: '管理员总数', 
-    value: 156, 
+    value: 0, 
     icon: UserFilledIcon, 
     color: '#409EFF',
-    trend: 12.5
+    trend: 0
   },
   { 
     title: '今日访问', 
-    value: 2847, 
+    value: 0, 
     icon: ViewIcon, 
     color: '#67C23A',
-    trend: 8.3
+    trend: 0
   },
   { 
     title: '角色数量', 
-    value: 24, 
+    value: 0, 
     icon: KeyIcon, 
     color: '#E6A23C',
-    trend: -2.1
+    trend: 0
   },
   { 
     title: '菜单数量', 
-    value: 89, 
+    value: 0, 
     icon: MenuIcon, 
     color: '#F56C6C',
-    trend: 5.6
+    trend: 0
   }
 ])
 
@@ -218,37 +226,203 @@ let accessSourceChartInstance = null
 let deviceChartInstance = null
 let regionChartInstance = null
 
-// 访问趋势数据 - 写死的默认数据
-const visitTrendData = {
-  dates: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-  visits: [1200, 1900, 3000, 2500, 3200, 2800, 3500],
-  users: [800, 1200, 2000, 1800, 2200, 2000, 2400]
+// 访问趋势数据
+const visitTrendData = ref({
+  dates: [],
+  visits: [],
+  users: []
+})
+
+// 访问来源数据
+const accessSourceData = ref([])
+
+// 设备分布数据（从访问来源数据中提取）
+const deviceData = ref([])
+
+// 地区分布数据（暂时使用空数据，后续可以从后端获取）
+const regionData = ref([])
+
+// Dashboard SSE 连接
+let dashboardEventSource = null
+
+// 更新统计数据
+const updateStats = (countData) => {
+  if (!countData) return
+  
+  stats.value[0].value = countData.admin_count || 0
+  stats.value[1].value = countData.today_visits || 0
+  stats.value[2].value = countData.role_count || 0
+  stats.value[3].value = countData.menu_count || 0
 }
 
-// 访问来源数据 - 写死的默认数据
-const accessSourceData = [
-  { value: 35, name: '直接访问' },
-  { value: 28, name: '搜索引擎' },
-  { value: 22, name: '社交媒体' },
-  { value: 15, name: '外部链接' }
-]
+// 更新访问趋势图表
+const updateVisitTrendChart = (weeklyData) => {
+  if (!weeklyData || !Array.isArray(weeklyData) || weeklyData.length === 0) return
+  
+  visitTrendData.value = {
+    dates: weeklyData.map(item => item.date || item.Date || ''),
+    visits: weeklyData.map(item => item.visits || item.Visits || 0),
+    users: weeklyData.map(item => item.users || item.Users || 0)
+  }
+  
+  if (visitTrendChartInstance) {
+    visitTrendChartInstance.setOption({
+      xAxis: {
+        data: visitTrendData.value.dates
+      },
+      series: [
+        {
+          data: visitTrendData.value.visits
+        },
+        {
+          data: visitTrendData.value.users
+        }
+      ]
+    })
+  }
+}
 
-// 设备分布数据 - 写死的默认数据
-const deviceData = [
-  { value: 45, name: '桌面端' },
-  { value: 35, name: '移动端' },
-  { value: 20, name: '平板端' }
-]
+// 更新访问来源图表
+const updateAccessSourceChart = (sourceData) => {
+  if (!sourceData || !Array.isArray(sourceData) || sourceData.length === 0) return
+  
+  accessSourceData.value = sourceData.map(item => ({
+    value: item.value || item.Value || 0,
+    name: item.name || item.Name || ''
+  }))
+  
+  if (accessSourceChartInstance) {
+    accessSourceChartInstance.setOption({
+      series: [{
+        data: accessSourceData.value
+      }]
+    })
+  }
+}
 
-// 地区分布数据 - 写死的默认数据
-const regionData = [
-  { name: '北京', value: 1250 },
-  { name: '上海', value: 980 },
-  { name: '广州', value: 750 },
-  { name: '深圳', value: 680 },
-  { name: '杭州', value: 520 },
-  { name: '其他', value: 1120 }
-]
+// 更新设备分布图表（从访问来源数据中提取设备相关数据）
+const updateDeviceChart = (sourceData) => {
+  if (!sourceData || !Array.isArray(sourceData)) return
+  
+  // 假设访问来源数据中包含设备信息，或者可以从其他接口获取
+  // 这里暂时使用默认数据，实际应该从后端获取
+  deviceData.value = [
+    { value: 45, name: '桌面端' },
+    { value: 35, name: '移动端' },
+    { value: 20, name: '平板端' }
+  ]
+  
+  if (deviceChartInstance) {
+    deviceChartInstance.setOption({
+      series: [{
+        data: deviceData.value
+      }]
+    })
+  }
+}
+
+// 更新地区分布图表
+const updateRegionChart = (regionDataArray) => {
+  if (!regionDataArray || !Array.isArray(regionDataArray)) return
+  
+  regionData.value = regionDataArray.map(item => ({
+    name: item.name || item.Name || '',
+    value: item.value || item.Value || 0
+  }))
+  
+  if (regionChartInstance) {
+    regionChartInstance.setOption({
+      yAxis: {
+        data: regionData.value.map(item => item.name)
+      },
+      series: [{
+        data: regionData.value.map(item => item.value)
+      }]
+    })
+  }
+}
+
+// 启动 SSE 实时更新
+const startDashboardSSE = () => {
+  try {
+    const url = createDashboardSSE({ interval: 5 })
+    dashboardEventSource = createSSEConnection(url, {
+      onMessage: (data) => {
+        if (data.type === 'dashboard_data') {
+          const dashboardData = data.data || {}
+          
+          // 更新统计数据
+          if (dashboardData.count) {
+            updateStats(dashboardData.count)
+          }
+          
+          // 更新访问来源
+          if (dashboardData.user_access_source) {
+            updateAccessSourceChart(dashboardData.user_access_source)
+          }
+          
+          // 更新每周活动
+          if (dashboardData.weekly_user_activity) {
+            updateVisitTrendChart(dashboardData.weekly_user_activity)
+          }
+          
+          // 更新每月销售（如果有）
+          if (dashboardData.monthly_sales) {
+            // 可以在这里更新销售相关的图表
+          }
+        }
+      },
+      onError: (error) => {
+        console.error('Dashboard SSE error:', error)
+        // SSE 连接失败时，降级到定时刷新
+        if (dashboardEventSource && dashboardEventSource.readyState === EventSource.CLOSED) {
+          closeSSEConnection(dashboardEventSource)
+          dashboardEventSource = null
+          // 可以启动定时刷新作为降级方案
+          loadDashboardData()
+        }
+      },
+      onOpen: () => {
+        console.log('Dashboard SSE connected')
+      }
+    })
+  } catch (error) {
+    console.error('Failed to start Dashboard SSE:', error)
+    // 降级到普通 API 调用
+    loadDashboardData()
+  }
+}
+
+// 加载 Dashboard 数据（降级方案）
+const loadDashboardData = async () => {
+  try {
+    // 加载统计数据
+    const countRes = await getCount()
+    if (countRes.data) {
+      updateStats(countRes.data)
+    }
+    
+    // 加载访问来源
+    const sourceRes = await getUserAccessSource()
+    if (sourceRes.data) {
+      updateAccessSourceChart(sourceRes.data)
+    }
+    
+    // 加载每周活动
+    const weeklyRes = await getWeeklyUserActivity()
+    if (weeklyRes.data) {
+      updateVisitTrendChart(weeklyRes.data)
+    }
+    
+    // 加载每月销售（如果有）
+    // const salesRes = await getMonthlySales()
+    // if (salesRes.data) {
+    //   updateSalesChart(salesRes.data)
+    // }
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error)
+  }
+}
 
 // 最近活动 - 写死的默认数据
 const recentActivities = ref([
@@ -334,7 +508,7 @@ const initVisitTrendChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: visitTrendData.dates
+      data: visitTrendData.value.dates
     },
     yAxis: {
       type: 'value'
@@ -344,7 +518,7 @@ const initVisitTrendChart = () => {
         name: '访问量',
         type: 'line',
         smooth: true,
-        data: visitTrendData.visits,
+        data: visitTrendData.value.visits,
         itemStyle: {
           color: '#409EFF'
         },
@@ -366,7 +540,7 @@ const initVisitTrendChart = () => {
         name: '用户数',
         type: 'line',
         smooth: true,
-        data: visitTrendData.users,
+        data: visitTrendData.value.users,
         itemStyle: {
           color: '#67C23A'
         }
@@ -412,7 +586,7 @@ const initAccessSourceChart = () => {
             fontWeight: 'bold'
           }
         },
-        data: accessSourceData
+        data: accessSourceData.value
       }
     ]
   })
@@ -438,7 +612,7 @@ const initDeviceChart = () => {
         type: 'pie',
         radius: '60%',
         center: ['50%', '45%'],
-        data: deviceData,
+        data: deviceData.value,
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
@@ -474,13 +648,13 @@ const initRegionChart = () => {
     },
     yAxis: {
       type: 'category',
-      data: regionData.map(item => item.name)
+      data: regionData.value.map(item => item.name)
     },
     series: [
       {
         name: '访问量',
         type: 'bar',
-        data: regionData.map(item => item.value),
+        data: regionData.value.map(item => item.value),
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
             { offset: 0, color: '#83bff6' },
@@ -531,6 +705,8 @@ const initCharts = async () => {
 
 onMounted(() => {
   initCharts()
+  // 优先使用 SSE 实时更新
+  startDashboardSSE()
 })
 
 onBeforeUnmount(() => {
@@ -539,6 +715,14 @@ onBeforeUnmount(() => {
   accessSourceChartInstance?.dispose()
   deviceChartInstance?.dispose()
   regionChartInstance?.dispose()
+})
+
+onUnmounted(() => {
+  // 关闭 SSE 连接
+  if (dashboardEventSource) {
+    closeSSEConnection(dashboardEventSource)
+    dashboardEventSource = null
+  }
 })
 </script>
 

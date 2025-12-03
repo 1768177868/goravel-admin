@@ -16,7 +16,7 @@ func (s *PermissionSeeder) Signature() string {
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu models.Menu
-	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu models.Menu
+	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
 	facades.Orm().Query().Where("slug", "role").First(&roleMenu)
@@ -34,6 +34,12 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "profile").First(&profileMenu)
 	facades.Orm().Query().Where("slug", "export").First(&exportMenu)
 	facades.Orm().Query().Where("slug", "attachment").First(&attachmentMenu)
+	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联（或者可以创建 dashboard 菜单）
+	// 如果 dashboard 菜单不存在，使用 profileMenu 作为后备
+	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
+	if dashboardMenu.ID == 0 {
+		dashboardMenu = profileMenu // 使用 profile 菜单作为后备
+	}
 
 	// 创建权限（关联菜单ID）
 	permissions := []models.Permission{
@@ -112,22 +118,27 @@ func (s *PermissionSeeder) Run() error {
 		// {Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/api/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 5, MenuID: systemLogMenu.ID},
 		// 服务监控
 		{Name: "系统监控", Slug: "monitor.system_info", Method: "GET", Path: "/api/admin/monitor/system-info", Description: "查看系统监控信息", Status: 1, Sort: 1, MenuID: monitorMenu.ID},
+		{Name: "系统监控实时流", Slug: "monitor.system_info_stream", Method: "GET", Path: "/api/admin/monitor/system-info/stream", Description: "系统监控实时数据流（SSE）", Status: 1, Sort: 2, MenuID: monitorMenu.ID},
 		// 个人中心
 		{Name: "修改资料", Slug: "profile.update", Method: "PUT", Path: "/api/admin/profile", Description: "修改当前登录管理员资料", Status: 1, Sort: 1, MenuID: profileMenu.ID},
 		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/api/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 2, MenuID: profileMenu.ID},
 		// 导出管理
 		{Name: "导出列表", Slug: "export.index", Method: "GET", Path: "/api/admin/exports", Description: "查看导出记录列表", Status: 1, Sort: 1, MenuID: exportMenu.ID},
-		{Name: "删除导出", Slug: "export.destroy", Method: "DELETE", Path: "/api/admin/exports/*", Description: "删除导出记录及源文件", Status: 1, Sort: 2, MenuID: exportMenu.ID},
-		{Name: "导出批量删除", Slug: "export.batch_delete", Method: "POST", Path: "/api/admin/exports/batch-delete", Description: "批量删除导出记录", Status: 1, Sort: 3, MenuID: exportMenu.ID},
+		{Name: "导出进度", Slug: "export.progress", Method: "GET", Path: "/api/admin/exports/*/progress", Description: "查看导出任务进度（SSE实时推送）", Status: 1, Sort: 2, MenuID: exportMenu.ID},
+		{Name: "删除导出", Slug: "export.destroy", Method: "DELETE", Path: "/api/admin/exports/*", Description: "删除导出记录及源文件", Status: 1, Sort: 3, MenuID: exportMenu.ID},
+		{Name: "导出批量删除", Slug: "export.batch_delete", Method: "POST", Path: "/api/admin/exports/batch-delete", Description: "批量删除导出记录", Status: 1, Sort: 4, MenuID: exportMenu.ID},
 		// 附件管理
 		{Name: "附件列表", Slug: "attachment.index", Method: "GET", Path: "/api/admin/attachments", Description: "查看附件列表", Status: 1, Sort: 1, MenuID: attachmentMenu.ID},
 		{Name: "附件上传", Slug: "attachment.upload", Method: "POST", Path: "/api/admin/attachments/upload", Description: "上传附件", Status: 1, Sort: 2, MenuID: attachmentMenu.ID},
 		{Name: "大文件分片上传", Slug: "attachment.chunk", Method: "POST", Path: "/api/admin/attachments/chunk", Description: "大文件分片上传（包含初始化、上传分片、合并分片、获取进度）", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
+		{Name: "上传进度推送", Slug: "attachment.upload_progress", Method: "GET", Path: "/api/admin/attachments/upload/progress", Description: "文件上传进度实时推送（SSE）", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		// {Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
 		{Name: "附件更新显示名称", Slug: "attachment.update_display_name", Method: "PUT", Path: "/api/admin/attachments/*/display-name", Description: "更新附件显示名称", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
 		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 7, MenuID: attachmentMenu.ID},
 		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 8, MenuID: attachmentMenu.ID},
+		// Dashboard 统计
+		{Name: "Dashboard数据", Slug: "dashboard.data", Method: "GET", Path: "/api/admin/dashboard/*", Description: "查看Dashboard统计数据（包含实时数据流）", Status: 1, Sort: 1, MenuID: dashboardMenu.ID},
 	}
 
 	for _, perm := range permissions {

@@ -31,6 +31,12 @@ func Jwt() http.Middleware {
 		}
 
 		token := ctx.Request().Header("Authorization", "")
+
+		// 如果 Header 中没有 token，尝试从 URL 参数中获取（用于 SSE 等不支持自定义 headers 的场景）
+		if token == "" {
+			token = ctx.Request().Query("_token", "")
+		}
+
 		if token == "" {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
