@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -22,6 +23,79 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/utils/errorlog"
 )
+
+// 监控数据缓存（短期缓存，减少系统调用）
+var (
+	monitorCache     map[string]any
+	monitorCacheLock sync.RWMutex
+	monitorCacheTime time.Time
+	cacheDuration    = 1 * time.Second // 缓存1秒，SSE推送间隔2秒时可以减少一半的系统调用
+)
+
+// 网络带宽监控缓存（用于计算速度和峰值）
+var (
+	lastNetBytesSent  uint64
+	lastNetBytesRecv  uint64
+	lastNetSampleTime time.Time
+	peakSentSpeed     float64 // 峰值发送速度
+	peakRecvSpeed     float64 // 峰值接收速度
+	peakTotalSpeed    float64 // 峰值总速度
+	netSpeedLock      sync.RWMutex
+)
+
+// getNetworkSpeed 计算网络速度并记录峰值（需要两次采样）
+func getNetworkSpeed(currentBytesSent, currentBytesRecv uint64) (sentSpeed, recvSpeed, totalSpeed, peakSent, peakRecv, peakTotal float64) {
+	netSpeedLock.Lock()
+	defer netSpeedLock.Unlock()
+
+	now := time.Now()
+
+	// 如果是第一次采样，保存当前值并返回0
+	if lastNetSampleTime.IsZero() {
+		lastNetBytesSent = currentBytesSent
+		lastNetBytesRecv = currentBytesRecv
+		lastNetSampleTime = now
+		return 0, 0, 0, 0, 0, 0
+	}
+
+	// 计算时间差（秒）
+	timeDiff := now.Sub(lastNetSampleTime).Seconds()
+	if timeDiff <= 0 {
+		return sentSpeed, recvSpeed, totalSpeed, peakSentSpeed, peakRecvSpeed, peakTotalSpeed
+	}
+
+	// 计算速度（字节/秒）
+	var sentSpeedBps, recvSpeedBps float64
+	if currentBytesSent >= lastNetBytesSent {
+		sentSpeedBps = float64(currentBytesSent-lastNetBytesSent) / timeDiff
+	}
+	if currentBytesRecv >= lastNetBytesRecv {
+		recvSpeedBps = float64(currentBytesRecv-lastNetBytesRecv) / timeDiff
+	}
+
+	// 更新缓存
+	lastNetBytesSent = currentBytesSent
+	lastNetBytesRecv = currentBytesRecv
+	lastNetSampleTime = now
+
+	// 转换为Mbps（兆比特每秒）：字节/秒 * 8 / 1024 / 1024
+	sentSpeed = sentSpeedBps * 8 / 1024 / 1024
+	recvSpeed = recvSpeedBps * 8 / 1024 / 1024
+	totalSpeed = sentSpeed + recvSpeed
+
+	// 更新峰值
+	if sentSpeed > peakSentSpeed {
+		peakSentSpeed = sentSpeed
+	}
+	if recvSpeed > peakRecvSpeed {
+		peakRecvSpeed = recvSpeed
+	}
+	if totalSpeed > peakTotalSpeed {
+		peakTotalSpeed = totalSpeed
+	}
+
+	return sentSpeed, recvSpeed, totalSpeed, peakSentSpeed, peakRecvSpeed, peakTotalSpeed
+}
 
 type MonitorController struct{}
 
@@ -255,7 +329,7 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 
 		// 获取MySQL状态信息
 		var statusRows []map[string]any
-		if err := query.Raw("SHOW STATUS WHERE Variable_name IN ('Uptime', 'Threads_connected', 'Questions', 'Connections')").Scan(&statusRows); err == nil {
+		if err := query.Raw("SHOW STATUS WHERE Variable_name IN ('Uptime', 'Threads_connected', 'Questions')").Scan(&statusRows); err == nil {
 			for _, row := range statusRows {
 				if variableName, ok := row["Variable_name"].(string); ok {
 					if value, ok := row["Value"].(string); ok {
@@ -264,11 +338,11 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 						case "Uptime":
 							uptime = intValue
 						case "Threads_connected":
-							threads = intValue
+							// Threads_connected 是当前连接数，应该用作 connections
+							connections = intValue
+							threads = intValue // 线程数也使用当前连接数
 						case "Questions":
 							queries = intValue
-						case "Connections":
-							connections = intValue
 						}
 					}
 				}
@@ -276,12 +350,12 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 			result["uptime"] = uptime
 			result["threads"] = threads
 			result["queries"] = queries
-			result["connections"] = connections
+			result["connections"] = connections // 当前连接数
 		}
 
 		// 获取MySQL变量信息（内存相关）
 		var variableRows []map[string]any
-		if err := query.Raw("SHOW VARIABLES WHERE Variable_name IN ('max_connections', 'innodb_buffer_pool_size')").Scan(&variableRows); err == nil {
+		if err := query.Raw("SHOW VARIABLES WHERE Variable_name IN ('max_connections', 'innodb_buffer_pool_size', 'slow_query_log', 'long_query_time')").Scan(&variableRows); err == nil {
 			for _, row := range variableRows {
 				if variableName, ok := row["Variable_name"].(string); ok {
 					if value, ok := row["Value"].(string); ok {
@@ -290,6 +364,40 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 							result["buffer_pool_size"] = intValue
 						} else if variableName == "max_connections" {
 							result["max_connections"] = intValue
+						} else if variableName == "slow_query_log" {
+							result["slow_query_log"] = value
+						} else if variableName == "long_query_time" {
+							if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
+								result["long_query_time"] = floatValue
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// 获取MySQL更多状态信息（慢查询、锁等待等）
+		var moreStatusRows []map[string]any
+		if err := query.Raw("SHOW STATUS WHERE Variable_name IN ('Slow_queries', 'Table_locks_waited', 'Innodb_row_lock_waits', 'Innodb_row_lock_time_avg', 'Threads_running', 'Threads_created', 'Aborted_connects')").Scan(&moreStatusRows); err == nil {
+			for _, row := range moreStatusRows {
+				if variableName, ok := row["Variable_name"].(string); ok {
+					if value, ok := row["Value"].(string); ok {
+						intValue, _ := strconv.ParseInt(value, 10, 64)
+						switch variableName {
+						case "Slow_queries":
+							result["slow_queries"] = intValue
+						case "Table_locks_waited":
+							result["table_locks_waited"] = intValue
+						case "Innodb_row_lock_waits":
+							result["innodb_row_lock_waits"] = intValue
+						case "Innodb_row_lock_time_avg":
+							result["innodb_row_lock_time_avg"] = intValue
+						case "Threads_running":
+							result["threads_running"] = intValue
+						case "Threads_created":
+							result["threads_created"] = intValue
+						case "Aborted_connects":
+							result["aborted_connects"] = intValue
 						}
 					}
 				}
@@ -345,13 +453,119 @@ func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 		return result
 	}
 
-	// 尝试执行Redis INFO命令（通过Cache接口可能不支持，这里先标记为已连接）
-	// 注意：Goravel的Cache接口可能不直接支持INFO命令，这里先返回基本连接状态
-	result["status"] = "connected"
+	// 尝试通过测试连接来验证Redis是否可用
+	testKey := "__monitor_test__"
+	testValue := "test"
+	if err := cache.Put(testKey, testValue, 1*time.Second); err == nil {
+		result["status"] = "connected"
+		// 清理测试键
+		cache.Forget(testKey)
 
-	// 如果Redis连接正常，尝试获取一些基本信息
-	// 注意：这需要Redis驱动支持，如果不行可以标记为"connected"但无法获取详细信息
+		// 注意：由于Goravel的Cache接口限制，无法直接执行Redis INFO命令
+		// Redis详细信息需要通过进程监控获取（CPU、内存等）
+		// 或者需要直接使用Redis客户端库来获取
+		// 这里先返回基本连接状态，详细信息通过进程监控补充
+	} else {
+		result["status"] = "disconnected"
+		return result
+	}
+
 	return result
+}
+
+// parseRedisInfo 解析Redis INFO命令返回的字符串
+func parseRedisInfo(infoStr string, result map[string]any) {
+	lines := strings.Split(infoStr, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "redis_version":
+			result["version"] = value
+		case "used_memory":
+			if mem, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["used_memory"] = mem
+			}
+		case "used_memory_human":
+			result["used_memory_human"] = value
+		case "used_memory_peak":
+			if mem, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["used_memory_peak"] = mem
+			}
+		case "used_memory_rss":
+			if mem, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["used_memory_rss"] = mem
+			}
+		case "connected_clients":
+			if clients, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["connected_clients"] = clients
+			}
+		case "total_commands_processed":
+			if cmds, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["total_commands_processed"] = cmds
+			}
+		case "instantaneous_ops_per_sec":
+			if ops, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["instantaneous_ops_per_sec"] = ops
+			}
+		case "keyspace_hits":
+			if hits, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["keyspace_hits"] = hits
+			}
+		case "keyspace_misses":
+			if misses, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["keyspace_misses"] = misses
+			}
+		case "expired_keys":
+			if expired, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["expired_keys"] = expired
+			}
+		case "evicted_keys":
+			if evicted, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["evicted_keys"] = evicted
+			}
+		case "uptime_in_seconds":
+			if uptime, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["uptime"] = uptime
+			}
+		case "role":
+			result["role"] = value
+		case "connected_slaves":
+			if slaves, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["connected_slaves"] = slaves
+			}
+		case "rdb_last_save_time":
+			if saveTime, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["rdb_last_save_time"] = saveTime
+			}
+		case "aof_enabled":
+			if enabled, err := strconv.ParseInt(value, 10, 64); err == nil {
+				result["aof_enabled"] = enabled == 1
+			}
+		}
+	}
+
+	// 计算命中率
+	if hits, ok := result["keyspace_hits"].(int64); ok {
+		if misses, ok2 := result["keyspace_misses"].(int64); ok2 {
+			total := hits + misses
+			if total > 0 {
+				hitRate := float64(hits) / float64(total) * 100
+				result["keyspace_hit_rate"] = hitRate
+			}
+		}
+	}
 }
 
 // getProcessesInfo 获取 MySQL、Redis 和当前应用进程的信息
@@ -519,8 +733,8 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 
 // GetSystemInfo 获取系统监控信息
 func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
-	// CPU信息
-	cpuPercent, err := cpu.Percent(time.Second, false)
+	// CPU信息 - 使用0秒采样，避免阻塞（gopsutil会使用上次采样的差值）
+	cpuPercent, err := cpu.Percent(0, false)
 	if err != nil {
 		errorlog.RecordHTTP(ctx, "monitor", "Get CPU percent error", map[string]any{
 			"error": err.Error(),
@@ -609,17 +823,26 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		})
 	}
 
+	// 计算网络速度（Mbps）并获取峰值
+	sentSpeed, recvSpeed, totalSpeed, peakSent, peakRecv, peakTotal := getNetworkSpeed(totalBytesSent, totalBytesRecv)
+
 	// 汇总统计
 	netStats := map[string]any{
-		"bytes_sent":   totalBytesSent,
-		"bytes_recv":   totalBytesRecv,
-		"packets_sent": totalPacketsSent,
-		"packets_recv": totalPacketsRecv,
-		"errin":        totalErrin,
-		"errout":       totalErrout,
-		"dropin":       totalDropin,
-		"dropout":      totalDropout,
-		"interfaces":   interfaces, // 所有网卡的详细信息
+		"bytes_sent":       totalBytesSent,
+		"bytes_recv":       totalBytesRecv,
+		"packets_sent":     totalPacketsSent,
+		"packets_recv":     totalPacketsRecv,
+		"errin":            totalErrin,
+		"errout":           totalErrout,
+		"dropin":           totalDropin,
+		"dropout":          totalDropout,
+		"interfaces":       interfaces, // 所有网卡的详细信息
+		"speed_sent_mbps":  sentSpeed,  // 当前发送速度（Mbps）
+		"speed_recv_mbps":  recvSpeed,  // 当前接收速度（Mbps）
+		"speed_total_mbps": totalSpeed, // 当前总速度（Mbps）
+		"peak_sent_mbps":   peakSent,   // 峰值发送速度（Mbps）
+		"peak_recv_mbps":   peakRecv,   // 峰值接收速度（Mbps）
+		"peak_total_mbps":  peakTotal,  // 峰值总速度（Mbps）
 	}
 
 	var cpuModel string
@@ -761,6 +984,190 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		cpuPercent = []float64{0}
 	}
 
+	// 获取磁盘IO统计（仅Linux/Unix系统）
+	var diskIO map[string]any
+	if runtime.GOOS != "windows" {
+		ioCounters, err := disk.IOCounters()
+		if err == nil && len(ioCounters) > 0 {
+			// 汇总所有磁盘的IO统计
+			var totalReadBytes, totalWriteBytes, totalReadCount, totalWriteCount uint64
+			var diskIOCounters []map[string]any
+			for name, io := range ioCounters {
+				totalReadBytes += io.ReadBytes
+				totalWriteBytes += io.WriteBytes
+				totalReadCount += io.ReadCount
+				totalWriteCount += io.WriteCount
+				diskIOCounters = append(diskIOCounters, map[string]any{
+					"name":        name,
+					"read_bytes":  io.ReadBytes,
+					"write_bytes": io.WriteBytes,
+					"read_count":  io.ReadCount,
+					"write_count": io.WriteCount,
+					"read_time":   io.ReadTime,
+					"write_time":  io.WriteTime,
+				})
+			}
+			diskIO = map[string]any{
+				"total_read_bytes":  totalReadBytes,
+				"total_write_bytes": totalWriteBytes,
+				"total_read_count":  totalReadCount,
+				"total_write_count": totalWriteCount,
+				"disks":             diskIOCounters,
+			}
+		} else {
+			diskIO = map[string]any{
+				"total_read_bytes":  0,
+				"total_write_bytes": 0,
+				"total_read_count":  0,
+				"total_write_count": 0,
+				"disks":             []map[string]any{},
+			}
+		}
+	} else {
+		// Windows系统不支持磁盘IO统计
+		diskIO = map[string]any{
+			"total_read_bytes":  0,
+			"total_write_bytes": 0,
+			"total_read_count":  0,
+			"total_write_count": 0,
+			"disks":             []map[string]any{},
+		}
+	}
+
+	// 获取TCP连接统计（限制处理数量，避免连接数过多时阻塞）
+	var tcpConnections map[string]any
+	connections, err := net.Connections("tcp")
+	if err == nil {
+		var established, listen, timeWait, closeWait int
+		var listeningPorts []int
+		portMap := make(map[int]bool)
+		// 限制处理数量，避免连接数过多时阻塞（最多处理10000个连接）
+		maxConnections := 10000
+		processed := 0
+		for _, conn := range connections {
+			if processed >= maxConnections {
+				break
+			}
+			processed++
+			switch conn.Status {
+			case "ESTABLISHED":
+				established++
+			case "LISTEN":
+				listen++
+				port := int(conn.Laddr.Port)
+				if port > 0 && !portMap[port] {
+					listeningPorts = append(listeningPorts, port)
+					portMap[port] = true
+				}
+			case "TIME_WAIT":
+				timeWait++
+			case "CLOSE_WAIT":
+				closeWait++
+			}
+		}
+		tcpConnections = map[string]any{
+			"total":           len(connections),
+			"established":     established,
+			"listen":          listen,
+			"time_wait":       timeWait,
+			"close_wait":      closeWait,
+			"listening_ports": listeningPorts,
+		}
+	} else {
+		tcpConnections = map[string]any{
+			"total":           0,
+			"established":     0,
+			"listen":          0,
+			"time_wait":       0,
+			"close_wait":      0,
+			"listening_ports": []int{},
+		}
+	}
+
+	// 获取所有磁盘分区信息（限制数量，避免分区过多时阻塞）
+	var diskPartitions []map[string]any
+	partitions, err := disk.Partitions(false)
+	if err == nil {
+		maxPartitions := 20 // 限制最多处理20个分区
+		count := 0
+		for _, part := range partitions {
+			if count >= maxPartitions {
+				break
+			}
+			usage, err := disk.Usage(part.Mountpoint)
+			if err == nil {
+				diskPartitions = append(diskPartitions, map[string]any{
+					"device":     part.Device,
+					"mountpoint": part.Mountpoint,
+					"fstype":     part.Fstype,
+					"total":      usage.Total,
+					"free":       usage.Free,
+					"used":       usage.Used,
+					"percent":    usage.UsedPercent,
+				})
+				count++
+			}
+		}
+	}
+
+	// 生成系统告警提示
+	alerts := []map[string]any{}
+	if memInfo.UsedPercent > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "high",
+			"message": fmt.Sprintf("内存使用率过高: %.2f%%", memInfo.UsedPercent),
+			"metric":  "memory",
+		})
+	} else if memInfo.UsedPercent > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "medium",
+			"message": fmt.Sprintf("内存使用率较高: %.2f%%", memInfo.UsedPercent),
+			"metric":  "memory",
+		})
+	}
+	if diskInfo.UsedPercent > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "high",
+			"message": fmt.Sprintf("磁盘使用率过高: %.2f%%", diskInfo.UsedPercent),
+			"metric":  "disk",
+		})
+	} else if diskInfo.UsedPercent > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "medium",
+			"message": fmt.Sprintf("磁盘使用率较高: %.2f%%", diskInfo.UsedPercent),
+			"metric":  "disk",
+		})
+	}
+	if cpuPercent[0] > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "high",
+			"message": fmt.Sprintf("CPU使用率过高: %.2f%%", cpuPercent[0]),
+			"metric":  "cpu",
+		})
+	} else if cpuPercent[0] > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "medium",
+			"message": fmt.Sprintf("CPU使用率较高: %.2f%%", cpuPercent[0]),
+			"metric":  "cpu",
+		})
+	}
+	if runtime.GOOS != "windows" {
+		if fileDescriptors["percent"].(float64) > 90 {
+			alerts = append(alerts, map[string]any{
+				"type":    "warning",
+				"level":   "high",
+				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", fileDescriptors["percent"].(float64)),
+				"metric":  "file_descriptors",
+			})
+		}
+	}
+
 	return response.Success(ctx, "get_success", http.Json{
 		"os": runtime.GOOS, // 操作系统类型
 		"cpu": map[string]any{
@@ -785,7 +1192,10 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			"fstype":  diskInfo.Fstype,
 			"path":    diskInfo.Path,
 		},
+		"disk_partitions":  diskPartitions,
+		"disk_io":          diskIO,
 		"net":              netStats,
+		"tcp_connections":  tcpConnections,
 		"load":             loadAvg,
 		"file_descriptors": fileDescriptors,
 		"runtime": map[string]any{
@@ -817,6 +1227,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			"go_version": runtime.Version(),
 		},
 		"processes": r.getProcessesInfo(ctx),
+		"alerts":    alerts,
 	})
 }
 
@@ -900,8 +1311,17 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 
 // collectSystemInfo 收集系统监控信息（从 GetSystemInfo 提取的逻辑）
 func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
-	// CPU信息
-	cpuPercent, err := cpu.Percent(time.Second, false)
+	// 检查缓存（仅在SSE流中使用缓存，减少系统调用）
+	monitorCacheLock.RLock()
+	if monitorCache != nil && time.Since(monitorCacheTime) < cacheDuration {
+		cached := monitorCache
+		monitorCacheLock.RUnlock()
+		return cached
+	}
+	monitorCacheLock.RUnlock()
+
+	// CPU信息 - 使用0秒采样，避免阻塞（gopsutil会使用上次采样的差值）
+	cpuPercent, err := cpu.Percent(0, false)
 	if err != nil {
 		errorlog.RecordHTTP(ctx, "monitor", "Get CPU percent error", map[string]any{
 			"error": err.Error(),
@@ -986,16 +1406,25 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 		})
 	}
 
+	// 计算网络速度（Mbps）并获取峰值
+	sentSpeed, recvSpeed, totalSpeed, peakSent, peakRecv, peakTotal := getNetworkSpeed(totalBytesSent, totalBytesRecv)
+
 	netStats := map[string]any{
-		"bytes_sent":   totalBytesSent,
-		"bytes_recv":   totalBytesRecv,
-		"packets_sent": totalPacketsSent,
-		"packets_recv": totalPacketsRecv,
-		"errin":        totalErrin,
-		"errout":       totalErrout,
-		"dropin":       totalDropin,
-		"dropout":      totalDropout,
-		"interfaces":   interfaces,
+		"bytes_sent":       totalBytesSent,
+		"bytes_recv":       totalBytesRecv,
+		"packets_sent":     totalPacketsSent,
+		"packets_recv":     totalPacketsRecv,
+		"errin":            totalErrin,
+		"errout":           totalErrout,
+		"dropin":           totalDropin,
+		"dropout":          totalDropout,
+		"interfaces":       interfaces,
+		"speed_sent_mbps":  sentSpeed,  // 当前发送速度（Mbps）
+		"speed_recv_mbps":  recvSpeed,  // 当前接收速度（Mbps）
+		"speed_total_mbps": totalSpeed, // 当前总速度（Mbps）
+		"peak_sent_mbps":   peakSent,   // 峰值发送速度（Mbps）
+		"peak_recv_mbps":   peakRecv,   // 峰值接收速度（Mbps）
+		"peak_total_mbps":  peakTotal,  // 峰值总速度（Mbps）
 	}
 
 	var cpuModel string
@@ -1111,7 +1540,191 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 		cpuPercent = []float64{0}
 	}
 
-	return map[string]any{
+	// 获取磁盘IO统计（仅Linux/Unix系统）
+	var diskIO map[string]any
+	if runtime.GOOS != "windows" {
+		ioCounters, err := disk.IOCounters()
+		if err == nil && len(ioCounters) > 0 {
+			// 汇总所有磁盘的IO统计
+			var totalReadBytes, totalWriteBytes, totalReadCount, totalWriteCount uint64
+			var diskIOCounters []map[string]any
+			for name, io := range ioCounters {
+				totalReadBytes += io.ReadBytes
+				totalWriteBytes += io.WriteBytes
+				totalReadCount += io.ReadCount
+				totalWriteCount += io.WriteCount
+				diskIOCounters = append(diskIOCounters, map[string]any{
+					"name":        name,
+					"read_bytes":  io.ReadBytes,
+					"write_bytes": io.WriteBytes,
+					"read_count":  io.ReadCount,
+					"write_count": io.WriteCount,
+					"read_time":   io.ReadTime,
+					"write_time":  io.WriteTime,
+				})
+			}
+			diskIO = map[string]any{
+				"total_read_bytes":  totalReadBytes,
+				"total_write_bytes": totalWriteBytes,
+				"total_read_count":  totalReadCount,
+				"total_write_count": totalWriteCount,
+				"disks":             diskIOCounters,
+			}
+		} else {
+			diskIO = map[string]any{
+				"total_read_bytes":  0,
+				"total_write_bytes": 0,
+				"total_read_count":  0,
+				"total_write_count": 0,
+				"disks":             []map[string]any{},
+			}
+		}
+	} else {
+		// Windows系统不支持磁盘IO统计
+		diskIO = map[string]any{
+			"total_read_bytes":  0,
+			"total_write_bytes": 0,
+			"total_read_count":  0,
+			"total_write_count": 0,
+			"disks":             []map[string]any{},
+		}
+	}
+
+	// 获取TCP连接统计（限制处理数量，避免连接数过多时阻塞）
+	var tcpConnections map[string]any
+	connections, err := net.Connections("tcp")
+	if err == nil {
+		var established, listen, timeWait, closeWait int
+		var listeningPorts []int
+		portMap := make(map[int]bool)
+		// 限制处理数量，避免连接数过多时阻塞（最多处理10000个连接）
+		maxConnections := 10000
+		processed := 0
+		for _, conn := range connections {
+			if processed >= maxConnections {
+				break
+			}
+			processed++
+			switch conn.Status {
+			case "ESTABLISHED":
+				established++
+			case "LISTEN":
+				listen++
+				port := int(conn.Laddr.Port)
+				if port > 0 && !portMap[port] {
+					listeningPorts = append(listeningPorts, port)
+					portMap[port] = true
+				}
+			case "TIME_WAIT":
+				timeWait++
+			case "CLOSE_WAIT":
+				closeWait++
+			}
+		}
+		tcpConnections = map[string]any{
+			"total":           len(connections),
+			"established":     established,
+			"listen":          listen,
+			"time_wait":       timeWait,
+			"close_wait":      closeWait,
+			"listening_ports": listeningPorts,
+		}
+	} else {
+		tcpConnections = map[string]any{
+			"total":           0,
+			"established":     0,
+			"listen":          0,
+			"time_wait":       0,
+			"close_wait":      0,
+			"listening_ports": []int{},
+		}
+	}
+
+	// 获取所有磁盘分区信息（限制数量，避免分区过多时阻塞）
+	var diskPartitions []map[string]any
+	partitions, err := disk.Partitions(false)
+	if err == nil {
+		maxPartitions := 20 // 限制最多处理20个分区
+		count := 0
+		for _, part := range partitions {
+			if count >= maxPartitions {
+				break
+			}
+			usage, err := disk.Usage(part.Mountpoint)
+			if err == nil {
+				diskPartitions = append(diskPartitions, map[string]any{
+					"device":     part.Device,
+					"mountpoint": part.Mountpoint,
+					"fstype":     part.Fstype,
+					"total":      usage.Total,
+					"free":       usage.Free,
+					"used":       usage.Used,
+					"percent":    usage.UsedPercent,
+				})
+				count++
+			}
+		}
+	}
+
+	// 生成系统告警提示
+	alerts := []map[string]any{}
+	if memInfo.UsedPercent > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "high",
+			"message": fmt.Sprintf("内存使用率过高: %.2f%%", memInfo.UsedPercent),
+			"metric":  "memory",
+		})
+	} else if memInfo.UsedPercent > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "medium",
+			"message": fmt.Sprintf("内存使用率较高: %.2f%%", memInfo.UsedPercent),
+			"metric":  "memory",
+		})
+	}
+	if diskInfo.UsedPercent > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "high",
+			"message": fmt.Sprintf("磁盘使用率过高: %.2f%%", diskInfo.UsedPercent),
+			"metric":  "disk",
+		})
+	} else if diskInfo.UsedPercent > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "medium",
+			"message": fmt.Sprintf("磁盘使用率较高: %.2f%%", diskInfo.UsedPercent),
+			"metric":  "disk",
+		})
+	}
+	if cpuPercent[0] > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "high",
+			"message": fmt.Sprintf("CPU使用率过高: %.2f%%", cpuPercent[0]),
+			"metric":  "cpu",
+		})
+	} else if cpuPercent[0] > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":    "warning",
+			"level":   "medium",
+			"message": fmt.Sprintf("CPU使用率较高: %.2f%%", cpuPercent[0]),
+			"metric":  "cpu",
+		})
+	}
+	if runtime.GOOS != "windows" {
+		if fileDescriptors["percent"].(float64) > 90 {
+			alerts = append(alerts, map[string]any{
+				"type":    "warning",
+				"level":   "high",
+				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", fileDescriptors["percent"].(float64)),
+				"metric":  "file_descriptors",
+			})
+		}
+	}
+
+	result := map[string]any{
 		"os": runtime.GOOS,
 		"cpu": map[string]any{
 			"percent": cpuPercent[0],
@@ -1135,19 +1748,47 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 			"fstype":  diskInfo.Fstype,
 			"path":    diskInfo.Path,
 		},
+		"disk_partitions":  diskPartitions,
+		"disk_io":          diskIO,
 		"net":              netStats,
+		"tcp_connections":  tcpConnections,
 		"load":             loadAvg,
 		"file_descriptors": fileDescriptors,
-		"runtime": map[string]any{
-			"goroutines": runtime.NumGoroutine(),
-			"total_processes": func() int {
-				processes, err := process.Processes()
-				if err != nil {
-					return 0
-				}
-				return len(processes)
-			}(),
-		},
+		"runtime": func() map[string]any {
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+
+			return map[string]any{
+				"goroutines": runtime.NumGoroutine(),
+				"num_cpu":    runtime.NumCPU(),
+				"gomaxprocs": runtime.GOMAXPROCS(0), // 0表示获取当前值，不修改
+				"total_processes": func() int {
+					processes, err := process.Processes()
+					if err != nil {
+						return 0
+					}
+					return len(processes)
+				}(),
+				"memory": map[string]any{
+					"alloc":          memStats.Alloc,        // 当前分配的内存
+					"total_alloc":    memStats.TotalAlloc,   // 累计分配的内存
+					"sys":            memStats.Sys,          // 系统内存
+					"lookups":        memStats.Lookups,      // 指针查找次数
+					"mallocs":        memStats.Mallocs,      // 分配次数
+					"frees":          memStats.Frees,        // 释放次数
+					"heap_alloc":     memStats.HeapAlloc,    // 堆内存分配
+					"heap_sys":       memStats.HeapSys,      // 堆内存系统
+					"heap_idle":      memStats.HeapIdle,     // 堆内存空闲
+					"heap_inuse":     memStats.HeapInuse,    // 堆内存使用
+					"heap_objects":   memStats.HeapObjects,  // 堆对象数
+					"stack_inuse":    memStats.StackInuse,   // 栈内存使用
+					"stack_sys":      memStats.StackSys,     // 栈内存系统
+					"num_gc":         memStats.NumGC,        // GC次数
+					"pause_total_ns": memStats.PauseTotalNs, // GC总暂停时间（纳秒）
+					"last_gc":        memStats.LastGC,       // 上次GC时间
+				},
+			}
+		}(),
 		"system": map[string]any{
 			"hostname": func() string {
 				hostname, err := os.Hostname()
@@ -1161,5 +1802,14 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 			"go_version": runtime.Version(),
 		},
 		"processes": r.getProcessesInfo(ctx),
+		"alerts":    alerts,
 	}
+
+	// 更新缓存（仅在collectSystemInfo中缓存，用于SSE流）
+	monitorCacheLock.Lock()
+	monitorCache = result
+	monitorCacheTime = time.Now()
+	monitorCacheLock.Unlock()
+
+	return result
 }

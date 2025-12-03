@@ -1,8 +1,21 @@
 <template>
   <div class="monitor-page">
+    <!-- 系统告警提示 -->
+    <el-alert
+      v-if="systemInfo.alerts && systemInfo.alerts.length > 0"
+      v-for="(alert, index) in systemInfo.alerts"
+      :key="index"
+      :title="alert.message"
+      :type="alert.level === 'high' ? 'error' : 'warning'"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 20px"
+    />
+    
+    <!-- 核心资源监控：CPU、内存、磁盘 -->
     <el-row :gutter="20">
       <!-- CPU信息 -->
-      <el-col :span="12">
+      <el-col :span="8">
         <el-card class="monitor-card cpu-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -22,7 +35,7 @@
               <el-progress
                 :percentage="formatPercentForProgress(systemInfo.cpu?.percent || 0)"
                 :color="getProgressColor(systemInfo.cpu?.percent || 0)"
-                :stroke-width="24"
+                :stroke-width="20"
                 :show-text="false"
                 class="usage-progress"
               />
@@ -30,19 +43,21 @@
             <div class="info-grid">
               <div class="info-item">
                 <span class="info-label">{{ $t('monitor.cpu_model') }}</span>
-                <span class="info-value">{{ systemInfo.cpu?.model || '-' }}</span>
+                <span class="info-value" style="font-size: 12px">{{ systemInfo.cpu?.model || '-' }}</span>
               </div>
               <div class="info-item">
                 <span class="info-label">{{ $t('monitor.cpu_cores') }}</span>
                 <span class="info-value highlight">{{ systemInfo.cpu?.cores || 0 }}</span>
               </div>
             </div>
+            <!-- CPU使用率走势图 -->
+            <div ref="cpuChartRef" style="height: 180px; margin-top: 15px;"></div>
           </div>
         </el-card>
       </el-col>
 
       <!-- 内存信息 -->
-      <el-col :span="12">
+      <el-col :span="8">
         <el-card class="monitor-card memory-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -62,7 +77,7 @@
               <el-progress
                 :percentage="formatPercentForProgress(systemInfo.memory?.percent || 0)"
                 :color="getProgressColor(systemInfo.memory?.percent || 0)"
-                :stroke-width="24"
+                :stroke-width="20"
                 :show-text="false"
                 class="usage-progress"
               />
@@ -85,14 +100,14 @@
                 <span class="info-value">{{ formatBytes(systemInfo.memory?.free || 0) }}</span>
               </div>
             </div>
+            <!-- 内存使用率走势图 -->
+            <div ref="memoryChartRef" style="height: 180px; margin-top: 15px;"></div>
           </div>
         </el-card>
       </el-col>
-    </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px">
       <!-- 磁盘信息 -->
-      <el-col :span="12">
+      <el-col :span="8">
         <el-card class="monitor-card disk-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -112,7 +127,7 @@
               <el-progress
                 :percentage="formatPercentForProgress(systemInfo.disk?.percent || 0)"
                 :color="getProgressColor(systemInfo.disk?.percent || 0)"
-                :stroke-width="24"
+                :stroke-width="20"
                 :show-text="false"
                 class="usage-progress"
               />
@@ -130,21 +145,56 @@
                 <span class="info-label">{{ $t('monitor.disk_free') }}</span>
                 <span class="info-value">{{ formatBytes(systemInfo.disk?.free || 0) }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.disk_fstype') }}</span>
-                <span class="info-value">{{ systemInfo.disk?.fstype || '-' }}</span>
-              </div>
               <div class="info-item full-width">
                 <span class="info-label">{{ $t('monitor.disk_path') }}</span>
-                <span class="info-value">{{ systemInfo.disk?.path || '-' }}</span>
+                <span class="info-value" style="font-size: 12px">{{ systemInfo.disk?.path || '-' }}</span>
               </div>
             </div>
+            <!-- 磁盘使用率走势图 -->
+            <div ref="diskChartRef" style="height: 180px; margin-top: 15px;"></div>
           </div>
         </el-card>
       </el-col>
+    </el-row>
 
-      <!-- 网络信息汇总 -->
+    <!-- 资源使用率统计图 -->
+    <el-row :gutter="20" style="margin-top: 20px">
       <el-col :span="12">
+        <el-card class="monitor-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><TrendCharts /></el-icon>
+                <span>{{ $t('monitor.resource_usage_chart') }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div ref="resourcePieChartRef" style="height: 300px;"></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card class="monitor-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><Connection /></el-icon>
+                <span>{{ $t('monitor.network_speed_chart') }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div ref="networkChartRef" style="height: 300px;"></div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 网络和系统负载 -->
+    <el-row :gutter="20" style="margin-top: 20px">
+      <!-- 网络信息汇总 -->
+      <el-col :span="isLinux ? 8 : 12">
         <el-card class="monitor-card network-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -156,6 +206,30 @@
             </div>
           </template>
           <div class="monitor-content">
+            <!-- 带宽速度 -->
+            <div v-if="systemInfo.net?.speed_total_mbps !== undefined" class="monitor-item" style="margin-bottom: 15px; padding: 12px; background: #f5f7fa; border-radius: 8px">
+              <div style="font-size: 13px; color: #606266; margin-bottom: 8px; font-weight: 600">{{ $t('monitor.bandwidth_speed') }}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
+                <span style="font-size: 12px; color: #909399">{{ $t('monitor.current_speed') }}:</span>
+                <span style="font-size: 16px; font-weight: 600; color: #409eff">
+                  {{ formatNumber(systemInfo.net?.speed_total_mbps || 0, 2) }} Mbps
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
+                <span style="font-size: 12px; color: #909399">{{ $t('monitor.peak_speed') }}:</span>
+                <span style="font-size: 16px; font-weight: 600; color: #e6a23c">
+                  {{ formatNumber(systemInfo.net?.peak_total_mbps || 0, 2) }} Mbps
+                </span>
+              </div>
+              <div style="font-size: 11px; color: #909399; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e4e7ed">
+                <span>↑{{ formatNumber(systemInfo.net?.speed_sent_mbps || 0, 2) }} Mbps</span>
+                <span style="margin: 0 8px">|</span>
+                <span>↓{{ formatNumber(systemInfo.net?.speed_recv_mbps || 0, 2) }} Mbps</span>
+                <span style="margin-left: 12px; color: #c0c4cc">
+                  (峰值: ↑{{ formatNumber(systemInfo.net?.peak_sent_mbps || 0, 2) }} ↓{{ formatNumber(systemInfo.net?.peak_recv_mbps || 0, 2) }})
+                </span>
+              </div>
+            </div>
             <div class="info-grid">
               <div class="info-item">
                 <span class="info-label">{{ $t('monitor.net_bytes_sent') }}</span>
@@ -173,98 +247,162 @@
                 <span class="info-label">{{ $t('monitor.net_packets_recv') }}</span>
                 <span class="info-value">{{ formatNumber(systemInfo.net?.packets_recv || 0) }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_errin') }}</span>
+              <div class="info-item" v-if="(systemInfo.net?.errin || 0) > 0 || (systemInfo.net?.errout || 0) > 0 || (systemInfo.net?.dropin || 0) > 0 || (systemInfo.net?.dropout || 0) > 0">
+                <span class="info-label" style="color: #f56c6c">{{ $t('monitor.net_errin') }}</span>
                 <span class="info-value error">{{ formatNumber(systemInfo.net?.errin || 0) }}</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_errout') }}</span>
-                <span class="info-value error">{{ formatNumber(systemInfo.net?.errout || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_dropin') }}</span>
+              <div class="info-item" v-if="(systemInfo.net?.errin || 0) > 0 || (systemInfo.net?.errout || 0) > 0 || (systemInfo.net?.dropin || 0) > 0 || (systemInfo.net?.dropout || 0) > 0">
+                <span class="info-label" style="color: #f56c6c">{{ $t('monitor.net_dropin') }}</span>
                 <span class="info-value error">{{ formatNumber(systemInfo.net?.dropin || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_dropout') }}</span>
-                <span class="info-value error">{{ formatNumber(systemInfo.net?.dropout || 0) }}</span>
               </div>
             </div>
           </div>
         </el-card>
       </el-col>
-    </el-row>
 
-    <!-- 网卡流量详情 -->
-    <el-row v-if="systemInfo.net?.interfaces && systemInfo.net.interfaces.length > 0" :gutter="20" style="margin-top: 20px">
-      <el-col :span="24">
-        <el-card class="monitor-card interfaces-card" shadow="hover">
+      <!-- 系统负载（仅Linux） -->
+      <el-col :span="8" v-if="isLinux">
+        <el-card class="monitor-card load-card" shadow="hover">
           <template #header>
             <div class="card-header">
               <div class="card-title">
-                <el-icon class="card-icon interfaces-icon"><Monitor /></el-icon>
-                <span>{{ $t('monitor.network_interfaces') }}</span>
+                <el-icon class="card-icon load-icon"><TrendCharts /></el-icon>
+                <span>{{ $t('monitor.load') }}</span>
               </div>
               <el-button size="small" :icon="Refresh" circle @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
-            <el-table 
-              :data="systemInfo.net.interfaces" 
-              border 
-              style="width: 100%"
-              class="interfaces-table"
-              stripe
-            >
-              <el-table-column :label="$t('monitor.interface_name')" prop="name" width="150" />
-              <el-table-column :label="$t('monitor.interface_bytes_sent')" width="150">
-                <template #default="{ row }">
-                  {{ formatBytes(row.bytes_sent || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_bytes_recv')" width="150">
-                <template #default="{ row }">
-                  {{ formatBytes(row.bytes_recv || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_packets_sent')" width="150">
-                <template #default="{ row }">
-                  {{ formatNumber(row.packets_sent || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_packets_recv')" width="150">
-                <template #default="{ row }">
-                  {{ formatNumber(row.packets_recv || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_errin')" width="120">
-                <template #default="{ row }">
-                  {{ formatNumber(row.errin || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_errout')" width="120">
-                <template #default="{ row }">
-                  {{ formatNumber(row.errout || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_dropin')" width="120">
-                <template #default="{ row }">
-                  {{ formatNumber(row.dropin || 0) }}
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('monitor.interface_dropout')" width="120">
-                <template #default="{ row }">
-                  {{ formatNumber(row.dropout || 0) }}
-                </template>
-              </el-table-column>
-            </el-table>
+            <div class="load-display">
+              <div class="load-value">
+                <span class="load-number">{{ formatLoad(systemInfo.load?.load1 || 0) }}</span>
+                <span class="load-percent">({{ formatPercent(systemInfo.load?.load1_percent || 0) }})</span>
+              </div>
+              <div class="load-label">{{ $t('monitor.load_current') }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 文件描述符信息（仅Linux） -->
+      <el-col :span="8" v-if="isLinux">
+        <el-card class="monitor-card fd-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon fd-icon"><Document /></el-icon>
+                <span>{{ $t('monitor.file_descriptors') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div class="monitor-item usage-item">
+              <div class="usage-header">
+                <span class="label">{{ $t('monitor.fd_usage') }}</span>
+                <span class="percent-value">{{ formatPercent(systemInfo.file_descriptors?.percent || 0) }}</span>
+              </div>
+              <el-progress
+                :percentage="formatPercentForProgress(systemInfo.file_descriptors?.percent || 0)"
+                :color="getProgressColor(systemInfo.file_descriptors?.percent || 0)"
+                :stroke-width="20"
+                :show-text="false"
+                class="usage-progress"
+              />
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.fd_used') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.file_descriptors?.used || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.fd_free') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.file_descriptors?.free || 0) }}</span>
+              </div>
+              <div class="info-item full-width">
+                <span class="info-label">{{ $t('monitor.fd_max') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.file_descriptors?.max || 0) }}</span>
+              </div>
+            </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 系统信息和运行时信息 -->
+    <!-- 运行时和系统信息 -->
     <el-row :gutter="20" style="margin-top: 20px">
+      <!-- 运行时信息 -->
+      <el-col :span="12">
+        <el-card class="monitor-card runtime-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon runtime-icon"><Operation /></el-icon>
+                <span>{{ $t('monitor.runtime') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.goroutines') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.runtime?.goroutines || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.total_processes') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.runtime?.total_processes || 0) }}</span>
+              </div>
+              <div class="info-item" v-if="systemInfo.runtime?.num_cpu">
+                <span class="info-label">{{ $t('monitor.num_cpu') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.runtime.num_cpu) }}</span>
+              </div>
+              <div class="info-item" v-if="systemInfo.runtime?.gomaxprocs">
+                <span class="info-label">{{ $t('monitor.gomaxprocs') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.runtime.gomaxprocs) }}</span>
+              </div>
+            </div>
+            <div v-if="systemInfo.runtime?.memory" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ebeef5">
+              <div class="info-label" style="margin-bottom: 10px; font-weight: 600">{{ $t('monitor.memory_stats') }}:</div>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_alloc') }}</span>
+                  <span class="info-value">{{ formatBytes(systemInfo.runtime.memory.alloc || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_total_alloc') }}</span>
+                  <span class="info-value">{{ formatBytes(systemInfo.runtime.memory.total_alloc || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_sys') }}</span>
+                  <span class="info-value">{{ formatBytes(systemInfo.runtime.memory.sys || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_heap_alloc') }}</span>
+                  <span class="info-value highlight">{{ formatBytes(systemInfo.runtime.memory.heap_alloc || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_heap_sys') }}</span>
+                  <span class="info-value">{{ formatBytes(systemInfo.runtime.memory.heap_sys || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_heap_objects') }}</span>
+                  <span class="info-value">{{ formatNumber(systemInfo.runtime.memory.heap_objects || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">{{ $t('monitor.mem_num_gc') }}</span>
+                  <span class="info-value">{{ formatNumber(systemInfo.runtime.memory.num_gc || 0) }}</span>
+                </div>
+                <div class="info-item" v-if="systemInfo.runtime.memory.pause_total_ns">
+                  <span class="info-label">{{ $t('monitor.mem_pause_total') }}</span>
+                  <span class="info-value">{{ formatDuration(systemInfo.runtime.memory.pause_total_ns / 1000000) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
       <!-- 系统信息 -->
       <el-col :span="12">
         <el-card class="monitor-card system-card" shadow="hover">
@@ -294,104 +432,6 @@
               <div class="info-item full-width">
                 <span class="info-label">{{ $t('monitor.go_version') }}</span>
                 <span class="info-value">{{ systemInfo.system?.go_version || '-' }}</span>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <!-- Goroutine 和进程数 -->
-      <el-col :span="12">
-        <el-card class="monitor-card runtime-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <div class="card-title">
-                <el-icon class="card-icon runtime-icon"><Operation /></el-icon>
-                <span>{{ $t('monitor.runtime') }}</span>
-              </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
-            </div>
-          </template>
-          <div class="monitor-content">
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.goroutines') }}</span>
-                <span class="info-value highlight">{{ formatNumber(systemInfo.runtime?.goroutines || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.total_processes') }}</span>
-                <span class="info-value highlight">{{ formatNumber(systemInfo.runtime?.total_processes || 0) }}</span>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 只在Linux系统上显示负载和文件描述符 -->
-    <el-row v-if="isLinux" :gutter="20" style="margin-top: 20px">
-      <!-- 负载信息 -->
-      <el-col :span="12">
-        <el-card class="monitor-card load-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <div class="card-title">
-                <el-icon class="card-icon load-icon"><TrendCharts /></el-icon>
-                <span>{{ $t('monitor.load') }}</span>
-              </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
-            </div>
-          </template>
-          <div class="monitor-content">
-            <div class="load-display">
-              <div class="load-value">
-                <span class="load-number">{{ formatLoad(systemInfo.load?.load1 || 0) }}</span>
-                <span class="load-percent">({{ formatPercent(systemInfo.load?.load1_percent || 0) }})</span>
-              </div>
-              <div class="load-label">{{ $t('monitor.load_current') }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <!-- 文件描述符信息 -->
-      <el-col :span="12">
-        <el-card class="monitor-card fd-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <div class="card-title">
-                <el-icon class="card-icon fd-icon"><Document /></el-icon>
-                <span>{{ $t('monitor.file_descriptors') }}</span>
-              </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
-            </div>
-          </template>
-          <div class="monitor-content">
-            <div class="monitor-item usage-item">
-              <div class="usage-header">
-                <span class="label">{{ $t('monitor.fd_usage') }}</span>
-                <span class="percent-value">{{ formatPercent(systemInfo.file_descriptors?.percent || 0) }}</span>
-              </div>
-              <el-progress
-                :percentage="formatPercentForProgress(systemInfo.file_descriptors?.percent || 0)"
-                :color="getProgressColor(systemInfo.file_descriptors?.percent || 0)"
-                :stroke-width="24"
-                :show-text="false"
-                class="usage-progress"
-              />
-            </div>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.fd_used') }}</span>
-                <span class="info-value highlight">{{ formatNumber(systemInfo.file_descriptors?.used || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.fd_free') }}</span>
-                <span class="info-value">{{ formatNumber(systemInfo.file_descriptors?.free || 0) }}</span>
-              </div>
-              <div class="info-item full-width">
-                <span class="info-label">{{ $t('monitor.fd_max') }}</span>
-                <span class="info-value">{{ formatNumber(systemInfo.file_descriptors?.max || 0) }}</span>
               </div>
             </div>
           </div>
@@ -481,6 +521,26 @@
                       <span class="process-label">{{ $t('monitor.process_uptime') }}:</span>
                       <span class="process-value">{{ formatUptime(systemInfo.processes.mysql.uptime) }}</span>
                     </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.slow_queries !== undefined && systemInfo.processes.mysql.slow_queries > 0">
+                      <span class="process-label">{{ $t('monitor.process_slow_queries') }}:</span>
+                      <span class="process-value warning">{{ formatNumber(systemInfo.processes.mysql.slow_queries) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.table_locks_waited !== undefined && systemInfo.processes.mysql.table_locks_waited > 0">
+                      <span class="process-label">{{ $t('monitor.process_table_locks') }}:</span>
+                      <span class="process-value warning">{{ formatNumber(systemInfo.processes.mysql.table_locks_waited) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.innodb_row_lock_waits !== undefined && systemInfo.processes.mysql.innodb_row_lock_waits > 0">
+                      <span class="process-label">{{ $t('monitor.process_row_locks') }}:</span>
+                      <span class="process-value warning">{{ formatNumber(systemInfo.processes.mysql.innodb_row_lock_waits) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.threads_running !== undefined">
+                      <span class="process-label">{{ $t('monitor.process_threads_running') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.threads_running) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.buffer_pool_size !== undefined && systemInfo.processes.mysql.buffer_pool_size > 0">
+                      <span class="process-label">{{ $t('monitor.process_buffer_pool') }}:</span>
+                      <span class="process-value">{{ formatBytes(systemInfo.processes.mysql.buffer_pool_size) }}</span>
+                    </div>
                   </div>
                 </div>
               </el-col>
@@ -527,6 +587,39 @@
                     <div class="process-item" v-if="systemInfo.processes.redis.host">
                       <span class="process-label">{{ $t('monitor.process_host') }}:</span>
                       <span class="process-value">{{ systemInfo.processes.redis.host }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.connected_clients !== undefined">
+                      <span class="process-label">{{ $t('monitor.redis_connected_clients') }}:</span>
+                      <span class="process-value highlight">{{ formatNumber(systemInfo.processes.redis.connected_clients || 0) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.total_commands_processed !== undefined && systemInfo.processes.redis.total_commands_processed > 0">
+                      <span class="process-label">{{ $t('monitor.redis_total_commands') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.redis.total_commands_processed) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.instantaneous_ops_per_sec !== undefined && systemInfo.processes.redis.instantaneous_ops_per_sec > 0">
+                      <span class="process-label">{{ $t('monitor.redis_ops_per_sec') }}:</span>
+                      <span class="process-value highlight">{{ formatNumber(systemInfo.processes.redis.instantaneous_ops_per_sec) }}/s</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.keyspace_hits !== undefined || systemInfo.processes.redis.keyspace_misses !== undefined">
+                      <span class="process-label">{{ $t('monitor.redis_keyspace') }}:</span>
+                      <span class="process-value">
+                        {{ formatNumber(systemInfo.processes.redis.keyspace_hits || 0) }} / {{ formatNumber(systemInfo.processes.redis.keyspace_misses || 0) }}
+                        <span v-if="systemInfo.processes.redis.keyspace_hit_rate !== undefined" class="connections-info">
+                          ({{ formatPercent(systemInfo.processes.redis.keyspace_hit_rate) }})
+                        </span>
+                      </span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.used_memory_peak !== undefined && systemInfo.processes.redis.used_memory_peak > 0">
+                      <span class="process-label">{{ $t('monitor.redis_memory_peak') }}:</span>
+                      <span class="process-value">{{ formatBytes(systemInfo.processes.redis.used_memory_peak) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.uptime !== undefined && systemInfo.processes.redis.uptime > 0">
+                      <span class="process-label">{{ $t('monitor.process_uptime') }}:</span>
+                      <span class="process-value">{{ formatUptime(systemInfo.processes.redis.uptime) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.db_size !== undefined && systemInfo.processes.redis.db_size > 0">
+                      <span class="process-label">{{ $t('monitor.redis_db_size') }}:</span>
+                      <span class="process-value highlight">{{ formatNumber(systemInfo.processes.redis.db_size) }}</span>
                     </div>
                   </div>
                 </div>
@@ -576,13 +669,244 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 详细监控信息：TCP连接、磁盘IO、磁盘分区、网卡详情 -->
+    <el-row v-if="systemInfo.tcp_connections || (systemInfo.disk_io && systemInfo.disk_io.total_read_bytes > 0) || (systemInfo.disk_partitions && systemInfo.disk_partitions.length > 0)" :gutter="20" style="margin-top: 20px">
+      <!-- TCP连接统计 -->
+      <el-col :span="8" v-if="systemInfo.tcp_connections">
+        <el-card class="monitor-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><Connection /></el-icon>
+                <span>{{ $t('monitor.tcp_connections') }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.tcp_total') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.tcp_connections.total || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.tcp_established') }}</span>
+                <span class="info-value highlight">{{ formatNumber(systemInfo.tcp_connections.established || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.tcp_listen') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.tcp_connections.listen || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.tcp_time_wait') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.tcp_connections.time_wait || 0) }}</span>
+              </div>
+            </div>
+            <div v-if="systemInfo.tcp_connections.listening_ports && systemInfo.tcp_connections.listening_ports.length > 0" style="margin-top: 15px">
+              <div class="info-label" style="margin-bottom: 8px; font-size: 12px">{{ $t('monitor.tcp_listening_ports') }}:</div>
+              <el-tag v-for="port in systemInfo.tcp_connections.listening_ports.slice(0, 15)" :key="port" size="small" style="margin-right: 6px; margin-bottom: 6px">
+                {{ port }}
+              </el-tag>
+              <span v-if="systemInfo.tcp_connections.listening_ports.length > 15" class="info-value" style="font-size: 11px; color: #909399">
+                +{{ systemInfo.tcp_connections.listening_ports.length - 15 }}
+              </span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 磁盘IO统计 -->
+      <el-col :span="8" v-if="systemInfo.disk_io && systemInfo.disk_io.total_read_bytes > 0">
+        <el-card class="monitor-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><TrendCharts /></el-icon>
+                <span>{{ $t('monitor.disk_io') }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.disk_read_bytes') }}</span>
+                <span class="info-value">{{ formatBytes(systemInfo.disk_io.total_read_bytes || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.disk_write_bytes') }}</span>
+                <span class="info-value">{{ formatBytes(systemInfo.disk_io.total_write_bytes || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.disk_read_count') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.disk_io.total_read_count || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.disk_write_count') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.disk_io.total_write_count || 0) }}</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 磁盘分区信息（如果分区数量较少，显示在卡片中） -->
+      <el-col :span="8" v-if="systemInfo.disk_partitions && systemInfo.disk_partitions.length > 0 && systemInfo.disk_partitions.length <= 3">
+        <el-card class="monitor-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><FolderOpened /></el-icon>
+                <span>{{ $t('monitor.disk_partitions') }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div v-for="(part, index) in systemInfo.disk_partitions" :key="index" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #ebeef5" :class="{ 'no-border': index === systemInfo.disk_partitions.length - 1 }">
+              <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px">{{ part.mountpoint || part.device }}</div>
+              <div class="info-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="info-item">
+                  <span class="info-label" style="font-size: 11px">{{ $t('monitor.partition_total') }}</span>
+                  <span class="info-value" style="font-size: 12px">{{ formatBytes(part.total || 0) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label" style="font-size: 11px">{{ $t('monitor.partition_used') }}</span>
+                  <span class="info-value highlight" style="font-size: 12px">{{ formatBytes(part.used || 0) }}</span>
+                </div>
+              </div>
+              <el-progress
+                :percentage="formatPercentForProgress(part.percent || 0)"
+                :color="getProgressColor(part.percent || 0)"
+                :stroke-width="6"
+                style="margin-top: 6px"
+              />
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 磁盘分区表格（分区数量较多时） -->
+    <el-row v-if="systemInfo.disk_partitions && systemInfo.disk_partitions.length > 3" :gutter="20" style="margin-top: 20px">
+      <el-col :span="24">
+        <el-card class="monitor-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><FolderOpened /></el-icon>
+                <span>{{ $t('monitor.disk_partitions') }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="monitor-content">
+            <el-table :data="systemInfo.disk_partitions" style="width: 100%" stripe>
+              <el-table-column :label="$t('monitor.partition_device')" prop="device" width="150" />
+              <el-table-column :label="$t('monitor.partition_mountpoint')" prop="mountpoint" />
+              <el-table-column :label="$t('monitor.partition_fstype')" prop="fstype" width="120" />
+              <el-table-column :label="$t('monitor.partition_total')" width="120">
+                <template #default="{ row }">
+                  {{ formatBytes(row.total || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.partition_used')" width="120">
+                <template #default="{ row }">
+                  {{ formatBytes(row.used || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.partition_free')" width="120">
+                <template #default="{ row }">
+                  {{ formatBytes(row.free || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.partition_percent')" width="150">
+                <template #default="{ row }">
+                  <el-progress
+                    :percentage="formatPercentForProgress(row.percent || 0)"
+                    :color="getProgressColor(row.percent || 0)"
+                    :stroke-width="8"
+                  />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 网卡流量详情 -->
+    <el-row v-if="systemInfo.net?.interfaces && systemInfo.net.interfaces.length > 0" :gutter="20" style="margin-top: 20px">
+      <el-col :span="24">
+        <el-card class="monitor-card interfaces-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon interfaces-icon"><Monitor /></el-icon>
+                <span>{{ $t('monitor.network_interfaces') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <el-table 
+              :data="systemInfo.net.interfaces" 
+              border 
+              style="width: 100%"
+              class="interfaces-table"
+              stripe
+            >
+              <el-table-column :label="$t('monitor.interface_name')" prop="name" width="150" />
+              <el-table-column :label="$t('monitor.interface_bytes_sent')" width="150">
+                <template #default="{ row }">
+                  {{ formatBytes(row.bytes_sent || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_bytes_recv')" width="150">
+                <template #default="{ row }">
+                  {{ formatBytes(row.bytes_recv || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_packets_sent')" width="150">
+                <template #default="{ row }">
+                  {{ formatNumber(row.packets_sent || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_packets_recv')" width="150">
+                <template #default="{ row }">
+                  {{ formatNumber(row.packets_recv || 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_errin')" width="120">
+                <template #default="{ row }">
+                  <span :style="{ color: (row.errin || 0) > 0 ? '#f56c6c' : '' }">{{ formatNumber(row.errin || 0) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_errout')" width="120">
+                <template #default="{ row }">
+                  <span :style="{ color: (row.errout || 0) > 0 ? '#f56c6c' : '' }">{{ formatNumber(row.errout || 0) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_dropin')" width="120">
+                <template #default="{ row }">
+                  <span :style="{ color: (row.dropin || 0) > 0 ? '#f56c6c' : '' }">{{ formatNumber(row.dropin || 0) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('monitor.interface_dropout')" width="120">
+                <template #default="{ row }">
+                  <span :style="{ color: (row.dropout || 0) > 0 ? '#f56c6c' : '' }">{{ formatNumber(row.dropout || 0) }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import * as echarts from 'echarts'
 import { 
   Cpu, 
   DataBoard, 
@@ -609,7 +933,11 @@ const systemInfo = ref({
   file_descriptors: {},
   runtime: {},
   system: {},
-  processes: {}
+  processes: {},
+  alerts: [],
+  tcp_connections: {},
+  disk_io: {},
+  disk_partitions: []
 })
 
 // 判断是否为Linux系统
@@ -621,6 +949,36 @@ const loading = ref(false)
 let eventSource = null
 let refreshTimer = null
 
+// 图表引用
+const cpuChartRef = ref(null)
+const memoryChartRef = ref(null)
+const diskChartRef = ref(null)
+const networkChartRef = ref(null)
+const resourcePieChartRef = ref(null)
+
+// 图表实例
+let cpuChartInstance = null
+let memoryChartInstance = null
+let diskChartInstance = null
+let networkChartInstance = null
+let resourcePieChartInstance = null
+
+// 历史数据（保留最近60个数据点，约2分钟，每2秒一个点）
+const historyData = ref({
+  cpu: [],
+  memory: [],
+  disk: [],
+  network: {
+    sent: [],
+    recv: [],
+    total: []
+  },
+  timestamps: []
+})
+
+// 最大历史数据点数
+const MAX_HISTORY_POINTS = 60
+
 // 使用 SSE 实时推送
 const startSSEStream = () => {
   try {
@@ -630,6 +988,9 @@ const startSSEStream = () => {
         if (data.type === 'system_info') {
           systemInfo.value = data.data || {}
           loading.value = false
+          // 更新历史数据和图表
+          updateHistoryData()
+          updateCharts()
         }
       },
       onError: (error) => {
@@ -667,12 +1028,294 @@ const startPolling = () => {
   }, 30000)
 }
 
+// 更新历史数据
+const updateHistoryData = () => {
+  const now = new Date()
+  const timeStr = now.toLocaleTimeString()
+  
+  // 添加新数据点
+  historyData.value.cpu.push(systemInfo.value.cpu?.percent || 0)
+  historyData.value.memory.push(systemInfo.value.memory?.percent || 0)
+  historyData.value.disk.push(systemInfo.value.disk?.percent || 0)
+  historyData.value.network.sent.push(systemInfo.value.net?.speed_sent_mbps || 0)
+  historyData.value.network.recv.push(systemInfo.value.net?.speed_recv_mbps || 0)
+  historyData.value.network.total.push(systemInfo.value.net?.speed_total_mbps || 0)
+  historyData.value.timestamps.push(timeStr)
+  
+  // 限制数据点数量
+  if (historyData.value.cpu.length > MAX_HISTORY_POINTS) {
+    historyData.value.cpu.shift()
+    historyData.value.memory.shift()
+    historyData.value.disk.shift()
+    historyData.value.network.sent.shift()
+    historyData.value.network.recv.shift()
+    historyData.value.network.total.shift()
+    historyData.value.timestamps.shift()
+  }
+}
+
+// 初始化图表
+const initCharts = () => {
+  nextTick(() => {
+    // CPU使用率走势图
+    if (cpuChartRef.value && !cpuChartInstance) {
+      cpuChartInstance = echarts.init(cpuChartRef.value)
+      cpuChartInstance.setOption({
+        grid: { top: 10, left: 30, right: 10, bottom: 30 },
+        xAxis: {
+          type: 'category',
+          data: [],
+          axisLabel: { fontSize: 10, rotate: 45 }
+        },
+        yAxis: {
+          type: 'value',
+          max: 100,
+          axisLabel: { fontSize: 10, formatter: '{value}%' }
+        },
+        series: [{
+          data: [],
+          type: 'line',
+          smooth: true,
+          areaStyle: { opacity: 0.3 },
+          lineStyle: { color: '#f5576c', width: 2 },
+          itemStyle: { color: '#f5576c' }
+        }],
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+      })
+    }
+    
+    // 内存使用率走势图
+    if (memoryChartRef.value && !memoryChartInstance) {
+      memoryChartInstance = echarts.init(memoryChartRef.value)
+      memoryChartInstance.setOption({
+        grid: { top: 10, left: 30, right: 10, bottom: 30 },
+        xAxis: {
+          type: 'category',
+          data: [],
+          axisLabel: { fontSize: 10, rotate: 45 }
+        },
+        yAxis: {
+          type: 'value',
+          max: 100,
+          axisLabel: { fontSize: 10, formatter: '{value}%' }
+        },
+        series: [{
+          data: [],
+          type: 'line',
+          smooth: true,
+          areaStyle: { opacity: 0.3 },
+          lineStyle: { color: '#4facfe', width: 2 },
+          itemStyle: { color: '#4facfe' }
+        }],
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+      })
+    }
+    
+    // 磁盘使用率走势图
+    if (diskChartRef.value && !diskChartInstance) {
+      diskChartInstance = echarts.init(diskChartRef.value)
+      diskChartInstance.setOption({
+        grid: { top: 10, left: 30, right: 10, bottom: 30 },
+        xAxis: {
+          type: 'category',
+          data: [],
+          axisLabel: { fontSize: 10, rotate: 45 }
+        },
+        yAxis: {
+          type: 'value',
+          max: 100,
+          axisLabel: { fontSize: 10, formatter: '{value}%' }
+        },
+        series: [{
+          data: [],
+          type: 'line',
+          smooth: true,
+          areaStyle: { opacity: 0.3 },
+          lineStyle: { color: '#43e97b', width: 2 },
+          itemStyle: { color: '#43e97b' }
+        }],
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+      })
+    }
+    
+    // 网络带宽速度走势图
+    if (networkChartRef.value && !networkChartInstance) {
+      networkChartInstance = echarts.init(networkChartRef.value)
+      networkChartInstance.setOption({
+        grid: { top: 20, left: 40, right: 20, bottom: 30 },
+        legend: {
+          data: [t('monitor.net_send'), t('monitor.net_receive')],
+          top: 5,
+          textStyle: { fontSize: 11 }
+        },
+        xAxis: {
+          type: 'category',
+          data: [],
+          axisLabel: { fontSize: 10, rotate: 45 }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { fontSize: 10, formatter: '{value} Mbps' }
+        },
+        series: [
+          {
+            name: t('monitor.net_send'),
+            data: [],
+            type: 'line',
+            smooth: true,
+            lineStyle: { color: '#fa709a', width: 2 },
+            itemStyle: { color: '#fa709a' }
+          },
+          {
+            name: t('monitor.net_receive'),
+            data: [],
+            type: 'line',
+            smooth: true,
+            lineStyle: { color: '#fee140', width: 2 },
+            itemStyle: { color: '#fee140' }
+          }
+        ],
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+      })
+    }
+    
+    // 资源使用率饼图
+    if (resourcePieChartRef.value && !resourcePieChartInstance) {
+      resourcePieChartInstance = echarts.init(resourcePieChartRef.value)
+      resourcePieChartInstance.setOption({
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c}% ({d}%)'
+        },
+        legend: {
+          orient: 'vertical',
+          left: 'left',
+          top: 'middle',
+          textStyle: { fontSize: 12 }
+        },
+        series: [{
+          name: t('monitor.resource_usage'),
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['60%', '50%'],
+          avoidLabelOverlap: false,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: '#fff',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            formatter: '{b}: {c}%'
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 14,
+              fontWeight: 'bold'
+            }
+          },
+          data: []
+        }]
+      })
+    }
+    
+    // 窗口大小改变时调整图表
+    window.addEventListener('resize', handleResize)
+  })
+}
+
+// 更新图表数据
+const updateCharts = () => {
+  const timestamps = historyData.value.timestamps
+  const cpuData = historyData.value.cpu
+  const memoryData = historyData.value.memory
+  const diskData = historyData.value.disk
+  const networkSent = historyData.value.network.sent
+  const networkRecv = historyData.value.network.recv
+  
+  // 更新CPU图表
+  if (cpuChartInstance && cpuData.length > 0) {
+    cpuChartInstance.setOption({
+      xAxis: { data: timestamps },
+      series: [{ data: cpuData }]
+    })
+  }
+  
+  // 更新内存图表
+  if (memoryChartInstance && memoryData.length > 0) {
+    memoryChartInstance.setOption({
+      xAxis: { data: timestamps },
+      series: [{ data: memoryData }]
+    })
+  }
+  
+  // 更新磁盘图表
+  if (diskChartInstance && diskData.length > 0) {
+    diskChartInstance.setOption({
+      xAxis: { data: timestamps },
+      series: [{ data: diskData }]
+    })
+  }
+  
+  // 更新网络图表
+  if (networkChartInstance && networkSent.length > 0) {
+    networkChartInstance.setOption({
+      xAxis: { data: timestamps },
+      series: [
+        { data: networkSent },
+        { data: networkRecv }
+      ]
+    })
+  }
+  
+  // 更新资源饼图
+  if (resourcePieChartInstance) {
+    const cpuPercent = systemInfo.value.cpu?.percent || 0
+    const memoryPercent = systemInfo.value.memory?.percent || 0
+    const diskPercent = systemInfo.value.disk?.percent || 0
+    
+    resourcePieChartInstance.setOption({
+      series: [{
+        data: [
+          { 
+            value: cpuPercent, 
+            name: t('monitor.cpu'),
+            itemStyle: { color: '#f5576c' }
+          },
+          { 
+            value: memoryPercent, 
+            name: t('monitor.memory'),
+            itemStyle: { color: '#4facfe' }
+          },
+          { 
+            value: diskPercent, 
+            name: t('monitor.disk'),
+            itemStyle: { color: '#43e97b' }
+          }
+        ]
+      }]
+    })
+  }
+}
+
+// 处理窗口大小改变
+const handleResize = () => {
+  cpuChartInstance?.resize()
+  memoryChartInstance?.resize()
+  diskChartInstance?.resize()
+  networkChartInstance?.resize()
+  resourcePieChartInstance?.resize()
+}
+
 // 手动刷新（兼容原有功能）
 const loadData = async () => {
   loading.value = true
   try {
     const { data } = await getSystemInfo()
     systemInfo.value = data || {}
+    updateHistoryData()
+    updateCharts()
   } catch (error) {
     console.error('Load system info error:', error)
     ElMessage.error(t('error.default'))
@@ -689,8 +1332,13 @@ const formatBytes = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-const formatNumber = (num) => {
-  return num.toLocaleString()
+const formatNumber = (num, decimals = 0) => {
+  if (num === null || num === undefined) return '0'
+  const value = Number(num)
+  if (decimals > 0) {
+    return value.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  }
+  return value.toLocaleString()
 }
 
 // 格式化百分比：根据值的大小决定保留的小数位数
@@ -749,6 +1397,24 @@ const formatUptime = (seconds) => {
   return parts.join(' ')
 }
 
+// 格式化时长（毫秒转换为友好格式）
+const formatDuration = (milliseconds) => {
+  if (!milliseconds || milliseconds <= 0) return '0ms'
+  
+  if (milliseconds < 1000) {
+    return `${Math.round(milliseconds)}ms`
+  }
+  
+  const seconds = milliseconds / 1000
+  if (seconds < 60) {
+    return `${Math.round(seconds * 10) / 10}s`
+  }
+  
+  const minutes = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${minutes}分${secs}秒`
+}
+
 // 获取连接数百分比样式类
 const getConnectionPercentClass = (connections, maxConnections) => {
   if (!maxConnections || maxConnections <= 0) return ''
@@ -772,6 +1438,8 @@ const getProcessStatusType = (status) => {
 }
 
 onMounted(() => {
+  // 初始化图表
+  initCharts()
   // 优先使用 SSE 实时推送
   startSSEStream()
 })
@@ -787,6 +1455,14 @@ onUnmounted(() => {
     clearInterval(refreshTimer)
     refreshTimer = null
   }
+  // 移除窗口大小监听
+  window.removeEventListener('resize', handleResize)
+  // 销毁图表实例
+  cpuChartInstance?.dispose()
+  memoryChartInstance?.dispose()
+  diskChartInstance?.dispose()
+  networkChartInstance?.dispose()
+  resourcePieChartInstance?.dispose()
 })
 </script>
 
@@ -914,6 +1590,14 @@ onUnmounted(() => {
     color: #409eff;
     font-size: 15px;
   }
+  
+  &.warning {
+    color: #e6a23c;
+  }
+  
+  &.error {
+    color: #f56c6c;
+  }
 }
 
 .connections-info {
@@ -939,6 +1623,12 @@ onUnmounted(() => {
     color: #f56c6c;
     font-weight: 600;
   }
+}
+
+.no-border {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .card-header {

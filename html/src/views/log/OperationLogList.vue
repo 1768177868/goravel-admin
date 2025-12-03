@@ -200,6 +200,18 @@ const getSevenDaysAgo = () => {
   return formatDateTime(date)
 }
 
+// 初始搜索表单数据
+const initialSearchForm = {
+  username: '',
+  method: '',
+  path: '',
+  title: '',
+  ip: '',
+  status: '',
+  start_time: getSevenDaysAgo(),
+  end_time: ''
+}
+
 // 转换操作日志数据（PascalCase -> snake_case）
 const transformOperationLogData = (log) => {
   let params = null
@@ -250,16 +262,7 @@ const {
   initDefaultSort
 } = useListPage({
   fetchApi: getOperationLogList,
-  initialSearchForm: {
-    username: '',
-    method: '',
-    path: '',
-    title: '',
-    ip: '',
-    status: '',
-    start_time: getSevenDaysAgo(),
-    end_time: ''
-  },
+  initialSearchForm,
   sortOptions: {
     tableRef,
     fieldMapping,
