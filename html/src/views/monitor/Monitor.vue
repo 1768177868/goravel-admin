@@ -1080,7 +1080,22 @@ const initCharts = () => {
           lineStyle: { color: '#f5576c', width: 2 },
           itemStyle: { color: '#f5576c' }
         }],
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+        tooltip: { 
+          trigger: 'axis', 
+          axisPointer: { type: 'cross' },
+          formatter: (params) => {
+            if (Array.isArray(params) && params.length > 0) {
+              const time = params[0].axisValue
+              let result = time + '<br/>'
+              params.forEach(item => {
+                const value = typeof item.value === 'number' ? item.value.toFixed(1) : item.value
+                result += `${item.marker}CPU: ${value}%<br/>`
+              })
+              return result
+            }
+            return ''
+          }
+        }
       })
     }
     
@@ -1107,7 +1122,22 @@ const initCharts = () => {
           lineStyle: { color: '#4facfe', width: 2 },
           itemStyle: { color: '#4facfe' }
         }],
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+        tooltip: { 
+          trigger: 'axis', 
+          axisPointer: { type: 'cross' },
+          formatter: (params) => {
+            if (Array.isArray(params) && params.length > 0) {
+              const time = params[0].axisValue
+              let result = time + '<br/>'
+              params.forEach(item => {
+                const value = typeof item.value === 'number' ? item.value.toFixed(1) : item.value
+                result += `${item.marker}内存: ${value}%<br/>`
+              })
+              return result
+            }
+            return ''
+          }
+        }
       })
     }
     
@@ -1134,7 +1164,22 @@ const initCharts = () => {
           lineStyle: { color: '#43e97b', width: 2 },
           itemStyle: { color: '#43e97b' }
         }],
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+        tooltip: { 
+          trigger: 'axis', 
+          axisPointer: { type: 'cross' },
+          formatter: (params) => {
+            if (Array.isArray(params) && params.length > 0) {
+              const time = params[0].axisValue
+              let result = time + '<br/>'
+              params.forEach(item => {
+                const value = typeof item.value === 'number' ? item.value.toFixed(2) : item.value
+                result += `${item.marker}${item.seriesName}: ${value} Mbps<br/>`
+              })
+              return result
+            }
+            return ''
+          }
+        }
       })
     }
     
@@ -1175,7 +1220,22 @@ const initCharts = () => {
             itemStyle: { color: '#fee140' }
           }
         ],
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+        tooltip: { 
+          trigger: 'axis', 
+          axisPointer: { type: 'cross' },
+          formatter: (params) => {
+            if (Array.isArray(params) && params.length > 0) {
+              const time = params[0].axisValue
+              let result = time + '<br/>'
+              params.forEach(item => {
+                const value = typeof item.value === 'number' ? item.value.toFixed(2) : item.value
+                result += `${item.marker}${item.seriesName}: ${value} Mbps<br/>`
+              })
+              return result
+            }
+            return ''
+          }
+        }
       })
     }
     
@@ -1185,7 +1245,11 @@ const initCharts = () => {
       resourcePieChartInstance.setOption({
         tooltip: {
           trigger: 'item',
-          formatter: '{a} <br/>{b}: {c}% ({d}%)'
+          formatter: (params) => {
+            const value = typeof params.value === 'number' ? params.value.toFixed(1) : params.value
+            const percent = typeof params.percent === 'number' ? params.percent.toFixed(1) : params.percent
+            return `${params.seriesName}<br/>${params.name}: ${value}% (${percent}%)`
+          }
         },
         legend: {
           orient: 'vertical',
@@ -1206,7 +1270,10 @@ const initCharts = () => {
           },
           label: {
             show: true,
-            formatter: '{b}: {c}%'
+            formatter: (params) => {
+              const value = typeof params.value === 'number' ? params.value.toFixed(1) : params.value
+              return `${params.name}: ${value}%`
+            }
           },
           emphasis: {
             label: {
@@ -1329,15 +1396,42 @@ const formatBytes = (bytes) => {
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+  const value = bytes / Math.pow(k, i)
+  
+  // 根据值的大小决定小数位数
+  if (value >= 100) {
+    return Math.round(value) + ' ' + sizes[i]
+  } else if (value >= 10) {
+    return Math.round(value * 10) / 10 + ' ' + sizes[i]
+  } else {
+    return Math.round(value * 100) / 100 + ' ' + sizes[i]
+  }
 }
 
 const formatNumber = (num, decimals = 0) => {
   if (num === null || num === undefined) return '0'
   const value = Number(num)
+  
+  // 如果指定了小数位数
   if (decimals > 0) {
-    return value.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    // 对于小于1的值，保留指定的小数位数
+    if (value < 1) {
+      return value.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    }
+    // 对于大于等于1的值，智能处理小数位数
+    if (value >= 100) {
+      // 大于等于100，不显示小数
+      return Math.round(value).toLocaleString()
+    } else if (value >= 10) {
+      // 10-100之间，保留1位小数
+      return (Math.round(value * 10) / 10).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    } else {
+      // 1-10之间，保留指定的小数位数
+      return value.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    }
   }
+  
+  // 没有指定小数位数，使用默认格式化
   return value.toLocaleString()
 }
 
@@ -1365,8 +1459,13 @@ const formatPercentForProgress = (percent) => {
 
 // 格式化负载值
 const formatLoad = (load) => {
-  if (load === 0) return '0.00'
-  return load.toFixed(2)
+  if (load === 0) return '0'
+  const value = Number(load)
+  // 负载值通常小于10，保留2位小数；大于等于10时保留1位小数
+  if (value >= 10) {
+    return value.toFixed(1)
+  }
+  return value.toFixed(2)
 }
 
 const getProgressColor = (percentage) => {
