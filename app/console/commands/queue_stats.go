@@ -94,12 +94,32 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 		ctx.Info("═══════════════════════════════════════")
 		ctx.Info("队列统计信息 (Redis)")
 		ctx.Info("═══════════════════════════════════════")
+		ctx.Info(fmt.Sprintf("队列名称:      %s", queueName))
 		ctx.Info(fmt.Sprintf("待执行任务:    %d", stats.Pending))
 		ctx.Info(fmt.Sprintf("正在执行任务:  %d", stats.Reserved))
 		ctx.Info(fmt.Sprintf("延迟任务:      %d", stats.Delayed))
 		ctx.Info(fmt.Sprintf("失败任务:      %d", stats.Failed))
 		ctx.Info(fmt.Sprintf("总任务数:      %d", totalCount))
 		ctx.Info("═══════════════════════════════════════")
+
+		// 提示信息
+		if stats.Pending > 0 {
+			ctx.Info("")
+			ctx.Warning(fmt.Sprintf("提示：队列中有 %d 个待执行任务", stats.Pending))
+			ctx.Info("")
+			ctx.Info("如果需要处理这些任务：")
+			ctx.Info("  1. 启动主程序（main.go 中会自动启动队列 Worker）")
+			ctx.Info("     go run .")
+			ctx.Info("  2. 确保 Worker 监听正确的队列名称和连接")
+			ctx.Info("  3. 确保任务已正确注册到 QueueServiceProvider")
+			ctx.Info("")
+			ctx.Info("如果不需要这些任务，可以清理队列：")
+			ctx.Info("  使用 Redis 客户端执行以下命令清理队列：")
+			ctx.Info(fmt.Sprintf("    redis-cli DEL queues:%s", queueName))
+			ctx.Info(fmt.Sprintf("    redis-cli DEL queues:%s:reserved", queueName))
+			ctx.Info(fmt.Sprintf("    redis-cli DEL queues:%s:delayed", queueName))
+			ctx.Info("  或者使用命令：go run . artisan queue:clear --queue=" + queueName)
+		}
 
 		// 如果未指定队列名称，显示按队列分组的统计
 		if queueName == "" {
@@ -350,12 +370,28 @@ func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueName string) (
 	}
 	stats.Delayed = delayedLen
 
-	// 失败任务：从数据库 failed_jobs 表查询（Redis 队列的失败任务也存储在数据库中）
-	failedQuery := facades.Orm().Query().Table("failed_jobs")
-	if queueName != "" {
-		failedQuery = failedQuery.Where("queue", "=", queueName)
+	// 调试信息：显示 Redis 键的实际值（可选，用于排查问题）
+	// 可以查看队列中的实际内容
+	if pendingLen > 0 {
+		// 查看队列中的第一个任务（不移除）
+		firstTask, _ := redisClient.LIndex(ctx, pendingKey, 0).Result()
+		if firstTask != "" {
+			// 只显示前100个字符，避免输出过长
+			if len(firstTask) > 100 {
+				firstTask = firstTask[:100] + "..."
+			}
+		}
 	}
-	failedCount, err := failedQuery.Count()
+
+	// 失败任务：从数据库 failed_jobs 表查询（Redis 队列的失败任务也存储在数据库中）
+	var failedCount int64
+	if queueName != "" {
+		failedCount, err = facades.Orm().Query().Table("failed_jobs").
+			Where("queue = ?", queueName).
+			Count()
+	} else {
+		failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
+	}
 	if err != nil {
 		// 失败任务查询失败不影响其他统计
 		stats.Failed = 0
@@ -395,8 +431,8 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName string) (map[strin
 			continue
 		}
 		// 提取队列名称（去掉 queues: 前缀）
-		if strings.HasPrefix(key, "queues:") {
-			queueName := strings.TrimPrefix(key, "queues:")
+		if after, ok := strings.CutPrefix(key, "queues:"); ok {
+			queueName := after
 			if queueName != "" {
 				queueMap[queueName] = true
 			}
