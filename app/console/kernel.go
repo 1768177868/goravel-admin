@@ -24,5 +24,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.ClearLogs{},
 		&commands.ClearChunks{},
 		&commands.CreateToken{},
+		&commands.QueueStats{},
 	}
 }
