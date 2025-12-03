@@ -17,6 +17,12 @@ func Web() {
 	swaggerController := controllers.NewSwaggerController()
 	facades.Route().Get("/swagger/*any", swaggerController.Index)
 
+	// SSE (Server-Sent Events) 示例
+	// sseController := controllers.NewSseController()
+	// facades.Route().Get("/sse", sseController.Server)
+	// facades.Route().Get("/sse/stream", sseController.StreamData)
+	// facades.Route().StaticFile("sse.html", "./resources/views/sse.html") // SSE 测试页面
+
 	// Single Page Application
 	// 1. Add your single page application to `resources/views/*`
 	// 2. Add route to `/route/web.go`, needs to contain your home page and static routes
