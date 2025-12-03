@@ -372,7 +372,19 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	}
 
 	// Redis处理：检查是否为本地Redis
-	if isLocalHost(redisHost) {
+	if redisHost == "" {
+		// Redis配置为空，尝试查找本地进程
+		redisNames := []string{"redis-server", "redis"}
+		if runtime.GOOS == "windows" {
+			redisNames = []string{"redis-server", "redis-server.exe", "redis"}
+		}
+		redisPid := findProcessByName(ctx, redisNames)
+		if redisPid > 0 {
+			result["redis"] = getProcessInfo(ctx, "redis", redisPid)
+			result["redis"].(map[string]any)["type"] = "local"
+		}
+		// 如果找不到进程，保持默认的 not_found 状态
+	} else if isLocalHost(redisHost) {
 		// 本地Redis，尝试查找进程
 		redisNames := []string{"redis-server", "redis"}
 		if runtime.GOOS == "windows" {
@@ -386,16 +398,31 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 			// 本地但找不到进程，尝试通过连接获取信息
 			result["redis"] = getRedisInfoFromConnection(ctx)
 		}
-	} else if redisHost != "" {
+	} else {
 		// 远程Redis，通过连接获取信息
 		result["redis"] = getRedisInfoFromConnection(ctx)
 	}
 
-	// 获取当前应用进程信息
+	// 获取当前应用进程信息（总是尝试获取，因为这是当前进程）
 	currentPid := int32(os.Getpid())
 	if currentPid > 0 {
-		result["app"] = getProcessInfo(ctx, "app", currentPid)
-		result["app"].(map[string]any)["type"] = "local"
+		appInfo := getProcessInfo(ctx, "app", currentPid)
+		appInfo["type"] = "local"
+		// 确保应用进程总是有状态信息
+		if appInfo["status"] == "not_found" {
+			appInfo["status"] = "running" // 当前进程应该总是运行中
+		}
+		result["app"] = appInfo
+	} else {
+		// 如果无法获取 PID，至少返回基本信息
+		result["app"] = map[string]any{
+			"name":   "app",
+			"pid":    0,
+			"cpu":    0.0,
+			"memory": 0,
+			"status": "unknown",
+			"type":   "local",
+		}
 	}
 
 	return result

@@ -815,7 +815,12 @@
     "process_host": "Host",
     "process_threads": "Threads",
     "process_connections": "Connections",
-    "process_name": "Process Name"
+    "process_name": "Process Name",
+    "process_status": "Status",
+    "process_running": "Running",
+    "process_connected": "Connected",
+    "process_not_found": "Not Found",
+    "process_disconnected": "Disconnected"
   },
   "operation.unknown": "Unknown Operation"
 }

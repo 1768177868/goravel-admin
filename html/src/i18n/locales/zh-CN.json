@@ -815,7 +815,12 @@
     "process_host": "连接地址",
     "process_threads": "线程数",
     "process_connections": "连接数",
-    "process_name": "进程名"
+    "process_name": "进程名",
+    "process_status": "状态",
+    "process_running": "运行中",
+    "process_connected": "已连接",
+    "process_not_found": "未找到",
+    "process_disconnected": "未连接"
   },
   "operation.unknown": "未知操作"
 }

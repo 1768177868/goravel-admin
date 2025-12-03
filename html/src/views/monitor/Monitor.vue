@@ -400,7 +400,7 @@
     </el-row>
 
     <!-- 进程监控信息 -->
-    <el-row v-if="systemInfo.processes && Object.keys(systemInfo.processes).length > 0" :gutter="20" style="margin-top: 20px">
+    <el-row v-if="systemInfo.processes" :gutter="20" style="margin-top: 20px">
       <el-col :span="24">
         <el-card class="monitor-card processes-card" shadow="hover">
           <template #header>
@@ -426,7 +426,17 @@
                     </el-tag>
                   </div>
                   <div class="process-content">
-                    <div class="process-item" v-if="systemInfo.processes.mysql.pid">
+                    <div class="process-item">
+                      <span class="process-label">{{ $t('monitor.process_status') }}:</span>
+                      <span class="process-value" :class="getProcessStatusType(systemInfo.processes.mysql.status) === 'success' ? 'highlight' : ''">
+                        {{ systemInfo.processes.mysql.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.mysql.status === 'connected' ? $t('monitor.process_connected') :
+                           systemInfo.processes.mysql.status === 'not_found' ? $t('monitor.process_not_found') :
+                           systemInfo.processes.mysql.status === 'disconnected' ? $t('monitor.process_disconnected') :
+                           systemInfo.processes.mysql.status }}
+                      </span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.mysql.pid && systemInfo.processes.mysql.pid > 0">
                       <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
                       <span class="process-value">{{ systemInfo.processes.mysql.pid }}</span>
                     </div>
@@ -434,7 +444,7 @@
                       <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
                       <span class="process-value highlight">{{ formatPercent(systemInfo.processes.mysql.cpu) }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.mysql.memory">
+                    <div class="process-item" v-if="systemInfo.processes.mysql.memory && systemInfo.processes.mysql.memory > 0">
                       <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
                       <span class="process-value highlight">{{ formatBytes(systemInfo.processes.mysql.memory) }}</span>
                     </div>
@@ -446,11 +456,11 @@
                       <span class="process-label">{{ $t('monitor.process_host') }}:</span>
                       <span class="process-value">{{ systemInfo.processes.mysql.host }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.mysql.threads !== undefined">
+                    <div class="process-item" v-if="systemInfo.processes.mysql.threads !== undefined && systemInfo.processes.mysql.threads > 0">
                       <span class="process-label">{{ $t('monitor.process_threads') }}:</span>
                       <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.threads) }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.mysql.connections !== undefined">
+                    <div class="process-item" v-if="systemInfo.processes.mysql.connections !== undefined && systemInfo.processes.mysql.connections > 0">
                       <span class="process-label">{{ $t('monitor.process_connections') }}:</span>
                       <span class="process-value">{{ formatNumber(systemInfo.processes.mysql.connections) }}</span>
                     </div>
@@ -470,7 +480,17 @@
                     </el-tag>
                   </div>
                   <div class="process-content">
-                    <div class="process-item" v-if="systemInfo.processes.redis.pid">
+                    <div class="process-item">
+                      <span class="process-label">{{ $t('monitor.process_status') }}:</span>
+                      <span class="process-value" :class="getProcessStatusType(systemInfo.processes.redis.status) === 'success' ? 'highlight' : ''">
+                        {{ systemInfo.processes.redis.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.redis.status === 'connected' ? $t('monitor.process_connected') :
+                           systemInfo.processes.redis.status === 'not_found' ? $t('monitor.process_not_found') :
+                           systemInfo.processes.redis.status === 'disconnected' ? $t('monitor.process_disconnected') :
+                           systemInfo.processes.redis.status }}
+                      </span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.redis.pid && systemInfo.processes.redis.pid > 0">
                       <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
                       <span class="process-value">{{ systemInfo.processes.redis.pid }}</span>
                     </div>
@@ -478,7 +498,7 @@
                       <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
                       <span class="process-value highlight">{{ formatPercent(systemInfo.processes.redis.cpu) }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.redis.memory">
+                    <div class="process-item" v-if="systemInfo.processes.redis.memory && systemInfo.processes.redis.memory > 0">
                       <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
                       <span class="process-value highlight">{{ formatBytes(systemInfo.processes.redis.memory) }}</span>
                     </div>
@@ -504,15 +524,24 @@
                     <el-tag type="info" size="small">{{ $t('monitor.process_local') }}</el-tag>
                   </div>
                   <div class="process-content">
-                    <div class="process-item" v-if="systemInfo.processes.app.pid">
-                      <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
-                      <span class="process-value">{{ systemInfo.processes.app.pid }}</span>
+                    <div class="process-item">
+                      <span class="process-label">{{ $t('monitor.process_status') }}:</span>
+                      <span class="process-value" :class="getProcessStatusType(systemInfo.processes.app.status) === 'success' ? 'highlight' : ''">
+                        {{ systemInfo.processes.app.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.app.status === 'connected' ? $t('monitor.process_connected') :
+                           systemInfo.processes.app.status === 'not_found' ? $t('monitor.process_not_found') :
+                           systemInfo.processes.app.status }}
+                      </span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.app.cpu !== undefined && systemInfo.processes.app.cpu > 0">
+                    <div class="process-item" v-if="systemInfo.processes.app.pid && systemInfo.processes.app.pid > 0">
+                      <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
+                      <span class="process-value highlight">{{ systemInfo.processes.app.pid }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.app.cpu !== undefined && systemInfo.processes.app.cpu >= 0">
                       <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
                       <span class="process-value highlight">{{ formatPercent(systemInfo.processes.app.cpu) }}</span>
                     </div>
-                    <div class="process-item" v-if="systemInfo.processes.app.memory">
+                    <div class="process-item" v-if="systemInfo.processes.app.memory && systemInfo.processes.app.memory > 0">
                       <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
                       <span class="process-value highlight">{{ formatBytes(systemInfo.processes.app.memory) }}</span>
                     </div>
