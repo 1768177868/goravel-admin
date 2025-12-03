@@ -37,6 +37,8 @@
     "save_success": "保存成功",
     "required": "必选",
     "all": "全部",
+    "back": "返回",
+    "loading": "加载中",
     "locale": "zh-CN"
   },
   "login": {
@@ -52,7 +54,11 @@
     "refresh_captcha": "刷新",
     "login_success": "登录成功",
     "login_failed": "登录失败",
-    "account_disabled": "账号已被禁用"
+    "account_disabled": "账号已被禁用",
+    "google_code_placeholder": "请输入6位谷歌验证码",
+    "google_code_required": "请输入谷歌验证码",
+    "google_code_invalid": "谷歌验证码错误",
+    "google_code_format": "验证码必须是6位数字"
   },
   "error": {
     "default": "请求失败",
@@ -141,7 +147,14 @@
     "create_success": "创建成功",
     "update_success": "更新成功",
     "export_success": "导出成功",
-    "reset_password_success": "密码重置成功"
+    "reset_password_success": "密码重置成功",
+    "google_auth_status": "谷歌验证码",
+    "google_auth_bound": "已绑定",
+    "google_auth_not_bound": "未绑定",
+    "unbind_google_auth": "解绑谷歌验证码",
+    "unbind_google_auth_confirm": "确定要解绑管理员 {username} 的谷歌验证码吗？请输入您的谷歌验证码以确认操作。",
+    "unbind_google_auth_success": "解绑成功",
+    "unbind_google_auth_failed": "解绑失败"
   },
   "role": {
     "title": "角色列表",
@@ -643,7 +656,28 @@
     "avatar_update_success": "头像更新成功",
     "avatar_format_error": "头像只能是图片格式",
     "avatar_size_error": "头像大小不能超过 2MB",
-    "please_select_avatar": "请选择头像"
+    "please_select_avatar": "请选择头像",
+    "google_authenticator": "谷歌验证码",
+    "google_auth_not_bound": "您尚未绑定谷歌验证码",
+    "google_auth_bound": "您已绑定谷歌验证码",
+    "scan_qr_tip": "请使用 Google Authenticator 或其他支持 TOTP 的应用扫描二维码",
+    "step1_scan_qr": "扫描二维码",
+    "step2_verify": "验证验证码",
+    "secret_key": "密钥",
+    "save_secret_tip": "请妥善保管密钥，以便在无法扫描二维码时手动输入",
+    "next_step": "下一步",
+    "verification_code": "验证码",
+    "enter_6_digit_code": "请输入6位验证码",
+    "bind": "绑定",
+    "unbind": "解绑",
+    "bind_success": "绑定成功",
+    "bind_failed": "绑定失败",
+    "unbind_success": "解绑成功",
+    "unbind_failed": "解绑失败",
+    "unbind_confirm": "解绑后，您将需要使用图形验证码登录。确定要解绑吗？",
+    "google_code_required": "请输入验证码",
+    "google_code_format": "验证码必须是6位数字",
+    "load_qr_code_failed": "加载二维码失败"
   },
   "tabs": {
     "refresh": "刷新",

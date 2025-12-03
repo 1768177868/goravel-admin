@@ -42,7 +42,17 @@
             @keyup.enter="handleLogin"
           />
         </el-form-item>
-        <el-form-item v-if="captchaInfo.enabled" prop="captcha_answer">
+        <el-form-item v-if="needGoogleCode" prop="google_code">
+          <el-input
+            v-model="loginForm.google_code"
+            :placeholder="$t('login.google_code_placeholder')"
+            size="large"
+            class="login-input"
+            maxlength="6"
+            @keyup.enter="handleLogin"
+          />
+        </el-form-item>
+        <el-form-item v-if="captchaInfo.shouldShow && !needGoogleCode" prop="captcha_answer">
           <div class="captcha-row">
             <img
               v-if="captchaInfo.image"
@@ -95,6 +105,7 @@ import { Lock, Refresh } from '@element-plus/icons-vue'
 import { login, getLoginCaptcha } from '../api/auth'
 import { useUserStore } from '../store/user'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
+import { ERROR_CODES } from '../utils/request'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -106,14 +117,18 @@ const loading = ref(false)
 const loginForm = reactive({
   username: '',
   password: '',
-  captcha_answer: ''
+  captcha_answer: '',
+  google_code: ''
 })
 
 const captchaInfo = reactive({
   enabled: false,
   captcha_id: '',
-  image: ''
+  image: '',
+  shouldShow: false // 是否应该显示图形验证码（需要先验证账号密码后才能确定）
 })
+
+const needGoogleCode = ref(false)
 
 const loginRules = computed(() => ({
   username: [
@@ -122,11 +137,33 @@ const loginRules = computed(() => ({
   password: [
     { required: true, message: t('login.password_required'), trigger: 'blur' }
   ],
-  captcha_answer: captchaInfo.enabled
+  google_code: needGoogleCode.value
+    ? [
+        { required: true, message: t('login.google_code_required'), trigger: 'blur' },
+        { pattern: /^\d{6}$/, message: t('login.google_code_format'), trigger: 'blur' }
+      ]
+    : [],
+  captcha_answer: captchaInfo.shouldShow && !needGoogleCode.value
     ? [{ required: true, message: t('login.captcha_required'), trigger: 'blur' }]
     : []
 }))
 
+// 获取图形验证码配置（不自动获取图片）
+const checkCaptchaEnabled = async () => {
+  try {
+    const res = await getLoginCaptcha()
+    const captcha = res.data?.captcha || {}
+    captchaInfo.enabled = !!captcha.enabled
+    // 不自动显示图形验证码，需要先验证账号密码
+    captchaInfo.shouldShow = false
+  } catch (error) {
+    console.error('Check captcha enabled error:', error)
+    captchaInfo.enabled = false
+    captchaInfo.shouldShow = false
+  }
+}
+
+// 获取图形验证码图片（当需要显示时才获取）
 const fetchCaptcha = async () => {
   try {
     const res = await getLoginCaptcha()
@@ -134,11 +171,13 @@ const fetchCaptcha = async () => {
     captchaInfo.enabled = !!captcha.enabled
     captchaInfo.captcha_id = captcha.captcha_id || ''
     captchaInfo.image = captcha.captcha_image || ''
+    captchaInfo.shouldShow = true
   } catch (error) {
     console.error('Fetch captcha error:', error)
     captchaInfo.enabled = false
     captchaInfo.captcha_id = ''
     captchaInfo.image = ''
+    captchaInfo.shouldShow = false
   } finally {
     loginForm.captcha_answer = ''
     if (loginFormRef.value) {
@@ -148,12 +187,16 @@ const fetchCaptcha = async () => {
 }
 
 onMounted(() => {
-  fetchCaptcha()
+  // 只检查图形验证码是否启用，不自动获取图片
+  checkCaptchaEnabled()
 })
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
   
+  // 先验证账号密码（不包含图形验证码）
+  // 如果绑定了 2FA，后端会返回 google_code_required
+  // 如果没有绑定 2FA 且图形验证码开启，后端会返回需要图形验证码的错误
   await loginFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true
@@ -162,10 +205,18 @@ const handleLogin = async () => {
           username: loginForm.username,
           password: loginForm.password
         }
-        if (captchaInfo.enabled) {
+        
+        // 如果已经需要谷歌验证码，添加谷歌验证码
+        if (needGoogleCode.value) {
+          payload.google_code = loginForm.google_code
+        }
+        // 如果图形验证码应该显示，添加图形验证码
+        else if (captchaInfo.shouldShow) {
           payload.captcha_id = captchaInfo.captcha_id
           payload.captcha_answer = loginForm.captcha_answer
         }
+        // 否则，先只提交账号密码，让后端判断是否需要图形验证码或谷歌验证码
+        
         const res = await login(payload)
         if (res.data && res.data.token) {
           const token = res.data.token
@@ -189,24 +240,61 @@ const handleLogin = async () => {
       } catch (error) {
         if (error?.__handled) {
           // 已在 axios 拦截器中提示
-        } else if (error.response) {
-          const errorMessage = error.response.data?.message || ''
-          // 检查是否是账号被禁用
-          if (errorMessage === 'account_disabled') {
-            ElMessage.error(t('login.account_disabled'))
-          } else {
-            // 尝试翻译错误消息，如果翻译不存在则使用原始消息
-            const translatedMessage = t(errorMessage) !== errorMessage ? t(errorMessage) : errorMessage
-            ElMessage.error(translatedMessage || t('login.login_failed'))
-          }
-        } else if (error.message) {
-          ElMessage.error(error.message)
-        } else {
-          ElMessage.error(t('login.login_failed'))
+          return
         }
+        
+        // 使用错误码判断，简化逻辑
+        // 优先从 error.errorCode 获取，如果没有则从 response.data.error_code 获取
+        const errorCode = error.errorCode || error.response?.data?.error_code || ''
+        const message = error.translatedMessage || error.message || error.response?.data?.message || ''
+        
+        // 根据错误码处理
+        if (errorCode === ERROR_CODES.GOOGLE_CODE_REQUIRED) {
+          // 绑定了 2FA，需要谷歌验证码，隐藏图形验证码
+          needGoogleCode.value = true
+          captchaInfo.shouldShow = false
+          loginForm.google_code = ''
+          loginForm.captcha_answer = ''
+          if (loginFormRef.value) {
+            loginFormRef.value.clearValidate(['captcha_answer'])
+          }
+          ElMessage.warning(message || t('login.google_code_required'))
+          return
+        }
+        
+        if (errorCode === ERROR_CODES.GOOGLE_CODE_INVALID) {
+          ElMessage.error(message || t('login.google_code_invalid'))
+          loginForm.google_code = ''
+          return
+        }
+        
+        if (errorCode === ERROR_CODES.ACCOUNT_DISABLED) {
+          ElMessage.error(message || t('login.account_disabled'))
+          return
+        }
+        
+        // 检查是否是验证码相关的错误
+        if (errorCode === ERROR_CODES.CAPTCHA_INVALID || errorCode === ERROR_CODES.CAPTCHA_REQUIRED) {
+          // 验证码错误，如果图形验证码开启且还没有显示，则显示图形验证码
+          if (captchaInfo.enabled && !captchaInfo.shouldShow && !needGoogleCode.value) {
+            await fetchCaptcha()
+          }
+          ElMessage.error(message || t('login.login_failed'))
+          return
+        }
+        
+        // 其他错误（可能是密码错误等）
+        // 如果图形验证码开启且还没有显示，则显示图形验证码
+        if (captchaInfo.enabled && !captchaInfo.shouldShow && !needGoogleCode.value) {
+          await fetchCaptcha()
+        }
+        
+        // 显示错误消息
+        ElMessage.error(message || t('login.login_failed'))
       } finally {
         loading.value = false
-        if (captchaInfo.enabled) {
+        // 如果图形验证码已显示且不需要谷歌验证码，刷新图形验证码
+        if (captchaInfo.shouldShow && !needGoogleCode.value) {
           await fetchCaptcha()
         }
       }

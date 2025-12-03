@@ -3,10 +3,12 @@ package admin
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/http/helpers"
 	"goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
@@ -16,8 +18,9 @@ import (
 )
 
 type AuthController struct {
-	authService    services.AuthService
-	captchaService services.CaptchaService
+	authService              services.AuthService
+	captchaService           services.CaptchaService
+	googleAuthenticatorService services.GoogleAuthenticatorService
 }
 
 func NewAuthController() *AuthController {
@@ -25,8 +28,9 @@ func NewAuthController() *AuthController {
 	tokenService := services.NewTokenServiceImpl()
 	authService := services.NewAuthServiceImpl(adminService, tokenService)
 	return &AuthController{
-		authService:    authService,
-		captchaService: services.NewCaptchaServiceImpl(),
+		authService:              authService,
+		captchaService:           services.NewCaptchaServiceImpl(),
+		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
 	}
 }
 
@@ -41,30 +45,100 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	if r.captchaService.Enabled() {
-		captchaID := ctx.Request().Input("captcha_id")
-		captchaAnswer := ctx.Request().Input("captcha_answer")
-		if ok, messageKey := r.captchaService.Verify(captchaID, captchaAnswer); !ok {
-			if messageKey == "" {
-				messageKey = "captcha_invalid"
+	// 先验证用户名和密码（但不生成token）
+	var admin models.Admin
+	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&admin); err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
+	}
+
+	if admin.Status == 0 {
+		return response.Error(ctx, http.StatusForbidden, "account_disabled")
+	}
+
+	// 验证密码
+	if !facades.Hash().Check(loginRequest.Password, admin.Password) {
+		// 记录登录失败日志
+		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, trans.Get(ctx, "password_error"))
+		return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
+	}
+
+	// 检查是否绑定了谷歌验证码
+	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to check google authenticator binding", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Check google authenticator binding error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "login_failed")
+	}
+
+	// 如果绑定了谷歌验证码，验证谷歌验证码
+	if isBound {
+		googleCode := loginRequest.GoogleCode
+		if googleCode == "" {
+			return response.Error(ctx, http.StatusBadRequest, "google_code_required")
+		}
+
+		// 获取管理员的密钥
+		secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
+		if err != nil {
+			errorlog.RecordHTTP(ctx, "auth", "Failed to get google secret", map[string]any{
+				"error":    err.Error(),
+				"admin_id": admin.ID,
+			}, "Get google secret error: %v", err)
+			return response.Error(ctx, http.StatusInternalServerError, "login_failed")
+		}
+
+		// 验证谷歌验证码
+		if !r.googleAuthenticatorService.Verify(secret, googleCode) {
+			// 记录登录失败日志
+			r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, trans.Get(ctx, "google_code_error"))
+			return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+		}
+	} else {
+		// 如果没有绑定谷歌验证码，验证图形验证码（如果启用了）
+		if r.captchaService.Enabled() {
+			captchaID := ctx.Request().Input("captcha_id")
+			captchaAnswer := ctx.Request().Input("captcha_answer")
+			if ok, messageKey := r.captchaService.Verify(captchaID, captchaAnswer); !ok {
+				if messageKey == "" {
+					messageKey = "captcha_invalid"
+				}
+				return response.Error(ctx, http.StatusBadRequest, messageKey)
 			}
-			return response.Error(ctx, http.StatusBadRequest, messageKey)
 		}
 	}
 
-	admin, token, err := r.authService.Login(ctx, loginRequest.Username, loginRequest.Password)
+	// 验证通过，生成token并完成登录
+	// 获取浏览器和操作系统信息
+	browser, os := helpers.GetBrowserAndOS(ctx)
+	// 获取真实IP地址
+	ip := helpers.GetRealIP(ctx)
+
+	// 生成token
+	var expiresAt *time.Time
+	ttl := facades.Config().GetInt("jwt.ttl", 60) // 默认60分钟
+	if ttl > 0 {
+		exp := time.Now().Add(time.Duration(ttl) * time.Minute)
+		expiresAt = &exp
+	}
+
+	tokenService := services.NewTokenServiceImpl()
+	plainToken, _, err := tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
 	if err != nil {
-		// 检查是否是账号被禁用
-		if err.Error() == "account_disabled" {
-			return response.Error(ctx, http.StatusForbidden, "account_disabled")
-		}
-		// 检查是否是用户名或密码错误
-		if err.Error() == "password_error" || err.Error() == "record not found" {
-			return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
-		}
-		// 其他错误（登录失败）
+		errorlog.RecordHTTP(ctx, "auth", "Failed to create token", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Create token error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "login_failed")
 	}
+	token := plainToken
+
+	// 记录登录成功日志
+	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, trans.Get(ctx, "login_success"))
+
+	// 更新最后登录时间（ORM会自动更新UpdatedAt）
+	facades.Orm().Query().Save(&admin)
 
 	return response.SuccessWithHeader(ctx, "login_success", "Authorization", "Bearer "+token, http.Json{
 		"token": token,
@@ -447,4 +521,191 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "kick_out_success")
+}
+
+// GetGoogleAuthenticatorQRCode 获取谷歌验证码二维码（用于绑定）
+func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Response {
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		admin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	// 检查是否已经绑定
+	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to check google authenticator binding", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Check google authenticator binding error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	if isBound {
+		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_already_bound")
+	}
+
+	// 生成密钥和二维码
+	accountName := admin.Username
+	if admin.Email != "" {
+		accountName = admin.Email
+	}
+	secret, qrCodeURL, err := r.googleAuthenticatorService.GenerateSecret(accountName)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to generate google authenticator secret", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Generate google authenticator secret error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
+	}
+
+	// 生成二维码图片
+	qrCodeImage, err := r.googleAuthenticatorService.GenerateQRCodeImage(accountName, secret)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to generate QR code image", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Generate QR code image error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"secret":      secret,
+		"qr_code_url": qrCodeURL,
+		"qr_code_image": qrCodeImage,
+	})
+}
+
+// BindGoogleAuthenticator 绑定谷歌验证码
+func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response {
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		admin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	secret := ctx.Request().Input("secret")
+	code := ctx.Request().Input("code")
+
+	if secret == "" || code == "" {
+		return response.Error(ctx, http.StatusBadRequest, "secret_and_code_required")
+	}
+
+	// 绑定谷歌验证码
+	if err := r.googleAuthenticatorService.Bind(admin.ID, secret, code); err != nil {
+		if err.Error() == "invalid_code" {
+			return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+		}
+		errorlog.RecordHTTP(ctx, "auth", "Failed to bind google authenticator", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Bind google authenticator error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "bind_failed")
+	}
+
+	return response.Success(ctx, "bind_success")
+}
+
+// UnbindGoogleAuthenticator 解绑谷歌验证码
+func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		admin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	// 需要验证码确认
+	code := ctx.Request().Input("code")
+	if code == "" {
+		return response.Error(ctx, http.StatusBadRequest, "code_required")
+	}
+
+	// 获取管理员的密钥
+	secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to get google secret", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Get google secret error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	if secret == "" {
+		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_not_bound")
+	}
+
+	// 验证验证码
+	if !r.googleAuthenticatorService.Verify(secret, code) {
+		return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+	}
+
+	// 解绑谷歌验证码
+	if err := r.googleAuthenticatorService.Unbind(admin.ID); err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to unbind google authenticator", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Unbind google authenticator error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "unbind_failed")
+	}
+
+	return response.Success(ctx, "unbind_success")
+}
+
+// GetGoogleAuthenticatorStatus 获取谷歌验证码绑定状态
+func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Response {
+	// 从context中获取admin信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var admin models.Admin
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		admin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		admin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	// 检查是否绑定
+	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "auth", "Failed to check google authenticator binding", map[string]any{
+			"error":    err.Error(),
+			"admin_id": admin.ID,
+		}, "Check google authenticator binding error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	return response.Success(ctx, "get_success", http.Json{
+		"is_bound": isBound,
+	})
 }

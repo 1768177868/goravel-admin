@@ -69,3 +69,12 @@ export function kickOutUser(id) {
   })
 }
 
+// 解绑管理员的谷歌验证码
+export function unbindAdminGoogleAuth(id, data) {
+  return request({
+    url: `/admins/${id}/unbind-google-auth`,
+    method: 'post',
+    data
+  })
+}
+

@@ -116,6 +116,109 @@
                 </el-form-item>
               </el-form>
             </el-tab-pane>
+
+            <el-tab-pane :label="$t('profile.google_authenticator')" name="2fa">
+              <div class="google-authenticator-section">
+                <el-alert
+                  v-if="!googleAuthStatus.is_bound"
+                  :title="$t('profile.google_auth_not_bound')"
+                  type="info"
+                  :closable="false"
+                  show-icon
+                  style="margin-bottom: 20px;"
+                />
+                <el-alert
+                  v-else
+                  :title="$t('profile.google_auth_bound')"
+                  type="success"
+                  :closable="false"
+                  show-icon
+                  style="margin-bottom: 20px;"
+                />
+
+                <div v-if="!googleAuthStatus.is_bound" class="bind-section">
+                  <el-steps :active="bindStep" finish-status="success" style="margin-bottom: 30px;">
+                    <el-step :title="$t('profile.step1_scan_qr')" />
+                    <el-step :title="$t('profile.step2_verify')" />
+                  </el-steps>
+
+                  <div v-if="bindStep === 0" class="qr-code-section">
+                    <el-alert
+                      :title="$t('profile.scan_qr_tip')"
+                      type="warning"
+                      :closable="false"
+                      show-icon
+                      style="margin-bottom: 20px;"
+                    />
+                    <div class="qr-code-container">
+                      <div v-if="qrCodeLoading" class="loading-container">
+                        <el-icon class="is-loading"><Loading /></el-icon>
+                        <span>{{ $t('common.loading') }}</span>
+                      </div>
+                      <div v-else-if="qrCodeData.qr_code_image" class="qr-code-wrapper">
+                        <img :src="qrCodeData.qr_code_image" alt="QR Code" class="qr-code-image" />
+                        <div class="qr-code-info">
+                          <p><strong>{{ $t('profile.secret_key') }}:</strong> {{ qrCodeData.secret }}</p>
+                          <p class="tip-text">{{ $t('profile.save_secret_tip') }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <el-button type="primary" @click="bindStep = 1" :disabled="!qrCodeData.secret">
+                      {{ $t('profile.next_step') }}
+                    </el-button>
+                  </div>
+
+                  <div v-if="bindStep === 1" class="verify-section">
+                    <el-form
+                      ref="bindFormRef"
+                      :model="bindForm"
+                      :rules="bindRules"
+                      label-width="120px"
+                      style="max-width: 400px;"
+                    >
+                      <el-form-item :label="$t('profile.verification_code')" prop="code">
+                        <el-input
+                          v-model="bindForm.code"
+                          :placeholder="$t('profile.enter_6_digit_code')"
+                          maxlength="6"
+                          style="width: 200px;"
+                        />
+                      </el-form-item>
+                      <el-form-item>
+                        <el-button @click="bindStep = 0">{{ $t('common.back') }}</el-button>
+                        <el-button type="primary" @click="handleBindGoogleAuth" :loading="bindSubmitting">
+                          {{ $t('profile.bind') }}
+                        </el-button>
+                      </el-form-item>
+                    </el-form>
+                  </div>
+                </div>
+
+                <div v-else class="unbind-section">
+                  <el-form
+                    ref="unbindFormRef"
+                    :model="unbindForm"
+                    :rules="unbindRules"
+                    label-width="120px"
+                    style="max-width: 400px;"
+                  >
+                    <el-form-item :label="$t('profile.verification_code')" prop="code">
+                      <el-input
+                        v-model="unbindForm.code"
+                        :placeholder="$t('profile.enter_6_digit_code')"
+                        maxlength="6"
+                        style="width: 200px;"
+                      />
+                    </el-form-item>
+                    <el-form-item>
+                      <el-button type="danger" @click="handleUnbindGoogleAuth" :loading="unbindSubmitting">
+                        {{ $t('profile.unbind') }}
+                      </el-button>
+                    </el-form-item>
+                  </el-form>
+                </div>
+              </div>
+            </el-tab-pane>
           </el-tabs>
         </el-card>
       </el-col>
@@ -153,11 +256,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
-import { User, Plus } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { User, Plus, Loading } from '@element-plus/icons-vue'
 import { getProfile, updateProfile, updatePassword } from '../../api/profile'
+import { 
+  getGoogleAuthenticatorStatus, 
+  getGoogleAuthenticatorQRCode, 
+  bindGoogleAuthenticator, 
+  unbindGoogleAuthenticator 
+} from '../../api/auth'
 import { useUserStore } from '../../store/user'
 
 const { t } = useI18n()
@@ -171,6 +280,24 @@ const passwordSubmitting = ref(false)
 const showAvatarDialog = ref(false)
 const selectedAvatar = ref('')
 const avatarSubmitting = ref(false)
+
+// 谷歌验证码相关
+const googleAuthStatus = ref({ is_bound: false })
+const qrCodeLoading = ref(false)
+const qrCodeData = ref({ secret: '', qr_code_image: '' })
+const bindStep = ref(0)
+const bindSubmitting = ref(false)
+const unbindSubmitting = ref(false)
+const bindFormRef = ref(null)
+const unbindFormRef = ref(null)
+
+const bindForm = reactive({
+  code: ''
+})
+
+const unbindForm = reactive({
+  code: ''
+})
 
 // 系统默认头像列表（使用UI Avatars服务生成）
 const defaultAvatars = [
@@ -249,6 +376,28 @@ const passwordRules = {
   confirm_password: [
     { required: true, message: t('profile.confirm_password_required'), trigger: 'blur' },
     { validator: validateConfirmPassword, trigger: 'blur' }
+  ]
+}
+
+const validateGoogleCode = (rule, value, callback) => {
+  if (!value || value.trim() === '') {
+    callback(new Error(t('profile.google_code_required')))
+  } else if (!/^\d{6}$/.test(value)) {
+    callback(new Error(t('profile.google_code_format')))
+  } else {
+    callback()
+  }
+}
+
+const bindRules = {
+  code: [
+    { validator: validateGoogleCode, trigger: 'blur' }
+  ]
+}
+
+const unbindRules = {
+  code: [
+    { validator: validateGoogleCode, trigger: 'blur' }
   ]
 }
 
@@ -457,8 +606,123 @@ const handleSaveAvatar = async () => {
   }
 }
 
+// 加载谷歌验证码状态
+const loadGoogleAuthStatus = async () => {
+  try {
+    const res = await getGoogleAuthenticatorStatus()
+    if (res.data) {
+      googleAuthStatus.value = res.data
+    }
+  } catch (error) {
+    console.error('Load google auth status error:', error)
+  }
+}
+
+// 加载二维码
+const loadQRCode = async () => {
+  qrCodeLoading.value = true
+  try {
+    const res = await getGoogleAuthenticatorQRCode()
+    if (res.data) {
+      qrCodeData.value = res.data
+    }
+  } catch (error) {
+    console.error('Load QR code error:', error)
+    // 如果错误已经在拦截器中处理过，不再重复显示
+    if (!error?.__handled) {
+      const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
+      ElMessage.error(errorMessage || t('profile.load_qr_code_failed'))
+    }
+  } finally {
+    qrCodeLoading.value = false
+  }
+}
+
+// 绑定谷歌验证码
+const handleBindGoogleAuth = async () => {
+  if (!bindFormRef.value) return
+
+  await bindFormRef.value.validate(async (valid) => {
+    if (valid) {
+      bindSubmitting.value = true
+      try {
+        await bindGoogleAuthenticator({
+          secret: qrCodeData.value.secret,
+          code: bindForm.code
+        })
+        ElMessage.success(t('profile.bind_success'))
+        bindForm.code = ''
+        bindStep.value = 0
+        await loadGoogleAuthStatus()
+      } catch (error) {
+        console.error('Bind google auth error:', error)
+        // 如果错误已经在拦截器中处理过，不再重复显示
+        if (!error?.__handled) {
+          const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
+          ElMessage.error(errorMessage || t('profile.bind_failed'))
+        }
+      } finally {
+        bindSubmitting.value = false
+      }
+    }
+  })
+}
+
+// 解绑谷歌验证码
+const handleUnbindGoogleAuth = async () => {
+  if (!unbindFormRef.value) return
+
+  await unbindFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        await ElMessageBox.confirm(
+          t('profile.unbind_confirm'),
+          t('common.confirm'),
+          {
+            confirmButtonText: t('common.confirm'),
+            cancelButtonText: t('common.cancel'),
+            type: 'warning'
+          }
+        )
+        
+        unbindSubmitting.value = true
+        try {
+          await unbindGoogleAuthenticator({
+            code: unbindForm.code
+          })
+          ElMessage.success(t('profile.unbind_success'))
+          unbindForm.code = ''
+          await loadGoogleAuthStatus()
+        } catch (error) {
+          console.error('Unbind google auth error:', error)
+          // 如果错误已经在拦截器中处理过，不再重复显示
+          if (!error?.__handled) {
+            const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
+            ElMessage.error(errorMessage || t('profile.unbind_failed'))
+          }
+        } finally {
+          unbindSubmitting.value = false
+        }
+      } catch (error) {
+        // 用户取消
+      }
+    }
+  })
+}
+
+// 监听标签页切换
+watch(activeTab, (newTab) => {
+  if (newTab === '2fa') {
+    loadGoogleAuthStatus()
+    if (!googleAuthStatus.value.is_bound && !qrCodeData.value.secret) {
+      loadQRCode()
+    }
+  }
+})
+
 onMounted(() => {
   loadProfile()
+  loadGoogleAuthStatus()
 })
 </script>
 
@@ -524,6 +788,73 @@ onMounted(() => {
 .avatar-item.active {
   border-color: #409EFF;
   background-color: #ecf5ff;
+}
+
+.google-authenticator-section {
+  padding: 20px 0;
+}
+
+.bind-section,
+.unbind-section {
+  max-width: 600px;
+}
+
+.qr-code-section {
+  text-align: center;
+}
+
+.qr-code-container {
+  margin: 30px 0;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 10px;
+}
+
+.qr-code-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.qr-code-image {
+  width: 200px;
+  height: 200px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: white;
+  padding: 10px;
+}
+
+.qr-code-info {
+  text-align: left;
+  width: 100%;
+  max-width: 400px;
+}
+
+.qr-code-info p {
+  margin: 8px 0;
+  word-break: break-all;
+}
+
+.tip-text {
+  color: #909399;
+  font-size: 12px;
+  margin-top: 10px !important;
+}
+
+.verify-section {
+  padding: 20px 0;
 }
 </style>
 

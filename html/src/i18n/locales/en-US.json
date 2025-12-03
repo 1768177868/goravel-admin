@@ -37,6 +37,8 @@
     "save_success": "Save successful",
     "required": "Required",
     "all": "All",
+    "back": "Back",
+    "loading": "Loading",
     "locale": "en-US"
   },
   "login": {
@@ -52,7 +54,11 @@
     "refresh_captcha": "Refresh",
     "login_success": "Login successful",
     "login_failed": "Login failed",
-    "account_disabled": "Account has been disabled"
+    "account_disabled": "Account has been disabled",
+    "google_code_placeholder": "Please enter 6-digit Google Authenticator code",
+    "google_code_required": "Please enter Google Authenticator code",
+    "google_code_invalid": "Invalid Google Authenticator code",
+    "google_code_format": "Verification code must be 6 digits"
   },
   "error": {
     "default": "Request failed",
@@ -141,7 +147,14 @@
     "create_success": "Create successful",
     "update_success": "Update successful",
     "export_success": "Export successful",
-    "reset_password_success": "Password reset successful"
+    "reset_password_success": "Password reset successful",
+    "google_auth_status": "Google Authenticator",
+    "google_auth_bound": "Bound",
+    "google_auth_not_bound": "Not Bound",
+    "unbind_google_auth": "Unbind Google Authenticator",
+    "unbind_google_auth_confirm": "Are you sure you want to unbind Google Authenticator for admin {username}? Please enter your Google Authenticator code to confirm.",
+    "unbind_google_auth_success": "Unbind successful",
+    "unbind_google_auth_failed": "Unbind failed"
   },
   "role": {
     "title": "Role List",
@@ -643,7 +656,28 @@
     "avatar_update_success": "Avatar updated successfully",
     "avatar_format_error": "Avatar must be an image",
     "avatar_size_error": "Avatar size cannot exceed 2MB",
-    "please_select_avatar": "Please select an avatar"
+    "please_select_avatar": "Please select an avatar",
+    "google_authenticator": "Google Authenticator",
+    "google_auth_not_bound": "You have not bound Google Authenticator",
+    "google_auth_bound": "You have bound Google Authenticator",
+    "scan_qr_tip": "Please use Google Authenticator or other TOTP-compatible apps to scan the QR code",
+    "step1_scan_qr": "Scan QR Code",
+    "step2_verify": "Verify Code",
+    "secret_key": "Secret Key",
+    "save_secret_tip": "Please keep the secret key safe for manual entry if QR code scanning is not available",
+    "next_step": "Next Step",
+    "verification_code": "Verification Code",
+    "enter_6_digit_code": "Please enter 6-digit code",
+    "bind": "Bind",
+    "unbind": "Unbind",
+    "bind_success": "Bind successful",
+    "bind_failed": "Bind failed",
+    "unbind_success": "Unbind successful",
+    "unbind_failed": "Unbind failed",
+    "unbind_confirm": "After unbinding, you will need to use image captcha for login. Are you sure to unbind?",
+    "google_code_required": "Please enter verification code",
+    "google_code_format": "Verification code must be 6 digits",
+    "load_qr_code_failed": "Failed to load QR code"
   },
   "tabs": {
     "refresh": "Refresh",

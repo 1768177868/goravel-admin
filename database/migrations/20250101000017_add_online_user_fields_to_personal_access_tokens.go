@@ -13,15 +13,53 @@ func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Signature() s
 }
 
 func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Up() error {
-	if facades.Schema().HasTable("personal_access_tokens") {
+	if !facades.Schema().HasTable("personal_access_tokens") {
+		return nil
+	}
+
+	// 检查列是否已存在
+	columns, err := facades.Schema().GetColumns("personal_access_tokens")
+	if err != nil {
+		return err
+	}
+
+	// 检查哪些列需要添加
+	columnMap := make(map[string]bool)
+	for _, column := range columns {
+		columnMap[column.Name] = true
+	}
+
+	// 构建需要添加的列
+	columnsToAdd := []struct {
+		name    string
+		length  int
+		comment string
+	}{
+		{"browser", 100, "浏览器"},
+		{"ip", 45, "IP地址"},
+		{"os", 100, "操作系统"},
+		{"session_id", 64, "会话编号"},
+	}
+
+	hasNewColumns := false
+	for _, col := range columnsToAdd {
+		if !columnMap[col.name] {
+			hasNewColumns = true
+			break
+		}
+	}
+
+	// 如果有需要添加的列，则添加
+	if hasNewColumns {
 		return facades.Schema().Table("personal_access_tokens", func(table schema.Blueprint) {
-			// 直接添加字段（如果字段已存在，迁移会失败，需要手动处理）
-			table.String("browser", 100).Nullable().Comment("浏览器")
-			table.String("ip", 45).Nullable().Comment("IP地址")
-			table.String("os", 100).Nullable().Comment("操作系统")
-			table.String("session_id", 64).Nullable().Comment("会话编号")
+			for _, col := range columnsToAdd {
+				if !columnMap[col.name] {
+					table.String(col.name, col.length).Nullable().Comment(col.comment)
+				}
+			}
 		})
 	}
+
 	return nil
 }
 

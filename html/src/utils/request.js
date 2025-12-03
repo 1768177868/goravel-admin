@@ -8,21 +8,35 @@ import i18n from '../i18n'
 
 const { t } = i18n.global
 
+// 错误码常量
+const ERROR_CODES = {
+  // 认证相关
+  GOOGLE_CODE_REQUIRED: 'google_code_required',
+  GOOGLE_CODE_INVALID: 'google_code_invalid',
+  ACCOUNT_DISABLED: 'account_disabled',
+  UNAUTHORIZED: 'unauthorized',
+  FORBIDDEN: 'forbidden',
+  // 验证码相关
+  CAPTCHA_REQUIRED: 'captcha_required',
+  CAPTCHA_INVALID: 'captcha_invalid',
+  CAPTCHA_EXPIRED: 'captcha_expired',
+  // 通用错误
+  TOO_MANY_REQUESTS: 'too_many_requests',
+  NETWORK_ERROR: 'network_error',
+  TIMEOUT: 'timeout'
+}
+
 // 构建完整的 API baseURL
-// 如果配置了 VITE_API_BASE_URL，使用它 + VITE_API_PREFIX，否则使用相对路径
 const getBaseURL = () => {
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL
   const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
   
-  // 如果配置了完整的基础 URL，使用它
   if (apiBaseURL) {
-    // 确保 URL 格式正确（移除末尾的 /，确保前缀以 / 开头）
     const base = apiBaseURL.replace(/\/+$/, '')
     const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
     return `${base}${prefix}`
   }
   
-  // 如果没有配置基础 URL，使用相对路径
   return apiPrefix
 }
 
@@ -36,14 +50,11 @@ request.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token')
     if (token) {
-      // 确保 token 没有多余的空格
-      const cleanToken = token.trim()
-      config.headers.Authorization = `Bearer ${cleanToken}`
+      config.headers.Authorization = `Bearer ${token.trim()}`
     }
     
-    // 设置语言请求头，将前端的语言代码转换为后端期望的格式
+    // 设置语言请求头
     const currentLocale = i18n.global.locale.value || localStorage.getItem('language') || 'zh-CN'
-    // 前端使用 zh-CN/en-US，后端期望 cn/en
     let acceptLanguage = 'zh-CN'
     if (currentLocale === 'en-US') {
       acceptLanguage = 'en-US'
@@ -52,6 +63,7 @@ request.interceptors.request.use(
     }
     config.headers['Accept-Language'] = acceptLanguage
     
+    // 设置时区
     const appStore = useAppStore()
     let browserTimezone = 'UTC'
     try {
@@ -75,7 +87,6 @@ let isRedirecting = false
 
 // 处理401错误的统一函数
 const handle401Error = (message) => {
-  // 如果正在跳转，直接返回
   if (isRedirecting) {
     return
   }
@@ -84,29 +95,33 @@ const handle401Error = (message) => {
   const userStore = useUserStore()
   const tabsStore = useTabsStore()
   
-  // 立即清除用户状态（同步执行）
   userStore.logout(true)
-  
-  // 清除标签页
   tabsStore.removeAllTabs()
   
-  // 如果当前不在登录页，立即跳转
   const currentPath = router.currentRoute.value.path
   if (currentPath !== '/login') {
-      // 显示错误消息
-      ElMessage.error(message || t('error.unauthorized'))
-    
-    // 立即使用 router.replace 跳转
+    ElMessage.error(message || t('error.unauthorized'))
     router.replace('/login').catch(() => {
-      // 如果路由跳转失败，直接使用 window.location 强制跳转
       window.location.href = '/login'
     })
   }
   
-  // 清除跳转标志（延迟清除，避免立即重复）
   setTimeout(() => {
     isRedirecting = false
   }, 2000)
+}
+
+// 处理错误响应，提取错误信息
+const extractErrorInfo = (data) => {
+  const message = data?.message || data?.data?.message || ''
+  const errorCode = data?.error_code || data?.data?.error_code || ''
+  const code = data?.code || 0
+  
+  return {
+    message,      // 后端已翻译的消息
+    errorCode,    // 错误码（如 'google_code_required'）
+    code          // HTTP 状态码或业务状态码
+  }
 }
 
 // 响应拦截器
@@ -114,23 +129,19 @@ request.interceptors.response.use(
   response => {
     const res = response.data
     const url = response.config?.url || ''
-    
-    // 排除登录和退出接口，这些接口返回 401 是正常的业务错误，不应该触发自动跳转
     const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
     
-    // 如果响应头中有新的 token，更新本地存储
+    // 更新 token
     const newToken = response.headers.authorization || response.headers.Authorization
     if (newToken) {
       const token = newToken.replace('Bearer ', '').trim()
       if (token) {
         localStorage.setItem('token', token)
-        // 同时更新 userStore 中的 token
         const userStore = useUserStore()
         userStore.setToken(token)
       }
     }
     
-    // 如果响应数据中有 token（登录接口会在 data.token 中返回），也更新本地存储
     if (res.data && res.data.token) {
       const token = res.data.token
       if (token) {
@@ -140,35 +151,38 @@ request.interceptors.response.use(
       }
     }
     
-    // 如果 code 不是 200，说明有错误
-    // 注意：HTTP 403 状态码会进入错误回调，不会进入这里
-    // 这里只处理 HTTP 200 但 code 不是 200 的情况
+    // 处理业务错误（HTTP 200 但 code 不是 200）
     if (res.code !== 200) {
+      const { message, errorCode } = extractErrorInfo(res)
+      
       if (!isAuthEndpoint) {
-        const message = res.message || t('error.default')
         if (res.code === 401) {
           handle401Error(message || t('error.unauthorized'))
         } else if (res.code === 403) {
-          // 403 错误会在错误回调中处理，这里不重复显示
-          // 但如果 HTTP 状态码是 200，说明是业务逻辑错误，需要显示
           ElMessage.error(message || t('error.forbidden'))
         } else {
-          ElMessage.error(message)
+          ElMessage.error(message || t('error.default'))
         }
       }
-      // 创建错误对象，包含更多信息
-      const errorMessage = res.message || t('error.default') || '请求失败'
-      const err = new Error(errorMessage)
+      
+      // 创建错误对象
+      const err = new Error(message || t('error.default'))
       err.code = res.code
+      err.errorCode = errorCode
       err.data = res.data
-      err.__handled = true
+      err.message = message
+      err.translatedMessage = message // 后端已翻译
+      
+      if (!isAuthEndpoint) {
+        err.__handled = true
+      }
+      
       return Promise.reject(err)
     }
     
     return res
   },
   error => {
-    // 如果错误已经被标记为已处理，不再重复处理
     if (error.__handled) {
       return Promise.reject(error)
     }
@@ -176,40 +190,46 @@ request.interceptors.response.use(
     if (error.response) {
       const { status, data, config } = error.response
       const url = config?.url || ''
-
       const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+      const { message, errorCode } = extractErrorInfo(data)
 
+      // 根据 HTTP 状态码和错误码处理
       if (status === 429) {
-        const message = data?.message || data?.data?.message || t('error.tooManyRequests')
-        ElMessage.error(message)
-      } else if (status === 401 && !isAuthEndpoint) {
-        const message = data?.message || data?.data?.message || t('error.unauthorized')
-        handle401Error(message)
-      } else if (status === 401 && isAuthEndpoint) {
-        // 登录/退出接口 401 只提示一次
-        const message = data?.message || data?.data?.message || t('login.login_failed')
-        ElMessage.error(message)
-      } else if (status === 403 && isAuthEndpoint) {
-        // 登录/退出接口 403（账号被禁用等）只提示一次
-        const message = data?.message || data?.data?.message || t('error.forbidden')
-        // 如果是 account_disabled，使用登录相关的翻译
-        if (message === 'account_disabled') {
-          ElMessage.error(t('login.account_disabled'))
+        ElMessage.error(message || t('error.tooManyRequests'))
+      } else if (status === 401) {
+        if (!isAuthEndpoint) {
+          handle401Error(message || t('error.unauthorized'))
         } else {
-          ElMessage.error(message)
+          // 登录接口错误，不在这里显示，让 Login.vue 处理
+          error.errorCode = errorCode
+          error.message = message
+          error.translatedMessage = message
+          error.__handled = false // 明确标记为未处理，让 Login.vue 处理
         }
+      } else if (status === 403) {
+        if (!isAuthEndpoint) {
+          ElMessage.error(message || t('error.forbidden'))
+        } else {
+          // 登录接口错误，不在这里显示，让 Login.vue 处理
+          error.errorCode = errorCode
+          error.message = message
+          error.translatedMessage = message
+          error.__handled = false // 明确标记为未处理，让 Login.vue 处理
+        }
+      } else if (isAuthEndpoint && status >= 400) {
+        // 登录接口的其他错误（400等），不在这里显示，让 Login.vue 处理
+        error.errorCode = errorCode
+        error.message = message
+        error.translatedMessage = message
+        error.code = status
+        error.response = error.response // 确保 response 对象存在
+        error.__handled = false // 明确标记为未处理，让 Login.vue 处理
       } else if (!isAuthEndpoint) {
-        if (status === 403) {
-          // 使用后端返回的错误消息，如果没有则使用默认翻译
-          const message = data?.message || data?.data?.message || t('error.forbidden')
-          ElMessage.error(message)
-        } else {
-          const errorMessage = data?.message || data?.data?.message || t('error.default')
-          ElMessage.error(errorMessage)
-        }
+        // 非登录接口的错误，直接显示
+        ElMessage.error(message || t('error.default'))
       }
     } else {
-      // 网络错误或 CORS 错误
+      // 网络错误
       let errorMessage = t('error.network')
       
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
@@ -220,13 +240,13 @@ request.interceptors.response.use(
         errorMessage = error.message
       }
       
-      // 只在非静默错误时显示消息
       if (!error.config?.silent) {
         ElMessage.error(errorMessage)
       }
     }
 
-    if (typeof error === 'object') {
+    // 只有在非登录接口的错误或已经显示过消息的情况下才标记为已处理
+    if (typeof error === 'object' && error.__handled !== false) {
       error.__handled = true
     }
     
@@ -235,3 +255,4 @@ request.interceptors.response.use(
 )
 
 export default request
+export { ERROR_CODES }

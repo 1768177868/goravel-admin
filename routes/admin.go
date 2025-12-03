@@ -46,6 +46,12 @@ func Admin() {
 		router.Post("logout", adminAuthController.Logout)
 		router.Get("heartbeat", adminAuthController.Heartbeat)
 
+		// 谷歌验证码相关
+		router.Get("google-authenticator/status", adminAuthController.GetGoogleAuthenticatorStatus)
+		router.Get("google-authenticator/qrcode", adminAuthController.GetGoogleAuthenticatorQRCode)
+		router.Post("google-authenticator/bind", adminAuthController.BindGoogleAuthenticator)
+		router.Post("google-authenticator/unbind", adminAuthController.UnbindGoogleAuthenticator)
+
 		// Token管理
 		// router.Get("tokens", adminAuthController.Tokens)
 		// router.Delete("tokens/{id}", adminAuthController.RevokeToken)
@@ -79,7 +85,8 @@ func Admin() {
 		router.Post("admins", adminController.Store)
 		router.Put("admins/{id}", adminController.Update)
 		router.Delete("admins/{id}", adminController.Destroy)
-		router.Delete("admins/{id}/tokens", adminAuthController.KickOutUser) // 踢出指定用户的所有token
+		router.Delete("admins/{id}/tokens", adminAuthController.KickOutUser)                     // 踢出指定用户的所有token
+		router.Post("admins/{id}/unbind-google-auth", adminController.UnbindGoogleAuthenticator) // 解绑管理员的谷歌验证码
 
 		// 角色管理 - 使用 Resource 路由
 		router.Resource("roles", roleController)

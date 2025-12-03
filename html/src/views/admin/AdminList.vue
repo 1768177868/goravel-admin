@@ -15,7 +15,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', status: '', role_id: '', department_id: '' }"
+        :initial-values="{ username: '', status: '', role_id: '', department_id: '', is_2fa_bound: '' }"
         i18n-prefix="admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -73,10 +73,21 @@
               </template>
               <span v-else>-</span>
             </template>
+            <template v-else-if="column.slot === 'is_2fa_bound'" #default="{ row }">
+              {{ (row.is_2fa_bound || row.Is2FABound) ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
+            </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
               <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
               <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
               <el-button type="info" link @click="handleKickOut(row)">{{ $t('admin.kick_out') }}</el-button>
+              <el-button
+                v-if="(row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id)"
+                type="warning"
+                link
+                @click="handleUnbindGoogleAuth(row)"
+              >
+                {{ $t('admin.unbind_google_auth') }}
+              </el-button>
               <el-button
                 v-if="!isProtectedAdmin(row.id)"
                 type="danger"
@@ -207,7 +218,8 @@ import {
   deleteAdmin,
   exportAdmin,
   resetPassword,
-  kickOutUser
+  kickOutUser,
+  unbindAdminGoogleAuth
 } from '../../api/admin'
 import { getOptions } from '../../api/option'
 
@@ -252,7 +264,8 @@ const {
     username: '',
     status: '',
     role_id: '',
-    department_id: ''
+    department_id: '',
+    is_2fa_bound: ''
   },
   sortOptions: {
     tableRef,
@@ -297,6 +310,13 @@ const tableColumns = computed(() => [
     slot: 'status'
   },
   {
+    field: 'is_2fa_bound',
+    title: t('admin.google_auth_status'),
+    width: 120,
+    sortable: false,
+    slot: 'is_2fa_bound'
+  },
+  {
     field: 'department',
     title: t('table.department'),
     slot: 'department',
@@ -336,6 +356,17 @@ const searchFields = computed(() => [
     type: 'select',
     width: '150px',
     options: getStatusOptions(t),
+    advanced: false
+  },
+  {
+    prop: 'is_2fa_bound',
+    label: t('admin.google_auth_status'),
+    type: 'select',
+    width: '150px',
+    options: [
+      { label: t('admin.google_auth_bound'), value: '1' },
+      { label: t('admin.google_auth_not_bound'), value: '0' }
+    ],
     advanced: false
   },
   {
@@ -600,6 +631,35 @@ const handleKickOut = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Kick out error:', error)
+    }
+  }
+}
+
+const handleUnbindGoogleAuth = async (row) => {
+  try {
+    const { value: code } = await ElMessageBox.prompt(
+      t('admin.unbind_google_auth_confirm', { username: row.username || row.Username }),
+      t('admin.unbind_google_auth'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        inputPlaceholder: t('profile.enter_6_digit_code'),
+        inputType: 'text',
+        inputPattern: /^\d{6}$/,
+        inputErrorMessage: t('profile.google_code_format')
+      }
+    )
+    
+    await unbindAdminGoogleAuth(row.id, { code })
+    ElMessage.success(t('admin.unbind_google_auth_success'))
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Unbind google auth error:', error)
+      if (!error?.__handled) {
+        const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
+        ElMessage.error(errorMessage || t('admin.unbind_google_auth_failed'))
+      }
     }
   }
 }

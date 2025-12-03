@@ -19,7 +19,8 @@ import (
 )
 
 type AdminController struct {
-	adminService services.AdminService
+	adminService               services.AdminService
+	googleAuthenticatorService services.GoogleAuthenticatorService
 }
 
 // AdminExportRequest 导出管理员请求参数
@@ -28,6 +29,7 @@ type AdminExportRequest struct {
 	Status       string `json:"status" form:"status" example:"1"`                           // 状态：1-启用，0-禁用
 	RoleID       string `json:"role_id" form:"role_id" example:"1"`                         // 角色ID
 	DepartmentID string `json:"department_id" form:"department_id" example:"1"`             // 部门ID
+	Is2FABound   string `json:"is_2fa_bound" form:"is_2fa_bound" example:"1"`               // 是否绑定2FA：1-已绑定，0-未绑定
 	StartTime    string `json:"start_time" form:"start_time" example:"2024-01-01 00:00:00"` // 开始时间
 	EndTime      string `json:"end_time" form:"end_time" example:"2024-12-31 23:59:59"`     // 结束时间
 	OrderBy      string `json:"order_by" form:"order_by" example:"created_at:desc"`         // 排序
@@ -42,6 +44,7 @@ type AdminResponse struct {
 	Email        string                   `json:"email" example:"admin@example.com"`        // 邮箱
 	Phone        string                   `json:"phone" example:"13800138000"`              // 手机号
 	Status       uint8                    `json:"status" example:"1"`                       // 状态：1-启用，0-禁用
+	Is2FABound   bool                     `json:"is_2fa_bound" example:"true"`              // 是否绑定2FA
 	DepartmentID uint                     `json:"department_id" example:"1"`                // 部门ID
 	Department   map[string]interface{}   `json:"department"`                               // 部门信息
 	Roles        []map[string]interface{} `json:"roles"`                                    // 角色列表
@@ -70,7 +73,8 @@ type AdminDetailResponse struct {
 
 func NewAdminController() *AdminController {
 	return &AdminController{
-		adminService: services.NewAdminServiceImpl(),
+		adminService:               services.NewAdminServiceImpl(),
+		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
 	}
 }
 
@@ -82,6 +86,7 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
 	roleID := ctx.Request().Input("role_id", ctx.Request().Query("role_id", ""))
 	departmentID := ctx.Request().Input("department_id", ctx.Request().Query("department_id", ""))
+	is2FABound := ctx.Request().Input("is_2fa_bound", ctx.Request().Query("is_2fa_bound", ""))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
 	// 时间参数同时支持从请求体和查询参数读取，并转换为 UTC
 	startTimeStr := ctx.Request().Input("start_time", ctx.Request().Query("start_time", ""))
@@ -126,6 +131,16 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 				}
 				query = query.WhereIn("department_id", idsAny)
 			}
+		}
+	}
+	if is2FABound != "" {
+		switch is2FABound {
+		case "1":
+			// 已绑定：google_secret IS NOT NULL AND google_secret != ''
+			query = query.Where("google_secret IS NOT NULL AND google_secret != ?", "")
+		case "0":
+			// 未绑定：google_secret IS NULL OR google_secret = ''
+			query = query.Where("(google_secret IS NULL OR google_secret = ?)", "")
 		}
 	}
 	if startTime != "" {
@@ -179,7 +194,28 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Paginate(ctx, "get_success", admins, total, page, pageSize)
+	// 为每个管理员添加 2FA 绑定状态
+	adminList := make([]http.Json, len(admins))
+	for i, admin := range admins {
+		isBound, _ := r.googleAuthenticatorService.IsBound(admin.ID)
+		adminList[i] = http.Json{
+			"id":            admin.ID,
+			"username":      admin.Username,
+			"nickname":      admin.Nickname,
+			"avatar":        admin.Avatar,
+			"email":         admin.Email,
+			"phone":         admin.Phone,
+			"status":        admin.Status,
+			"is_2fa_bound":  isBound,
+			"department_id": admin.DepartmentID,
+			"department":    admin.Department,
+			"roles":         admin.Roles,
+			"created_at":    admin.CreatedAt,
+			"updated_at":    admin.UpdatedAt,
+		}
+	}
+
+	return response.Paginate(ctx, "get_success", adminList, total, page, pageSize)
 }
 
 // Show 管理员详情
@@ -456,6 +492,116 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success")
+}
+
+// UnbindGoogleAuthenticator 管理员解绑其他管理员的谷歌验证码
+// @Summary      解绑管理员的谷歌验证码
+// @Description  管理员可以解绑其他管理员的谷歌验证码，需要当前管理员已绑定谷歌验证码并输入验证码确认
+// @Tags         管理员管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int  true  "要解绑的管理员ID"
+// @Param        code body     string true "当前管理员的谷歌验证码"
+// @Success      200  {object} map[string]interface{} "解绑成功"
+// @Failure      400  {object} map[string]interface{} "参数错误或验证码错误"
+// @Failure      401  {object} map[string]interface{} "未登录"
+// @Failure      403  {object} map[string]interface{} "无权限或当前管理员未绑定谷歌验证码"
+// @Failure      404  {object} map[string]interface{} "管理员不存在"
+// @Failure      500  {object} map[string]interface{} "服务器错误"
+// @Router       /api/admin/admins/{id}/unbind-google-auth [post]
+// @Security     BearerAuth
+func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
+	// 获取要解绑的管理员ID
+	targetAdminID := cast.ToUint(ctx.Request().Route("id"))
+	if targetAdminID == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	// 检查目标管理员是否存在
+	var targetAdmin models.Admin
+	if err := facades.Orm().Query().Where("id", targetAdminID).First(&targetAdmin); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+	}
+
+	// 从context中获取当前管理员信息（由JWT中间件设置）
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	var currentAdmin models.Admin
+	if adminVal, ok := adminValue.(models.Admin); ok {
+		currentAdmin = adminVal
+	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+		currentAdmin = *adminPtr
+	} else {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	// 检查当前管理员是否已绑定谷歌验证码
+	isBound, err := r.googleAuthenticatorService.IsBound(currentAdmin.ID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to check google authenticator binding", map[string]any{
+			"error":    err.Error(),
+			"admin_id": currentAdmin.ID,
+		}, "Check google authenticator binding error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	if !isBound {
+		return response.Error(ctx, http.StatusForbidden, "google_authenticator_not_bound")
+	}
+
+	// 需要验证码确认
+	code := ctx.Request().Input("code")
+	if code == "" {
+		return response.Error(ctx, http.StatusBadRequest, "code_required")
+	}
+
+	// 获取当前管理员的密钥
+	secret, err := r.googleAuthenticatorService.GetSecret(currentAdmin.ID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to get google secret", map[string]any{
+			"error":    err.Error(),
+			"admin_id": currentAdmin.ID,
+		}, "Get google secret error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	if secret == "" {
+		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_not_bound")
+	}
+
+	// 验证当前管理员的验证码
+	if !r.googleAuthenticatorService.Verify(secret, code) {
+		return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+	}
+
+	// 检查目标管理员是否已绑定
+	targetIsBound, err := r.googleAuthenticatorService.IsBound(targetAdminID)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to check target admin google authenticator binding", map[string]any{
+			"error":           err.Error(),
+			"target_admin_id": targetAdminID,
+		}, "Check target admin google authenticator binding error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	if !targetIsBound {
+		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_not_bound")
+	}
+
+	// 解绑目标管理员的谷歌验证码
+	if err := r.googleAuthenticatorService.Unbind(targetAdminID); err != nil {
+		errorlog.RecordHTTP(ctx, "admin", "Failed to unbind target admin google authenticator", map[string]any{
+			"error":            err.Error(),
+			"target_admin_id":  targetAdminID,
+			"current_admin_id": currentAdmin.ID,
+		}, "Unbind target admin google authenticator error: %v", err)
+		return response.Error(ctx, http.StatusInternalServerError, "unbind_failed")
+	}
+
+	return response.Success(ctx, "unbind_success")
 }
 
 // parseProtectedIDs 解析受保护的管理员ID字符串（支持逗号分隔）

@@ -127,6 +127,17 @@
     "ids_required": "IDs are required",
     "record_not_found": "Record not found",
     "params_error": "Parameter error",
-    "too_many_requests": "Too many requests, please try again later"
+    "too_many_requests": "Too many requests, please try again later",
+    "google_code_required": "Please enter Google Authenticator code",
+    "google_code_invalid": "Invalid Google Authenticator code",
+    "google_code_error": "Google Authenticator code error",
+    "google_authenticator_already_bound": "Google Authenticator is already bound",
+    "google_authenticator_not_bound": "Google Authenticator is not bound",
+    "secret_and_code_required": "Secret and code cannot be empty",
+    "code_required": "Code cannot be empty",
+    "bind_success": "Bind successful",
+    "bind_failed": "Bind failed",
+    "unbind_success": "Unbind successful",
+    "unbind_failed": "Unbind failed"
   }
 }

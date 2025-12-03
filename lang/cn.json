@@ -131,6 +131,17 @@
     "ids_required": "IDs不能为空",
     "record_not_found": "记录不存在",
     "params_error": "参数错误",
-    "too_many_requests": "请求过于频繁，请稍后再试"
+    "too_many_requests": "请求过于频繁，请稍后再试",
+    "google_code_required": "请输入谷歌验证码",
+    "google_code_invalid": "谷歌验证码错误",
+    "google_code_error": "谷歌验证码错误",
+    "google_authenticator_already_bound": "谷歌验证码已绑定",
+    "google_authenticator_not_bound": "谷歌验证码未绑定",
+    "secret_and_code_required": "密钥和验证码不能为空",
+    "code_required": "验证码不能为空",
+    "bind_success": "绑定成功",
+    "bind_failed": "绑定失败",
+    "unbind_success": "解绑成功",
+    "unbind_failed": "解绑失败"
   }
 }

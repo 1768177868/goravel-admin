@@ -61,13 +61,14 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 	return ctx.Response().Header(headerKey, headerValue).Success().Json(response)
 }
 
-// Error 错误响应（支持多语言，自动包含 trace_id）
+// Error 错误响应（支持多语言，自动包含 trace_id 和 error_code）
 func Error(ctx http.Context, code int, messageKey string) http.Response {
 	message := trans.Get(ctx, messageKey)
 
 	response := http.Json{
-		"code":    code,
-		"message": message,
+		"code":       code,
+		"message":    message,
+		"error_code": messageKey, // 添加错误码字段，方便前端判断
 	}
 
 	// 自动包含 trace_id，方便前端显示和用户报告错误
@@ -78,14 +79,15 @@ func Error(ctx http.Context, code int, messageKey string) http.Response {
 	return ctx.Response().Json(code, response)
 }
 
-// ValidationError 验证错误响应（支持多语言，自动包含 trace_id）
+// ValidationError 验证错误响应（支持多语言，自动包含 trace_id 和 error_code）
 func ValidationError(ctx http.Context, code int, messageKey string, errors map[string]map[string]string) http.Response {
 	message := trans.Get(ctx, messageKey)
 
 	response := http.Json{
-		"code":    code,
-		"message": message,
-		"errors":  errors,
+		"code":       code,
+		"message":    message,
+		"error_code": messageKey, // 添加错误码字段，方便前端判断
+		"errors":     errors,
 	}
 
 	// 自动包含 trace_id，方便前端显示和用户报告错误

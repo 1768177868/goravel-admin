@@ -12,6 +12,7 @@ type Admin struct {
 	Avatar       string     `gorm:"size:255;comment:头像" json:"avatar"`
 	Email        string     `gorm:"size:100;comment:邮箱" json:"email"`
 	Phone        string     `gorm:"size:20;comment:手机号" json:"phone"`
+	GoogleSecret string     `gorm:"size:255;comment:谷歌验证码密钥" json:"-"` // 使用 json:"-" 隐藏密钥字段
 	Status       uint8      `gorm:"default:1;comment:状态 1:启用 0:禁用" json:"status"`
 	DepartmentID uint       `gorm:"index;comment:部门ID" json:"department_id"`
 	Department   Department `gorm:"foreignKey:DepartmentID" json:"department"`
