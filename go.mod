@@ -22,13 +22,13 @@ require (
 	github.com/goravel/sqlite v1.4.1-0.20251004131812-ab9e59222309
 	github.com/goravel/sqlserver v1.4.1-0.20251004130832-c84ae22a9d68
 	github.com/gorilla/websocket v1.5.0
-	github.com/jpillora/overseer v1.1.6
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/mojocn/base64Captcha v1.3.6
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.5.0
+	github.com/redis/go-redis/v9 v9.14.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -56,7 +56,6 @@ require (
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/RichardKnop/logging v0.0.0-20190827224416-1a693bdd4fae // indirect
 	github.com/RichardKnop/machinery/v2 v2.0.13 // indirect
-	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
@@ -151,7 +150,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/jpillora/s3 v1.1.4 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
@@ -190,7 +188,6 @@ require (
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.0 // indirect
 	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
-	github.com/redis/go-redis/v9 v9.14.0 // indirect
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect

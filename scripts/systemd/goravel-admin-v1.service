@@ -1,5 +1,5 @@
 [Unit]
-Description=Goravel Admin Application (Port 3001)
+Description=Goravel Admin Application (v1 - Port 3000)
 After=network.target mysql.service
 Requires=network.target
 
@@ -7,31 +7,25 @@ Requires=network.target
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/www/goravel-admin
-Environment="APP_PORT=3001"
-ExecStart=/www/goravel-admin/main
+WorkingDirectory=/www/goravel-admin/v1
+ExecStart=/www/goravel-admin/v1/main
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=goravel-admin-3001
+SyslogIdentifier=goravel-admin-v1
 
 # 优雅关闭配置
 KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=30
 
-# 环境变量（可选，如果不在 .env 文件中配置）
-# Environment="APP_ENV=production"
-# Environment="APP_DEBUG=false"
-# Environment="APP_URL=https://your-domain.com"
-
 # 安全设置
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/www/goravel-admin/storage
+ReadWritePaths=/www/goravel-admin/v1/storage
 
 # 资源限制
 LimitNOFILE=65535
