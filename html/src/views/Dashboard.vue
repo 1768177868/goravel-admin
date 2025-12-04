@@ -149,10 +149,8 @@ import {
   getCount, 
   getUserAccessSource, 
   getWeeklyUserActivity, 
-  getMonthlySales,
-  createDashboardSSE 
+  getMonthlySales
 } from '../api/dashboard'
-import { createSSEConnection, closeSSEConnection } from '../utils/sse'
 import {
   User,
   View,
@@ -243,7 +241,7 @@ const deviceData = ref([])
 const regionData = ref([])
 
 // Dashboard SSE 连接
-let dashboardEventSource = null
+let dashboardRefreshTimer = null // 定时刷新定时器
 
 // 更新统计数据
 const updateStats = (countData) => {
@@ -342,55 +340,15 @@ const updateRegionChart = (regionDataArray) => {
   }
 }
 
-// 启动 SSE 实时更新
-const startDashboardSSE = () => {
-  try {
-    const url = createDashboardSSE({ interval: 5 })
-    dashboardEventSource = createSSEConnection(url, {
-      onMessage: (data) => {
-        if (data.type === 'dashboard_data') {
-          const dashboardData = data.data || {}
-          
-          // 更新统计数据
-          if (dashboardData.count) {
-            updateStats(dashboardData.count)
-          }
-          
-          // 更新访问来源
-          if (dashboardData.user_access_source) {
-            updateAccessSourceChart(dashboardData.user_access_source)
-          }
-          
-          // 更新每周活动
-          if (dashboardData.weekly_user_activity) {
-            updateVisitTrendChart(dashboardData.weekly_user_activity)
-          }
-          
-          // 更新每月销售（如果有）
-          if (dashboardData.monthly_sales) {
-            // 可以在这里更新销售相关的图表
-          }
-        }
-      },
-      onError: (error) => {
-        console.error('Dashboard SSE error:', error)
-        // SSE 连接失败时，降级到定时刷新
-        if (dashboardEventSource && dashboardEventSource.readyState === EventSource.CLOSED) {
-          closeSSEConnection(dashboardEventSource)
-          dashboardEventSource = null
-          // 可以启动定时刷新作为降级方案
-          loadDashboardData()
-        }
-      },
-      onOpen: () => {
-        console.log('Dashboard SSE connected')
-      }
-    })
-  } catch (error) {
-    console.error('Failed to start Dashboard SSE:', error)
-    // 降级到普通 API 调用
+// 启动定时刷新 Dashboard 数据
+const startDashboardRefresh = () => {
+  // 立即加载一次
+  loadDashboardData()
+  
+  // 每5秒刷新一次
+  dashboardRefreshTimer = setInterval(() => {
     loadDashboardData()
-  }
+  }, 5000)
 }
 
 // 加载 Dashboard 数据（降级方案）
@@ -705,8 +663,8 @@ const initCharts = async () => {
 
 onMounted(() => {
   initCharts()
-  // 优先使用 SSE 实时更新
-  startDashboardSSE()
+  // 启动定时刷新 Dashboard 数据
+  startDashboardRefresh()
 })
 
 onBeforeUnmount(() => {
@@ -718,10 +676,10 @@ onBeforeUnmount(() => {
 })
 
 onUnmounted(() => {
-  // 关闭 SSE 连接
-  if (dashboardEventSource) {
-    closeSSEConnection(dashboardEventSource)
-    dashboardEventSource = null
+  // 清除定时刷新
+  if (dashboardRefreshTimer) {
+    clearInterval(dashboardRefreshTimer)
+    dashboardRefreshTimer = null
   }
 })
 </script>

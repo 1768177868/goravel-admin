@@ -903,7 +903,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, nextTick, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
@@ -1536,14 +1537,8 @@ const getProcessStatusType = (status) => {
   return 'info'
 }
 
-onMounted(() => {
-  // 初始化图表
-  initCharts()
-  // 优先使用 SSE 实时推送
-  startSSEStream()
-})
-
-onUnmounted(() => {
+// 清理函数：关闭SSE连接和定时器
+const cleanup = () => {
   // 关闭 SSE 连接
   if (eventSource) {
     closeSSEConnection(eventSource)
@@ -1554,6 +1549,46 @@ onUnmounted(() => {
     clearInterval(refreshTimer)
     refreshTimer = null
   }
+}
+
+onMounted(() => {
+  // 初始化图表
+  initCharts()
+  // 优先使用 SSE 实时推送
+  startSSEStream()
+})
+
+// 路由离开前清理（确保路由切换时断开连接）
+onBeforeRouteLeave(() => {
+  cleanup()
+})
+
+// 组件被缓存时清理（keep-alive场景）
+onDeactivated(() => {
+  cleanup()
+  // 移除窗口大小监听
+  window.removeEventListener('resize', handleResize)
+})
+
+// 组件重新激活时重新启动SSE（keep-alive场景）
+onActivated(() => {
+  // 重新添加窗口大小监听
+  window.addEventListener('resize', handleResize)
+  // 如果图表未初始化，先初始化图表
+  if (!cpuChartInstance) {
+    initCharts()
+  } else {
+    // 图表已存在，只需要调整大小
+    handleResize()
+  }
+  // 如果SSE连接不存在，重新启动
+  if (!eventSource) {
+    startSSEStream()
+  }
+})
+
+onUnmounted(() => {
+  cleanup()
   // 移除窗口大小监听
   window.removeEventListener('resize', handleResize)
   // 销毁图表实例
