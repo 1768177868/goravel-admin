@@ -1,6 +1,7 @@
 ﻿package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	nethttp "net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/redis/go-redis/v9"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/load"
@@ -272,11 +274,7 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	result := map[string]any{
 		"name":        "mysql",
 		"type":        "remote",
-		"cpu":         0.0,
-		"memory":      0,
 		"status":      "disconnected",
-		"rss":         0,
-		"vms":         0,
 		"version":     "",
 		"uptime":      0,
 		"threads":     0,
@@ -299,9 +297,11 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	if !isLocalHost(dbHost) {
 		result["host"] = fmt.Sprintf("%s:%d", dbHost, dbPort)
 		result["type"] = "remote"
+		// 云数据库无法获取进程信息（CPU、内存、PID等），不设置这些字段
 	} else {
 		result["host"] = fmt.Sprintf("%s:%d", dbHost, dbPort)
 		result["type"] = "local"
+		// 本地数据库可能会通过进程监控获取CPU、内存等信息，但这里先不设置
 	}
 
 	// 尝试连接数据库获取信息
@@ -414,11 +414,7 @@ func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 	result := map[string]any{
 		"name":                     "redis",
 		"type":                     "remote",
-		"cpu":                      0.0,
-		"memory":                   0,
 		"status":                   "disconnected",
-		"rss":                      0,
-		"vms":                      0,
 		"version":                  "",
 		"used_memory":              0,
 		"used_memory_human":        "",
@@ -437,37 +433,47 @@ func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 	// 获取Redis连接配置
 	redisHost := facades.Config().GetString("database.redis.default.host", "")
 	redisPort := facades.Config().GetInt("database.redis.default.port", 6379)
+	redisPassword := facades.Config().GetString("database.redis.default.password", "")
+	redisDB := facades.Config().GetInt("database.redis.default.database", 0)
 
 	// 检查是否为本地Redis
 	if !isLocalHost(redisHost) {
 		result["host"] = fmt.Sprintf("%s:%d", redisHost, redisPort)
 		result["type"] = "remote"
+		// 云数据库无法获取进程信息（CPU、PID等），不设置这些字段
+		// 但可以通过INFO命令获取内存使用情况
 	} else {
 		result["host"] = fmt.Sprintf("%s:%d", redisHost, redisPort)
 		result["type"] = "local"
+		// 本地Redis可能会通过进程监控获取CPU等信息，但这里先不设置
 	}
 
-	// 尝试连接Redis获取信息
-	cache := facades.Cache()
-	if cache == nil {
-		return result
-	}
+	// 创建Redis客户端直接连接（用于执行INFO命令）
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", redisHost, redisPort),
+		Password: redisPassword,
+		DB:       redisDB,
+	})
+	defer redisClient.Close()
 
-	// 尝试通过测试连接来验证Redis是否可用
-	testKey := "__monitor_test__"
-	testValue := "test"
-	if err := cache.Put(testKey, testValue, 1*time.Second); err == nil {
-		result["status"] = "connected"
-		// 清理测试键
-		cache.Forget(testKey)
-
-		// 注意：由于Goravel的Cache接口限制，无法直接执行Redis INFO命令
-		// Redis详细信息需要通过进程监控获取（CPU、内存等）
-		// 或者需要直接使用Redis客户端库来获取
-		// 这里先返回基本连接状态，详细信息通过进程监控补充
-	} else {
+	// 测试连接
+	redisCtx := context.Background()
+	if err := redisClient.Ping(redisCtx).Err(); err != nil {
 		result["status"] = "disconnected"
 		return result
+	}
+
+	result["status"] = "connected"
+
+	// 执行INFO命令获取详细信息
+	infoStr, err := redisClient.Info(redisCtx).Result()
+	if err == nil && infoStr != "" {
+		// 解析Redis INFO命令返回的信息
+		parseRedisInfo(infoStr, result)
+		// 将 used_memory 也设置到 memory 字段（用于兼容）
+		if usedMemory, ok := result["used_memory"].(int64); ok {
+			result["memory"] = usedMemory
+		}
 	}
 
 	return result
