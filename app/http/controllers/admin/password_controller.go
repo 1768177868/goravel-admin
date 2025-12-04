@@ -5,6 +5,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/utils/errorlog"
@@ -36,27 +37,22 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
-	oldPassword := ctx.Request().Input("old_password")
-	newPassword := ctx.Request().Input("new_password")
-	confirmPassword := ctx.Request().Input("confirm_password")
-
-	if oldPassword == "" || newPassword == "" || confirmPassword == "" {
-		return response.Error(ctx, http.StatusBadRequest, "params_required")
+	// 使用请求验证
+	var updatePasswordRequest adminrequests.UpdatePassword
+	errors, err := ctx.Request().ValidateRequest(&updatePasswordRequest)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	if newPassword != confirmPassword {
-		return response.Error(ctx, http.StatusBadRequest, "password_not_match")
-	}
-
-	if len(newPassword) < 6 {
-		return response.Error(ctx, http.StatusBadRequest, "password_length_error")
-	}
-
-	if !facades.Hash().Check(oldPassword, admin.Password) {
+	// 验证旧密码是否正确
+	if !facades.Hash().Check(updatePasswordRequest.OldPassword, admin.Password) {
 		return response.Error(ctx, http.StatusBadRequest, "old_password_error")
 	}
 
-	hashedPassword, err := facades.Hash().Make(newPassword)
+	hashedPassword, err := facades.Hash().Make(updatePasswordRequest.NewPassword)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 	}
@@ -76,14 +72,15 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 // ResetPassword 重置密码（管理员操作）
 func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	newPassword := ctx.Request().Input("password")
 
-	if newPassword == "" {
-		return response.Error(ctx, http.StatusBadRequest, "new_password_required")
+	// 使用请求验证
+	var resetPasswordRequest adminrequests.ResetPassword
+	errors, err := ctx.Request().ValidateRequest(&resetPasswordRequest)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
-
-	if len(newPassword) < 6 {
-		return response.Error(ctx, http.StatusBadRequest, "password_length_error")
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
 	var admin models.Admin
@@ -91,7 +88,7 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
-	hashedPassword, err := facades.Hash().Make(newPassword)
+	hashedPassword, err := facades.Hash().Make(resetPasswordRequest.Password)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 	}

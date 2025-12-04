@@ -29,6 +29,7 @@ func (receiver *ValidationServiceProvider) rules() []validation.Rule {
 	return []validation.Rule{
 		&rules.Exists{},
 		&rules.NotExists{},
+		&rules.Same{},
 	}
 }
 

@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -83,10 +85,20 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 
 	// 验证IP格式
 	if errMsg := utils.ValidateBlacklistIP(ip); errMsg != "" {
-		return ctx.Response().Json(http.StatusBadRequest, http.Json{
-			"code":    http.StatusBadRequest,
-			"message": errMsg,
-		})
+		// 根据错误消息类型返回对应的错误码
+		if strings.Contains(errMsg, "不能为空") {
+			return response.Error(ctx, http.StatusBadRequest, "ip_address_required")
+		} else if strings.Contains(errMsg, "CIDR格式错误") {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_cidr_format")
+		} else if strings.Contains(errMsg, "IP范围格式错误") {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_ip_range_format")
+		} else if strings.Contains(errMsg, "起始IP格式错误") || strings.Contains(errMsg, "结束IP格式错误") {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_ip_format")
+		} else if strings.Contains(errMsg, "必须大于等于") {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_ip_range_order")
+		} else {
+			return response.Error(ctx, http.StatusBadRequest, "invalid_ip_format")
+		}
 	}
 
 	now := carbon.Now()
@@ -135,10 +147,20 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 	if ip != "" {
 		// 验证IP格式
 		if errMsg := utils.ValidateBlacklistIP(ip); errMsg != "" {
-			return ctx.Response().Json(http.StatusBadRequest, http.Json{
-				"code":    http.StatusBadRequest,
-				"message": errMsg,
-			})
+			// 根据错误消息类型返回对应的错误码
+			if strings.Contains(errMsg, "不能为空") {
+				return response.Error(ctx, http.StatusBadRequest, "ip_address_required")
+			} else if strings.Contains(errMsg, "CIDR格式错误") {
+				return response.Error(ctx, http.StatusBadRequest, "invalid_cidr_format")
+			} else if strings.Contains(errMsg, "IP范围格式错误") {
+				return response.Error(ctx, http.StatusBadRequest, "invalid_ip_range_format")
+			} else if strings.Contains(errMsg, "起始IP格式错误") || strings.Contains(errMsg, "结束IP格式错误") {
+				return response.Error(ctx, http.StatusBadRequest, "invalid_ip_format")
+			} else if strings.Contains(errMsg, "必须大于等于") {
+				return response.Error(ctx, http.StatusBadRequest, "invalid_ip_range_order")
+			} else {
+				return response.Error(ctx, http.StatusBadRequest, "invalid_ip_format")
+			}
 		}
 		blacklist.IP = ip
 	}

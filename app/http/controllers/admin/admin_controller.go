@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/goravel/framework/contracts/database/orm"
@@ -11,6 +10,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
 	"goravel/app/models"
@@ -267,19 +267,18 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 // @Router       /api/admin/admins [post]
 // @Security     BearerAuth
 func (r *AdminController) Store(ctx http.Context) http.Response {
-	username := ctx.Request().Input("username")
-	password := ctx.Request().Input("password")
-	nickname := ctx.Request().Input("nickname")
-	email := ctx.Request().Input("email")
-	phone := ctx.Request().Input("phone")
-	departmentID := cast.ToUint(ctx.Request().Input("department_id", "0"))
-	status := cast.ToUint8(ctx.Request().Input("status", "0"))
-
-	if username == "" || password == "" {
-		return response.Error(ctx, http.StatusBadRequest, "username_and_password_required")
+	// 使用请求验证
+	var adminCreate adminrequests.AdminCreate
+	errors, err := ctx.Request().ValidateRequest(&adminCreate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Exists()
+	// 检查用户名是否已存在
+	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", adminCreate.Username).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -288,21 +287,21 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	// 加密密码
-	hashedPassword, err := facades.Hash().Make(password)
+	hashedPassword, err := facades.Hash().Make(adminCreate.Password)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 	}
 
 	now := carbon.Now()
 	adminData := map[string]any{
-		"username":      username,
+		"username":      adminCreate.Username,
 		"password":      hashedPassword,
-		"nickname":      nickname,
+		"nickname":      adminCreate.Nickname,
 		"avatar":        "",
-		"email":         email,
-		"phone":         phone,
-		"department_id": departmentID,
-		"status":        status,
+		"email":         adminCreate.Email,
+		"phone":         adminCreate.Phone,
+		"department_id": adminCreate.DepartmentID,
+		"status":        adminCreate.Status,
 		"created_at":    now,
 		"updated_at":    now,
 	}
@@ -310,32 +309,26 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Table("admins").Create(adminData); err != nil {
 		errorlog.RecordHTTP(ctx, "admin", "Failed to create admin", map[string]any{
 			"error":    err.Error(),
-			"username": username,
+			"username": adminCreate.Username,
 		}, "Create admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("username", adminCreate.Username).First(&admin); err != nil {
 		errorlog.RecordHTTP(ctx, "admin", "Failed to query created admin", map[string]any{
 			"error":    err.Error(),
-			"username": username,
+			"username": adminCreate.Username,
 		}, "Query created admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
-	if roleIds := ctx.Request().Input("role_ids"); roleIds != "" {
-		var roleIDs []uint
-		for _, idStr := range ctx.Request().InputArray("role_ids") {
-			if id, err := strconv.ParseUint(idStr, 10, 32); err == nil {
-				roleIDs = append(roleIDs, uint(id))
-			}
-		}
-		if err := r.adminService.SyncRoles(&admin, roleIDs); err != nil {
+	if len(adminCreate.RoleIDs) > 0 {
+		if err := r.adminService.SyncRoles(&admin, adminCreate.RoleIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles", map[string]any{
 				"error":    err.Error(),
 				"admin_id": admin.ID,
-				"role_ids": roleIDs,
+				"role_ids": adminCreate.RoleIDs,
 			}, "Sync admin roles error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 		}
@@ -378,37 +371,45 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	allProtectedIDs := r.getAllProtectedAdminIDs()
 	isProtected := allProtectedIDs[id]
 
-	nickname := ctx.Request().Input("nickname")
-	email := ctx.Request().Input("email")
-	phone := ctx.Request().Input("phone")
-	departmentID := cast.ToUint(ctx.Request().Input("department_id", "0"))
-	status := ctx.Request().Input("status", "")
+	// 使用请求验证
+	var adminUpdate adminrequests.AdminUpdate
+	errors, err := ctx.Request().ValidateRequest(&adminUpdate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
 
-	if nickname != "" {
-		admin.Nickname = nickname
+	if adminUpdate.Nickname != "" {
+		admin.Nickname = adminUpdate.Nickname
 	}
-	if email != "" {
-		admin.Email = email
+	if adminUpdate.Email != "" {
+		admin.Email = adminUpdate.Email
 	}
-	if phone != "" {
-		admin.Phone = phone
+	if adminUpdate.Phone != "" {
+		admin.Phone = adminUpdate.Phone
 	}
-	if departmentID > 0 {
-		admin.DepartmentID = departmentID
+	if adminUpdate.DepartmentID > 0 {
+		admin.DepartmentID = adminUpdate.DepartmentID
 	}
-	if status != "" {
-		newStatus := cast.ToUint8(status)
-		if isProtected && newStatus == 0 {
+	// 如果请求中提供了 status 字段，则更新状态
+	// 使用 All() 方法检查 status 字段是否存在（包括值为 0 的情况）
+	allInputs := ctx.Request().All()
+	if _, exists := allInputs["status"]; exists {
+		// 请求中提供了 status 字段，使用验证后的值
+		if isProtected && adminUpdate.Status == 0 {
 			return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_disable")
 		}
-		admin.Status = newStatus
+		admin.Status = adminUpdate.Status
 	}
 
-	if password := ctx.Request().Input("password"); password != "" {
-		hashedPassword, err := facades.Hash().Make(password)
-		if err == nil {
-			admin.Password = hashedPassword
+	if adminUpdate.Password != "" {
+		hashedPassword, err := facades.Hash().Make(adminUpdate.Password)
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 		}
+		admin.Password = hashedPassword
 	}
 
 	if err := facades.Orm().Query().Save(&admin); err != nil {
@@ -419,18 +420,12 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
-	if roleIds := ctx.Request().Input("role_ids"); roleIds != "" {
-		var roleIDs []uint
-		for _, idStr := range ctx.Request().InputArray("role_ids") {
-			if id, err := strconv.ParseUint(idStr, 10, 32); err == nil {
-				roleIDs = append(roleIDs, uint(id))
-			}
-		}
-		if err := r.adminService.SyncRoles(&admin, roleIDs); err != nil {
+	if len(adminUpdate.RoleIDs) > 0 {
+		if err := r.adminService.SyncRoles(&admin, adminUpdate.RoleIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles in update", map[string]any{
 				"error":    err.Error(),
 				"admin_id": admin.ID,
-				"role_ids": roleIDs,
+				"role_ids": adminUpdate.RoleIDs,
 			}, "Sync admin roles in update error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 		}

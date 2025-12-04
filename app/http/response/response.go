@@ -80,8 +80,29 @@ func Error(ctx http.Context, code int, messageKey string) http.Response {
 }
 
 // ValidationError 验证错误响应（支持多语言，自动包含 trace_id 和 error_code）
+// 自动提取第一个错误信息并添加到 message 中，方便前端直接显示
 func ValidationError(ctx http.Context, code int, messageKey string, errors map[string]map[string]string) http.Response {
-	message := trans.Get(ctx, messageKey)
+	baseMessage := trans.Get(ctx, messageKey)
+
+	// 提取第一个错误信息
+	var firstError string
+	for _, fieldErrors := range errors {
+		for _, errorMsg := range fieldErrors {
+			firstError = errorMsg
+			break
+		}
+		if firstError != "" {
+			break
+		}
+	}
+
+	// 如果有具体错误信息，将其添加到 message 中
+	var message string
+	if firstError != "" {
+		message = firstError
+	} else {
+		message = baseMessage
+	}
 
 	response := http.Json{
 		"code":       code,
