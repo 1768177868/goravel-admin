@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/utils/errorlog"
@@ -72,27 +73,25 @@ func (r *DictionaryController) Show(ctx http.Context) http.Response {
 
 // Store 创建字典
 func (r *DictionaryController) Store(ctx http.Context) http.Response {
-	dictType := ctx.Request().Input("type")
-	label := ctx.Request().Input("label")
-	value := ctx.Request().Input("value")
-	description := ctx.Request().Input("description")
-	status := cast.ToUint8(ctx.Request().Input("status", "0"))
-	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
-	remark := ctx.Request().Input("remark")
-
-	if dictType == "" || label == "" || value == "" {
-		return response.Error(ctx, http.StatusBadRequest, "dictionary_type_label_value_required")
+	// 使用请求验证
+	var dictionaryCreate adminrequests.DictionaryCreate
+	errors, err := ctx.Request().ValidateRequest(&dictionaryCreate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
 	now := carbon.Now()
 	dictionaryData := map[string]interface{}{
-		"type":        dictType,
-		"label":       label,
-		"value":       value,
-		"description": description,
-		"status":      status,
-		"sort":        sort,
-		"remark":      remark,
+		"type":        dictionaryCreate.Type,
+		"label":       dictionaryCreate.Label,
+		"value":       dictionaryCreate.Value,
+		"description": dictionaryCreate.Description,
+		"status":      dictionaryCreate.Status,
+		"sort":        dictionaryCreate.Sort,
+		"remark":      dictionaryCreate.Remark,
 		"created_at":  now,
 		"updated_at":  now,
 	}
@@ -100,18 +99,18 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Table("dictionaries").Create(dictionaryData); err != nil {
 		errorlog.RecordHTTP(ctx, "dictionary", "Failed to create dictionary", map[string]any{
 			"error": err.Error(),
-			"type":  dictType,
-			"label": label,
+			"type":  dictionaryCreate.Type,
+			"label": dictionaryCreate.Label,
 		}, "Create dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("type", dictType).Where("value", value).First(&dictionary); err != nil {
+	if err := facades.Orm().Query().Where("type", dictionaryCreate.Type).Where("value", dictionaryCreate.Value).First(&dictionary); err != nil {
 		errorlog.RecordHTTP(ctx, "dictionary", "Failed to query created dictionary", map[string]any{
 			"error": err.Error(),
-			"type":  dictType,
-			"value": value,
+			"type":  dictionaryCreate.Type,
+			"value": dictionaryCreate.Value,
 		}, "Query created dictionary error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -128,34 +127,39 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
 	}
 
-	dictType := ctx.Request().Input("type")
-	label := ctx.Request().Input("label")
-	value := ctx.Request().Input("value")
-	description := ctx.Request().Input("description")
-	status := ctx.Request().Input("status", "")
-	sort := ctx.Request().Input("sort", "")
-	remark := ctx.Request().Input("remark")
+	// 使用请求验证
+	var dictionaryUpdate adminrequests.DictionaryUpdate
+	errors, err := ctx.Request().ValidateRequest(&dictionaryUpdate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
 
-	if dictType != "" {
-		dictionary.Type = dictType
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["type"]; exists {
+		dictionary.Type = dictionaryUpdate.Type
 	}
-	if label != "" {
-		dictionary.Label = label
+	if _, exists := allInputs["label"]; exists {
+		dictionary.Label = dictionaryUpdate.Label
 	}
-	if value != "" {
-		dictionary.Value = value
+	if _, exists := allInputs["value"]; exists {
+		dictionary.Value = dictionaryUpdate.Value
 	}
-	if description != "" {
-		dictionary.Description = description
+	if _, exists := allInputs["description"]; exists {
+		dictionary.Description = dictionaryUpdate.Description
 	}
-	if status != "" {
-		dictionary.Status = cast.ToUint8(status)
+	if _, exists := allInputs["status"]; exists {
+		dictionary.Status = dictionaryUpdate.Status
 	}
-	if sort != "" {
-		dictionary.Sort = cast.ToInt(sort)
+	if _, exists := allInputs["sort"]; exists {
+		dictionary.Sort = dictionaryUpdate.Sort
 	}
-	if remark != "" {
-		dictionary.Remark = remark
+	if _, exists := allInputs["remark"]; exists {
+		dictionary.Remark = dictionaryUpdate.Remark
 	}
 
 	if err := facades.Orm().Query().Save(&dictionary); err != nil {

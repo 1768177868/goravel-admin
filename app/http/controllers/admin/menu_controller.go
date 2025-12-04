@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -49,27 +50,18 @@ func (r *MenuController) Show(ctx http.Context) http.Response {
 
 // Store 创建菜单
 func (r *MenuController) Store(ctx http.Context) http.Response {
-	parentID := cast.ToUint(ctx.Request().Input("parent_id", "0"))
-	title := ctx.Request().Input("title")
-	slug := ctx.Request().Input("slug")
-	icon := ctx.Request().Input("icon")
-	path := ctx.Request().Input("path")
-	component := ctx.Request().Input("component")
-	permission := ctx.Request().Input("permission")
-	menuType := cast.ToUint8(ctx.Request().Input("type", "1"))
-	status := cast.ToUint8(ctx.Request().Input("status", "0"))
-	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
-	isHidden := cast.ToUint8(ctx.Request().Input("is_hidden", "0"))
-
-	if title == "" {
-		return response.Error(ctx, http.StatusBadRequest, "menu_title_required")
+	// 使用请求验证
+	var menuCreate adminrequests.MenuCreate
+	errors, err := ctx.Request().ValidateRequest(&menuCreate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	if slug == "" {
-		return response.Error(ctx, http.StatusBadRequest, "menu_slug_required")
-	}
-
-	exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", slug).Exists()
+	// 检查 slug 是否已存在
+	exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuCreate.Slug).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -78,18 +70,18 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	}
 
 	now := carbon.Now()
-	menuData := map[string]interface{}{
-		"parent_id":  parentID,
-		"title":      title,
-		"slug":       slug,
-		"icon":       icon,
-		"path":       path,
-		"component":  component,
-		"permission": permission,
-		"type":       menuType,
-		"status":     status,
-		"sort":       sort,
-		"is_hidden":  isHidden,
+	menuData := map[string]any{
+		"parent_id":  menuCreate.ParentID,
+		"title":      menuCreate.Title,
+		"slug":       menuCreate.Slug,
+		"icon":       menuCreate.Icon,
+		"path":       menuCreate.Path,
+		"component":  menuCreate.Component,
+		"permission": menuCreate.Permission,
+		"type":       menuCreate.Type,
+		"status":     menuCreate.Status,
+		"sort":       menuCreate.Sort,
+		"is_hidden":  menuCreate.IsHidden,
 		"created_at": now,
 		"updated_at": now,
 	}
@@ -97,17 +89,17 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Table("menus").Create(menuData); err != nil {
 		errorlog.RecordHTTP(ctx, "menu", "Failed to create menu", map[string]any{
 			"error": err.Error(),
-			"title": title,
-			"slug":  slug,
+			"title": menuCreate.Title,
+			"slug":  menuCreate.Slug,
 		}, "Create menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var menu models.Menu
-	if err := facades.Orm().Query().Where("slug", slug).First(&menu); err != nil {
+	if err := facades.Orm().Query().Where("slug", menuCreate.Slug).First(&menu); err != nil {
 		errorlog.RecordHTTP(ctx, "menu", "Failed to query created menu", map[string]any{
 			"error": err.Error(),
-			"slug":  slug,
+			"slug":  menuCreate.Slug,
 		}, "Query created menu error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -124,55 +116,59 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
 	}
 
-	parentID := ctx.Request().Input("parent_id", "")
-	title := ctx.Request().Input("title")
-	slug := ctx.Request().Input("slug")
-	icon := ctx.Request().Input("icon")
-	path := ctx.Request().Input("path")
-	component := ctx.Request().Input("component")
-	permission := ctx.Request().Input("permission")
-	menuType := ctx.Request().Input("type", "")
-	status := ctx.Request().Input("status", "")
-	sort := ctx.Request().Input("sort", "")
-	isHidden := ctx.Request().Input("is_hidden", "")
-
-	if title != "" {
-		menu.Title = title
+	// 使用请求验证
+	var menuUpdate adminrequests.MenuUpdate
+	errors, err := ctx.Request().ValidateRequest(&menuUpdate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
-	if slug != "" {
-		exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", slug).Where("id != ?", id).Exists()
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
+
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["title"]; exists {
+		menu.Title = menuUpdate.Title
+	}
+	if _, exists := allInputs["slug"]; exists {
+		// 检查 slug 是否已被其他菜单使用
+		exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuUpdate.Slug).Where("id != ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 		}
 		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "menu_slug_exists")
 		}
-		menu.Slug = slug
+		menu.Slug = menuUpdate.Slug
 	}
-	if parentID != "" {
-		menu.ParentID = cast.ToUint(parentID)
+	if _, exists := allInputs["parent_id"]; exists {
+		menu.ParentID = menuUpdate.ParentID
 	}
-	menu.Icon = icon
-	if path != "" {
-		menu.Path = path
+	if _, exists := allInputs["icon"]; exists {
+		menu.Icon = menuUpdate.Icon
 	}
-	if component != "" {
-		menu.Component = component
+	if _, exists := allInputs["path"]; exists {
+		menu.Path = menuUpdate.Path
 	}
-	if permission != "" {
-		menu.Permission = permission
+	if _, exists := allInputs["component"]; exists {
+		menu.Component = menuUpdate.Component
 	}
-	if menuType != "" {
-		menu.Type = cast.ToUint8(menuType)
+	if _, exists := allInputs["permission"]; exists {
+		menu.Permission = menuUpdate.Permission
 	}
-	if status != "" {
-		menu.Status = cast.ToUint8(status)
+	if _, exists := allInputs["type"]; exists {
+		menu.Type = menuUpdate.Type
 	}
-	if sort != "" {
-		menu.Sort = cast.ToInt(sort)
+	if _, exists := allInputs["status"]; exists {
+		menu.Status = menuUpdate.Status
 	}
-	if isHidden != "" {
-		menu.IsHidden = cast.ToUint8(isHidden)
+	if _, exists := allInputs["sort"]; exists {
+		menu.Sort = menuUpdate.Sort
+	}
+	if _, exists := allInputs["is_hidden"]; exists {
+		menu.IsHidden = menuUpdate.IsHidden
 	}
 
 	if err := facades.Orm().Query().Save(&menu); err != nil {

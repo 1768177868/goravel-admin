@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -89,32 +90,27 @@ func (r *DepartmentController) Show(ctx http.Context) http.Response {
 
 // Store 创建部门
 func (r *DepartmentController) Store(ctx http.Context) http.Response {
-	parentID := cast.ToUint(ctx.Request().Input("parent_id", "0"))
-	name := ctx.Request().Input("name")
-	code := ctx.Request().Input("code")
-	leader := ctx.Request().Input("leader")
-	phone := ctx.Request().Input("phone")
-	email := ctx.Request().Input("email")
-	status := cast.ToUint8(ctx.Request().Input("status", "0"))
-
-	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
-	remark := ctx.Request().Input("remark")
-
-	if name == "" {
-		return response.Error(ctx, http.StatusBadRequest, "department_name_required")
+	// 使用请求验证
+	var departmentCreate adminrequests.DepartmentCreate
+	errors, err := ctx.Request().ValidateRequest(&departmentCreate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
 	now := carbon.Now()
-	departmentData := map[string]interface{}{
-		"parent_id":  parentID,
-		"name":       name,
-		"code":       code,
-		"leader":     leader,
-		"phone":      phone,
-		"email":      email,
-		"status":     status, // 明确设置 status，即使是 0 也会被保存
-		"sort":       sort,
-		"remark":     remark,
+	departmentData := map[string]any{
+		"parent_id":  departmentCreate.ParentID,
+		"name":       departmentCreate.Name,
+		"code":       departmentCreate.Code,
+		"leader":     departmentCreate.Leader,
+		"phone":      departmentCreate.Phone,
+		"email":      departmentCreate.Email,
+		"status":     departmentCreate.Status,
+		"sort":       departmentCreate.Sort,
+		"remark":     departmentCreate.Remark,
 		"created_at": now,
 		"updated_at": now,
 	}
@@ -122,16 +118,16 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Table("departments").Create(departmentData); err != nil {
 		errorlog.RecordHTTP(ctx, "department", "Failed to create department", map[string]any{
 			"error": err.Error(),
-			"name":  name,
+			"name":  departmentCreate.Name,
 		}, "Create department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var department models.Department
-	if err := facades.Orm().Query().Where("name", name).First(&department); err != nil {
+	if err := facades.Orm().Query().Where("name", departmentCreate.Name).First(&department); err != nil {
 		errorlog.RecordHTTP(ctx, "department", "Failed to query created department", map[string]any{
 			"error": err.Error(),
-			"name":  name,
+			"name":  departmentCreate.Name,
 		}, "Query created department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -149,47 +145,50 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "department_not_found")
 	}
 
-	parentID := ctx.Request().Input("parent_id", "")
-	name := ctx.Request().Input("name")
-	code := ctx.Request().Input("code")
-	leader := ctx.Request().Input("leader")
-	phone := ctx.Request().Input("phone")
-	email := ctx.Request().Input("email")
-	status := ctx.Request().Input("status", "")
-	sort := ctx.Request().Input("sort", "")
-	remark := ctx.Request().Input("remark")
+	// 使用请求验证
+	var departmentUpdate adminrequests.DepartmentUpdate
+	errors, err := ctx.Request().ValidateRequest(&departmentUpdate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
 
-	if name != "" {
-		department.Name = name
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["name"]; exists {
+		department.Name = departmentUpdate.Name
 	}
-	if parentID != "" {
-		department.ParentID = cast.ToUint(parentID)
+	if _, exists := allInputs["parent_id"]; exists {
+		department.ParentID = departmentUpdate.ParentID
 	}
-	if code != "" {
-		department.Code = code
+	if _, exists := allInputs["code"]; exists {
+		department.Code = departmentUpdate.Code
 	}
-	if leader != "" {
-		department.Leader = leader
+	if _, exists := allInputs["leader"]; exists {
+		department.Leader = departmentUpdate.Leader
 	}
-	if phone != "" {
-		department.Phone = phone
+	if _, exists := allInputs["phone"]; exists {
+		department.Phone = departmentUpdate.Phone
 	}
-	if email != "" {
-		department.Email = email
+	if _, exists := allInputs["email"]; exists {
+		department.Email = departmentUpdate.Email
 	}
-	if status != "" {
-		department.Status = cast.ToUint8(status)
+	if _, exists := allInputs["status"]; exists {
+		department.Status = departmentUpdate.Status
 	}
-	if sort != "" {
-		department.Sort = cast.ToInt(sort)
+	if _, exists := allInputs["sort"]; exists {
+		department.Sort = departmentUpdate.Sort
 	}
-	if remark != "" {
-		department.Remark = remark
+	if _, exists := allInputs["remark"]; exists {
+		department.Remark = departmentUpdate.Remark
 	}
 
 	if err := facades.Orm().Query().Save(&department); err != nil {
 		errorlog.RecordHTTP(ctx, "department", "Failed to update department", map[string]any{
-			"error":        err.Error(),
+			"error":         err.Error(),
 			"department_id": department.ID,
 		}, "Update department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
@@ -228,7 +227,7 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 
 	if _, err := facades.Orm().Query().Delete(&department); err != nil {
 		errorlog.RecordHTTP(ctx, "department", "Failed to delete department", map[string]any{
-			"error":        err.Error(),
+			"error":         err.Error(),
 			"department_id": department.ID,
 		}, "Delete department error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")

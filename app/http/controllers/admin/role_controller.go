@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -83,18 +84,18 @@ func (r *RoleController) Show(ctx http.Context) http.Response {
 
 // Store 创建角色
 func (r *RoleController) Store(ctx http.Context) http.Response {
-	name := ctx.Request().Input("name")
-	slug := ctx.Request().Input("slug")
-	description := ctx.Request().Input("description")
-	status := cast.ToUint8(ctx.Request().Input("status", "0"))
-	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
-
-	if name == "" || slug == "" {
-		return response.Error(ctx, http.StatusBadRequest, "role_name_and_slug_required")
+	// 使用请求验证
+	var roleCreate adminrequests.RoleCreate
+	errors, err := ctx.Request().ValidateRequest(&roleCreate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
 	// 检查名称是否已存在
-	exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Exists()
+	exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", roleCreate.Name).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -103,7 +104,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查标识是否已存在
-	exists, err = facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Exists()
+	exists, err = facades.Orm().Query().Model(&models.Role{}).Where("slug", roleCreate.Slug).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -113,11 +114,11 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 
 	now := carbon.Now()
 	roleData := map[string]interface{}{
-		"name":        name,
-		"slug":        slug,
-		"description": description,
-		"status":      status, // 明确设置 status，即使是 0 也会被保存
-		"sort":        sort,
+		"name":        roleCreate.Name,
+		"slug":        roleCreate.Slug,
+		"description": roleCreate.Description,
+		"status":      roleCreate.Status,
+		"sort":        roleCreate.Sort,
 		"created_at":  now,
 		"updated_at":  now,
 	}
@@ -125,17 +126,17 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Table("roles").Create(roleData); err != nil {
 		errorlog.RecordHTTP(ctx, "role", "Failed to create role", map[string]any{
 			"error": err.Error(),
-			"name":  name,
-			"slug":  slug,
+			"name":  roleCreate.Name,
+			"slug":  roleCreate.Slug,
 		}, "Create role error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var role models.Role
-	if err := facades.Orm().Query().Where("slug", slug).First(&role); err != nil {
+	if err := facades.Orm().Query().Where("slug", roleCreate.Slug).First(&role); err != nil {
 		errorlog.RecordHTTP(ctx, "role", "Failed to query created role", map[string]any{
 			"error": err.Error(),
-			"slug":  slug,
+			"slug":  roleCreate.Slug,
 		}, "Query created role error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -145,8 +146,8 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	if len(permissionIDs) > 0 {
 		if err := r.roleService.SyncPermissions(&role, permissionIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role permissions", map[string]any{
-				"error":         err.Error(),
-				"role_id":       role.ID,
+				"error":          err.Error(),
+				"role_id":        role.ID,
 				"permission_ids": permissionIDs,
 			}, "Sync role permissions error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
@@ -158,8 +159,8 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	if len(menuIDs) > 0 {
 		if err := r.roleService.SyncMenus(&role, menuIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role menus", map[string]any{
-				"error":   err.Error(),
-				"role_id": role.ID,
+				"error":    err.Error(),
+				"role_id":  role.ID,
 				"menu_ids": menuIDs,
 			}, "Sync role menus error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
@@ -212,51 +213,57 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	// 检查是否是受保护的角色（通过slug判断）
 	isProtected := r.isProtectedRole(role.Slug)
 
-	name := ctx.Request().Input("name")
-	slug := ctx.Request().Input("slug")
-	description := ctx.Request().Input("description")
-	status := ctx.Request().Input("status", "")
-	sort := ctx.Request().Input("sort", "")
+	// 使用请求验证
+	var roleUpdate adminrequests.RoleUpdate
+	errors, err := ctx.Request().ValidateRequest(&roleUpdate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
 
-	if name != "" {
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["name"]; exists {
 		// 检查名称是否已被其他角色使用（排除当前角色）
-		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", name).Where("id != ?", id).Exists()
+		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", roleUpdate.Name).Where("id != ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 		}
 		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
 		}
-		role.Name = name
+		role.Name = roleUpdate.Name
 	}
-	if slug != "" {
+	if _, exists := allInputs["slug"]; exists {
 		// 受保护角色的标识不能修改
 		if isProtected {
 			return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_modify_slug")
 		}
 		// 检查标识是否已被其他角色使用（排除当前角色）
-		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", slug).Where("id != ?", id).Exists()
+		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 		}
 		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
 		}
-		role.Slug = slug
+		role.Slug = roleUpdate.Slug
 	}
-	if description != "" {
-		role.Description = description
+	if _, exists := allInputs["description"]; exists {
+		role.Description = roleUpdate.Description
 	}
-	if status != "" {
-		newStatus := cast.ToUint8(status)
+	if _, exists := allInputs["status"]; exists {
 		// 受保护角色不能禁用
-		if isProtected && newStatus == 0 {
+		if isProtected && roleUpdate.Status == 0 {
 			return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_disable")
 		}
-		role.Status = newStatus
+		role.Status = roleUpdate.Status
 	}
-	if sort != "" {
-		role.Sort = cast.ToInt(sort)
+	if _, exists := allInputs["sort"]; exists {
+		role.Sort = roleUpdate.Sort
 	}
 
 	if err := facades.Orm().Query().Save(&role); err != nil {
@@ -273,8 +280,8 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
 		if err := r.roleService.SyncPermissions(&role, permissionIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role permissions in update", map[string]any{
-				"error":         err.Error(),
-				"role_id":       role.ID,
+				"error":          err.Error(),
+				"role_id":        role.ID,
 				"permission_ids": permissionIDs,
 			}, "Sync role permissions in update error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
@@ -286,8 +293,8 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
 		if err := r.roleService.SyncMenus(&role, menuIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role menus in update", map[string]any{
-				"error":   err.Error(),
-				"role_id": role.ID,
+				"error":    err.Error(),
+				"role_id":  role.ID,
 				"menu_ids": menuIDs,
 			}, "Sync role menus in update error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")

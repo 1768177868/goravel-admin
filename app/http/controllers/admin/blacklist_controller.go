@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
+	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/utils"
@@ -75,16 +76,18 @@ func (r *BlacklistController) Show(ctx http.Context) http.Response {
 
 // Store 创建黑名单
 func (r *BlacklistController) Store(ctx http.Context) http.Response {
-	ip := ctx.Request().Input("ip")
-	remark := ctx.Request().Input("remark")
-	status := cast.ToUint8(ctx.Request().Input("status", "1"))
-
-	if ip == "" {
-		return response.Error(ctx, http.StatusBadRequest, "blacklist_ip_required")
+	// 使用请求验证
+	var blacklistCreate adminrequests.BlacklistCreate
+	errors, err := ctx.Request().ValidateRequest(&blacklistCreate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 验证IP格式
-	if errMsg := utils.ValidateBlacklistIP(ip); errMsg != "" {
+	// 验证IP格式（使用自定义验证函数）
+	if errMsg := utils.ValidateBlacklistIP(blacklistCreate.IP); errMsg != "" {
 		// 根据错误消息类型返回对应的错误码
 		if strings.Contains(errMsg, "不能为空") {
 			return response.Error(ctx, http.StatusBadRequest, "ip_address_required")
@@ -103,9 +106,9 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 
 	now := carbon.Now()
 	blacklistData := map[string]any{
-		"ip":         ip,
-		"remark":     remark,
-		"status":     status,
+		"ip":         blacklistCreate.IP,
+		"remark":     blacklistCreate.Remark,
+		"status":     blacklistCreate.Status,
 		"created_at": now,
 		"updated_at": now,
 	}
@@ -113,16 +116,16 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 	if err := facades.Orm().Query().Table("blacklists").Create(blacklistData); err != nil {
 		errorlog.RecordHTTP(ctx, "blacklist", "Failed to create blacklist", map[string]any{
 			"error": err.Error(),
-			"ip":    ip,
+			"ip":    blacklistCreate.IP,
 		}, "Create blacklist error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
 
 	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("ip", ip).First(&blacklist); err != nil {
+	if err := facades.Orm().Query().Where("ip", blacklistCreate.IP).First(&blacklist); err != nil {
 		errorlog.RecordHTTP(ctx, "blacklist", "Failed to query created blacklist", map[string]any{
 			"error": err.Error(),
-			"ip":    ip,
+			"ip":    blacklistCreate.IP,
 		}, "Query created blacklist error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
 	}
@@ -140,13 +143,22 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
 	}
 
-	ip := ctx.Request().Input("ip")
-	remark := ctx.Request().Input("remark")
-	status := ctx.Request().Input("status", "")
+	// 使用请求验证
+	var blacklistUpdate adminrequests.BlacklistUpdate
+	errors, err := ctx.Request().ValidateRequest(&blacklistUpdate)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
 
-	if ip != "" {
-		// 验证IP格式
-		if errMsg := utils.ValidateBlacklistIP(ip); errMsg != "" {
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["ip"]; exists {
+		// 验证IP格式（使用自定义验证函数）
+		if errMsg := utils.ValidateBlacklistIP(blacklistUpdate.IP); errMsg != "" {
 			// 根据错误消息类型返回对应的错误码
 			if strings.Contains(errMsg, "不能为空") {
 				return response.Error(ctx, http.StatusBadRequest, "ip_address_required")
@@ -162,13 +174,13 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 				return response.Error(ctx, http.StatusBadRequest, "invalid_ip_format")
 			}
 		}
-		blacklist.IP = ip
+		blacklist.IP = blacklistUpdate.IP
 	}
-	if remark != "" {
-		blacklist.Remark = remark
+	if _, exists := allInputs["remark"]; exists {
+		blacklist.Remark = blacklistUpdate.Remark
 	}
-	if status != "" {
-		blacklist.Status = cast.ToUint8(status)
+	if _, exists := allInputs["status"]; exists {
+		blacklist.Status = blacklistUpdate.Status
 	}
 
 	if err := facades.Orm().Query().Save(&blacklist); err != nil {
