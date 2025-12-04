@@ -92,7 +92,7 @@ func Pprof() {
 		runtime.ReadMemStats(&m)
 		return ctx.Response().Json(http.StatusOK, http.Json{
 			"goroutines": runtime.NumGoroutine(),
-			"memory": map[string]interface{}{
+			"memory": map[string]any{
 				"alloc":       m.Alloc,
 				"total_alloc": m.TotalAlloc,
 				"sys":         m.Sys,
@@ -100,7 +100,7 @@ func Pprof() {
 				"mallocs":     m.Mallocs,
 				"frees":       m.Frees,
 			},
-			"gc": map[string]interface{}{
+			"gc": map[string]any{
 				"num_gc":      m.NumGC,
 				"pause_total": m.PauseTotalNs,
 			},

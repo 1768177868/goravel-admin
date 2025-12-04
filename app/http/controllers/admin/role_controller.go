@@ -113,7 +113,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	now := carbon.Now()
-	roleData := map[string]interface{}{
+	roleData := map[string]any{
 		"name":        roleCreate.Name,
 		"slug":        roleCreate.Slug,
 		"description": roleCreate.Description,

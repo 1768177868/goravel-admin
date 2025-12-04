@@ -768,7 +768,7 @@ func (r *AttachmentController) StreamUploadProgress(ctx http.Context) http.Respo
 	writer.Header().Set("X-Accel-Buffering", "no") // 禁用 Nginx 缓冲
 
 	// 发送初始连接消息
-	initMsg := map[string]interface{}{
+	initMsg := map[string]any{
 		"type":     "connected",
 		"message":  "SSE连接已建立，开始推送上传进度",
 		"chunk_id": chunkID,
@@ -808,7 +808,7 @@ func (r *AttachmentController) StreamUploadProgress(ctx http.Context) http.Respo
 				}, "Get chunk progress error: %v", err)
 
 				// 发送错误消息
-				errorMsg := map[string]interface{}{
+				errorMsg := map[string]any{
 					"type":    "error",
 					"message": "获取上传进度失败",
 					"error":   err.Error(),
@@ -840,7 +840,7 @@ func (r *AttachmentController) StreamUploadProgress(ctx http.Context) http.Respo
 			lastUploadedCount = currentUploadedCount
 
 			// 构造 SSE 消息
-			message := map[string]interface{}{
+			message := map[string]any{
 				"type":           "progress",
 				"chunk_id":       chunkID,
 				"total_chunks":   totalChunks,

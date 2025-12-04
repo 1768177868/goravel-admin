@@ -37,19 +37,19 @@ type AdminExportRequest struct {
 
 // AdminResponse 管理员响应数据
 type AdminResponse struct {
-	ID           uint                     `json:"id" example:"1"`                           // 管理员ID
-	Username     string                   `json:"username" example:"admin"`                 // 用户名
-	Nickname     string                   `json:"nickname" example:"管理员"`                   // 昵称
-	Avatar       string                   `json:"avatar" example:""`                        // 头像
-	Email        string                   `json:"email" example:"admin@example.com"`        // 邮箱
-	Phone        string                   `json:"phone" example:"13800138000"`              // 手机号
-	Status       uint8                    `json:"status" example:"1"`                       // 状态：1-启用，0-禁用
-	Is2FABound   bool                     `json:"is_2fa_bound" example:"true"`              // 是否绑定2FA
-	DepartmentID uint                     `json:"department_id" example:"1"`                // 部门ID
-	Department   map[string]interface{}   `json:"department"`                               // 部门信息
-	Roles        []map[string]interface{} `json:"roles"`                                    // 角色列表
-	CreatedAt    string                   `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
-	UpdatedAt    string                   `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+	ID           uint             `json:"id" example:"1"`                           // 管理员ID
+	Username     string           `json:"username" example:"admin"`                 // 用户名
+	Nickname     string           `json:"nickname" example:"管理员"`                   // 昵称
+	Avatar       string           `json:"avatar" example:""`                        // 头像
+	Email        string           `json:"email" example:"admin@example.com"`        // 邮箱
+	Phone        string           `json:"phone" example:"13800138000"`              // 手机号
+	Status       uint8            `json:"status" example:"1"`                       // 状态：1-启用，0-禁用
+	Is2FABound   bool             `json:"is_2fa_bound" example:"true"`              // 是否绑定2FA
+	DepartmentID uint             `json:"department_id" example:"1"`                // 部门ID
+	Department   map[string]any   `json:"department"`                               // 部门信息
+	Roles        []map[string]any `json:"roles"`                                    // 角色列表
+	CreatedAt    string           `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt    string           `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
 }
 
 // PaginatedAdminResponse 分页管理员响应
@@ -171,10 +171,10 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 // @Param        end_time      query     string  false  "结束时间（格式：YYYY-MM-DD HH:mm:ss）"
 // @Param        order_by      query     string  false  "排序（格式：字段:asc/desc，如：created_at:desc）"
 // @Success      200           {object}  PaginatedAdminResponse
-// @Failure      400           {object}  map[string]interface{} "参数错误"
-// @Failure      401           {object}  map[string]interface{} "未登录"
-// @Failure      403           {object}  map[string]interface{} "无权限"
-// @Failure      500           {object}  map[string]interface{} "服务器错误"
+// @Failure      400           {object}  map[string]any "参数错误"
+// @Failure      401           {object}  map[string]any "未登录"
+// @Failure      403           {object}  map[string]any "无权限"
+// @Failure      500           {object}  map[string]any "服务器错误"
 // @Router       /api/admin/admins [get]
 // @Security     BearerAuth
 func (r *AdminController) Index(ctx http.Context) http.Response {
@@ -226,11 +226,11 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
 // @Success      200  {object} AdminDetailResponse
-// @Failure      400  {object} map[string]interface{} "参数错误"
-// @Failure      401  {object} map[string]interface{} "未登录"
-// @Failure      403  {object} map[string]interface{} "无权限"
-// @Failure      404  {object} map[string]interface{} "管理员不存在"
-// @Failure      500  {object} map[string]interface{} "服务器错误"
+// @Failure      400  {object} map[string]any "参数错误"
+// @Failure      401  {object} map[string]any "未登录"
+// @Failure      403  {object} map[string]any "无权限"
+// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id} [get]
 // @Security     BearerAuth
 func (r *AdminController) Show(ctx http.Context) http.Response {
@@ -260,10 +260,10 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 // @Param        status        body     int     false "状态：1-启用，0-禁用" example(1)
 // @Param        role_ids      body     []int   false "角色ID列表" example([1,2])
 // @Success      200           {object} AdminDetailResponse
-// @Failure      400           {object} map[string]interface{} "参数错误或用户名已存在"
-// @Failure      401           {object} map[string]interface{} "未登录"
-// @Failure      403           {object} map[string]interface{} "无权限"
-// @Failure      500           {object} map[string]interface{} "服务器错误"
+// @Failure      400           {object} map[string]any "参数错误或用户名已存在"
+// @Failure      401           {object} map[string]any "未登录"
+// @Failure      403           {object} map[string]any "无权限"
+// @Failure      500           {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins [post]
 // @Security     BearerAuth
 func (r *AdminController) Store(ctx http.Context) http.Response {
@@ -354,11 +354,11 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 // @Param        password      body     string  false "密码（可选，不传则不更新）" example(123456)
 // @Param        role_ids      body     []int   false "角色ID列表" example([1,2])
 // @Success      200           {object} AdminDetailResponse
-// @Failure      400           {object} map[string]interface{} "参数错误"
-// @Failure      401           {object} map[string]interface{} "未登录"
-// @Failure      403           {object} map[string]interface{} "无权限或受保护管理员不能禁用"
-// @Failure      404           {object} map[string]interface{} "管理员不存在"
-// @Failure      500           {object} map[string]interface{} "服务器错误"
+// @Failure      400           {object} map[string]any "参数错误"
+// @Failure      401           {object} map[string]any "未登录"
+// @Failure      403           {object} map[string]any "无权限或受保护管理员不能禁用"
+// @Failure      404           {object} map[string]any "管理员不存在"
+// @Failure      500           {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id} [put]
 // @Security     BearerAuth
 func (r *AdminController) Update(ctx http.Context) http.Response {
@@ -443,12 +443,12 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
-// @Success      200  {object} map[string]interface{} "删除成功"
-// @Failure      400  {object} map[string]interface{} "参数错误"
-// @Failure      401  {object} map[string]interface{} "未登录"
-// @Failure      403  {object} map[string]interface{} "无权限、受保护管理员不能删除或不能删除自己"
-// @Failure      404  {object} map[string]interface{} "管理员不存在"
-// @Failure      500  {object} map[string]interface{} "服务器错误"
+// @Success      200  {object} map[string]any "删除成功"
+// @Failure      400  {object} map[string]any "参数错误"
+// @Failure      401  {object} map[string]any "未登录"
+// @Failure      403  {object} map[string]any "无权限、受保护管理员不能删除或不能删除自己"
+// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id} [delete]
 // @Security     BearerAuth
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
@@ -497,12 +497,12 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 // @Produce      json
 // @Param        id   path     int  true  "要解绑的管理员ID"
 // @Param        code body     string true "当前管理员的谷歌验证码"
-// @Success      200  {object} map[string]interface{} "解绑成功"
-// @Failure      400  {object} map[string]interface{} "参数错误或验证码错误"
-// @Failure      401  {object} map[string]interface{} "未登录"
-// @Failure      403  {object} map[string]interface{} "无权限或当前管理员未绑定谷歌验证码"
-// @Failure      404  {object} map[string]interface{} "管理员不存在"
-// @Failure      500  {object} map[string]interface{} "服务器错误"
+// @Success      200  {object} map[string]any "解绑成功"
+// @Failure      400  {object} map[string]any "参数错误或验证码错误"
+// @Failure      401  {object} map[string]any "未登录"
+// @Failure      403  {object} map[string]any "无权限或当前管理员未绑定谷歌验证码"
+// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id}/unbind-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
@@ -655,11 +655,11 @@ func (r *AdminController) getChildrenDepartmentIDs(parentID uint, departmentIDs 
 // @Accept       json
 // @Produce      json
 // @Param        request body     AdminExportRequest false "导出筛选条件（可选）"
-// @Success      200     {object} map[string]interface{} "导出成功，返回文件下载信息"
-// @Failure      400     {object} map[string]interface{} "参数错误"
-// @Failure      401     {object} map[string]interface{} "未登录"
-// @Failure      403     {object} map[string]interface{} "无权限"
-// @Failure      500     {object} map[string]interface{} "服务器错误"
+// @Success      200     {object} map[string]any "导出成功，返回文件下载信息"
+// @Failure      400     {object} map[string]any "参数错误"
+// @Failure      401     {object} map[string]any "未登录"
+// @Failure      403     {object} map[string]any "无权限"
+// @Failure      500     {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth
 func (r *AdminController) Export(ctx http.Context) http.Response {

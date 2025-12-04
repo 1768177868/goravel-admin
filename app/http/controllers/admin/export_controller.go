@@ -308,7 +308,7 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 	writer.Header().Set("X-Accel-Buffering", "no") // 禁用 Nginx 缓冲
 
 	// 发送初始连接消息
-	initMsg := map[string]interface{}{
+	initMsg := map[string]any{
 		"type":      "connected",
 		"message":   "SSE连接已建立，开始监控导出任务进度",
 		"export_id": exportID,
@@ -343,7 +343,7 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 			var export models.Export
 			if err := facades.Orm().Query().Where("id", exportID).First(&export); err != nil {
 				// 导出任务不存在或已删除
-				errorMsg := map[string]interface{}{
+				errorMsg := map[string]any{
 					"type":    "error",
 					"message": "导出任务不存在或已删除",
 					"error":   err.Error(),
@@ -371,7 +371,7 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 			lastPath = export.Path
 
 			// 构造进度消息
-			message := map[string]interface{}{
+			message := map[string]any{
 				"type":      "progress",
 				"export_id": export.ID,
 				"status":    export.Status,

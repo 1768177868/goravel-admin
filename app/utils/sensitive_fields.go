@@ -12,7 +12,7 @@ func IsSensitiveField(fieldName string) bool {
 
 	// 获取配置的敏感字段列表
 	sensitiveFieldsInterface := facades.Config().Get("operation_log.sensitive_fields", []string{})
-	if sensitiveFields, ok := sensitiveFieldsInterface.([]interface{}); ok {
+	if sensitiveFields, ok := sensitiveFieldsInterface.([]any); ok {
 		for _, fieldInterface := range sensitiveFields {
 			if field, ok := fieldInterface.(string); ok {
 				if keyLower == strings.ToLower(field) {
@@ -30,7 +30,7 @@ func IsSensitiveField(fieldName string) bool {
 
 	// 检查是否包含敏感关键词
 	sensitiveKeywordsInterface := facades.Config().Get("operation_log.sensitive_keywords", []string{})
-	if sensitiveKeywords, ok := sensitiveKeywordsInterface.([]interface{}); ok {
+	if sensitiveKeywords, ok := sensitiveKeywordsInterface.([]any); ok {
 		for _, keywordInterface := range sensitiveKeywords {
 			if keyword, ok := keywordInterface.(string); ok {
 				if strings.Contains(keyLower, strings.ToLower(keyword)) {
@@ -48,4 +48,3 @@ func IsSensitiveField(fieldName string) bool {
 
 	return false
 }
-

@@ -93,7 +93,7 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 	}
 
 	// 更新字段
-	updateData := make(map[string]interface{})
+	updateData := make(map[string]any)
 	if name := ctx.Request().Input("name"); name != "" {
 		updateData["name"] = name
 	}

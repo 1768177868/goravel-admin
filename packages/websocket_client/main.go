@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var done chan interface{}
+var done chan any
 var interrupt chan os.Signal
 
 func receiveHandler(connection *websocket.Conn) {
@@ -26,7 +26,7 @@ func receiveHandler(connection *websocket.Conn) {
 }
 
 func main() {
-	done = make(chan interface{})    // Channel to indicate that the receiverHandler is done
+	done = make(chan any)            // Channel to indicate that the receiverHandler is done
 	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
 
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT

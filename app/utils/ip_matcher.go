@@ -25,8 +25,8 @@ func IsIPInBlacklist(ip string, blacklistIPs string) bool {
 	}
 
 	// 分割多个IP（支持逗号分隔）
-	ipList := strings.Split(blacklistIPs, ",")
-	for _, blacklistIP := range ipList {
+	ipList := strings.SplitSeq(blacklistIPs, ",")
+	for blacklistIP := range ipList {
 		blacklistIP = strings.TrimSpace(blacklistIP)
 		if blacklistIP == "" {
 			continue
@@ -88,8 +88,8 @@ func ValidateBlacklistIP(ipStr string) string {
 		return "IP地址不能为空"
 	}
 
-	ipList := strings.Split(ipStr, ",")
-	for _, ip := range ipList {
+	ipList := strings.SplitSeq(ipStr, ",")
+	for ip := range ipList {
 		ip = strings.TrimSpace(ip)
 		if ip == "" {
 			continue
@@ -124,7 +124,7 @@ func ValidateBlacklistIP(ipStr string) string {
 				startBytes := startIP.To4()
 				endBytes := endIP.To4()
 				if startBytes != nil && endBytes != nil {
-					for i := 0; i < 4; i++ {
+					for i := range 4 {
 						if endBytes[i] < startBytes[i] {
 							return fmt.Sprintf("结束IP必须大于等于起始IP: %s", ip)
 						}
@@ -157,4 +157,3 @@ func FormatIPRange(ipStr string) string {
 	}
 	return ipStr
 }
-

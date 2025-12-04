@@ -32,7 +32,7 @@ func OperationLog() http.Middleware {
 		var requestBody string
 		if method == "POST" || method == "PUT" || method == "PATCH" {
 			// 获取所有输入参数
-			inputs := make(map[string]interface{})
+			inputs := make(map[string]any)
 			// 记录所有非敏感参数
 			allInputs := ctx.Request().All()
 			for key, value := range allInputs {

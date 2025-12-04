@@ -109,7 +109,7 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 			}
 		} else {
 			// 创建新配置
-			configData := map[string]interface{}{
+			configData := map[string]any{
 				"group":      group,
 				"key":        key,
 				"value":      valueStr,
