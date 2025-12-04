@@ -317,7 +317,11 @@ const handleMonitorExport = (row) => {
     ElMessage.info(t('export.monitoring_started') || '开始监控导出进度')
   } catch (error) {
     console.error('Failed to start export progress monitoring:', error)
-    ElMessage.error(t('export.monitor_failed') || '启动监控失败')
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('export.monitor_failed') || '启动监控失败'
+      ElMessage.error(errorMessage)
+    }
   }
 }
 
@@ -441,7 +445,11 @@ const handleDownload = async (row) => {
     ElMessage.success(t('export.download_success') || '下载成功')
   } catch (error) {
     console.error('Download error:', error)
-    ElMessage.error(t('export.download_failed') || '下载失败')
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('export.download_failed') || '下载失败'
+      ElMessage.error(errorMessage)
+    }
   } finally {
     // 下载完成或失败后，延迟移除标记（防止短时间内重复点击）
     setTimeout(() => {

@@ -550,9 +550,14 @@ const handleSubmit = async () => {
         loadData()
       } catch (error) {
         console.error('Submit error:', error)
-        // 显示更详细的错误信息
-        if (error.response && error.response.data && error.response.data.message) {
-          ElMessage.error(error.response.data.message)
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+          // 显示更详细的错误信息
+          if (error.response && error.response.data && error.response.data.message) {
+            ElMessage.error(error.response.data.message)
+          } else if (error.message) {
+            ElMessage.error(error.message)
+          }
         }
       } finally {
         submitting.value = false
@@ -582,18 +587,10 @@ const handleDelete = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Delete error:', error)
-      // 显示后端返回的错误信息
-      if (error.response && error.response.data && error.response.data.message) {
-        const errorMsg = error.response.data.message
-        if (errorMsg === 'admin_protected_cannot_delete') {
-          ElMessage.error(t('admin.protected_cannot_delete'))
-        } else if (errorMsg === 'admin_cannot_delete_self') {
-          ElMessage.error(t('admin.cannot_delete_self'))
-        } else {
-          ElMessage.error(error.response.data.message || t('admin.delete_failed'))
-        }
-      } else {
-        ElMessage.error(t('admin.delete_failed'))
+      // 如果错误已经在响应拦截器中处理过，就不再重复显示
+      if (!error.__handled) {
+        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
       }
     }
   }
@@ -657,8 +654,8 @@ const handleUnbindGoogleAuth = async (row) => {
     if (error !== 'cancel') {
       console.error('Unbind google auth error:', error)
       if (!error?.__handled) {
-        const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
-        ElMessage.error(errorMessage || t('admin.unbind_google_auth_failed'))
+        const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
       }
     }
   }

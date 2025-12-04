@@ -912,13 +912,10 @@ const handleSubmit = async () => {
         loadData()
       } catch (error) {
         console.error('Submit error:', error)
-        if (error.response && error.response.data && error.response.data.message) {
-          const errorMsg = error.response.data.message
-          if (errorMsg === 'role_protected_cannot_disable') {
-            ElMessage.error(t('role.protected_cannot_disable'))
-          } else {
-            ElMessage.error(error.response.data.message || t('role.update_failed'))
-          }
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
         }
       } finally {
         submitting.value = false
@@ -1090,13 +1087,10 @@ const handleDelete = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Delete error:', error)
-      if (error.response && error.response.data && error.response.data.message) {
-        const errorMsg = error.response.data.message
-        if (errorMsg === 'role_protected_cannot_delete') {
-          ElMessage.error(t('role.protected_cannot_delete'))
-        } else {
-          ElMessage.error(error.response.data.message || t('role.delete_failed'))
-        }
+      // 如果错误已经在响应拦截器中处理过，就不再重复显示
+      if (!error.__handled) {
+        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
       }
     }
   }

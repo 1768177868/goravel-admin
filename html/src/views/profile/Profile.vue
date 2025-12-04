@@ -470,6 +470,11 @@ const loadProfile = async () => {
     }
   } catch (error) {
     console.error('Load profile error:', error)
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
   }
 }
 
@@ -542,6 +547,11 @@ const handleUpdateInfo = async () => {
         }
       } catch (error) {
         console.error('Update info error:', error)
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+          const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+          ElMessage.error(errorMessage)
+        }
       } finally {
         infoSubmitting.value = false
       }
@@ -566,6 +576,11 @@ const handleUpdatePassword = async () => {
         handleResetPassword()
       } catch (error) {
         console.error('Update password error:', error)
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+          const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+          ElMessage.error(errorMessage)
+        }
       } finally {
         passwordSubmitting.value = false
       }
@@ -601,6 +616,11 @@ const handleSaveAvatar = async () => {
     selectedAvatar.value = ''
   } catch (error) {
     console.error('Update avatar error:', error)
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
   } finally {
     avatarSubmitting.value = false
   }
@@ -615,6 +635,11 @@ const loadGoogleAuthStatus = async () => {
     }
   } catch (error) {
     console.error('Load google auth status error:', error)
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
   }
 }
 
@@ -630,8 +655,8 @@ const loadQRCode = async () => {
     console.error('Load QR code error:', error)
     // 如果错误已经在拦截器中处理过，不再重复显示
     if (!error?.__handled) {
-      const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
-      ElMessage.error(errorMessage || t('profile.load_qr_code_failed'))
+      const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
     }
   } finally {
     qrCodeLoading.value = false
@@ -658,8 +683,8 @@ const handleBindGoogleAuth = async () => {
         console.error('Bind google auth error:', error)
         // 如果错误已经在拦截器中处理过，不再重复显示
         if (!error?.__handled) {
-          const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
-          ElMessage.error(errorMessage || t('profile.bind_failed'))
+          const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+          ElMessage.error(errorMessage)
         }
       } finally {
         bindSubmitting.value = false
@@ -697,8 +722,8 @@ const handleUnbindGoogleAuth = async () => {
           console.error('Unbind google auth error:', error)
           // 如果错误已经在拦截器中处理过，不再重复显示
           if (!error?.__handled) {
-            const errorMessage = error.response?.data?.message || error.translatedMessage || error.message
-            ElMessage.error(errorMessage || t('profile.unbind_failed'))
+            const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+            ElMessage.error(errorMessage)
           }
         } finally {
           unbindSubmitting.value = false

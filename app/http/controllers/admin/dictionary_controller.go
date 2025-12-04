@@ -84,7 +84,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	}
 
 	now := carbon.Now()
-	dictionaryData := map[string]interface{}{
+	dictionaryData := map[string]any{
 		"type":        dictionaryCreate.Type,
 		"label":       dictionaryCreate.Label,
 		"value":       dictionaryCreate.Value,

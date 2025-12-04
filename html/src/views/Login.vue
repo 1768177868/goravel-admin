@@ -248,7 +248,7 @@ const handleLogin = async () => {
         const errorCode = error.errorCode || error.response?.data?.error_code || ''
         const message = error.translatedMessage || error.message || error.response?.data?.message || ''
         
-        // 根据错误码处理
+        // 根据错误码处理 UI 状态
         if (errorCode === ERROR_CODES.GOOGLE_CODE_REQUIRED) {
           // 绑定了 2FA，需要谷歌验证码，隐藏图形验证码
           needGoogleCode.value = true
@@ -258,18 +258,18 @@ const handleLogin = async () => {
           if (loginFormRef.value) {
             loginFormRef.value.clearValidate(['captcha_answer'])
           }
-          ElMessage.warning(message || t('login.google_code_required'))
+          ElMessage.warning(message)
           return
         }
         
         if (errorCode === ERROR_CODES.GOOGLE_CODE_INVALID) {
-          ElMessage.error(message || t('login.google_code_invalid'))
+          ElMessage.error(message)
           loginForm.google_code = ''
           return
         }
         
         if (errorCode === ERROR_CODES.ACCOUNT_DISABLED) {
-          ElMessage.error(message || t('login.account_disabled'))
+          ElMessage.error(message)
           return
         }
         
@@ -279,7 +279,7 @@ const handleLogin = async () => {
           if (captchaInfo.enabled && !captchaInfo.shouldShow && !needGoogleCode.value) {
             await fetchCaptcha()
           }
-          ElMessage.error(message || t('login.login_failed'))
+          ElMessage.error(message)
           return
         }
         
@@ -290,7 +290,7 @@ const handleLogin = async () => {
         }
         
         // 显示错误消息
-        ElMessage.error(message || t('login.login_failed'))
+        ElMessage.error(message)
       } finally {
         loading.value = false
         // 如果图形验证码已显示且不需要谷歌验证码，刷新图形验证码

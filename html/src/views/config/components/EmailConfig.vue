@@ -136,6 +136,11 @@ const loadData = async () => {
     }
   } catch (error) {
     console.error('Load email config error:', error)
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
   }
 }
 
@@ -163,6 +168,11 @@ const handleSubmit = async () => {
         await loadData()
       } catch (error) {
         console.error('Submit error:', error)
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+          const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+          ElMessage.error(errorMessage)
+        }
       } finally {
         submitting.value = false
       }
@@ -190,7 +200,11 @@ const handleTest = async () => {
         ElMessage.success(t('config.test_email_success'))
       } catch (error) {
         console.error('Test email error:', error)
-        ElMessage.error(error.response?.data?.message || t('config.test_email_failed'))
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+          const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+          ElMessage.error(errorMessage)
+        }
       } finally {
         testing.value = false
       }

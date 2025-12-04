@@ -161,6 +161,7 @@ request.interceptors.response.use(
         } else if (res.code === 403) {
           ElMessage.error(message || t('error.forbidden'))
         } else {
+          // 显示后端返回的实际错误消息
           ElMessage.error(message || t('error.default'))
         }
       }
@@ -170,11 +171,12 @@ request.interceptors.response.use(
       err.code = res.code
       err.errorCode = errorCode
       err.data = res.data
+      err.response = response // 确保 response 对象存在，方便组件访问
       err.message = message
       err.translatedMessage = message // 后端已翻译
       
       if (!isAuthEndpoint) {
-        err.__handled = true
+        err.__handled = true // 标记为已处理，避免组件重复显示
       }
       
       return Promise.reject(err)
@@ -196,6 +198,7 @@ request.interceptors.response.use(
       // 根据 HTTP 状态码和错误码处理
       if (status === 429) {
         ElMessage.error(message || t('error.tooManyRequests'))
+        error.__handled = true
       } else if (status === 401) {
         if (!isAuthEndpoint) {
           handle401Error(message || t('error.unauthorized'))
@@ -209,6 +212,7 @@ request.interceptors.response.use(
       } else if (status === 403) {
         if (!isAuthEndpoint) {
           ElMessage.error(message || t('error.forbidden'))
+          error.__handled = true
         } else {
           // 登录接口错误，不在这里显示，让 Login.vue 处理
           error.errorCode = errorCode
@@ -227,6 +231,7 @@ request.interceptors.response.use(
       } else if (!isAuthEndpoint) {
         // 非登录接口的错误，直接显示
         ElMessage.error(message || t('error.default'))
+        error.__handled = true
       }
     } else {
       // 网络错误
@@ -242,12 +247,18 @@ request.interceptors.response.use(
       
       if (!error.config?.silent) {
         ElMessage.error(errorMessage)
+        error.__handled = true
       }
     }
 
-    // 只有在非登录接口的错误或已经显示过消息的情况下才标记为已处理
-    if (typeof error === 'object' && error.__handled !== false) {
-      error.__handled = true
+    // 如果还没有标记为已处理，且不是登录接口的错误，则标记为已处理
+    if (typeof error === 'object' && error.__handled !== false && error.__handled !== true) {
+      // 检查是否是登录接口
+      const url = error.config?.url || ''
+      const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+      if (!isAuthEndpoint) {
+        error.__handled = true
+      }
     }
     
     return Promise.reject(error)

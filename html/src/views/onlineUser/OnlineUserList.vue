@@ -289,11 +289,15 @@ const fetchData = async () => {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
     } else {
-      ElMessage.error(res.message || t('common.query_failed'))
+      ElMessage.error(res.message || t('common.operation_failed'))
     }
   } catch (error) {
     console.error('Fetch online users error:', error)
-    ElMessage.error(t('common.query_failed'))
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error?.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
   } finally {
     loading.value = false
   }
@@ -358,12 +362,16 @@ const handleKickOut = async (row) => {
       ElMessage.success(t('online_user.kick_out_success'))
       fetchData()
     } else {
-      ElMessage.error(res.message || t('online_user.kick_out_failed'))
+      ElMessage.error(res.message || t('common.operation_failed'))
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Kick out error:', error)
-      ElMessage.error(t('online_user.kick_out_failed'))
+      // 如果错误已经在响应拦截器中处理过，就不再重复显示
+      if (!error?.__handled) {
+        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
+      }
     }
   }
 }
@@ -388,12 +396,16 @@ const handleBatchKickOut = async () => {
       selectedRows.value = []
       fetchData()
     } else {
-      ElMessage.error(res.message || t('online_user.batch_kick_out_failed'))
+      ElMessage.error(res.message || t('common.operation_failed'))
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Batch kick out error:', error)
-      ElMessage.error(t('online_user.batch_kick_out_failed'))
+      // 如果错误已经在响应拦截器中处理过，就不再重复显示
+      if (!error?.__handled) {
+        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
+      }
     }
   }
 }

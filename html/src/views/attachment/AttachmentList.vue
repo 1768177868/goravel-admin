@@ -563,21 +563,27 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
         }
       } catch (error) {
         console.error('Init chunk upload error:', error)
-        // 检查是否是存储驱动不支持的错误
-        if (error.response && error.response.data && error.response.data.message) {
-          const message = error.response.data.message
-          if (message.includes('chunk_upload_only_local_storage') || message.includes('仅支持本地存储')) {
-            ElMessage.error(t('attachment.chunk_upload_only_local_storage'))
+        // 如果错误已经在响应拦截器中处理过，就不再重复显示
+        if (!error.__handled) {
+          // 检查错误码来决定是否需要关闭对话框
+          const errorCode = error.errorCode || error.response?.data?.error_code || ''
+          const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+          
+          // 如果是存储驱动不支持的错误，需要关闭对话框
+          if (errorCode === 'chunk_upload_only_local_storage') {
             chunkUploadVisible.value = false
             chunkUploadFile.value = null
-            return
+          }
+          
+          ElMessage.error(errorMessage)
+        } else {
+          // 即使错误已处理，也可能需要关闭对话框
+          const errorCode = error.errorCode || error.response?.data?.error_code || ''
+          if (errorCode === 'chunk_upload_only_local_storage') {
+            chunkUploadVisible.value = false
+            chunkUploadFile.value = null
           }
         }
-        // 显示更详细的错误信息
-        const errorMessage = error.response?.data?.message || error.message || t('attachment.init_chunk_upload_failed')
-        ElMessage.error(`${t('attachment.init_chunk_upload_failed')}: ${errorMessage}`)
-        chunkUploadVisible.value = false
-        chunkUploadFile.value = null
         throw error // 重新抛出其他错误
       }
     }
@@ -741,7 +747,11 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
     }
     console.error('Chunk upload error:', error)
     chunkUploadStatus.value = 'exception'
-    ElMessage.error(t('attachment.upload_failed'))
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('attachment.upload_failed')
+      ElMessage.error(errorMessage)
+    }
   }
 }
 
@@ -780,7 +790,11 @@ const handleUpdateDisplayName = async (row) => {
     ElMessage.success(t('attachment.update_success'))
   } catch (error) {
     console.error('Update display name error:', error)
-    ElMessage.error(t('attachment.update_failed'))
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('attachment.update_failed')
+      ElMessage.error(errorMessage)
+    }
     // 重新加载数据以恢复原值
     loadData()
   }
@@ -879,7 +893,11 @@ const handleDownload = async (row) => {
     ElMessage.success(t('attachment.download_success') || '下载成功')
   } catch (error) {
     console.error('Download error:', error)
-    ElMessage.error(t('attachment.download_failed') || '下载失败')
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('attachment.download_failed') || '下载失败'
+      ElMessage.error(errorMessage)
+    }
   } finally {
     // 下载完成或失败后，延迟移除标记（防止短时间内重复点击）
     setTimeout(() => {

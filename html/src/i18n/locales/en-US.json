@@ -28,6 +28,7 @@
     "description": "Description",
     "password": "Password",
     "query_failed": "Query failed",
+    "operation_failed": "Operation failed",
     "get_success": "Get successful",
     "create_success": "Create successful",
     "update_success": "Update successful",
