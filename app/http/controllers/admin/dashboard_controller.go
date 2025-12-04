@@ -21,7 +21,7 @@ func NewDashboardController() *DashboardController {
 // GetCount 获取统计数据
 func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 	// 暂时返回空数据
-	emptyData := []interface{}{}
+	emptyData := []any{}
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -32,7 +32,7 @@ func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 // GetUserAccessSource 获取用户来源数据
 func (r *DashboardController) GetUserAccessSource(ctx http.Context) http.Response {
 	// 暂时返回空数据
-	emptyData := []interface{}{}
+	emptyData := []any{}
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -43,7 +43,7 @@ func (r *DashboardController) GetUserAccessSource(ctx http.Context) http.Respons
 // GetWeeklyUserActivity 获取每周用户活跃量
 func (r *DashboardController) GetWeeklyUserActivity(ctx http.Context) http.Response {
 	// 暂时返回空数据
-	emptyData := []interface{}{}
+	emptyData := []any{}
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -54,7 +54,7 @@ func (r *DashboardController) GetWeeklyUserActivity(ctx http.Context) http.Respo
 // GetMonthlySales 获取每月销售额
 func (r *DashboardController) GetMonthlySales(ctx http.Context) http.Response {
 	// 暂时返回空数据
-	emptyData := []interface{}{}
+	emptyData := []any{}
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -87,7 +87,7 @@ func (r *DashboardController) StreamDashboardData(ctx http.Context) http.Respons
 	writer.Header().Set("X-Accel-Buffering", "no") // 禁用 Nginx 缓冲
 
 	// 发送初始连接消息
-	initMsg := map[string]interface{}{
+	initMsg := map[string]any{
 		"type":     "connected",
 		"message":  "SSE连接已建立，开始推送 Dashboard 数据",
 		"interval": interval,
@@ -115,7 +115,7 @@ func (r *DashboardController) StreamDashboardData(ctx http.Context) http.Respons
 			dashboardData := r.collectDashboardData(ctx)
 
 			// 构造 SSE 消息
-			message := map[string]interface{}{
+			message := map[string]any{
 				"type":      "dashboard_data",
 				"data":      dashboardData,
 				"timestamp": time.Now().Format(time.RFC3339),
@@ -140,8 +140,8 @@ func (r *DashboardController) StreamDashboardData(ctx http.Context) http.Respons
 }
 
 // collectDashboardData 收集 Dashboard 数据
-func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]interface{} {
-	data := make(map[string]interface{})
+func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]any {
+	data := make(map[string]any)
 
 	// 1. 获取统计数据（管理员、角色、权限等）
 	countData := r.getCountData()
@@ -167,7 +167,7 @@ func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]
 }
 
 // getCountData 获取统计数据
-func (r *DashboardController) getCountData() map[string]interface{} {
+func (r *DashboardController) getCountData() map[string]any {
 	// 统计各种数据
 	adminCount, _ := facades.Orm().Query().Model(&models.Admin{}).Count()
 	roleCount, _ := facades.Orm().Query().Model(&models.Role{}).Count()
@@ -177,7 +177,7 @@ func (r *DashboardController) getCountData() map[string]interface{} {
 	dictionaryCount, _ := facades.Orm().Query().Model(&models.Dictionary{}).Count()
 	configCount, _ := facades.Orm().Query().Model(&models.Config{}).Count()
 
-	return map[string]interface{}{
+	return map[string]any{
 		"admins":       adminCount,
 		"roles":        roleCount,
 		"permissions":  permissionCount,
@@ -189,11 +189,11 @@ func (r *DashboardController) getCountData() map[string]interface{} {
 }
 
 // getUserAccessSourceData 获取用户访问来源数据
-func (r *DashboardController) getUserAccessSourceData() []map[string]interface{} {
+func (r *DashboardController) getUserAccessSourceData() []map[string]any {
 	// 这里可以根据实际业务逻辑查询用户访问来源
 	// 例如：根据登录日志统计不同来源的用户数
 	// 暂时返回示例数据
-	return []map[string]interface{}{
+	return []map[string]any{
 		{"source": "web", "count": 0},
 		{"source": "mobile", "count": 0},
 		{"source": "api", "count": 0},
@@ -201,15 +201,15 @@ func (r *DashboardController) getUserAccessSourceData() []map[string]interface{}
 }
 
 // getWeeklyUserActivityData 获取每周用户活跃量
-func (r *DashboardController) getWeeklyUserActivityData() []map[string]interface{} {
+func (r *DashboardController) getWeeklyUserActivityData() []map[string]any {
 	// 这里可以根据实际业务逻辑查询每周用户活跃量
 	// 例如：统计最近7天每天的用户活跃数
 	// 暂时返回示例数据
 	now := time.Now()
-	weeklyData := make([]map[string]interface{}, 7)
+	weeklyData := make([]map[string]any, 7)
 	for i := 6; i >= 0; i-- {
 		date := now.AddDate(0, 0, -i)
-		weeklyData[6-i] = map[string]interface{}{
+		weeklyData[6-i] = map[string]any{
 			"date":  date.Format("2006-01-02"),
 			"count": 0,
 		}
@@ -218,15 +218,15 @@ func (r *DashboardController) getWeeklyUserActivityData() []map[string]interface
 }
 
 // getMonthlySalesData 获取每月销售额
-func (r *DashboardController) getMonthlySalesData() []map[string]interface{} {
+func (r *DashboardController) getMonthlySalesData() []map[string]any {
 	// 这里可以根据实际业务逻辑查询每月销售额
 	// 例如：统计最近12个月每月的销售额
 	// 暂时返回示例数据
 	now := time.Now()
-	monthlyData := make([]map[string]interface{}, 12)
+	monthlyData := make([]map[string]any, 12)
 	for i := 11; i >= 0; i-- {
 		date := now.AddDate(0, -i, 0)
-		monthlyData[11-i] = map[string]interface{}{
+		monthlyData[11-i] = map[string]any{
 			"month": date.Format("2006-01"),
 			"sales": 0,
 		}

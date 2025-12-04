@@ -1714,11 +1714,11 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 		})
 	}
 	if runtime.GOOS != "windows" {
-		if fileDescriptors["percent"].(float64) > 90 {
+		if percent, ok := fileDescriptors["percent"].(float64); ok && percent > 90 {
 			alerts = append(alerts, map[string]any{
 				"type":    "warning",
 				"level":   "high",
-				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", fileDescriptors["percent"].(float64)),
+				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", percent),
 				"metric":  "file_descriptors",
 			})
 		}
