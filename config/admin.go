@@ -7,6 +7,15 @@ import (
 func init() {
 	config := facades.Config()
 	config.Add("admin", map[string]any{
+		// Super Admin ID
+		//
+		// The super admin ID that cannot modify roles. This is usually the default admin account.
+		// You can set this ID in the .env file.
+		//
+		// Example in .env file:
+		//   ADMIN_SUPER_ADMIN_ID=1
+		"super_admin_id": config.Env("ADMIN_SUPER_ADMIN_ID", "1"), // Default: ID 1 (default admin user)
+
 		// Developer Admin IDs
 		//
 		// The developer admin IDs that should be hidden from the admin list.

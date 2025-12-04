@@ -177,7 +177,13 @@
           </el-popover>
         </el-form-item>
         <el-form-item :label="$t('table.roles')" prop="role_ids">
-          <el-select v-model="formData.role_ids" multiple :placeholder="$t('form.select_role')" style="width: 100%">
+          <el-select 
+            v-model="formData.role_ids" 
+            multiple 
+            :placeholder="$t('form.select_role')" 
+            :disabled="isDefaultAdmin"
+            style="width: 100%"
+          >
             <el-option
               v-for="role in roles"
               :key="role.id || role.ID"
@@ -187,7 +193,7 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
-          <el-radio-group v-model="formData.status">
+          <el-radio-group v-model="formData.status" :disabled="isDefaultAdmin">
             <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
             <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
@@ -395,6 +401,11 @@ const roles = ref([])
 const departmentSelectVisible = ref(false)
 const protectedAdminIds = ref([1, 2])
 
+// 判断是否是超级管理员（通过 is_super_admin 字段判断，不依赖用户名）
+const isDefaultAdmin = computed(() => {
+  return formData.is_super_admin === true && formData.id !== null
+})
+
 const formData = reactive({
   id: null,
   username: '',
@@ -404,7 +415,8 @@ const formData = reactive({
   phone: '',
   department_id: null,
   role_ids: [],
-  status: 1
+  status: 1,
+  is_super_admin: false // 是否是超级管理员
 })
 
 const formRules = computed(() => ({
@@ -451,7 +463,8 @@ const handleAdd = () => {
     phone: '',
     department_id: null,
     role_ids: [],
-    status: 1
+    status: 1,
+    is_super_admin: false // 重置超级管理员标识
   })
   dialogVisible.value = true
 }
@@ -518,7 +531,8 @@ const handleEdit = async (row) => {
     phone: row.Phone || row.phone || '',
     department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
     role_ids: uniqueRoleIds,
-    status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1)
+    status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
+    is_super_admin: row.is_super_admin === true || row.IsSuperAdmin === true // 保存超级管理员标识
   })
   dialogVisible.value = true
 }
@@ -539,6 +553,10 @@ const handleSubmit = async () => {
         if (formData.id) {
           if (!data.password) {
             delete data.password
+          }
+          // 如果是默认 admin 用户，不发送 role_ids 字段（即使禁用了也可能包含原值）
+          if (isDefaultAdmin.value) {
+            delete data.role_ids
           }
           await updateAdmin(formData.id, data)
           ElMessage.success(t('admin.update_success'))

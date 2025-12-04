@@ -21,6 +21,7 @@
     "clean_failed": "Clean failed",
     "validation_failed": "Validation failed",
     "admin_not_found": "Admin not found",
+    "admin_cannot_modify_roles": "Default admin cannot modify roles",
     "username_and_password_required": "Username and password cannot be empty",
     "username_exists": "Username already exists",
     "password_encrypt_failed": "Password encryption failed",

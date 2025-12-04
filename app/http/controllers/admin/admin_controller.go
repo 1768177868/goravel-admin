@@ -193,24 +193,28 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
+	// 获取超级管理员ID
+	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+
 	// 为每个管理员添加 2FA 绑定状态
 	adminList := make([]http.Json, len(admins))
 	for i, admin := range admins {
 		isBound, _ := r.googleAuthenticatorService.IsBound(admin.ID)
 		adminList[i] = http.Json{
-			"id":            admin.ID,
-			"username":      admin.Username,
-			"nickname":      admin.Nickname,
-			"avatar":        admin.Avatar,
-			"email":         admin.Email,
-			"phone":         admin.Phone,
-			"status":        admin.Status,
-			"is_2fa_bound":  isBound,
-			"department_id": admin.DepartmentID,
-			"department":    admin.Department,
-			"roles":         admin.Roles,
-			"created_at":    admin.CreatedAt,
-			"updated_at":    admin.UpdatedAt,
+			"id":             admin.ID,
+			"username":       admin.Username,
+			"nickname":       admin.Nickname,
+			"avatar":         admin.Avatar,
+			"email":          admin.Email,
+			"phone":          admin.Phone,
+			"status":         admin.Status,
+			"is_2fa_bound":   isBound,
+			"is_super_admin": admin.ID == superAdminID, // 标识是否是超级管理员
+			"department_id":  admin.DepartmentID,
+			"department":     admin.Department,
+			"roles":          admin.Roles,
+			"created_at":     admin.CreatedAt,
+			"updated_at":     admin.UpdatedAt,
 		}
 	}
 
@@ -239,8 +243,25 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
+	// 获取超级管理员ID
+	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+
 	return response.Success(ctx, "get_success", http.Json{
-		"admin": admin,
+		"admin": http.Json{
+			"id":             admin.ID,
+			"username":       admin.Username,
+			"nickname":       admin.Nickname,
+			"avatar":         admin.Avatar,
+			"email":          admin.Email,
+			"phone":          admin.Phone,
+			"status":         admin.Status,
+			"is_super_admin": admin.ID == superAdminID, // 标识是否是超级管理员
+			"department_id":  admin.DepartmentID,
+			"department":     admin.Department,
+			"roles":          admin.Roles,
+			"created_at":     admin.CreatedAt,
+			"updated_at":     admin.UpdatedAt,
+		},
 	})
 }
 
@@ -363,7 +384,8 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 func (r *AdminController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("id", id).First(&admin); err != nil {
+	// 加载管理员的当前角色，用于后续比较角色是否改变
+	if err := facades.Orm().Query().With("Roles").Where("id", id).First(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
@@ -397,7 +419,10 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	allInputs := ctx.Request().All()
 	if _, exists := allInputs["status"]; exists {
 		// 请求中提供了 status 字段，使用验证后的值
-		if isProtected && adminUpdate.Status == 0 {
+		// 检查是否是超级管理员或受保护的管理员
+		superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+		isSuperAdmin := admin.ID == superAdminID
+		if (isProtected || isSuperAdmin) && adminUpdate.Status == 0 {
 			return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_disable")
 		}
 		admin.Status = adminUpdate.Status
@@ -417,6 +442,48 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 			"admin_id": admin.ID,
 		}, "Update admin error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+	}
+
+	// 检查是否尝试修改 admin 用户的角色
+	if _, exists := allInputs["role_ids"]; exists {
+		// 获取当前管理员的角色ID列表
+		currentRoleIDs := make([]uint, 0, len(admin.Roles))
+		for _, role := range admin.Roles {
+			currentRoleIDs = append(currentRoleIDs, role.ID)
+		}
+
+		// 比较新的角色ID列表和当前的角色ID列表
+		// 只有当角色ID真正改变时才阻止修改
+		roleIDsChanged := false
+
+		// 如果长度不同，肯定改变了
+		if len(adminUpdate.RoleIDs) != len(currentRoleIDs) {
+			roleIDsChanged = true
+		} else {
+			// 长度相同，需要检查内容是否完全一致（忽略顺序）
+			// 创建当前角色ID的映射，用于快速查找
+			currentRoleIDMap := make(map[uint]bool)
+			for _, roleID := range currentRoleIDs {
+				currentRoleIDMap[roleID] = true
+			}
+			// 检查新的角色ID是否都在当前角色ID中，且数量一致
+			for _, newRoleID := range adminUpdate.RoleIDs {
+				if !currentRoleIDMap[newRoleID] {
+					roleIDsChanged = true
+					break
+				}
+			}
+			// 如果所有新角色ID都在当前角色ID中，且长度相同，说明没有改变
+		}
+
+		// 检查是否是超级管理员（通过配置的ID判断，不依赖用户名）
+		superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+		isSuperAdmin := admin.ID == superAdminID
+
+		// 只有当角色ID真正改变时才阻止修改
+		if roleIDsChanged && isSuperAdmin {
+			return response.Error(ctx, http.StatusForbidden, "admin_cannot_modify_roles")
+		}
 	}
 
 	if len(adminUpdate.RoleIDs) > 0 {
@@ -621,7 +688,10 @@ func (r *AdminController) parseProtectedIDs(idsStr string) []uint {
 
 func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 	allProtectedIDs := make(map[uint]bool)
-	allProtectedIDs[1] = true
+	// 添加超级管理员ID（从配置读取，默认1）
+	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+	allProtectedIDs[superAdminID] = true
+	// 添加开发者管理员ID
 	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 	developerIDs := r.parseProtectedIDs(developerIDsStr)
 	for _, did := range developerIDs {

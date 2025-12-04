@@ -237,21 +237,26 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		role.Name = roleUpdate.Name
 	}
 	if _, exists := allInputs["slug"]; exists {
-		// 受保护角色的标识不能修改
-		if isProtected {
-			return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_modify_slug")
+		// 只有当 slug 值真正改变时才检查
+		if roleUpdate.Slug != role.Slug {
+			// 受保护角色的标识不能修改
+			if isProtected {
+				return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_modify_slug")
+			}
+			// 检查标识是否已被其他角色使用（排除当前角色）
+			exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
+			if err != nil {
+				return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			}
+			if exists {
+				return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
+			}
+			role.Slug = roleUpdate.Slug
 		}
-		// 检查标识是否已被其他角色使用（排除当前角色）
-		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
-		}
-		role.Slug = roleUpdate.Slug
+		// 如果 slug 值未改变，跳过更新（允许其他字段正常更新）
 	}
 	if _, exists := allInputs["description"]; exists {
+		// 描述字段允许修改，包括受保护角色（如 super-admin）也可以修改描述
 		role.Description = roleUpdate.Description
 	}
 	if _, exists := allInputs["status"]; exists {
