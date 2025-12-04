@@ -1158,11 +1158,11 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		})
 	}
 	if runtime.GOOS != "windows" {
-		if fileDescriptors["percent"].(float64) > 90 {
+		if percent, ok := fileDescriptors["percent"].(float64); ok && percent > 90 {
 			alerts = append(alerts, map[string]any{
 				"type":    "warning",
 				"level":   "high",
-				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", fileDescriptors["percent"].(float64)),
+				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", percent),
 				"metric":  "file_descriptors",
 			})
 		}
@@ -1280,31 +1280,52 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 			// 客户端断开连接
 			return nil
 		case <-ticker.C:
-			// 获取系统信息（复用 GetSystemInfo 的逻辑）
-			systemInfo := r.collectSystemInfo(ctx)
-
-			// 构造 SSE 消息
-			message := map[string]any{
-				"type":      "system_info",
-				"data":      systemInfo,
-				"timestamp": time.Now().Format(time.RFC3339),
+			// 检查客户端是否已断开
+			select {
+			case <-clientGone:
+				return nil
+			default:
 			}
 
-			messageData, err := json.Marshal(message)
-			if err != nil {
-				errorlog.RecordHTTP(ctx, "monitor", "Failed to marshal system info", map[string]any{
-					"error": err.Error(),
-				}, "Marshal system info error: %v", err)
-				continue
-			}
+			// 使用 recover 捕获可能的 panic（客户端断开时 writer 可能为 nil）
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						// 客户端断开连接，静默返回
+						facades.Log().Debugf("Monitor SSE: client disconnected, error: %v", r)
+					}
+				}()
 
-			// 发送 SSE 消息
-			fmt.Fprintf(writer, "data: %s\n\n", string(messageData))
+				// 获取系统信息（复用 GetSystemInfo 的逻辑）
+				systemInfo := r.collectSystemInfo(ctx)
 
-			// 刷新缓冲区
-			if flusher, ok := writer.(nethttp.Flusher); ok {
-				flusher.Flush()
-			}
+				// 构造 SSE 消息
+				message := map[string]any{
+					"type":      "system_info",
+					"data":      systemInfo,
+					"timestamp": time.Now().Format(time.RFC3339),
+				}
+
+				messageData, err := json.Marshal(message)
+				if err != nil {
+					errorlog.RecordHTTP(ctx, "monitor", "Failed to marshal system info", map[string]any{
+						"error": err.Error(),
+					}, "Marshal system info error: %v", err)
+					return
+				}
+
+				// 发送 SSE 消息（可能因客户端断开而失败）
+				if _, err := fmt.Fprintf(writer, "data: %s\n\n", string(messageData)); err != nil {
+					// 写入失败，客户端可能已断开
+					facades.Log().Debugf("Monitor SSE: write failed, client may have disconnected: %v", err)
+					return
+				}
+
+				// 刷新缓冲区（可能因客户端断开而失败）
+				if flusher, ok := writer.(nethttp.Flusher); ok {
+					flusher.Flush()
+				}
+			}()
 		}
 	}
 }

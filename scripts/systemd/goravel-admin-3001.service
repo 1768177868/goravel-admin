@@ -1,5 +1,5 @@
 [Unit]
-Description=Goravel Admin Application
+Description=Goravel Admin Application (Port 3001)
 After=network.target mysql.service
 Requires=network.target
 
@@ -8,21 +8,18 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/www/goravel-admin
+Environment="APP_PORT=3001"
 ExecStart=/www/goravel-admin/main
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=goravel-admin
+SyslogIdentifier=goravel-admin-3001
 
 # 优雅关闭配置
 KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=30
-
-# 支持 overseer 零停机重启（如果使用 overseer）
-# 使用 systemctl reload goravel-admin 触发零停机重启
-ExecReload=/bin/kill -HUP $MAINPID
 
 # 环境变量（可选，如果不在 .env 文件中配置）
 # Environment="APP_ENV=production"
