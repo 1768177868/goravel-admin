@@ -151,8 +151,6 @@ sudo netstat -tlnp | grep 3000
 # 或使用 ss 命令
 sudo ss -tlnp | grep 3000
 
-# 测试 API 接口（本地）
-curl http://localhost:3000/api/admin/health
 ```
 
 ### 配置外部访问
@@ -311,6 +309,11 @@ cd /www/goravel-admin/v1
 ./main artisan db:seed
 ```
 
+```bash
+# 试运行
+./main
+
+```
 ### 步骤 5：配置 Nginx 负载均衡
 
 项目已提供 Nginx 配置文件：`scripts/nginx/goravel-admin.conf`
@@ -329,7 +332,7 @@ sudo nginx -s reload
 ```
 
 **Nginx 配置说明：**
-
+nginx.conf 参考
 编辑 `/etc/nginx/sites-available/goravel-admin`，修改 `server_name` 为你的域名：
 
 
@@ -339,15 +342,13 @@ sudo nginx -s reload
 ```bash
 # 启动 v1 实例（端口 3000）
 sudo systemctl start goravel-admin-v1
+# 开机自启
 sudo systemctl enable goravel-admin-v1
 
 # 检查状态
 sudo systemctl status goravel-admin-v1
 
-# 测试 API
-curl http://localhost:3000/api/admin/health
 ```
-
 
 
 ### 查看日志
@@ -374,11 +375,6 @@ sudo systemctl status goravel-admin-v2
 # 检查端口监听
 sudo ss -tlnp | grep 3000
 sudo ss -tlnp | grep 3001
-
-# 测试 API（本地）
-curl http://localhost:3000/api/admin/health
-curl http://localhost:3001/api/admin/health
-
 
 ```
 
@@ -421,13 +417,9 @@ sudo ss -tlnp | grep 3001
 
 # 停止所有服务
 sudo systemctl stop goravel-admin-v1 goravel-admin-v2 2>/dev/null
-sudo systemctl stop goravel-admin-3000 goravel-admin-3001 2>/dev/null
-sudo systemctl stop goravel-admin 2>/dev/null
 
 # 禁用所有服务
 sudo systemctl disable goravel-admin-v1 goravel-admin-v2 2>/dev/null
-sudo systemctl disable goravel-admin-3000 goravel-admin-3001 2>/dev/null
-sudo systemctl disable goravel-admin 2>/dev/null
 
 # 删除服务文件
 sudo rm -f /etc/systemd/system/goravel-admin*.service
