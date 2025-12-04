@@ -1,12 +1,21 @@
 /**
  * Cloudflare Worker for SPA routing
  * Handles all requests and serves index.html for non-file requests
- * Based on Cloudflare's recommended pattern for SPA routing
+ * This ensures that routes like /operation-logs work correctly when refreshed
  */
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    
+    // Direct requests to index.html or root should be served as-is
+    if (pathname === '/index.html' || pathname === '/') {
+      const indexRequest = new Request(new URL('/index.html', url.origin).toString(), {
+        method: request.method,
+        headers: request.headers,
+      });
+      return env.ASSETS.fetch(indexRequest);
+    }
     
     // Check if the request is for a static asset (has file extension)
     const hasFileExtension = /\.\w+$/.test(pathname);
@@ -20,7 +29,7 @@ export default {
       }
     }
     
-    // For non-file requests or missing assets, serve index.html for SPA routing
+    // For non-file requests (SPA routes), serve index.html
     // This handles all SPA routes like /operation-logs, /login, /admins, etc.
     const indexRequest = new Request(new URL('/index.html', url.origin).toString(), {
       method: request.method,
