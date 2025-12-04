@@ -6,23 +6,28 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const pathname = url.pathname;
     
-    // First, try to fetch the requested asset
-    const asset = await env.ASSETS.fetch(request);
+    // Check if the request is for a static asset (has file extension)
+    const hasFileExtension = /\.\w+$/.test(pathname);
     
-    // If the asset exists (status 200), return it
-    if (asset.status === 200) {
-      return asset;
+    // If it's a static asset request, try to fetch it
+    if (hasFileExtension) {
+      const asset = await env.ASSETS.fetch(request);
+      // If asset exists, return it; otherwise continue to serve index.html
+      if (asset.status === 200) {
+        return asset;
+      }
     }
     
-    // If the asset doesn't exist (404), serve index.html for SPA routing
-    // This handles all SPA routes like /login, /admins, etc.
-    if (asset.status === 404) {
-      return env.ASSETS.fetch(new Request(url.origin + '/index.html', request));
-    }
+    // For non-file requests or missing assets, serve index.html for SPA routing
+    // This handles all SPA routes like /operation-logs, /login, /admins, etc.
+    const indexRequest = new Request(new URL('/index.html', url.origin).toString(), {
+      method: request.method,
+      headers: request.headers,
+    });
     
-    // For any other status, return the asset response
-    return asset;
+    return env.ASSETS.fetch(indexRequest);
   }
 };
 
