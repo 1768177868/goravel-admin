@@ -1,9 +1,8 @@
 package controllers
 
 import (
-	"strings"
-
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/str"
 
 	"goravel/app/http/requests/user"
 	"goravel/app/http/response"
@@ -86,8 +85,7 @@ func (r *UserAuthController) Logout(ctx http.Context) http.Response {
 	if userValue != nil {
 		// 获取token
 		token := ctx.Request().Header("Authorization", "")
-		token = strings.TrimPrefix(token, "Bearer ")
-		token = strings.TrimSpace(token)
+		token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 		// 删除token
 		tokenService := services.NewTokenServiceImpl()

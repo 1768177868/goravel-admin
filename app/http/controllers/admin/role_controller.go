@@ -1,11 +1,10 @@
 package admin
 
 import (
-	"strings"
-
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
+	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
@@ -179,10 +178,10 @@ func (r *RoleController) parseProtectedRoleSlugs(slugsStr string) []string {
 		return slugs
 	}
 
-	parts := strings.Split(slugsStr, ",")
+	parts := str.Of(slugsStr).Split(",")
 	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
 			slugs = append(slugs, part)
 		}
 	}

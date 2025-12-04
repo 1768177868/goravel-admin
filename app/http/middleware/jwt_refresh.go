@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/goravel/framework/auth"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
 
 	"goravel/app/http/trans"
 )
@@ -17,7 +17,7 @@ func JwtRefresh() http.Middleware {
 		guard := "admin"
 
 		token := ctx.Request().Header("Authorization", "")
-		if token == "" {
+		if str.Of(token).IsEmpty() {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "unauthorized"),
@@ -26,8 +26,7 @@ func JwtRefresh() http.Middleware {
 		}
 
 		// 移除Bearer前缀（如果有）
-		token = strings.TrimPrefix(token, "Bearer ")
-		token = strings.TrimSpace(token)
+		token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 		// 尝试解析token
 		_, parseErr := facades.Auth(ctx).Guard(guard).Parse(token)

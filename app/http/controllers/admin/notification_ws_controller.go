@@ -2,10 +2,10 @@ package admin
 
 import (
 	"net/http"
-	"strings"
 
 	apphttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
 	"github.com/gorilla/websocket"
 
 	"goravel/app/models"
@@ -42,7 +42,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 		return nil
 	}
 
-	token = strings.TrimSpace(strings.TrimPrefix(token, "Bearer "))
+	token = str.Of(token).ChopStart("Bearer ").Trim().String()
 	accessToken, err := r.tokenService.FindToken(token)
 	if err != nil || accessToken == nil || accessToken.TokenableType != "admin" {
 		_ = ctx.Response().Json(http.StatusUnauthorized, apphttp.Json{

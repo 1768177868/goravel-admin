@@ -1,9 +1,8 @@
 package helpers
 
 import (
-	"strings"
-
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/support/str"
 )
 
 // ApplySort 应用排序到查询
@@ -23,22 +22,22 @@ func ApplySort(query orm.Query, orderBy string, defaultSort string) orm.Query {
 	}
 
 	// 解析多个排序字段（逗号分隔）
-	sortFields := strings.Split(sortStr, ",")
+	sortFields := str.Of(sortStr).Split(",")
 	var orderClauses []string
 	
 	for _, field := range sortFields {
-		field = strings.TrimSpace(field)
-		if field == "" {
+		field = str.Of(field).Trim().String()
+		if str.Of(field).IsEmpty() {
 			continue
 		}
 
 		// 解析字段和方向（格式: "field:direction" 或 "field"）
-		parts := strings.Split(field, ":")
-		fieldName := strings.TrimSpace(parts[0])
+		parts := str.Of(field).Split(":")
+		fieldName := str.Of(parts[0]).Trim().String()
 		direction := "asc" // 默认升序
 
 		if len(parts) > 1 {
-			direction = strings.ToLower(strings.TrimSpace(parts[1]))
+			direction = str.Of(parts[1]).Trim().Lower().String()
 		}
 
 		// 验证方向
@@ -52,7 +51,13 @@ func ApplySort(query orm.Query, orderBy string, defaultSort string) orm.Query {
 
 	// 如果有排序子句，组合成一个字符串并应用
 	if len(orderClauses) > 0 {
-		orderStr := strings.Join(orderClauses, ", ")
+		var orderStr string
+		if len(orderClauses) > 0 {
+			orderStr = orderClauses[0]
+			for i := 1; i < len(orderClauses); i++ {
+				orderStr = str.Of(orderStr).Append(", ").Append(orderClauses[i]).String()
+			}
+		}
 		query = query.Order(orderStr)
 	}
 
@@ -70,21 +75,21 @@ func ParseSort(orderBy string) map[string]string {
 	}
 
 	// 解析多个排序字段（逗号分隔）
-	sortFields := strings.Split(orderBy, ",")
+	sortFields := str.Of(orderBy).Split(",")
 	
 	for _, field := range sortFields {
-		field = strings.TrimSpace(field)
-		if field == "" {
+		field = str.Of(field).Trim().String()
+		if str.Of(field).IsEmpty() {
 			continue
 		}
 
 		// 解析字段和方向
-		parts := strings.Split(field, ":")
-		fieldName := strings.TrimSpace(parts[0])
+		parts := str.Of(field).Split(":")
+		fieldName := str.Of(parts[0]).Trim().String()
 		direction := "asc" // 默认升序
 
 		if len(parts) > 1 {
-			direction = strings.ToLower(strings.TrimSpace(parts[1]))
+			direction = str.Of(parts[1]).Trim().Lower().String()
 		}
 
 		// 验证方向

@@ -2,10 +2,10 @@ package helpers
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
+	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 )
 
@@ -47,7 +47,7 @@ func GetUintRoute(ctx http.Context, key string) uint {
 // ParseIDsFromString 从逗号分隔的字符串中解析 ID 列表
 // 返回去重后的 ID 列表
 func ParseIDsFromString(idStr string) []uint {
-	if idStr == "" {
+	if str.Of(idStr).IsEmpty() {
 		return []uint{}
 	}
 
@@ -55,10 +55,10 @@ func ParseIDsFromString(idStr string) []uint {
 	idMap := make(map[uint]bool)
 
 	// 分割字符串
-	idStrs := strings.Split(idStr, ",")
+	idStrs := str.Of(idStr).Split(",")
 	for _, idStr := range idStrs {
-		idStr = strings.TrimSpace(idStr)
-		if idStr == "" {
+		idStr = str.Of(idStr).Trim().String()
+		if str.Of(idStr).IsEmpty() {
 			continue
 		}
 

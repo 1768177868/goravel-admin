@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
 
 	"goravel/app/http/trans"
 	"goravel/app/models"
@@ -25,7 +25,8 @@ func Jwt() http.Middleware {
 	return func(ctx http.Context) {
 		// 如果路径是api/admin前缀，使用admin guard
 		path := ctx.Request().Path()
-		if path == "" || (!strings.HasPrefix(path, "/api/admin") && !strings.HasPrefix(path, "/admin")) {
+		pathStr := str.Of(path)
+		if pathStr.IsEmpty() || (!pathStr.StartsWith("/api/admin") && !pathStr.StartsWith("/admin")) {
 			ctx.Request().Next()
 			return
 		}
@@ -33,11 +34,11 @@ func Jwt() http.Middleware {
 		token := ctx.Request().Header("Authorization", "")
 
 		// 如果 Header 中没有 token，尝试从 URL 参数中获取（用于 SSE 等不支持自定义 headers 的场景）
-		if token == "" {
+		if str.Of(token).IsEmpty() {
 			token = ctx.Request().Query("_token", "")
 		}
 
-		if token == "" {
+		if str.Of(token).IsEmpty() {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "not_logged_in"),
@@ -46,8 +47,7 @@ func Jwt() http.Middleware {
 		}
 
 		// 移除Bearer前缀（如果有）
-		token = strings.TrimPrefix(token, "Bearer ")
-		token = strings.TrimSpace(token)
+		token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 		if token == "" {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{

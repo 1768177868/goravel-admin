@@ -1,12 +1,12 @@
 package helpers
 
 import (
-	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
+	"github.com/goravel/framework/support/str"
 )
 
 // GetCurrentTimezone 获取当前请求的时区
@@ -47,8 +47,8 @@ func isValidTimezone(timezone string) bool {
 
 // NormalizeTimezone 规范化时区名称（处理常见别名）
 func NormalizeTimezone(timezone string) string {
-	timezone = strings.TrimSpace(timezone)
-	if timezone == "" {
+	timezone = str.Of(timezone).Trim().String()
+	if str.Of(timezone).IsEmpty() {
 		return carbon.UTC
 	}
 

@@ -1,12 +1,11 @@
 package admin
 
 import (
-	"strings"
-
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
+	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
@@ -607,10 +606,10 @@ func (r *AdminController) parseProtectedIDs(idsStr string) []uint {
 	}
 
 	// 使用字符串分割
-	parts := strings.Split(idsStr, ",")
+	parts := str.Of(idsStr).Split(",")
 	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
 			if id := cast.ToUint(part); id > 0 {
 				ids = append(ids, id)
 			}

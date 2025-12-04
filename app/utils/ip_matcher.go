@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/goravel/framework/support/str"
 )
 
 // IsIPInBlacklist 检查IP是否在黑名单中
@@ -27,8 +29,8 @@ func IsIPInBlacklist(ip string, blacklistIPs string) bool {
 	// 分割多个IP（支持逗号分隔）
 	ipList := strings.SplitSeq(blacklistIPs, ",")
 	for blacklistIP := range ipList {
-		blacklistIP = strings.TrimSpace(blacklistIP)
-		if blacklistIP == "" {
+		blacklistIP = str.Of(blacklistIP).Trim().String()
+		if str.Of(blacklistIP).IsEmpty() {
 			continue
 		}
 
@@ -38,7 +40,7 @@ func IsIPInBlacklist(ip string, blacklistIPs string) bool {
 		}
 
 		// 检查CIDR格式 (192.168.0.0/24)
-		if strings.Contains(blacklistIP, "/") {
+		if str.Of(blacklistIP).Contains("/") {
 			_, ipNet, err := net.ParseCIDR(blacklistIP)
 			if err == nil && ipNet.Contains(parsedIP) {
 				return true
@@ -46,11 +48,11 @@ func IsIPInBlacklist(ip string, blacklistIPs string) bool {
 		}
 
 		// 检查IP范围格式 (192.168.1.1-192.168.1.100)
-		if strings.Contains(blacklistIP, "-") {
-			parts := strings.Split(blacklistIP, "-")
+		if str.Of(blacklistIP).Contains("-") {
+			parts := str.Of(blacklistIP).Split("-")
 			if len(parts) == 2 {
-				startIP := net.ParseIP(strings.TrimSpace(parts[0]))
-				endIP := net.ParseIP(strings.TrimSpace(parts[1]))
+				startIP := net.ParseIP(str.Of(parts[0]).Trim().String())
+				endIP := net.ParseIP(str.Of(parts[1]).Trim().String())
 				if startIP != nil && endIP != nil {
 					if isIPInRange(parsedIP, startIP, endIP) {
 						return true
@@ -90,13 +92,13 @@ func ValidateBlacklistIP(ipStr string) string {
 
 	ipList := strings.SplitSeq(ipStr, ",")
 	for ip := range ipList {
-		ip = strings.TrimSpace(ip)
-		if ip == "" {
+		ip = str.Of(ip).Trim().String()
+		if str.Of(ip).IsEmpty() {
 			continue
 		}
 
 		// 检查CIDR格式
-		if strings.Contains(ip, "/") {
+		if str.Of(ip).Contains("/") {
 			_, _, err := net.ParseCIDR(ip)
 			if err != nil {
 				return fmt.Sprintf("CIDR格式错误: %s", ip)
@@ -105,13 +107,13 @@ func ValidateBlacklistIP(ipStr string) string {
 		}
 
 		// 检查IP范围格式
-		if strings.Contains(ip, "-") {
-			parts := strings.Split(ip, "-")
+		if str.Of(ip).Contains("-") {
+			parts := str.Of(ip).Split("-")
 			if len(parts) != 2 {
 				return fmt.Sprintf("IP范围格式错误: %s (格式应为: 192.168.1.1-192.168.1.100)", ip)
 			}
-			startIP := net.ParseIP(strings.TrimSpace(parts[0]))
-			endIP := net.ParseIP(strings.TrimSpace(parts[1]))
+			startIP := net.ParseIP(str.Of(parts[0]).Trim().String())
+			endIP := net.ParseIP(str.Of(parts[1]).Trim().String())
 			if startIP == nil {
 				return fmt.Sprintf("起始IP格式错误: %s", parts[0])
 			}
@@ -149,10 +151,10 @@ func ValidateBlacklistIP(ipStr string) string {
 
 // FormatIPRange 格式化IP范围显示
 func FormatIPRange(ipStr string) string {
-	if strings.Contains(ipStr, "-") {
-		parts := strings.Split(ipStr, "-")
+	if str.Of(ipStr).Contains("-") {
+		parts := str.Of(ipStr).Split("-")
 		if len(parts) == 2 {
-			return fmt.Sprintf("%s ~ %s", strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+			return fmt.Sprintf("%s ~ %s", str.Of(parts[0]).Trim().String(), str.Of(parts[1]).Trim().String())
 		}
 	}
 	return ipStr

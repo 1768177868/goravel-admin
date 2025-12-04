@@ -2,11 +2,11 @@ package admin
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
 
 	"goravel/app/http/helpers"
 	"goravel/app/http/requests/admin"
@@ -291,8 +291,7 @@ func (r *AuthController) Refresh(ctx http.Context) http.Response {
 	}
 
 	// 移除Bearer前缀
-	token = strings.TrimPrefix(token, "Bearer ")
-	token = strings.TrimSpace(token)
+	token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 	// 先尝试解析token，如果token有效，直接重新生成（滑动过期）
 	if _, err := facades.Auth(ctx).Guard("admin").Parse(token); err == nil {
@@ -334,8 +333,7 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 		if admin, ok := adminValue.(models.Admin); ok {
 			// 获取token
 			token := ctx.Request().Header("Authorization", "")
-			token = strings.TrimPrefix(token, "Bearer ")
-			token = strings.TrimSpace(token)
+			token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 			// 删除token
 			tokenService := services.NewTokenServiceImpl()

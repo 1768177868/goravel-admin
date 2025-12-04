@@ -2,9 +2,9 @@ package helpers
 
 import (
 	"net"
-	"strings"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/str"
 )
 
 // GetRealIP 获取客户端真实IP地址
@@ -37,11 +37,11 @@ func GetRealIP(ctx http.Context) string {
 	}
 
 	// 4. X-Forwarded-For (可能包含多个IP，取第一个)
-	if forwardedFor := ctx.Request().Header("X-Forwarded-For", ""); forwardedFor != "" {
-		ips := strings.Split(forwardedFor, ",")
+	if forwardedFor := ctx.Request().Header("X-Forwarded-For", ""); !str.Of(forwardedFor).IsEmpty() {
+		ips := str.Of(forwardedFor).Split(",")
 		if len(ips) > 0 {
-			ip := strings.TrimSpace(ips[0])
-			if parsedIP := parseIP(ip); parsedIP != "" {
+			ip := str.Of(ips[0]).Trim().String()
+			if parsedIP := parseIP(ip); !str.Of(parsedIP).IsEmpty() {
 				return parsedIP
 			}
 		}
@@ -58,8 +58,8 @@ func GetRealIP(ctx http.Context) string {
 
 // parseIP 解析并验证IP地址
 func parseIP(ip string) string {
-	ip = strings.TrimSpace(ip)
-	if ip == "" {
+	ip = str.Of(ip).Trim().String()
+	if str.Of(ip).IsEmpty() {
 		return ""
 	}
 

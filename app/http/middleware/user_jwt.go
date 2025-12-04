@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
 
 	"goravel/app/http/trans"
 	"goravel/app/models"
@@ -16,13 +16,13 @@ func UserJwt() http.Middleware {
 	return func(ctx http.Context) {
 		// 如果路径是api/user前缀，使用user guard
 		path := ctx.Request().Path()
-		if path == "" || !strings.HasPrefix(path, "/api/user") {
+		if str.Of(path).IsEmpty() || !str.Of(path).StartsWith("/api/user") {
 			ctx.Request().Next()
 			return
 		}
 
 		token := ctx.Request().Header("Authorization", "")
-		if token == "" {
+		if str.Of(token).IsEmpty() {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "unauthorized"),
@@ -31,8 +31,7 @@ func UserJwt() http.Middleware {
 		}
 
 		// 移除Bearer前缀（如果有）
-		token = strings.TrimPrefix(token, "Bearer ")
-		token = strings.TrimSpace(token)
+		token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 		// 从数据库查找token
 		tokenService := services.NewTokenServiceImpl()

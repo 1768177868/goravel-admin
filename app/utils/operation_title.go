@@ -1,9 +1,8 @@
 package utils
 
 import (
-	"strings"
-
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/str"
 )
 
 // GetOperationTitleFromContext 从 context 中获取操作标题
@@ -38,90 +37,81 @@ func GetOperationTitleFromContext(ctx http.Context) string {
 
 // generateDefaultTitle 根据方法和路径生成默认操作标题
 func generateDefaultTitle(method, path string) string {
+	pathStr := str.Of(path)
+
 	// 分片上传相关（与权限配置中的 slug 保持一致）
-	if strings.Contains(path, "/attachments/chunk") {
-		if method == "POST" {
+	if pathStr.Contains("/attachments/chunk") {
+		if method == "POST" || method == "GET" {
 			// 权限配置中的 slug 是 attachment.chunk
-			return "attachment.chunk"
-		}
-		if method == "GET" {
-			// GET 请求用于获取进度，也使用相同的权限标识
 			return "attachment.chunk"
 		}
 	}
 
 	// 附件上传
-	if strings.Contains(path, "/attachments/upload") && method == "POST" {
+	if pathStr.Contains("/attachments/upload") && method == "POST" {
 		return "attachment.upload"
 	}
 
 	// 附件删除
-	if strings.Contains(path, "/attachments/") && strings.HasSuffix(path, "/batch-delete") && method == "POST" {
+	if pathStr.Contains("/attachments/") && pathStr.EndsWith("/batch-delete") && method == "POST" {
 		return "attachment.batch_delete"
 	}
-	if strings.Contains(path, "/attachments/") && method == "DELETE" {
+	if pathStr.Contains("/attachments/") && method == "DELETE" {
 		return "attachment.destroy"
 	}
 
 	// 附件更新显示名称
-	if strings.Contains(path, "/attachments/") && strings.HasSuffix(path, "/display-name") && method == "PUT" {
+	if pathStr.Contains("/attachments/") && pathStr.EndsWith("/display-name") && method == "PUT" {
 		return "attachment.update_display_name"
 	}
 
 	// 导出下载
-	if strings.Contains(path, "/exports/") && strings.HasSuffix(path, "/download") && method == "GET" {
+	if pathStr.Contains("/exports/") && pathStr.EndsWith("/download") && method == "GET" {
 		return "export.download"
 	}
 
 	// 管理员解绑谷歌验证码
-	if strings.Contains(path, "/admins/") && strings.HasSuffix(path, "/unbind-google-auth") && method == "POST" {
+	if pathStr.Contains("/admins/") && pathStr.EndsWith("/unbind-google-auth") && method == "POST" {
 		return "admin.unbind_google_auth"
 	}
 
 	// 批量删除（通用模式）
-	if strings.HasSuffix(path, "/batch-delete") && method == "POST" {
-		// 提取模块名（直接使用路径中的原始模块名，不做任何转换）
-		parts := strings.Split(strings.TrimPrefix(path, "/api/admin/"), "/")
+	if pathStr.EndsWith("/batch-delete") && method == "POST" {
+		parts := pathStr.ChopStart("/api/admin/").Split("/")
 		if len(parts) > 0 {
-			module := parts[0]
-			// 将连字符转换为下划线（如 operation-logs -> operation_logs）
-			module = strings.ReplaceAll(module, "-", "_")
-			return module + ".batch_delete"
+			module := str.Of(parts[0]).Replace("-", "_").String()
+			return str.Of(module).Append(".batch_delete").String()
 		}
 	}
 
 	// 清理操作（通用模式）
-	if strings.HasSuffix(path, "/clean") && method == "POST" {
-		parts := strings.Split(strings.TrimPrefix(path, "/api/admin/"), "/")
+	if pathStr.EndsWith("/clean") && method == "POST" {
+		parts := pathStr.ChopStart("/api/admin/").Split("/")
 		if len(parts) > 0 {
-			module := parts[0]
-			// 将连字符转换为下划线（如 operation-logs -> operation_logs）
-			module = strings.ReplaceAll(module, "-", "_")
-			return module + ".clean"
+			module := str.Of(parts[0]).Replace("-", "_").String()
+			return str.Of(module).Append(".clean").String()
 		}
 	}
 
 	// 标准 CRUD 操作（通用模式）
-	parts := strings.Split(strings.TrimPrefix(path, "/api/admin/"), "/")
+	parts := pathStr.ChopStart("/api/admin/").Split("/")
 	if len(parts) >= 1 {
-		module := parts[0]
-		// 将连字符转换为下划线（如 operation-logs -> operation_logs）
-		module = strings.ReplaceAll(module, "-", "_")
+		module := str.Of(parts[0]).Replace("-", "_").String()
 		switch method {
 		case "POST":
 			// 创建操作
 			if len(parts) == 1 || (len(parts) == 2 && parts[1] != "batch-delete" && parts[1] != "clean") {
-				return module + ".store"
+				return str.Of(module).Append(".store").String()
 			}
 		case "PUT", "PATCH":
 			// 更新操作
 			if len(parts) >= 2 {
-				return module + ".update"
+				return str.Of(module).Append(".update").String()
 			}
 		case "DELETE":
 			// 删除操作
 			if len(parts) >= 2 {
-				return module + ".destroy"
+				return str.Of(module).Append(".destroy").String()
 			}
 		}
 	}
