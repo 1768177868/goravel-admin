@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount, onUnmounted, markRaw } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, onUnmounted, onActivated, onDeactivated, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { 
@@ -345,10 +345,10 @@ const startDashboardRefresh = () => {
   // 立即加载一次
   loadDashboardData()
   
-  // 每5秒刷新一次
+  // 每10秒刷新一次
   dashboardRefreshTimer = setInterval(() => {
     loadDashboardData()
-  }, 5000)
+  }, 10000)
 }
 
 // 加载 Dashboard 数据（降级方案）
@@ -667,7 +667,30 @@ onMounted(() => {
   startDashboardRefresh()
 })
 
+// keep-alive 场景：组件被激活时启动定时器
+onActivated(() => {
+  // 如果定时器不存在，启动定时刷新
+  if (!dashboardRefreshTimer) {
+    startDashboardRefresh()
+  }
+})
+
+// keep-alive 场景：组件被停用时清除定时器
+onDeactivated(() => {
+  // 清除定时刷新（离开页面时立即停止）
+  if (dashboardRefreshTimer) {
+    clearInterval(dashboardRefreshTimer)
+    dashboardRefreshTimer = null
+  }
+})
+
 onBeforeUnmount(() => {
+  // 清除定时刷新（离开页面时立即停止）
+  if (dashboardRefreshTimer) {
+    clearInterval(dashboardRefreshTimer)
+    dashboardRefreshTimer = null
+  }
+  
   window.removeEventListener('resize', handleResize)
   visitTrendChartInstance?.dispose()
   accessSourceChartInstance?.dispose()
@@ -676,7 +699,7 @@ onBeforeUnmount(() => {
 })
 
 onUnmounted(() => {
-  // 清除定时刷新
+  // 清除定时刷新（双重保险）
   if (dashboardRefreshTimer) {
     clearInterval(dashboardRefreshTimer)
     dashboardRefreshTimer = null
