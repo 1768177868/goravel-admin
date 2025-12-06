@@ -1,12 +1,13 @@
 package services
 
 import (
-	"errors"
+	"context"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/models"
@@ -37,6 +38,16 @@ func NewAuthServiceImpl(adminService AdminService, tokenService TokenService) *A
 }
 
 // Login 管理员登录
+// 
+// 参数:
+//   - ctx: HTTP 上下文
+//   - username: 用户名
+//   - password: 密码
+//
+// 返回:
+//   - *models.Admin: 管理员对象
+//   - string: JWT token
+//   - error: 错误信息
 func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*models.Admin, string, error) {
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
@@ -44,14 +55,14 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	}
 
 	if admin.Status == 0 {
-		return nil, "", errors.New("account_disabled")
+		return nil, "", errors.ErrAccountDisabled
 	}
 
 	// 验证密码
 	if !facades.Hash().Check(password, admin.Password) {
 		// 记录登录失败日志
 		s.RecordLoginLog(ctx, 0, username, 0, trans.Get(ctx, "password_error"))
-		return nil, "", errors.New("password_error")
+		return nil, "", errors.ErrPasswordError
 	}
 
 	// 生成token并存入数据库（类似Laravel Sanctum）
@@ -71,28 +82,38 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	ip := helpers.GetRealIP(ctx)
 	// sessionID将在CreateToken中自动生成
 
+	// 生成token
 	plainToken, _, err := s.tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
 	if err != nil {
 		return nil, "", err
 	}
 	token := plainToken
 
-	// 记录登录成功日志
-	s.RecordLoginLog(ctx, admin.ID, username, 1, trans.Get(ctx, "login_success"))
-
 	// 更新最后登录时间（ORM会自动更新UpdatedAt）
 	facades.Orm().Query().Save(&admin)
+
+	// 记录登录成功日志
+	s.RecordLoginLog(ctx, admin.ID, username, 1, trans.Get(ctx, "login_success"))
 
 	return &admin, token, nil
 }
 
 // GetAdminInfo 获取管理员完整信息（包括权限和菜单）
+// 
+// 参数:
+//   - ctx: HTTP 上下文
+//
+// 返回:
+//   - *models.Admin: 管理员对象
+//   - []models.Permission: 权限列表
+//   - []models.Menu: 菜单列表
+//   - error: 错误信息
 func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []models.Permission, []models.Menu, error) {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
 		logger.ErrorfHTTP(ctx, "GetAdminInfo: admin value is nil in context")
-		return nil, nil, nil, errors.New("not_logged_in")
+		return nil, nil, nil, errors.ErrNotLoggedIn
 	}
 
 	var admin models.Admin
@@ -101,10 +122,14 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		admin = adminVal
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		// 尝试指针类型
+		if adminPtr == nil {
+			logger.ErrorfHTTP(ctx, "GetAdminInfo: admin pointer is nil")
+			return nil, nil, nil, errors.ErrNotLoggedIn
+		}
 		admin = *adminPtr
 	} else {
 		logger.ErrorfHTTP(ctx, "GetAdminInfo: admin value type assertion failed, type: %T, value: %+v", adminValue, adminValue)
-		return nil, nil, nil, errors.New("not_logged_in")
+		return nil, nil, nil, errors.ErrNotLoggedIn
 	}
 
 	// facades.Log().Debugf("GetAdminInfo: admin found, ID: %d, Username: %s", admin.ID, admin.Username)
@@ -195,9 +220,10 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 	}
 
 	// 检查是否是超级管理员
+	const SuperAdminRoleSlug = "super-admin"
 	isSuperAdmin := false
 	for _, role := range admin.Roles {
-		if role.Slug == "super-admin" && role.Status == 1 {
+		if role.Slug == SuperAdminRoleSlug && role.Status == 1 {
 			isSuperAdmin = true
 			break
 		}
@@ -262,13 +288,35 @@ func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, usernam
 	// 异步查询 IP 地理位置信息并更新日志记录
 	// 这样不会阻塞登录流程
 	go func() {
+		// 添加 panic 恢复机制
+		defer func() {
+			if r := recover(); r != nil {
+				facades.Log().Errorf("Recovered from panic in IP location update: %v", r)
+			}
+		}()
+
+		// 添加上下文超时控制（5秒超时）
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		location := utils.GetIPLocation(ip)
 		if location != "" {
 			// 更新登录日志的 Location 字段
-			_, _ = facades.Orm().Query().
+			if _, err := facades.Orm().Query().
 				Model(&models.LoginLog{}).
 				Where("id", loginLog.ID).
-				Update("location", location)
+				Update("location", location); err != nil {
+				facades.Log().Errorf("Failed to update login log location: %v", err)
+			}
+		}
+
+		// 检查上下文是否超时
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				facades.Log().Errorf("IP location update timeout for login log ID: %d", loginLog.ID)
+			}
+		default:
 		}
 	}()
 

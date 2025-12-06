@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	stderrors "errors"
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support/str"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/requests/user"
 	"goravel/app/http/response"
 	"goravel/app/services"
@@ -34,15 +38,37 @@ func (r *UserAuthController) Login(ctx http.Context) http.Response {
 
 	user, token, err := r.userAuthService.Login(ctx, loginRequest.Username, loginRequest.Password)
 	if err != nil {
-		// 检查是否是账号被禁用
-		if err.Error() == "account_disabled" {
+		// 检查是否是业务错误
+		if be, ok := apperrors.GetBusinessError(err); ok {
+			switch be.Code {
+			case "account_disabled":
+				return response.Error(ctx, http.StatusForbidden, "account_disabled")
+			case "password_error":
+				return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
+			case "not_logged_in":
+				return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+			default:
+				return response.Error(ctx, http.StatusInternalServerError, "login_failed")
+			}
+		}
+
+		// 检查是否是标准错误
+		if stderrors.Is(err, apperrors.ErrAccountDisabled) {
 			return response.Error(ctx, http.StatusForbidden, "account_disabled")
 		}
-		// 检查是否是用户名或密码错误
-		if err.Error() == "password_error" || err.Error() == "record not found" {
+		if stderrors.Is(err, apperrors.ErrPasswordError) {
 			return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
 		}
-		// 其他错误（登录失败）
+		if stderrors.Is(err, apperrors.ErrNotLoggedIn) {
+			return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		}
+
+		// 检查是否是记录不存在错误（通过错误消息判断）
+		if strings.Contains(err.Error(), "record not found") {
+			return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
+		}
+
+		// 默认返回登录失败
 		return response.Error(ctx, http.StatusInternalServerError, "login_failed")
 	}
 
@@ -87,9 +113,11 @@ func (r *UserAuthController) Logout(ctx http.Context) http.Response {
 		token := ctx.Request().Header("Authorization", "")
 		token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
-		// 删除token
-		tokenService := services.NewTokenServiceImpl()
-		_ = tokenService.DeleteToken(token)
+		if token != "" {
+			// 删除token
+			tokenService := services.NewTokenServiceImpl()
+			_ = tokenService.DeleteToken(token)
+		}
 	}
 
 	return response.Success(ctx, "logout_success")

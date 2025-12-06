@@ -4,7 +4,16 @@ import (
 	"time"
 
 	"github.com/goravel/framework/facades"
+
+	"goravel/app/errors"
 )
+
+// SendEmailArgs 发送邮件任务的参数结构体
+type SendEmailArgs struct {
+	To      string `validate:"required,email"`
+	Subject string `validate:"required"`
+	Content string
+}
 
 // SendEmail 发送邮件任务（支持递增延迟重试）
 type SendEmail struct {
@@ -14,64 +23,139 @@ func (r *SendEmail) Signature() string {
 	return "send_email"
 }
 
+// Handle 处理发送邮件任务
+//
+// 参数:
+//   - args[0]: SendEmailArgs 结构体或 map[string]any
+//
+// 返回:
+//   - error: 错误信息
 func (r *SendEmail) Handle(args ...any) error {
-	if len(args) >= 2 {
-		to := args[0].(string)
-		subject := args[1].(string)
-		content := ""
-		if len(args) >= 3 {
-			content = args[2].(string)
-		}
-
-		// 实际场景中这里会调用邮件服务发送邮件
-		err := sendEmail(to, subject, content)
-		if err != nil {
-			facades.Log().Errorf("📧 [Job] 发送邮件失败 - 收件人: %s, 主题: %s, 错误: %v", to, subject, err)
-			return err // 返回错误，触发重试
-		}
-
-		facades.Log().Infof("📧 [Job] 发送邮件成功 - 收件人: %s, 主题: %s", to, subject)
+	if len(args) < 1 {
+		return errors.ErrInvalidArgument.WithMessage("missing email arguments")
 	}
+
+	// 解析参数
+	var emailArgs SendEmailArgs
+	switch v := args[0].(type) {
+	case SendEmailArgs:
+		emailArgs = v
+	case map[string]any:
+		// 从 map 转换
+		if to, ok := v["to"].(string); ok {
+			emailArgs.To = to
+		}
+		if subject, ok := v["subject"].(string); ok {
+			emailArgs.Subject = subject
+		}
+		if content, ok := v["content"].(string); ok {
+			emailArgs.Content = content
+		}
+	default:
+		// 兼容旧版本：尝试按位置解析
+		if len(args) >= 2 {
+			to, ok := args[0].(string)
+			if !ok || to == "" {
+				return errors.ErrInvalidArgument.WithMessage("invalid or empty email address")
+			}
+			emailArgs.To = to
+
+			subject, ok := args[1].(string)
+			if !ok || subject == "" {
+				return errors.ErrInvalidArgument.WithMessage("invalid or empty subject")
+			}
+			emailArgs.Subject = subject
+
+			if len(args) >= 3 {
+				if content, ok := args[2].(string); ok {
+					emailArgs.Content = content
+				}
+			}
+		} else {
+			return errors.ErrInvalidArgument.WithMessage("insufficient arguments")
+		}
+	}
+
+	// 基本验证
+	if emailArgs.To == "" {
+		return errors.ErrInvalidArgument.WithMessage("email address is required")
+	}
+	if emailArgs.Subject == "" {
+		return errors.ErrInvalidArgument.WithMessage("subject is required")
+	}
+
+	// 实际场景中这里会调用邮件服务发送邮件
+	err := sendEmail(emailArgs.To, emailArgs.Subject, emailArgs.Content)
+	if err != nil {
+		facades.Log().Errorf("📧 [Job] 发送邮件失败 - 收件人: %s, 主题: %s, 错误: %v", emailArgs.To, emailArgs.Subject, err)
+		return err // 返回错误，触发重试
+	}
+
+	facades.Log().Infof("📧 [Job] 发送邮件成功 - 收件人: %s, 主题: %s", emailArgs.To, emailArgs.Subject)
 	return nil
 }
 
 // ShouldRetry 自定义重试逻辑：递增延迟重试
-// attempt: 当前重试次数（从1开始，第1次重试时attempt=1，第2次重试时attempt=2）
-// 返回: (是否重试, 延迟时间)
+//
+// 参数:
+//   - err: 错误信息
+//   - attempt: 当前重试次数（从1开始，第1次重试时attempt=1，第2次重试时attempt=2）
+//
+// 返回:
+//   - retryable: 是否重试
+//   - delay: 延迟时间
 func (r *SendEmail) ShouldRetry(err error, attempt int) (retryable bool, delay time.Duration) {
-	// 最多重试 3 次
-	maxRetries := 3
+	// 从配置读取最大重试次数，默认3次
+	const DefaultMaxRetries = 3
+	maxRetries := facades.Config().GetInt("queue.jobs.send_email.max_retries", DefaultMaxRetries)
+
 	if attempt > maxRetries {
 		facades.Log().Errorf("📧 [Job] 已达到最大重试次数 %d，不再重试", maxRetries)
 		return false, 0 // 不再重试
 	}
 
-	// 递增延迟：第1次重试延迟3秒，第2次延迟10秒，第3次延迟20秒
+	// 从配置读取延迟时间，默认递增延迟
 	delays := []time.Duration{
-		3 * time.Second,  // 第1次重试：3秒
-		10 * time.Second, // 第2次重试：10秒
-		20 * time.Second, // 第3次重试：20秒
+		facades.Config().GetDuration("queue.jobs.send_email.retry_delays.first", 3*time.Second),
+		facades.Config().GetDuration("queue.jobs.send_email.retry_delays.second", 10*time.Second),
+		facades.Config().GetDuration("queue.jobs.send_email.retry_delays.third", 20*time.Second),
 	}
 
 	// 获取当前重试的延迟时间（attempt从1开始，所以减1作为索引）
 	delayIndex := attempt - 1
+	if delayIndex < 0 {
+		delayIndex = 0
+	}
 	if delayIndex < len(delays) {
 		delay = delays[delayIndex]
 	} else {
 		// 如果超过配置的延迟数组，使用最后一个延迟时间
-		delay = delays[len(delays)-1]
+		if len(delays) > 0 {
+			delay = delays[len(delays)-1]
+		} else {
+			delay = 3 * time.Second // 默认延迟
+		}
 	}
 
 	facades.Log().Infof("📧 [Job] 第 %d 次重试，将在 %v 后执行", attempt, delay)
 	return true, delay
 }
 
-// sendEmail 模拟发送邮件函数
+// sendEmail 发送邮件函数
+//
+// 参数:
+//   - to: 收件人邮箱
+//   - subject: 邮件主题
+//   - content: 邮件内容
+//
+// 返回:
+//   - error: 错误信息
 func sendEmail(to, subject, content string) error {
 	// 实际场景中这里会调用邮件服务发送邮件
+	// 例如：使用 SMTP、SendGrid、Mailgun 等服务
 	// 模拟：随机失败（用于测试重试）
 	// if rand.Intn(3) == 0 {
-	//     return errors.New("邮件服务暂时不可用")
+	//     return fmt.Errorf("邮件服务暂时不可用")
 	// }
 	return nil
 }

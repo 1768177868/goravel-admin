@@ -187,9 +187,10 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 	showButtonsWithoutPermission := facades.Config().GetBool("admin.show_buttons_without_permission", false)
 
 	// 检查是否是超级管理员
+	const SuperAdminRoleSlug = "super-admin"
 	isSuperAdmin := false
 	for _, role := range admin.Roles {
-		if role.Slug == "super-admin" && role.Status == 1 {
+		if role.Slug == SuperAdminRoleSlug && role.Status == 1 {
 			isSuperAdmin = true
 			break
 		}
@@ -230,6 +231,9 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 		admin = adminVal
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		// 尝试指针类型
+		if adminPtr == nil {
+			return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		}
 		admin = *adminPtr
 	} else {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
@@ -346,14 +350,25 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue != nil {
-		if admin, ok := adminValue.(models.Admin); ok {
+		var admin models.Admin
+		if adminVal, ok := adminValue.(models.Admin); ok {
+			admin = adminVal
+		} else if adminPtr, ok := adminValue.(*models.Admin); ok {
+			if adminPtr != nil {
+				admin = *adminPtr
+			}
+		}
+
+		if admin.ID > 0 {
 			// 获取token
 			token := ctx.Request().Header("Authorization", "")
 			token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
-			// 删除token
-			tokenService := services.NewTokenServiceImpl()
-			_ = tokenService.DeleteToken(token)
+			if token != "" {
+				// 删除token
+				tokenService := services.NewTokenServiceImpl()
+				_ = tokenService.DeleteToken(token)
+			}
 
 			// 记录退出日志
 			r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, trans.Get(ctx, "logout_success"))
@@ -393,6 +408,10 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	if currentTokenValue != nil {
 		if currentToken, ok := currentTokenValue.(models.PersonalAccessToken); ok {
 			currentTokenID = currentToken.ID
+		} else if currentTokenPtr, ok := currentTokenValue.(*models.PersonalAccessToken); ok {
+			if currentTokenPtr != nil {
+				currentTokenID = currentTokenPtr.ID
+			}
 		}
 	}
 

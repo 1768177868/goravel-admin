@@ -4,11 +4,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"time"
 
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/models"
 )
 
@@ -72,9 +72,16 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 }
 
 // FindToken 根据token值查找token记录
+// 
+// 参数:
+//   - token: token 字符串
+//
+// 返回:
+//   - *models.PersonalAccessToken: token 记录
+//   - error: 错误信息
 func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken, error) {
 	if token == "" {
-		return nil, errors.New("token is empty")
+		return nil, apperrors.ErrInvalidArgument.WithMessage("token is empty")
 	}
 
 	tokenHash := s.hashToken(token)
@@ -90,7 +97,7 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 		// token已过期，删除它
 		_, _ = facades.Orm().Query().Delete(&accessToken)
 		// 返回错误，表示token已过期
-		return nil, errors.New("token expired")
+		return nil, apperrors.ErrInvalidArgument.WithMessage("token expired")
 	}
 
 	return &accessToken, nil

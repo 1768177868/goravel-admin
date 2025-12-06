@@ -144,7 +144,28 @@ func (r *AuthController) LoginBySession(ctx http.Context) http.Response {
 }
 
 func (r *AuthController) InfoBySession(ctx http.Context) http.Response {
-	user := ctx.Value("user").(models.User)
+	userValue := ctx.Value("user")
+	if userValue == nil {
+		return ctx.Response().Json(http.StatusUnauthorized, http.Json{
+			"error": "not_logged_in",
+		})
+	}
+
+	var user models.User
+	if userVal, ok := userValue.(models.User); ok {
+		user = userVal
+	} else if userPtr, ok := userValue.(*models.User); ok {
+		if userPtr == nil {
+			return ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"error": "not_logged_in",
+			})
+		}
+		user = *userPtr
+	} else {
+		return ctx.Response().Json(http.StatusUnauthorized, http.Json{
+			"error": "not_logged_in",
+		})
+	}
 
 	return ctx.Response().Success().Json(http.Json{
 		"id":   user.ID,
