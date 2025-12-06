@@ -92,4 +92,24 @@ func Web() {
 	// 3. HTTP接口发送聊天室消息（支持GET/POST）
 	// facades.Route().Post("/api/chat/send", chatController.SendMsgByHttp)
 	// facades.Route().Get("/api/chat/send", chatController.SendMsgByHttp)
+
+	// 测试控制器 - 事件、监听器、Job使用示例
+	// testController := controllers.NewTestController()
+	// facades.Route().Prefix("test").Group(func(router route.Router) {
+	// 	// 事件测试
+	// 	router.Get("/event", testController.TestEvent)                               // 测试纯事件
+	// 	router.Get("/event-multiple", testController.TestEventWithMultipleListeners) // 测试事件触发多个监听器
+	// 	router.Get("/event-order", testController.TestEventOrderCreated)             // 测试订单创建事件
+
+	// 	// Job测试
+	// 	router.Get("/job", testController.TestJob)                      // 测试纯Job
+	// 	router.Get("/job-delay", testController.TestJobWithDelay)       // 测试延迟Job
+	// 	router.Get("/job-queue", testController.TestJobOnQueue)         // 测试指定队列的Job
+	// 	router.Get("/job-image", testController.TestJobProcessImage)    // 测试图片处理Job
+	// 	router.Get("/job-report", testController.TestJobGenerateReport) // 测试生成报表Job
+
+	// 	// 结合使用测试
+	// 	router.Get("/combined", testController.TestCombined) // 测试事件和Job结合使用
+	// 	router.Get("/all", testController.TestAll)           // 测试所有功能
+	// })
 }
