@@ -66,5 +66,12 @@ func init() {
 		// 可以通过环境变量 QUEUE_TRIES 设置，默认值为 10
 		// 注意：这个值是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
 		"tries": config.Env("QUEUE_TRIES", 10), // 最大重试次数上限（建议设置较大值，如 10）
+
+		// Concurrent Configuration
+		//
+		// 队列工作进程的并发数（同时处理的任务数量）
+		// 可以通过环境变量 QUEUE_CONCURRENT 设置，默认值为 1
+		// 建议值：根据服务器性能和任务特性调整（1-10 或更多）
+		"concurrent": config.Env("QUEUE_CONCURRENT", 3), // 并发数（同时处理的任务数量）
 	})
 }

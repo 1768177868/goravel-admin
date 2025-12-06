@@ -55,16 +55,18 @@ func runApplication() {
 	// }()
 
 	// Start queue server by facades.Queue().
-	// 从配置文件读取重试次数（支持环境变量 QUEUE_TRIES）
-	// 这个值是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
-	tries := facades.Config().GetInt("queue.tries", 10)
+	// 从配置文件读取重试次数和并发数（支持环境变量）
+	// 重试次数是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
+	tries := facades.Config().GetInt("queue.tries", 5)
+	concurrent := facades.Config().GetInt("queue.concurrent", 1)
+
 	worker := facades.Queue().Worker(queue.Args{
-		Connection: "",    // 使用默认连接
-		Queue:      "",    // 使用默认队列
-		Concurrent: 1,     // 并发数
-		Tries:      tries, // 最大重试次数上限（从配置读取）
+		Connection: "",         // 使用默认连接
+		Queue:      "",         // 使用默认队列
+		Concurrent: concurrent, // 并发数（从配置读取，支持环境变量 QUEUE_CONCURRENT）
+		Tries:      tries,      // 最大重试次数上限（从配置读取，支持环境变量 QUEUE_TRIES）
 	})
-	facades.Log().Infof("队列工作进程启动 - 最大重试次数: %d", tries)
+	facades.Log().Infof("队列工作进程启动 - 并发数: %d, 最大重试次数: %d", concurrent, tries)
 	go func() {
 		if err := worker.Run(); err != nil {
 			facades.Log().Errorf("Queue run error: %v", err)
