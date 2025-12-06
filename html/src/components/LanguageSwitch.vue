@@ -33,6 +33,7 @@
 <script setup>
 import { computed, defineComponent, h } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Storage from '../utils/storage'
 
 // 自定义文字图标组件
 const TextIcon = defineComponent({
@@ -61,7 +62,7 @@ const currentLanguageText = computed(() => {
 
 const handleCommand = (command) => {
   locale.value = command
-  localStorage.setItem('language', command)
+  Storage.setItem('language', command)
   
   // 触发页面刷新以应用新语言（包括 Element Plus 的语言）
   window.location.reload()

@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import Storage from '../../utils/storage'
 import { getOptions } from '../../api/option'
 
 export function useFieldOptions() {
@@ -24,10 +25,11 @@ export function useFieldOptions() {
           return res.data.options
         }
       } else {
+        const token = Storage.getItem('token', '') || ''
         const res = await fetch(field.apiUrl, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+            'Authorization': `Bearer ${typeof token === 'string' ? token.trim() : ''}`,
             'Content-Type': 'application/json'
           }
         })

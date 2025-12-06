@@ -3,6 +3,8 @@
  * 用于创建和管理 SSE 连接
  */
 
+import Storage from './storage'
+
 /**
  * 创建 SSE 连接
  * @param {string} url - SSE 端点 URL（相对路径，会自动添加 baseURL）
@@ -40,8 +42,8 @@ export function createSSEConnection(url, options = {}) {
   const fullURL = url.startsWith('http') ? url : `${baseURL}${url.startsWith('/') ? url : '/' + url}`
 
   // 获取 token
-  const token = localStorage.getItem('token')
-  if (!token) {
+  const token = Storage.getItem('token', '')
+  if (!token || typeof token !== 'string') {
     throw new Error('Token is required for SSE connection')
   }
 

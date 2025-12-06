@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import Storage from '../utils/storage'
 
 /**
  * 列设置 composable
@@ -25,9 +26,7 @@ export function useColumnSetting(options) {
 
   // 从 localStorage 加载或使用默认值
   const visibleColumns = ref(
-    JSON.parse(
-      localStorage.getItem(storageKey) || JSON.stringify(defaultVisibleColumns)
-    )
+    Storage.getItem(storageKey, defaultVisibleColumns) || defaultVisibleColumns
   )
 
   // 所有可配置的列（用于对话框显示，不包括始终显示的列）
@@ -42,7 +41,7 @@ export function useColumnSetting(options) {
     // 如果传入了新的列数组，使用新的；否则使用当前的
     const columnsToSave = newVisibleColumns || visibleColumns.value
     visibleColumns.value = columnsToSave
-    localStorage.setItem(storageKey, JSON.stringify(columnsToSave))
+    Storage.setItem(storageKey, columnsToSave)
     showColumnSetting.value = false
     ElMessage.success(t('common.save_success'))
   }

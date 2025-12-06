@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import i18n from '../i18n'
+import Storage from '../utils/storage'
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -79,8 +80,8 @@ export const useNotificationStore = defineStore('notification', {
       if (this.ws || this.wsConnected) {
         return
       }
-      const token = localStorage.getItem('token')
-      if (!token) {
+      const token = Storage.getItem('token', '')
+      if (!token || typeof token !== 'string') {
         return
       }
       
@@ -157,8 +158,8 @@ export const useNotificationStore = defineStore('notification', {
       const delay = Math.min(30000, 2000 * Math.pow(2, this.retryCount))
       this.retryTimer = setTimeout(() => {
         this.retryCount += 1
-        const token = localStorage.getItem('token')
-        if (!token) {
+        const token = Storage.getItem('token', '')
+        if (!token || typeof token !== 'string') {
           return
         }
         this.connect()

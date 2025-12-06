@@ -106,6 +106,7 @@ import { login, getLoginCaptcha } from '../api/auth'
 import { useUserStore } from '../store/user'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import { ERROR_CODES } from '../utils/request'
+import Storage from '../utils/storage'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -224,7 +225,7 @@ const handleLogin = async () => {
           userStore.menus = []
           userStore.adminInfo = null
           userStore.permissions = []
-          localStorage.removeItem('adminInfo')
+          Storage.removeItem('adminInfo')
           
           userStore.setToken(token)
           // 注意：登录接口返回的 admin 信息可能不完整，所以先不设置

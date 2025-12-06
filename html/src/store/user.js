@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import { getInfo, logout } from '../api/auth'
+import Storage from '../utils/storage'
+import logger from '../utils/logger'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
-    adminInfo: JSON.parse(localStorage.getItem('adminInfo') || 'null'),
+    token: Storage.getItem('token', ''),
+    adminInfo: Storage.getItem('adminInfo', null),
     permissions: [],
     menus: [], // 菜单不缓存，每次刷新都从服务器重新获取
     isSuperAdmin: false, // 是否是超级管理员
@@ -41,7 +43,7 @@ export const useUserStore = defineStore('user', {
   actions: {
     setToken(token) {
       this.token = token
-      localStorage.setItem('token', token)
+      Storage.setItem('token', token)
     },
 
     setAdminInfo(adminInfo) {
@@ -70,23 +72,22 @@ export const useUserStore = defineStore('user', {
         (adminInfo.roles || adminInfo.Roles || []).some(role => 
           (role.slug || role.Slug) === 'super-admin' && (role.status || role.Status) === 1
         )
-      try {
-        localStorage.setItem('adminInfo', JSON.stringify(basicInfo))
-      } catch (error) {
-        // 如果仍然超出配额，尝试清除其他可能的缓存
-        console.warn('Failed to save adminInfo to localStorage:', error)
-        // 尝试只存储最基本信息
+      
+      // 使用 Storage 工具保存，自动处理错误
+      const saved = Storage.setItem('adminInfo', basicInfo)
+      if (!saved) {
+        // 如果保存失败，尝试只存储最基本信息
         const minimalInfo = {
           id: basicInfo.id,
           username: basicInfo.username,
           nickname: basicInfo.nickname,
           avatar: basicInfo.avatar
         }
-        try {
-          localStorage.setItem('adminInfo', JSON.stringify(minimalInfo))
+        const minimalSaved = Storage.setItem('adminInfo', minimalInfo)
+        if (minimalSaved) {
           this.adminInfo = minimalInfo
-        } catch (e) {
-          console.error('Failed to save minimal adminInfo:', e)
+        } else {
+          logger.error('Failed to save adminInfo even with minimal data')
         }
       }
     },
@@ -123,7 +124,7 @@ export const useUserStore = defineStore('user', {
         this.menus = []
         this.adminInfo = null
         this.permissions = []
-        localStorage.removeItem('adminInfo')
+        Storage.removeItem('adminInfo')
         
         const res = await getInfo()
         if (res.data && res.data.admin) {
@@ -138,10 +139,8 @@ export const useUserStore = defineStore('user', {
             )
           
           // 调试：打印权限信息（开发环境）
-          if (process.env.NODE_ENV === 'development') {
-            console.log('User permissions:', this.permissions)
-            console.log('Is super admin:', this.isSuperAdmin)
-          }
+          logger.debug('User permissions:', this.permissions)
+          logger.debug('Is super admin:', this.isSuperAdmin)
         }
         // 保存配置信息
         if (res.data && res.data.config) {
@@ -163,7 +162,7 @@ export const useUserStore = defineStore('user', {
         }
       } catch (error) {
         // 即使登出接口失败，也要清除本地状态
-        console.error('Logout error:', error)
+        logger.error('Logout error:', error)
       } finally {
         // 清除所有状态（同步执行，不等待）
         this.token = ''
@@ -174,8 +173,8 @@ export const useUserStore = defineStore('user', {
         this.config = {
           showButtonsWithoutPermission: false
         }
-        localStorage.removeItem('token')
-        localStorage.removeItem('adminInfo')
+        Storage.removeItem('token')
+        Storage.removeItem('adminInfo')
         // 菜单不缓存，无需清除
       }
       // 返回 resolved promise 确保调用者可以继续

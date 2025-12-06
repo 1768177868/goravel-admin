@@ -1,5 +1,7 @@
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { useTableSort } from './useTableSort'
+import { useApiRequest } from './useApiRequest'
+import logger from '../utils/logger'
 
 /**
  * 列表页面通用逻辑 composable
@@ -33,9 +35,9 @@ export function useListPage(options = {}) {
 
   // 表格数据
   const tableData = ref([])
-
-  // 加载状态
-  const loading = ref(false)
+  
+  // 使用 API 请求 composable（提供请求取消功能和加载状态）
+  const { request: apiRequest, cancel: cancelRequest, loading } = useApiRequest()
 
   // 搜索表单
   const searchForm = reactive({ ...initialSearchForm })
@@ -106,16 +108,15 @@ export function useListPage(options = {}) {
    */
   const loadData = async () => {
     if (!fetchApi) {
-      console.error('useListPage: fetchApi is required')
+      logger.error('useListPage: fetchApi is required')
       return
     }
 
-    loading.value = true
     try {
       const params = buildRequestParams()
-      const res = await fetchApi(params)
+      const res = await apiRequest(() => fetchApi(params))
 
-      if (res.data) {
+      if (res && res.data) {
         let list = res.data.list || res.data.data || []
         
         // 如果提供了数据转换函数，使用它
@@ -132,14 +133,17 @@ export function useListPage(options = {}) {
         }
       }
     } catch (error) {
-      console.error('Load list error:', error)
+      // 如果是取消错误，不处理
+      if (error?.name === 'AbortError' || error?.message === 'canceled') {
+        return
+      }
+      
+      logger.error('Load list error:', error)
       
       // 调用错误回调
       if (onLoadError) {
         onLoadError(error)
       }
-    } finally {
-      loading.value = false
     }
   }
 
@@ -191,6 +195,7 @@ export function useListPage(options = {}) {
     handleSearch,
     handleReset,
     handlePageChange,
+    cancelRequest, // 导出取消请求方法
     
     // 排序相关（如果提供了排序配置）
     buildOrderBy,

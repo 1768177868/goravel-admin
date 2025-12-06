@@ -164,6 +164,8 @@ import {
   getWeeklyUserActivity, 
   getMonthlySales
 } from '../api/dashboard'
+import logger from '../utils/logger'
+import ErrorHandler from '../utils/errorHandler'
 import {
   User,
   View,
@@ -394,7 +396,8 @@ const loadDashboardData = async () => {
     //   updateSalesChart(salesRes.data)
     // }
   } catch (error) {
-    console.error('Failed to load dashboard data:', error)
+    logger.error('Failed to load dashboard data:', error)
+    ErrorHandler.handle(error, { showNotification: true })
   }
 }
 

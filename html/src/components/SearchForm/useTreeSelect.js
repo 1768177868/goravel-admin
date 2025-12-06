@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import Storage from '../../utils/storage'
 import { getOptions } from '../../api/option'
 
 export function useTreeSelect({ field, modelValue, onUpdate }) {
@@ -175,10 +176,11 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
           }
         }
       } else {
+        const token = Storage.getItem('token', '') || ''
         const res = await fetch(field.apiUrl, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+            'Authorization': `Bearer ${typeof token === 'string' ? token.trim() : ''}`,
             'Content-Type': 'application/json'
           }
         })

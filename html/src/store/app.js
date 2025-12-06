@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import Storage from '../utils/storage'
 
 const detectBrowserTimezone = () => {
   try {
@@ -10,26 +11,26 @@ const detectBrowserTimezone = () => {
 
 export const useAppStore = defineStore('app', {
   state: () => ({
-    sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
-    layoutSize: localStorage.getItem('layoutSize') || 'default', // default, large, small
+    sidebarCollapsed: Storage.getItem('sidebarCollapsed', 'false') === 'true',
+    layoutSize: Storage.getItem('layoutSize', 'default') || 'default', // default, large, small
     isFullscreen: false,
-    timezone: localStorage.getItem('timezone') || detectBrowserTimezone()
+    timezone: Storage.getItem('timezone', detectBrowserTimezone()) || detectBrowserTimezone()
   }),
 
   actions: {
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed
-      localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed.toString())
+      Storage.setItem('sidebarCollapsed', this.sidebarCollapsed.toString())
     },
 
     setSidebarCollapsed(collapsed) {
       this.sidebarCollapsed = collapsed
-      localStorage.setItem('sidebarCollapsed', collapsed.toString())
+      Storage.setItem('sidebarCollapsed', collapsed.toString())
     },
 
     setLayoutSize(size) {
       this.layoutSize = size
-      localStorage.setItem('layoutSize', size)
+      Storage.setItem('layoutSize', size)
       // 应用布局大小到 body
       document.body.className = document.body.className.replace(/layout-\w+/g, '')
       document.body.classList.add(`layout-${size}`)
@@ -53,7 +54,7 @@ export const useAppStore = defineStore('app', {
 
     setTimezone(timezone) {
       this.timezone = timezone || 'UTC'
-      localStorage.setItem('timezone', this.timezone)
+      Storage.setItem('timezone', this.timezone)
     }
   }
 })

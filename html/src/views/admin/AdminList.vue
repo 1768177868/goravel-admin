@@ -262,6 +262,8 @@ import {
   unbindAdminGoogleAuth
 } from '../../api/admin'
 import { getOptions } from '../../api/option'
+import logger from '../../utils/logger'
+import ErrorHandler from '../../utils/errorHandler'
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const PlusIcon = markRaw(Plus)
@@ -468,7 +470,8 @@ const loadDepartments = async () => {
       departmentTree.value = res.data.options
     }
   } catch (error) {
-    console.error('Load departments error:', error)
+    logger.error('Load departments error:', error)
+    ErrorHandler.handle(error, { silent: true })
   }
 }
 
@@ -484,7 +487,8 @@ const loadRoles = async () => {
       }))
     }
   } catch (error) {
-    console.error('Load roles error:', error)
+    logger.error('Load roles error:', error)
+    ErrorHandler.handle(error, { silent: true })
   }
 }
 
@@ -604,7 +608,7 @@ const handleSubmit = async () => {
         dialogVisible.value = false
         loadData()
       } catch (error) {
-        console.error('Submit error:', error)
+        logger.error('Submit error:', error)
         // 如果错误已经在响应拦截器中处理过，就不再重复显示
         if (!error.__handled) {
           // 显示更详细的错误信息
@@ -641,7 +645,7 @@ const handleDelete = async (row) => {
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('Delete error:', error)
+      logger.error('Delete error:', error)
       // 如果错误已经在响应拦截器中处理过，就不再重复显示
       if (!error.__handled) {
         const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
@@ -662,7 +666,8 @@ const handleResetPassword = async (row) => {
     ElMessage.success(t('admin.reset_password_success'))
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('Reset password error:', error)
+      logger.error('Reset password error:', error)
+      ErrorHandler.handle(error, { silent: true })
     }
   }
 }
@@ -682,7 +687,8 @@ const handleKickOut = async (row) => {
     ElMessage.success(t('admin.kick_out_success'))
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('Kick out error:', error)
+      logger.error('Kick out error:', error)
+      ErrorHandler.handle(error, { silent: true })
     }
   }
 }
@@ -707,7 +713,7 @@ const handleUnbindGoogleAuth = async (row) => {
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('Unbind google auth error:', error)
+      logger.error('Unbind google auth error:', error)
       if (!error?.__handled) {
         const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
         ElMessage.error(errorMessage)
@@ -724,7 +730,8 @@ const handleExport = async () => {
     // 导出完成后跳转到导出管理列表
     router.push('/exports')
   } catch (error) {
-    console.error('Export error:', error)
+    logger.error('Export error:', error)
+    ErrorHandler.handle(error, { silent: true })
   }
 }
 
@@ -737,8 +744,8 @@ onMounted(async () => {
       loadRoles()
     ])
   } catch (error) {
-    console.error('AdminList onMounted error:', error)
-    ElMessage.error('页面加载失败，请刷新重试')
+    logger.error('AdminList onMounted error:', error)
+    ErrorHandler.handle(error)
   }
 })
 </script>

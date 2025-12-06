@@ -220,6 +220,7 @@ import {
   updateDisplayName
 } from '../../api/attachment'
 import i18n from '../../i18n'
+import Storage from '../../utils/storage'
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
@@ -352,14 +353,14 @@ const uploadAction = computed(() => {
 })
 
 const uploadHeaders = computed(() => {
-  const token = localStorage.getItem('token') || ''
+  const token = Storage.getItem('token', '') || ''
   return {
-    'Authorization': `Bearer ${token.trim()}`
+    'Authorization': `Bearer ${typeof token === 'string' ? token.trim() : ''}`
   }
 })
 
 const uploadData = computed(() => {
-  const currentLocale = locale.value || localStorage.getItem('language') || 'zh-CN'
+  const currentLocale = locale.value || Storage.getItem('language', 'zh-CN') || 'zh-CN'
   const acceptLanguage = currentLocale === 'en-US' ? 'en-US' : 'zh-CN'
   return {
     'Accept-Language': acceptLanguage
@@ -405,11 +406,12 @@ const loadImageAsBlob = async (row) => {
   // 通过axios获取图片并转换为blob URL
   // 因为预览接口需要JWT认证，直接使用src无法携带认证头
   try {
-    const token = localStorage.getItem('token')?.trim() || ''
+    const token = Storage.getItem('token', '') || ''
+    const tokenStr = typeof token === 'string' ? token.trim() : ''
     const response = await axios.get(fullUrl, {
       responseType: 'blob',
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${tokenStr}`
       }
     })
     const blob = new Blob([response.data])
@@ -564,13 +566,13 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
         
         // 保存分片信息到 localStorage（用于断点续传）
         try {
-          localStorage.setItem(`chunk_${chunkUploadChunkID.value}`, JSON.stringify({
+          Storage.setItem(`chunk_${chunkUploadChunkID.value}`, {
             filename: file.name,
             total_size: totalSize,
             chunk_size: CHUNK_SIZE,
             total_chunks: totalChunks,
             created_at: Date.now()
-          }))
+          })
         } catch (e) {
           console.warn('Failed to save chunk info to localStorage:', e)
         }
@@ -745,10 +747,10 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
     // 清理 localStorage 中的分片信息
     try {
       if (chunkUploadChunkID.value) {
-        localStorage.removeItem(`chunk_${chunkUploadChunkID.value}`)
+        Storage.removeItem(`chunk_${chunkUploadChunkID.value}`)
       }
     } catch (e) {
-      console.warn('Failed to remove chunk info from localStorage:', e)
+      console.warn('Failed to remove chunk info from storage:', e)
     }
     
     // 刷新列表
@@ -836,17 +838,18 @@ const handleDownload = async (row) => {
     }
     
     // 获取 token
-    const token = localStorage.getItem('token') || ''
+    const token = Storage.getItem('token', '') || ''
+    const tokenStr = typeof token === 'string' ? token.trim() : ''
     
     // 获取当前语言设置
-    const currentLocale = locale.value || i18n.global.locale.value || localStorage.getItem('language') || 'zh-CN'
+    const currentLocale = locale.value || i18n.global.locale.value || Storage.getItem('language', 'zh-CN') || 'zh-CN'
     const acceptLanguage = currentLocale === 'en-US' ? 'en-US' : 'zh-CN'
     
     // 使用 fetch 请求下载文件，这样可以携带认证 token
     const response = await fetch(downloadUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token.trim()}`,
+        'Authorization': `Bearer ${tokenStr}`,
         'Accept-Language': acceptLanguage
       }
     })

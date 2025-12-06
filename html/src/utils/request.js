@@ -5,6 +5,8 @@ import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
 import { useAppStore } from '../store/app'
 import i18n from '../i18n'
+import logger from './logger'
+import Storage from './storage'
 
 const { t } = i18n.global
 
@@ -48,13 +50,13 @@ const request = axios.create({
 // 请求拦截器
 request.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token')
+    const token = Storage.getItem('token', '')
     if (token) {
       config.headers.Authorization = `Bearer ${token.trim()}`
     }
     
     // 设置语言请求头
-    const currentLocale = i18n.global.locale.value || localStorage.getItem('language') || 'zh-CN'
+    const currentLocale = i18n.global.locale.value || Storage.getItem('language', 'zh-CN')
     let acceptLanguage = 'zh-CN'
     if (currentLocale === 'en-US') {
       acceptLanguage = 'en-US'
@@ -71,10 +73,13 @@ request.interceptors.request.use(
     } catch {
       browserTimezone = 'UTC'
     }
-    const timezone = appStore.timezone || localStorage.getItem('timezone') || browserTimezone
+    const timezone = appStore.timezone || Storage.getItem('timezone', browserTimezone)
     if (timezone) {
       config.headers['X-Timezone'] = timezone
     }
+    
+    // 支持请求取消（如果传递了 signal）
+    // axios 会自动处理 config.signal
     return config
   },
   error => {
@@ -136,7 +141,7 @@ request.interceptors.response.use(
     if (newToken) {
       const token = newToken.replace('Bearer ', '').trim()
       if (token) {
-        localStorage.setItem('token', token)
+        Storage.setItem('token', token)
         const userStore = useUserStore()
         userStore.setToken(token)
       }
@@ -145,7 +150,7 @@ request.interceptors.response.use(
     if (res.data && res.data.token) {
       const token = res.data.token
       if (token) {
-        localStorage.setItem('token', token)
+        Storage.setItem('token', token)
         const userStore = useUserStore()
         userStore.setToken(token)
       }

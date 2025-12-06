@@ -105,27 +105,19 @@ func (r *SendEmail) Handle(args ...any) error {
 //   - retryable: 是否重试
 //   - delay: 延迟时间
 func (r *SendEmail) ShouldRetry(err error, attempt int) (retryable bool, delay time.Duration) {
-	// 从配置读取最大重试次数，默认3次
-	const DefaultMaxRetries = 3
-	maxRetries := facades.Config().GetInt("queue.jobs.send_email.max_retries", DefaultMaxRetries)
+
+	maxRetries := 3 // 最大重试次数
 
 	if attempt > maxRetries {
 		facades.Log().Errorf("📧 [Job] 已达到最大重试次数 %d，不再重试", maxRetries)
 		return false, 0 // 不再重试
 	}
 
-	// 从配置读取延迟时间，默认递增延迟
-	delays := []time.Duration{
-		facades.Config().GetDuration("queue.jobs.send_email.retry_delays.first", 3*time.Second),
-		facades.Config().GetDuration("queue.jobs.send_email.retry_delays.second", 10*time.Second),
-		facades.Config().GetDuration("queue.jobs.send_email.retry_delays.third", 20*time.Second),
-	}
+	// 递增延迟重试：3秒、10秒、20秒
+	delays := []time.Duration{3 * time.Second, 10 * time.Second, 20 * time.Second}
 
 	// 获取当前重试的延迟时间（attempt从1开始，所以减1作为索引）
-	delayIndex := attempt - 1
-	if delayIndex < 0 {
-		delayIndex = 0
-	}
+	delayIndex := max(attempt-1, 0)
 	if delayIndex < len(delays) {
 		delay = delays[delayIndex]
 	} else {

@@ -1,4 +1,5 @@
 import request from '../utils/request'
+import Storage from '../utils/storage'
 
 // 获取附件列表
 export function getAttachmentList(params) {
@@ -90,13 +91,12 @@ export function mergeChunks(chunkID, filename, mimeType, totalChunks) {
   // 如果 totalChunks 未提供，尝试从 localStorage 获取（断点续传场景）
   if (!totalChunks) {
     try {
-      const chunkInfo = localStorage.getItem(`chunk_${chunkID}`)
-      if (chunkInfo) {
-        const info = JSON.parse(chunkInfo)
-        totalChunks = info.total_chunks
+      const chunkInfo = Storage.getItem(`chunk_${chunkID}`, null)
+      if (chunkInfo && typeof chunkInfo === 'object') {
+        totalChunks = chunkInfo.total_chunks
       }
     } catch (e) {
-      console.warn('Failed to get totalChunks from localStorage:', e)
+      console.warn('Failed to get totalChunks from storage:', e)
     }
   }
   if (!totalChunks || totalChunks <= 0) {
@@ -119,13 +119,12 @@ export function getChunkProgress(chunkID, totalChunks) {
   // 如果 totalChunks 未提供，尝试从 localStorage 获取（断点续传场景）
   if (!totalChunks) {
     try {
-      const chunkInfo = localStorage.getItem(`chunk_${chunkID}`)
-      if (chunkInfo) {
-        const info = JSON.parse(chunkInfo)
-        totalChunks = info.total_chunks
+      const chunkInfo = Storage.getItem(`chunk_${chunkID}`, null)
+      if (chunkInfo && typeof chunkInfo === 'object') {
+        totalChunks = chunkInfo.total_chunks
       }
     } catch (e) {
-      console.warn('Failed to get totalChunks from localStorage:', e)
+      console.warn('Failed to get totalChunks from storage:', e)
     }
   }
   if (!totalChunks || totalChunks <= 0) {

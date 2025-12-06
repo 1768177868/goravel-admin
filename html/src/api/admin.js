@@ -1,80 +1,57 @@
 import request from '../utils/request'
+import { createCRUDApi, extendApi } from '../utils/apiFactory'
 
-// 获取管理员列表
-export function getAdminList(params) {
-  return request({
-    url: '/admins',
-    method: 'get',
-    params
-  })
-}
+// 创建基础 CRUD API
+const baseAdminApi = createCRUDApi('admins')
 
-// 获取管理员详情
-export function getAdminDetail(id) {
-  return request({
-    url: `/admins/${id}`,
-    method: 'get'
-  })
-}
+// 扩展 API，添加自定义方法
+const adminApi = extendApi(baseAdminApi, {
+  // 导出管理员
+  export: (params) => {
+    return request({
+      url: '/admins/export',
+      method: 'post',
+      data: params
+    })
+  },
 
-// 创建管理员
-export function createAdmin(data) {
-  return request({
-    url: '/admins',
-    method: 'post',
-    data
-  })
-}
+  // 重置密码
+  resetPassword: (id, data) => {
+    return request({
+      url: `/admins/${id}/password`,
+      method: 'put',
+      data
+    })
+  },
 
-// 更新管理员
-export function updateAdmin(id, data) {
-  return request({
-    url: `/admins/${id}`,
-    method: 'put',
-    data
-  })
-}
+  // 踢出用户（删除该用户的所有token）
+  kickOutUser: (id) => {
+    return request({
+      url: `/admins/${id}/tokens`,
+      method: 'delete'
+    })
+  },
 
-// 删除管理员
-export function deleteAdmin(id) {
-  return request({
-    url: `/admins/${id}`,
-    method: 'delete'
-  })
-}
+  // 解绑管理员的谷歌验证码
+  unbindGoogleAuth: (id, data) => {
+    return request({
+      url: `/admins/${id}/unbind-google-auth`,
+      method: 'post',
+      data
+    })
+  }
+})
 
-// 导出管理员
-export function exportAdmin(params) {
-  return request({
-    url: '/admins/export',
-    method: 'post',
-    data: params
-  })
-}
-
-// 重置密码
-export function resetPassword(id, data) {
-  return request({
-    url: `/admins/${id}/password`,
-    method: 'put',
-    data
-  })
-}
-
-// 踢出用户（删除该用户的所有token）
-export function kickOutUser(id) {
-  return request({
-    url: `/admins/${id}/tokens`,
-    method: 'delete'
-  })
-}
-
-// 解绑管理员的谷歌验证码
-export function unbindAdminGoogleAuth(id, data) {
-  return request({
-    url: `/admins/${id}/unbind-google-auth`,
-    method: 'post',
-    data
-  })
-}
+// 导出所有方法（保持向后兼容）
+export const {
+  list: getAdminList,
+  detail: getAdminDetail,
+  create: createAdmin,
+  update: updateAdmin,
+  delete: deleteAdmin,
+  export: exportAdmin,
+  resetPassword,
+  kickOutUser,
+  unbindGoogleAuth: unbindAdminGoogleAuth
+} = adminApi
 

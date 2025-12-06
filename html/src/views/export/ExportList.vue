@@ -115,6 +115,7 @@ import { usePermission } from '../../composables/usePermission'
 import { getExportList, deleteExport, batchDeleteExports, createExportProgressSSE } from '../../api/export'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 import i18n from '../../i18n'
+import Storage from '../../utils/storage'
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
@@ -384,10 +385,10 @@ const handleDownload = async (row) => {
     }
     
     // 获取 token
-    const token = localStorage.getItem('token') || ''
+    const token = Storage.getItem('token', '') || ''
     
     // 获取当前语言设置
-    const currentLocale = locale.value || i18n.global.locale.value || localStorage.getItem('language') || 'zh-CN'
+    const currentLocale = locale.value || i18n.global.locale.value || Storage.getItem('language', 'zh-CN') || 'zh-CN'
     const acceptLanguage = currentLocale === 'en-US' ? 'en-US' : 'zh-CN'
     
     // 使用 fetch 请求下载文件，这样可以携带认证 token

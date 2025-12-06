@@ -1,18 +1,18 @@
 import { defineStore } from 'pinia'
+import Storage from '../utils/storage'
 
 // 从 localStorage 加载标签页数据
 const loadTabsFromStorage = () => {
   try {
-    const stored = localStorage.getItem('tabs')
-    if (stored) {
-      const data = JSON.parse(stored)
+    const data = Storage.getItem('tabs', null)
+    if (data && typeof data === 'object') {
       return {
         tabs: data.tabs || [],
         activeTab: data.activeTab || null
       }
     }
   } catch (error) {
-    console.error('Failed to load tabs from localStorage:', error)
+    console.error('Failed to load tabs from storage:', error)
   }
   return {
     tabs: [],
@@ -23,17 +23,15 @@ const loadTabsFromStorage = () => {
 // 保存标签页数据到 localStorage
 const saveTabsToStorage = (tabs, activeTab) => {
   try {
-    localStorage.setItem('tabs', JSON.stringify({
-      tabs,
-      activeTab
-    }))
+    const data = { tabs, activeTab }
+    Storage.setItem('tabs', data)
     // 触发 storage 事件，通知其他标签页更新
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'tabs',
-      newValue: JSON.stringify({ tabs, activeTab })
+      newValue: JSON.stringify(data)
     }))
   } catch (error) {
-    console.error('Failed to save tabs to localStorage:', error)
+    console.error('Failed to save tabs to storage:', error)
   }
 }
 

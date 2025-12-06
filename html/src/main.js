@@ -14,7 +14,23 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import { setupTabsStorageSync } from './store/tabs'
+import { validateEnv } from './utils/env'
+import Storage from './utils/storage'
+import logger from './utils/logger'
 import './style.css'
+
+// 验证环境变量
+
+try {
+  validateEnv(false) // 非严格模式，只警告
+} catch (error) {
+  logger.error('Environment validation failed:', error)
+}
+
+// 检查 localStorage 是否可用
+if (!Storage.isAvailable()) {
+  logger.warn('localStorage is not available. Some features may not work properly.')
+}
 
 const app = createApp(App)
 
@@ -25,7 +41,7 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 // 根据当前语言设置 Element Plus 语言
 const getElementLocale = () => {
-  const savedLocale = localStorage.getItem('language') || 'zh-CN'
+  const savedLocale = Storage.getItem('language', 'zh-CN')
   return savedLocale === 'zh-CN' ? zhCn : en
 }
 
@@ -38,7 +54,7 @@ app.use(VXETable)
 app.use(VxePcUI)
 
 // 初始化布局大小
-const layoutSize = localStorage.getItem('layoutSize') || 'default'
+const layoutSize = Storage.getItem('layoutSize', 'default')
 document.body.classList.add(`layout-${layoutSize}`)
 
 // 设置多标签页同步监听器（在 Pinia 初始化后）
