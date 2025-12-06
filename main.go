@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 
 	"goravel/bootstrap"
@@ -54,7 +55,16 @@ func runApplication() {
 	// }()
 
 	// Start queue server by facades.Queue().
-	worker := facades.Queue().Worker()
+	// 从配置文件读取重试次数（支持环境变量 QUEUE_TRIES）
+	// 这个值是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
+	tries := facades.Config().GetInt("queue.tries", 10)
+	worker := facades.Queue().Worker(queue.Args{
+		Connection: "",    // 使用默认连接
+		Queue:      "",    // 使用默认队列
+		Concurrent: 1,     // 并发数
+		Tries:      tries, // 最大重试次数上限（从配置读取）
+	})
+	facades.Log().Infof("队列工作进程启动 - 最大重试次数: %d", tries)
 	go func() {
 		if err := worker.Run(); err != nil {
 			facades.Log().Errorf("Queue run error: %v", err)

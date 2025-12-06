@@ -24,12 +24,16 @@ func init() {
 				"connection": "sqlite",
 				"queue":      "default",
 				"concurrent": 1,
+				// "tries": 3,        // 最大重试次数（可选，默认由队列工作进程设置）
+				// "retry_after": 90, // 重试延迟时间（秒，可选）
 			},
 			"machinery": map[string]any{
 				"driver":     "machinery",
 				"connection": "default",
 				"queue":      "default",
 				"concurrent": 1,
+				// "tries": 3,        // 最大重试次数（可选，默认由队列工作进程设置）
+				// "retry_after": 90, // 重试延迟时间（秒，可选）
 			},
 			"redis1": map[string]any{
 				"driver":     "custom",
@@ -56,5 +60,11 @@ func init() {
 			"database": config.Env("DB_CONNECTION", "postgres"),
 			"table":    "failed_jobs",
 		},
+		// Retry Configuration
+		//
+		// 队列工作进程的最大重试次数
+		// 可以通过环境变量 QUEUE_TRIES 设置，默认值为 10
+		// 注意：这个值是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
+		"tries": config.Env("QUEUE_TRIES", 10), // 最大重试次数上限（建议设置较大值，如 10）
 	})
 }
