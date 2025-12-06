@@ -394,6 +394,7 @@ sudo systemctl stop goravel-admin-v2
 sudo systemctl restart goravel-admin-v1
 sudo systemctl restart goravel-admin-v2
 
+
 # 查看状态
 sudo systemctl status goravel-admin-v1
 sudo systemctl status goravel-admin-v2

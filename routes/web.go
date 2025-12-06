@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/http/controllers"
@@ -12,6 +13,12 @@ func Web() {
 	// 		"version": support.Version,
 	// 	})
 	// })
+
+	facades.Route().Get("/", func(ctx http.Context) http.Response {
+		return ctx.Response().Json(http.StatusOK, http.Json{
+			"version": "1.0.3",
+		})
+	})
 
 	// Swagger
 	swaggerController := controllers.NewSwaggerController()

@@ -1,6 +1,3 @@
-//go:build !overseer
-// +build !overseer
-
 package main
 
 import (
@@ -33,7 +30,8 @@ import (
 // @name                       Authorization
 // @description                JWT 认证，格式：Bearer {token}
 
-func main() {
+// runApplication 启动应用程序的核心逻辑
+func runApplication() {
 	// This bootstraps the framework and gets it ready for use.
 	bootstrap.Boot()
 
@@ -66,18 +64,27 @@ func main() {
 	// Listen for the OS signal
 	go func() {
 		<-quit
-		if err := facades.Route().Shutdown(); err != nil {
-			facades.Log().Errorf("Route Shutdown error: %v", err)
-		}
-		// if err := facades.Grpc().Shutdown(); err != nil {
-		// 	facades.Log().Errorf("Grpc Shutdown error: %v", err)
-		// }
-		if err := worker.Shutdown(); err != nil {
-			facades.Log().Errorf("Queue Shutdown error: %v", err)
-		}
-
+		shutdownApplication()
 		os.Exit(0)
 	}()
 
 	select {}
+}
+
+// shutdownApplication 优雅关闭应用程序
+func shutdownApplication() {
+	if err := facades.Route().Shutdown(); err != nil {
+		facades.Log().Errorf("Route Shutdown error: %v", err)
+	}
+	// if err := facades.Grpc().Shutdown(); err != nil {
+	// 	facades.Log().Errorf("Grpc Shutdown error: %v", err)
+	// }
+	worker := facades.Queue().Worker()
+	if err := worker.Shutdown(); err != nil {
+		facades.Log().Errorf("Queue Shutdown error: %v", err)
+	}
+}
+
+func main() {
+	runApplication()
 }

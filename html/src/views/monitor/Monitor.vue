@@ -23,7 +23,7 @@
                 <el-icon class="card-icon cpu-icon"><Cpu /></el-icon>
                 <span>{{ $t('monitor.cpu') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -65,7 +65,7 @@
                 <el-icon class="card-icon memory-icon"><DataBoard /></el-icon>
                 <span>{{ $t('monitor.memory') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -115,7 +115,7 @@
                 <el-icon class="card-icon disk-icon"><FolderOpened /></el-icon>
                 <span>{{ $t('monitor.disk') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -202,7 +202,7 @@
                 <el-icon class="card-icon network-icon"><Connection /></el-icon>
                 <span>{{ $t('monitor.network') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -269,7 +269,7 @@
                 <el-icon class="card-icon load-icon"><TrendCharts /></el-icon>
                 <span>{{ $t('monitor.load') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -293,7 +293,7 @@
                 <el-icon class="card-icon fd-icon"><Document /></el-icon>
                 <span>{{ $t('monitor.file_descriptors') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -340,7 +340,7 @@
                 <el-icon class="card-icon runtime-icon"><Operation /></el-icon>
                 <span>{{ $t('monitor.runtime') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -412,7 +412,7 @@
                 <el-icon class="card-icon system-icon"><Monitor /></el-icon>
                 <span>{{ $t('monitor.system_info') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -449,7 +449,7 @@
                 <el-icon class="card-icon processes-icon"><Operation /></el-icon>
                 <span>{{ $t('monitor.processes') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -842,7 +842,7 @@
                 <el-icon class="card-icon interfaces-icon"><Monitor /></el-icon>
                 <span>{{ $t('monitor.network_interfaces') }}</span>
               </div>
-              <el-button size="small" :icon="Refresh" circle @click="loadData" />
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
             </div>
           </template>
           <div class="monitor-content">
@@ -947,6 +947,7 @@ const isLinux = computed(() => {
 })
 
 const loading = ref(false)
+const refreshing = ref(false) // 刷新按钮状态，防止重复点击
 let eventSource = null
 let refreshTimer = null
 
@@ -1378,6 +1379,12 @@ const handleResize = () => {
 
 // 手动刷新（兼容原有功能）
 const loadData = async () => {
+  // 如果正在刷新，直接返回，防止重复点击
+  if (refreshing.value) {
+    return
+  }
+  
+  refreshing.value = true
   loading.value = true
   try {
     const { data } = await getSystemInfo()
@@ -1393,6 +1400,7 @@ const loadData = async () => {
     }
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
