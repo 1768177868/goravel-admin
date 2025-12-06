@@ -144,6 +144,7 @@
 <script setup>
 import { ref, onMounted, nextTick, onBeforeUnmount, onUnmounted, onActivated, onDeactivated, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave } from 'vue-router'
 import * as echarts from 'echarts'
 import { 
   getCount, 
@@ -340,8 +341,19 @@ const updateRegionChart = (regionDataArray) => {
   }
 }
 
+// 停止定时刷新 Dashboard 数据
+const stopDashboardRefresh = () => {
+  if (dashboardRefreshTimer) {
+    clearInterval(dashboardRefreshTimer)
+    dashboardRefreshTimer = null
+  }
+}
+
 // 启动定时刷新 Dashboard 数据
 const startDashboardRefresh = () => {
+  // 先清除可能存在的旧定时器
+  stopDashboardRefresh()
+  
   // 立即加载一次
   loadDashboardData()
   
@@ -675,21 +687,20 @@ onActivated(() => {
   }
 })
 
+// 路由离开前清理（确保路由切换时停止请求）
+onBeforeRouteLeave(() => {
+  stopDashboardRefresh()
+})
+
 // keep-alive 场景：组件被停用时清除定时器
 onDeactivated(() => {
   // 清除定时刷新（离开页面时立即停止）
-  if (dashboardRefreshTimer) {
-    clearInterval(dashboardRefreshTimer)
-    dashboardRefreshTimer = null
-  }
+  stopDashboardRefresh()
 })
 
 onBeforeUnmount(() => {
   // 清除定时刷新（离开页面时立即停止）
-  if (dashboardRefreshTimer) {
-    clearInterval(dashboardRefreshTimer)
-    dashboardRefreshTimer = null
-  }
+  stopDashboardRefresh()
   
   window.removeEventListener('resize', handleResize)
   visitTrendChartInstance?.dispose()
@@ -700,10 +711,7 @@ onBeforeUnmount(() => {
 
 onUnmounted(() => {
   // 清除定时刷新（双重保险）
-  if (dashboardRefreshTimer) {
-    clearInterval(dashboardRefreshTimer)
-    dashboardRefreshTimer = null
-  }
+  stopDashboardRefresh()
 })
 </script>
 
