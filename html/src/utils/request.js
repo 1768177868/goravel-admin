@@ -240,7 +240,7 @@ request.interceptors.response.use(
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         errorMessage = t('error.network') + ' (网络连接失败，请检查 API 地址配置)'
       } else if (error.code === 'ECONNABORTED') {
-        errorMessage = t('error.timeout') || '请求超时'
+        errorMessage = t('error.timeout')
       } else if (error.message) {
         errorMessage = error.message
       }

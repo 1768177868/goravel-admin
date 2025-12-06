@@ -66,7 +66,8 @@
     "unauthorized": "Not logged in or session expired, please login again",
     "forbidden": "No permission to access",
     "tooManyRequests": "Too many requests, please try again later",
-    "network": "Network error, please check your connection"
+    "network": "Network error, please check your connection",
+    "timeout": "Request timeout, please try again later"
   },
   "notification": {
     "center": "Notification Center",

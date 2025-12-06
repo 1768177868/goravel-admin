@@ -1,5 +1,18 @@
 <template>
   <div class="dashboard">
+    <!-- 页面头部：刷新按钮 -->
+    <div class="dashboard-header">
+      <h2>{{ $t('menu.dashboard') }}</h2>
+      <el-button 
+        :icon="RefreshIcon" 
+        :loading="refreshing"
+        :disabled="refreshing"
+        @click="handleRefresh"
+      >
+        {{ $t('tabs.refresh') || '刷新' }}
+      </el-button>
+    </div>
+    
     <!-- 统计卡片 -->
     <el-row :gutter="20" class="stats-row">
       <el-col :xs="12" :sm="12" :md="6" :lg="6" v-for="stat in stats" :key="stat.title">
@@ -142,9 +155,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount, onUnmounted, onActivated, onDeactivated, markRaw } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
-import { onBeforeRouteLeave } from 'vue-router'
 import * as echarts from 'echarts'
 import { 
   getCount, 
@@ -166,7 +178,8 @@ import {
   Plus,
   Edit,
   Delete,
-  Setting
+  Setting,
+  Refresh
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -180,6 +193,7 @@ const ArrowUpIcon = markRaw(ArrowUp)
 const ArrowDownIcon = markRaw(ArrowDown)
 const PlusIcon = markRaw(Plus)
 const SettingIcon = markRaw(Setting)
+const RefreshIcon = markRaw(Refresh)
 
 // 统计数据
 const stats = ref([
@@ -241,8 +255,8 @@ const deviceData = ref([])
 // 地区分布数据（暂时使用空数据，后续可以从后端获取）
 const regionData = ref([])
 
-// Dashboard SSE 连接
-let dashboardRefreshTimer = null // 定时刷新定时器
+// 刷新状态
+const refreshing = ref(false)
 
 // 更新统计数据
 const updateStats = (countData) => {
@@ -341,29 +355,19 @@ const updateRegionChart = (regionDataArray) => {
   }
 }
 
-// 停止定时刷新 Dashboard 数据
-const stopDashboardRefresh = () => {
-  if (dashboardRefreshTimer) {
-    clearInterval(dashboardRefreshTimer)
-    dashboardRefreshTimer = null
+// 手动刷新 Dashboard 数据
+const handleRefresh = async () => {
+  if (refreshing.value) return
+  
+  refreshing.value = true
+  try {
+    await loadDashboardData()
+  } finally {
+    refreshing.value = false
   }
 }
 
-// 启动定时刷新 Dashboard 数据
-const startDashboardRefresh = () => {
-  // 先清除可能存在的旧定时器
-  stopDashboardRefresh()
-  
-  // 立即加载一次
-  loadDashboardData()
-  
-  // 每10秒刷新一次
-  dashboardRefreshTimer = setInterval(() => {
-    loadDashboardData()
-  }, 10000)
-}
-
-// 加载 Dashboard 数据（降级方案）
+// 加载 Dashboard 数据
 const loadDashboardData = async () => {
   try {
     // 加载统计数据
@@ -675,49 +679,37 @@ const initCharts = async () => {
 
 onMounted(() => {
   initCharts()
-  // 启动定时刷新 Dashboard 数据
-  startDashboardRefresh()
-})
-
-// keep-alive 场景：组件被激活时启动定时器
-onActivated(() => {
-  // 如果定时器不存在，启动定时刷新
-  if (!dashboardRefreshTimer) {
-    startDashboardRefresh()
-  }
-})
-
-// 路由离开前清理（确保路由切换时停止请求）
-onBeforeRouteLeave(() => {
-  stopDashboardRefresh()
-})
-
-// keep-alive 场景：组件被停用时清除定时器
-onDeactivated(() => {
-  // 清除定时刷新（离开页面时立即停止）
-  stopDashboardRefresh()
+  // 初始加载数据
+  loadDashboardData()
 })
 
 onBeforeUnmount(() => {
-  // 清除定时刷新（离开页面时立即停止）
-  stopDashboardRefresh()
-  
   window.removeEventListener('resize', handleResize)
   visitTrendChartInstance?.dispose()
   accessSourceChartInstance?.dispose()
   deviceChartInstance?.dispose()
   regionChartInstance?.dispose()
 })
-
-onUnmounted(() => {
-  // 清除定时刷新（双重保险）
-  stopDashboardRefresh()
-})
 </script>
 
 <style scoped>
 .dashboard {
   padding: 0;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+
+.dashboard-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .stats-row {
