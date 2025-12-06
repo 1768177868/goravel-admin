@@ -7,7 +7,7 @@
           <div class="header-actions">
             <el-button 
               type="danger" 
-              :disabled="selectedRows.length === 0"
+              :disabled="selectedRows.length === 0 || getButtonState('operation_log.destroy').disabled"
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>
@@ -64,8 +64,22 @@
               {{ getOperationTitle(row.title || row.Title) }}
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('operation_log.show').disabled"
+                @click="handleView(row)"
+              >
+                {{ $t('common.view') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('operation_log.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -105,6 +119,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import { getMethodOptions } from '../../utils/fieldOptions'
 import {
   getOperationLogList,
@@ -116,6 +131,7 @@ import {
 } from '../../api/log'
 
 const { t, te, tm } = useI18n()
+const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const detailVisible = ref(false)

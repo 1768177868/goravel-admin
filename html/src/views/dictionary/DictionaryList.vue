@@ -4,7 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('dictionary.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('dictionary.store').disabled"
+            @click="handleAdd"
+          >
             <el-icon><Plus /></el-icon>
             {{ $t('dictionary.add_dictionary') }}
           </el-button>
@@ -53,8 +57,22 @@
               </el-tag>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('dictionary.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('dictionary.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -112,6 +130,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
+import { usePermission } from '../../composables/usePermission'
 import {
   getDictionaryList,
   getDictionaryDetail,
@@ -121,6 +140,7 @@ import {
 } from '../../api/dictionary'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const tableRef = ref(null)
 const loading = ref(false)

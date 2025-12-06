@@ -65,8 +65,22 @@
               </el-tag>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('login_log.show').disabled"
+                @click="handleView(row)"
+              >
+                {{ $t('common.view') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('login_log.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -105,6 +119,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import {
   getLoginLogList,
   getLoginLogDetail,
@@ -114,6 +129,7 @@ import {
 } from '../../api/log'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const detailVisible = ref(false)

@@ -9,7 +9,11 @@
               <el-icon><Setting /></el-icon>
               {{ $t('common.column_setting') }}
             </el-button>
-            <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchKickOut">
+            <el-button 
+              type="danger" 
+              :disabled="selectedRows.length === 0 || getButtonState('admin.kick_out').disabled"
+              @click="handleBatchKickOut"
+            >
               <el-icon><Delete /></el-icon>
               {{ $t('online_user.batch_kick_out') }}
             </el-button>
@@ -63,7 +67,14 @@
               {{ formatTime(row.last_active) }}
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="danger" link @click="handleKickOut(row)">{{ $t('online_user.kick_out') }}</el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('admin.kick_out').disabled"
+                @click="handleKickOut(row)"
+              >
+                {{ $t('online_user.kick_out') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -96,8 +107,10 @@ import SearchForm from '@/components/SearchForm.vue'
 import Pagination from '@/components/Pagination.vue'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog.vue'
 import { useColumnSetting } from '@/composables/useColumnSetting'
+import { usePermission } from '@/composables/usePermission'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const loading = ref(false)

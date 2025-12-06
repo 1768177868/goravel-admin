@@ -80,7 +80,14 @@
             >
               {{ $t('common.view') }}
             </el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+            <el-button 
+              type="danger" 
+              link 
+              :disabled="getButtonState('export.destroy').disabled"
+              @click="handleDelete(row)"
+            >
+              {{ $t('common.delete') }}
+            </el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -104,11 +111,13 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import { getExportList, deleteExport, batchDeleteExports, createExportProgressSSE } from '../../api/export'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 import i18n from '../../i18n'
 
 const { t, locale } = useI18n()
+const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const selectedRows = ref([])

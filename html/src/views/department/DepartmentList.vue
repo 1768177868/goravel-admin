@@ -4,7 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('department.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('department.store').disabled"
+            @click="handleAdd"
+          >
             <el-icon><Plus /></el-icon>
             {{ $t('department.add_department') }}
           </el-button>
@@ -52,8 +56,22 @@
               </el-tag>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('department.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('department.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -113,6 +131,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
+import { usePermission } from '../../composables/usePermission'
 import {
   getDepartmentList,
   getDepartmentDetail,
@@ -122,6 +141,7 @@ import {
 } from '../../api/department'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)

@@ -4,7 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('admin.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('admin.store').disabled"
+            @click="handleAdd"
+          >
             <el-icon><PlusIcon /></el-icon>
             {{ $t('admin.add_admin') }}
           </el-button>
@@ -21,7 +25,13 @@
         @reset="handleReset"
       >
         <template #extra-buttons>
-          <el-button type="success" @click="handleExport">{{ $t('common.export') }}</el-button>
+          <el-button 
+            type="success" 
+            :disabled="getButtonState('admin.export').disabled"
+            @click="handleExport"
+          >
+            {{ $t('common.export') }}
+          </el-button>
         </template>
       </SearchForm>
 
@@ -77,13 +87,35 @@
               {{ (row.is_2fa_bound || row.Is2FABound) ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-              <el-button type="warning" link @click="handleResetPassword(row)">{{ $t('admin.reset_password') }}</el-button>
-              <el-button type="info" link @click="handleKickOut(row)">{{ $t('admin.kick_out') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('admin.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="warning" 
+                link 
+                :disabled="getButtonState('admin.password').disabled"
+                @click="handleResetPassword(row)"
+              >
+                {{ $t('admin.reset_password') }}
+              </el-button>
+              <el-button 
+                type="info" 
+                link 
+                :disabled="getButtonState('admin.kick_out').disabled"
+                @click="handleKickOut(row)"
+              >
+                {{ $t('admin.kick_out') }}
+              </el-button>
               <el-button
                 v-if="(row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id)"
                 type="warning"
                 link
+                :disabled="getButtonState('admin.unbind_google_auth').disabled"
                 @click="handleUnbindGoogleAuth(row)"
               >
                 {{ $t('admin.unbind_google_auth') }}
@@ -92,6 +124,7 @@
                 v-if="!isProtectedAdmin(row.id)"
                 type="danger"
                 link
+                :disabled="getButtonState('admin.destroy').disabled"
                 @click="handleDelete(row)"
               >
                 {{ $t('common.delete') }}
@@ -216,6 +249,7 @@ import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
@@ -232,6 +266,9 @@ import { getOptions } from '../../api/option'
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const PlusIcon = markRaw(Plus)
 const ArrowDownIcon = markRaw(ArrowDown)
+
+// 权限控制
+const { getButtonState } = usePermission()
 
 const { t } = useI18n()
 const router = useRouter()

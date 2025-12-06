@@ -4,7 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('role.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('role.store').disabled"
+            @click="handleAdd"
+          >
             <el-icon><PlusIcon /></el-icon>
             {{ $t('role.add_role') }}
           </el-button>
@@ -53,11 +57,19 @@
               </el-tag>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('role.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
               <el-button 
                 v-if="!isProtectedRole(row)"
                 type="danger" 
                 link 
+                :disabled="getButtonState('role.destroy').disabled"
                 @click="handleDelete(row)"
               >
                 {{ $t('common.delete') }}
@@ -185,6 +197,7 @@ import { Plus, InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/i
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
+import { usePermission } from '../../composables/usePermission'
 import { getMenuTranslation } from '../../utils/menuTranslation'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
@@ -199,6 +212,7 @@ const KeyIcon = markRaw(Key)
 const LockIcon = markRaw(Lock)
 
 const { t, te, tm } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const tableRef = ref(null)
 const menuPermissionTreeRef = ref(null)

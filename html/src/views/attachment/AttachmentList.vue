@@ -18,7 +18,10 @@
               :multiple="false"
             >
               <template #trigger>
-                <el-button type="primary">
+                <el-button 
+                  type="primary"
+                  :disabled="getButtonState('attachment.store').disabled"
+                >
                   <el-icon><UploadIcon /></el-icon>
                   {{ $t('attachment.upload') }}
                 </el-button>
@@ -26,6 +29,7 @@
             </el-upload>
             <el-button 
               type="success"
+              :disabled="getButtonState('attachment.store').disabled"
               @click="handleLargeFileUpload"
             >
               <el-icon><UploadIcon /></el-icon>
@@ -33,7 +37,7 @@
             </el-button>
             <el-button 
               type="danger" 
-              :disabled="selectedRows.length === 0"
+              :disabled="selectedRows.length === 0 || getButtonState('attachment.destroy').disabled"
               @click="handleBatchDelete"
             >
               <el-icon><DeleteIcon /></el-icon>
@@ -119,7 +123,14 @@
             >
               {{ $t('common.download') }}
             </el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+            <el-button 
+              type="danger" 
+              link 
+              :disabled="getButtonState('attachment.destroy').disabled"
+              @click="handleDelete(row)"
+            >
+              {{ $t('common.delete') }}
+            </el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -195,6 +206,7 @@ const DeleteIcon = markRaw(Delete)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import axios from 'axios'
 import { 
   getAttachmentList, 
@@ -210,6 +222,7 @@ import {
 import i18n from '../../i18n'
 
 const { t, locale } = useI18n()
+const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const uploadRef = ref(null)

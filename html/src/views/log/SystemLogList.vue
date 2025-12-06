@@ -75,8 +75,22 @@
               <span v-else>-</span>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleView(row)">{{ $t('common.view') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('system_log.show').disabled"
+                @click="handleView(row)"
+              >
+                {{ $t('common.view') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('system_log.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -118,6 +132,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
+import { usePermission } from '../../composables/usePermission'
 import {
   getSystemLogList,
   getSystemLogDetail,
@@ -127,6 +142,7 @@ import {
 } from '../../api/log'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const loading = ref(false)

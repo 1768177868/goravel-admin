@@ -18,8 +18,8 @@ import (
 )
 
 type AuthController struct {
-	authService              services.AuthService
-	captchaService           services.CaptchaService
+	authService                services.AuthService
+	captchaService             services.CaptchaService
 	googleAuthenticatorService services.GoogleAuthenticatorService
 }
 
@@ -28,8 +28,8 @@ func NewAuthController() *AuthController {
 	tokenService := services.NewTokenServiceImpl()
 	authService := services.NewAuthServiceImpl(adminService, tokenService)
 	return &AuthController{
-		authService:              authService,
-		captchaService:           services.NewCaptchaServiceImpl(),
+		authService:                authService,
+		captchaService:             services.NewCaptchaServiceImpl(),
 		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
 	}
 }
@@ -183,19 +183,35 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
+	// 获取配置：是否显示无权限的按钮
+	showButtonsWithoutPermission := facades.Config().GetBool("admin.show_buttons_without_permission", false)
+
+	// 检查是否是超级管理员
+	isSuperAdmin := false
+	for _, role := range admin.Roles {
+		if role.Slug == "super-admin" && role.Status == 1 {
+			isSuperAdmin = true
+			break
+		}
+	}
+
 	return response.Success(ctx, "get_success", http.Json{
 		"admin": http.Json{
-			"id":            admin.ID,
-			"username":      admin.Username,
-			"nickname":      admin.Nickname,
-			"avatar":        admin.Avatar,
-			"email":         admin.Email,
-			"phone":         admin.Phone,
-			"department_id": admin.DepartmentID,
-			"department":    admin.Department,
-			"roles":         admin.Roles,
-			"permissions":   permissions,
-			"menus":         menus,
+			"id":             admin.ID,
+			"username":       admin.Username,
+			"nickname":       admin.Nickname,
+			"avatar":         admin.Avatar,
+			"email":          admin.Email,
+			"phone":          admin.Phone,
+			"department_id":  admin.DepartmentID,
+			"department":     admin.Department,
+			"roles":          admin.Roles,
+			"permissions":    permissions,
+			"menus":          menus,
+			"is_super_admin": isSuperAdmin,
+		},
+		"config": http.Json{
+			"show_buttons_without_permission": showButtonsWithoutPermission,
 		},
 	})
 }
@@ -577,8 +593,8 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"secret":      secret,
-		"qr_code_url": qrCodeURL,
+		"secret":        secret,
+		"qr_code_url":   qrCodeURL,
 		"qr_code_image": qrCodeImage,
 	})
 }

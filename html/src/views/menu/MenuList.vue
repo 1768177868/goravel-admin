@@ -13,7 +13,11 @@
               <el-icon><component :is="isExpanded ? 'Fold' : 'Expand'" /></el-icon>
               {{ isExpanded ? $t('menu_management.collapse_all') : $t('menu_management.expand_all') }}
             </el-button>
-            <el-button type="primary" @click="handleAdd">
+            <el-button 
+              type="primary" 
+              :disabled="getButtonState('menu.store').disabled"
+              @click="handleAdd"
+            >
               <el-icon><Plus /></el-icon>
               {{ $t('menu_management.add_menu') }}
             </el-button>
@@ -56,8 +60,22 @@
         <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" />
         <el-table-column :label="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+            <el-button 
+              type="primary" 
+              link 
+              :disabled="getButtonState('menu.update').disabled"
+              @click="handleEdit(row)"
+            >
+              {{ $t('common.edit') }}
+            </el-button>
+            <el-button 
+              type="danger" 
+              link 
+              :disabled="getButtonState('menu.destroy').disabled"
+              @click="handleDelete(row)"
+            >
+              {{ $t('common.delete') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -167,8 +185,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Fold, Expand, Plus, Refresh } from '@element-plus/icons-vue'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { getMenuList, getMenuDetail, createMenu, updateMenu, deleteMenu } from '../../api/menu'
+import { usePermission } from '../../composables/usePermission'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const tableRef = ref(null)
 const loading = ref(false)

@@ -4,7 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('blacklist.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('blacklist.store').disabled"
+            @click="handleAdd"
+          >
             <el-icon><Plus /></el-icon>
             {{ $t('blacklist.add_blacklist') }}
           </el-button>
@@ -57,8 +61,22 @@
               </div>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('blacklist.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('blacklist.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -124,6 +142,7 @@ import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import {
   getBlacklistList,
   getBlacklistDetail,
@@ -133,6 +152,7 @@ import {
 } from '../../api/blacklist'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const tableRef = ref(null)
 const submitting = ref(false)

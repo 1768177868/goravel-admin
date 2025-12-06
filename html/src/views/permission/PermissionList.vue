@@ -4,7 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('permission.title') }}</span>
-          <el-button type="primary" @click="handleAdd">
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('permission.store').disabled"
+            @click="handleAdd"
+          >
             <el-icon><Plus /></el-icon>
             {{ $t('permission.add_permission') }}
           </el-button>
@@ -57,8 +61,22 @@
               <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button type="primary" link @click="handleEdit(row)">{{ $t('common.edit') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('common.delete') }}</el-button>
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('permission.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('permission.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
             </template>
           </vxe-column>
         </template>
@@ -164,6 +182,7 @@ import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import { getMenuTitle as getMenuTitleUtil } from '../../utils/menuTranslation'
 import {
   getPermissionList,
@@ -175,6 +194,7 @@ import {
 import { getMenuList } from '../../api/menu'
 
 const { t, te } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const tableRef = ref(null)
 const submitting = ref(false)
