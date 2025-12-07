@@ -7,7 +7,7 @@
     popper-class="notification-popover"
   >
     <template #reference>
-<el-badge
+      <el-badge
         :value="badgeValue"
         :hidden="notificationStore.unreadCount === 0"
         :offset="[-6, 10]"
@@ -130,12 +130,28 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .bell-btn {
-  padding: 6px;
-  height: 40px;
-  width: 40px;
+  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.bell-btn .el-icon {
+  font-size: 20px;
+}
+
+/* 确保 el-badge 不会影响按钮大小 */
+:deep(.el-badge) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.el-badge__content) {
+  font-size: 12px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 6px;
 }
 
 .header-actions {
