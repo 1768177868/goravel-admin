@@ -907,6 +907,7 @@ import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, next
 import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import { useAppStore } from '../../store/app'
 import * as echarts from 'echarts'
 import { 
   Cpu, 
@@ -923,6 +924,12 @@ import { getSystemInfo, createSystemInfoSSE } from '../../api/monitor'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 
 const { t } = useI18n()
+const appStore = useAppStore()
+
+// 主题相关计算属性
+const isDark = computed(() => appStore.theme === 'dark')
+const textColor = computed(() => isDark.value ? '#cfd3dc' : '#303133')
+const secondaryTextColor = computed(() => isDark.value ? '#909399' : '#606266')
 
 const systemInfo = ref({
   os: 'linux',
@@ -1067,12 +1074,16 @@ const initCharts = () => {
         xAxis: {
           type: 'category',
           data: [],
-          axisLabel: { fontSize: 10, rotate: 45 }
+          axisLabel: { fontSize: 10, rotate: 45, color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { show: false }
         },
         yAxis: {
           type: 'value',
           max: 100,
-          axisLabel: { fontSize: 10, formatter: '{value}%' }
+          axisLabel: { fontSize: 10, formatter: '{value}%', color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#ebeef5' } }
         },
         series: [{
           data: [],
@@ -1085,6 +1096,9 @@ const initCharts = () => {
         tooltip: { 
           trigger: 'axis', 
           axisPointer: { type: 'cross' },
+          backgroundColor: isDark.value ? '#2d2d30' : '#fff',
+          borderColor: isDark.value ? '#3d3e40' : '#e4e7ed',
+          textStyle: { color: textColor.value },
           formatter: (params) => {
             if (Array.isArray(params) && params.length > 0) {
               const time = params[0].axisValue
@@ -1109,12 +1123,16 @@ const initCharts = () => {
         xAxis: {
           type: 'category',
           data: [],
-          axisLabel: { fontSize: 10, rotate: 45 }
+          axisLabel: { fontSize: 10, rotate: 45, color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { show: false }
         },
         yAxis: {
           type: 'value',
           max: 100,
-          axisLabel: { fontSize: 10, formatter: '{value}%' }
+          axisLabel: { fontSize: 10, formatter: '{value}%', color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#ebeef5' } }
         },
         series: [{
           data: [],
@@ -1127,6 +1145,9 @@ const initCharts = () => {
         tooltip: { 
           trigger: 'axis', 
           axisPointer: { type: 'cross' },
+          backgroundColor: isDark.value ? '#2d2d30' : '#fff',
+          borderColor: isDark.value ? '#3d3e40' : '#e4e7ed',
+          textStyle: { color: textColor.value },
           formatter: (params) => {
             if (Array.isArray(params) && params.length > 0) {
               const time = params[0].axisValue
@@ -1151,12 +1172,16 @@ const initCharts = () => {
         xAxis: {
           type: 'category',
           data: [],
-          axisLabel: { fontSize: 10, rotate: 45 }
+          axisLabel: { fontSize: 10, rotate: 45, color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { show: false }
         },
         yAxis: {
           type: 'value',
           max: 100,
-          axisLabel: { fontSize: 10, formatter: '{value}%' }
+          axisLabel: { fontSize: 10, formatter: '{value}%', color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#ebeef5' } }
         },
         series: [{
           data: [],
@@ -1193,16 +1218,20 @@ const initCharts = () => {
         legend: {
           data: [t('monitor.net_send'), t('monitor.net_receive')],
           top: 5,
-          textStyle: { fontSize: 11 }
+          textStyle: { fontSize: 11, color: textColor.value }
         },
         xAxis: {
           type: 'category',
           data: [],
-          axisLabel: { fontSize: 10, rotate: 45 }
+          axisLabel: { fontSize: 10, rotate: 45, color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { show: false }
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 10, formatter: '{value} Mbps' }
+          axisLabel: { fontSize: 10, formatter: '{value} Mbps', color: textColor.value },
+          axisLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#dcdfe6' } },
+          splitLine: { lineStyle: { color: isDark.value ? '#3d3e40' : '#ebeef5' } }
         },
         series: [
           {
@@ -1247,6 +1276,9 @@ const initCharts = () => {
       resourcePieChartInstance.setOption({
         tooltip: {
           trigger: 'item',
+          backgroundColor: isDark.value ? '#2d2d30' : '#fff',
+          borderColor: isDark.value ? '#3d3e40' : '#e4e7ed',
+          textStyle: { color: textColor.value },
           formatter: (params) => {
             const value = typeof params.value === 'number' ? params.value.toFixed(1) : params.value
             const percent = typeof params.percent === 'number' ? params.percent.toFixed(1) : params.percent
@@ -1257,7 +1289,7 @@ const initCharts = () => {
           orient: 'vertical',
           left: 'left',
           top: 'middle',
-          textStyle: { fontSize: 12 }
+          textStyle: { fontSize: 12, color: textColor.value }
         },
         series: [{
           name: t('monitor.resource_usage'),
@@ -1267,11 +1299,12 @@ const initCharts = () => {
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 10,
-            borderColor: '#fff',
+            borderColor: isDark.value ? '#3d3e40' : '#fff',
             borderWidth: 2
           },
           label: {
             show: true,
+            color: textColor.value,
             formatter: (params) => {
               const value = typeof params.value === 'number' ? params.value.toFixed(1) : params.value
               return `${params.name}: ${value}%`
@@ -1563,6 +1596,34 @@ const cleanup = () => {
   }
 }
 
+// 监听主题变化，重新初始化图表
+watch(() => appStore.theme, () => {
+  if (cpuChartInstance) {
+    cpuChartInstance.dispose()
+    cpuChartInstance = null
+  }
+  if (memoryChartInstance) {
+    memoryChartInstance.dispose()
+    memoryChartInstance = null
+  }
+  if (diskChartInstance) {
+    diskChartInstance.dispose()
+    diskChartInstance = null
+  }
+  if (networkChartInstance) {
+    networkChartInstance.dispose()
+    networkChartInstance = null
+  }
+  if (resourcePieChartInstance) {
+    resourcePieChartInstance.dispose()
+    resourcePieChartInstance = null
+  }
+  nextTick(() => {
+    initCharts()
+    updateCharts()
+  })
+})
+
 onMounted(() => {
   // 初始化图表
   initCharts()
@@ -1617,6 +1678,7 @@ onUnmounted(() => {
   padding: 20px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: calc(100vh - 60px);
+  transition: background 0.3s ease;
 }
 
 .monitor-card {
@@ -1640,6 +1702,7 @@ onUnmounted(() => {
   :deep(.el-card__body) {
     padding: 20px;
     background: white;
+    transition: background-color 0.3s ease;
   }
 }
 
@@ -1975,6 +2038,153 @@ onUnmounted(() => {
   .load-number {
     font-size: 36px;
   }
+}
+</style>
+
+<style>
+/* 服务监控页面夜间模式适配 */
+.dark-mode .monitor-page {
+  background: var(--bg-color) !important;
+}
+
+.dark-mode .monitor-card :deep(.el-card__body) {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .monitor-card :deep(.el-card__header) {
+  color: #fff !important;
+}
+
+.dark-mode .monitor-content {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .usage-header .label {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .info-label {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .info-value {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .info-value.highlight {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .info-value.error {
+  color: #f56c6c !important;
+}
+
+.dark-mode .process-label {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .process-value {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .process-value.highlight {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .process-value.warning {
+  color: #e6a23c !important;
+}
+
+.dark-mode .process-value.error {
+  color: #f56c6c !important;
+}
+
+.dark-mode .connections-info {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .load-label {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .load-percent {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .process-card {
+  background: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .process-card:hover {
+  background: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+}
+
+.dark-mode .info-item {
+  background: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .info-item:hover {
+  background: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+}
+
+.dark-mode .load-display {
+  background: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .usage-item {
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .process-header {
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .interfaces-table :deep(.el-table__header) th {
+  background: var(--bg-color-tertiary) !important;
+  color: var(--text-color-primary) !important;
+  border-bottom-color: var(--sidebar-active) !important;
+}
+
+.dark-mode .interfaces-table :deep(.el-table__row:hover) {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .interfaces-table :deep(.el-table) {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .interfaces-table :deep(.el-table td) {
+  color: var(--text-color-primary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+/* 内联样式覆盖 */
+.dark-mode .monitor-item {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode [style*="background: #f5f7fa"] {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode [style*="color: #606266"] {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode [style*="color: #909399"] {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode [style*="border-top: 1px solid #ebeef5"] {
+  border-top-color: var(--border-color-light) !important;
 }
 </style>
 

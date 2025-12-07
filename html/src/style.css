@@ -272,13 +272,86 @@ body {
 }
 
 .dark-mode .el-table th.el-table__cell {
-  background-color: var(--bg-color-tertiary);
-  color: var(--text-color-regular);
-  border-bottom-color: var(--border-color-light);
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-regular) !important;
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+/* Element Plus 表格标题夜间模式适配 */
+.dark-mode .el-table__header {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table__header-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table__header th {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-regular) !important;
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-table__header th.el-table__cell {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-regular) !important;
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-table__header th.el-table__cell .cell {
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .el-table .el-table__header th {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-regular) !important;
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-table .el-table__header th.el-table__cell {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-regular) !important;
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-table .el-table__header th.el-table__cell .cell {
+  color: var(--text-color-regular) !important;
 }
 
 .dark-mode .el-table td.el-table__cell {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
   border-bottom-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-table td.el-table__cell .cell {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-table td {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-table td .cell {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-table td * {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-table__body-wrapper td {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-table__body-wrapper td .cell {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-table__body-wrapper td * {
+  color: var(--text-color-primary) !important;
 }
 
 .dark-mode .el-table--border {
@@ -1079,6 +1152,39 @@ body {
 
 .dark-mode .el-table__body-wrapper .el-table__row:hover > td {
   background-color: #2d2d30 !important;
+}
+
+/* Element Plus 表格斑马线行夜间模式适配 */
+.dark-mode .el-table__row.el-table__row--striped {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table__row.el-table__row--striped > td {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table__row.el-table__row--striped:hover {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table__row.el-table__row--striped:hover > td {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table .el-table__row.el-table__row--striped {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table .el-table__row.el-table__row--striped > td {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table .el-table__row.el-table__row--striped:hover {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .el-table .el-table__row.el-table__row--striped:hover > td {
+  background-color: var(--bg-color-tertiary) !important;
 }
 
 .dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-1,
