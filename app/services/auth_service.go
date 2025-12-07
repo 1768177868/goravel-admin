@@ -38,7 +38,7 @@ func NewAuthServiceImpl(adminService AdminService, tokenService TokenService) *A
 }
 
 // Login 管理员登录
-// 
+//
 // 参数:
 //   - ctx: HTTP 上下文
 //   - username: 用户名
@@ -99,7 +99,7 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 }
 
 // GetAdminInfo 获取管理员完整信息（包括权限和菜单）
-// 
+//
 // 参数:
 //   - ctx: HTTP 上下文
 //
