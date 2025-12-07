@@ -760,6 +760,60 @@ export const useAppStore = defineStore('app', {
           background-color: #2d2d30 !important;
           border-color: #3d3e40 !important;
         }
+        .vxe-header--column .vxe-sort--btn,
+        .vxe-header--column .vxe-sort--wrapper,
+        .vxe-header--column .vxe-sort--icon {
+          color: #909399 !important;
+        }
+        .vxe-header--column .vxe-sort--btn:hover,
+        .vxe-header--column .vxe-sort--wrapper:hover {
+          color: #409EFF !important;
+        }
+        .vxe-header--column.is--sortable .vxe-sort--btn,
+        .vxe-header--column.is--sortable .vxe-sort--wrapper,
+        .vxe-header--column.is--sortable .vxe-sort--icon {
+          color: #909399 !important;
+        }
+        .vxe-header--column.is--sortable .vxe-sort--btn:hover,
+        .vxe-header--column.is--sortable .vxe-sort--wrapper:hover {
+          color: #409EFF !important;
+        }
+        .vxe-header--column .vxe-sort--btn:not(.is--active),
+        .vxe-header--column .vxe-sort--wrapper:not(.is--active),
+        .vxe-header--column .vxe-sort--icon:not(.is--active) {
+          color: #909399 !important;
+          opacity: 0.6;
+        }
+        .vxe-header--column .vxe-sort--btn.is--active,
+        .vxe-header--column .vxe-sort--wrapper.is--active,
+        .vxe-header--column .vxe-sort--icon.is--active {
+          color: #409EFF !important;
+          opacity: 1;
+        }
+        .vxe-table .vxe-header--column .vxe-icon,
+        .vxe-table .vxe-header--column .vxe-icon--sort,
+        .vxe-table .vxe-header--column .vxe-icon--sort-up,
+        .vxe-table .vxe-header--column .vxe-icon--sort-down {
+          color: #909399 !important;
+        }
+        .vxe-table .vxe-header--column.is--sortable .vxe-icon,
+        .vxe-table .vxe-header--column.is--sortable .vxe-icon--sort,
+        .vxe-table .vxe-header--column.is--sortable .vxe-icon--sort-up,
+        .vxe-table .vxe-header--column.is--sortable .vxe-icon--sort-down {
+          color: #909399 !important;
+        }
+        .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon,
+        .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon--sort,
+        .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon--sort-up,
+        .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon--sort-down {
+          color: #409EFF !important;
+        }
+        .vxe-table .vxe-header--column.col--actived .vxe-icon,
+        .vxe-table .vxe-header--column.col--actived .vxe-icon--sort,
+        .vxe-table .vxe-header--column.col--actived .vxe-icon--sort-up,
+        .vxe-table .vxe-header--column.col--actived .vxe-icon--sort-down {
+          color: #409EFF !important;
+        }
       `
     },
 

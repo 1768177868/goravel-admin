@@ -515,6 +515,75 @@ body {
   border-width: 1px !important;
 }
 
+/* VXE Table 排序图标夜间模式适配 */
+.dark-mode .vxe-header--column .vxe-sort--btn,
+.dark-mode .vxe-header--column .vxe-sort--wrapper,
+.dark-mode .vxe-header--column .vxe-sort--icon {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .vxe-header--column .vxe-sort--btn:hover,
+.dark-mode .vxe-header--column .vxe-sort--wrapper:hover {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .vxe-header--column.is--sortable .vxe-sort--btn,
+.dark-mode .vxe-header--column.is--sortable .vxe-sort--wrapper,
+.dark-mode .vxe-header--column.is--sortable .vxe-sort--icon {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .vxe-header--column.is--sortable .vxe-sort--btn:hover,
+.dark-mode .vxe-header--column.is--sortable .vxe-sort--wrapper:hover {
+  color: var(--sidebar-active) !important;
+}
+
+/* 未选中状态的排序图标 */
+.dark-mode .vxe-header--column .vxe-sort--btn:not(.is--active),
+.dark-mode .vxe-header--column .vxe-sort--wrapper:not(.is--active),
+.dark-mode .vxe-header--column .vxe-sort--icon:not(.is--active) {
+  color: var(--text-color-secondary) !important;
+  opacity: 0.6;
+}
+
+/* 选中状态的排序图标 */
+.dark-mode .vxe-header--column .vxe-sort--btn.is--active,
+.dark-mode .vxe-header--column .vxe-sort--wrapper.is--active,
+.dark-mode .vxe-header--column .vxe-sort--icon.is--active {
+  color: var(--sidebar-active) !important;
+  opacity: 1;
+}
+
+/* VXE Table 排序图标通用样式 */
+.dark-mode .vxe-table .vxe-header--column .vxe-icon,
+.dark-mode .vxe-table .vxe-header--column .vxe-icon--sort,
+.dark-mode .vxe-table .vxe-header--column .vxe-icon--sort-up,
+.dark-mode .vxe-table .vxe-header--column .vxe-icon--sort-down {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .vxe-table .vxe-header--column.is--sortable .vxe-icon,
+.dark-mode .vxe-table .vxe-header--column.is--sortable .vxe-icon--sort,
+.dark-mode .vxe-table .vxe-header--column.is--sortable .vxe-icon--sort-up,
+.dark-mode .vxe-table .vxe-header--column.is--sortable .vxe-icon--sort-down {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon,
+.dark-mode .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon--sort,
+.dark-mode .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon--sort-up,
+.dark-mode .vxe-table .vxe-header--column.is--sortable:hover .vxe-icon--sort-down {
+  color: var(--sidebar-active) !important;
+}
+
+/* 排序激活状态 */
+.dark-mode .vxe-table .vxe-header--column.col--actived .vxe-icon,
+.dark-mode .vxe-table .vxe-header--column.col--actived .vxe-icon--sort,
+.dark-mode .vxe-table .vxe-header--column.col--actived .vxe-icon--sort-up,
+.dark-mode .vxe-table .vxe-header--column.col--actived .vxe-icon--sort-down {
+  color: var(--sidebar-active) !important;
+}
+
 .dark-mode .vxe-body--column {
   background-color: var(--card-bg);
   color: var(--text-color-primary);
