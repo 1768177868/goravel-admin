@@ -217,4 +217,47 @@ onBeforeUnmount(() => {
 }
 </style>
 
+<style>
+/* 通知弹窗夜间模式适配 - 需要非 scoped 样式来覆盖组件内部样式 */
+.dark-mode .notification-popover {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark-mode .notification-popover .notification-popover__header {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .notification-item {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .notification-item.unread {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+}
+
+.dark-mode .notification-item__head {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .notification-type {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .notification-item__title {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .notification-item__content {
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .notification-empty {
+  color: var(--text-color-secondary) !important;
+}
+</style>
+
 

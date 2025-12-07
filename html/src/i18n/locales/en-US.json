@@ -634,7 +634,9 @@
     "system_management": "Management System",
     "fullscreen": "Fullscreen",
     "profile": "Profile",
-    "timezone": "Timezone"
+    "timezone": "Timezone",
+    "switch_to_dark": "Switch to dark mode",
+    "switch_to_light": "Switch to light mode"
   },
   "profile": {
     "basic_info": "Basic Information",

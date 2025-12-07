@@ -257,9 +257,10 @@ onMounted(() => {
 
 <style scoped>
 .tabs-view {
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color-light);
   padding: 0;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .tabs-container {
@@ -268,8 +269,9 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__header) {
   margin: 0;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fff;
+  border-bottom: 1px solid var(--border-color-light);
+  background: var(--header-bg);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .tabs-container :deep(.el-tabs__nav-wrap) {
@@ -287,11 +289,11 @@ onMounted(() => {
   padding: 0 14px;
   margin-right: 4px;
   margin-top: 4px;
-  background: #f5f7fa;
-  border: 1px solid #e4e7ed;
+  background: var(--bg-color-tertiary);
+  border: 1px solid var(--border-color-light);
   border-bottom: none;
   border-radius: 4px 4px 0 0;
-  color: #606266;
+  color: var(--text-color-regular);
   font-size: 12px;
   user-select: none;
   transition: all 0.2s;
@@ -300,11 +302,11 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__item:hover) {
   color: #409EFF;
-  background: #ecf5ff;
+  background: var(--bg-color-tertiary);
 }
 
 .tabs-container :deep(.el-tabs__item.is-active) {
-  background: #fff;
+  background: var(--header-bg);
   border-color: #409EFF;
   border-bottom: 2px solid #409EFF;
   color: #409EFF;
@@ -319,7 +321,7 @@ onMounted(() => {
   margin-left: 8px;
   border-radius: 50%;
   transition: all 0.2s;
-  color: #909399;
+  color: var(--text-color-secondary);
 }
 
 .tabs-container :deep(.el-tabs__item .el-icon-close:hover) {
@@ -370,7 +372,7 @@ onMounted(() => {
 }
 
 .refresh-icon:hover {
-  background: #ecf5ff;
+  background: var(--bg-color-tertiary);
   color: #66B1FF;
   transform: rotate(180deg);
 }
@@ -378,12 +380,13 @@ onMounted(() => {
 .context-menu {
   position: fixed;
   z-index: 9999;
-  background: white;
-  border: 1px solid #e4e7ed;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color-light);
   border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px 0 var(--shadow-base);
   min-width: 160px;
   padding: 4px 0;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .context-menu-item {
@@ -393,16 +396,16 @@ onMounted(() => {
   padding: 8px 16px;
   cursor: pointer;
   font-size: 14px;
-  color: #606266;
+  color: var(--text-color-regular);
   transition: background-color 0.3s;
 }
 
 .context-menu-item:hover:not(.disabled) {
-  background-color: #f5f7fa;
+  background-color: var(--bg-color-tertiary);
 }
 
 .context-menu-item.disabled {
-  color: #c0c4cc;
+  color: var(--text-color-placeholder);
   cursor: not-allowed;
 }
 

@@ -14,7 +14,7 @@
         router
         class="sidebar-menu"
         :collapse="appStore.sidebarCollapsed"
-        background-color="#304156"
+        :background-color="sidebarBgColor"
         text-color="#bfcbd9"
         active-text-color="#409EFF"
       >
@@ -124,6 +124,7 @@
           </el-button>
           <NotificationBell />
           <TimezoneSwitch />
+          <ThemeSwitch />
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <span class="user-info">
@@ -184,6 +185,7 @@ import request from '../utils/request'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import NotificationBell from '../components/NotificationBell.vue'
+import ThemeSwitch from '../components/ThemeSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'
@@ -215,6 +217,11 @@ const appStore = useAppStore()
 const { t } = useI18n()
 
 const activeMenu = computed(() => route.path)
+
+// 根据主题获取 sidebar 背景色
+const sidebarBgColor = computed(() => {
+  return appStore.theme === 'dark' ? '#1e1e1e' : '#1f2937'
+})
 
 // 转换菜单数据格式并构建树形结构
 const menuTree = computed(() => {
@@ -352,7 +359,7 @@ const handleCommand = async (command) => {
 }
 
 .sidebar {
-  background-color: #304156;
+  background-color: var(--sidebar-bg);
   overflow-y: auto;
   transition: width 0.3s;
 }
@@ -470,14 +477,15 @@ const handleCommand = async (command) => {
 }
 
 .header {
-  background-color: white;
-  border-bottom: 1px solid #e4e7ed;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
   height: 60px;
   line-height: 60px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .header-left {
@@ -490,11 +498,13 @@ const handleCommand = async (command) => {
 
 .collapse-btn {
   font-size: 18px;
-  color: #606266;
+  color: var(--text-color-regular);
+  transition: color 0.3s ease;
 }
 
 .size-btn {
-  color: #606266;
+  color: var(--text-color-regular);
+  transition: color 0.3s ease;
 }
 
 .header-right {
@@ -504,14 +514,14 @@ const handleCommand = async (command) => {
 }
 
 .header-btn {
-  color: #606266;
+  color: var(--text-color-regular);
   padding: 8px;
   border-radius: 4px;
   transition: all 0.3s;
 }
 
 .header-btn:hover {
-  background-color: #f5f7fa;
+  background-color: var(--bg-color-tertiary);
   color: #409EFF;
 }
 
@@ -523,8 +533,9 @@ const handleCommand = async (command) => {
   display: flex;
   align-items: center;
   cursor: pointer;
-  color: #606266;
+  color: var(--text-color-regular);
   gap: 8px;
+  transition: color 0.3s ease;
 }
 
 .user-avatar {
@@ -540,14 +551,16 @@ const handleCommand = async (command) => {
 }
 
 .tabs-wrapper {
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color-light);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .main-content {
-  background-color: #f0f2f5;
+  background-color: var(--bg-color-secondary);
   padding: 20px;
   overflow-y: auto;
+  transition: background-color 0.3s ease;
 }
 
 /* 布局大小样式 */

@@ -634,7 +634,9 @@
     "system_management": "管理系统",
     "fullscreen": "全屏",
     "profile": "个人中心",
-    "timezone": "时区"
+    "timezone": "时区",
+    "switch_to_dark": "切换到夜间模式",
+    "switch_to_light": "切换到日间模式"
   },
   "profile": {
     "basic_info": "基本信息",

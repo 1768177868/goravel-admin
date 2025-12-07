@@ -443,7 +443,7 @@ defineExpose({
 .search-form {
   margin-bottom: 20px;
   padding: 20px;
-  background: #f5f7fa;
+  background: var(--bg-color-tertiary, #f5f7fa);
   border-radius: 4px;
   transition: all 0.3s ease;
 

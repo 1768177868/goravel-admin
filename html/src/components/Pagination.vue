@@ -254,17 +254,19 @@ watch(totalPages, (val) => {
   }
 
   .pagination-total {
-    color: #606266;
+    color: var(--text-color-regular, #606266);
     font-size: 14px;
     white-space: nowrap;
+    transition: color 0.3s ease;
   }
 
   .pagination-jumper {
     display: flex;
     align-items: center;
-    color: #606266;
+    color: var(--text-color-regular, #606266);
     font-size: 14px;
     white-space: nowrap;
+    transition: color 0.3s ease;
   }
 
   // 对齐方式

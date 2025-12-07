@@ -883,3 +883,31 @@ onMounted(() => {
 }
 </style>
 
+<style>
+/* 个人中心谷歌验证码设置页夜间模式适配 - 需要非 scoped 样式来覆盖组件内部样式 */
+.dark-mode .qr-code-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .qr-code-image {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .qr-code-info {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .qr-code-info p {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .qr-code-info strong {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .tip-text {
+  color: var(--text-color-secondary) !important;
+}
+</style>
+

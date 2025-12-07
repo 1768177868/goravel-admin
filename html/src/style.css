@@ -4,14 +4,1569 @@
   box-sizing: border-box;
 }
 
+/* CSS变量定义 - 浅色模式（默认） */
+:root {
+  --bg-color: #ffffff;
+  --bg-color-secondary: #f0f2f5;
+  --bg-color-tertiary: #f5f7fa;
+  --text-color-primary: #303133;
+  --text-color-regular: #606266;
+  --text-color-secondary: #909399;
+  --text-color-placeholder: #c0c4cc;
+  --border-color-base: #dcdfe6;
+  --border-color-light: #e4e7ed;
+  --border-color-lighter: #ebeef5;
+  --border-color-extra-light: #f2f6fc;
+  --header-bg: #ffffff;
+  --sidebar-bg: #1f2937;
+  --sidebar-text: #bfcbd9;
+  --sidebar-active: #409EFF;
+  --card-bg: #ffffff;
+  --card-border: #e4e7ed;
+  --shadow-base: rgba(0, 0, 0, 0.1);
+  --shadow-light: rgba(0, 0, 0, 0.05);
+}
+
+/* CSS变量定义 - 深色模式 */
+.dark-mode {
+  --bg-color: #252526;
+  --bg-color-secondary: #252526;
+  --bg-color-tertiary: #2d2d30;
+  --text-color-primary: #e5eaf3;
+  --text-color-regular: #cfd3dc;
+  --text-color-secondary: #a3a6ad;
+  --text-color-placeholder: #6d6d6d;
+  --border-color-base: #4c4d4f;
+  --border-color-light: #3d3e40;
+  --border-color-lighter: #353536;
+  --border-color-extra-light: #2d2d30;
+  --header-bg: #252526;
+  --sidebar-bg: #1e1e1e;
+  --sidebar-text: #bfcbd9;
+  --sidebar-active: #409EFF;
+  --card-bg: #252526;
+  --card-border: #3d3e40;
+  --shadow-base: rgba(0, 0, 0, 0.3);
+  --shadow-light: rgba(0, 0, 0, 0.2);
+  /* VXE Table CSS 变量覆盖 */
+  --vxe-ui-layout-background-color: transparent;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-color-secondary);
+  color: var(--text-color-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #app {
   width: 100%;
   height: 100vh;
+}
+
+/* Element Plus 夜间模式适配 */
+.dark-mode .el-card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-card__header {
+  border-bottom-color: var(--border-color-light);
+  color: var(--text-color-primary);
+  background-color: var(--card-bg);
+}
+
+.dark-mode .el-card__body {
+  color: var(--text-color-primary);
+  background-color: var(--card-bg);
+}
+
+/* 确保卡片阴影在夜间模式下正确显示 */
+.dark-mode .el-card.is-always-shadow,
+.dark-mode .el-card.is-hover-shadow:hover {
+  box-shadow: 0 2px 12px 0 var(--shadow-base);
+}
+
+/* 确保表格和分页之间的空白区域在夜间模式下正确显示 */
+.dark-mode .el-card__body > * {
+  background-color: transparent;
+}
+
+/* 确保搜索表单在卡片内的背景色正确 */
+.dark-mode .el-card__body .search-form {
+  background-color: var(--bg-color-tertiary);
+}
+
+/* 确保分页组件在卡片内的文字颜色正确 */
+.dark-mode .el-card__body .pagination-wrapper {
+  background-color: transparent;
+}
+
+.dark-mode .el-button--text {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-button--text:hover {
+  color: var(--sidebar-active);
+  background-color: var(--bg-color-tertiary);
+}
+
+/* el-button 夜间模式适配 */
+.dark-mode .el-button {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-button:hover:not(:disabled) {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active) !important;
+}
+
+/* el-button--primary 夜间模式适配 */
+.dark-mode .el-button--primary {
+  background-color: var(--sidebar-active) !important;
+  border-color: var(--sidebar-active) !important;
+  color: #fff !important;
+}
+
+.dark-mode .el-button--primary:hover:not(:disabled) {
+  background-color: #66b1ff !important;
+  border-color: #66b1ff !important;
+  color: #fff !important;
+}
+
+/* el-button--primary.is-plain 夜间模式适配 - 全部标记已读按钮 */
+.dark-mode .el-button--primary.is-plain {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-button--primary.is-plain:hover:not(:disabled) {
+  background-color: var(--sidebar-active) !important;
+  border-color: var(--sidebar-active) !important;
+  color: #fff !important;
+}
+
+.dark-mode .el-button--primary.is-plain:disabled,
+.dark-mode .el-button--primary.is-plain.is-disabled {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-placeholder) !important;
+}
+
+.dark-mode .el-input__wrapper {
+  background-color: var(--bg-color);
+  border-color: var(--border-color-base);
+  border-width: 1px;
+}
+
+.dark-mode .el-input__wrapper::before,
+.dark-mode .el-input__wrapper::after {
+  background-color: transparent !important;
+}
+
+.dark-mode .el-input__wrapper * {
+  background-color: transparent !important;
+}
+
+.dark-mode .el-input__wrapper .el-input__inner {
+  background-color: var(--bg-color) !important;
+}
+
+.dark-mode .el-input__wrapper.is-disabled,
+.dark-mode .el-input__wrapper:disabled,
+.dark-mode .el-input.is-disabled .el-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .el-input__inner {
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-input__inner:disabled,
+.dark-mode .el-input.is-disabled .el-input__inner {
+  background-color: #252526 !important;
+  color: #6d6d6d !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .el-textarea__inner {
+  background-color: var(--bg-color);
+  border-color: var(--border-color-base);
+  color: var(--text-color-primary);
+  border-width: 1px;
+}
+
+.dark-mode .el-textarea__inner:disabled,
+.dark-mode .el-textarea.is-disabled .el-textarea__inner {
+  background-color: #252526 !important;
+  color: #6d6d6d !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .el-select .el-input__wrapper {
+  background-color: var(--bg-color) !important;
+}
+
+.dark-mode .el-select__wrapper {
+  background-color: var(--bg-color) !important;
+}
+
+.dark-mode .el-select .el-input__inner {
+  color: var(--text-color-primary) !important;
+  background-color: var(--bg-color) !important;
+}
+
+.dark-mode .el-select__selection {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-select__placeholder {
+  color: var(--text-color-placeholder) !important;
+}
+
+.dark-mode .el-dropdown-menu {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.dark-mode .el-dropdown-menu__item {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-dropdown-menu__item:hover {
+  background-color: var(--bg-color-tertiary);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-dialog {
+  background-color: var(--card-bg);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-dialog__header {
+  border-bottom-color: var(--border-color-light);
+}
+
+.dark-mode .el-dialog__title {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-form-item__label {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-table {
+  background-color: var(--card-bg);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-table th.el-table__cell {
+  background-color: var(--bg-color-tertiary);
+  color: var(--text-color-regular);
+  border-bottom-color: var(--border-color-light);
+}
+
+.dark-mode .el-table td.el-table__cell {
+  border-bottom-color: var(--border-color-lighter);
+}
+
+.dark-mode .el-table--border {
+  border-color: var(--border-color-light);
+}
+
+.dark-mode .el-table--border::after,
+.dark-mode .el-table--border::before {
+  background-color: var(--border-color-light);
+}
+
+.dark-mode .el-table--border th.el-table__cell,
+.dark-mode .el-table--border td.el-table__cell {
+  border-right-color: var(--border-color-light);
+}
+
+.dark-mode .el-table__row:hover > td {
+  background-color: var(--bg-color-tertiary);
+}
+
+.dark-mode .el-pagination {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-pagination button {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .el-pagination button:hover:not(:disabled) {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-pagination button:disabled,
+.dark-mode .el-pagination button.is-disabled {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-placeholder) !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .el-pagination .btn-prev,
+.dark-mode .el-pagination .btn-next {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .el-pagination .btn-prev:hover:not(:disabled),
+.dark-mode .el-pagination .btn-next:hover:not(:disabled) {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-pagination .btn-prev:disabled,
+.dark-mode .el-pagination .btn-prev.is-disabled,
+.dark-mode .el-pagination .btn-next:disabled,
+.dark-mode .el-pagination .btn-next.is-disabled {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-placeholder) !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .el-pagination .el-pager li {
+  color: var(--text-color-regular);
+  background-color: var(--bg-color);
+}
+
+.dark-mode .el-pagination .el-pager li.is-active {
+  color: var(--sidebar-active);
+}
+
+/* el-tag 夜间模式适配 - 只对没有type的标签应用默认样式 */
+.dark-mode .el-tag:not(.el-tag--success):not(.el-tag--danger):not(.el-tag--warning):not(.el-tag--info) {
+  background-color: var(--bg-color-tertiary);
+  border-color: var(--border-color-base);
+  color: var(--text-color-primary) !important;
+}
+
+/* el-tag--light 夜间模式适配 - 调整浅色变体的背景和文字颜色 */
+.dark-mode .el-tag--light {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-primary) !important;
+}
+
+/* 保留有type的标签的原始颜色，只调整文字颜色使其在夜间模式下更清晰 */
+.dark-mode .el-tag--success {
+  /* 保持原有的绿色背景，只确保文字清晰 */
+  color: #fff !important;
+}
+
+/* el-tag--success.el-tag--light 夜间模式适配 */
+.dark-mode .el-tag--success.el-tag--light {
+  background-color: #21462a !important;
+  border-color: #386c44 !important;
+  color: #67c23a !important;
+}
+
+.dark-mode .el-tag--danger {
+  /* 保持原有的红色背景，只确保文字清晰 */
+  color: #fff !important;
+}
+
+/* el-tag--danger.el-tag--light 夜间模式适配 */
+.dark-mode .el-tag--danger.el-tag--light {
+  background-color: #4a2020 !important;
+  border-color: #7a3a3a !important;
+  color: #f56c6c !important;
+}
+
+.dark-mode .el-tag--warning {
+  /* 保持原有的橙色背景，只确保文字清晰 */
+  color: #fff !important;
+}
+
+/* el-tag--warning.el-tag--light 夜间模式适配 */
+.dark-mode .el-tag--warning.el-tag--light {
+  background-color: #4a3212 !important;
+  border-color: #7a532e !important;
+  color: #e6a23c !important;
+}
+
+.dark-mode .el-tag--info {
+  /* 保持原有的灰色背景，只确保文字清晰 */
+  color: #fff !important;
+}
+
+/* el-tag--info.el-tag--light 夜间模式适配 */
+.dark-mode .el-tag--info.el-tag--light {
+  background-color: #2d2d30 !important;
+  border-color: #4c4d4f !important;
+  color: #a3a6ad !important;
+}
+
+/* el-tag--plain 夜间模式适配 - 针对 plain 效果的标签 */
+.dark-mode .el-tag--plain {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-primary) !important;
+}
+
+/* el-tag--info.el-tag--plain 夜间模式适配 - 已读标签 */
+.dark-mode .el-tag--info.el-tag--plain {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-primary) !important;
+}
+
+/* el-tag--danger.el-tag--plain 夜间模式适配 - 未读标签 */
+.dark-mode .el-tag--danger.el-tag--plain {
+  background-color: #4a2020 !important;
+  border-color: #7a3a3a !important;
+  color: #f56c6c !important;
+}
+
+.dark-mode .el-breadcrumb__inner {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--text-color-primary);
+}
+
+/* VXE Table 夜间模式适配 */
+.dark-mode .vxe-table {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+  border-width: 1px !important;
+}
+
+.dark-mode .vxe-table--header {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-table--header-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-table__header-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-table--header-inner-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-table__header-inner-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-table--body {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-mode .vxe-table--body-wrapper {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-mode .vxe-table--body-inner-wrapper {
+  background-color: #252526 !important;
+}
+
+.dark-mode .vxe-table__body-inner-wrapper {
+  background-color: #252526 !important;
+}
+
+.dark-mode .vxe-table--body-wrapper {
+  background-color: #252526 !important;
+}
+
+.dark-mode .vxe-table__body-wrapper {
+  background-color: #252526 !important;
+}
+
+.dark-mode .vxe-table--body {
+  background-color: #252526 !important;
+}
+
+.dark-mode .vxe-table__body {
+  background-color: #252526 !important;
+}
+
+.dark-mode .vxe-header--column {
+  background-color: var(--bg-color-tertiary);
+  color: var(--text-color-regular);
+  border-color: var(--border-color-light);
+  border-width: 1px !important;
+}
+
+.dark-mode .vxe-body--column {
+  background-color: var(--card-bg);
+  color: var(--text-color-primary);
+  border-color: var(--border-color-lighter);
+  border-width: 1px !important;
+}
+
+.dark-mode .vxe-body--row.row--hover {
+  background-color: var(--bg-color-tertiary);
+}
+
+/* VXE Table 斑马线偶数行夜间模式适配 */
+.dark-mode .vxe-body--row.row--stripe,
+.dark-mode .vxe-body--row:nth-child(even),
+.dark-mode .vxe-table .vxe-body--row.row--stripe,
+.dark-mode .vxe-table .vxe-body--row:nth-child(even) {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-body--row.row--stripe .vxe-body--column,
+.dark-mode .vxe-body--row:nth-child(even) .vxe-body--column,
+.dark-mode .vxe-table .vxe-body--row.row--stripe .vxe-body--column,
+.dark-mode .vxe-table .vxe-body--row:nth-child(even) .vxe-body--column {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .vxe-table--border-line {
+  border-color: var(--border-color-light);
+  border-width: 1px !important;
+}
+
+/* 夜间模式下表格边框更细 */
+.dark-mode .vxe-table.border--full,
+.dark-mode .vxe-table.border--outer,
+.dark-mode .vxe-table.border--inner {
+  border-width: 1px !important;
+}
+
+.dark-mode .vxe-table .vxe-header--column:not(:last-child),
+.dark-mode .vxe-table .vxe-body--column:not(:last-child) {
+  border-right-width: 1px !important;
+  border-right-color: var(--border-color-light) !important;
+}
+
+.dark-mode .vxe-table .vxe-header--row:not(:last-child),
+.dark-mode .vxe-table .vxe-body--row:not(:last-child) {
+  border-bottom-width: 1px !important;
+  border-bottom-color: var(--border-color-light) !important;
+}
+
+/* VXE Pager 夜间模式适配 */
+.dark-mode .vxe-pager {
+  background-color: transparent !important;
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--wrapper {
+  background-color: transparent !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--btn-wrapper {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--btn-wrapper:hover {
+  color: #409EFF !important;
+  background-color: #2d2d30 !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--btn-wrapper.is--active {
+  background-color: #409EFF !important;
+  color: #fff !important;
+  border-color: #409EFF !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--btn-wrapper.is--disabled {
+  color: #6d6d6d !important;
+  background-color: #2d2d30 !important;
+  cursor: not-allowed !important;
+}
+
+/* VXE Pager 所有按钮类型 */
+.dark-mode .vxe-pager--jump-prev,
+.dark-mode .vxe-pager--jump-next,
+.dark-mode .vxe-pager--prev-page,
+.dark-mode .vxe-pager--next-page,
+.dark-mode .vxe-pager--prev-btn,
+.dark-mode .vxe-pager--next-btn,
+.dark-mode .vxe-pager--num-btn,
+.dark-mode .vxe-pager .vxe-pager--jump-prev,
+.dark-mode .vxe-pager .vxe-pager--jump-next,
+.dark-mode .vxe-pager .vxe-pager--prev-page,
+.dark-mode .vxe-pager .vxe-pager--next-page,
+.dark-mode .vxe-pager .vxe-pager--prev-btn,
+.dark-mode .vxe-pager .vxe-pager--next-btn,
+.dark-mode .vxe-pager .vxe-pager--num-btn,
+.dark-mode [class*="vxe-pager--jump-prev"],
+.dark-mode [class*="vxe-pager--jump-next"],
+.dark-mode [class*="vxe-pager--prev-page"],
+.dark-mode [class*="vxe-pager--next-page"],
+.dark-mode [class*="vxe-pager--prev-btn"],
+.dark-mode [class*="vxe-pager--next-btn"],
+.dark-mode [class*="vxe-pager--num-btn"] {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-pager--jump-prev:hover:not(.is--disabled),
+.dark-mode .vxe-pager--jump-next:hover:not(.is--disabled),
+.dark-mode .vxe-pager--prev-page:hover:not(.is--disabled),
+.dark-mode .vxe-pager--next-page:hover:not(.is--disabled),
+.dark-mode .vxe-pager--prev-btn:hover:not(.is--disabled),
+.dark-mode .vxe-pager--next-btn:hover:not(.is--disabled),
+.dark-mode .vxe-pager--num-btn:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--jump-prev:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--jump-next:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--prev-page:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--next-page:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--prev-btn:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--next-btn:hover:not(.is--disabled),
+.dark-mode .vxe-pager .vxe-pager--num-btn:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--jump-prev"]:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--jump-next"]:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--prev-page"]:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--next-page"]:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--prev-btn"]:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--next-btn"]:hover:not(.is--disabled),
+.dark-mode [class*="vxe-pager--num-btn"]:hover:not(.is--disabled) {
+  color: #409EFF !important;
+  background-color: #2d2d30 !important;
+}
+
+.dark-mode .vxe-pager--jump-prev.is--disabled,
+.dark-mode .vxe-pager--jump-next.is--disabled,
+.dark-mode .vxe-pager--prev-page.is--disabled,
+.dark-mode .vxe-pager--next-page.is--disabled,
+.dark-mode .vxe-pager--prev-btn.is--disabled,
+.dark-mode .vxe-pager--next-btn.is--disabled,
+.dark-mode .vxe-pager--num-btn.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--jump-prev.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--jump-next.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--prev-page.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--next-page.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--prev-btn.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--next-btn.is--disabled,
+.dark-mode .vxe-pager .vxe-pager--num-btn.is--disabled,
+.dark-mode [class*="vxe-pager--jump-prev"].is--disabled,
+.dark-mode [class*="vxe-pager--jump-next"].is--disabled,
+.dark-mode [class*="vxe-pager--prev-page"].is--disabled,
+.dark-mode [class*="vxe-pager--next-page"].is--disabled,
+.dark-mode [class*="vxe-pager--prev-btn"].is--disabled,
+.dark-mode [class*="vxe-pager--next-btn"].is--disabled,
+.dark-mode [class*="vxe-pager--num-btn"].is--disabled {
+  color: #6d6d6d !important;
+  background-color: #2d2d30 !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .vxe-pager--num-btn.is--active,
+.dark-mode .vxe-pager .vxe-pager--num-btn.is--active {
+  background-color: #409EFF !important;
+  color: #fff !important;
+  border-color: #409EFF !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--sizes .vxe-select {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input--inner {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+  border-color: #4c4d4f !important;
+}
+
+/* VXE Select 输入框容器样式 */
+.dark-mode .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input,
+.dark-mode .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input__inner {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+}
+
+/* VXE Select 通用样式 */
+.dark-mode .vxe-select,
+.dark-mode .vxe-pager .vxe-select {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+}
+
+.dark-mode .vxe-select .vxe-input,
+.dark-mode .vxe-select .vxe-input__wrapper,
+.dark-mode .vxe-pager .vxe-select .vxe-input,
+.dark-mode .vxe-pager .vxe-select .vxe-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+}
+
+.dark-mode .vxe-select .vxe-input__inner,
+.dark-mode .vxe-select .vxe-input--inner,
+.dark-mode .vxe-pager .vxe-select .vxe-input__inner,
+.dark-mode .vxe-pager .vxe-select .vxe-input--inner {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+}
+
+/* VXE Select 下拉箭头样式 */
+.dark-mode .vxe-select .vxe-input__suffix,
+.dark-mode .vxe-select .vxe-input__icon,
+.dark-mode .vxe-select__suffix,
+.dark-mode .vxe-select__icon,
+.dark-mode .vxe-select__arrow,
+.dark-mode .vxe-pager .vxe-select .vxe-input__suffix,
+.dark-mode .vxe-pager .vxe-select .vxe-input__icon,
+.dark-mode .vxe-pager .vxe-select__suffix,
+.dark-mode .vxe-pager .vxe-select__icon,
+.dark-mode .vxe-pager .vxe-select__arrow {
+  background-color: transparent !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-select .vxe-input__suffix-inner,
+.dark-mode .vxe-select .vxe-input__icon-wrapper,
+.dark-mode .vxe-pager .vxe-select .vxe-input__suffix-inner,
+.dark-mode .vxe-pager .vxe-select .vxe-input__icon-wrapper {
+  background-color: transparent !important;
+}
+
+/* VXE Input 前缀和后缀样式 */
+.dark-mode .vxe-input--prefix,
+.dark-mode .vxe-input--suffix,
+.dark-mode .vxe-pager .vxe-input--prefix,
+.dark-mode .vxe-pager .vxe-input--suffix,
+.dark-mode .vxe-select .vxe-input--prefix,
+.dark-mode .vxe-select .vxe-input--suffix,
+.dark-mode .vxe-pager .vxe-select .vxe-input--prefix,
+.dark-mode .vxe-pager .vxe-select .vxe-input--suffix {
+  background-color: transparent !important;
+  color: #cfd3dc !important;
+}
+
+/* VXE Input 后缀图标样式 */
+.dark-mode .vxe-input--suffix-icon,
+.dark-mode .vxe-pager .vxe-input--suffix-icon,
+.dark-mode .vxe-select .vxe-input--suffix-icon,
+.dark-mode .vxe-pager .vxe-select .vxe-input--suffix-icon {
+  background-color: transparent !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-input--suffix-icon .vxe-icon-caret-down,
+.dark-mode .vxe-pager .vxe-input--suffix-icon .vxe-icon-caret-down,
+.dark-mode .vxe-select .vxe-input--suffix-icon .vxe-icon-caret-down,
+.dark-mode .vxe-pager .vxe-select .vxe-input--suffix-icon .vxe-icon-caret-down {
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--jump .vxe-input--inner {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+  border-color: #4c4d4f !important;
+}
+
+/* VXE Table 分页数字输入框夜间模式适配 */
+.dark-mode .vxe-number-input--input,
+.dark-mode .vxe-pager .vxe-number-input--input {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+  border-color: #4c4d4f !important;
+}
+
+.dark-mode .vxe-number-input,
+.dark-mode .vxe-pager .vxe-number-input {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+}
+
+/* 分页快速跳转输入框和按钮夜间模式适配 */
+.dark-mode .pagination-jumper .el-input-number .el-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+}
+
+.dark-mode .pagination-jumper .el-input-number .el-input__inner {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .pagination-jumper .el-button {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .pagination-jumper .el-button:hover:not(:disabled) {
+  background-color: #2d2d30 !important;
+  border-color: #409EFF !important;
+  color: #409EFF !important;
+}
+
+.dark-mode .pagination-jumper .el-button:active:not(:disabled) {
+  background-color: #2d2d30 !important;
+  border-color: #409EFF !important;
+  color: #409EFF !important;
+}
+
+.dark-mode .vxe-pager .vxe-pager--total {
+  color: #cfd3dc !important;
+}
+
+/* VXE Pager 下拉框样式 */
+.dark-mode .vxe-pager .vxe-select--panel {
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+}
+
+.dark-mode .vxe-pager .vxe-select-option {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .vxe-pager .vxe-select-option:hover {
+  background-color: #2d2d30 !important;
+  color: #e5eaf3 !important;
+}
+
+.dark-mode .vxe-pager .vxe-select-option.is--selected {
+  background-color: #2d2d30 !important;
+  color: #409EFF !important;
+}
+
+/* Element Plus Input Number 夜间模式适配（用于分页快速跳转） */
+.dark-mode .el-input-number {
+  background-color: #252526 !important;
+}
+
+.dark-mode .el-input-number .el-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #4c4d4f !important;
+  border-width: 1px !important;
+}
+
+.dark-mode .el-input-number .el-input__inner {
+  background-color: #252526 !important;
+  color: #cfd3dc !important;
+}
+
+.dark-mode .el-input-number.is-controls-right .el-input__wrapper {
+  background-color: #252526 !important;
+}
+
+/* el-input-number 增加减少按钮夜间模式适配 */
+.dark-mode .el-input-number__decrease,
+.dark-mode .el-input-number__increase {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-input-number__decrease:hover:not(:disabled),
+.dark-mode .el-input-number__increase:hover:not(:disabled) {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-input-number__decrease:active:not(:disabled),
+.dark-mode .el-input-number__increase:active:not(:disabled) {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-input-number__decrease:disabled,
+.dark-mode .el-input-number__decrease.is-disabled,
+.dark-mode .el-input-number__increase:disabled,
+.dark-mode .el-input-number__increase.is-disabled {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-placeholder) !important;
+  cursor: not-allowed !important;
+}
+
+.dark-mode .el-input-number__decrease .el-icon,
+.dark-mode .el-input-number__increase .el-icon {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-input-number__decrease:hover:not(:disabled) .el-icon,
+.dark-mode .el-input-number__increase:hover:not(:disabled) .el-icon {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-input-number__decrease:disabled .el-icon,
+.dark-mode .el-input-number__decrease.is-disabled .el-icon,
+.dark-mode .el-input-number__increase:disabled .el-icon,
+.dark-mode .el-input-number__increase.is-disabled .el-icon {
+  color: var(--text-color-placeholder) !important;
+}
+
+/* 通用样式适配 */
+.dark-mode .el-menu {
+  background-color: var(--sidebar-bg);
+  border-color: var(--border-color-light);
+}
+
+.dark-mode .el-menu-item {
+  color: var(--sidebar-text);
+}
+
+.dark-mode .el-menu-item:hover {
+  background-color: var(--bg-color-tertiary);
+}
+
+.dark-mode .el-menu-item.is-active {
+  color: var(--sidebar-active);
+  background-color: var(--bg-color-tertiary);
+}
+
+.dark-mode .el-sub-menu__title {
+  color: var(--sidebar-text);
+}
+
+.dark-mode .el-sub-menu__title:hover {
+  background-color: var(--bg-color-tertiary);
+}
+
+/* 树形组件夜间模式适配 */
+.dark-mode .el-tree {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-tree-node {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-tree-node__content {
+  background-color: transparent !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-tree-node__content:hover {
+  background-color: #2d2d30 !important;
+}
+
+.dark-mode .el-tree-node__content:hover .el-tree-node__label {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-tree-node__label {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-tree-node__expand-icon {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .el-tree-node__expand-icon:hover {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-tree-node.is-current > .el-tree-node__content {
+  background-color: #2d2d30 !important;
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-tree-node.is-current > .el-tree-node__content:hover {
+  background-color: #2d2d30 !important;
+}
+
+/* 树形表格（el-table with tree-props）夜间模式适配 */
+.dark-mode .el-table__body-wrapper .el-table__row {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-mode .el-table__body-wrapper .el-table__row:hover {
+  background-color: #2d2d30 !important;
+}
+
+.dark-mode .el-table__body-wrapper .el-table__row:hover > td {
+  background-color: #2d2d30 !important;
+}
+
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-1,
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-2,
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-3 {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-1:hover,
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-2:hover,
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-3:hover {
+  background-color: #2d2d30 !important;
+}
+
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-1:hover > td,
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-2:hover > td,
+.dark-mode .el-table__body-wrapper .el-table__row.el-table__row--level-3:hover > td {
+  background-color: #2d2d30 !important;
+}
+
+/* 搜索表单夜间模式适配 */
+.dark-mode .el-form-item__label {
+  color: var(--text-color-regular);
+}
+
+/* 下拉框样式 - 使用属性选择器和多重选择器确保应用到teleport渲染的元素 */
+[data-theme="dark"] .el-select-dropdown,
+body.dark-mode .el-select-dropdown,
+.dark-mode .el-select-dropdown,
+html.dark-mode .el-select-dropdown,
+.el-select-dropdown[data-theme="dark"] {
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .el-select-dropdown__wrap,
+body.dark-mode .el-select-dropdown__wrap,
+.dark-mode .el-select-dropdown__wrap,
+html.dark-mode .el-select-dropdown__wrap {
+  background-color: #252526 !important;
+}
+
+[data-theme="dark"] .el-select-dropdown__list,
+body.dark-mode .el-select-dropdown__list,
+.dark-mode .el-select-dropdown__list,
+html.dark-mode .el-select-dropdown__list {
+  background-color: #252526 !important;
+}
+
+[data-theme="dark"] .el-select-dropdown__item,
+body.dark-mode .el-select-dropdown__item,
+.dark-mode .el-select-dropdown__item,
+html.dark-mode .el-select-dropdown__item {
+  color: #cfd3dc !important;
+  background-color: transparent !important;
+}
+
+[data-theme="dark"] .el-select-dropdown__item:hover,
+body.dark-mode .el-select-dropdown__item:hover,
+.dark-mode .el-select-dropdown__item:hover,
+html.dark-mode .el-select-dropdown__item:hover {
+  background-color: #2d2d30 !important;
+  color: #e5eaf3 !important;
+}
+
+[data-theme="dark"] .el-select-dropdown__item.is-selected,
+body.dark-mode .el-select-dropdown__item.is-selected,
+.dark-mode .el-select-dropdown__item.is-selected,
+html.dark-mode .el-select-dropdown__item.is-selected {
+  color: #409EFF !important;
+  background-color: #2d2d30 !important;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .el-select-dropdown__item.is-disabled,
+body.dark-mode .el-select-dropdown__item.is-disabled,
+.dark-mode .el-select-dropdown__item.is-disabled,
+html.dark-mode .el-select-dropdown__item.is-disabled {
+  color: #6d6d6d !important;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .el-select-dropdown__empty,
+body.dark-mode .el-select-dropdown__empty,
+.dark-mode .el-select-dropdown__empty,
+html.dark-mode .el-select-dropdown__empty {
+  color: #a3a6ad !important;
+}
+
+[data-theme="dark"] .el-select-dropdown__loading,
+body.dark-mode .el-select-dropdown__loading,
+.dark-mode .el-select-dropdown__loading,
+html.dark-mode .el-select-dropdown__loading {
+  color: #a3a6ad !important;
+}
+
+/* 下拉框滚动条样式 */
+[data-theme="dark"] .el-select-dropdown__wrap::-webkit-scrollbar,
+body.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar,
+.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar,
+html.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-theme="dark"] .el-select-dropdown__wrap::-webkit-scrollbar-track,
+body.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-track,
+.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-track,
+html.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-track {
+  background: #2d2d30;
+}
+
+[data-theme="dark"] .el-select-dropdown__wrap::-webkit-scrollbar-thumb,
+body.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-thumb,
+.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-thumb,
+html.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-thumb {
+  background-color: #4c4d4f;
+  border-radius: 3px;
+}
+
+[data-theme="dark"] .el-select-dropdown__wrap::-webkit-scrollbar-thumb:hover,
+body.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-thumb:hover,
+.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-thumb:hover,
+html.dark-mode .el-select-dropdown__wrap::-webkit-scrollbar-thumb:hover {
+  background-color: #a3a6ad;
+}
+
+/* 兼容 Firefox */
+[data-theme="dark"] .el-select-dropdown__wrap,
+body.dark-mode .el-select-dropdown__wrap,
+.dark-mode .el-select-dropdown__wrap,
+html.dark-mode .el-select-dropdown__wrap {
+  scrollbar-width: thin;
+  scrollbar-color: #4c4d4f #2d2d30;
+}
+
+/* 使用全局选择器作为后备方案 - 直接针对所有下拉框 */
+html[data-theme="dark"] .el-select-dropdown,
+body[data-theme="dark"] .el-select-dropdown {
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+}
+
+html[data-theme="dark"] .el-select-dropdown__wrap,
+body[data-theme="dark"] .el-select-dropdown__wrap {
+  background-color: #252526 !important;
+}
+
+html[data-theme="dark"] .el-select-dropdown__list,
+body[data-theme="dark"] .el-select-dropdown__list {
+  background-color: #252526 !important;
+}
+
+.dark-mode .el-date-editor {
+  background-color: var(--bg-color);
+  border-color: var(--border-color-base);
+}
+
+.dark-mode .el-date-picker {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.dark-mode .el-picker-panel {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-picker-panel__content {
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-date-table td.available:hover {
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-date-table td.today span {
+  color: var(--sidebar-active);
+}
+
+.dark-mode .el-date-table td.current:not(.disabled) span {
+  background-color: var(--sidebar-active);
+  color: #fff;
+}
+
+/* 消息提示夜间模式适配 */
+.dark-mode .el-message {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-message-box {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.dark-mode .el-message-box__title {
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-message-box__message {
+  color: var(--text-color-regular);
+}
+
+/* 加载遮罩夜间模式适配 */
+.dark-mode .el-loading-mask {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* VXE Table 加载遮罩夜间模式适配 */
+.dark-mode .vxe-loading,
+.dark-mode .vxe-loading--mask {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.dark-mode .vxe-table .vxe-loading,
+.dark-mode .vxe-table .vxe-loading--mask {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* 工具提示夜间模式适配 */
+.dark-mode .el-tooltip__popper {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-popover {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-color-primary);
+}
+
+/* 抽屉夜间模式适配 */
+.dark-mode .el-drawer {
+  background-color: var(--card-bg);
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-drawer__header {
+  border-bottom-color: var(--border-color-light);
+  color: var(--text-color-primary);
+}
+
+/* 面包屑夜间模式适配 */
+.dark-mode .el-breadcrumb__inner {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-breadcrumb__inner.is-link {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-breadcrumb__inner.is-link:hover {
+  color: var(--sidebar-active);
+}
+
+/* 标签页夜间模式适配 */
+.dark-mode .el-tabs__header {
+  background-color: var(--header-bg);
+  border-bottom-color: var(--border-color-light);
+}
+
+.dark-mode .el-tabs__nav-wrap::after {
+  background-color: var(--border-color-light);
+}
+
+.dark-mode .el-tabs__item {
+  color: var(--text-color-regular);
+  border-color: var(--border-color-light);
+}
+
+.dark-mode .el-tabs__item:hover {
+  color: var(--sidebar-active);
+}
+
+.dark-mode .el-tabs__item.is-active {
+  color: var(--sidebar-active);
+  border-bottom-color: var(--sidebar-active);
+}
+
+/* 步骤条夜间模式适配 */
+.dark-mode .el-steps {
+  background-color: var(--card-bg);
+}
+
+.dark-mode .el-step__title {
+  color: var(--text-color-regular);
+}
+
+.dark-mode .el-step__title.is-process {
+  color: var(--text-color-primary);
+}
+
+.dark-mode .el-step__title.is-finish {
+  color: var(--sidebar-active);
+}
+
+/* 进度条夜间模式适配 */
+.dark-mode .el-progress-bar__outer {
+  background-color: var(--bg-color-tertiary);
+}
+
+/* 分割线夜间模式适配 */
+.dark-mode .el-divider {
+  border-color: var(--border-color-light);
+}
+
+/* 空状态夜间模式适配 */
+.dark-mode .el-empty__description {
+  color: var(--text-color-secondary);
+}
+
+/* 描述列表夜间模式适配 */
+.dark-mode .el-descriptions {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__body {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__label {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__content {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__table {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light);
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__table td,
+.dark-mode .el-descriptions__table th {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light);
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__table td .el-descriptions__label,
+.dark-mode .el-descriptions__table th .el-descriptions__label {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__table td .el-descriptions__content,
+.dark-mode .el-descriptions__table th .el-descriptions__content {
+  color: var(--text-color-primary) !important;
+}
+
+/* el-descriptions cell 和 bordered content 夜间模式适配 */
+.dark-mode .el-descriptions__cell {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__cell.is-bordered-content {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__cell .el-descriptions__content {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions__cell.is-bordered-content .el-descriptions__content {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions.is-bordered .el-descriptions__cell {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-descriptions.is-bordered .el-descriptions__cell .el-descriptions__label {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-descriptions.is-bordered .el-descriptions__cell .el-descriptions__content {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+/* el-descriptions 中的 pre 标签夜间模式适配 */
+.dark-mode .el-descriptions__cell pre,
+.dark-mode .el-descriptions__content pre,
+.dark-mode .el-descriptions__cell.is-bordered-content pre {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-descriptions pre,
+.dark-mode .el-descriptions__body pre,
+.dark-mode .el-descriptions__table pre {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+/* 通用 pre 和 code 标签夜间模式适配 */
+.dark-mode pre {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode code {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color-primary) !important;
+}
+
+/* el-switch 开关按钮夜间模式适配 */
+.dark-mode .el-switch {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-switch__label {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-switch__label--left {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-switch__label--right {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-switch__label.is-active {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-switch__core {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-base) !important;
+}
+
+.dark-mode .el-switch.is-checked .el-switch__core {
+  background-color: var(--sidebar-active) !important;
+  border-color: var(--sidebar-active) !important;
+}
+
+.dark-mode .el-switch.is-disabled {
+  opacity: 0.6;
+}
+
+.dark-mode .el-switch.is-disabled .el-switch__label {
+  color: var(--text-color-placeholder) !important;
+}
+
+/* 个人中心谷歌验证码设置页夜间模式适配 */
+.dark-mode .qr-code-wrapper {
+  background-color: var(--bg-color-tertiary) !important;
+}
+
+.dark-mode .qr-code-image {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .qr-code-info {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .qr-code-info p {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .qr-code-info strong {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .tip-text {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .bind-section,
+.dark-mode .unbind-section {
+  color: var(--text-color-primary) !important;
+}
+
+/* el-alert 夜间模式适配 */
+.dark-mode .el-alert {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-alert__title {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-alert__description {
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .el-alert--info {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-alert--success {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .el-alert--warning {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+/* 通知弹窗夜间模式适配 */
+.dark-mode .notification-popover {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark-mode .notification-popover .el-popover__title {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .notification-item {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .notification-item.unread {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--sidebar-active) !important;
+}
+
+.dark-mode .notification-item__head {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .notification-type {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .notification-item__title {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .notification-item__content {
+  color: var(--text-color-regular) !important;
+}
+
+.dark-mode .notification-empty {
+  color: var(--text-color-secondary) !important;
 }
 

@@ -811,7 +811,7 @@ const handleEdit = async (row) => {
       // 只设置权限ID，让 handleDialogOpened 来处理
       checkedKeys.value = []
       
-      console.log('Role edit - menuIds:', menuIds, 'permissionIds:', permissionIds)
+      // console.log('Role edit - menuIds:', menuIds, 'permissionIds:', permissionIds)
       
       dialogVisible.value = true
       
@@ -1043,20 +1043,20 @@ const handleDialogOpened = async () => {
             const allPermissionsSet = validPermissionIds.length === 0 || 
               validPermissionIds.every(id => actualCheckedKeys.includes(id))
             
-            console.log('Set checked keys result:', {
-              requestedPermissionIds: permissionIds,
-              validPermissionIds,
-              actualCheckedKeys,
-              allPermissionsSet,
-              checkedKeysValue: checkedKeys.value
-            })
+            // console.log('Set checked keys result:', {
+            //   requestedPermissionIds: permissionIds,
+            //   validPermissionIds,
+            //   actualCheckedKeys,
+            //   allPermissionsSet,
+            //   checkedKeysValue: checkedKeys.value
+            // })
             
             if (!allPermissionsSet && retries > 1) {
               // 如果还有未选中的，重试
-              console.log(`Retrying set checked keys, remaining retries: ${retries - 1}`)
+              // console.log(`Retrying set checked keys, remaining retries: ${retries - 1}`)
               setCheckedKeysWithRetry(retries - 1)
             } else {
-              console.log('Checked keys set successfully')
+              // console.log('Checked keys set successfully')
             }
           }, 100)
         } catch (error) {
@@ -1126,8 +1126,9 @@ onMounted(async () => {
 
 <style scoped>
 .role-list {
-  background: white;
+  background: var(--card-bg, white);
   border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
 
 .card-header {
@@ -1177,7 +1178,8 @@ onMounted(async () => {
   max-height: 500px;
   overflow-y: auto;
   padding: 12px;
-  background: #fff;
+  background: var(--card-bg, #fff);
+  transition: background-color 0.3s ease;
   min-height: 200px;
 }
 
@@ -1186,17 +1188,19 @@ onMounted(async () => {
 }
 
 .tree-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-color-tertiary, #f1f1f1);
   border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
 
 .tree-wrapper::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--border-color-base, #c1c1c1);
   border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
 
 .tree-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--text-color-secondary, #a8a8a8);
 }
 
 .menu-permission-tree {
@@ -1217,22 +1221,24 @@ onMounted(async () => {
 }
 
 .menu-permission-tree :deep(.el-tree-node__content:hover) {
-  background-color: #f0f9ff;
-  border-color: #b3d8ff;
+  background-color: var(--bg-color-tertiary, #f0f9ff) !important;
+  border-color: var(--border-color-light, #b3d8ff) !important;
+  transition: all 0.2s ease;
 }
 
 .menu-permission-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background-color: #e1f3ff;
-  border-color: #409eff;
+  background-color: var(--bg-color-tertiary, #e1f3ff);
+  border-color: var(--sidebar-active, #409eff);
 }
 
 .menu-permission-tree :deep(.el-tree-node__expand-icon) {
-  color: #909399;
+  color: var(--text-color-secondary, #909399);
   font-size: 14px;
+  transition: color 0.2s ease;
 }
 
 .menu-permission-tree :deep(.el-tree-node__expand-icon:hover) {
-  color: #409eff;
+  color: var(--sidebar-active, #409eff);
 }
 
 .menu-permission-tree :deep(.el-checkbox) {
