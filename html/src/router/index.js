@@ -10,7 +10,7 @@ import logger from '../utils/logger'
  * @param {number} timeout - 超时时间（毫秒），默认 30 秒
  * @returns {Promise} 导入的模块
  */
-function lazyLoad(importFn, maxRetries = 3, timeout = 30000) {
+function lazyLoad(importFn, maxRetries = 3, timeout = 10000) {
   return new Promise((resolve, reject) => {
     let retryCount = 0
     
@@ -206,26 +206,40 @@ router.beforeEach((to, from, next) => {
     } else {
       next()
     }
+  } else {
+    // 需要认证的页面
+    if (!userStore.isLoggedIn) {
+      // 如果没有token，直接跳转到登录页
+      next('/login')
     } else {
-      // 需要认证的页面
-      if (!userStore.isLoggedIn) {
-        // 如果没有token，直接跳转到登录页
-        next('/login')
-      } else {
-        // 如果用户信息不存在或菜单为空（菜单不缓存，刷新后需要重新获取），尝试获取
-        if (!userStore.adminInfo || userStore.menus.length === 0) {
-          userStore.fetchUserInfo().then(() => {
-            next()
-          }).catch((error) => {
-            // 如果获取用户信息失败（可能是401），拦截器会处理跳转
-            // 这里只需要阻止导航
-            next(false)
-          })
-        } else {
+      // 优化：只在首次加载（从登录页或刷新页面）时才阻塞导航
+      // 如果用户信息已获取过，允许导航继续，菜单可以在后台异步加载
+      const isFirstLoad = !from.name || from.name === 'Login'
+      
+      // 如果用户信息已获取过，直接允许导航（菜单可以在后台异步更新）
+      if (userStore.userInfoFetched) {
+        next()
+        return
+      }
+      
+      // 首次加载：如果用户信息不存在或菜单为空，需要获取
+      if (!userStore.adminInfo || userStore.menus.length === 0) {
+        // 阻塞导航，等待用户信息加载完成
+        userStore.fetchUserInfo().then(() => {
           next()
-        }
+        }).catch((error) => {
+          // 如果获取用户信息失败（可能是401），拦截器会处理跳转
+          // 这里只需要阻止导航
+          next(false)
+        })
+      } else {
+        // 用户信息已存在，直接允许导航
+        // 标记为已获取，避免后续路由切换时重复检查
+        userStore.userInfoFetched = true
+        next()
       }
     }
+  }
 })
 
 // 捕获路由错误（包括动态导入失败）

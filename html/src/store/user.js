@@ -4,16 +4,22 @@ import Storage from '../utils/storage'
 import logger from '../utils/logger'
 
 export const useUserStore = defineStore('user', {
-  state: () => ({
-    token: Storage.getItem('token', ''),
-    adminInfo: Storage.getItem('adminInfo', null),
-    permissions: [],
-    menus: [], // 菜单不缓存，每次刷新都从服务器重新获取
-    isSuperAdmin: false, // 是否是超级管理员
-    config: {
-      showButtonsWithoutPermission: false // 是否显示无权限的按钮
+  state: () => {
+    const adminInfo = Storage.getItem('adminInfo', null)
+    return {
+      token: Storage.getItem('token', ''),
+      adminInfo: adminInfo,
+      permissions: [],
+      menus: [], // 菜单不缓存，每次刷新都从服务器重新获取
+      isSuperAdmin: false, // 是否是超级管理员
+      isFetchingUserInfo: false, // 是否正在获取用户信息，避免重复请求
+      // 如果从 localStorage 恢复了用户信息，认为已获取过（但菜单仍需从服务器获取）
+      userInfoFetched: !!adminInfo, // 用户信息是否已获取过（用于判断是否需要阻塞导航）
+      config: {
+        showButtonsWithoutPermission: false // 是否显示无权限的按钮
+      }
     }
-  }),
+  },
 
   getters: {
     isLoggedIn: (state) => !!state.token,
@@ -118,8 +124,24 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async fetchUserInfo() {
+    async fetchUserInfo(force = false) {
+      // 如果正在获取中，且不是强制刷新，则等待当前请求完成
+      if (this.isFetchingUserInfo && !force) {
+        // 等待当前请求完成
+        while (this.isFetchingUserInfo) {
+          await new Promise(resolve => setTimeout(resolve, 50))
+        }
+        return Promise.resolve()
+      }
+      
+      // 如果已经获取过且不是强制刷新，直接返回
+      if (this.userInfoFetched && !force && this.adminInfo && this.menus.length > 0) {
+        return Promise.resolve()
+      }
+      
       try {
+        this.isFetchingUserInfo = true
+        
         // 清除旧的数据，确保获取最新的数据
         this.menus = []
         this.adminInfo = null
@@ -138,6 +160,9 @@ export const useUserStore = defineStore('user', {
               (role.slug || role.Slug) === 'super-admin' && (role.status || role.Status) === 1
             )
           
+          // 标记用户信息已获取
+          this.userInfoFetched = true
+          
           // 调试：打印权限信息（开发环境）
           logger.debug('User permissions:', this.permissions)
           logger.debug('Is super admin:', this.isSuperAdmin)
@@ -149,8 +174,11 @@ export const useUserStore = defineStore('user', {
         return res
       } catch (error) {
         // fetchUserInfo 失败时也应该清除状态，但这里不直接跳转，由拦截器处理
+        this.userInfoFetched = false
         this.logout(true)
         throw error
+      } finally {
+        this.isFetchingUserInfo = false
       }
     },
 
@@ -170,6 +198,8 @@ export const useUserStore = defineStore('user', {
         this.permissions = []
         this.menus = []
         this.isSuperAdmin = false
+        this.userInfoFetched = false
+        this.isFetchingUserInfo = false
         this.config = {
           showButtonsWithoutPermission: false
         }
