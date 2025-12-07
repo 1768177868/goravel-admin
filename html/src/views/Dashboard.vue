@@ -155,9 +155,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount, markRaw } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, markRaw, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
+import { useAppStore } from '../store/app'
 import { 
   getCount, 
   getUserAccessSource, 
@@ -185,6 +186,12 @@ import {
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const appStore = useAppStore()
+
+// 获取当前主题
+const isDark = computed(() => appStore.theme === 'dark')
+const textColor = computed(() => isDark.value ? '#e5eaf3' : '#303133')
+const secondaryTextColor = computed(() => isDark.value ? '#a3a6ad' : '#909399')
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const UserFilledIcon = markRaw(UserFilled)
@@ -471,10 +478,16 @@ const initVisitTrendChart = () => {
       trigger: 'axis',
       axisPointer: {
         type: 'cross'
+      },
+      textStyle: {
+        color: textColor.value
       }
     },
     legend: {
-      data: ['访问量', '用户数']
+      data: ['访问量', '用户数'],
+      textStyle: {
+        color: textColor.value
+      }
     },
     grid: {
       left: '3%',
@@ -485,10 +498,31 @@ const initVisitTrendChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: visitTrendData.value.dates
+      data: visitTrendData.value.dates,
+      axisLabel: {
+        color: textColor.value
+      },
+      axisLine: {
+        lineStyle: {
+          color: isDark.value ? '#3d3e40' : '#dcdfe6'
+        }
+      }
     },
     yAxis: {
-      type: 'value'
+      type: 'value',
+      axisLabel: {
+        color: textColor.value
+      },
+      axisLine: {
+        lineStyle: {
+          color: isDark.value ? '#3d3e40' : '#dcdfe6'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: isDark.value ? '#3d3e40' : '#ebeef5'
+        }
+      }
     },
     series: [
       {
@@ -534,12 +568,18 @@ const initAccessSourceChart = () => {
   accessSourceChartInstance.setOption({
     tooltip: {
       trigger: 'item',
-      formatter: '{a} <br/>{b}: {c} ({d}%)'
+      formatter: '{a} <br/>{b}: {c} ({d}%)',
+      textStyle: {
+        color: textColor.value
+      }
     },
     legend: {
       orient: 'vertical',
       left: 'left',
-      top: 'middle'
+      top: 'middle',
+      textStyle: {
+        color: textColor.value
+      }
     },
     series: [
       {
@@ -554,13 +594,15 @@ const initAccessSourceChart = () => {
         },
         label: {
           show: true,
-          formatter: '{b}: {d}%'
+          formatter: '{b}: {d}%',
+          color: textColor.value
         },
         emphasis: {
           label: {
             show: true,
             fontSize: 16,
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            color: textColor.value
           }
         },
         data: accessSourceData.value
@@ -577,11 +619,17 @@ const initDeviceChart = () => {
   deviceChartInstance.setOption({
     tooltip: {
       trigger: 'item',
-      formatter: '{a} <br/>{b}: {c}% ({d}%)'
+      formatter: '{a} <br/>{b}: {c}% ({d}%)',
+      textStyle: {
+        color: textColor.value
+      }
     },
     legend: {
       bottom: '5%',
-      left: 'center'
+      left: 'center',
+      textStyle: {
+        color: textColor.value
+      }
     },
     series: [
       {
@@ -612,6 +660,9 @@ const initRegionChart = () => {
       trigger: 'axis',
       axisPointer: {
         type: 'shadow'
+      },
+      textStyle: {
+        color: textColor.value
       }
     },
     grid: {
@@ -621,11 +672,32 @@ const initRegionChart = () => {
       containLabel: true
     },
     xAxis: {
-      type: 'value'
+      type: 'value',
+      axisLabel: {
+        color: textColor.value
+      },
+      axisLine: {
+        lineStyle: {
+          color: isDark.value ? '#3d3e40' : '#dcdfe6'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: isDark.value ? '#3d3e40' : '#ebeef5'
+        }
+      }
     },
     yAxis: {
       type: 'category',
-      data: regionData.value.map(item => item.name)
+      data: regionData.value.map(item => item.name),
+      axisLabel: {
+        color: textColor.value
+      },
+      axisLine: {
+        lineStyle: {
+          color: isDark.value ? '#3d3e40' : '#dcdfe6'
+        }
+      }
     },
     series: [
       {
@@ -679,6 +751,22 @@ const initCharts = async () => {
   // 监听窗口大小变化
   window.addEventListener('resize', handleResize)
 }
+
+// 监听主题变化，重新初始化图表以应用新的文字颜色
+watch(isDark, () => {
+  if (visitTrendChartInstance) {
+    initVisitTrendChart()
+  }
+  if (accessSourceChartInstance) {
+    initAccessSourceChart()
+  }
+  if (deviceChartInstance) {
+    initDeviceChart()
+  }
+  if (regionChartInstance) {
+    initRegionChart()
+  }
+})
 
 onMounted(() => {
   initCharts()
@@ -894,6 +982,40 @@ onBeforeUnmount(() => {
 }
 
 .dark-mode .card-header * {
+  color: var(--text-color-primary) !important;
+}
+
+/* 确保 el-card__header 中的文字也是白色 */
+.dark-mode .el-card__header {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-card__header * {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-card__header .card-header {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-card__header .card-header span {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .el-card__header .card-header * {
+  color: var(--text-color-primary) !important;
+}
+
+/* 确保所有卡片头部内的文字都是白色 */
+.dark-mode .dashboard .el-card__header {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .dashboard .el-card__header * {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .dashboard .el-card__header span {
   color: var(--text-color-primary) !important;
 }
 

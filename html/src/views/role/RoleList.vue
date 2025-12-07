@@ -1373,3 +1373,86 @@ onMounted(async () => {
   color: #409eff;
 }
 </style>
+
+<style>
+/* 角色管理页面菜单与权限树夜间模式适配 */
+.dark-mode .menu-permission-container {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .menu-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #fff !important;
+}
+
+.dark-mode .header-title {
+  color: #fff !important;
+}
+
+.dark-mode .tree-wrapper {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-mode .menu-name,
+.dark-mode .permission-name {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node__label) {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node__content) {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node__content:hover) {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node__expand-icon) {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node__expand-icon:hover) {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .permission-path-icon {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-mode .permission-path-icon:hover {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .protected-tip {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .protected-role-tip {
+  background-color: var(--bg-color-tertiary) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .protected-role-tip .el-icon {
+  color: var(--sidebar-active) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-checkbox__label) {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node) {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .menu-permission-tree :deep(.el-tree-node *) {
+  color: var(--text-color-primary) !important;
+}
+</style>

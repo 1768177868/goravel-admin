@@ -129,6 +129,12 @@ export const useAppStore = defineStore('app', {
           this.dropdownObserver.disconnect()
           this.dropdownObserver = null
         }
+        // 清除所有已存在的下拉框的内联样式
+        setTimeout(() => {
+          document.querySelectorAll('.el-select-dropdown').forEach(dropdown => {
+            this.applyDropdownStyles(dropdown)
+          })
+        }, 0)
       }
     },
     
@@ -197,6 +203,15 @@ export const useAppStore = defineStore('app', {
           item.style.removeProperty('color')
           item.style.removeProperty('background-color')
         })
+        
+        // 清除 popper 箭头样式
+        const arrow = element.querySelector('.el-popper__arrow')
+        if (arrow) {
+          const arrowBefore = arrow.querySelector('::before') || window.getComputedStyle(arrow, '::before')
+          if (arrowBefore) {
+            arrow.style.removeProperty('--el-popper-arrow-bg-color')
+          }
+        }
         return
       }
       
@@ -243,10 +258,12 @@ export const useAppStore = defineStore('app', {
       styleElement.textContent = `
         .el-select__wrapper {
           background-color: #252526 !important;
+          border-color: #3d3e40 !important;
           border-width: 1px !important;
         }
         .el-select .el-input__wrapper {
           background-color: #252526 !important;
+          border-color: #3d3e40 !important;
           border-width: 1px !important;
         }
         .el-select .el-input__inner {
@@ -452,7 +469,7 @@ export const useAppStore = defineStore('app', {
         }
         .vxe-pager .vxe-pager--btn-wrapper {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
           color: #cfd3dc !important;
         }
         .vxe-pager .vxe-pager--btn-wrapper:hover {
@@ -486,7 +503,7 @@ export const useAppStore = defineStore('app', {
         [class*="vxe-pager--next-btn"],
         [class*="vxe-pager--num-btn"] {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
           color: #cfd3dc !important;
         }
         .vxe-pager--jump-prev:hover:not(.is--disabled),
@@ -546,7 +563,7 @@ export const useAppStore = defineStore('app', {
         }
         .vxe-pager .vxe-pager--sizes .vxe-select {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input--inner {
           background-color: #252526 !important;
@@ -555,7 +572,7 @@ export const useAppStore = defineStore('app', {
         .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input,
         .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input__wrapper {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input__inner {
           background-color: #252526 !important;
@@ -564,14 +581,14 @@ export const useAppStore = defineStore('app', {
         .vxe-select,
         .vxe-pager .vxe-select {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .vxe-select .vxe-input,
         .vxe-select .vxe-input__wrapper,
         .vxe-pager .vxe-select .vxe-input,
         .vxe-pager .vxe-select .vxe-input__wrapper {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .vxe-select .vxe-input__inner,
         .vxe-select .vxe-input--inner,
@@ -631,16 +648,16 @@ export const useAppStore = defineStore('app', {
         .vxe-pager .vxe-number-input--input {
           background-color: #252526 !important;
           color: #cfd3dc !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .vxe-number-input,
         .vxe-pager .vxe-number-input {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .pagination-jumper .el-input-number .el-input__wrapper {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
         }
         .pagination-jumper .el-input-number .el-input__inner {
           background-color: #252526 !important;
@@ -648,7 +665,7 @@ export const useAppStore = defineStore('app', {
         }
         .pagination-jumper .el-button {
           background-color: #252526 !important;
-          border-color: #4c4d4f !important;
+          border-color: #3d3e40 !important;
           color: #cfd3dc !important;
         }
         .pagination-jumper .el-button:hover:not(:disabled) {
@@ -726,6 +743,22 @@ export const useAppStore = defineStore('app', {
         .vxe-table .vxe-loading,
         .vxe-table .vxe-loading--mask {
           background-color: rgba(0, 0, 0, 0.85) !important;
+        }
+        .el-popper__arrow::before {
+          background-color: #2d2d30 !important;
+          border-color: #3d3e40 !important;
+        }
+        .el-popper__arrow::after {
+          background-color: #2d2d30 !important;
+          border-color: #3d3e40 !important;
+        }
+        .el-popover__arrow::before {
+          background-color: #2d2d30 !important;
+          border-color: #3d3e40 !important;
+        }
+        .el-popover__arrow::after {
+          background-color: #2d2d30 !important;
+          border-color: #3d3e40 !important;
         }
       `
     },

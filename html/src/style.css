@@ -162,7 +162,7 @@ body {
 
 .dark-mode .el-input__wrapper {
   background-color: var(--bg-color);
-  border-color: var(--border-color-base);
+  border-color: var(--border-color-light) !important;
   border-width: 1px;
 }
 
@@ -200,7 +200,7 @@ body {
 
 .dark-mode .el-textarea__inner {
   background-color: var(--bg-color);
-  border-color: var(--border-color-base);
+  border-color: var(--border-color-light) !important;
   color: var(--text-color-primary);
   border-width: 1px;
 }
@@ -214,10 +214,12 @@ body {
 
 .dark-mode .el-select .el-input__wrapper {
   background-color: var(--bg-color) !important;
+  border-color: var(--border-color-light) !important;
 }
 
 .dark-mode .el-select__wrapper {
   background-color: var(--bg-color) !important;
+  border-color: var(--border-color-light) !important;
 }
 
 .dark-mode .el-select .el-input__inner {
@@ -276,7 +278,7 @@ body {
 }
 
 .dark-mode .el-table td.el-table__cell {
-  border-bottom-color: var(--border-color-lighter);
+  border-bottom-color: var(--border-color-light) !important;
 }
 
 .dark-mode .el-table--border {
@@ -450,6 +452,7 @@ body {
 .dark-mode .vxe-table {
   background-color: var(--card-bg) !important;
   color: var(--text-color-primary) !important;
+  border-color: var(--border-color-light) !important;
   border-width: 1px !important;
 }
 
@@ -515,7 +518,7 @@ body {
 .dark-mode .vxe-body--column {
   background-color: var(--card-bg);
   color: var(--text-color-primary);
-  border-color: var(--border-color-lighter);
+  border-color: var(--border-color-light) !important;
   border-width: 1px !important;
 }
 
@@ -1240,6 +1243,27 @@ body[data-theme="dark"] .el-select-dropdown__list {
   background-color: var(--card-bg);
   border-color: var(--card-border);
   color: var(--text-color-primary);
+}
+
+/* Popper 箭头夜间模式适配 */
+.dark-mode .el-popper__arrow::before {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark-mode .el-popper__arrow::after {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark-mode .el-popover__arrow::before {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark-mode .el-popover__arrow::after {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
 }
 
 /* 抽屉夜间模式适配 */

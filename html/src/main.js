@@ -132,6 +132,12 @@ const injectDropdownStyles = () => {
         
         const list = element.querySelector('.el-select-dropdown__list')
         if (list) list.style.removeProperty('background-color')
+        
+        const items = element.querySelectorAll('.el-select-dropdown__item')
+        items.forEach(item => {
+          item.style.removeProperty('color')
+          item.style.removeProperty('background-color')
+        })
         return
       }
       
@@ -192,10 +198,12 @@ const applySelectInputStyles = () => {
   styleElement.textContent = `
       .el-select__wrapper {
         background-color: #252526 !important;
+        border-color: #3d3e40 !important;
         border-width: 1px !important;
       }
       .el-select .el-input__wrapper {
         background-color: #252526 !important;
+        border-color: #3d3e40 !important;
         border-width: 1px !important;
       }
       .el-select .el-input__inner {
@@ -401,7 +409,7 @@ const applySelectInputStyles = () => {
       }
       .vxe-pager .vxe-pager--btn-wrapper {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
         color: #cfd3dc !important;
       }
       .vxe-pager .vxe-pager--btn-wrapper:hover {
@@ -495,7 +503,7 @@ const applySelectInputStyles = () => {
       }
       .vxe-pager .vxe-pager--sizes .vxe-select {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input--inner {
         background-color: #252526 !important;
@@ -504,7 +512,7 @@ const applySelectInputStyles = () => {
       .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input,
       .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input__wrapper {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .vxe-pager .vxe-pager--sizes .vxe-select .vxe-input__inner {
         background-color: #252526 !important;
@@ -513,14 +521,14 @@ const applySelectInputStyles = () => {
       .vxe-select,
       .vxe-pager .vxe-select {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .vxe-select .vxe-input,
       .vxe-select .vxe-input__wrapper,
       .vxe-pager .vxe-select .vxe-input,
       .vxe-pager .vxe-select .vxe-input__wrapper {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .vxe-select .vxe-input__inner,
       .vxe-select .vxe-input--inner,
@@ -580,16 +588,16 @@ const applySelectInputStyles = () => {
       .vxe-pager .vxe-number-input--input {
         background-color: #252526 !important;
         color: #cfd3dc !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .vxe-number-input,
       .vxe-pager .vxe-number-input {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .pagination-jumper .el-input-number .el-input__wrapper {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
       }
       .pagination-jumper .el-input-number .el-input__inner {
         background-color: #252526 !important;
@@ -597,7 +605,7 @@ const applySelectInputStyles = () => {
       }
       .pagination-jumper .el-button {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
         color: #cfd3dc !important;
       }
       .pagination-jumper .el-button:hover:not(:disabled) {
@@ -623,7 +631,7 @@ const applySelectInputStyles = () => {
       }
       .el-input-number .el-input__wrapper {
         background-color: #252526 !important;
-        border-color: #4c4d4f !important;
+        border-color: #3d3e40 !important;
         border-width: 1px !important;
       }
       .el-input-number .el-input__inner {
@@ -675,6 +683,22 @@ const applySelectInputStyles = () => {
       .vxe-table .vxe-loading,
       .vxe-table .vxe-loading--mask {
         background-color: rgba(0, 0, 0, 0.85) !important;
+      }
+      .el-popper__arrow::before {
+        background-color: #2d2d30 !important;
+        border-color: #3d3e40 !important;
+      }
+      .el-popper__arrow::after {
+        background-color: #2d2d30 !important;
+        border-color: #3d3e40 !important;
+      }
+      .el-popover__arrow::before {
+        background-color: #2d2d30 !important;
+        border-color: #3d3e40 !important;
+      }
+      .el-popover__arrow::after {
+        background-color: #2d2d30 !important;
+        border-color: #3d3e40 !important;
       }
     `
 }
