@@ -104,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
@@ -524,6 +524,15 @@ onMounted(() => {
 // 当组件被激活时（包括从缓存恢复）自动刷新数据
 onActivated(() => {
   loadData()
+})
+
+// 组件被缓存时清理所有 SSE 连接（keep-alive场景）
+onDeactivated(() => {
+  monitoringExports.value.forEach((eventSource, exportId) => {
+    closeSSEConnection(eventSource)
+  })
+  monitoringExports.value.clear()
+  // 注意：不清除 exportProgress，保留进度信息显示
 })
 
 // 组件卸载时清理所有 SSE 连接

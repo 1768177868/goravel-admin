@@ -33,6 +33,7 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.Blacklist{})
+	orderBy := ctx.Request().Query("order_by", "")
 
 	if ip != "" {
 		query = query.Where("ip LIKE ?", "%"+ip+"%")
@@ -47,6 +48,9 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	// 应用排序，默认排序为 id desc
+	query = helpers.ApplySort(query, orderBy, "id:desc")
+
 	total, err := query.Count()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
@@ -54,7 +58,7 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 
 	var blacklists []models.Blacklist
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("id desc").Get(&blacklists); err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Get(&blacklists); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 

@@ -344,6 +344,9 @@ const handleSortChange = ({ column, property, order }) => {
 }
 
 const handleCheckboxChange = ({ row, checked }) => {
+  if (!selectedRows.value) {
+    selectedRows.value = []
+  }
   if (checked) {
     if (!selectedRows.value.find(item => item.id === row.id)) {
       selectedRows.value.push(row)
@@ -354,8 +357,11 @@ const handleCheckboxChange = ({ row, checked }) => {
 }
 
 const handleCheckboxAll = ({ checked, records }) => {
+  if (!selectedRows.value) {
+    selectedRows.value = []
+  }
   if (checked) {
-    selectedRows.value = [...records]
+    selectedRows.value = Array.isArray(records) ? [...records] : []
   } else {
     selectedRows.value = []
   }
@@ -425,10 +431,6 @@ const handleBatchKickOut = async () => {
 
 onMounted(() => {
   fetchData()
-  // 每30秒自动刷新一次
-  setInterval(() => {
-    fetchData()
-  }, 30000)
 })
 </script>
 

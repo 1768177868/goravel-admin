@@ -26,6 +26,7 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
 	dictType := ctx.Request().Query("type", "")
 	status := ctx.Request().Query("status", "")
+	orderBy := ctx.Request().Query("order_by", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -44,6 +45,9 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	// 应用排序，默认排序为 sort asc, id desc
+	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
+
 	total, err := query.Count()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
@@ -51,7 +55,7 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 
 	var dictionaries []models.Dictionary
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("sort asc, id desc").Get(&dictionaries); err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Get(&dictionaries); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 

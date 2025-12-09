@@ -34,6 +34,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 	ip := ctx.Request().Query("ip", "")
 	browser := ctx.Request().Query("browser", "")
 	os := ctx.Request().Query("os", "")
+	orderBy := ctx.Request().Query("order_by", "")
 
 	// 只查询最近15分钟内有活动的token（在线用户）
 	// 默认只显示admin类型的token
@@ -54,8 +55,11 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 		query = query.Where("os LIKE ?", "%"+os+"%")
 	}
 
+	// 应用排序，默认排序为 last_used_at desc
+	query = helpers.ApplySort(query, orderBy, "last_used_at:desc")
+
 	var tokens []models.PersonalAccessToken
-	if err := query.Order("last_used_at desc").Get(&tokens); err != nil {
+	if err := query.Get(&tokens); err != nil {
 		errorlog.RecordHTTP(ctx, "online_user", "Failed to query online user list", map[string]any{
 			"error": err.Error(),
 		}, "Query online user list error: %v", err)

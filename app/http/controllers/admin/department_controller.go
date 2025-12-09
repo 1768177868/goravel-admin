@@ -38,6 +38,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	// 如果有搜索条件，返回扁平列表；否则返回树形结构
 	if name != "" || status != "" || startTime != "" || endTime != "" {
 		query := facades.Orm().Query().Model(&models.Department{})
+		orderBy := ctx.Request().Query("order_by", "")
 
 		if name != "" {
 			// 使用模型字段名，GORM 会自动转换为数据库字段名
@@ -54,8 +55,11 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 			query = query.Where("created_at <= ?", endTime)
 		}
 
+		// 应用排序，默认排序为 sort asc, id asc
+		query = helpers.ApplySort(query, orderBy, "sort:asc,id:asc")
+
 		var departments []models.Department
-		if err := query.Order("sort asc, id asc").Get(&departments); err != nil {
+		if err := query.Get(&departments); err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 		}
 

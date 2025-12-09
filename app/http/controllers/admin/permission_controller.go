@@ -72,6 +72,10 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
+	// 应用排序，默认排序为 sort asc, id desc
+	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
+
 	total, err := query.Count()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
@@ -79,7 +83,7 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 
 	var permissions []models.Permission
 	offset := (page - 1) * pageSize
-	if err := query.With("Menu").Offset(offset).Limit(pageSize).Order("sort asc, id desc").Get(&permissions); err != nil {
+	if err := query.With("Menu").Offset(offset).Limit(pageSize).Get(&permissions); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
