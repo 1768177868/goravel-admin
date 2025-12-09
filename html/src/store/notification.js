@@ -9,6 +9,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead
 } from '../api/notification'
+import { playNotificationSound } from '../utils/sound'
 
 const { t } = i18n.global
 
@@ -21,7 +22,8 @@ export const useNotificationStore = defineStore('notification', {
     wsConnected: false,
     initializing: false,
     retryCount: 0,
-    retryTimer: null
+    retryTimer: null,
+    soundDebounceTimer: null // 声音防抖定时器
   }),
   actions: {
     async init() {
@@ -181,14 +183,22 @@ export const useNotificationStore = defineStore('notification', {
         clearTimeout(this.retryTimer)
         this.retryTimer = null
       }
+      if (this.soundDebounceTimer) {
+        clearTimeout(this.soundDebounceTimer)
+        this.soundDebounceTimer = null
+      }
       this.retryCount = 0
     },
     handleIncoming(notification) {
       const exists = this.items.find(item => item.id === notification.id)
-      if (!exists) {
+      const isNewNotification = !exists
+      
+      if (isNewNotification) {
         this.items.unshift(notification)
         if (!notification.is_read) {
           this.unreadCount += 1
+          // 播放提示音（带防抖，1秒内只播放一次）
+          this.playNotificationSoundWithDebounce()
         }
         if (this.items.length > 7) {
           this.items = this.items.slice(0, 7)
@@ -196,6 +206,24 @@ export const useNotificationStore = defineStore('notification', {
       } else {
         this.items = this.items.map(item => item.id === notification.id ? notification : item)
       }
+    },
+    /**
+     * 播放通知提示音（带防抖）
+     * 如果1秒内收到多个通知，只播放一次声音
+     */
+    playNotificationSoundWithDebounce() {
+      // 如果已经有待执行的定时器，说明在防抖窗口内，直接返回
+      if (this.soundDebounceTimer) {
+        return
+      }
+      
+      // 立即播放一次声音
+      playNotificationSound()
+      
+      // 设置防抖定时器，1秒后重置
+      this.soundDebounceTimer = setTimeout(() => {
+        this.soundDebounceTimer = null
+      }, 1000) // 1秒防抖窗口
     }
   }
 })
