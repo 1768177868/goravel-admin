@@ -14,7 +14,7 @@
         router
         class="sidebar-menu"
         :collapse="appStore.sidebarCollapsed"
-        :background-color="sidebarBgColor"
+        background-color="#1f2937"
         text-color="#bfcbd9"
         active-text-color="#409EFF"
       >
@@ -124,7 +124,6 @@
           </el-button>
           <NotificationBell />
           <TimezoneSwitch />
-          <ThemeSwitch />
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <span class="user-info">
@@ -185,7 +184,6 @@ import request from '../utils/request'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import NotificationBell from '../components/NotificationBell.vue'
-import ThemeSwitch from '../components/ThemeSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'
@@ -219,9 +217,6 @@ const { t } = useI18n()
 const activeMenu = computed(() => route.path)
 
 // 根据主题获取 sidebar 背景色
-const sidebarBgColor = computed(() => {
-  return appStore.theme === 'dark' ? '#1e1e1e' : '#1f2937'
-})
 
 // 转换菜单数据格式并构建树形结构
 const menuTree = computed(() => {

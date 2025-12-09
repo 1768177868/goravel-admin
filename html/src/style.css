@@ -161,9 +161,9 @@ body {
 }
 
 .dark-mode .el-input__wrapper {
-  background-color: var(--bg-color);
-  border-color: var(--border-color-light) !important;
-  border-width: 1px;
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+  border-width: 1px !important;
 }
 
 .dark-mode .el-input__wrapper::before,
@@ -176,7 +176,68 @@ body {
 }
 
 .dark-mode .el-input__wrapper .el-input__inner {
-  background-color: var(--bg-color) !important;
+  background-color: #252526 !important;
+  color: #e5eaf3 !important;
+}
+
+/* 确保所有输入框都被覆盖 */
+.dark-mode .el-input .el-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+}
+
+.dark-mode .el-input .el-input__wrapper .el-input__inner {
+  background-color: #252526 !important;
+  color: #e5eaf3 !important;
+}
+
+.dark-mode .el-form-item .el-input__wrapper {
+  background-color: #252526 !important;
+  border-color: #3d3e40 !important;
+}
+
+.dark-mode .el-form-item .el-input__wrapper .el-input__inner {
+  background-color: #252526 !important;
+  color: #e5eaf3 !important;
+}
+
+/* 密码输入框夜间模式适配 */
+.dark-mode .el-input[type="password"] .el-input__wrapper,
+.dark-mode .el-input[type="password"] .el-input__wrapper .el-input__inner {
+  background-color: #252526 !important;
+  color: #e5eaf3 !important;
+}
+
+.dark-mode .el-input[type="password"] .el-input__suffix {
+  background-color: transparent !important;
+}
+
+.dark-mode .el-input[type="password"] .el-input__suffix .el-input__icon {
+  background-color: transparent !important;
+  color: #909399 !important;
+}
+
+.dark-mode .el-input[type="password"] .el-input__suffix .el-input__icon:hover {
+  color: #e5eaf3 !important;
+}
+
+.dark-mode .el-input.show-password .el-input__wrapper,
+.dark-mode .el-input.show-password .el-input__wrapper .el-input__inner {
+  background-color: #252526 !important;
+  color: #e5eaf3 !important;
+}
+
+.dark-mode .el-input.show-password .el-input__suffix {
+  background-color: transparent !important;
+}
+
+.dark-mode .el-input.show-password .el-input__suffix .el-input__icon {
+  background-color: transparent !important;
+  color: #909399 !important;
+}
+
+.dark-mode .el-input.show-password .el-input__suffix .el-input__icon:hover {
+  color: #e5eaf3 !important;
 }
 
 .dark-mode .el-input__wrapper.is-disabled,
