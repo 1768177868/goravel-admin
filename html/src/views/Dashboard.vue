@@ -78,12 +78,13 @@
         </el-card>
       </el-col>
       
-      <!-- 地区分布 -->
+      <!-- 月度操作统计 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="12">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>地区分布</span>
+              <span>月度操作统计</span>
+              <el-tag type="info" size="small">近12个月</el-tag>
             </div>
           </template>
           <div ref="regionChart" style="height: 320px;"></div>
@@ -98,7 +99,7 @@
           <template #header>
             <div class="card-header">
               <span>最近活动</span>
-              <el-button type="primary" text size="small">查看全部</el-button>
+              <el-button type="primary" text size="small" @click="handleViewAllActivities">查看全部</el-button>
             </div>
           </template>
           <el-table :data="recentActivities" style="width: 100%" :show-header="false">
@@ -163,10 +164,12 @@ import {
   getCount, 
   getUserAccessSource, 
   getWeeklyUserActivity, 
-  getMonthlySales
+  getMonthlySales,
+  getRecentActivities
 } from '../api/dashboard'
 import logger from '../utils/logger'
 import ErrorHandler from '../utils/errorHandler'
+import { useI18n } from 'vue-i18n'
 import {
   User,
   View,
@@ -187,6 +190,7 @@ import {
 
 const router = useRouter()
 const appStore = useAppStore()
+const { t, te, tm } = useI18n()
 
 // 获取当前主题
 const isDark = computed(() => appStore.theme === 'dark')
@@ -324,15 +328,21 @@ const updateAccessSourceChart = (sourceData) => {
 
 // 更新设备分布图表（从访问来源数据中提取设备相关数据）
 const updateDeviceChart = (sourceData) => {
-  if (!sourceData || !Array.isArray(sourceData)) return
-  
-  // 假设访问来源数据中包含设备信息，或者可以从其他接口获取
-  // 这里暂时使用默认数据，实际应该从后端获取
-  deviceData.value = [
-    { value: 45, name: '桌面端' },
-    { value: 35, name: '移动端' },
-    { value: 20, name: '平板端' }
-  ]
+  if (!sourceData || !Array.isArray(sourceData)) {
+    // 如果没有数据，使用默认数据
+    deviceData.value = [
+      { value: 0, name: '桌面端' },
+      { value: 0, name: '移动端' },
+      { value: 0, name: '平板端' },
+      { value: 0, name: '其他' }
+    ]
+  } else {
+    // 使用真实的访问来源数据
+    deviceData.value = sourceData.map(item => ({
+      value: item.value || item.Value || 0,
+      name: item.name || item.Name || ''
+    }))
+  }
   
   if (deviceChartInstance) {
     deviceChartInstance.setOption({
@@ -343,13 +353,13 @@ const updateDeviceChart = (sourceData) => {
   }
 }
 
-// 更新地区分布图表
-const updateRegionChart = (regionDataArray) => {
-  if (!regionDataArray || !Array.isArray(regionDataArray)) return
+// 更新月度操作统计图表（替换地区分布）
+const updateRegionChart = (monthlyData) => {
+  if (!monthlyData || !Array.isArray(monthlyData)) return
   
-  regionData.value = regionDataArray.map(item => ({
-    name: item.name || item.Name || '',
-    value: item.value || item.Value || 0
+  regionData.value = monthlyData.map(item => ({
+    name: item.month || item.Month || '',
+    value: item.count || item.Count || 0
   }))
   
   if (regionChartInstance) {
@@ -389,6 +399,8 @@ const loadDashboardData = async () => {
     const sourceRes = await getUserAccessSource()
     if (sourceRes.data) {
       updateAccessSourceChart(sourceRes.data)
+      // 同时更新设备分布图表
+      updateDeviceChart(sourceRes.data)
     }
     
     // 加载每周活动
@@ -397,60 +409,136 @@ const loadDashboardData = async () => {
       updateVisitTrendChart(weeklyRes.data)
     }
     
-    // 加载每月销售（如果有）
-    // const salesRes = await getMonthlySales()
-    // if (salesRes.data) {
-    //   updateSalesChart(salesRes.data)
-    // }
+    // 加载月度操作统计（替换销售额）
+    const salesRes = await getMonthlySales()
+    if (salesRes.data) {
+      updateRegionChart(salesRes.data)
+    }
+    
+    // 加载最近活动
+    const activitiesRes = await getRecentActivities()
+    if (activitiesRes.data) {
+      updateRecentActivities(activitiesRes.data)
+    }
   } catch (error) {
     logger.error('Failed to load dashboard data:', error)
     ErrorHandler.handle(error, { showNotification: true })
   }
 }
 
-// 最近活动 - 写死的默认数据
-const recentActivities = ref([
-  {
-    user: '张三',
-    action: '创建了新角色',
-    time: '2分钟前',
-    status: '成功',
-    type: 'success',
-    avatarColor: '#409EFF'
-  },
-  {
-    user: '李四',
-    action: '修改了菜单权限',
-    time: '15分钟前',
-    status: '成功',
-    type: 'success',
-    avatarColor: '#67C23A'
-  },
-  {
-    user: '王五',
-    action: '删除了管理员',
-    time: '1小时前',
-    status: '成功',
-    type: 'success',
-    avatarColor: '#E6A23C'
-  },
-  {
-    user: '赵六',
-    action: '更新了系统配置',
-    time: '2小时前',
-    status: '成功',
-    type: 'success',
-    avatarColor: '#F56C6C'
-  },
-  {
-    user: '钱七',
-    action: '导出了用户数据',
-    time: '3小时前',
-    status: '成功',
-    type: 'success',
-    avatarColor: '#909399'
+// 最近活动
+const recentActivities = ref([])
+
+// 复数转单数转换函数
+const pluralToSingular = (word) => {
+  if (!word || word.length <= 1) return word
+  
+  // 特殊映射
+  const specialCases = {
+    'dictionaries': 'dictionary',
+    'notifications': 'notification',
+    'departments': 'department',
+    'admins': 'admin',
+    'roles': 'role',
+    'permissions': 'permission',
+    'menus': 'menu',
+    'operation_logs': 'operation_log',
+    'login_logs': 'login_log',
+    'system_logs': 'system_log'
   }
-])
+  
+  if (specialCases[word]) {
+    return specialCases[word]
+  }
+  
+  // 以 -s 结尾的单词，去掉 s
+  if (word.endsWith('s')) {
+    // 特殊情况：-ies 结尾的单词（如 dictionaries -> dictionary）
+    if (word.endsWith('ies') && word.length > 3) {
+      return word.slice(0, -3) + 'y'
+    }
+    // 特殊情况：-es 结尾的单词（如 permissions -> permission）
+    if (word.endsWith('es') && word.length > 2) {
+      const beforeEs = word.slice(0, -2)
+      // 如果去掉 es 后以 ch, sh, x, s, z 结尾，保留 e
+      const lastChar = beforeEs[beforeEs.length - 1]
+      if (['c', 's', 'x', 'z'].includes(lastChar)) {
+        return beforeEs
+      }
+      return beforeEs
+    }
+    return word.slice(0, -1)
+  }
+  
+  // 默认返回原值
+  return word
+}
+
+// 获取操作标题的翻译
+const getOperationTitle = (titleKey) => {
+  if (!titleKey) return '-'
+  
+  // 先尝试将复数形式转换为单数形式
+  let slug = titleKey
+  if (slug.includes('.')) {
+    const parts = slug.split('.')
+    if (parts.length >= 2) {
+      const module = pluralToSingular(parts[0])
+      slug = module + '.' + parts.slice(1).join('.')
+    }
+  } else {
+    slug = pluralToSingular(slug)
+  }
+  
+  // 作为权限标识翻译：permission.dictionary.update 这种形式
+  const slugKey = `permission.${slug}`
+  
+  // 使用 te 检测路径是否存在（兼容嵌套路径）
+  if (typeof te === 'function' && te(slugKey)) {
+    return t(slugKey)
+  }
+  
+  // 直接从 permission 命名空间对象里取（兼容平铺的 "dictionary.update" 键）
+  const messages = typeof tm === 'function' ? tm('permission') : null
+  if (messages && Object.prototype.hasOwnProperty.call(messages, slug)) {
+    const value = messages[slug]
+    if (typeof value === 'string') {
+      return value
+    }
+  }
+  
+  // 如果转换后的 slug 和原始 titleKey 不同，再尝试用原始值查找一次（兼容旧数据）
+  if (slug !== titleKey) {
+    const originalSlugKey = `permission.${titleKey}`
+    if (typeof te === 'function' && te(originalSlugKey)) {
+      return t(originalSlugKey)
+    }
+    const originalMessages = typeof tm === 'function' ? tm('permission') : null
+    if (originalMessages && Object.prototype.hasOwnProperty.call(originalMessages, titleKey)) {
+      const value = originalMessages[titleKey]
+      if (typeof value === 'string') {
+        return value
+      }
+    }
+  }
+  
+  // 找不到翻译就原样返回
+  return titleKey
+}
+
+// 更新最近活动
+const updateRecentActivities = (activities) => {
+  if (activities && Array.isArray(activities)) {
+    recentActivities.value = activities.map(item => ({
+      user: item.user || '未知用户',
+      action: getOperationTitle(item.action || ''), // 翻译操作标题
+      time: item.time || '',
+      status: item.status || '成功',
+      type: item.type || 'success',
+      avatarColor: item.avatarColor || '#409EFF'
+    }))
+  }
+}
 
 // 快速操作
 const quickActions = [
@@ -473,6 +561,21 @@ const initVisitTrendChart = () => {
   if (!visitTrendChart.value) return
   
   visitTrendChartInstance = echarts.init(visitTrendChart.value)
+  
+  // 如果没有数据，使用默认空数据
+  if (!visitTrendData.value.dates || visitTrendData.value.dates.length === 0) {
+    const now = new Date()
+    visitTrendData.value = {
+      dates: Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(now)
+        date.setDate(date.getDate() - (6 - i))
+        return date.toISOString().split('T')[0]
+      }),
+      visits: Array(7).fill(0),
+      users: Array(7).fill(0)
+    }
+  }
+  
   visitTrendChartInstance.setOption({
     tooltip: {
       trigger: 'axis',
@@ -565,6 +668,17 @@ const initAccessSourceChart = () => {
   if (!accessSourceChart.value) return
   
   accessSourceChartInstance = echarts.init(accessSourceChart.value)
+  
+  // 如果没有数据，使用默认空数据
+  if (!accessSourceData.value || accessSourceData.value.length === 0) {
+    accessSourceData.value = [
+      { value: 0, name: '桌面端' },
+      { value: 0, name: '移动端' },
+      { value: 0, name: '平板端' },
+      { value: 0, name: '其他' }
+    ]
+  }
+  
   accessSourceChartInstance.setOption({
     tooltip: {
       trigger: 'item',
@@ -616,6 +730,17 @@ const initDeviceChart = () => {
   if (!deviceChart.value) return
   
   deviceChartInstance = echarts.init(deviceChart.value)
+  
+  // 如果没有数据，使用默认空数据
+  if (!deviceData.value || deviceData.value.length === 0) {
+    deviceData.value = [
+      { value: 0, name: '桌面端' },
+      { value: 0, name: '移动端' },
+      { value: 0, name: '平板端' },
+      { value: 0, name: '其他' }
+    ]
+  }
+  
   deviceChartInstance.setOption({
     tooltip: {
       trigger: 'item',
@@ -650,11 +775,25 @@ const initDeviceChart = () => {
   })
 }
 
-// 初始化地区分布图表
+// 初始化月度操作统计图表（替换地区分布）
 const initRegionChart = () => {
   if (!regionChart.value) return
   
   regionChartInstance = echarts.init(regionChart.value)
+  
+  // 如果没有数据，使用默认空数据
+  if (!regionData.value || regionData.value.length === 0) {
+    const now = new Date()
+    regionData.value = Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(now)
+      date.setMonth(date.getMonth() - (11 - i))
+      return {
+        name: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        value: 0
+      }
+    })
+  }
+  
   regionChartInstance.setOption({
     tooltip: {
       trigger: 'axis',
@@ -738,6 +877,11 @@ const handleQuickAction = (action) => {
   if (action.path) {
     router.push(action.path)
   }
+}
+
+// 查看全部活动
+const handleViewAllActivities = () => {
+  router.push('/operation-logs')
 }
 
 // 初始化所有图表

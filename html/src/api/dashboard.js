@@ -24,10 +24,18 @@ export function getWeeklyUserActivity() {
   })
 }
 
-// 获取每月销售数据
+// 获取每月销售数据（实际是操作统计）
 export function getMonthlySales() {
   return request({
     url: '/dashboard/monthly-sales',
+    method: 'get'
+  })
+}
+
+// 获取最近活动
+export function getRecentActivities() {
+  return request({
+    url: '/dashboard/recent-activities',
     method: 'get'
   })
 }

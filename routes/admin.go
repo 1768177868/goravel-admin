@@ -153,6 +153,7 @@ func Admin() {
 		router.Get("dashboard/user-access-source", dashboardController.GetUserAccessSource)
 		router.Get("dashboard/weekly-user-activity", dashboardController.GetWeeklyUserActivity)
 		router.Get("dashboard/monthly-sales", dashboardController.GetMonthlySales)
+		router.Get("dashboard/recent-activities", dashboardController.GetRecentActivities)
 		// SSE 路由：实时推送所有 Dashboard 数据（适合实时 Dashboard 页面，自动更新）
 		router.Get("dashboard/stream", dashboardController.StreamDashboardData)
 
