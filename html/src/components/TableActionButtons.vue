@@ -72,7 +72,7 @@
         link
         :disabled="isMoreActionsDisabled(row)"
       >
-        {{ $t('common.more') }}
+        {{ t('common.more') }}
         <el-icon class="el-icon--right"><ArrowDownIcon /></el-icon>
       </el-button>
       <template #dropdown>
@@ -95,9 +95,11 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { markRaw } from 'vue'
 
+const { t } = useI18n()
 const ArrowDownIcon = markRaw(ArrowDown)
 
 const props = defineProps({
