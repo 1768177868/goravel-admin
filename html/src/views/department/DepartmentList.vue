@@ -45,7 +45,6 @@
             :field="column.field"
             :title="column.title"
             :width="column.width"
-            :sortable="column.sortable"
             :fixed="column.fixed"
             :formatter="column.formatter"
             :tree-node="column.treeNode"
@@ -179,46 +178,41 @@ const searchFields = computed(() => [
 ])
 
 // 表格列配置（使用 vxe-table columns）
+// 树形结构不需要排序功能
 const tableColumns = computed(() => [
   {
     field: 'name',
     title: t('department.name'),
     treeNode: true,
-    sortable: true,
     formatter: ({ row }) => row.Name || row.name || '-'
   },
   {
     field: 'remark',
     title: t('common.description'),
-    sortable: false,
     formatter: ({ row }) => row.Remark || row.remark || row.description || '-'
   },
   {
     field: 'sort',
     title: t('common.sort'),
     width: 80,
-    sortable: true,
     formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0)
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 80,
-    sortable: true,
     slot: 'status'
   },
   {
     field: 'created_at',
     title: t('table.created_at'),
-    sortable: true,
     formatter: ({ row }) => row.created_at || row.CreatedAt || '-'
   },
   {
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
-    slot: 'operation',
-    sortable: false
+    slot: 'operation'
   }
 ])
 

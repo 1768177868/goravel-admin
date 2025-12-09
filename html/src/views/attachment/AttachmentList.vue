@@ -62,6 +62,8 @@
         border
         stripe
         height="600"
+        :sort-config="{ multiple: false, trigger: 'default' }"
+        @sort-change="handleSortChange"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
       >
@@ -260,6 +262,19 @@ const transformAttachmentData = (item) => {
   }
 }
 
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'filename': 'filename',
+  'display_name': 'display_name',
+  'file_type': 'file_type',
+  'disk': 'disk',
+  'extension': 'extension',
+  'size': 'size',
+  'mime_type': 'mime_type',
+  'created_at': 'created_at'
+}
+
 // 使用列表页面 composable
 const {
   pagination,
@@ -269,7 +284,9 @@ const {
   loadData,
   handleSearch,
   handleReset,
-  handlePageChange
+  handlePageChange,
+  handleSortChange,
+  initDefaultSort
 } = useListPage({
   fetchApi: getAttachmentList,
   initialSearchForm: {
@@ -279,6 +296,11 @@ const {
     extension: '',
     start_time: '',
     end_time: ''
+  },
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
   },
   transformData: transformAttachmentData,
   onLoadSuccess: (res, list) => {
@@ -972,6 +994,7 @@ const handleBatchDelete = async () => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   loadData()
 })
 

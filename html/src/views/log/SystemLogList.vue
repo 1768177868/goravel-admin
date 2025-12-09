@@ -34,7 +34,7 @@
         border
         :column-config="{ resizable: true }"
         height="600"
-        :sort-config="{ multiple: true, trigger: 'default' }"
+        :sort-config="{ multiple: false, trigger: 'default' }"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
         @sort-change="handleSortChange"

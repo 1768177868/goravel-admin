@@ -37,7 +37,7 @@
         border
         :column-config="{ resizable: true }"
         height="600"
-        :sort-config="{ multiple: true, trigger: 'default' }"
+        :sort-config="{ multiple: false, trigger: 'default' }"
         @sort-change="handleSortChange"
         @checkbox-change="handleCheckboxChange"
         @checkbox-all="handleCheckboxAll"
@@ -108,6 +108,7 @@ import Pagination from '@/components/Pagination.vue'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog.vue'
 import { useColumnSetting } from '@/composables/useColumnSetting'
 import { usePermission } from '@/composables/usePermission'
+import { useTableSort } from '@/composables/useTableSort'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
@@ -116,6 +117,29 @@ const tableRef = ref(null)
 const loading = ref(false)
 const tableData = ref([])
 const selectedRows = ref([])
+
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'username': 'username',
+  'nickname': 'nickname',
+  'browser': 'browser',
+  'ip': 'ip',
+  'os': 'os',
+  'session_id': 'session_id',
+  'last_active': 'last_used_at'
+}
+
+// 使用排序 composable
+const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
+  tableRef,
+  fieldMapping,
+  defaultSort: 'last_used_at:desc',
+  onSortChange: () => {
+    pagination.page = 1
+    fetchData()
+  }
+})
 
 // 所有可配置的列（不包括checkbox和operation，它们始终显示）
 const allColumnsConfig = computed(() => [
@@ -295,6 +319,7 @@ const fetchData = async () => {
     const params = {
       page: pagination.page,
       page_size: pagination.pageSize,
+      order_by: buildOrderBy(),
       ...searchForm
     }
     const res = await getOnlineUserList(params)
@@ -328,6 +353,7 @@ const handleReset = () => {
     browser: '',
     os: ''
   })
+  resetSort()
   pagination.page = 1
   fetchData()
 }
@@ -335,11 +361,6 @@ const handleReset = () => {
 const handlePageChange = (page, pageSize) => {
   pagination.page = page
   pagination.pageSize = pageSize
-  fetchData()
-}
-
-const handleSortChange = ({ column, property, order }) => {
-  // 可以在这里处理排序逻辑
   fetchData()
 }
 
@@ -430,6 +451,7 @@ const handleBatchKickOut = async () => {
 }
 
 onMounted(() => {
+  initDefaultSort()
   fetchData()
 })
 </script>

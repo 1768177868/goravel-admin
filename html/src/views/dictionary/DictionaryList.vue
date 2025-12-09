@@ -31,7 +31,7 @@
         border
         :column-config="{ resizable: true }"
         height="600"
-        :sort-config="{ multiple: true, trigger: 'default' }"
+        :sort-config="{ multiple: false, trigger: 'default' }"
         @sort-change="handleSortChange"
       >
         <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
