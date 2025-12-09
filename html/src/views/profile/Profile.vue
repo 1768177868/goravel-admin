@@ -544,6 +544,8 @@ const handleUpdateInfo = async () => {
           
           userStore.setAdminInfo(transformedAdmin)
           ElMessage.success(t('profile.update_success'))
+          // 重新获取用户信息（包括权限），确保权限信息不会丢失
+          await userStore.fetchUserInfo(true)
         }
       } catch (error) {
         console.error('Update info error:', error)
@@ -574,6 +576,8 @@ const handleUpdatePassword = async () => {
         await updatePassword(passwordForm)
         ElMessage.success(t('profile.password_update_success'))
         handleResetPassword()
+        // 重新获取用户信息（包括权限），确保权限信息不会丢失
+        await userStore.fetchUserInfo(true)
       } catch (error) {
         console.error('Update password error:', error)
         // 如果错误已经在响应拦截器中处理过，就不再重复显示
