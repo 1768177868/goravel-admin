@@ -57,22 +57,26 @@
               </el-tag>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('dictionary.update').disabled"
-                @click="handleEdit(row)"
-              >
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('dictionary.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
+              <TableActionButtons
+                :row="row"
+                :primary-actions="[
+                  {
+                    key: 'edit',
+                    label: $t('common.edit'),
+                    type: 'primary',
+                    permission: 'dictionary.update',
+                    handler: handleEdit
+                  },
+                  {
+                    key: 'delete',
+                    label: $t('common.delete'),
+                    type: 'danger',
+                    permission: 'dictionary.destroy',
+                    handler: handleDelete
+                  }
+                ]"
+                :get-button-state="getButtonState"
+              />
             </template>
           </vxe-column>
         </template>
@@ -129,6 +133,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import { useTableSort } from '../../composables/useTableSort'
 import { usePermission } from '../../composables/usePermission'
 import {

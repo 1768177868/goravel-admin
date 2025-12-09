@@ -87,48 +87,13 @@
               {{ (row.is_2fa_bound || row.Is2FABound) ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('admin.update').disabled"
-                @click="handleEdit(row)"
-              >
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button 
-                type="warning" 
-                link 
-                :disabled="getButtonState('admin.password').disabled"
-                @click="handleResetPassword(row)"
-              >
-                {{ $t('admin.reset_password') }}
-              </el-button>
-              <el-button 
-                type="info" 
-                link 
-                :disabled="getButtonState('admin.kick_out').disabled"
-                @click="handleKickOut(row)"
-              >
-                {{ $t('admin.kick_out') }}
-              </el-button>
-              <el-button
-                v-if="(row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id)"
-                type="warning"
-                link
-                :disabled="getButtonState('admin.unbind_google_auth').disabled"
-                @click="handleUnbindGoogleAuth(row)"
-              >
-                {{ $t('admin.unbind_google_auth') }}
-              </el-button>
-              <el-button
-                v-if="!isProtectedAdmin(row.id)"
-                type="danger"
-                link
-                :disabled="getButtonState('admin.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
+              <TableActionButtons
+                :row="row"
+                :primary-actions="getPrimaryActions(row)"
+                :more-actions="getMoreActions(row)"
+                :get-button-state="getButtonState"
+                @action="handleAction"
+              />
             </template>
           </vxe-column>
         </template>
@@ -248,6 +213,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { getStatusOptions } from '../../utils/fieldOptions'
@@ -380,7 +346,7 @@ const tableColumns = computed(() => [
   },
   {
     title: t('table.operation'),
-    width: 250,
+    width: 220,
     fixed: 'right',
     slot: 'operation'
   }
@@ -693,6 +659,78 @@ const handleKickOut = async (row) => {
   }
 }
 
+// 获取主要操作按钮配置
+const getPrimaryActions = (row) => {
+  return [
+    {
+      key: 'edit',
+      label: t('common.edit'),
+      type: 'primary',
+      permission: 'admin.update',
+      handler: handleEdit
+    },
+    {
+      key: 'delete',
+      label: t('common.delete'),
+      type: 'danger',
+      permission: 'admin.destroy',
+      show: () => !isProtectedAdmin(row.id),
+      handler: handleDelete
+    }
+  ]
+}
+
+// 获取更多操作按钮配置
+const getMoreActions = (row) => {
+  return [
+    {
+      key: 'resetPassword',
+      command: 'resetPassword',
+      label: t('admin.reset_password'),
+      permission: 'admin.password',
+      handler: handleResetPassword
+    },
+    {
+      key: 'kickOut',
+      command: 'kickOut',
+      label: t('admin.kick_out'),
+      permission: 'admin.kick_out',
+      divided: true, // 在踢出和重置密码之间添加分割线
+      handler: handleKickOut
+    },
+    {
+      key: 'unbindGoogleAuth',
+      command: 'unbindGoogleAuth',
+      label: t('admin.unbind_google_auth'),
+      permission: 'admin.unbind_google_auth',
+      show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
+      divided: true, // 在解绑谷歌验证码和踢出之间添加分割线
+      handler: handleUnbindGoogleAuth
+    }
+  ]
+}
+
+// 处理操作事件
+const handleAction = (command, row) => {
+  switch (command) {
+    case 'edit':
+      handleEdit(row)
+      break
+    case 'delete':
+      handleDelete(row)
+      break
+    case 'resetPassword':
+      handleResetPassword(row)
+      break
+    case 'kickOut':
+      handleKickOut(row)
+      break
+    case 'unbindGoogleAuth':
+      handleUnbindGoogleAuth(row)
+      break
+  }
+}
+
 const handleUnbindGoogleAuth = async (row) => {
   try {
     const { value: code } = await ElMessageBox.prompt(
@@ -761,6 +799,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
 }
+
 
 </style>
 
