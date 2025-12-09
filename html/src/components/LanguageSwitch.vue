@@ -63,9 +63,7 @@ const currentLanguageText = computed(() => {
 const handleCommand = (command) => {
   locale.value = command
   Storage.setItem('language', command)
-  
-  // 触发页面刷新以应用新语言（包括 Element Plus 的语言）
-  window.location.reload()
+  // 语言切换会自动通过 ElConfigProvider 更新，无需刷新页面
 }
 </script>
 
