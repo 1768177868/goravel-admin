@@ -25,6 +25,29 @@ func NewRoleController() *RoleController {
 	}
 }
 
+// findRoleByID 根据ID查找角色，如果不存在则返回错误响应
+// withRelations 为 true 时会预加载 Permissions 和 Menus 关联
+func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations bool) (*models.Role, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var role models.Role
+	query := facades.Orm().Query().Where("id", id)
+	if withRelations {
+		query = query.With("Permissions").With("Menus")
+	}
+	if err := query.First(&role); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "role_not_found")
+	}
+
+	if role.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "role_not_found")
+	}
+
+	return &role, nil
+}
+
 // Index 角色列表
 func (r *RoleController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
@@ -70,14 +93,13 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 // Show 角色详情
 func (r *RoleController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var role models.Role
-	// 使用 With 预加载关联
-	if err := facades.Orm().Query().With("Permissions").With("Menus").Where("id", id).First(&role); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "role_not_found")
+	role, resp := r.findRoleByID(ctx, id, true) // 预加载关联
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"role": role,
+		"role": *role,
 	})
 }
 
@@ -204,9 +226,9 @@ func (r *RoleController) isProtectedRole(roleSlug string) bool {
 // Update 更新角色
 func (r *RoleController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var role models.Role
-	if err := facades.Orm().Query().Where("id", id).First(&role); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "role_not_found")
+	role, resp := r.findRoleByID(ctx, id, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
 	// 检查是否是受保护的角色（通过slug判断）
@@ -270,7 +292,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		role.Sort = roleUpdate.Sort
 	}
 
-	if err := facades.Orm().Query().Save(&role); err != nil {
+	if err := facades.Orm().Query().Save(role); err != nil {
 		errorlog.RecordHTTP(ctx, "role", "Failed to update role", map[string]any{
 			"error":   err.Error(),
 			"role_id": role.ID,
@@ -282,7 +304,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	// 处理权限关联
 	if !isProtected && ctx.Request().Input("permission_ids") != "" {
 		permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
-		if err := r.roleService.SyncPermissions(&role, permissionIDs); err != nil {
+		if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role permissions in update", map[string]any{
 				"error":          err.Error(),
 				"role_id":        role.ID,
@@ -295,7 +317,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	// 处理菜单关联
 	if !isProtected && ctx.Request().Input("menu_ids") != "" {
 		menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
-		if err := r.roleService.SyncMenus(&role, menuIDs); err != nil {
+		if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "role", "Failed to sync role menus in update", map[string]any{
 				"error":    err.Error(),
 				"role_id":  role.ID,
@@ -306,17 +328,16 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"role": role,
+		"role": *role,
 	})
 }
 
 // Destroy 删除角色
 func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-
-	var role models.Role
-	if err := facades.Orm().Query().Where("id", id).First(&role); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "role_not_found")
+	role, resp := r.findRoleByID(ctx, id, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
 	// 检查是否是受保护的角色（通过slug判断）
@@ -324,7 +345,7 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_delete")
 	}
 
-	if _, err := facades.Orm().Query().Delete(&role); err != nil {
+	if _, err := facades.Orm().Query().Delete(role); err != nil {
 		errorlog.RecordHTTP(ctx, "role", "Failed to delete role", map[string]any{
 			"error":   err.Error(),
 			"role_id": role.ID,

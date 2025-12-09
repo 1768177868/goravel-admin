@@ -957,6 +957,10 @@ const loading = ref(false)
 const refreshing = ref(false) // 刷新按钮状态，防止重复点击
 let eventSource = null
 let refreshTimer = null
+let errorCount = 0 // SSE 错误计数
+let lastErrorTime = 0 // 上次错误时间
+const MAX_ERROR_COUNT = 5 // 最大错误次数，超过后降级到轮询
+const ERROR_WINDOW = 10000 // 错误时间窗口（10秒）
 
 // 图表引用
 const cpuChartRef = ref(null)
@@ -991,9 +995,17 @@ const MAX_HISTORY_POINTS = 60
 // 使用 SSE 实时推送
 const startSSEStream = () => {
   try {
+    // 重置错误计数
+    errorCount = 0
+    lastErrorTime = 0
+    
     const url = createSystemInfoSSE({ interval: 2 })
     eventSource = createSSEConnection(url, {
       onMessage: (data) => {
+        // 收到消息时重置错误计数
+        errorCount = 0
+        lastErrorTime = 0
+        
         if (data.type === 'system_info') {
           systemInfo.value = data.data || {}
           loading.value = false
@@ -1002,19 +1014,47 @@ const startSSEStream = () => {
           updateCharts()
         }
       },
-      onError: (error) => {
-        console.error('SSE connection error:', error)
-        // SSE 连接失败时，降级到定时刷新
-        if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+      onError: (error, source) => {
+        const now = Date.now()
+        
+        // 如果距离上次错误时间超过窗口期，重置计数
+        if (now - lastErrorTime > ERROR_WINDOW) {
+          errorCount = 0
+        }
+        
+        errorCount++
+        lastErrorTime = now
+        
+        // 只有在错误次数过多或连接真正关闭时才降级到轮询
+        // EventSource 会自动重连，所以大多数错误是正常的
+        if (source && source.readyState === EventSource.CLOSED) {
+          // 连接已关闭，无法重连
+          console.warn('SSE connection closed, switching to polling mode')
           ElMessage.warning(t('monitor.sse_connection_failed') || '实时推送连接失败，已切换到定时刷新模式')
           // 关闭 SSE 连接
           closeSSEConnection(eventSource)
           eventSource = null
           // 启动定时刷新作为降级方案
           startPolling()
+        } else if (errorCount >= MAX_ERROR_COUNT) {
+          // 错误次数过多，可能网络不稳定，降级到轮询
+          console.warn(`SSE connection errors exceeded ${MAX_ERROR_COUNT}, switching to polling mode`)
+          ElMessage.warning(t('monitor.sse_connection_failed') || '实时推送连接不稳定，已切换到定时刷新模式')
+          // 关闭 SSE 连接
+          closeSSEConnection(eventSource)
+          eventSource = null
+          // 启动定时刷新作为降级方案
+          startPolling()
+        } else {
+          // EventSource 会自动重连，这是正常行为，只记录调试信息
+          // 不打印错误日志，避免控制台噪音
+          // console.debug('SSE connection error (will auto-reconnect):', error)
         }
       },
       onOpen: () => {
+        // 连接成功时重置错误计数
+        errorCount = 0
+        lastErrorTime = 0
         console.log('SSE connected for system info')
         loading.value = false
       }

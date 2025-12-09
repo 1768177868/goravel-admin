@@ -75,7 +75,9 @@ export function createSSEConnection(url, options = {}) {
 
   if (onError) {
     eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error)
+      // EventSource 的错误事件会在连接失败时触发，但 EventSource 会自动重连
+      // 这里不直接打印错误，让调用者决定如何处理
+      // console.error('SSE connection error:', error)
       onError(error, eventSource)
     }
   }

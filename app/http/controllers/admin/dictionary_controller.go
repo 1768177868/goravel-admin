@@ -20,6 +20,24 @@ func NewDictionaryController() *DictionaryController {
 	return &DictionaryController{}
 }
 
+// findDictionaryByID 根据ID查找字典，如果不存在则返回错误响应
+func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*models.Dictionary, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var dictionary models.Dictionary
+	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
+	}
+
+	if dictionary.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
+	}
+
+	return &dictionary, nil
+}
+
 // Index 字典列表
 func (r *DictionaryController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
@@ -65,13 +83,13 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 // Show 字典详情
 func (r *DictionaryController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
+	dictionary, resp := r.findDictionaryByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"dictionary": dictionary,
+		"dictionary": *dictionary,
 	})
 }
 
@@ -126,9 +144,9 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 
 func (r *DictionaryController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
+	dictionary, resp := r.findDictionaryByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	// 使用请求验证
@@ -166,7 +184,7 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 		dictionary.Remark = dictionaryUpdate.Remark
 	}
 
-	if err := facades.Orm().Query().Save(&dictionary); err != nil {
+	if err := facades.Orm().Query().Save(dictionary); err != nil {
 		errorlog.RecordHTTP(ctx, "dictionary", "Failed to update dictionary", map[string]any{
 			"error":         err.Error(),
 			"dictionary_id": dictionary.ID,
@@ -175,19 +193,19 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"dictionary": dictionary,
+		"dictionary": *dictionary,
 	})
 }
 
 // Destroy 删除字典
 func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
+	dictionary, resp := r.findDictionaryByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(&dictionary); err != nil {
+	if _, err := facades.Orm().Query().Delete(dictionary); err != nil {
 		errorlog.RecordHTTP(ctx, "dictionary", "Failed to delete dictionary", map[string]any{
 			"error":         err.Error(),
 			"dictionary_id": dictionary.ID,

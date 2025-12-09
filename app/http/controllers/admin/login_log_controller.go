@@ -20,6 +20,33 @@ func NewLoginLogController() *LoginLogController {
 	return &LoginLogController{}
 }
 
+// findLoginLogByID 根据ID查找登录日志，如果不存在则返回错误响应
+// withAdmin 为 true 时会预加载 Admin 关联
+func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdmin bool) (*models.LoginLog, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var log models.LoginLog
+	query := facades.Orm().Query().Where("id", id)
+	if withAdmin {
+		query = query.With("Admin")
+	}
+	if err := query.First(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "login-log", "Login log not found", map[string]any{
+			"error":  err.Error(),
+			"log_id": id,
+		}, "Login log not found: %v", err)
+		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
+	}
+
+	if log.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
+	}
+
+	return &log, nil
+}
+
 // Index 获取登录日志列表
 func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	// 验证并规范化分页参数
@@ -80,41 +107,25 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 // Show 获取登录日志详情
 func (r *LoginLogController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var log models.LoginLog
-	if err := facades.Orm().Query().With("Admin").Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Login log not found", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "Login log not found: %v", err)
-		return response.Error(ctx, http.StatusNotFound, "log_not_found")
+	log, resp := r.findLoginLogByID(ctx, id, true) // 预加载 Admin 关联
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"log": log,
+		"log": *log,
 	})
 }
 
 // Destroy 删除登录日志
 func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+	log, resp := r.findLoginLogByID(ctx, id, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
-	var log models.LoginLog
-	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Login log not found for delete", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "Login log not found: %v", err)
-		return response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	if _, err := facades.Orm().Query().Delete(&log); err != nil {
+	if _, err := facades.Orm().Query().Delete(log); err != nil {
 		errorlog.RecordHTTP(ctx, "login-log", "Failed to delete login log", map[string]any{
 			"error":  err.Error(),
 			"log_id": log.ID,

@@ -23,6 +23,29 @@ func NewPermissionController() *PermissionController {
 	}
 }
 
+// findPermissionByID 根据ID查找权限，如果不存在则返回错误响应
+// withMenu 为 true 时会预加载 Menu 关联
+func (r *PermissionController) findPermissionByID(ctx http.Context, id uint, withMenu bool) (*models.Permission, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var permission models.Permission
+	query := facades.Orm().Query().Where("id", id)
+	if withMenu {
+		query = query.With("Menu")
+	}
+	if err := query.First(&permission); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "permission_not_found")
+	}
+
+	if permission.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "permission_not_found")
+	}
+
+	return &permission, nil
+}
+
 // Index 权限列表
 func (r *PermissionController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
@@ -93,13 +116,13 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 // Show 权限详情
 func (r *PermissionController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var permission models.Permission
-	if err := facades.Orm().Query().With("Menu").Where("id", id).First(&permission); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "permission_not_found")
+	permission, resp := r.findPermissionByID(ctx, id, true) // 预加载 Menu 关联
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"permission": permission,
+		"permission": *permission,
 	})
 }
 
@@ -168,9 +191,9 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 
 func (r *PermissionController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var permission models.Permission
-	if err := facades.Orm().Query().Where("id", id).First(&permission); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "permission_not_found")
+	permission, resp := r.findPermissionByID(ctx, id, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
 	name := ctx.Request().Input("name")
@@ -221,7 +244,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 		permission.MenuID = cast.ToUint(menuIDStr)
 	}
 
-	if err := facades.Orm().Query().Save(&permission); err != nil {
+	if err := facades.Orm().Query().Save(permission); err != nil {
 		errorlog.RecordHTTP(ctx, "permission", "Failed to update permission", map[string]any{
 			"error":         err.Error(),
 			"permission_id": permission.ID,
@@ -230,19 +253,19 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"permission": permission,
+		"permission": *permission,
 	})
 }
 
 // Destroy 删除权限
 func (r *PermissionController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var permission models.Permission
-	if err := facades.Orm().Query().Where("id", id).First(&permission); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "permission_not_found")
+	permission, resp := r.findPermissionByID(ctx, id, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(&permission); err != nil {
+	if _, err := facades.Orm().Query().Delete(permission); err != nil {
 		errorlog.RecordHTTP(ctx, "permission", "Failed to delete permission", map[string]any{
 			"error":         err.Error(),
 			"permission_id": permission.ID,

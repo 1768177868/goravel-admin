@@ -23,6 +23,24 @@ func NewMenuController() *MenuController {
 	}
 }
 
+// findMenuByID 根据ID查找菜单，如果不存在则返回错误响应
+func (r *MenuController) findMenuByID(ctx http.Context, id uint) (*models.Menu, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var menu models.Menu
+	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	}
+
+	if menu.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	}
+
+	return &menu, nil
+}
+
 // Index 菜单列表（树形结构）
 func (r *MenuController) Index(ctx http.Context) http.Response {
 	menus, err := r.treeService.BuildMenuTree(0)
@@ -38,13 +56,13 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 // Show 菜单详情
 func (r *MenuController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var menu models.Menu
-	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	menu, resp := r.findMenuByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"menu": menu,
+		"menu": *menu,
 	})
 }
 
@@ -111,9 +129,9 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 
 func (r *MenuController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var menu models.Menu
-	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	menu, resp := r.findMenuByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	// 使用请求验证
@@ -171,7 +189,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		menu.IsHidden = menuUpdate.IsHidden
 	}
 
-	if err := facades.Orm().Query().Save(&menu); err != nil {
+	if err := facades.Orm().Query().Save(menu); err != nil {
 		errorlog.RecordHTTP(ctx, "menu", "Failed to update menu", map[string]any{
 			"error":   err.Error(),
 			"menu_id": menu.ID,
@@ -180,15 +198,15 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"menu": menu,
+		"menu": *menu,
 	})
 }
 
 func (r *MenuController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var menu models.Menu
-	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "menu_not_found")
+	menu, resp := r.findMenuByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	hasChildren, err := r.treeService.HasMenuChildren(id)
@@ -199,7 +217,7 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "menu_has_children")
 	}
 
-	if _, err := facades.Orm().Query().Delete(&menu); err != nil {
+	if _, err := facades.Orm().Query().Delete(menu); err != nil {
 		errorlog.RecordHTTP(ctx, "menu", "Failed to delete menu", map[string]any{
 			"error":   err.Error(),
 			"menu_id": menu.ID,

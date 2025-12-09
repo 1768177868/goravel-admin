@@ -27,6 +27,24 @@ func NewDepartmentController() *DepartmentController {
 	}
 }
 
+// findDepartmentByID 根据ID查找部门，如果不存在则返回错误响应
+func (r *DepartmentController) findDepartmentByID(ctx http.Context, id uint) (*models.Department, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var department models.Department
+	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "department_not_found")
+	}
+
+	if department.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "department_not_found")
+	}
+
+	return &department, nil
+}
+
 // Index 部门列表（树形结构）
 func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	name := ctx.Request().Query("name", "")
@@ -82,13 +100,13 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 // Show 部门详情
 func (r *DepartmentController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var department models.Department
-	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "department_not_found")
+	department, resp := r.findDepartmentByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"department": department,
+		"department": *department,
 	})
 }
 
@@ -144,9 +162,9 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 // Update 更新部门
 func (r *DepartmentController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var department models.Department
-	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "department_not_found")
+	department, resp := r.findDepartmentByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	// 使用请求验证
@@ -190,7 +208,7 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 		department.Remark = departmentUpdate.Remark
 	}
 
-	if err := facades.Orm().Query().Save(&department); err != nil {
+	if err := facades.Orm().Query().Save(department); err != nil {
 		errorlog.RecordHTTP(ctx, "department", "Failed to update department", map[string]any{
 			"error":         err.Error(),
 			"department_id": department.ID,
@@ -199,16 +217,16 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"department": department,
+		"department": *department,
 	})
 }
 
 // Destroy 删除部门
 func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var department models.Department
-	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "department_not_found")
+	department, resp := r.findDepartmentByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	// 检查是否有子部门
@@ -229,7 +247,7 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "department_has_admins")
 	}
 
-	if _, err := facades.Orm().Query().Delete(&department); err != nil {
+	if _, err := facades.Orm().Query().Delete(department); err != nil {
 		errorlog.RecordHTTP(ctx, "department", "Failed to delete department", map[string]any{
 			"error":         err.Error(),
 			"department_id": department.ID,

@@ -13,7 +13,7 @@ go build --ldflags "-extldflags -static -s -w" -o main .
 
 ```bash
 # Windows PowerShell:
-$env:GOOS="linux"; $env:GOARCH="amd64"; go build --ldflags "-extldflags -static -s -w" -o main .
+$env:CGO_ENABLED="0"; $env:GOOS="linux"; $env:GOARCH="amd64"; go build --ldflags "-extldflags -static -s -w" -o main .
 
 # Windows CMD (需要分开执行):
 set GOOS=linux

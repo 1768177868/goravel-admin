@@ -77,6 +77,33 @@ func NewAdminController() *AdminController {
 	}
 }
 
+// findAdminByID 根据ID查找管理员，如果不存在则返回错误响应
+// withDepartment 为 true 时会预加载 Department 关联
+// withRoles 为 true 时会预加载 Roles 关联
+func (r *AdminController) findAdminByID(ctx http.Context, id uint, withDepartment bool, withRoles bool) (*models.Admin, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var admin models.Admin
+	query := facades.Orm().Query().Where("id", id)
+	if withDepartment {
+		query = query.With("Department")
+	}
+	if withRoles {
+		query = query.With("Roles")
+	}
+	if err := query.First(&admin); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "admin_not_found")
+	}
+
+	if admin.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "admin_not_found")
+	}
+
+	return &admin, nil
+}
+
 // buildQuery 构建查询（列表和导出共用）
 // 同时支持查询参数（GET）和请求体参数（POST）
 func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
@@ -238,9 +265,9 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *AdminController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var admin models.Admin
-	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", id).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+	admin, resp := r.findAdminByID(ctx, id, true, true) // 预加载 Department 和 Roles 关联
+	if resp != nil {
+		return resp
 	}
 
 	// 获取超级管理员ID
@@ -383,10 +410,10 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *AdminController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var admin models.Admin
 	// 加载管理员的当前角色，用于后续比较角色是否改变
-	if err := facades.Orm().Query().With("Roles").Where("id", id).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+	admin, resp := r.findAdminByID(ctx, id, false, true) // 预加载 Roles 关联
+	if resp != nil {
+		return resp
 	}
 
 	allProtectedIDs := r.getAllProtectedAdminIDs()
@@ -436,7 +463,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		admin.Password = hashedPassword
 	}
 
-	if err := facades.Orm().Query().Save(&admin); err != nil {
+	if err := facades.Orm().Query().Save(admin); err != nil {
 		errorlog.RecordHTTP(ctx, "admin", "Failed to update admin", map[string]any{
 			"error":    err.Error(),
 			"admin_id": admin.ID,
@@ -487,7 +514,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	}
 
 	if len(adminUpdate.RoleIDs) > 0 {
-		if err := r.adminService.SyncRoles(&admin, adminUpdate.RoleIDs); err != nil {
+		if err := r.adminService.SyncRoles(admin, adminUpdate.RoleIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles in update", map[string]any{
 				"error":    err.Error(),
 				"admin_id": admin.ID,
@@ -498,7 +525,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"admin": admin,
+		"admin": *admin,
 	})
 }
 
@@ -539,12 +566,12 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 		}
 	}
 
-	var admin models.Admin
-	if err := facades.Orm().Query().Where("id", id).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+	admin, resp := r.findAdminByID(ctx, id, false, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(&admin); err != nil {
+	if _, err := facades.Orm().Query().Delete(admin); err != nil {
 		errorlog.RecordHTTP(ctx, "admin", "Failed to delete admin", map[string]any{
 			"error":    err.Error(),
 			"admin_id": admin.ID,

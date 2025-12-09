@@ -22,6 +22,33 @@ func NewOperationLogController() *OperationLogController {
 	return &OperationLogController{}
 }
 
+// findOperationLogByID 根据ID查找操作日志，如果不存在则返回错误响应
+// withAdmin 为 true 时会预加载 Admin 关联
+func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint, withAdmin bool) (*models.OperationLog, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var log models.OperationLog
+	query := facades.Orm().Query().Where("id", id)
+	if withAdmin {
+		query = query.With("Admin")
+	}
+	if err := query.First(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "operation-log", "Operation log not found", map[string]any{
+			"error":  err.Error(),
+			"log_id": id,
+		}, "Operation log not found: %v", err)
+		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
+	}
+
+	if log.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
+	}
+
+	return &log, nil
+}
+
 // Index 获取操作日志列表
 func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	// 验证并规范化分页参数
@@ -118,41 +145,25 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 // Show 获取操作日志详情
 func (r *OperationLogController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var log models.OperationLog
-	if err := facades.Orm().Query().With("Admin").Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Operation log not found", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "Operation log not found: %v", err)
-		return response.Error(ctx, http.StatusNotFound, "log_not_found")
+	log, resp := r.findOperationLogByID(ctx, id, true) // 预加载 Admin 关联
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"log": log,
+		"log": *log,
 	})
 }
 
 // Destroy 删除操作日志
 func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+	log, resp := r.findOperationLogByID(ctx, id, false) // 不需要预加载关联
+	if resp != nil {
+		return resp
 	}
 
-	var log models.OperationLog
-	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Operation log not found for delete", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "Operation log not found: %v", err)
-		return response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	if _, err := facades.Orm().Query().Delete(&log); err != nil {
+	if _, err := facades.Orm().Query().Delete(log); err != nil {
 		errorlog.RecordHTTP(ctx, "operation-log", "Failed to delete operation log", map[string]any{
 			"error":  err.Error(),
 			"log_id": log.ID,

@@ -23,6 +23,24 @@ func NewBlacklistController() *BlacklistController {
 	return &BlacklistController{}
 }
 
+// findBlacklistByID 根据ID查找黑名单，如果不存在则返回错误响应
+func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*models.Blacklist, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var blacklist models.Blacklist
+	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
+	}
+
+	if blacklist.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
+	}
+
+	return &blacklist, nil
+}
+
 // Index 黑名单列表
 func (r *BlacklistController) Index(ctx http.Context) http.Response {
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
@@ -68,13 +86,13 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 // Show 黑名单详情
 func (r *BlacklistController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
+	blacklist, resp := r.findBlacklistByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"blacklist": blacklist,
+		"blacklist": *blacklist,
 	})
 }
 
@@ -142,9 +160,9 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 // Update 更新黑名单
 func (r *BlacklistController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
+	blacklist, resp := r.findBlacklistByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	// 使用请求验证
@@ -187,7 +205,7 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 		blacklist.Status = blacklistUpdate.Status
 	}
 
-	if err := facades.Orm().Query().Save(&blacklist); err != nil {
+	if err := facades.Orm().Query().Save(blacklist); err != nil {
 		errorlog.RecordHTTP(ctx, "blacklist", "Failed to update blacklist", map[string]any{
 			"error":        err.Error(),
 			"blacklist_id": blacklist.ID,
@@ -196,19 +214,19 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
-		"blacklist": blacklist,
+		"blacklist": *blacklist,
 	})
 }
 
 // Destroy 删除黑名单
 func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
+	blacklist, resp := r.findBlacklistByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(&blacklist); err != nil {
+	if _, err := facades.Orm().Query().Delete(blacklist); err != nil {
 		errorlog.RecordHTTP(ctx, "blacklist", "Failed to delete blacklist", map[string]any{
 			"error":        err.Error(),
 			"blacklist_id": blacklist.ID,

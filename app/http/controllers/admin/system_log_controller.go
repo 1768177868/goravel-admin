@@ -20,6 +20,28 @@ func NewSystemLogController() *SystemLogController {
 	return &SystemLogController{}
 }
 
+// findSystemLogByID 根据ID查找系统日志，如果不存在则返回错误响应
+func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*models.SystemLog, http.Response) {
+	if id == 0 {
+		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
+	}
+
+	var log models.SystemLog
+	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
+		errorlog.RecordHTTP(ctx, "system-log", "System log not found", map[string]any{
+			"error":  err.Error(),
+			"log_id": id,
+		}, "System log not found: %v", err)
+		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
+	}
+
+	if log.ID == 0 {
+		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
+	}
+
+	return &log, nil
+}
+
 // Index 获取系统日志列表
 func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	// 验证并规范化分页参数
@@ -80,41 +102,25 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 // Show 获取系统日志详情
 func (r *SystemLogController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var log models.SystemLog
-	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "system-log", "System log not found", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "System log not found: %v", err)
-		return response.Error(ctx, http.StatusNotFound, "log_not_found")
+	log, resp := r.findSystemLogByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
-		"log": log,
+		"log": *log,
 	})
 }
 
 // Destroy 删除系统日志
 func (r *SystemLogController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+	log, resp := r.findSystemLogByID(ctx, id)
+	if resp != nil {
+		return resp
 	}
 
-	var log models.SystemLog
-	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "system-log", "System log not found for delete", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "System log not found: %v", err)
-		return response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	if _, err := facades.Orm().Query().Delete(&log); err != nil {
+	if _, err := facades.Orm().Query().Delete(log); err != nil {
 		errorlog.RecordHTTP(ctx, "system-log", "Failed to delete system log", map[string]any{
 			"error":  err.Error(),
 			"log_id": log.ID,
