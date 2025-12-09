@@ -7,8 +7,7 @@
           <div class="header-actions">
             <el-select
               v-model="filterType"
-              size="small"
-              style="width: 120px; margin-right: 10px"
+              style="width: 150px; margin-right: 10px"
               @change="handleTypeChange"
               clearable
               :placeholder="$t('notification.table.type')"
@@ -32,8 +31,7 @@
             </el-select>
             <el-select
               v-model="filterIsRead"
-              size="small"
-              style="width: 120px; margin-right: 10px"
+              style="width: 150px; margin-right: 10px"
               @change="handleIsReadChange"
               clearable
               :placeholder="$t('notification.table.status')"
@@ -51,11 +49,10 @@
                 value="true"
               />
             </el-select>
-            <el-button size="small" @click="loadData">
+            <el-button @click="loadData">
               {{ $t('tabs.refresh') }}
             </el-button>
             <el-button
-              size="small"
               type="primary"
               plain
               @click="handleMarkAll"
