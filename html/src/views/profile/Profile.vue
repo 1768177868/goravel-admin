@@ -618,6 +618,8 @@ const handleSaveAvatar = async () => {
     ElMessage.success(t('profile.avatar_update_success'))
     showAvatarDialog.value = false
     selectedAvatar.value = ''
+    // 重新获取用户信息（包括权限），确保权限信息不会丢失
+    await userStore.fetchUserInfo(true)
   } catch (error) {
     console.error('Update avatar error:', error)
     // 如果错误已经在响应拦截器中处理过，就不再重复显示
