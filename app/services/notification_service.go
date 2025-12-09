@@ -12,7 +12,7 @@ import (
 
 type NotificationService interface {
 	Create(title, content, notifType string, senderID *uint, receiverID *uint) (*models.Notification, error)
-	List(adminID uint, page int, pageSize int) ([]models.Notification, int64, error)
+	List(adminID uint, page int, pageSize int, notifType string, isRead string) ([]models.Notification, int64, error)
 	ListRecent(adminID uint, limit int) ([]models.Notification, error)
 	MarkRead(adminID uint, notificationID uint) error
 	MarkAllRead(adminID uint) error
@@ -68,7 +68,7 @@ func (s *NotificationServiceImpl) Create(title, content, notifType string, sende
 	return notification, nil
 }
 
-func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int) ([]models.Notification, int64, error) {
+func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int, notifType string, isRead string) ([]models.Notification, int64, error) {
 	var notifications []models.Notification
 	if page < 1 {
 		page = 1
@@ -79,6 +79,19 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int) ([]
 
 	countQuery := facades.Orm().Query().Model(&models.Notification{}).
 		Where("receiver_id = ?", adminID)
+
+	// 如果指定了类型，添加类型筛选
+	if notifType != "" {
+		countQuery = countQuery.Where("type = ?", notifType)
+	}
+
+	// 如果指定了已读/未读状态，添加状态筛选
+	if isRead == "true" {
+		countQuery = countQuery.Where("is_read = ?", true)
+	} else if isRead == "false" {
+		countQuery = countQuery.Where("is_read = ?", false)
+	}
+
 	total, err := countQuery.Count()
 	if err != nil {
 		return nil, 0, err
@@ -86,6 +99,18 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int) ([]
 
 	listQuery := facades.Orm().Query().Model(&models.Notification{}).
 		Where("receiver_id = ?", adminID)
+
+	// 如果指定了类型，添加类型筛选
+	if notifType != "" {
+		listQuery = listQuery.Where("type = ?", notifType)
+	}
+
+	// 如果指定了已读/未读状态，添加状态筛选
+	if isRead == "true" {
+		listQuery = listQuery.Where("is_read = ?", true)
+	} else if isRead == "false" {
+		listQuery = listQuery.Where("is_read = ?", false)
+	}
 
 	if err := listQuery.Order("created_at desc").
 		Offset((page - 1) * pageSize).

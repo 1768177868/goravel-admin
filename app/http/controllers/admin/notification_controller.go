@@ -28,7 +28,9 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
 	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
-	notifications, total, err := r.service.List(admin.ID, page, pageSize)
+	notifType := ctx.Request().Query("type", "")
+	isRead := ctx.Request().Query("is_read", "")
+	notifications, total, err := r.service.List(admin.ID, page, pageSize, notifType, isRead)
 	if err != nil {
 		logger.ErrorfHTTP(ctx, "list notifications error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")

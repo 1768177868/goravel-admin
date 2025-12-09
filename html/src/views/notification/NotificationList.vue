@@ -5,6 +5,52 @@
         <div class="card-header">
           <span>{{ $t('notification.center') }}</span>
           <div class="header-actions">
+            <el-select
+              v-model="filterType"
+              size="small"
+              style="width: 120px; margin-right: 10px"
+              @change="handleTypeChange"
+              clearable
+              :placeholder="$t('notification.table.type')"
+            >
+              <el-option
+                :label="$t('common.all')"
+                value=""
+              />
+              <el-option
+                :label="$t('notification.types.announcement')"
+                value="announcement"
+              />
+              <el-option
+                :label="$t('notification.types.notice')"
+                value="notice"
+              />
+              <el-option
+                :label="$t('notification.types.message')"
+                value="message"
+              />
+            </el-select>
+            <el-select
+              v-model="filterIsRead"
+              size="small"
+              style="width: 120px; margin-right: 10px"
+              @change="handleIsReadChange"
+              clearable
+              :placeholder="$t('notification.table.status')"
+            >
+              <el-option
+                :label="$t('common.all')"
+                value=""
+              />
+              <el-option
+                :label="$t('notification.unread')"
+                value="false"
+              />
+              <el-option
+                :label="$t('notification.read')"
+                value="true"
+              />
+            </el-select>
             <el-button size="small" @click="loadData">
               {{ $t('tabs.refresh') }}
             </el-button>
@@ -118,6 +164,8 @@ const notificationStore = useNotificationStore()
 
 const list = ref([])
 const loading = ref(false)
+const filterType = ref('')
+const filterIsRead = ref('')
 const pagination = reactive({
   page: 1,
   pageSize: 20,
@@ -127,10 +175,19 @@ const pagination = reactive({
 const loadData = async () => {
   loading.value = true
   try {
-    const { data } = await fetchNotifications({
+    const params = {
       page: pagination.page,
       page_size: pagination.pageSize
-    })
+    }
+    // 如果选择了类型筛选，添加到参数中
+    if (filterType.value) {
+      params.type = filterType.value
+    }
+    // 如果选择了已读/未读筛选，添加到参数中
+    if (filterIsRead.value !== '') {
+      params.is_read = filterIsRead.value
+    }
+    const { data } = await fetchNotifications(params)
     list.value = data.notifications || []
     pagination.total = data.pagination?.total || list.value.length
     notificationStore.unreadCount = data.unread_count || 0
@@ -153,6 +210,20 @@ const handlePageChange = (page) => {
 
 const handleSizeChange = (size) => {
   pagination.pageSize = size
+  pagination.page = 1
+  loadData()
+}
+
+const handleTypeChange = (value) => {
+  // 处理清空筛选器的情况（value 可能为 null）
+  filterType.value = value || ''
+  pagination.page = 1
+  loadData()
+}
+
+const handleIsReadChange = (value) => {
+  // 处理清空筛选器的情况（value 可能为 null 或 undefined）
+  filterIsRead.value = value || ''
   pagination.page = 1
   loadData()
 }
