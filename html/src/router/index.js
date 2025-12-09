@@ -216,14 +216,27 @@ router.beforeEach((to, from, next) => {
       // 如果用户信息已获取过，允许导航继续，菜单可以在后台异步加载
       const isFirstLoad = !from.name || from.name === 'Login'
       
-      // 如果用户信息已获取过，直接允许导航（菜单可以在后台异步更新）
-      if (userStore.userInfoFetched) {
+      // 检查菜单是否为空（即使 userInfoFetched 为 true，菜单也可能被意外清空）
+      const menusEmpty = !userStore.menus || userStore.menus.length === 0
+      
+      // 如果用户信息已获取过，但菜单为空，需要重新获取菜单（不阻塞导航）
+      if (userStore.userInfoFetched && menusEmpty && userStore.adminInfo) {
+        // 后台异步获取菜单，不阻塞导航
+        userStore.fetchUserInfo(true).catch((error) => {
+          logger.error('Failed to refresh menus in background:', error)
+        })
+        next()
+        return
+      }
+      
+      // 如果用户信息已获取过且菜单不为空，直接允许导航
+      if (userStore.userInfoFetched && !menusEmpty) {
         next()
         return
       }
       
       // 首次加载：如果用户信息不存在或菜单为空，需要获取
-      if (!userStore.adminInfo || userStore.menus.length === 0) {
+      if (!userStore.adminInfo || menusEmpty) {
         // 阻塞导航，等待用户信息加载完成
         userStore.fetchUserInfo().then(() => {
           next()

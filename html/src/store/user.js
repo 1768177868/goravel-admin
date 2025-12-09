@@ -134,7 +134,7 @@ export const useUserStore = defineStore('user', {
         return Promise.resolve()
       }
       
-      // 如果已经获取过且不是强制刷新，直接返回
+      // 如果已经获取过且不是强制刷新，且菜单不为空，直接返回
       if (this.userInfoFetched && !force && this.adminInfo && this.menus.length > 0) {
         return Promise.resolve()
       }
@@ -142,18 +142,37 @@ export const useUserStore = defineStore('user', {
       try {
         this.isFetchingUserInfo = true
         
-        // 清除旧的数据，确保获取最新的数据
-        this.menus = []
-        this.adminInfo = null
-        this.permissions = []
-        Storage.removeItem('adminInfo')
+        // 保存当前菜单数据，避免在请求失败时丢失
+        const oldMenus = this.menus.length > 0 ? [...this.menus] : []
+        const oldAdminInfo = this.adminInfo
+        const oldPermissions = [...this.permissions]
+        
+        // 清除旧的数据，确保获取最新的数据（仅在强制刷新或首次加载时）
+        if (force || !this.userInfoFetched) {
+          this.menus = []
+          this.adminInfo = null
+          this.permissions = []
+          Storage.removeItem('adminInfo')
+        }
         
         const res = await getInfo()
         if (res.data && res.data.admin) {
           this.setAdminInfo(res.data.admin)
           // 设置权限（需要先设置，因为 setAdminInfo 可能会用到）
           this.setPermissions(res.data.admin.permissions || [])
-          this.setMenus(res.data.admin.menus || [])
+          
+          // 确保菜单数据存在且不为空
+          const newMenus = res.data.admin.menus || []
+          if (newMenus.length > 0) {
+            this.setMenus(newMenus)
+          } else if (oldMenus.length > 0 && !force) {
+            // 如果新菜单为空但旧菜单存在，保留旧菜单（可能是接口返回问题）
+            logger.warn('New menus is empty, keeping old menus')
+            this.setMenus(oldMenus)
+          } else {
+            this.setMenus([])
+          }
+          
           // 设置超级管理员标识
           this.isSuperAdmin = res.data.admin.is_super_admin === true || res.data.admin.isSuperAdmin === true ||
             (res.data.admin.roles || []).some(role => 
@@ -166,6 +185,15 @@ export const useUserStore = defineStore('user', {
           // 调试：打印权限信息（开发环境）
           logger.debug('User permissions:', this.permissions)
           logger.debug('Is super admin:', this.isSuperAdmin)
+          logger.debug('Menus count:', this.menus.length)
+        } else {
+          // 如果接口返回的数据中没有 admin 信息，恢复旧数据
+          if (oldMenus.length > 0 && !force) {
+            logger.warn('No admin data in response, restoring old data')
+            this.menus = oldMenus
+            this.adminInfo = oldAdminInfo
+            this.permissions = oldPermissions
+          }
         }
         // 保存配置信息
         if (res.data && res.data.config) {
@@ -173,7 +201,17 @@ export const useUserStore = defineStore('user', {
         }
         return res
       } catch (error) {
-        // fetchUserInfo 失败时也应该清除状态，但这里不直接跳转，由拦截器处理
+        // fetchUserInfo 失败时，如果旧数据存在，恢复旧数据
+        if (oldMenus.length > 0 && !force) {
+          logger.warn('Failed to fetch user info, restoring old data:', error)
+          this.menus = oldMenus
+          this.adminInfo = oldAdminInfo
+          this.permissions = oldPermissions
+          // 不标记为失败，允许继续使用旧数据
+          return Promise.resolve()
+        }
+        
+        // 如果没有旧数据或强制刷新，清除状态
         this.userInfoFetched = false
         this.logout(true)
         throw error
