@@ -307,7 +307,7 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__item.is-active) {
   background: var(--header-bg);
-  border-color: #409EFF;
+  border: 1px solid #409EFF;
   border-bottom: 2px solid #409EFF;
   color: #409EFF;
   font-weight: 500;
