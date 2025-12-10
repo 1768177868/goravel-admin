@@ -455,7 +455,7 @@
           <div class="monitor-content">
             <el-row :gutter="20">
               <!-- MySQL 进程 -->
-              <el-col :span="8" v-if="systemInfo.processes.mysql">
+              <el-col :span="6" v-if="systemInfo.processes.mysql">
                 <div class="process-card">
                   <div class="process-header">
                     <el-tag :type="getProcessStatusType(systemInfo.processes.mysql.status)" size="large">
@@ -545,8 +545,87 @@
                 </div>
               </el-col>
 
+              <!-- PostgreSQL 进程 -->
+              <el-col :span="6" v-if="systemInfo.processes.postgresql">
+                <div class="process-card">
+                  <div class="process-header">
+                    <el-tag :type="getProcessStatusType(systemInfo.processes.postgresql.status)" size="large">
+                      {{ $t('monitor.process_postgresql') }}
+                    </el-tag>
+                    <el-tag v-if="systemInfo.processes.postgresql.type" :type="systemInfo.processes.postgresql.type === 'remote' ? 'warning' : 'success'" size="small">
+                      {{ systemInfo.processes.postgresql.type === 'remote' ? $t('monitor.process_remote') : $t('monitor.process_local') }}
+                    </el-tag>
+                  </div>
+                  <div class="process-content">
+                    <div class="process-item">
+                      <span class="process-label">{{ $t('monitor.process_status') }}:</span>
+                      <span class="process-value" :class="getProcessStatusType(systemInfo.processes.postgresql.status) === 'success' ? 'highlight' : ''">
+                        {{ systemInfo.processes.postgresql.status === 'running' ? $t('monitor.process_running') : 
+                           systemInfo.processes.postgresql.status === 'sleep' ? $t('monitor.process_running') :
+                           systemInfo.processes.postgresql.status === 'connected' ? $t('monitor.process_connected') :
+                           systemInfo.processes.postgresql.status === 'not_found' ? $t('monitor.process_not_found') :
+                           systemInfo.processes.postgresql.status === 'disconnected' ? $t('monitor.process_disconnected') :
+                           systemInfo.processes.postgresql.status }}
+                      </span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.pid && systemInfo.processes.postgresql.pid > 0">
+                      <span class="process-label">{{ $t('monitor.process_pid') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.postgresql.pid }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.cpu !== undefined && systemInfo.processes.postgresql.cpu > 0">
+                      <span class="process-label">{{ $t('monitor.process_cpu') }}:</span>
+                      <span class="process-value highlight">{{ formatPercent(systemInfo.processes.postgresql.cpu) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.memory && systemInfo.processes.postgresql.memory > 0">
+                      <span class="process-label">{{ $t('monitor.process_memory') }}:</span>
+                      <span class="process-value highlight">{{ formatBytes(systemInfo.processes.postgresql.memory) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.version">
+                      <span class="process-label">{{ $t('monitor.process_version') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.postgresql.version }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.host">
+                      <span class="process-label">{{ $t('monitor.process_host') }}:</span>
+                      <span class="process-value">{{ systemInfo.processes.postgresql.host }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.connections !== undefined">
+                      <span class="process-label">{{ $t('monitor.process_connections') }}:</span>
+                      <span class="process-value highlight">
+                        {{ formatNumber(systemInfo.processes.postgresql.connections || 0) }}
+                        <span v-if="systemInfo.processes.postgresql.max_connections" class="connections-info">
+                          / {{ formatNumber(systemInfo.processes.postgresql.max_connections) }}
+                          <span class="connections-percent" :class="getConnectionPercentClass(systemInfo.processes.postgresql.connections, systemInfo.processes.postgresql.max_connections)">
+                            ({{ formatPercent((systemInfo.processes.postgresql.connections || 0) / systemInfo.processes.postgresql.max_connections * 100) }})
+                          </span>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.active_connections !== undefined">
+                      <span class="process-label">{{ $t('monitor.postgresql_active_connections') }}:</span>
+                      <span class="process-value highlight">{{ formatNumber(systemInfo.processes.postgresql.active_connections || 0) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.idle_connections !== undefined">
+                      <span class="process-label">{{ $t('monitor.postgresql_idle_connections') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.postgresql.idle_connections || 0) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.queries !== undefined && systemInfo.processes.postgresql.queries > 0">
+                      <span class="process-label">{{ $t('monitor.process_queries') }}:</span>
+                      <span class="process-value">{{ formatNumber(systemInfo.processes.postgresql.queries) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.uptime !== undefined && systemInfo.processes.postgresql.uptime > 0">
+                      <span class="process-label">{{ $t('monitor.process_uptime') }}:</span>
+                      <span class="process-value">{{ formatUptime(systemInfo.processes.postgresql.uptime) }}</span>
+                    </div>
+                    <div class="process-item" v-if="systemInfo.processes.postgresql.database_size !== undefined && systemInfo.processes.postgresql.database_size > 0">
+                      <span class="process-label">{{ $t('monitor.postgresql_database_size') }}:</span>
+                      <span class="process-value highlight">{{ formatBytes(systemInfo.processes.postgresql.database_size) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </el-col>
+
               <!-- Redis 进程 -->
-              <el-col :span="8" v-if="systemInfo.processes.redis">
+              <el-col :span="6" v-if="systemInfo.processes.redis">
                 <div class="process-card">
                   <div class="process-header">
                     <el-tag :type="getProcessStatusType(systemInfo.processes.redis.status)" size="large">
@@ -626,7 +705,7 @@
               </el-col>
 
               <!-- 应用进程 -->
-              <el-col :span="8" v-if="systemInfo.processes.app">
+              <el-col :span="6" v-if="systemInfo.processes.app">
                 <div class="process-card">
                   <div class="process-header">
                     <el-tag :type="getProcessStatusType(systemInfo.processes.app.status)" size="large">

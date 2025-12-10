@@ -121,8 +121,8 @@ func convertProcessStatus(statusCode string, processName string) string {
 	case "R", "RUNNING":
 		return "running"
 	case "S", "SLEEPING", "SLEEP":
-		// 对于服务进程（MySQL、Redis、应用），sleep 状态是正常的，显示为 running
-		if processName == "mysql" || processName == "redis" || processName == "app" {
+		// 对于服务进程（MySQL、PostgreSQL、Redis、应用），sleep 状态是正常的，显示为 running
+		if processName == "mysql" || processName == "postgresql" || processName == "redis" || processName == "app" {
 			return "running"
 		}
 		return "sleep"
@@ -136,7 +136,7 @@ func convertProcessStatus(statusCode string, processName string) string {
 		return "running" // 空闲也是运行状态
 	default:
 		// 如果无法识别，对于服务进程默认显示 running
-		if processName == "mysql" || processName == "redis" || processName == "app" {
+		if processName == "mysql" || processName == "postgresql" || processName == "redis" || processName == "app" {
 			return "running"
 		}
 		return statusCode
@@ -185,7 +185,7 @@ func getProcessInfo(ctx http.Context, processName string, pid int32) map[string]
 		result["status"] = convertProcessStatus(status[0], processName)
 	} else {
 		// 如果无法获取状态，对于服务进程默认显示 running
-		if processName == "mysql" || processName == "redis" || processName == "app" {
+		if processName == "mysql" || processName == "postgresql" || processName == "redis" || processName == "app" {
 			result["status"] = "running"
 		} else {
 			result["status"] = "unknown"
@@ -409,6 +409,116 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	return result
 }
 
+// getPostgreSQLInfoFromDB 通过数据库连接获取PostgreSQL信息
+func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
+	result := map[string]any{
+		"name":            "postgresql",
+		"type":            "remote",
+		"status":          "disconnected",
+		"version":         "",
+		"uptime":          0,
+		"connections":     0,
+		"max_connections": 0,
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			result["status"] = "error"
+		}
+	}()
+
+	// 获取数据库连接配置
+	dbConnection := facades.Config().GetString("database.default", "sqlite")
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
+	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", dbConnection), 5432)
+
+	// 检查是否为本地数据库
+	if !isLocalHost(dbHost) {
+		result["host"] = fmt.Sprintf("%s:%d", dbHost, dbPort)
+		result["type"] = "remote"
+	} else {
+		result["host"] = fmt.Sprintf("%s:%d", dbHost, dbPort)
+		result["type"] = "local"
+	}
+
+	// 尝试连接数据库获取信息
+	orm := facades.Orm()
+	if orm == nil {
+		return result
+	}
+
+	// 检查连接类型是否为PostgreSQL
+	if dbConnection != "postgres" {
+		result["status"] = "not_postgres"
+		return result
+	}
+
+	// 执行PostgreSQL查询
+	query := orm.Query()
+	if query != nil {
+		// 获取PostgreSQL版本
+		var version string
+		if err := query.Raw("SELECT version() as version").Scan(&version); err == nil {
+			// 提取版本号（例如：PostgreSQL 14.5 on x86_64-pc-linux-gnu）
+			if strings.Contains(version, "PostgreSQL") {
+				parts := strings.Fields(version)
+				if len(parts) >= 2 {
+					result["version"] = parts[1]
+				} else {
+					result["version"] = version
+				}
+			} else {
+				result["version"] = version
+			}
+		}
+
+		// 获取PostgreSQL运行时间（秒）
+		var uptime int64
+		if err := query.Raw("SELECT EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time()))::bigint as uptime").Scan(&uptime); err == nil {
+			result["uptime"] = uptime
+		}
+
+		// 获取当前连接数
+		var connections int64
+		if err := query.Raw("SELECT count(*) FROM pg_stat_activity").Scan(&connections); err == nil {
+			result["connections"] = connections
+		}
+
+		// 获取最大连接数
+		var maxConnections int64
+		if err := query.Raw("SELECT setting::bigint FROM pg_settings WHERE name = 'max_connections'").Scan(&maxConnections); err == nil {
+			result["max_connections"] = maxConnections
+		}
+
+		// 获取数据库大小
+		var dbSize int64
+		if err := query.Raw("SELECT pg_database_size(current_database())").Scan(&dbSize); err == nil {
+			result["database_size"] = dbSize
+		}
+
+		// 获取活跃连接数
+		var activeConnections int64
+		if err := query.Raw("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'").Scan(&activeConnections); err == nil {
+			result["active_connections"] = activeConnections
+		}
+
+		// 获取空闲连接数
+		var idleConnections int64
+		if err := query.Raw("SELECT count(*) FROM pg_stat_activity WHERE state = 'idle'").Scan(&idleConnections); err == nil {
+			result["idle_connections"] = idleConnections
+		}
+
+		// 获取总查询数（从启动开始）
+		var totalQueries int64
+		if err := query.Raw("SELECT sum(xact_commit + xact_rollback) FROM pg_stat_database WHERE datname = current_database()").Scan(&totalQueries); err == nil {
+			result["queries"] = totalQueries
+		}
+	}
+
+	result["status"] = "connected"
+	return result
+}
+
 // getRedisInfoFromConnection 通过Redis连接获取Redis信息
 func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 	result := map[string]any{
@@ -574,11 +684,20 @@ func parseRedisInfo(infoStr string, result map[string]any) {
 	}
 }
 
-// getProcessesInfo 获取 MySQL、Redis 和当前应用进程的信息
+// getProcessesInfo 获取 MySQL、PostgreSQL、Redis 和当前应用进程的信息
 func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	result := map[string]any{
 		"mysql": map[string]any{
 			"name":   "mysql",
+			"pid":    0,
+			"cpu":    0.0,
+			"memory": 0,
+			"status": "not_found",
+			"rss":    0,
+			"vms":    0,
+		},
+		"postgresql": map[string]any{
+			"name":   "postgresql",
 			"pid":    0,
 			"cpu":    0.0,
 			"memory": 0,
@@ -617,6 +736,49 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	dbConnection := facades.Config().GetString("database.default", "sqlite")
 	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
 	redisHost := facades.Config().GetString("database.redis.default.host", "")
+
+	// PostgreSQL处理：检查是否为PostgreSQL数据库
+	if dbConnection == "postgres" {
+		// 无论本地还是远程，都先通过数据库连接获取统计信息
+		postgresDBInfo := getPostgreSQLInfoFromDB(ctx)
+
+		if isLocalHost(dbHost) {
+			// 本地PostgreSQL，尝试查找进程获取 CPU、内存等信息
+			postgresNames := []string{"postgres", "postmaster", "postgresql"}
+			if runtime.GOOS == "windows" {
+				postgresNames = []string{"postgres", "postgres.exe", "postmaster.exe"}
+			}
+			postgresPid := findProcessByName(ctx, postgresNames)
+			if postgresPid > 0 {
+				// 获取进程信息（CPU、内存等）
+				processInfo := getProcessInfo(ctx, "postgresql", postgresPid)
+				if processInfo != nil {
+					// 合并进程信息和数据库统计信息
+					for k, v := range postgresDBInfo {
+						if _, exists := processInfo[k]; !exists {
+							// 如果进程信息中没有这个字段，使用数据库信息
+							processInfo[k] = v
+						}
+					}
+					// 确保类型和状态正确
+					processInfo["type"] = "local"
+					if postgresDBInfo["status"] == "connected" {
+						processInfo["status"] = "connected"
+					}
+					result["postgresql"] = processInfo
+				} else {
+					// 如果获取进程信息失败，使用数据库信息
+					result["postgresql"] = postgresDBInfo
+				}
+			} else {
+				// 找不到进程，使用数据库信息
+				result["postgresql"] = postgresDBInfo
+			}
+		} else {
+			// 远程PostgreSQL，直接使用数据库信息
+			result["postgresql"] = postgresDBInfo
+		}
+	}
 
 	// MySQL处理：检查是否为本地数据库
 	if dbConnection == "mysql" {
