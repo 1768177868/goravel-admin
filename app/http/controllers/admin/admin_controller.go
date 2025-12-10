@@ -473,10 +473,24 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 
 	// 检查是否尝试修改 admin 用户的角色
 	if _, exists := allInputs["role_ids"]; exists {
-		// 获取当前管理员的角色ID列表
-		currentRoleIDs := make([]uint, 0, len(admin.Roles))
+		// 获取当前管理员的角色ID列表（去重）
+		currentRoleIDSet := make(map[uint]bool)
+		var currentRoleIDs []uint
 		for _, role := range admin.Roles {
-			currentRoleIDs = append(currentRoleIDs, role.ID)
+			if !currentRoleIDSet[role.ID] {
+				currentRoleIDSet[role.ID] = true
+				currentRoleIDs = append(currentRoleIDs, role.ID)
+			}
+		}
+
+		// 对传入的角色ID进行去重
+		newRoleIDSet := make(map[uint]bool)
+		var deduplicatedRoleIDs []uint
+		for _, roleID := range adminUpdate.RoleIDs {
+			if !newRoleIDSet[roleID] {
+				newRoleIDSet[roleID] = true
+				deduplicatedRoleIDs = append(deduplicatedRoleIDs, roleID)
+			}
 		}
 
 		// 比较新的角色ID列表和当前的角色ID列表
@@ -484,18 +498,13 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		roleIDsChanged := false
 
 		// 如果长度不同，肯定改变了
-		if len(adminUpdate.RoleIDs) != len(currentRoleIDs) {
+		if len(deduplicatedRoleIDs) != len(currentRoleIDs) {
 			roleIDsChanged = true
 		} else {
 			// 长度相同，需要检查内容是否完全一致（忽略顺序）
-			// 创建当前角色ID的映射，用于快速查找
-			currentRoleIDMap := make(map[uint]bool)
-			for _, roleID := range currentRoleIDs {
-				currentRoleIDMap[roleID] = true
-			}
-			// 检查新的角色ID是否都在当前角色ID中，且数量一致
-			for _, newRoleID := range adminUpdate.RoleIDs {
-				if !currentRoleIDMap[newRoleID] {
+			// 检查新的角色ID是否都在当前角色ID中
+			for _, newRoleID := range deduplicatedRoleIDs {
+				if !currentRoleIDSet[newRoleID] {
 					roleIDsChanged = true
 					break
 				}
@@ -508,17 +517,18 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		isSuperAdmin := admin.ID == superAdminID
 
 		// 只有当角色ID真正改变时才阻止修改
+		// 如果角色ID没有改变，允许调用 SyncRoles 来清理重复数据
 		if roleIDsChanged && isSuperAdmin {
 			return response.Error(ctx, http.StatusForbidden, "admin_cannot_modify_roles")
 		}
-	}
 
-	if len(adminUpdate.RoleIDs) > 0 {
-		if err := r.adminService.SyncRoles(admin, adminUpdate.RoleIDs); err != nil {
+		// 即使角色ID没有改变，也调用 SyncRoles 来清理重复数据
+		// 使用去重后的角色ID列表
+		if err := r.adminService.SyncRoles(admin, deduplicatedRoleIDs); err != nil {
 			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles in update", map[string]any{
 				"error":    err.Error(),
 				"admin_id": admin.ID,
-				"role_ids": adminUpdate.RoleIDs,
+				"role_ids": deduplicatedRoleIDs,
 			}, "Sync admin roles in update error: %v", err)
 			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 		}

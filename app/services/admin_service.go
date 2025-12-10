@@ -1,6 +1,8 @@
 package services
 
 import (
+	"slices"
+
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
@@ -220,12 +222,24 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 		return err
 	}
 
-	// 收集所有角色 ID
+	// 收集所有角色 ID（去重）
 	var roleIDs []uint
-	adminRoleMap := make(map[uint][]uint) // admin_id -> []role_id
+	roleIDSet := make(map[uint]bool)
+	adminRoleMap := make(map[uint][]uint)        // admin_id -> []role_id
+	adminRoleSet := make(map[uint]map[uint]bool) // admin_id -> map[role_id]bool 用于去重
 	for _, ar := range adminRoles {
-		adminRoleMap[ar.AdminID] = append(adminRoleMap[ar.AdminID], ar.RoleID)
-		if !contains(roleIDs, ar.RoleID) {
+		// 初始化管理员的角色集合
+		if adminRoleSet[ar.AdminID] == nil {
+			adminRoleSet[ar.AdminID] = make(map[uint]bool)
+		}
+		// 如果该角色ID还未添加，则添加
+		if !adminRoleSet[ar.AdminID][ar.RoleID] {
+			adminRoleSet[ar.AdminID][ar.RoleID] = true
+			adminRoleMap[ar.AdminID] = append(adminRoleMap[ar.AdminID], ar.RoleID)
+		}
+		// 收集所有角色ID（去重）
+		if !roleIDSet[ar.RoleID] {
+			roleIDSet[ar.RoleID] = true
 			roleIDs = append(roleIDs, ar.RoleID)
 		}
 	}
@@ -251,11 +265,15 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 			}
 		}
 
-		// 填充角色
+		// 填充角色（去重）
 		if roleIDs, ok := adminRoleMap[admins[i].ID]; ok {
+			addedRoles := make(map[uint]bool) // 用于去重
 			for _, roleID := range roleIDs {
 				if role, ok := rolesMap[roleID]; ok {
-					admins[i].Roles = append(admins[i].Roles, role)
+					if !addedRoles[roleID] {
+						addedRoles[roleID] = true
+						admins[i].Roles = append(admins[i].Roles, role)
+					}
 				}
 			}
 		}
@@ -266,21 +284,52 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 
 // contains 辅助函数，检查切片中是否包含某个值
 func contains(slice []uint, val uint) bool {
-	for _, v := range slice {
-		if v == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, val)
 }
 
 // SyncRoles 同步管理员角色关联
 func (s *AdminServiceImpl) SyncRoles(admin *models.Admin, roleIDs []uint) error {
-	var roles []models.Role
-	if len(roleIDs) > 0 {
-		if err := facades.Orm().Query().Where("id IN ?", roleIDs).Find(&roles); err != nil {
+	// 去重角色ID，避免重复数据
+	uniqueRoleIDs := make(map[uint]bool)
+	var deduplicatedRoleIDs []uint
+	for _, roleID := range roleIDs {
+		if !uniqueRoleIDs[roleID] {
+			uniqueRoleIDs[roleID] = true
+			deduplicatedRoleIDs = append(deduplicatedRoleIDs, roleID)
+		}
+	}
+
+	// 先清空该管理员的所有角色关联（包括重复的），确保彻底清理重复数据
+	if err := facades.Orm().Query().Model(admin).Association("Roles").Clear(); err != nil {
+		return err
+	}
+
+	// 如果有角色需要关联，则添加去重后的角色关联
+	if len(deduplicatedRoleIDs) > 0 {
+		var roles []models.Role
+		if err := facades.Orm().Query().Where("id IN ?", deduplicatedRoleIDs).Find(&roles); err != nil {
+			return err
+		}
+
+		// 对查询到的角色再次去重（双重保险）
+		roleMap := make(map[uint]models.Role)
+		for _, role := range roles {
+			if _, exists := roleMap[role.ID]; !exists {
+				roleMap[role.ID] = role
+			}
+		}
+
+		// 将去重后的角色转换为切片
+		deduplicatedRoles := make([]models.Role, 0, len(roleMap))
+		for _, role := range roleMap {
+			deduplicatedRoles = append(deduplicatedRoles, role)
+		}
+
+		// Replace 方法会先删除所有现有关联，然后添加新的关联
+		if err := facades.Orm().Query().Model(admin).Association("Roles").Replace(deduplicatedRoles); err != nil {
 			return err
 		}
 	}
-	return facades.Orm().Query().Model(admin).Association("Roles").Replace(roles)
+
+	return nil
 }
