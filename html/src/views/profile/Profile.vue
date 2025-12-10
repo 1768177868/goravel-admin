@@ -301,11 +301,32 @@ const unbindForm = reactive({
 
 // 系统默认头像列表（使用UI Avatars服务生成）
 const defaultAvatars = [
-  'https://ui-avatars.com/api/?name=Admin&background=409EFF&color=fff&size=128',
-  'https://ui-avatars.com/api/?name=User&background=67C23A&color=fff&size=128',
-  'https://ui-avatars.com/api/?name=Manager&background=E6A23C&color=fff&size=128',
-  'https://ui-avatars.com/api/?name=Admin&background=F56C6C&color=fff&size=128',
-  'https://ui-avatars.com/api/?name=User&background=909399&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=A&background=409EFF&color=fff&size=128', // 蓝色
+  'https://ui-avatars.com/api/?name=B&background=67C23A&color=fff&size=128', // 绿色
+  'https://ui-avatars.com/api/?name=C&background=E6A23C&color=fff&size=128', // 橙色
+  'https://ui-avatars.com/api/?name=D&background=F56C6C&color=fff&size=128', // 红色
+  'https://ui-avatars.com/api/?name=E&background=9C27B0&color=fff&size=128', // 紫色
+  'https://ui-avatars.com/api/?name=F&background=00BCD4&color=fff&size=128', // 青色
+  'https://ui-avatars.com/api/?name=G&background=FF9800&color=fff&size=128', // 深橙色
+  'https://ui-avatars.com/api/?name=H&background=4CAF50&color=fff&size=128', // 深绿色
+  'https://ui-avatars.com/api/?name=I&background=2196F3&color=fff&size=128', // 亮蓝色
+  'https://ui-avatars.com/api/?name=J&background=FF5722&color=fff&size=128', // 深红色
+  'https://ui-avatars.com/api/?name=K&background=795548&color=fff&size=128', // 棕色
+  'https://ui-avatars.com/api/?name=L&background=607D8B&color=fff&size=128', // 蓝灰色
+  'https://ui-avatars.com/api/?name=M&background=3F51B5&color=fff&size=128', // 靛蓝色
+  'https://ui-avatars.com/api/?name=N&background=009688&color=fff&size=128', // 青绿色
+  'https://ui-avatars.com/api/?name=O&background=FFC107&color=fff&size=128', // 琥珀色
+  'https://ui-avatars.com/api/?name=P&background=E91E63&color=fff&size=128', // 粉红色
+  'https://ui-avatars.com/api/?name=Q&background=8BC34A&color=fff&size=128', // 浅绿色
+  'https://ui-avatars.com/api/?name=R&background=CDDC39&color=fff&size=128', // 黄绿色
+  'https://ui-avatars.com/api/?name=S&background=FFEB3B&color=333&size=128', // 黄色
+  'https://ui-avatars.com/api/?name=T&background=FF9800&color=fff&size=128', // 橙色
+  'https://ui-avatars.com/api/?name=U&background=9E9E9E&color=fff&size=128', // 灰色
+  'https://ui-avatars.com/api/?name=V&background=673AB7&color=fff&size=128', // 深紫色
+  'https://ui-avatars.com/api/?name=W&background=00ACC1&color=fff&size=128', // 深青色
+  'https://ui-avatars.com/api/?name=X&background=5C6BC0&color=fff&size=128', // 蓝紫色
+  'https://ui-avatars.com/api/?name=Y&background=F44336&color=fff&size=128', // 亮红色
+  'https://ui-avatars.com/api/?name=Z&background=26A69A&color=fff&size=128', // 青蓝色
 ]
 
 const adminInfo = computed(() => userStore.adminInfo || {})
