@@ -125,6 +125,8 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		"status":     menuCreate.Status,
 		"sort":       menuCreate.Sort,
 		"is_hidden":  menuCreate.IsHidden,
+		"link_type":  menuCreate.LinkType,
+		"open_type":  menuCreate.OpenType,
 		"created_at": now,
 		"updated_at": now,
 	}
@@ -208,6 +210,12 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	}
 	if _, exists := allInputs["is_hidden"]; exists {
 		menu.IsHidden = menuUpdate.IsHidden
+	}
+	if _, exists := allInputs["link_type"]; exists {
+		menu.LinkType = menuUpdate.LinkType
+	}
+	if _, exists := allInputs["open_type"]; exists {
+		menu.OpenType = menuUpdate.OpenType
 	}
 
 	if err := facades.Orm().Query().Save(menu); err != nil {

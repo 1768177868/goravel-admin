@@ -186,6 +186,12 @@ const routes = [
         name: 'Profile',
         component: () => lazyLoad(() => import('../views/profile/Profile.vue')),
         meta: { titleKey: 'menu.profile' }
+      },
+      {
+        path: 'iframe',
+        name: 'Iframe',
+        component: () => lazyLoad(() => import('../views/iframe/IframeView.vue')),
+        meta: { titleKey: 'menu.external_link' }
       }
     ]
   }

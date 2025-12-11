@@ -11,12 +11,12 @@
       </div>
       <el-menu
         :default-active="activeMenu"
-        router
         class="sidebar-menu"
         :collapse="appStore.sidebarCollapsed"
         background-color="#1f2937"
         text-color="#bfcbd9"
         active-text-color="#409EFF"
+        @select="handleMenuSelect"
       >
         <el-menu-item index="/dashboard">
           <el-icon><Odometer /></el-icon>
@@ -242,7 +242,9 @@ const menuTree = computed(() => {
       type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
       status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
       sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
-      is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0)
+      is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),
+      link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
+      open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1)
     }
   }
   
@@ -326,6 +328,18 @@ onMounted(() => {
     }
   })
 })
+
+const handleMenuSelect = (index) => {
+  // 处理静态菜单项的导航（如 dashboard）
+  // MenuItem 组件已经处理了动态菜单的点击，所以这里主要处理静态菜单
+  // 外部链接的 index 以 'external-' 开头，不应该在这里处理
+  if (index && typeof index === 'string' && !index.startsWith('external-')) {
+    // 检查是否是有效的内部路由路径（不以 http:// 或 https:// 开头）
+    if (!index.startsWith('http://') && !index.startsWith('https://')) {
+      router.push(index)
+    }
+  }
+}
 
 const handleCommand = async (command) => {
   if (command === 'profile') {

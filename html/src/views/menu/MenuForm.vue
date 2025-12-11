@@ -28,8 +28,41 @@
       <el-form-item :label="$t('menu_management.slug')" prop="slug">
         <el-input v-model="formData.slug" :placeholder="$t('menu_management.slug_placeholder')" />
       </el-form-item>
-      <el-form-item :label="$t('menu_management.path')" prop="path">
-        <el-input v-model="formData.path" />
+      <el-form-item :label="$t('menu_management.link_type')" prop="link_type">
+        <el-radio-group v-model="formData.link_type">
+          <el-radio :label="1">{{ $t('menu_management.link_type_internal') }}</el-radio>
+          <el-radio :label="2">{{ $t('menu_management.link_type_external') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item 
+        :label="$t('menu_management.path')" 
+        prop="path"
+        v-if="formData.link_type === 1"
+      >
+        <el-input 
+          v-model="formData.path" 
+          :placeholder="$t('menu_management.path_placeholder_internal')"
+        />
+      </el-form-item>
+      <el-form-item 
+        :label="$t('menu_management.path')" 
+        prop="path"
+        v-else
+      >
+        <el-input 
+          v-model="formData.path" 
+          :placeholder="$t('menu_management.path_placeholder_external')"
+        />
+      </el-form-item>
+      <el-form-item 
+        :label="$t('menu_management.open_type')" 
+        prop="open_type"
+        v-if="formData.link_type === 2"
+      >
+        <el-radio-group v-model="formData.open_type">
+          <el-radio :label="1">{{ $t('menu_management.open_type_iframe') }}</el-radio>
+          <el-radio :label="2">{{ $t('menu_management.open_type_new_window') }}</el-radio>
+        </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('menu_management.icon')">
         <div class="icon-picker">
@@ -142,7 +175,9 @@ const formData = reactive({
   path: '',
   icon: '',
   status: 1,
-  sort: 0
+  sort: 0,
+  link_type: 1, // 1: 内部页面, 2: 外部链接
+  open_type: 1 // 1: iframe嵌套, 2: 新窗口打开
 })
 
 const iconComponents = ElementPlusIconsVue
@@ -190,21 +225,41 @@ const clearIcon = () => {
   formData.icon = ''
 }
 
+// URL验证函数
+const validateUrl = (rule, value, callback) => {
+  if (!value) {
+    callback()
+    return
+  }
+  
+  // 如果是外部链接，验证URL格式
+  if (formData.link_type === 2) {
+    try {
+      new URL(value)
+      callback()
+    } catch {
+      callback(new Error(t('menu_management.path_url_invalid')))
+    }
+  } else {
+    callback()
+  }
+}
+
 const formRules = computed(() => ({
   name: [{ required: true, message: t('menu_management.name_required'), trigger: 'blur' }],
   slug: [{ required: true, message: t('menu_management.slug_required'), trigger: 'blur' }],
-  path: [{ required: true, message: t('menu_management.path_required'), trigger: 'blur' }]
+  path: [
+    { required: true, message: t('menu_management.path_required'), trigger: 'blur' },
+    { validator: validateUrl, trigger: ['blur', 'change'] }
+  ]
 }))
 
-// 监听 editId 变化，加载详情
-watch(() => props.editId, async (newId) => {
-  if (newId && dialogVisible.value) {
-    await loadDetail(newId)
-  } else if (!newId && dialogVisible.value) {
-    // 新增模式，重置表单
-    resetForm()
+// 监听 link_type 变化，重新验证 path
+watch(() => formData.link_type, () => {
+  if (formRef.value) {
+    formRef.value.validateField('path')
   }
-}, { immediate: true })
+})
 
 // 监听 dialogVisible 变化
 watch(dialogVisible, (visible) => {
@@ -212,6 +267,22 @@ watch(dialogVisible, (visible) => {
     if (props.editId) {
       loadDetail(props.editId)
     } else {
+      // 新增模式，重置表单
+      resetForm()
+    }
+  } else {
+    // 对话框关闭时，重置表单
+    resetForm()
+  }
+})
+
+// 监听 editId 变化，加载详情
+watch(() => props.editId, async (newId) => {
+  if (dialogVisible.value) {
+    if (newId) {
+      await loadDetail(newId)
+    } else {
+      // 新增模式，重置表单
       resetForm()
     }
   }
@@ -231,7 +302,9 @@ const loadDetail = async (id) => {
         path: menu.Path || menu.path || '',
         icon: menu.Icon || menu.icon || '',
         status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
-        sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0)
+        sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
+        link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
+        open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1)
       })
     }
   } catch (error) {
@@ -248,7 +321,9 @@ const resetForm = () => {
     path: '',
     icon: '',
     status: 1,
-    sort: 0
+    sort: 0,
+    link_type: 1,
+    open_type: 1
   })
   formRef.value?.resetFields()
 }
@@ -268,7 +343,9 @@ const handleSubmit = async () => {
           icon: formData.icon,
           status: formData.status,
           sort: formData.sort,
-          parent_id: formData.parent_id === 0 ? null : formData.parent_id
+          parent_id: formData.parent_id === 0 ? null : formData.parent_id,
+          link_type: formData.link_type,
+          open_type: formData.open_type
         }
         
         if (formData.id) {
@@ -291,10 +368,11 @@ const handleSubmit = async () => {
 
 const handleCancel = () => {
   dialogVisible.value = false
+  resetForm()
 }
 
 const handleDialogClose = () => {
-  formRef.value?.resetFields()
+  resetForm()
 }
 </script>
 

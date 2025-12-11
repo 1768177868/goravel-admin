@@ -38,6 +38,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250301000022CreateAttachmentsTable{},
 		&migrations.M20250301000023AddDisplayNameToAttachments{},
 		&migrations.M20250101000024AddGoogleSecretToAdmins{},
+		&migrations.M20250101000025AddLinkTypeToMenus{},
+		&migrations.M20250101000026ModifyMenusPathLength{},
 	}
 }
 

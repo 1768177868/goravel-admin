@@ -40,6 +40,23 @@
         <el-table-column prop="name" :label="$t('menu_management.name')" min-width="200" />
         <el-table-column prop="slug" :label="$t('menu_management.slug')" min-width="150" />
         <el-table-column prop="path" :label="$t('menu_management.path')" min-width="200" />
+        <el-table-column prop="link_type" :label="$t('menu_management.link_type')" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.link_type === 1 ? 'primary' : 'success'">
+              {{ row.link_type === 1 ? $t('menu_management.link_type_internal') : $t('menu_management.link_type_external') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="open_type" :label="$t('menu_management.open_type')" width="140">
+          <template #default="{ row }">
+            <span v-if="row.link_type === 2">
+              <el-tag :type="row.open_type === 1 ? 'info' : 'warning'">
+                {{ row.open_type === 1 ? $t('menu_management.open_type_iframe') : $t('menu_management.open_type_new_window') }}
+              </el-tag>
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="icon" :label="$t('menu_management.icon')" width="140">
           <template #default="{ row }">
             <span v-if="getIconComponent(row.icon)" class="menu-icon-preview">
@@ -173,6 +190,8 @@ const transformMenuData = (menu) => {
     icon: menu.Icon || menu.icon || '',
     status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
     sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
+    link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
+    open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1),
     created_at: menu.created_at || '',
     updated_at: menu.updated_at || ''
   }
