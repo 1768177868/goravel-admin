@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -37,13 +38,10 @@ func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*m
 	return &dictionary, nil
 }
 
-// Index 字典列表
-func (r *DictionaryController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+// buildQuery 构建字典查询
+func (r *DictionaryController) buildQuery(ctx http.Context) orm.Query {
 	dictType := ctx.Request().Query("type", "")
 	status := ctx.Request().Query("status", "")
-	orderBy := ctx.Request().Query("order_by", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -62,8 +60,19 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
 	// 应用排序，默认排序为 sort asc, id desc
 	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
+
+	return query
+}
+
+// Index 字典列表
+func (r *DictionaryController) Index(ctx http.Context) http.Response {
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+
+	query := r.buildQuery(ctx)
 
 	total, err := query.Count()
 	if err != nil {

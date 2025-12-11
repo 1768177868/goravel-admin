@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
@@ -23,19 +24,11 @@ func NewOnlineUserController() *OnlineUserController {
 }
 
 // Index 获取在线用户列表
-// 只显示最近15分钟内有活动的用户（根据 OnlineUserThreshold 常量判断）
-func (r *OnlineUserController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
-
-	username := ctx.Request().Query("username", "")
+// buildQuery 构建在线用户查询（基于 token）
+func (r *OnlineUserController) buildQuery(ctx http.Context) orm.Query {
 	ip := ctx.Request().Query("ip", "")
 	browser := ctx.Request().Query("browser", "")
 	os := ctx.Request().Query("os", "")
-	orderBy := ctx.Request().Query("order_by", "")
 
 	// 只查询最近15分钟内有活动的token（在线用户）
 	// 默认只显示admin类型的token
@@ -56,8 +49,24 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 		query = query.Where("os LIKE ?", "%"+os+"%")
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
 	// 应用排序，默认排序为 last_used_at desc
 	query = helpers.ApplySort(query, orderBy, "last_used_at:desc")
+
+	return query
+}
+
+// 只显示最近15分钟内有活动的用户（根据 OnlineUserThreshold 常量判断）
+func (r *OnlineUserController) Index(ctx http.Context) http.Response {
+	// 验证并规范化分页参数
+	page, pageSize := helpers.ValidatePagination(
+		helpers.GetIntQuery(ctx, "page", 1),
+		helpers.GetIntQuery(ctx, "page_size", 10),
+	)
+
+	username := ctx.Request().Query("username", "")
+
+	query := r.buildQuery(ctx)
 
 	var tokens []models.PersonalAccessToken
 	if err := query.Get(&tokens); err != nil {

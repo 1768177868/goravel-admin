@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -45,10 +46,8 @@ func (r *PermissionController) findPermissionByID(ctx http.Context, id uint, wit
 	return &permission, nil
 }
 
-// Index 权限列表
-func (r *PermissionController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+// buildQuery 构建权限查询
+func (r *PermissionController) buildQuery(ctx http.Context) orm.Query {
 	name := ctx.Request().Query("name", "")
 	slug := ctx.Request().Query("slug", "")
 	method := ctx.Request().Query("method", "")
@@ -79,7 +78,8 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 		// 获取菜单及其所有子菜单的ID列表
 		menuIDs, err := r.treeService.GetMenuChildrenIDs(cast.ToUint(menuID))
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+			// 如果获取菜单ID失败，返回空查询
+			return query.Where("1 = 0")
 		}
 		// 使用 IN 查询，查询该菜单及其所有子菜单的权限
 		if len(menuIDs) > 0 {
@@ -97,6 +97,16 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 	orderBy := ctx.Request().Query("order_by", "")
 	// 应用排序，默认排序为 sort asc, id desc
 	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
+
+	return query
+}
+
+// Index 权限列表
+func (r *PermissionController) Index(ctx http.Context) http.Response {
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+
+	query := r.buildQuery(ctx)
 
 	total, err := query.Count()
 	if err != nil {

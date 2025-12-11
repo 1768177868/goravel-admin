@@ -3,6 +3,7 @@ package admin
 import (
 	"time"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -42,18 +43,12 @@ func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdm
 	return &log, nil
 }
 
-// Index 获取登录日志列表
-func (r *LoginLogController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
+// buildQuery 构建登录日志查询
+func (r *LoginLogController) buildQuery(ctx http.Context) orm.Query {
 	adminID := ctx.Request().Query("admin_id", "")
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
-	orderBy := ctx.Request().Query("order_by", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -78,6 +73,23 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
+	// 应用排序，默认排序为 id desc
+	query = helpers.ApplySort(query, orderBy, "id:desc")
+
+	return query
+}
+
+// Index 获取登录日志列表
+func (r *LoginLogController) Index(ctx http.Context) http.Response {
+	// 验证并规范化分页参数
+	page, pageSize := helpers.ValidatePagination(
+		helpers.GetIntQuery(ctx, "page", 1),
+		helpers.GetIntQuery(ctx, "page_size", 10),
+	)
+
+	query := r.buildQuery(ctx)
+
 	total, err := query.Count()
 	if err != nil {
 		return response.ErrorWithLog(ctx, "login-log", err)
@@ -85,7 +97,6 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.LoginLog
 	offset := (page - 1) * pageSize
-	query = helpers.ApplySort(query, orderBy, "id:desc")
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.ErrorWithLog(ctx, "login-log", err)
 	}

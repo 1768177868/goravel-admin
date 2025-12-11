@@ -3,6 +3,7 @@ package admin
 import (
 	"strings"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -40,17 +41,14 @@ func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*mod
 	return &blacklist, nil
 }
 
-// Index 黑名单列表
-func (r *BlacklistController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+// buildQuery 构建黑名单查询
+func (r *BlacklistController) buildQuery(ctx http.Context) orm.Query {
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	query := facades.Orm().Query().Model(&models.Blacklist{})
-	orderBy := ctx.Request().Query("order_by", "")
 
 	if ip != "" {
 		query = query.Where("ip LIKE ?", "%"+ip+"%")
@@ -65,8 +63,19 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
 	// 应用排序，默认排序为 id desc
 	query = helpers.ApplySort(query, orderBy, "id:desc")
+
+	return query
+}
+
+// Index 黑名单列表
+func (r *BlacklistController) Index(ctx http.Context) http.Response {
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+
+	query := r.buildQuery(ctx)
 
 	total, err := query.Count()
 	if err != nil {

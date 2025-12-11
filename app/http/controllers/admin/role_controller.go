@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -47,13 +48,10 @@ func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations b
 	return &role, nil
 }
 
-// Index 角色列表
-func (r *RoleController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+// buildQuery 构建角色查询
+func (r *RoleController) buildQuery(ctx http.Context) orm.Query {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
-	orderBy := ctx.Request().Query("order_by", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
@@ -73,6 +71,20 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
+	// 应用排序（默认按排序字段升序，创建时间倒序）
+	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
+
+	return query
+}
+
+// Index 角色列表
+func (r *RoleController) Index(ctx http.Context) http.Response {
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
+
+	query := r.buildQuery(ctx)
+
 	total, err := query.Count()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
@@ -80,8 +92,6 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 
 	var roles []models.Role
 	offset := (page - 1) * pageSize
-	// 应用排序（默认按排序字段升序，创建时间倒序）
-	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
 	if err := query.Offset(offset).Limit(pageSize).Get(&roles); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}

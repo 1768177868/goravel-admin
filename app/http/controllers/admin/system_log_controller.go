@@ -3,6 +3,7 @@ package admin
 import (
 	"time"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -37,18 +38,12 @@ func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*mod
 	return &log, nil
 }
 
-// Index 获取系统日志列表
-func (r *SystemLogController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
+// buildQuery 构建系统日志查询
+func (r *SystemLogController) buildQuery(ctx http.Context) orm.Query {
 	level := ctx.Request().Query("level", "")
 	module := ctx.Request().Query("module", "")
 	traceID := ctx.Request().Query("trace_id", "")
 	message := ctx.Request().Query("message", "")
-	orderBy := ctx.Request().Query("order_by", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -73,6 +68,23 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 		query = query.Where("created_at <= ?", endTime)
 	}
 
+	orderBy := ctx.Request().Query("order_by", "")
+	// 应用排序，默认排序为 id desc
+	query = helpers.ApplySort(query, orderBy, "id:desc")
+
+	return query
+}
+
+// Index 获取系统日志列表
+func (r *SystemLogController) Index(ctx http.Context) http.Response {
+	// 验证并规范化分页参数
+	page, pageSize := helpers.ValidatePagination(
+		helpers.GetIntQuery(ctx, "page", 1),
+		helpers.GetIntQuery(ctx, "page_size", 10),
+	)
+
+	query := r.buildQuery(ctx)
+
 	total, err := query.Count()
 	if err != nil {
 		return response.ErrorWithLog(ctx, "system-log", err)
@@ -80,7 +92,6 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.SystemLog
 	offset := (page - 1) * pageSize
-	query = helpers.ApplySort(query, orderBy, "id:desc")
 	if err = query.Offset(offset).Limit(pageSize).Get(&logs); err != nil {
 		return response.ErrorWithLog(ctx, "system-log", err)
 	}

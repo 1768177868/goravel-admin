@@ -473,7 +473,6 @@ func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		// 记录未找到是业务级错误（404），不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 
@@ -541,7 +540,6 @@ func (r *AttachmentController) Destroy(ctx http.Context) http.Response {
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		// 记录未找到是业务级错误（404），不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 
@@ -564,7 +562,6 @@ func (r *AttachmentController) BatchDestroy(ctx http.Context) http.Response {
 	var req AttachmentBatchDestroyRequest
 
 	if err := ctx.Request().Bind(&req); err != nil {
-		// 参数绑定错误是业务级错误（400），不需要记录日志
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
 	}
 
@@ -607,7 +604,6 @@ func (r *AttachmentController) UpdateDisplayName(ctx http.Context) http.Response
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		// 记录未找到是业务级错误（404），不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 
