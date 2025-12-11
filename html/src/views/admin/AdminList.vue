@@ -107,101 +107,14 @@
     </el-card>
 
     <!-- 添加/编辑对话框 -->
-    <el-dialog
+    <AdminForm
+      ref="adminFormRef"
       v-model="dialogVisible"
-      :title="dialogTitle"
-      width="600px"
-      @close="handleDialogClose"
-    >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="100px"
-      >
-        <el-form-item :label="$t('table.username')" prop="username">
-          <el-input v-model="formData.username" :disabled="!!formData.id" />
-        </el-form-item>
-        <el-form-item :label="$t('common.password')" prop="password" v-if="!formData.id">
-          <el-input v-model="formData.password" type="password" />
-        </el-form-item>
-        <el-form-item :label="$t('table.nickname')" prop="nickname">
-          <el-input v-model="formData.nickname" />
-        </el-form-item>
-        <el-form-item :label="$t('table.email')" prop="email">
-          <el-input v-model="formData.email" />
-        </el-form-item>
-        <el-form-item :label="$t('table.phone')" prop="phone">
-          <el-input v-model="formData.phone" />
-        </el-form-item>
-        <el-form-item :label="$t('table.department')" prop="department_id">
-          <el-popover
-            placement="bottom-start"
-            :width="300"
-            trigger="click"
-            v-model="departmentSelectVisible"
-          >
-            <template #reference>
-              <el-input
-                :model-value="getDepartmentName(formData.department_id)"
-                :placeholder="$t('form.select_department')"
-                readonly
-                @click="departmentSelectVisible = !departmentSelectVisible"
-                style="cursor: pointer"
-              >
-                <template #suffix>
-                  <el-icon class="el-input__icon">
-                    <ArrowDownIcon />
-                  </el-icon>
-                </template>
-              </el-input>
-            </template>
-            <el-tree
-              :data="departmentTree"
-              :props="{ label: 'name', children: 'children' }"
-              node-key="id"
-              :default-expand-all="false"
-              :expand-on-click-node="false"
-              :highlight-current="true"
-              @node-click="handleDepartmentSelect"
-              style="max-height: 300px; overflow-y: auto;"
-            >
-              <template #default="{ node, data }">
-                <span class="custom-tree-node" style="flex: 1; display: flex; align-items: center; justify-content: space-between; font-size: 14px; padding-right: 8px;">
-                  <span>{{ node.label }}</span>
-                </span>
-              </template>
-            </el-tree>
-          </el-popover>
-        </el-form-item>
-        <el-form-item :label="$t('table.roles')" prop="role_ids">
-          <el-select 
-            v-model="formData.role_ids" 
-            multiple 
-            :placeholder="$t('form.select_role')" 
-            :disabled="isDefaultAdmin"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="role in roles"
-              :key="role.id || role.ID"
-              :label="role.Name || role.name"
-              :value="role.id || role.ID"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="$t('table.status')" prop="status">
-          <el-radio-group v-model="formData.status" :disabled="isDefaultAdmin">
-            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
-      </template>
-    </el-dialog>
+      :edit-id="editId"
+      :department-tree="departmentTree"
+      :roles="roles"
+      @success="handleFormSuccess"
+    />
   </div>
 </template>
 
@@ -214,13 +127,12 @@ import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import AdminForm from './AdminForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
-  createAdmin,
-  updateAdmin,
   deleteAdmin,
   exportAdmin,
   resetPassword,
@@ -241,10 +153,9 @@ const { getButtonState } = usePermission()
 const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
-const formRef = ref(null)
-const submitting = ref(false)
+const adminFormRef = ref(null)
 const dialogVisible = ref(false)
-const dialogTitle = computed(() => formData.id ? t('admin.edit_admin') : t('admin.add_admin'))
+const editId = ref(null)
 
 // 字段名映射：前端字段名 -> 数据库字段名
 const fieldMapping = {
@@ -403,31 +314,7 @@ const searchFields = computed(() => [
 
 const departmentTree = ref([])
 const roles = ref([])
-const departmentSelectVisible = ref(false)
 const protectedAdminIds = ref([1, 2])
-
-// 判断是否是超级管理员（通过 is_super_admin 字段判断，不依赖用户名）
-const isDefaultAdmin = computed(() => {
-  return formData.is_super_admin === true && formData.id !== null
-})
-
-const formData = reactive({
-  id: null,
-  username: '',
-  password: '',
-  nickname: '',
-  email: '',
-  phone: '',
-  department_id: null,
-  role_ids: [],
-  status: 1,
-  is_super_admin: false // 是否是超级管理员
-})
-
-const formRules = computed(() => ({
-  username: [{ required: true, message: t('admin.username_required'), trigger: 'blur' }],
-  password: [{ required: true, message: t('admin.password_required'), trigger: 'blur' }]
-}))
 
 const loadDepartments = async () => {
   try {
@@ -461,18 +348,7 @@ const loadRoles = async () => {
 // handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 
 const handleAdd = () => {
-  Object.assign(formData, {
-    id: null,
-    username: '',
-    password: '',
-    nickname: '',
-    email: '',
-    phone: '',
-    department_id: null,
-    role_ids: [],
-    status: 1,
-    is_super_admin: false // 重置超级管理员标识
-  })
+  editId.value = null
   dialogVisible.value = true
 }
 
@@ -496,32 +372,6 @@ const getDepartmentDisplayName = (department) => {
   return department.Name || department.name || '-'
 }
 
-// 获取部门名称
-const getDepartmentName = (departmentId) => {
-  if (!departmentId) return ''
-  const findDept = (depts, id) => {
-    for (const dept of depts) {
-      if (dept.id === id) {
-        return dept.name
-      }
-      if (dept.children && dept.children.length > 0) {
-        const found = findDept(dept.children, id)
-        if (found) return found
-      }
-    }
-    return ''
-  }
-  return findDept(departmentTree.value, departmentId) || ''
-}
-
-// 处理部门选择
-const handleDepartmentSelect = (data) => {
-  if (data && data.id) {
-    formData.department_id = data.id
-    departmentSelectVisible.value = false
-  }
-}
-
 const handleEdit = async (row) => {
   // 处理字段映射，支持 PascalCase 和 snake_case
   const adminRoles = row.Roles || row.roles
@@ -529,70 +379,28 @@ const handleEdit = async (row) => {
   // 去重角色ID
   const uniqueRoleIds = adminRoles ? [...new Set(adminRoles.map(r => r.id || r.ID).filter(id => id))] : []
   
-  Object.assign(formData, {
-    id: row.id,
-    username: row.Username || row.username || '',
-    password: '',
-    nickname: row.Nickname || row.nickname || '',
-    email: row.Email || row.email || '',
-    phone: row.Phone || row.phone || '',
-    department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
-    role_ids: uniqueRoleIds,
-    status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
-    is_super_admin: row.is_super_admin === true || row.IsSuperAdmin === true // 保存超级管理员标识
-  })
+  // 设置表单数据
+  if (adminFormRef.value) {
+    adminFormRef.value.setFormData({
+      id: row.id,
+      username: row.Username || row.username || '',
+      password: '',
+      nickname: row.Nickname || row.nickname || '',
+      email: row.Email || row.email || '',
+      phone: row.Phone || row.phone || '',
+      department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
+      role_ids: uniqueRoleIds,
+      status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
+      is_super_admin: row.is_super_admin === true || row.IsSuperAdmin === true
+    })
+  }
+  
+  editId.value = row.id
   dialogVisible.value = true
 }
 
-const handleSubmit = async () => {
-  if (!formRef.value) return
-  
-  await formRef.value.validate(async (valid) => {
-    if (valid) {
-      submitting.value = true
-      try {
-        const data = { ...formData }
-        
-        if (data.username) {
-          data.username = data.username.trim()
-        }
-        
-        if (formData.id) {
-          if (!data.password) {
-            delete data.password
-          }
-          // 如果是默认 admin 用户，不发送 role_ids 字段（即使禁用了也可能包含原值）
-          if (isDefaultAdmin.value) {
-            delete data.role_ids
-          }
-          await updateAdmin(formData.id, data)
-          ElMessage.success(t('admin.update_success'))
-        } else {
-          await createAdmin(data)
-          ElMessage.success(t('admin.create_success'))
-        }
-        dialogVisible.value = false
-        loadData()
-      } catch (error) {
-        logger.error('Submit error:', error)
-        // 如果错误已经在响应拦截器中处理过，就不再重复显示
-        if (!error.__handled) {
-          // 显示更详细的错误信息
-          if (error.response && error.response.data && error.response.data.message) {
-            ElMessage.error(error.response.data.message)
-          } else if (error.message) {
-            ElMessage.error(error.message)
-          }
-        }
-      } finally {
-        submitting.value = false
-      }
-    }
-  })
-}
-
-const handleDialogClose = () => {
-  formRef.value?.resetFields()
+const handleFormSuccess = () => {
+  loadData()
 }
 
 const isProtectedAdmin = (adminId) => {

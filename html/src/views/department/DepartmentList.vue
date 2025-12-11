@@ -77,50 +77,12 @@
       </vxe-table>
     </el-card>
 
-    <el-dialog
+    <DepartmentForm
       v-model="dialogVisible"
-      :title="dialogTitle"
-      width="600px"
-      @close="handleDialogClose"
-    >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="100px"
-      >
-        <el-form-item :label="$t('department.parent_department')">
-          <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('department.parent_department')" clearable>
-            <el-option :label="$t('department.top_department')" :value="0" />
-            <el-option
-              v-for="dept in departmentOptions"
-              :key="dept.id"
-              :label="dept.name"
-              :value="dept.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="$t('department.name')" prop="name">
-          <el-input v-model="formData.name" />
-        </el-form-item>
-        <el-form-item :label="$t('common.description')">
-          <el-input v-model="formData.description" type="textarea" />
-        </el-form-item>
-        <el-form-item :label="$t('table.status')" prop="status">
-          <el-radio-group v-model="formData.status">
-            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item :label="$t('common.sort')">
-          <el-input-number v-model="formData.sort" :min="0" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
-      </template>
-    </el-dialog>
+      :edit-id="editId"
+      :department-options="departmentOptions"
+      @success="handleFormSuccess"
+    />
   </div>
 </template>
 
@@ -130,22 +92,18 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
+import DepartmentForm from './DepartmentForm.vue'
 import { usePermission } from '../../composables/usePermission'
 import {
   getDepartmentList,
-  getDepartmentDetail,
-  createDepartment,
-  updateDepartment,
   deleteDepartment
 } from '../../api/department'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
-const formRef = ref(null)
 const loading = ref(false)
-const submitting = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = computed(() => formData.id ? t('department.edit_department') : t('department.add_department'))
+const editId = ref(null)
 
 const tableData = ref([])
 const hasSearch = ref(false) // 标记是否有搜索条件
@@ -215,19 +173,6 @@ const tableColumns = computed(() => [
     slot: 'operation'
   }
 ])
-
-const formData = reactive({
-  id: null,
-  parent_id: 0,
-  name: '',
-  description: '',
-  status: 1,
-  sort: 0
-})
-
-const formRules = computed(() => ({
-  name: [{ required: true, message: t('department.name_required'), trigger: 'blur' }]
-}))
 
 const departmentOptions = computed(() => {
   const flatten = (departments, parentId = 0) => {
@@ -319,74 +264,17 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
-  Object.assign(formData, {
-    id: null,
-    parent_id: 0,
-    name: '',
-    description: '',
-    status: 1,
-    sort: 0
-  })
+  editId.value = null
   dialogVisible.value = true
 }
 
-const handleEdit = async (row) => {
-  try {
-    const res = await getDepartmentDetail(row.id)
-    if (res.data && res.data.department) {
-      const dept = res.data.department
-      // 后端返回的是 PascalCase 字段，需要正确映射
-      Object.assign(formData, {
-        id: dept.id,
-        parent_id: dept.ParentID !== undefined ? dept.ParentID : (dept.parent_id || 0),
-        name: dept.Name || dept.name || '',
-        description: dept.Remark || dept.remark || dept.description || '',
-        status: dept.Status !== undefined ? dept.Status : (dept.status !== undefined ? dept.status : 1),
-        sort: dept.Sort !== undefined ? dept.Sort : (dept.sort !== undefined ? dept.sort : 0)
-      })
-      dialogVisible.value = true
-    }
-  } catch (error) {
-    console.error('Load department detail error:', error)
-  }
+const handleEdit = (row) => {
+  editId.value = row.id
+  dialogVisible.value = true
 }
 
-const handleSubmit = async () => {
-  if (!formRef.value) return
-  
-  await formRef.value.validate(async (valid) => {
-    if (valid) {
-      submitting.value = true
-      try {
-        // 转换前端字段名为后端期望的字段名
-        const data = {
-          name: formData.name,
-          remark: formData.description, // description 映射到 remark
-          status: formData.status,
-          sort: formData.sort,
-          parent_id: formData.parent_id === 0 ? null : formData.parent_id
-        }
-        
-        if (formData.id) {
-          await updateDepartment(formData.id, data)
-          ElMessage.success(t('department.update_success'))
-        } else {
-          await createDepartment(data)
-          ElMessage.success(t('department.create_success'))
-        }
-        dialogVisible.value = false
-        loadData()
-      } catch (error) {
-        console.error('Submit error:', error)
-      } finally {
-        submitting.value = false
-      }
-    }
-  })
-}
-
-const handleDialogClose = () => {
-  formRef.value?.resetFields()
+const handleFormSuccess = () => {
+  loadData()
 }
 
 const handleDelete = async (row) => {
