@@ -91,10 +91,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Fold, Expand, Plus, Refresh } from '@element-plus/icons-vue'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import MenuForm from './MenuForm.vue'
 import { getMenuList, deleteMenu } from '../../api/menu'
 import { usePermission } from '../../composables/usePermission'
@@ -108,6 +109,31 @@ const editId = ref(null)
 const isExpanded = ref(false)
 
 const tableData = ref([])
+
+const iconComponents = ElementPlusIconsVue
+
+const normalizeIconName = (iconName) => {
+  if (!iconName) {
+    return ''
+  }
+  const trimmed = iconName.trim()
+  if (!trimmed) {
+    return ''
+  }
+  if (iconComponents[trimmed]) {
+    return trimmed
+  }
+  const pascalCase = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+  if (iconComponents[pascalCase]) {
+    return pascalCase
+  }
+  return ''
+}
+
+const getIconComponent = (iconName) => {
+  const normalized = normalizeIconName(iconName)
+  return normalized ? iconComponents[normalized] : null
+}
 
 // 扁平化菜单选项（递归处理树形结构）
 const menuOptions = computed(() => {
