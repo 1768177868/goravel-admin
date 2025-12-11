@@ -84,12 +84,12 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 		// 获取开发者ID列表并过滤
 		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 		developerIDs := r.parseProtectedIDs(developerIDsStr)
-		
+
 		query := facades.Orm().Query().Where("id IN ?", adminIDs)
 		if len(developerIDs) > 0 {
 			query = query.Where("id NOT IN ?", developerIDs)
 		}
-		
+
 		var admins []models.Admin
 		if err := query.Find(&admins); err != nil {
 			errorlog.RecordHTTP(ctx, "online_user", "Failed to query admin list", map[string]any{
@@ -150,10 +150,6 @@ func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
 	// 查询token是否存在
 	var token models.PersonalAccessToken
 	if err := facades.Orm().Query().Where("id", tokenID).First(&token); err != nil {
-		errorlog.RecordHTTP(ctx, "online_user", "Token not found for kick out", map[string]any{
-			"error":    err.Error(),
-			"token_id": tokenID,
-		}, "Token not found for kick out error: %v", err)
 		return response.Error(ctx, http.StatusNotFound, "token_not_found")
 	}
 

@@ -28,10 +28,6 @@ func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*mod
 
 	var log models.SystemLog
 	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "system-log", "System log not found", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "System log not found: %v", err)
 		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
 

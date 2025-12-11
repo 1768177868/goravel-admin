@@ -124,10 +124,6 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 
 	var export models.Export
 	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Export record not found for delete", map[string]any{
-			"error":    err.Error(),
-			"exportId": id,
-		}, "Export record not found: %v", err)
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 
@@ -163,10 +159,7 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 
 	var export models.Export
 	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Export record not found for download", map[string]any{
-			"error":    err.Error(),
-			"exportId": id,
-		}, "Export record not found: %v", err)
+		// 资源不存在是正常的业务情况，不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 

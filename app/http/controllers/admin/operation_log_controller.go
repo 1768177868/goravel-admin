@@ -35,10 +35,6 @@ func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint,
 		query = query.With("Admin")
 	}
 	if err := query.First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Operation log not found", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "Operation log not found: %v", err)
 		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
 

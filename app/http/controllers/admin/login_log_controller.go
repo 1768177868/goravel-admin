@@ -33,10 +33,6 @@ func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdm
 		query = query.With("Admin")
 	}
 	if err := query.First(&log); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Login log not found", map[string]any{
-			"error":  err.Error(),
-			"log_id": id,
-		}, "Login log not found: %v", err)
 		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
 	}
 
