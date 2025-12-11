@@ -13,7 +13,6 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/filesystem"
 
-	// "github.com/goravel/framework/grpc" // gRPC 已关闭
 	"goravel/app/providers"
 	"goravel/lang"
 
@@ -105,7 +104,6 @@ func init() {
 			&schedule.ServiceProvider{},
 			&event.ServiceProvider{},
 			&queue.ServiceProvider{},
-			// &grpc.ServiceProvider{}, // gRPC 已关闭
 			&mail.ServiceProvider{},
 			&auth.ServiceProvider{},
 			&hash.ServiceProvider{},
@@ -118,7 +116,6 @@ func init() {
 			&providers.AppServiceProvider{},
 			&providers.AuthServiceProvider{},
 			&providers.RouteServiceProvider{},
-			// &providers.GrpcServiceProvider{}, // gRPC 已关闭
 			&providers.ConsoleServiceProvider{},
 			&providers.QueueServiceProvider{},
 			&providers.EventServiceProvider{},

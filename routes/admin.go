@@ -52,11 +52,6 @@ func Admin() {
 		router.Post("google-authenticator/bind", adminAuthController.BindGoogleAuthenticator)
 		router.Post("google-authenticator/unbind", adminAuthController.UnbindGoogleAuthenticator)
 
-		// Token管理
-		// router.Get("tokens", adminAuthController.Tokens)
-		// router.Delete("tokens/{id}", adminAuthController.RevokeToken)
-		// router.Delete("tokens", adminAuthController.RevokeAllTokens)
-
 		// 通知中心
 		router.Get("notifications", notificationController.Index)
 		router.Get("notifications/unread-count", notificationController.UnreadCount)

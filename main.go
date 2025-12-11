@@ -47,13 +47,6 @@ func runApplication() {
 		}
 	}()
 
-	// Start grpc server by facades.Grpc().
-	// go func() {
-	// 	if err := facades.Grpc().Run(); err != nil {
-	// 		facades.Log().Errorf("Grpc run error: %v", err)
-	// 	}
-	// }()
-
 	// Start queue server by facades.Queue().
 	// 从配置文件读取重试次数和并发数（支持环境变量）
 	// 重试次数是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
@@ -88,9 +81,6 @@ func shutdownApplication() {
 	if err := facades.Route().Shutdown(); err != nil {
 		facades.Log().Errorf("Route Shutdown error: %v", err)
 	}
-	// if err := facades.Grpc().Shutdown(); err != nil {
-	// 	facades.Log().Errorf("Grpc Shutdown error: %v", err)
-	// }
 	worker := facades.Queue().Worker()
 	if err := worker.Shutdown(); err != nil {
 		facades.Log().Errorf("Queue Shutdown error: %v", err)

@@ -616,22 +616,84 @@ const docTemplate = `{
                 }
             }
         },
-        "/swagger": {
-            "get": {
-                "description": "Description",
+        "/api/admin/admins/{id}/unbind-google-auth": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "管理员可以解绑其他管理员的谷歌验证码，需要当前管理员已绑定谷歌验证码并输入验证码确认",
                 "consumes": [
                     "application/json"
                 ],
-                "tags": [
-                    "example"
+                "produces": [
+                    "application/json"
                 ],
-                "summary": "Summary",
+                "tags": [
+                    "管理员管理"
+                ],
+                "summary": "解绑管理员的谷歌验证码",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "要解绑的管理员ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "当前管理员的谷歌验证码",
+                        "name": "code",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "解绑成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "description": "参数错误或验证码错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "无权限或当前管理员未绑定谷歌验证码",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "管理员不存在",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -679,6 +741,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2024-12-31 23:59:59"
                 },
+                "is_2fa_bound": {
+                    "description": "是否绑定2FA：1-已绑定，0-未绑定",
+                    "type": "string",
+                    "example": "1"
+                },
                 "order_by": {
                     "description": "排序",
                     "type": "string",
@@ -722,7 +789,7 @@ const docTemplate = `{
                 "department": {
                     "description": "部门信息",
                     "type": "object",
-                    "additionalProperties": true
+                    "additionalProperties": {}
                 },
                 "department_id": {
                     "description": "部门ID",
@@ -739,6 +806,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1
                 },
+                "is_2fa_bound": {
+                    "description": "是否绑定2FA",
+                    "type": "boolean",
+                    "example": true
+                },
                 "nickname": {
                     "description": "昵称",
                     "type": "string",
@@ -754,7 +826,7 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "additionalProperties": true
+                        "additionalProperties": {}
                     }
                 },
                 "status": {

@@ -14,10 +14,10 @@ Welcome to star, PR and issues！
 
 This project includes a complete admin management system built with Goravel framework.
 
-Demo
-https://admin.xuancheng888.top
-account:demo  
-password:demo123
+> Demo https://admin.xuancheng888.top 
+
+username: demo  
+password: demo123
 
 ### Screenshots
 
@@ -46,7 +46,7 @@ password:demo123
   - Multi-token management
   - Online user monitoring and kick-out
 
-- **User Management**
+- **Admin Management**
   - Admin user management
   - Department management
   - Role management
@@ -172,7 +172,7 @@ For detailed API documentation, see [routes/admin.go](./routes/admin.go)
 - Automatic operation logging
 - Sensitive data filtering in logs
 - Rate limiting on login endpoints
-- Blacklist management for IP/User blocking
+- Blacklist management for IP/Admin blocking
 - Token revocation support
 
 ## Getting Started
@@ -183,77 +183,10 @@ For detailed API documentation, see [routes/admin.go](./routes/admin.go)
 
 [About air]: https://www.goravel.dev/getting-started/installation.html#live-reload
 
-### DB
 
-[app/http/controllers/db_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/db_controller.go)
-
-### Websocket
-
-[app/http/controllers/websocket_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/websocket_controller.go)
-
-### Validation
-
-[app/http/controllers/validation_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/validation_controller.go)
-
-### Auth
-
-[app/http/controllers/auth_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/auth_controller.go)
-
-### Unit Test (Testing With Mock)
-
-[app/http/controllers/validation_controller_test.go](https://github.com/goravel/example/blob/master/app/http/controllers/validation_controller_test.go)
-
-### Integration Test (Testing With Configuration)
-
-[tests/controllers/validation_controller_test.go](https://github.com/goravel/example/blob/master/tests/controllers/validation_controller_test.go)
-
-### GRPC
-
-[app/grpc/controllers/user_controller.go](https://github.com/goravel/example/blob/master/app/grpc/controllers/user_controller.go)
-
-### Swagger(For gin HTTP driver)
-
-[app/http/controllers/swagger_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/swagger_controller.go)
-
-### Integration of single page application into the framework
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L26)
-
-### View nesting
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L33)
-
-### Session
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L42)
-
-### Cookie
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L58)
-
-### Localization
-
-[routes/api.go](https://github.com/goravel/example/blob/master/routes/api.go#L37)
-
-### GraphQL
+### Cloudflare Workers Deployment
 
 ```bash
-# download and install gqlgen locally, only need to run it once
-go get -d github.com/99designs/gqlgen
-# regenerate code
-go run github.com/99designs/gqlgen generate
-```
-
-### Other
-```
-swag init
-go run .
-http://localhost:3000/swagger/
-```
-
-
-cloudflare workers
-```
 # 构建命令
 npm install && npm run build
 # 部署命令 (使用 worker.js 处理 SPA 路由)
@@ -266,8 +199,9 @@ html
 # 注意: worker.js 会自动处理 SPA 路由，当文件不存在时返回 index.html
 ```
 
-pprof
-http://localhost:3000/debug/pprof/
+### Performance Profiling
+
+pprof is available at: http://localhost:3000/debug/pprof/
 
 ## Documentation
 

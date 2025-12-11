@@ -14,6 +14,12 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 
 本项目包含一个基于 Goravel 框架构建的完整后台管理系统。
 
+> 演示站 https://admin.xuancheng888.top
+
+账号: demo  
+密码: demo123
+
+
 ### 截图展示
 
 <p align="center">
@@ -40,7 +46,7 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
   - 多令牌管理
   - 在线用户监控与踢出
 
-- **用户管理**
+- **管理员管理**
   - 管理员用户管理
   - 部门管理
   - 角色管理
@@ -167,7 +173,7 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 - 自动操作日志记录
 - 日志中敏感数据过滤
 - 登录接口限流
-- IP/用户黑名单管理
+- IP/管理员黑名单管理
 - 令牌撤销支持
 
 ## 快速入门
@@ -178,75 +184,9 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 
 [关于 air]：https://www.goravel.dev/getting-started/installation.html#live-reload
 
-### 数据库
-
-[app/http/controllers/db_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/db_controller.go)
-
-### WebSocket
-
-[app/http/controllers/websocket_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/websocket_controller.go)
-
-### 数据验证
-
-[app/http/controllers/validation_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/validation_controller.go)
-
-### 认证
-
-[app/http/controllers/auth_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/auth_controller.go)
-
-### 单元测试（使用 Mock 测试）
-
-[app/http/controllers/validation_controller_test.go](https://github.com/goravel/example/blob/master/app/http/controllers/validation_controller_test.go)
-
-### 集成测试（使用配置测试）
-
-[tests/controllers/validation_controller_test.go](https://github.com/goravel/example/blob/master/tests/controllers/validation_controller_test.go)
-
-### GRPC
-
-[app/grpc/controllers/user_controller.go](https://github.com/goravel/example/blob/master/app/grpc/controllers/user_controller.go)
-
-### Swagger（适用于 gin HTTP 驱动）
-
-[app/http/controllers/swagger_controller.go](https://github.com/goravel/example/blob/master/app/http/controllers/swagger_controller.go)
-
-### 将单页应用集成到框架中
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L26)
-
-### 视图嵌套
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L33)
-
-### Session
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L42)
-
-### Cookie
-
-[routes/web.go](https://github.com/goravel/example/blob/master/routes/web.go#L58)
-
-### 本地化
-
-[routes/api.go](https://github.com/goravel/example/blob/master/routes/api.go#L37)
-
-### GraphQL
+### Cloudflare Workers 部署
 
 ```bash
-# 在本地下载并安装 gqlgen，只需运行一次
-go get -d github.com/99designs/gqlgen
-# 重新生成代码
-go run github.com/99designs/gqlgen generate
-```
-
-```
-swag init
-go run .
-http://localhost:3000/swagger/
-```
-
-cloudflare pages
-```
 # 构建命令
 npm install && npm run build
 # 部署命令
@@ -254,6 +194,10 @@ npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 # 根目录
 html
 ```
+
+### 性能分析
+
+pprof 性能分析工具地址：http://localhost:3000/debug/pprof/
 
 ## 文档
 

@@ -15,25 +15,19 @@ import (
 )
 
 // # Admin用户 - 1小时后过期
-// go run . artisan token:create 1 --expires=1h --type=admin
-
-// # User用户 - 24小时后过期
-// go run . artisan token:create 1 --expires=24h --type=user
+// go run . artisan token:create 1 --expires=1h
 
 // # 7天后过期
-// go run . artisan token:create 1 --expires=7d --type=admin
-
-// # 30分钟后过期
-// go run . artisan token:create 1 --expires=30m --type=user
+// go run . artisan token:create 1 --expires=7d
 
 // # 使用简写
-// go run . artisan token:create 1 -e=1h -t=admin
+// go run . artisan token:create 1 -e=1h
 
 // # 指定token名称
-// go run . artisan token:create 1 --expires=7d --name=api-token --type=user
+// go run . artisan token:create 1 --expires=7d --name=api-token
 
 // # 创建永久token（不设置expires）
-// go run . artisan token:create 1 --type=admin
+// go run . artisan token:create 1
 
 type CreateToken struct {
 }
@@ -45,7 +39,7 @@ func (receiver *CreateToken) Signature() string {
 
 // Description The console command description.
 func (receiver *CreateToken) Description() string {
-	return "为指定用户创建token（永久或指定过期时间），支持admin和user类型"
+	return "为指定管理员创建token（永久或指定过期时间）"
 }
 
 // Extend The console command extend.
@@ -64,12 +58,6 @@ func (receiver *CreateToken) Extend() command.Extend {
 				Value:   "console-token",
 				Usage:   "token名称",
 			},
-			&command.StringFlag{
-				Name:    "type",
-				Aliases: []string{"t"},
-				Value:   "admin",
-				Usage:   "用户类型：admin（管理员）或user（普通用户），默认为admin",
-			},
 		},
 	}
 }
@@ -82,15 +70,8 @@ func (receiver *CreateToken) Handle(ctx console.Context) error {
 		return errors.New("请提供用户ID或用户名")
 	}
 
-	// 获取用户类型
-	userType := ctx.Option("type")
-	if userType == "" {
-		userType = "admin"
-	}
-	userType = strings.ToLower(userType)
-	if userType != "admin" && userType != "user" {
-		return errors.New("用户类型必须是 admin 或 user")
-	}
+	// 用户类型固定为 admin
+	userType := "admin"
 
 	// 获取过期时间选项
 	expiresStr := ctx.Option("expires")
@@ -113,48 +94,24 @@ func (receiver *CreateToken) Handle(ctx console.Context) error {
 		tokenName = "console-token"
 	}
 
-	// 根据类型查询用户
-	var userID uint
-	var username string
+	// 查询管理员
+	var admin models.Admin
 	var err error
-
-	if userType == "admin" {
-		// 查询管理员
-		var admin models.Admin
-		// 尝试作为ID解析
-		if id, parseErr := strconv.ParseUint(userIdentifier, 10, 32); parseErr == nil {
-			// 作为ID查询
-			err = facades.Orm().Query().Where("id", uint(id)).First(&admin)
-		} else {
-			// 作为用户名查询
-			err = facades.Orm().Query().Where("username", userIdentifier).First(&admin)
-		}
-
-		if err != nil {
-			return errors.New("管理员不存在")
-		}
-
-		userID = admin.ID
-		username = admin.Username
+	// 尝试作为ID解析
+	if id, parseErr := strconv.ParseUint(userIdentifier, 10, 32); parseErr == nil {
+		// 作为ID查询
+		err = facades.Orm().Query().Where("id", uint(id)).First(&admin)
 	} else {
-		// 查询普通用户
-		var user models.User
-		// 尝试作为ID解析
-		if id, parseErr := strconv.ParseUint(userIdentifier, 10, 32); parseErr == nil {
-			// 作为ID查询
-			err = facades.Orm().Query().Where("id", uint(id)).First(&user)
-		} else {
-			// 作为用户名查询
-			err = facades.Orm().Query().Where("username", userIdentifier).First(&user)
-		}
-
-		if err != nil {
-			return errors.New("用户不存在")
-		}
-
-		userID = user.ID
-		username = user.Username
+		// 作为用户名查询
+		err = facades.Orm().Query().Where("username", userIdentifier).First(&admin)
 	}
+
+	if err != nil {
+		return errors.New("管理员不存在")
+	}
+
+	userID := admin.ID
+	username := admin.Username
 
 	// 创建token
 	tokenService := services.NewTokenServiceImpl()

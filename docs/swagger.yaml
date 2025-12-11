@@ -29,6 +29,10 @@ definitions:
         description: 结束时间
         example: "2024-12-31 23:59:59"
         type: string
+      is_2fa_bound:
+        description: 是否绑定2FA：1-已绑定，0-未绑定
+        example: "1"
+        type: string
       order_by:
         description: 排序
         example: created_at:desc
@@ -61,7 +65,7 @@ definitions:
         example: "2024-01-01 00:00:00"
         type: string
       department:
-        additionalProperties: true
+        additionalProperties: {}
         description: 部门信息
         type: object
       department_id:
@@ -76,6 +80,10 @@ definitions:
         description: 管理员ID
         example: 1
         type: integer
+      is_2fa_bound:
+        description: 是否绑定2FA
+        example: true
+        type: boolean
       nickname:
         description: 昵称
         example: 管理员
@@ -87,7 +95,7 @@ definitions:
       roles:
         description: 角色列表
         items:
-          additionalProperties: true
+          additionalProperties: {}
           type: object
         type: array
       status:
@@ -500,6 +508,61 @@ paths:
       summary: 更新管理员信息
       tags:
       - 管理员管理
+  /api/admin/admins/{id}/unbind-google-auth:
+    post:
+      consumes:
+      - application/json
+      description: 管理员可以解绑其他管理员的谷歌验证码，需要当前管理员已绑定谷歌验证码并输入验证码确认
+      parameters:
+      - description: 要解绑的管理员ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 当前管理员的谷歌验证码
+        in: body
+        name: code
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 解绑成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误或验证码错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限或当前管理员未绑定谷歌验证码
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 管理员不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 解绑管理员的谷歌验证码
+      tags:
+      - 管理员管理
   /api/admin/admins/export:
     post:
       consumes:
@@ -544,19 +607,6 @@ paths:
       summary: 导出管理员列表
       tags:
       - 管理员管理
-  /swagger:
-    get:
-      consumes:
-      - application/json
-      description: Description
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-      summary: Summary
-      tags:
-      - example
 securityDefinitions:
   BearerAuth:
     description: JWT 认证，格式：Bearer {token}
