@@ -190,7 +190,7 @@ func convertTimesInValue(v reflect.Value, timezone string) any {
 			return nil
 		}
 		result := make([]any, v.Len())
-		for i := 0; i < v.Len(); i++ {
+		for i := range result {
 			result[i] = convertTimesInValue(v.Index(i), timezone)
 		}
 		return result
@@ -199,7 +199,7 @@ func convertTimesInValue(v reflect.Value, timezone string) any {
 	// 处理数组
 	if v.Kind() == reflect.Array {
 		result := make([]any, v.Len())
-		for i := 0; i < v.Len(); i++ {
+		for i := range result {
 			result[i] = convertTimesInValue(v.Index(i), timezone)
 		}
 		return result
@@ -225,7 +225,7 @@ func convertTimesInValue(v reflect.Value, timezone string) any {
 	if v.Kind() == reflect.Struct {
 		result := make(map[string]any)
 		t := v.Type()
-		for i := 0; i < v.NumField(); i++ {
+		for i := range make([]int, v.NumField()) {
 			field := t.Field(i)
 			fieldValue := v.Field(i)
 

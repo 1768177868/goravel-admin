@@ -174,10 +174,8 @@ func Admin() {
 		router.Post("attachments/upload", attachmentController.Upload)
 		// 统一的分片上传接口（POST，action参数：init/upload/merge）
 		router.Post("attachments/chunk", attachmentController.ChunkUpload)
-		// 原路由：获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
+		// 获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
 		router.Get("attachments/chunk", attachmentController.ChunkUpload)
-		// SSE 路由：实时推送上传进度（适合上传过程中的实时进度显示）
-		router.Get("attachments/upload/progress", attachmentController.StreamUploadProgress)
 		router.Get("attachments/{id}/preview", attachmentController.Preview)
 		router.Get("attachments/{id}/download", attachmentController.Download)
 		router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)

@@ -221,7 +221,7 @@ func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response
 	}
 
 	// 排序
-	for i := 0; i < len(result)-1; i++ {
+	for i := range result[:len(result)-1] {
 		for j := i + 1; j < len(result); j++ {
 			if result[i] > result[j] {
 				result[i], result[j] = result[j], result[i]

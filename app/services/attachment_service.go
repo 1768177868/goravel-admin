@@ -104,7 +104,8 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	storage := facades.Storage().Disk(s.disk)
 
 	// 检查所有分片文件是否存在
-	for i := 0; i < totalChunks; i++ {
+	indices := make([]int, totalChunks)
+	for i := range indices {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if !storage.Exists(chunkPath) {
 			return nil, fmt.Errorf("分片 %d 不存在", i)
@@ -129,7 +130,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	// 合并分片（必须按顺序读取所有分片）
 	var mergedData []byte
 	var missingChunks []int // 记录缺失的分片索引
-	for i := 0; i < totalChunks; i++ {
+	for i := range make([]int, totalChunks) {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if !storage.Exists(chunkPath) {
 			missingChunks = append(missingChunks, i)
@@ -198,7 +199,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	// 清理所有分片文件（包括可能缺失的）
 	cleanupSuccess := true
 	cleanupCount := 0
-	for i := 0; i < totalChunks; i++ {
+	for i := range make([]int, totalChunks) {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if storage.Exists(chunkPath) {
 			if err := storage.Delete(chunkPath); err != nil {
@@ -238,7 +239,8 @@ func (s *AttachmentServiceImpl) GetChunkProgress(chunkID string, totalChunks int
 	}
 
 	// 检查每个分片文件是否存在
-	for i := 0; i < totalChunks; i++ {
+	indices := make([]int, totalChunks)
+	for i := range indices {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if storage.Exists(chunkPath) {
 			uploadedCount++

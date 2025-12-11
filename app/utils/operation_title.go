@@ -251,7 +251,7 @@ func matchPermissionPath(pattern, path string) bool {
 
 // containsChar 检查字符串是否包含指定字符
 func containsChar(s string, c byte) bool {
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		if s[i] == c {
 			return true
 		}
@@ -264,7 +264,7 @@ func splitPatternString(pattern string) []string {
 	var parts []string
 	var current strings.Builder
 
-	for i := 0; i < len(pattern); i++ {
+	for i := range pattern {
 		if pattern[i] == '*' {
 			if current.Len() > 0 {
 				parts = append(parts, current.String())

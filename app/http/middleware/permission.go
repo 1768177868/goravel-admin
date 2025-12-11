@@ -189,14 +189,14 @@ func matchPath(pattern, path string) bool {
 
 	// 检查中间部分是否存在（通配符匹配任意内容）
 	// 路径应该是：firstPart + 任意内容 + lastPart
-	remainingPath := path[len(firstPart):len(path)-len(lastPart)]
+	remainingPath := path[len(firstPart) : len(path)-len(lastPart)]
 	// 确保中间部分不为空（至少有一个字符，通常是数字ID）
 	return len(remainingPath) > 0
 }
 
 // contains 检查字符串是否包含指定字符
 func contains(s string, c byte) bool {
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		if s[i] == c {
 			return true
 		}
@@ -208,8 +208,8 @@ func contains(s string, c byte) bool {
 func splitPattern(pattern string) []string {
 	var parts []string
 	var current strings.Builder
-	
-	for i := 0; i < len(pattern); i++ {
+
+	for i := range pattern {
 		if pattern[i] == '*' {
 			if current.Len() > 0 {
 				parts = append(parts, current.String())
@@ -220,10 +220,10 @@ func splitPattern(pattern string) []string {
 			current.WriteByte(pattern[i])
 		}
 	}
-	
+
 	if current.Len() > 0 {
 		parts = append(parts, current.String())
 	}
-	
+
 	return parts
 }
