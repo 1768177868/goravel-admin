@@ -13,7 +13,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/utils"
-	"goravel/app/utils/errorlog"
 )
 
 type BlacklistController struct {
@@ -136,20 +135,16 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("blacklists").Create(blacklistData); err != nil {
-		errorlog.RecordHTTP(ctx, "blacklist", "Failed to create blacklist", map[string]any{
-			"error": err.Error(),
-			"ip":    blacklistCreate.IP,
-		}, "Create blacklist error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
+			"ip": blacklistCreate.IP,
+		})
 	}
 
 	var blacklist models.Blacklist
 	if err := facades.Orm().Query().Where("ip", blacklistCreate.IP).First(&blacklist); err != nil {
-		errorlog.RecordHTTP(ctx, "blacklist", "Failed to query created blacklist", map[string]any{
-			"error": err.Error(),
-			"ip":    blacklistCreate.IP,
-		}, "Query created blacklist error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
+			"ip": blacklistCreate.IP,
+		})
 	}
 
 	return response.Success(ctx, "create_success", http.Json{
@@ -206,11 +201,9 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(blacklist); err != nil {
-		errorlog.RecordHTTP(ctx, "blacklist", "Failed to update blacklist", map[string]any{
-			"error":        err.Error(),
+		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"blacklist_id": blacklist.ID,
-		}, "Update blacklist error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
@@ -227,11 +220,9 @@ func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(blacklist); err != nil {
-		errorlog.RecordHTTP(ctx, "blacklist", "Failed to delete blacklist", map[string]any{
-			"error":        err.Error(),
+		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"blacklist_id": blacklist.ID,
-		}, "Delete blacklist error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")

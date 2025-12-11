@@ -14,7 +14,6 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/errorlog"
 )
 
 type AuthController struct {
@@ -65,11 +64,9 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	// 检查是否绑定了谷歌验证码
 	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to check google authenticator binding", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Check google authenticator binding error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "login_failed")
+		})
 	}
 
 	// 如果绑定了谷歌验证码，验证谷歌验证码
@@ -82,11 +79,9 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		// 获取管理员的密钥
 		secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
 		if err != nil {
-			errorlog.RecordHTTP(ctx, "auth", "Failed to get google secret", map[string]any{
-				"error":    err.Error(),
+			return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 				"admin_id": admin.ID,
-			}, "Get google secret error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "login_failed")
+			})
 		}
 
 		// 验证谷歌验证码
@@ -126,11 +121,9 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	tokenService := services.NewTokenServiceImpl()
 	plainToken, _, err := tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to create token", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Create token error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "login_failed")
+		})
 	}
 	token := plainToken
 
@@ -161,10 +154,7 @@ func (r *AuthController) Captcha(ctx http.Context) http.Response {
 	if enabled {
 		captchaID, image, err := r.captchaService.Generate()
 		if err != nil {
-			errorlog.RecordHTTP(ctx, "captcha", "Generate captcha error", map[string]any{
-				"error": err.Error(),
-			}, "Generate captcha error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
+			return response.ErrorWithLog(ctx, "captcha", err)
 		}
 		captchaData["captcha_id"] = captchaID
 		captchaData["captcha_image"] = image
@@ -242,10 +232,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 
 	// 重新查询admin以确保获取最新数据
 	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to query admin in UpdateProfile", map[string]any{
-			"error":    err.Error(),
-			"admin_id": admin.ID,
-		}, "Query admin error: %v", err)
+		// 查询失败是业务级错误（404），不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
@@ -268,21 +255,17 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(&admin); err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to save admin profile", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Save admin profile error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	// 重新加载关联数据（确保部门和角色被正确加载）
 	var adminWithRelations models.Admin
 	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to load admin relations in UpdateProfile", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Load admin relations error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 	admin = adminWithRelations
 
@@ -396,11 +379,9 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	tokenService := services.NewTokenServiceImpl()
 	tokens, err := tokenService.GetTokensByUser("admin", admin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to get tokens by user", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Get tokens by user error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	// 获取当前使用的token
@@ -472,12 +453,10 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 	// 删除token（直接通过ID删除，因为数据库中存储的是hash值，无法获取原始token）
 	_, err = facades.Orm().Query().Delete(&token)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to delete token", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"token_id": token.ID,
 			"admin_id": admin.ID,
-		}, "Delete token error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "revoke_success")
@@ -499,11 +478,9 @@ func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
 	// 删除用户的所有token
 	tokenService := services.NewTokenServiceImpl()
 	if err := tokenService.DeleteTokensByUser("admin", admin.ID); err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to delete all tokens by user", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Delete all tokens by user error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "revoke_all_success")
@@ -546,12 +523,10 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	// 删除用户的所有token
 	tokenService := services.NewTokenServiceImpl()
 	if err := tokenService.DeleteTokensByUser("admin", targetAdmin.ID); err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to kick out user tokens", map[string]any{
-			"error":          err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"target_user_id": targetAdmin.ID,
 			"operator_id":    admin.ID,
-		}, "Kick out user tokens error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "kick_out_success")
@@ -577,11 +552,9 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	// 检查是否已经绑定
 	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to check google authenticator binding", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Check google authenticator binding error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	if isBound {
@@ -595,21 +568,17 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	}
 	secret, qrCodeURL, err := r.googleAuthenticatorService.GenerateSecret(accountName)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to generate google authenticator secret", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Generate google authenticator secret error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
+		})
 	}
 
 	// 生成二维码图片
 	qrCodeImage, err := r.googleAuthenticatorService.GenerateQRCodeImage(accountName, secret)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to generate QR code image", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Generate QR code image error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "generate_failed")
+		})
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
@@ -648,11 +617,9 @@ func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response
 		if err.Error() == "invalid_code" {
 			return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
 		}
-		errorlog.RecordHTTP(ctx, "auth", "Failed to bind google authenticator", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Bind google authenticator error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "bind_failed")
+		})
 	}
 
 	return response.Success(ctx, "bind_success")
@@ -684,11 +651,9 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	// 获取管理员的密钥
 	secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to get google secret", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Get google secret error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	if secret == "" {
@@ -702,11 +667,9 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 
 	// 解绑谷歌验证码
 	if err := r.googleAuthenticatorService.Unbind(admin.ID); err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to unbind google authenticator", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Unbind google authenticator error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "unbind_failed")
+		})
 	}
 
 	return response.Success(ctx, "unbind_success")
@@ -732,11 +695,9 @@ func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Res
 	// 检查是否绑定
 	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "auth", "Failed to check google authenticator binding", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Check google authenticator binding error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	return response.Success(ctx, "get_success", http.Json{

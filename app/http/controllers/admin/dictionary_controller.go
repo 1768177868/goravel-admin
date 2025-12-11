@@ -10,7 +10,6 @@ import (
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
-	"goravel/app/utils/errorlog"
 )
 
 type DictionaryController struct {
@@ -119,22 +118,18 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("dictionaries").Create(dictionaryData); err != nil {
-		errorlog.RecordHTTP(ctx, "dictionary", "Failed to create dictionary", map[string]any{
-			"error": err.Error(),
+		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"type":  dictionaryCreate.Type,
 			"label": dictionaryCreate.Label,
-		}, "Create dictionary error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		})
 	}
 
 	var dictionary models.Dictionary
 	if err := facades.Orm().Query().Where("type", dictionaryCreate.Type).Where("value", dictionaryCreate.Value).First(&dictionary); err != nil {
-		errorlog.RecordHTTP(ctx, "dictionary", "Failed to query created dictionary", map[string]any{
-			"error": err.Error(),
+		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"type":  dictionaryCreate.Type,
 			"value": dictionaryCreate.Value,
-		}, "Query created dictionary error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		})
 	}
 
 	return response.Success(ctx, "create_success", http.Json{
@@ -185,11 +180,9 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(dictionary); err != nil {
-		errorlog.RecordHTTP(ctx, "dictionary", "Failed to update dictionary", map[string]any{
-			"error":         err.Error(),
+		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"dictionary_id": dictionary.ID,
-		}, "Update dictionary error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
@@ -206,11 +199,9 @@ func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(dictionary); err != nil {
-		errorlog.RecordHTTP(ctx, "dictionary", "Failed to delete dictionary", map[string]any{
-			"error":         err.Error(),
+		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"dictionary_id": dictionary.ID,
-		}, "Delete dictionary error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")

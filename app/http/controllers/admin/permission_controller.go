@@ -10,7 +10,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/errorlog"
 )
 
 type PermissionController struct {
@@ -167,21 +166,17 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("permissions").Create(permissionData); err != nil {
-		errorlog.RecordHTTP(ctx, "permission", "Failed to create permission", map[string]any{
-			"error": err.Error(),
-			"name":  name,
-			"slug":  slug,
-		}, "Create permission error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
+			"name": name,
+			"slug": slug,
+		})
 	}
 
 	var permission models.Permission
 	if err := facades.Orm().Query().Where("slug", slug).First(&permission); err != nil {
-		errorlog.RecordHTTP(ctx, "permission", "Failed to query created permission", map[string]any{
-			"error": err.Error(),
-			"slug":  slug,
-		}, "Query created permission error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
+			"slug": slug,
+		})
 	}
 
 	return response.Success(ctx, "create_success", http.Json{
@@ -245,11 +240,9 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(permission); err != nil {
-		errorlog.RecordHTTP(ctx, "permission", "Failed to update permission", map[string]any{
-			"error":         err.Error(),
+		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
-		}, "Update permission error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
@@ -266,11 +259,9 @@ func (r *PermissionController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(permission); err != nil {
-		errorlog.RecordHTTP(ctx, "permission", "Failed to delete permission", map[string]any{
-			"error":         err.Error(),
+		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
-		}, "Delete permission error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")

@@ -12,7 +12,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/errorlog"
 )
 
 type RoleController struct {
@@ -145,33 +144,27 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("roles").Create(roleData); err != nil {
-		errorlog.RecordHTTP(ctx, "role", "Failed to create role", map[string]any{
-			"error": err.Error(),
-			"name":  roleCreate.Name,
-			"slug":  roleCreate.Slug,
-		}, "Create role error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "role", err, map[string]any{
+			"name": roleCreate.Name,
+			"slug": roleCreate.Slug,
+		})
 	}
 
 	var role models.Role
 	if err := facades.Orm().Query().Where("slug", roleCreate.Slug).First(&role); err != nil {
-		errorlog.RecordHTTP(ctx, "role", "Failed to query created role", map[string]any{
-			"error": err.Error(),
-			"slug":  roleCreate.Slug,
-		}, "Query created role error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "role", err, map[string]any{
+			"slug": roleCreate.Slug,
+		})
 	}
 
 	// 处理权限关联
 	permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
 	if len(permissionIDs) > 0 {
 		if err := r.roleService.SyncPermissions(&role, permissionIDs); err != nil {
-			errorlog.RecordHTTP(ctx, "role", "Failed to sync role permissions", map[string]any{
-				"error":          err.Error(),
+			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":        role.ID,
 				"permission_ids": permissionIDs,
-			}, "Sync role permissions error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+			})
 		}
 	}
 
@@ -179,12 +172,10 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
 	if len(menuIDs) > 0 {
 		if err := r.roleService.SyncMenus(&role, menuIDs); err != nil {
-			errorlog.RecordHTTP(ctx, "role", "Failed to sync role menus", map[string]any{
-				"error":    err.Error(),
+			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":  role.ID,
 				"menu_ids": menuIDs,
-			}, "Sync role menus error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+			})
 		}
 	}
 
@@ -293,11 +284,9 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(role); err != nil {
-		errorlog.RecordHTTP(ctx, "role", "Failed to update role", map[string]any{
-			"error":   err.Error(),
+		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
-		}, "Update role error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	// super-admin 角色拥有所有权限，不需要设置菜单和权限
@@ -305,12 +294,10 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	if !isProtected && ctx.Request().Input("permission_ids") != "" {
 		permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
 		if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
-			errorlog.RecordHTTP(ctx, "role", "Failed to sync role permissions in update", map[string]any{
-				"error":          err.Error(),
+			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":        role.ID,
 				"permission_ids": permissionIDs,
-			}, "Sync role permissions in update error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			})
 		}
 	}
 
@@ -318,12 +305,10 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	if !isProtected && ctx.Request().Input("menu_ids") != "" {
 		menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
 		if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
-			errorlog.RecordHTTP(ctx, "role", "Failed to sync role menus in update", map[string]any{
-				"error":    err.Error(),
+			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":  role.ID,
 				"menu_ids": menuIDs,
-			}, "Sync role menus in update error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			})
 		}
 	}
 
@@ -346,11 +331,9 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(role); err != nil {
-		errorlog.RecordHTTP(ctx, "role", "Failed to delete role", map[string]any{
-			"error":   err.Error(),
+		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
-		}, "Delete role error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")

@@ -35,10 +35,7 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 
 	total, err := query.Count()
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to count exports", map[string]any{
-			"error": err.Error(),
-		}, "Count exports error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "export", err)
 	}
 
 	orderBy := ctx.Request().Query("order_by", "id:desc")
@@ -48,10 +45,7 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 
 	var exports []models.Export
 	if err := query.With("Admin").Offset(offset).Limit(pageSize).Get(&exports); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to query exports", map[string]any{
-			"error": err.Error(),
-		}, "Query exports error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "export", err)
 	}
 
 	// 为每个导出记录生成可访问的 file_url
@@ -131,6 +125,7 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 	if export.Path != "" && export.Disk != "" {
 		storage := facades.Storage().Disk(export.Disk)
 		if err := storage.Delete(export.Path); err != nil {
+			// 删除源文件失败只记录日志，不影响主流程
 			errorlog.RecordHTTP(ctx, "export", "Failed to delete export source file", map[string]any{
 				"error": err.Error(),
 				"disk":  export.Disk,
@@ -140,11 +135,9 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&export); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to delete export record", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "export", err, map[string]any{
 			"exportId": export.ID,
-		}, "Delete export record error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")
@@ -159,7 +152,6 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 
 	var export models.Export
 	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
-		// 资源不存在是正常的业务情况，不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 
@@ -173,12 +165,10 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 	// 读取文件内容
 	content, err := storage.Get(export.Path)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to read export file", map[string]any{
-			"error": err.Error(),
-			"disk":  export.Disk,
-			"path":  export.Path,
-		}, "Read export file error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "file_read_failed")
+		return response.ErrorWithLog(ctx, "export", err, map[string]any{
+			"disk": export.Disk,
+			"path": export.Path,
+		})
 	}
 
 	// 设置响应头
@@ -217,9 +207,7 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to bind batch delete request", map[string]any{
-			"error": err.Error(),
-		}, "Bind batch delete request error: %v", err)
+		// 参数绑定错误是业务级错误（400），不需要记录日志
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
 	}
 
@@ -233,11 +221,9 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 	// 查询要删除的导出记录
 	var exports []models.Export
 	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&exports); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to query exports for batch delete", map[string]any{
-			"error": err.Error(),
-			"ids":   ids,
-		}, "Query exports for batch delete error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "export", err, map[string]any{
+			"ids": ids,
+		})
 	}
 
 	// 尝试删除源文件（忽略失败，仅记录日志）
@@ -256,11 +242,9 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 批量删除数据库记录
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
-		errorlog.RecordHTTP(ctx, "export", "Failed to batch delete export records", map[string]any{
-			"error": err.Error(),
-			"ids":   ids,
-		}, "Batch delete export records error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		return response.ErrorWithLog(ctx, "export", err, map[string]any{
+			"ids": ids,
+		})
 	}
 
 	return response.Success(ctx, "delete_success")

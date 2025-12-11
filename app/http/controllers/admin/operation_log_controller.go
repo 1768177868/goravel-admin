@@ -12,7 +12,6 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
-	"goravel/app/utils/errorlog"
 )
 
 type OperationLogController struct {
@@ -59,10 +58,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	// 获取总数
 	total, err := query.Count()
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Failed to count operation logs", map[string]any{
-			"error": err.Error(),
-		}, "Count operation logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "operation-log", err)
 	}
 
 	// 应用排序和分页
@@ -72,10 +68,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 
 	var logs []models.OperationLog
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Failed to query operation logs", map[string]any{
-			"error": err.Error(),
-		}, "Query operation logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "operation-log", err)
 	}
 
 	return response.Paginate(ctx, "get_success", logs, total, page, pageSize)
@@ -160,11 +153,9 @@ func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(log); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Failed to delete operation log", map[string]any{
-			"error":  err.Error(),
+		return response.ErrorWithLog(ctx, "operation-log", err, map[string]any{
 			"log_id": log.ID,
-		}, "Delete operation log error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")
@@ -180,9 +171,7 @@ func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Failed to bind batch delete request", map[string]any{
-			"error": err.Error(),
-		}, "Bind batch delete request error: %v", err)
+		// 参数绑定错误是业务级错误（400），不需要记录日志
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
 	}
 
@@ -196,11 +185,9 @@ func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.OperationLog{}); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Failed to batch delete operation logs", map[string]any{
-			"error": err.Error(),
-			"ids":   ids,
-		}, "Batch delete operation logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		return response.ErrorWithLog(ctx, "operation-log", err, map[string]any{
+			"ids": ids,
+		})
 	}
 
 	return response.Success(ctx, "delete_success")
@@ -216,11 +203,9 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 
 	cutoffTime := time.Now().AddDate(0, 0, -days)
 	if _, err := facades.Orm().Query().Model(&models.OperationLog{}).Where("created_at < ?", cutoffTime).Delete(&models.OperationLog{}); err != nil {
-		errorlog.RecordHTTP(ctx, "operation-log", "Failed to clean operation logs", map[string]any{
-			"error": err.Error(),
-			"days":  days,
-		}, "Clean operation logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "clean_failed")
+		return response.ErrorWithLog(ctx, "operation-log", err, map[string]any{
+			"days": days,
+		})
 	}
 
 	return response.Success(ctx, "clean_success")

@@ -10,7 +10,6 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
-	"goravel/app/utils/errorlog"
 )
 
 type LoginLogController struct {
@@ -81,20 +80,14 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 
 	total, err := query.Count()
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Failed to count login logs", map[string]any{
-			"error": err.Error(),
-		}, "Count login logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "login-log", err)
 	}
 
 	var logs []models.LoginLog
 	offset := (page - 1) * pageSize
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Failed to query login logs", map[string]any{
-			"error": err.Error(),
-		}, "Query login logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "login-log", err)
 	}
 
 	return response.Paginate(ctx, "get_success", logs, total, page, pageSize)
@@ -122,11 +115,9 @@ func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(log); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Failed to delete login log", map[string]any{
-			"error":  err.Error(),
+		return response.ErrorWithLog(ctx, "login-log", err, map[string]any{
 			"log_id": log.ID,
-		}, "Delete login log error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")
@@ -155,11 +146,9 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.LoginLog{}); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Failed to batch delete login logs", map[string]any{
-			"error": err.Error(),
-			"ids":   ids,
-		}, "Batch delete login logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		return response.ErrorWithLog(ctx, "login-log", err, map[string]any{
+			"ids": ids,
+		})
 	}
 
 	return response.Success(ctx, "delete_success")
@@ -175,11 +164,9 @@ func (r *LoginLogController) Clean(ctx http.Context) http.Response {
 
 	cutoffTime := time.Now().AddDate(0, 0, -days)
 	if _, err := facades.Orm().Query().Model(&models.LoginLog{}).Where("created_at < ?", cutoffTime).Delete(&models.LoginLog{}); err != nil {
-		errorlog.RecordHTTP(ctx, "login-log", "Failed to clean login logs", map[string]any{
-			"error": err.Error(),
-			"days":  days,
-		}, "Clean login logs error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "clean_failed")
+		return response.ErrorWithLog(ctx, "login-log", err, map[string]any{
+			"days": days,
+		})
 	}
 
 	return response.Success(ctx, "clean_success")

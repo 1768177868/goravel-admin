@@ -6,7 +6,15 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/services"
+	"goravel/app/utils/errorlog"
 	"goravel/app/utils/traceid"
+)
+
+// 错误日志信息的 context key
+const (
+	errorLogModuleKey     = "error_log_module"
+	errorLogMessageKey    = "error_log_message"
+	errorLogAttributesKey = "error_log_attributes"
 )
 
 // Success 成功响应（支持多语言，自动包含 trace_id）
@@ -62,6 +70,7 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 }
 
 // Error 错误响应（支持多语言，自动包含 trace_id 和 error_code）
+// 当 code >= 500 时，如果 context 中包含错误日志信息，会自动记录日志
 func Error(ctx http.Context, code int, messageKey string) http.Response {
 	message := trans.Get(ctx, messageKey)
 
@@ -76,7 +85,202 @@ func Error(ctx http.Context, code int, messageKey string) http.Response {
 		response["trace_id"] = traceID
 	}
 
+	// 系统级错误（500+）自动记录日志（如果 context 中有日志信息）
+	if code >= 500 {
+		if module, ok := ctx.Value(errorLogModuleKey).(string); ok && module != "" {
+			logMessage := ctx.Value(errorLogMessageKey)
+			if logMsg, ok := logMessage.(string); ok && logMsg != "" {
+				attributes := ctx.Value(errorLogAttributesKey)
+				var attrs map[string]any
+				if attributes != nil {
+					if attrsMap, ok := attributes.(map[string]any); ok {
+						attrs = attrsMap
+					}
+				}
+				errorlog.RecordHTTP(ctx, module, logMsg, attrs, "%s: %s", module, logMsg)
+			}
+		}
+	}
+
 	return ctx.Response().Json(code, response)
+}
+
+// SetErrorLog 设置错误日志信息到 context（用于系统级错误）
+// 在调用 response.Error 之前调用此函数，Error 函数会自动记录日志
+func SetErrorLog(ctx http.Context, module, logMessage string, attributes map[string]any) {
+	ctx.WithValue(errorLogModuleKey, module)
+	ctx.WithValue(errorLogMessageKey, logMessage)
+	if attributes != nil {
+		ctx.WithValue(errorLogAttributesKey, attributes)
+	}
+}
+
+// ErrorWithLog 错误响应并自动记录日志（用于系统级错误）
+// 支持多种调用方式，自动推断参数：
+//
+// 最简洁方式（推荐）：
+//   - response.ErrorWithLog(ctx, "module", err)
+//   - response.ErrorWithLog(ctx, "module", err, map[string]any{"extra": "value"})
+//
+// 完整方式：
+//   - response.ErrorWithLog(ctx, code, messageKey, module, logMessage, err)
+//   - response.ErrorWithLog(ctx, code, messageKey, module, logMessage, err, map[string]any{...})
+func ErrorWithLog(ctx http.Context, args ...any) http.Response {
+	// 智能识别调用方式
+	if len(args) == 0 {
+		return Error(ctx, http.StatusInternalServerError, "operation_failed")
+	}
+
+	// 方式1：最简洁方式 - ErrorWithLog(ctx, "module", err) 或 ErrorWithLog(ctx, "module", err, attrs)
+	if len(args) >= 2 {
+		if module, ok := args[0].(string); ok {
+			var err error
+			var attributes map[string]any
+
+			// 查找 error 和 attributes
+			for i := 1; i < len(args); i++ {
+				switch v := args[i].(type) {
+				case error:
+					if err == nil {
+						err = v
+					}
+				case map[string]any:
+					if attributes == nil {
+						attributes = v
+					}
+				}
+			}
+
+			if err == nil {
+				return Error(ctx, http.StatusInternalServerError, "operation_failed")
+			}
+
+			// 自动生成日志消息
+			logMessage := err.Error()
+			if len(logMessage) > 100 {
+				logMessage = logMessage[:100] + "..."
+			}
+
+			// 设置属性
+			if attributes == nil {
+				attributes = make(map[string]any)
+			}
+			if _, exists := attributes["error"]; !exists {
+				attributes["error"] = err.Error()
+			}
+
+			// 自动记录日志
+			SetErrorLog(ctx, module, logMessage, attributes)
+			return Error(ctx, http.StatusInternalServerError, "operation_failed")
+		}
+	}
+
+	// 方式2：完整方式 - ErrorWithLog(ctx, code, messageKey, module, logMessage, ...)
+	if len(args) >= 4 {
+		code, codeOk := args[0].(int)
+		messageKey, msgOk := args[1].(string)
+		module, modOk := args[2].(string)
+		logMessage, logOk := args[3].(string)
+
+		if codeOk && msgOk && modOk && logOk {
+			var attributes map[string]any
+			var err error
+
+			// 解析剩余参数
+			for i := 4; i < len(args); i++ {
+				switch v := args[i].(type) {
+				case error:
+					if err == nil {
+						err = v
+					}
+				case map[string]any:
+					if attributes == nil {
+						attributes = v
+					}
+				}
+			}
+
+			// 设置属性
+			if attributes == nil {
+				attributes = make(map[string]any)
+			}
+			if err != nil {
+				if _, exists := attributes["error"]; !exists {
+					attributes["error"] = err.Error()
+				}
+			}
+
+			// 系统级错误（500+）设置日志信息，Error 函数会自动记录
+			if code >= 500 {
+				SetErrorLog(ctx, module, logMessage, attributes)
+			}
+			return Error(ctx, code, messageKey)
+		}
+	}
+
+	// 无法识别参数格式，返回通用错误
+	return Error(ctx, http.StatusInternalServerError, "operation_failed")
+}
+
+// ErrorWithLogAuto 超简洁版本：自动推断所有参数
+// 只需要传入 module 和 err，其他参数自动推断
+// 默认使用 HTTP 500 状态码和通用的错误消息
+//
+// 使用方式：
+//   - response.ErrorWithLogAuto(ctx, "operation-log", err)
+//   - response.ErrorWithLogAuto(ctx, "operation-log", err, map[string]any{"extra": "value"})
+func ErrorWithLogAuto(ctx http.Context, module string, args ...any) http.Response {
+	var err error
+	var attributes map[string]any
+
+	// 解析参数
+	for i := len(args) - 1; i >= 0; i-- {
+		switch v := args[i].(type) {
+		case error:
+			if err == nil {
+				err = v
+			}
+		case map[string]any:
+			if attributes == nil {
+				attributes = v
+			}
+		}
+	}
+
+	// 如果没有 error，返回通用错误
+	if err == nil {
+		return Error(ctx, http.StatusInternalServerError, "operation_failed")
+	}
+
+	// 如果没有提供 attributes，创建一个
+	if attributes == nil {
+		attributes = make(map[string]any)
+	}
+
+	// 自动添加 error 字段
+	if _, exists := attributes["error"]; !exists {
+		attributes["error"] = err.Error()
+	}
+
+	// 自动生成日志消息：使用 err.Error() 作为日志消息
+	logMessage := err.Error()
+	// 如果错误信息太长，截取前100个字符
+	if len(logMessage) > 100 {
+		logMessage = logMessage[:100] + "..."
+	}
+
+	// 自动推断 messageKey：根据 module 生成通用的错误消息键
+	messageKey := "operation_failed"
+	if module != "" {
+		// 尝试使用 module 相关的错误消息键
+		// 例如 "operation-log" -> "operation_failed"
+		// 或者保持通用
+		messageKey = "operation_failed"
+	}
+
+	// 系统级错误（500）自动记录日志
+	SetErrorLog(ctx, module, logMessage, attributes)
+	return Error(ctx, http.StatusInternalServerError, messageKey)
 }
 
 // ValidationError 验证错误响应（支持多语言，自动包含 trace_id 和 error_code）

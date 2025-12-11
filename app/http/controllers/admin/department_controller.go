@@ -11,7 +11,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/errorlog"
 )
 
 type DepartmentController struct {
@@ -138,20 +137,16 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("departments").Create(departmentData); err != nil {
-		errorlog.RecordHTTP(ctx, "department", "Failed to create department", map[string]any{
-			"error": err.Error(),
-			"name":  departmentCreate.Name,
-		}, "Create department error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "department", err, map[string]any{
+			"name": departmentCreate.Name,
+		})
 	}
 
 	var department models.Department
 	if err := facades.Orm().Query().Where("name", departmentCreate.Name).First(&department); err != nil {
-		errorlog.RecordHTTP(ctx, "department", "Failed to query created department", map[string]any{
-			"error": err.Error(),
-			"name":  departmentCreate.Name,
-		}, "Query created department error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.ErrorWithLog(ctx, "department", err, map[string]any{
+			"name": departmentCreate.Name,
+		})
 	}
 
 	return response.Success(ctx, "create_success", http.Json{
@@ -209,11 +204,9 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(department); err != nil {
-		errorlog.RecordHTTP(ctx, "department", "Failed to update department", map[string]any{
-			"error":         err.Error(),
+		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"department_id": department.ID,
-		}, "Update department error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	return response.Success(ctx, "update_success", http.Json{
@@ -248,11 +241,9 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(department); err != nil {
-		errorlog.RecordHTTP(ctx, "department", "Failed to delete department", map[string]any{
-			"error":         err.Error(),
+		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"department_id": department.ID,
-		}, "Delete department error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")

@@ -13,7 +13,6 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
-	"goravel/app/utils/errorlog"
 )
 
 type OnlineUserController struct {
@@ -62,10 +61,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 
 	var tokens []models.PersonalAccessToken
 	if err := query.Get(&tokens); err != nil {
-		errorlog.RecordHTTP(ctx, "online_user", "Failed to query online user list", map[string]any{
-			"error": err.Error(),
-		}, "Query online user list error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.ErrorWithLog(ctx, "online_user", err)
 	}
 
 	// 批量查询所有 admin 信息，避免 N+1 查询
@@ -92,11 +88,9 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 
 		var admins []models.Admin
 		if err := query.Find(&admins); err != nil {
-			errorlog.RecordHTTP(ctx, "online_user", "Failed to query admin list", map[string]any{
-				"error":     err.Error(),
+			return response.ErrorWithLog(ctx, "online_user", err, map[string]any{
 				"admin_ids": adminIDs,
-			}, "Query admin list error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+			})
 		}
 
 		// 构建 admin map
@@ -155,11 +149,9 @@ func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
 
 	// 删除token
 	if _, err := facades.Orm().Query().Delete(&token); err != nil {
-		errorlog.RecordHTTP(ctx, "online_user", "Failed to kick out user", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "online_user", err, map[string]any{
 			"token_id": tokenID,
-		}, "Kick out user error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "kick_out_failed")
+		})
 	}
 
 	return response.Success(ctx, "kick_out_success")
@@ -181,11 +173,9 @@ func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
 	// 批量删除token
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.PersonalAccessToken{}); err != nil {
-		errorlog.RecordHTTP(ctx, "online_user", "Failed to batch kick out users", map[string]any{
-			"error":     err.Error(),
+		return response.ErrorWithLog(ctx, "online_user", err, map[string]any{
 			"token_ids": ids,
-		}, "Batch kick out users error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "batch_kick_out_failed")
+		})
 	}
 
 	return response.Success(ctx, "batch_kick_out_success", http.Json{

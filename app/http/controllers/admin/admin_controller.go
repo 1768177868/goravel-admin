@@ -14,7 +14,6 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/errorlog"
 )
 
 type AdminController struct {
@@ -354,30 +353,24 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Table("admins").Create(adminData); err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to create admin", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"username": adminCreate.Username,
-		}, "Create admin error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		})
 	}
 
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("username", adminCreate.Username).First(&admin); err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to query created admin", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"username": adminCreate.Username,
-		}, "Query created admin error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		})
 	}
 
 	if len(adminCreate.RoleIDs) > 0 {
 		if err := r.adminService.SyncRoles(&admin, adminCreate.RoleIDs); err != nil {
-			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles", map[string]any{
-				"error":    err.Error(),
+			return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 				"admin_id": admin.ID,
 				"role_ids": adminCreate.RoleIDs,
-			}, "Sync admin roles error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+			})
 		}
 	}
 
@@ -464,11 +457,9 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := facades.Orm().Query().Save(admin); err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to update admin", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Update admin error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		})
 	}
 
 	// 检查是否尝试修改 admin 用户的角色
@@ -525,12 +516,10 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		// 即使角色ID没有改变，也调用 SyncRoles 来清理重复数据
 		// 使用去重后的角色ID列表
 		if err := r.adminService.SyncRoles(admin, deduplicatedRoleIDs); err != nil {
-			errorlog.RecordHTTP(ctx, "admin", "Failed to sync admin roles in update", map[string]any{
-				"error":    err.Error(),
+			return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 				"admin_id": admin.ID,
 				"role_ids": deduplicatedRoleIDs,
-			}, "Sync admin roles in update error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			})
 		}
 	}
 
@@ -582,11 +571,9 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	}
 
 	if _, err := facades.Orm().Query().Delete(admin); err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to delete admin", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": admin.ID,
-		}, "Delete admin error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "delete_failed")
+		})
 	}
 
 	return response.Success(ctx, "delete_success")
@@ -639,11 +626,9 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	// 检查当前管理员是否已绑定谷歌验证码
 	isBound, err := r.googleAuthenticatorService.IsBound(currentAdmin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to check google authenticator binding", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": currentAdmin.ID,
-		}, "Check google authenticator binding error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	if !isBound {
@@ -659,11 +644,9 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	// 获取当前管理员的密钥
 	secret, err := r.googleAuthenticatorService.GetSecret(currentAdmin.ID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to get google secret", map[string]any{
-			"error":    err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": currentAdmin.ID,
-		}, "Get google secret error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	if secret == "" {
@@ -678,11 +661,9 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	// 检查目标管理员是否已绑定
 	targetIsBound, err := r.googleAuthenticatorService.IsBound(targetAdminID)
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to check target admin google authenticator binding", map[string]any{
-			"error":           err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"target_admin_id": targetAdminID,
-		}, "Check target admin google authenticator binding error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		})
 	}
 
 	if !targetIsBound {
@@ -691,12 +672,10 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 
 	// 解绑目标管理员的谷歌验证码
 	if err := r.googleAuthenticatorService.Unbind(targetAdminID); err != nil {
-		errorlog.RecordHTTP(ctx, "admin", "Failed to unbind target admin google authenticator", map[string]any{
-			"error":            err.Error(),
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"target_admin_id":  targetAdminID,
 			"current_admin_id": currentAdmin.ID,
-		}, "Unbind target admin google authenticator error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "unbind_failed")
+		})
 	}
 
 	return response.Success(ctx, "unbind_success")

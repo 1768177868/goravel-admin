@@ -12,7 +12,6 @@ import (
 
 	"goravel/app/http/response"
 	"goravel/app/models"
-	"goravel/app/utils/errorlog"
 )
 
 type ConfigController struct {
@@ -100,12 +99,10 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 			// 更新现有配置
 			config.Value = valueStr
 			if err := facades.Orm().Query().Save(config); err != nil {
-				errorlog.RecordHTTP(ctx, "config", "Failed to update config", map[string]any{
-					"error": err.Error(),
+				return response.ErrorWithLog(ctx, "config", err, map[string]any{
 					"group": group,
 					"key":   key,
-				}, "Update config error: %v", err)
-				return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+				})
 			}
 		} else {
 			// 创建新配置
@@ -119,12 +116,10 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 				"updated_at": now,
 			}
 			if err := facades.Orm().Query().Table("configs").Create(configData); err != nil {
-				errorlog.RecordHTTP(ctx, "config", "Failed to create config", map[string]any{
-					"error": err.Error(),
+				return response.ErrorWithLog(ctx, "config", err, map[string]any{
 					"group": group,
 					"key":   key,
-				}, "Create config error: %v", err)
-				return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+				})
 			}
 		}
 	}
@@ -200,68 +195,45 @@ func (r *ConfigController) TestEmail(ctx http.Context) http.Response {
 		}
 		conn, connErr := tls.Dial("tcp", addr, tlsConfig)
 		if connErr != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to connect SMTP server", map[string]any{
-				"error": connErr.Error(),
-				"host":  emailHost,
-				"port":  emailPort,
-			}, "SMTP SSL connection error: %v", connErr)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_connection_failed")
+			return response.ErrorWithLog(ctx, "config", connErr, map[string]any{
+				"host": emailHost,
+				"port": emailPort,
+			})
 		}
 		defer conn.Close()
 
 		client, clientErr := smtp.NewClient(conn, emailHost)
 		if clientErr != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to create SMTP client", map[string]any{
-				"error": clientErr.Error(),
-			}, "SMTP client creation error: %v", clientErr)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_client_failed")
+			return response.ErrorWithLog(ctx, "config", clientErr)
 		}
 		defer client.Close()
 
 		if err = client.Auth(auth); err != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to authenticate SMTP", map[string]any{
-				"error": err.Error(),
-			}, "SMTP authentication error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_auth_failed")
+			return response.ErrorWithLog(ctx, "config", err)
 		}
 
 		if err = client.Mail(emailFrom); err != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to set sender", map[string]any{
-				"error": err.Error(),
-			}, "SMTP set sender error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_sender_failed")
+			return response.ErrorWithLog(ctx, "config", err)
 		}
 
 		if err = client.Rcpt(testEmail); err != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to set recipient", map[string]any{
-				"error": err.Error(),
-			}, "SMTP set recipient error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_recipient_failed")
+			return response.ErrorWithLog(ctx, "config", err)
 		}
 
 		writer, writerErr := client.Data()
 		if writerErr != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to get data writer", map[string]any{
-				"error": writerErr.Error(),
-			}, "SMTP data writer error: %v", writerErr)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_data_failed")
+			return response.ErrorWithLog(ctx, "config", writerErr)
 		}
 
 		_, err = writer.Write([]byte(message))
 		if err != nil {
 			writer.Close()
-			errorlog.RecordHTTP(ctx, "config", "Failed to write email data", map[string]any{
-				"error": err.Error(),
-			}, "SMTP write data error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_write_failed")
+			return response.ErrorWithLog(ctx, "config", err)
 		}
 
 		err = writer.Close()
 		if err != nil {
-			errorlog.RecordHTTP(ctx, "config", "Failed to close data writer", map[string]any{
-				"error": err.Error(),
-			}, "SMTP close writer error: %v", err)
-			return response.Error(ctx, http.StatusInternalServerError, "test_email_close_failed")
+			return response.ErrorWithLog(ctx, "config", err)
 		}
 	} else {
 		// TLS或普通连接
@@ -276,66 +248,43 @@ func (r *ConfigController) TestEmail(ctx http.Context) http.Response {
 				// 如果直接SendMail失败，尝试手动TLS
 				conn, connErr := smtp.Dial(addr)
 				if connErr != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to dial SMTP server", map[string]any{
-						"error": connErr.Error(),
-						"host":  emailHost,
-						"port":  emailPort,
-					}, "SMTP dial error: %v", connErr)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_connection_failed")
+					return response.ErrorWithLog(ctx, "config", connErr, map[string]any{
+						"host": emailHost,
+						"port": emailPort,
+					})
 				}
 				defer conn.Close()
 
 				if err = conn.StartTLS(tlsConfig); err != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to start TLS", map[string]any{
-						"error": err.Error(),
-					}, "SMTP StartTLS error: %v", err)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_tls_failed")
+					return response.ErrorWithLog(ctx, "config", err)
 				}
 
 				if err = conn.Auth(auth); err != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to authenticate SMTP", map[string]any{
-						"error": err.Error(),
-					}, "SMTP authentication error: %v", err)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_auth_failed")
+					return response.ErrorWithLog(ctx, "config", err)
 				}
 
 				if err = conn.Mail(emailFrom); err != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to set sender", map[string]any{
-						"error": err.Error(),
-					}, "SMTP set sender error: %v", err)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_sender_failed")
+					return response.ErrorWithLog(ctx, "config", err)
 				}
 
 				if err = conn.Rcpt(testEmail); err != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to set recipient", map[string]any{
-						"error": err.Error(),
-					}, "SMTP set recipient error: %v", err)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_recipient_failed")
+					return response.ErrorWithLog(ctx, "config", err)
 				}
 
 				writer, writerErr := conn.Data()
 				if writerErr != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to get data writer", map[string]any{
-						"error": writerErr.Error(),
-					}, "SMTP data writer error: %v", writerErr)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_data_failed")
+					return response.ErrorWithLog(ctx, "config", writerErr)
 				}
 
 				_, err = writer.Write([]byte(message))
 				if err != nil {
 					writer.Close()
-					errorlog.RecordHTTP(ctx, "config", "Failed to write email data", map[string]any{
-						"error": err.Error(),
-					}, "SMTP write data error: %v", err)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_write_failed")
+					return response.ErrorWithLog(ctx, "config", err)
 				}
 
 				err = writer.Close()
 				if err != nil {
-					errorlog.RecordHTTP(ctx, "config", "Failed to close data writer", map[string]any{
-						"error": err.Error(),
-					}, "SMTP close writer error: %v", err)
-					return response.Error(ctx, http.StatusInternalServerError, "test_email_close_failed")
+					return response.ErrorWithLog(ctx, "config", err)
 				}
 			}
 		} else {
@@ -345,14 +294,12 @@ func (r *ConfigController) TestEmail(ctx http.Context) http.Response {
 	}
 
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "config", "Failed to send test email", map[string]any{
-			"error": err.Error(),
-			"host":  emailHost,
-			"port":  emailPort,
-			"from":  emailFrom,
-			"to":    testEmail,
-		}, "Test email error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "test_email_failed")
+		return response.ErrorWithLog(ctx, "config", err, map[string]any{
+			"host": emailHost,
+			"port": emailPort,
+			"from": emailFrom,
+			"to":   testEmail,
+		})
 	}
 
 	return response.Success(ctx, "test_email_success", http.Json{
