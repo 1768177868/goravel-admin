@@ -186,18 +186,26 @@ For detailed API documentation, see [routes/admin.go](./routes/admin.go)
 
 ### Cloudflare Workers Deployment
 
+Deploy the frontend application to Cloudflare Workers:
+
 ```bash
-# 构建命令
+# Build the frontend application
+cd html
 npm install && npm run build
-# 部署命令 (使用 worker.js 处理 SPA 路由)
-# 方法1: 使用 wrangler.toml 配置 (推荐)
-npx wrangler deploy
-# 方法2: 使用命令行参数
+
+# Deploy to Cloudflare Workers
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
-# 根目录
-html
-# 注意: worker.js 会自动处理 SPA 路由，当文件不存在时返回 index.html
 ```
+
+**Configuration:**
+
+- **Root directory:** `html`
+- **Environment variables (Variables & Secrets):**
+  - `VITE_API_BASE_URL`: `https://api.xuancheng888.top`
+  - `VITE_API_PREFIX`: `/api/admin`
+- **Custom domain:** `admin.xuancheng888.top`
+
+**Note:** The `worker.js` file automatically handles SPA routing by returning `index.html` when a file doesn't exist.
 
 ### Performance Profiling
 

@@ -186,14 +186,26 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 
 ### Cloudflare Workers 部署
 
+将前端应用部署到 Cloudflare Workers：
+
 ```bash
-# 构建命令
+# 构建前端应用
+cd html
 npm install && npm run build
-# 部署命令
+
+# 部署到 Cloudflare Workers
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
-# 根目录
-html
 ```
+
+**配置说明：**
+
+- **根目录：** `html`
+- **环境变量（变量和机密）：**
+  - `VITE_API_BASE_URL`: `https://api.xuancheng888.top`
+  - `VITE_API_PREFIX`: `/api/admin`
+- **自定义域名：** `admin.xuancheng888.top`
+
+**注意：** `worker.js` 文件会自动处理 SPA 路由，当文件不存在时返回 `index.html`。
 
 ### 性能分析
 
