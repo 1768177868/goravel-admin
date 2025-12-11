@@ -73,7 +73,7 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Paginate(ctx, "get_success", resultWithURL, total, page, pageSize)
+	return response.Paginate(ctx, resultWithURL, total, page, pageSize)
 }
 
 // buildQuery 构建导出记录查询

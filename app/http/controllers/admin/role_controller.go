@@ -86,7 +86,7 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Paginate(ctx, "get_success", roles, total, page, pageSize)
+	return response.Paginate(ctx, roles, total, page, pageSize)
 }
 
 // Show 角色详情

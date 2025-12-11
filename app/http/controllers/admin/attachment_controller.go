@@ -68,7 +68,7 @@ func (r *AttachmentController) Index(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Paginate(ctx, "get_success", resultWithURL, total, page, pageSize)
+	return response.Paginate(ctx, resultWithURL, total, page, pageSize)
 }
 
 // buildQuery 构建附件查询

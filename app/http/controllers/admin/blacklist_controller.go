@@ -79,7 +79,7 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Paginate(ctx, "get_success", blacklists, total, page, pageSize)
+	return response.Paginate(ctx, blacklists, total, page, pageSize)
 }
 
 // Show 黑名单详情

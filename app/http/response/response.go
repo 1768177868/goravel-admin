@@ -324,7 +324,60 @@ func ValidationError(ctx http.Context, code int, messageKey string, errors map[s
 }
 
 // Paginate 分页响应（支持多语言，自动包含 trace_id）
-func Paginate(ctx http.Context, messageKey string, list any, total int64, page, pageSize int) http.Response {
+// messageKey 可选，如果不传则使用默认值 "get_success"
+// 使用方式：
+//   - response.Paginate(ctx, list, total, page, pageSize)
+//   - response.Paginate(ctx, "custom_message", list, total, page, pageSize)
+func Paginate(ctx http.Context, args ...any) http.Response {
+	var messageKey string
+	var list any
+	var total int64
+	var page, pageSize int
+
+	// 智能识别参数：如果第一个参数是 string 且长度合理（<=50），则认为是 messageKey
+	if len(args) >= 4 {
+		if msgKey, ok := args[0].(string); ok && len(msgKey) <= 50 {
+			// 方式1：传了 messageKey
+			messageKey = msgKey
+			list = args[1]
+			if t, ok := args[2].(int64); ok {
+				total = t
+			} else if t, ok := args[2].(int); ok {
+				total = int64(t)
+			}
+			if p, ok := args[3].(int); ok {
+				page = p
+			}
+			if len(args) >= 5 {
+				if ps, ok := args[4].(int); ok {
+					pageSize = ps
+				}
+			}
+		} else {
+			// 方式2：没传 messageKey
+			messageKey = "get_success" // 默认值
+			list = args[0]
+			if t, ok := args[1].(int64); ok {
+				total = t
+			} else if t, ok := args[1].(int); ok {
+				total = int64(t)
+			}
+			if p, ok := args[2].(int); ok {
+				page = p
+			}
+			if len(args) >= 4 {
+				if ps, ok := args[3].(int); ok {
+					pageSize = ps
+				}
+			}
+		}
+	}
+
+	// 如果 messageKey 为空，使用默认值
+	if messageKey == "" {
+		messageKey = "get_success"
+	}
+
 	message := trans.Get(ctx, messageKey)
 
 	// 转换列表中的时间字段到对应时区

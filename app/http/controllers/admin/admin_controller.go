@@ -244,7 +244,7 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Paginate(ctx, "get_success", adminList, total, page, pageSize)
+	return response.Paginate(ctx, adminList, total, page, pageSize)
 }
 
 // Show 管理员详情

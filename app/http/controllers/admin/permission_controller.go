@@ -109,7 +109,7 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Paginate(ctx, "get_success", permissions, total, page, pageSize)
+	return response.Paginate(ctx, permissions, total, page, pageSize)
 }
 
 // Show 权限详情

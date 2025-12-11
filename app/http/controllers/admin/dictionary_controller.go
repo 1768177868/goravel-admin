@@ -76,7 +76,7 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Paginate(ctx, "get_success", dictionaries, total, page, pageSize)
+	return response.Paginate(ctx, dictionaries, total, page, pageSize)
 }
 
 // Show 字典详情

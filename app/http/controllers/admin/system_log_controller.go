@@ -85,7 +85,7 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 		return response.ErrorWithLog(ctx, "system-log", err)
 	}
 
-	return response.Paginate(ctx, "get_success", logs, total, page, pageSize)
+	return response.Paginate(ctx, logs, total, page, pageSize)
 }
 
 // Show 获取系统日志详情

@@ -131,7 +131,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 	// 使用工具函数进行分页
 	paginatedUsers, total := helpers.PaginateSlice(onlineUsers, page, pageSize)
 
-	return response.Paginate(ctx, "get_success", paginatedUsers, total, page, pageSize)
+	return response.Paginate(ctx, paginatedUsers, total, page, pageSize)
 }
 
 // KickOut 踢下线（删除token）
