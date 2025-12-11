@@ -62,8 +62,21 @@ func OperationLog() http.Middleware {
 
 		// 只记录新增、修改、删除操作（POST、PUT、PATCH、DELETE），排除 GET 请求
 		// 同时排除登录和info接口，以及分片上传的进度查询（GET请求）
+		// 对于分片上传，只记录 merge 操作（最终完成上传），排除 init 和 upload 操作
 		if (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE") &&
 			path != "/api/admin/login" && path != "/api/admin/info" {
+
+			// 排除分片上传的中间操作（init 和 upload），只记录 merge（最终完成上传）
+			if path == "/api/admin/attachments/chunk" {
+				action := ctx.Request().Input("action", "")
+				if action == "" {
+					action = ctx.Request().Query("action", "")
+				}
+				// 只记录 merge 操作，排除 init、upload 和 progress
+				if action != "merge" {
+					return
+				}
+			}
 			// 在请求处理后再获取一次管理员ID（确保JWT中间件已执行）
 			// 如果之前没有获取到，再次尝试从context获取
 			if adminID == 0 {
