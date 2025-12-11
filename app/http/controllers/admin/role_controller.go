@@ -80,23 +80,9 @@ func (r *RoleController) buildQuery(ctx http.Context) orm.Query {
 
 // Index 角色列表
 func (r *RoleController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
 	var roles []models.Role
-	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Get(&roles); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
-	return response.Paginate(ctx, roles, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &roles, nil)
 }
 
 // Show 角色详情

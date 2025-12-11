@@ -72,23 +72,9 @@ func (r *BlacklistController) buildQuery(ctx http.Context) orm.Query {
 
 // Index 黑名单列表
 func (r *BlacklistController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
 	var blacklists []models.Blacklist
-	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Get(&blacklists); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
-	return response.Paginate(ctx, blacklists, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &blacklists, nil)
 }
 
 // Show 黑名单详情

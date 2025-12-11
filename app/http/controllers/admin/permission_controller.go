@@ -103,23 +103,11 @@ func (r *PermissionController) buildQuery(ctx http.Context) orm.Query {
 
 // Index 权限列表
 func (r *PermissionController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
 	var permissions []models.Permission
-	offset := (page - 1) * pageSize
-	if err := query.With("Menu").Offset(offset).Limit(pageSize).Get(&permissions); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
-	return response.Paginate(ctx, permissions, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &permissions, &response.PaginateQueryOptions{
+		WithRelations: []string{"Menu"},
+	})
 }
 
 // Show 权限详情

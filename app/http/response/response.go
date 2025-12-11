@@ -1,6 +1,7 @@
 package response
 
 import (
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 
 	"goravel/app/http/helpers"
@@ -423,6 +424,94 @@ func Paginate(ctx http.Context, args ...any) http.Response {
 	}
 
 	return ctx.Response().Success().Json(response)
+}
+
+// PaginateQueryOptions 分页查询选项
+type PaginateQueryOptions struct {
+	// WithRelations 预加载关联，例如 []string{"Department", "Roles"}
+	WithRelations []string
+	// Transform 数据转换函数，可以对查询结果进行转换
+	Transform func(any) any
+	// ErrorHandler 自定义错误处理函数，如果为 nil 则使用默认错误处理
+	ErrorHandler func(ctx http.Context, err error, module string) http.Response
+	// ErrorModule 错误日志模块名，用于 ErrorWithLog
+	ErrorModule string
+}
+
+// PaginateQuery 通用的分页查询封装
+// query: 构建好的查询对象（已包含所有查询条件）
+// list: 用于接收查询结果的切片指针，例如 &[]models.Dictionary{}
+// options: 可选配置
+//
+// 使用示例：
+//
+//   - 基础用法：
+//     return response.PaginateQuery(ctx, query, &dictionaries, nil)
+//
+//   - 带预加载关联：
+//     return response.PaginateQuery(ctx, query, &roles, &response.PaginateQueryOptions{
+//     WithRelations: []string{"Permissions", "Menus"},
+//     })
+//
+//   - 带数据转换：
+//     return response.PaginateQuery(ctx, query, &admins, &response.PaginateQueryOptions{
+//     WithRelations: []string{"Department", "Roles"},
+//     Transform: func(data any) any {
+//     admins := data.(*[]models.Admin)
+//     // 转换逻辑
+//     return adminList
+//     },
+//     })
+//
+//   - 带错误日志模块：
+//     return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
+//     WithRelations: []string{"Admin"},
+//     ErrorModule:   "login-log",
+//     })
+func PaginateQuery(ctx http.Context, query orm.Query, list any, options *PaginateQueryOptions) http.Response {
+	// 获取分页参数
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
+	page, pageSize = helpers.ValidatePagination(page, pageSize)
+
+	// 获取总数
+	total, err := query.Count()
+	if err != nil {
+		if options != nil && options.ErrorHandler != nil {
+			return options.ErrorHandler(ctx, err, options.ErrorModule)
+		}
+		if options != nil && options.ErrorModule != "" {
+			return ErrorWithLog(ctx, options.ErrorModule, err)
+		}
+		return Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	// 应用预加载关联
+	if options != nil && len(options.WithRelations) > 0 {
+		for _, relation := range options.WithRelations {
+			query = query.With(relation)
+		}
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Get(list); err != nil {
+		if options != nil && options.ErrorHandler != nil {
+			return options.ErrorHandler(ctx, err, options.ErrorModule)
+		}
+		if options != nil && options.ErrorModule != "" {
+			return ErrorWithLog(ctx, options.ErrorModule, err)
+		}
+		return Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	// 数据转换
+	var result any = list
+	if options != nil && options.Transform != nil {
+		result = options.Transform(list)
+	}
+
+	return Paginate(ctx, result, total, page, pageSize)
 }
 
 // Export 导出响应（支持多语言）

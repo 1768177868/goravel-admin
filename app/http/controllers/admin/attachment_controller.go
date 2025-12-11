@@ -30,45 +30,30 @@ func NewAttachmentController() *AttachmentController {
 
 // Index 附件列表
 func (r *AttachmentController) Index(ctx http.Context) http.Response {
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.ErrorWithLog(ctx, "attachment", err)
-	}
-
-	orderBy := ctx.Request().Query("order_by", "id:desc")
-	query = helpers.ApplySort(query, orderBy, "id:desc")
-
-	offset := (page - 1) * pageSize
-
 	var attachments []models.Attachment
-	if err := query.With("Admin").Offset(offset).Limit(pageSize).Get(&attachments); err != nil {
-		return response.ErrorWithLog(ctx, "attachment", err)
-	}
-
-	// 为每个附件生成可访问的 file_url
 	attachmentService := services.NewAttachmentService(ctx)
 	type AttachmentWithURL struct {
 		models.Attachment
 		FileURL string `json:"file_url"`
 	}
 
-	var resultWithURL []AttachmentWithURL
-	for _, a := range attachments {
-		fileURL := attachmentService.GetFileURL(&a)
-		resultWithURL = append(resultWithURL, AttachmentWithURL{
-			Attachment: a,
-			FileURL:    fileURL,
-		})
-	}
-
-	return response.Paginate(ctx, resultWithURL, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &attachments, &response.PaginateQueryOptions{
+		WithRelations: []string{"Admin"},
+		ErrorModule:   "attachment",
+		Transform: func(data any) any {
+			attachments := data.(*[]models.Attachment)
+			var resultWithURL []AttachmentWithURL
+			for _, a := range *attachments {
+				fileURL := attachmentService.GetFileURL(&a)
+				resultWithURL = append(resultWithURL, AttachmentWithURL{
+					Attachment: a,
+					FileURL:    fileURL,
+				})
+			}
+			return resultWithURL
+		},
+	})
 }
 
 // buildQuery 构建附件查询
@@ -104,6 +89,10 @@ func (r *AttachmentController) buildQuery(ctx http.Context) orm.Query {
 	if endTime != "" {
 		query = query.Where("created_at <= ?", endTime)
 	}
+
+	orderBy := ctx.Request().Query("order_by", "")
+	// 应用排序，默认排序为 id desc
+	query = helpers.ApplySort(query, orderBy, "id:desc")
 
 	return query
 }

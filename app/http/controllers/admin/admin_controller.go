@@ -203,48 +203,39 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 // @Router       /api/admin/admins [get]
 // @Security     BearerAuth
 func (r *AdminController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
 	var admins []models.Admin
-	offset := (page - 1) * pageSize
-	if err := query.With("Department").With("Roles").Offset(offset).Limit(pageSize).Get(&admins); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
 
 	// 获取超级管理员ID
 	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
 
-	// 为每个管理员添加 2FA 绑定状态
-	adminList := make([]http.Json, len(admins))
-	for i, admin := range admins {
-		isBound, _ := r.googleAuthenticatorService.IsBound(admin.ID)
-		adminList[i] = http.Json{
-			"id":             admin.ID,
-			"username":       admin.Username,
-			"nickname":       admin.Nickname,
-			"avatar":         admin.Avatar,
-			"email":          admin.Email,
-			"phone":          admin.Phone,
-			"status":         admin.Status,
-			"is_2fa_bound":   isBound,
-			"is_super_admin": admin.ID == superAdminID, // 标识是否是超级管理员
-			"department_id":  admin.DepartmentID,
-			"department":     admin.Department,
-			"roles":          admin.Roles,
-			"created_at":     admin.CreatedAt,
-			"updated_at":     admin.UpdatedAt,
-		}
-	}
-
-	return response.Paginate(ctx, adminList, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &admins, &response.PaginateQueryOptions{
+		WithRelations: []string{"Department", "Roles"},
+		Transform: func(data any) any {
+			admins := data.(*[]models.Admin)
+			adminList := make([]http.Json, len(*admins))
+			for i, admin := range *admins {
+				isBound, _ := r.googleAuthenticatorService.IsBound(admin.ID)
+				adminList[i] = http.Json{
+					"id":             admin.ID,
+					"username":       admin.Username,
+					"nickname":       admin.Nickname,
+					"avatar":         admin.Avatar,
+					"email":          admin.Email,
+					"phone":          admin.Phone,
+					"status":         admin.Status,
+					"is_2fa_bound":   isBound,
+					"is_super_admin": admin.ID == superAdminID,
+					"department_id":  admin.DepartmentID,
+					"department":     admin.Department,
+					"roles":          admin.Roles,
+					"created_at":     admin.CreatedAt,
+					"updated_at":     admin.UpdatedAt,
+				}
+			}
+			return adminList
+		},
+	})
 }
 
 // Show 管理员详情

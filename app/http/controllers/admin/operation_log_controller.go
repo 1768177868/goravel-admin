@@ -46,32 +46,12 @@ func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint,
 
 // Index 获取操作日志列表
 func (r *OperationLogController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
-
-	// 构建查询
 	query := r.buildQuery(ctx)
-
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return response.ErrorWithLog(ctx, "operation-log", err)
-	}
-
-	// 应用排序和分页
-	orderBy := ctx.Request().Query("order_by", "")
-	query = helpers.ApplySort(query, orderBy, "id:desc")
-	offset := (page - 1) * pageSize
-
 	var logs []models.OperationLog
-	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
-		return response.ErrorWithLog(ctx, "operation-log", err)
-	}
-
-	return response.Paginate(ctx, logs, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
+		WithRelations: []string{"Admin"},
+		ErrorModule:   "operation-log",
+	})
 }
 
 // buildQuery 构建操作日志查询
@@ -127,6 +107,10 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 	if endTime != "" {
 		query = query.Where("created_at <= ?", endTime)
 	}
+
+	orderBy := ctx.Request().Query("order_by", "")
+	// 应用排序，默认排序为 id desc
+	query = helpers.ApplySort(query, orderBy, "id:desc")
 
 	return query
 }

@@ -69,23 +69,9 @@ func (r *DictionaryController) buildQuery(ctx http.Context) orm.Query {
 
 // Index 字典列表
 func (r *DictionaryController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "10"))
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
 	var dictionaries []models.Dictionary
-	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Get(&dictionaries); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
-	return response.Paginate(ctx, dictionaries, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &dictionaries, nil)
 }
 
 // Show 字典详情

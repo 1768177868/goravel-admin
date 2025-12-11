@@ -82,26 +82,12 @@ func (r *LoginLogController) buildQuery(ctx http.Context) orm.Query {
 
 // Index 获取登录日志列表
 func (r *LoginLogController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.ErrorWithLog(ctx, "login-log", err)
-	}
-
 	var logs []models.LoginLog
-	offset := (page - 1) * pageSize
-	if err = query.With("Admin").Offset(offset).Limit(pageSize).Get(&logs); err != nil {
-		return response.ErrorWithLog(ctx, "login-log", err)
-	}
-
-	return response.Paginate(ctx, logs, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
+		WithRelations: []string{"Admin"},
+		ErrorModule:   "login-log",
+	})
 }
 
 // Show 获取登录日志详情

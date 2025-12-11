@@ -77,26 +77,11 @@ func (r *SystemLogController) buildQuery(ctx http.Context) orm.Query {
 
 // Index 获取系统日志列表
 func (r *SystemLogController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
-
 	query := r.buildQuery(ctx)
-
-	total, err := query.Count()
-	if err != nil {
-		return response.ErrorWithLog(ctx, "system-log", err)
-	}
-
 	var logs []models.SystemLog
-	offset := (page - 1) * pageSize
-	if err = query.Offset(offset).Limit(pageSize).Get(&logs); err != nil {
-		return response.ErrorWithLog(ctx, "system-log", err)
-	}
-
-	return response.Paginate(ctx, logs, total, page, pageSize)
+	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
+		ErrorModule: "system-log",
+	})
 }
 
 // Show 获取系统日志详情
