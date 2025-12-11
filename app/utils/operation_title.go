@@ -1,8 +1,13 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
+
+	"goravel/app/models"
 )
 
 // GetOperationTitleFromContext 从 context 中获取操作标题
@@ -21,11 +26,17 @@ func GetOperationTitleFromContext(ctx http.Context) string {
 		}
 	}
 
-	// 如果没有权限标识，根据路径和方法生成默认标题
+	// 如果没有权限标识，尝试从权限表中查询匹配的权限
 	method := ctx.Request().Method()
 	path := ctx.Request().Path()
 
-	// 根据路径生成默认标题
+	// 先从权限表中查询匹配的权限
+	permissionSlug := findPermissionSlugFromDB(method, path)
+	if permissionSlug != "" {
+		return permissionSlug
+	}
+
+	// 如果权限表中没有找到，根据路径和方法生成默认标题
 	defaultTitle := generateDefaultTitle(method, path)
 	if defaultTitle != "" {
 		return defaultTitle
@@ -75,6 +86,16 @@ func generateDefaultTitle(method, path string) string {
 		return "admin.unbind_google_auth"
 	}
 
+	// 更新个人资料
+	if pathStr.EndsWith("/profile") && (method == "PUT" || method == "PATCH") {
+		return "profile.update"
+	}
+
+	// 修改密码
+	if pathStr.EndsWith("/password") && (method == "PUT" || method == "PATCH") {
+		return "password.update"
+	}
+
 	// 批量删除（通用模式）
 	if pathStr.EndsWith("/batch-delete") && method == "POST" {
 		parts := pathStr.ChopStart("/api/admin/").Split("/")
@@ -117,4 +138,147 @@ func generateDefaultTitle(method, path string) string {
 	}
 
 	return ""
+}
+
+// findPermissionSlugFromDB 从权限表中查询匹配的权限标识
+// 优先匹配精确路径，然后匹配通配符路径
+func findPermissionSlugFromDB(method, path string) string {
+	var permissions []models.Permission
+
+	// 查询所有启用的权限，方法匹配或方法为空
+	query := facades.Orm().Query().Model(&models.Permission{}).
+		Where("status", 1).
+		Where("(method = ? OR method = '')", method)
+
+	if err := query.Find(&permissions); err != nil {
+		// 查询失败时返回空，使用默认逻辑
+		return ""
+	}
+
+	// 优先匹配精确路径
+	for _, perm := range permissions {
+		if perm.Path == path {
+			return perm.Slug
+		}
+	}
+
+	// 然后匹配通配符路径
+	for _, perm := range permissions {
+		if perm.Path != "" && perm.Path != path {
+			if matchPermissionPath(perm.Path, path) {
+				return perm.Slug
+			}
+		}
+	}
+
+	return ""
+}
+
+// matchPermissionPath 路径匹配，支持通配符（与权限中间件中的 matchPath 逻辑一致）
+func matchPermissionPath(pattern, path string) bool {
+	if pattern == path {
+		return true
+	}
+
+	// 如果模式不包含通配符，直接返回 false
+	if !containsChar(pattern, '*') {
+		return false
+	}
+
+	// 将模式按 * 分割成多个部分
+	parts := splitPatternString(pattern)
+	if len(parts) == 0 {
+		return false
+	}
+
+	// 如果模式以 * 开头，需要特殊处理
+	if pattern[0] == '*' {
+		// 检查路径是否以模式的剩余部分结尾
+		if len(parts) > 1 {
+			suffix := parts[1]
+			return len(path) >= len(suffix) && path[len(path)-len(suffix):] == suffix
+		}
+		return true
+	}
+
+	// 如果模式以 * 结尾
+	if pattern[len(pattern)-1] == '*' {
+		prefix := pattern[:len(pattern)-1]
+		if len(path) >= len(prefix) {
+			pathPrefix := path[:len(prefix)]
+			if pathPrefix == prefix {
+				// 如果前缀以 / 结尾，路径必须比前缀长（即后面还有内容）
+				if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
+					return len(path) > len(prefix)
+				}
+				// 如果前缀不以 / 结尾，路径可以等于或长于前缀
+				return true
+			}
+		}
+		return false
+	}
+
+	// 处理中间有通配符的情况，如 /api/admin/attachments/*/display-name
+	// 过滤掉 "*" 标记，只保留实际的部分
+	var actualParts []string
+	for _, part := range parts {
+		if part != "*" {
+			actualParts = append(actualParts, part)
+		}
+	}
+
+	if len(actualParts) < 2 {
+		return false
+	}
+
+	// 检查路径是否以第一部分开头
+	firstPart := actualParts[0]
+	if len(path) < len(firstPart) || path[:len(firstPart)] != firstPart {
+		return false
+	}
+
+	// 检查路径是否以最后一部分结尾
+	lastPart := actualParts[len(actualParts)-1]
+	if len(path) < len(lastPart) || path[len(path)-len(lastPart):] != lastPart {
+		return false
+	}
+
+	// 检查中间部分是否存在（通配符匹配任意内容）
+	remainingPath := path[len(firstPart) : len(path)-len(lastPart)]
+	// 确保中间部分不为空（至少有一个字符，通常是数字ID）
+	return len(remainingPath) > 0
+}
+
+// containsChar 检查字符串是否包含指定字符
+func containsChar(s string, c byte) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == c {
+			return true
+		}
+	}
+	return false
+}
+
+// splitPatternString 按 * 分割模式字符串
+func splitPatternString(pattern string) []string {
+	var parts []string
+	var current strings.Builder
+
+	for i := 0; i < len(pattern); i++ {
+		if pattern[i] == '*' {
+			if current.Len() > 0 {
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+			parts = append(parts, "*")
+		} else {
+			current.WriteByte(pattern[i])
+		}
+	}
+
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+
+	return parts
 }
