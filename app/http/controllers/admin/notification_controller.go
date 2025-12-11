@@ -40,7 +40,7 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 		logger.ErrorfHTTP(ctx, "unread count error: %v", err)
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"notifications": notifications,
 		"unread_count":  count,
 		"pagination": http.Json{
@@ -63,7 +63,7 @@ func (r *NotificationController) UnreadCount(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"count": count,
 	})
 }
@@ -82,7 +82,7 @@ func (r *NotificationController) Recent(ctx http.Context) http.Response {
 
 	count, _ := r.service.UnreadCount(admin.ID)
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"notifications": notifications,
 		"unread_count":  count,
 	})
@@ -106,7 +106,7 @@ func (r *NotificationController) MarkRead(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"id": id,
 	})
 }
@@ -121,7 +121,7 @@ func (r *NotificationController) MarkAllRead(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
 	}
 
-	return response.Success(ctx, "update_success")
+	return response.Success(ctx)
 }
 
 func (r *NotificationController) Store(ctx http.Context) http.Response {
@@ -153,10 +153,10 @@ func (r *NotificationController) Store(ctx http.Context) http.Response {
 	}
 
 	if notification == nil {
-		return response.Success(ctx, "create_success")
+		return response.Success(ctx)
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"notification": notification,
 	})
 }

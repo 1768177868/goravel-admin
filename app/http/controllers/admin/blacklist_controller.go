@@ -90,7 +90,7 @@ func (r *BlacklistController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"blacklist": *blacklist,
 	})
 }
@@ -147,7 +147,7 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"blacklist": blacklist,
 	})
 }
@@ -206,7 +206,7 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"blacklist": *blacklist,
 	})
 }
@@ -225,5 +225,5 @@ func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }

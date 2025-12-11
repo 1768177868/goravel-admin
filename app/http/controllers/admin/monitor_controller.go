@@ -1336,7 +1336,7 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"os": runtime.GOOS, // 操作系统类型
 		"cpu": map[string]any{
 			"percent": cpuPercent[0],

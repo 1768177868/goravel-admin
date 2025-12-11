@@ -120,7 +120,7 @@ func (r *PermissionController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"permission": *permission,
 	})
 }
@@ -179,14 +179,14 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"permission": permission,
 	})
 }
 
 func (r *PermissionController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	permission, resp := r.findPermissionByID(ctx, id, false) // 不需要预加载关联
+	permission, resp := r.findPermissionByID(ctx, id, false)
 	if resp != nil {
 		return resp
 	}
@@ -245,7 +245,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"permission": *permission,
 	})
 }
@@ -264,5 +264,5 @@ func (r *PermissionController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }

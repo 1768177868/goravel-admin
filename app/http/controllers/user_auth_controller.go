@@ -91,7 +91,7 @@ func (r *UserAuthController) Info(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"user": http.Json{
 			"id":       user.ID,
 			"username": user.Username,
@@ -122,4 +122,3 @@ func (r *UserAuthController) Logout(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "logout_success")
 }
-

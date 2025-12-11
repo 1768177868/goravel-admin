@@ -41,7 +41,7 @@ func (r *ConfigController) GetByGroup(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"configs": configs,
 	})
 }
@@ -124,7 +124,7 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "save_success")
+	return response.Success(ctx)
 }
 
 // TestEmail 测试邮件发送

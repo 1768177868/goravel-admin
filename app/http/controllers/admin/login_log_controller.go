@@ -101,7 +101,7 @@ func (r *LoginLogController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"log": *log,
 	})
 }
@@ -109,7 +109,7 @@ func (r *LoginLogController) Show(ctx http.Context) http.Response {
 // Destroy 删除登录日志
 func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	log, resp := r.findLoginLogByID(ctx, id, false) // 不需要预加载关联
+	log, resp := r.findLoginLogByID(ctx, id, false)
 	if resp != nil {
 		return resp
 	}
@@ -120,7 +120,7 @@ func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 type LoginLogBatchDestroyRequest struct {
@@ -151,7 +151,7 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // Clean 清理登录日志
@@ -169,5 +169,5 @@ func (r *LoginLogController) Clean(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "clean_success")
+	return response.Success(ctx)
 }

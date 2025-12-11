@@ -96,7 +96,7 @@ func (r *SystemLogController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"log": *log,
 	})
 }
@@ -115,7 +115,7 @@ func (r *SystemLogController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 type SystemLogBatchDestroyRequest struct {
@@ -146,7 +146,7 @@ func (r *SystemLogController) BatchDestroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // Clean 清理系统日志
@@ -164,5 +164,5 @@ func (r *SystemLogController) Clean(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "clean_success")
+	return response.Success(ctx)
 }

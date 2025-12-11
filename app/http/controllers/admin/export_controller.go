@@ -140,7 +140,7 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // Download 下载导出文件
@@ -207,7 +207,6 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		// 参数绑定错误是业务级错误（400），不需要记录日志
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
 	}
 
@@ -247,7 +246,7 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // StreamExportProgress SSE 实时推送导出任务进度

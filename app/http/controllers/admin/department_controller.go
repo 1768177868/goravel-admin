@@ -80,7 +80,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 		}
 
-		return response.Success(ctx, "get_success", http.Json{
+		return response.Success(ctx, http.Json{
 			"list": departments,
 		})
 	}
@@ -91,7 +91,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"list": departments,
 	})
 }
@@ -104,7 +104,7 @@ func (r *DepartmentController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"department": *department,
 	})
 }
@@ -149,7 +149,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"department": department,
 	})
 }
@@ -209,7 +209,7 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"department": *department,
 	})
 }
@@ -246,5 +246,5 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }

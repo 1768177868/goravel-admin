@@ -112,7 +112,6 @@ func (r *AttachmentController) buildQuery(ctx http.Context) orm.Query {
 func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	file, err := ctx.Request().File("file")
 	if err != nil {
-		// 文件获取失败是业务级错误（400），不需要记录日志
 		return response.Error(ctx, http.StatusBadRequest, "file_required")
 	}
 
@@ -197,22 +196,18 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		totalSizeStr := ctx.Request().Input("total_size", "0")
 		totalSize, err := strconv.ParseInt(totalSizeStr, 10, 64)
 		if err != nil {
-			// 参数验证错误是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
 		}
 		if totalSize <= 0 {
-			// 参数验证错误是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
 		}
 
 		chunkSizeStr := ctx.Request().Input("chunk_size", "0")
 		chunkSize, err := strconv.ParseInt(chunkSizeStr, 10, 64)
 		if err != nil {
-			// 参数验证错误是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
 		}
 		if chunkSize <= 0 {
-			// 参数验证错误是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
 		}
 
@@ -223,12 +218,10 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			if floatVal, floatErr := strconv.ParseFloat(totalChunksStr, 64); floatErr == nil {
 				totalChunks = int(floatVal)
 			} else {
-				// 参数验证错误是业务级错误（400），不需要记录日志
 				return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
 			}
 		}
 		if totalChunks <= 0 {
-			// 参数验证错误是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
 		}
 
@@ -236,7 +229,6 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		expectedChunks := int((totalSize + chunkSize - 1) / chunkSize) // 向上取整
 		if totalChunks != expectedChunks {
 			// 不返回错误，使用客户端提供的值（可能是由于浮点数计算差异）
-			// 这种情况不需要记录日志
 		}
 
 		chunkID, err := attachmentService.InitChunkUpload(filename, totalSize, chunkSize, totalChunks)
@@ -273,7 +265,6 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 
 		file, err := ctx.Request().File("chunk")
 		if err != nil {
-			// 文件获取失败是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "chunk_file_required")
 		}
 
@@ -334,12 +325,10 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			if floatVal, floatErr := strconv.ParseFloat(totalChunksStr, 64); floatErr == nil {
 				totalChunks = int(floatVal)
 			} else {
-				// 参数验证错误是业务级错误（400），不需要记录日志
 				return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
 			}
 		}
 		if totalChunks <= 0 {
-			// 参数验证错误是业务级错误（400），不需要记录日志
 			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
 		}
 
@@ -398,7 +387,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			})
 		}
 
-		return response.Success(ctx, "get_success", progress)
+		return response.Success(ctx, progress)
 
 	default:
 		return response.Error(ctx, http.StatusBadRequest, "invalid_action")
@@ -414,7 +403,6 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		// 记录未找到是业务级错误（404），不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 
@@ -564,7 +552,7 @@ func (r *AttachmentController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 type AttachmentBatchDestroyRequest struct {
@@ -607,7 +595,7 @@ func (r *AttachmentController) BatchDestroy(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // UpdateDisplayName 更新显示名称
@@ -632,7 +620,7 @@ func (r *AttachmentController) UpdateDisplayName(ctx http.Context) http.Response
 		})
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"attachment": attachment,
 	})
 }

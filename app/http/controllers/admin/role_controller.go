@@ -97,7 +97,7 @@ func (r *RoleController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"role": *role,
 	})
 }
@@ -179,7 +179,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"role": role,
 	})
 }
@@ -217,7 +217,7 @@ func (r *RoleController) isProtectedRole(roleSlug string) bool {
 // Update 更新角色
 func (r *RoleController) Update(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	role, resp := r.findRoleByID(ctx, id, false) // 不需要预加载关联
+	role, resp := r.findRoleByID(ctx, id, false)
 	if resp != nil {
 		return resp
 	}
@@ -312,7 +312,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"role": *role,
 	})
 }
@@ -320,7 +320,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 // Destroy 删除角色
 func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	role, resp := r.findRoleByID(ctx, id, false) // 不需要预加载关联
+	role, resp := r.findRoleByID(ctx, id, false)
 	if resp != nil {
 		return resp
 	}
@@ -336,5 +336,5 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }

@@ -56,7 +56,7 @@ func (r *OptionController) getRoleOptions(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"options": options,
 	})
 }
@@ -69,7 +69,7 @@ func (r *OptionController) getDepartmentOptions(ctx http.Context) http.Response 
 
 	tree := r.buildDepartmentTree(departments, 0)
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"options": tree,
 		"list":    departments,
 	})
@@ -101,7 +101,7 @@ func (r *OptionController) getMenuOptions(ctx http.Context) http.Response {
 
 	tree := r.buildMenuTree(menus)
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"options": tree,
 	})
 }
@@ -137,7 +137,7 @@ func (r *OptionController) getStatusOptions(ctx http.Context) http.Response {
 		{"label": trans.Get(ctx, "common.disabled"), "value": "0"},
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"options": options,
 	})
 }
@@ -151,7 +151,7 @@ func (r *OptionController) getMethodOptions(ctx http.Context) http.Response {
 		{"label": "PATCH", "value": "PATCH"},
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"options": options,
 	})
 }
@@ -162,7 +162,7 @@ func (r *OptionController) getYesNoOptions(ctx http.Context) http.Response {
 		{"label": trans.Get(ctx, "common.no"), "value": "0"},
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"options": options,
 	})
 }

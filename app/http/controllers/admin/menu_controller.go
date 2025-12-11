@@ -73,7 +73,7 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"menus": menus,
 	})
 }
@@ -86,7 +86,7 @@ func (r *MenuController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"menu": *menu,
 	})
 }
@@ -143,7 +143,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"menu": menu,
 	})
 }
@@ -216,7 +216,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"menu": *menu,
 	})
 }
@@ -242,7 +242,7 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // isDeveloperAdmin 检查是否是开发者管理员

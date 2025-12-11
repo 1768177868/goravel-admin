@@ -18,7 +18,33 @@ const (
 )
 
 // Success 成功响应（支持多语言，自动包含 trace_id）
-func Success(ctx http.Context, messageKey string, data ...http.Json) http.Response {
+// messageKey 可选，如果不传则使用默认值 "success"
+// 使用方式：
+//   - response.Success(ctx)
+//   - response.Success(ctx, data)
+//   - response.Success(ctx, "custom_message", data)
+func Success(ctx http.Context, args ...any) http.Response {
+	var messageKey string
+	var data any
+
+	// 智能识别参数：如果第一个参数是 string 且长度合理（<=50），则认为是 messageKey
+	if len(args) > 0 {
+		if msgKey, ok := args[0].(string); ok && len(msgKey) <= 50 {
+			// 方式1：传了 messageKey
+			messageKey = msgKey
+			if len(args) > 1 {
+				data = args[1]
+			}
+		} else {
+			// 方式2：没传 messageKey，第一个参数就是 data
+			messageKey = "success" // 默认值
+			data = args[0]
+		}
+	} else {
+		// 没有参数，使用默认值
+		messageKey = "success"
+	}
+
 	message := trans.Get(ctx, messageKey)
 
 	response := http.Json{
@@ -31,14 +57,11 @@ func Success(ctx http.Context, messageKey string, data ...http.Json) http.Respon
 		response["trace_id"] = traceID
 	}
 
-	if len(data) > 0 {
+	// 如果有数据，添加到响应中
+	if data != nil {
 		// 转换时间字段到对应时区
-		convertedData := helpers.ConvertTimesInData(ctx, data[0])
-		if convertedMap, ok := convertedData.(map[string]any); ok {
-			response["data"] = http.Json(convertedMap)
-		} else {
-			response["data"] = convertedData
-		}
+		convertedData := helpers.ConvertTimesInData(ctx, data)
+		response["data"] = convertedData
 	}
 	return ctx.Response().Success().Json(response)
 }

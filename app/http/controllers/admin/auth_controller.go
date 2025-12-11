@@ -161,7 +161,7 @@ func (r *AuthController) Captcha(ctx http.Context) http.Response {
 		// captchaData["captcha_image"] = "data:image/png;base64," + image
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"captcha": captchaData,
 	})
 }
@@ -186,7 +186,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"admin": http.Json{
 			"id":             admin.ID,
 			"username":       admin.Username,
@@ -232,7 +232,6 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 
 	// 重新查询admin以确保获取最新数据
 	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
-		// 查询失败是业务级错误（404），不需要记录日志
 		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
 	}
 
@@ -269,7 +268,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	}
 	admin = adminWithRelations
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"admin": http.Json{
 			"id":            admin.ID,
 			"username":      admin.Username,
@@ -411,7 +410,7 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 		tokenList = append(tokenList, tokenData)
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"tokens": tokenList,
 	})
 }
@@ -581,7 +580,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 		})
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"secret":        secret,
 		"qr_code_url":   qrCodeURL,
 		"qr_code_image": qrCodeImage,
@@ -700,7 +699,7 @@ func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Res
 		})
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"is_bound": isBound,
 	})
 }

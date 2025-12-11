@@ -272,7 +272,7 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 	// 获取超级管理员ID
 	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"admin": http.Json{
 			"id":             admin.ID,
 			"username":       admin.Username,
@@ -374,7 +374,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "create_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"admin": admin,
 	})
 }
@@ -523,7 +523,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		}
 	}
 
-	return response.Success(ctx, "update_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"admin": *admin,
 	})
 }
@@ -565,7 +565,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 		}
 	}
 
-	admin, resp := r.findAdminByID(ctx, id, false, false) // 不需要预加载关联
+	admin, resp := r.findAdminByID(ctx, id, false, false)
 	if resp != nil {
 		return resp
 	}
@@ -576,7 +576,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // UnbindGoogleAuthenticator 管理员解绑其他管理员的谷歌验证码

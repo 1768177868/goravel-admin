@@ -139,7 +139,7 @@ func (r *OperationLogController) Show(ctx http.Context) http.Response {
 		return resp
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"log": *log,
 	})
 }
@@ -147,7 +147,7 @@ func (r *OperationLogController) Show(ctx http.Context) http.Response {
 // Destroy 删除操作日志
 func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	log, resp := r.findOperationLogByID(ctx, id, false) // 不需要预加载关联
+	log, resp := r.findOperationLogByID(ctx, id, false)
 	if resp != nil {
 		return resp
 	}
@@ -158,7 +158,7 @@ func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 type OperationLogBatchDestroyRequest struct {
@@ -171,7 +171,6 @@ func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		// 参数绑定错误是业务级错误（400），不需要记录日志
 		return response.Error(ctx, http.StatusBadRequest, "params_error")
 	}
 
@@ -190,7 +189,7 @@ func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "delete_success")
+	return response.Success(ctx)
 }
 
 // Clean 清理操作日志
@@ -208,7 +207,7 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 		})
 	}
 
-	return response.Success(ctx, "clean_success")
+	return response.Success(ctx)
 }
 
 // GetTitleOptions 获取所有可用的操作标题选项
@@ -246,7 +245,7 @@ func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response
 		}
 	}
 
-	return response.Success(ctx, "get_success", http.Json{
+	return response.Success(ctx, http.Json{
 		"titles": result,
 	})
 }
