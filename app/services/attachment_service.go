@@ -44,8 +44,9 @@ type AttachmentService interface {
 }
 
 type AttachmentServiceImpl struct {
-	ctx  http.Context
-	disk string
+	ctx              http.Context
+	disk             string
+	systemLogService SystemLogService
 }
 
 func NewAttachmentService(ctx http.Context) AttachmentService {
@@ -56,8 +57,9 @@ func NewAttachmentService(ctx http.Context) AttachmentService {
 	}
 
 	return &AttachmentServiceImpl{
-		ctx:  ctx,
-		disk: disk,
+		ctx:              ctx,
+		disk:             disk,
+		systemLogService: NewSystemLogService(),
 	}
 }
 
@@ -73,7 +75,7 @@ func (s *AttachmentServiceImpl) InitChunkUpload(filename string, totalSize int64
 	}
 
 	// 生成唯一的分片ID
-	hash := md5.Sum([]byte(fmt.Sprintf("%s_%d_%d", filename, totalSize, time.Now().UnixNano())))
+	hash := md5.Sum(fmt.Appendf(nil, "%s_%d_%d", filename, totalSize, time.Now().UnixNano()))
 	chunkID := hex.EncodeToString(hash[:])
 
 	// 不再使用服务端缓存，分片信息由客户端管理
@@ -138,8 +140,14 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		}
 		chunkContent, err := storage.Get(chunkPath)
 		if err != nil {
-			// 读取失败，记录缺失
-			facades.Log().Warningf("Failed to read chunk %d for chunkID %s: %v", i, chunkID, err)
+			// 读取失败，记录到系统日志
+			if s.ctx != nil {
+				_ = s.systemLogService.RecordHTTP(s.ctx, "warning", "attachment", fmt.Sprintf("Failed to read chunk %d for chunkID %s", i, chunkID), map[string]any{
+					"chunk_index": i,
+					"chunk_id":    chunkID,
+					"error":       err.Error(),
+				})
+			}
 			missingChunks = append(missingChunks, i)
 			continue
 		}
@@ -203,8 +211,14 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if storage.Exists(chunkPath) {
 			if err := storage.Delete(chunkPath); err != nil {
-				// 记录删除失败，但不影响整体流程
-				facades.Log().Warningf("Failed to delete chunk file %s: %v", chunkPath, err)
+				// 记录删除失败到系统日志，但不影响整体流程
+				if s.ctx != nil {
+					_ = s.systemLogService.RecordHTTP(s.ctx, "warning", "attachment", fmt.Sprintf("Failed to delete chunk file %s", chunkPath), map[string]any{
+						"chunk_path": chunkPath,
+						"chunk_id":   chunkID,
+						"error":      err.Error(),
+					})
+				}
 				cleanupSuccess = false
 			} else {
 				cleanupCount++
@@ -212,12 +226,13 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		}
 	}
 
-	if cleanupCount > 0 {
-		facades.Log().Infof("Cleaned up %d chunk files for chunkID %s (total: %d)", cleanupCount, chunkID, totalChunks)
-	}
-	if !cleanupSuccess {
-		// 记录警告，但不影响返回结果
-		facades.Log().Warningf("Some chunk files failed to delete for chunkID %s", chunkID)
+	if !cleanupSuccess && s.ctx != nil {
+		// 记录部分分片删除失败的警告到系统日志
+		_ = s.systemLogService.RecordHTTP(s.ctx, "warning", "attachment", fmt.Sprintf("Some chunk files failed to delete for chunkID %s", chunkID), map[string]any{
+			"chunk_id":      chunkID,
+			"cleaned_count": cleanupCount,
+			"total_chunks":  totalChunks,
+		})
 	}
 
 	return attachment, nil
