@@ -6,6 +6,8 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
+	"github.com/spf13/cast"
 
 	"goravel/app/constants"
 	"goravel/app/http/helpers"
@@ -76,11 +78,20 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 		}
 	}
 
-	// 批量查询 admin
+	// 批量查询 admin（排除开发者ID）
 	adminMap := make(map[uint]models.Admin)
 	if len(adminIDs) > 0 {
+		// 获取开发者ID列表并过滤
+		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+		developerIDs := r.parseProtectedIDs(developerIDsStr)
+		
+		query := facades.Orm().Query().Where("id IN ?", adminIDs)
+		if len(developerIDs) > 0 {
+			query = query.Where("id NOT IN ?", developerIDs)
+		}
+		
 		var admins []models.Admin
-		if err := facades.Orm().Query().Where("id IN ?", adminIDs).Find(&admins); err != nil {
+		if err := query.Find(&admins); err != nil {
 			errorlog.RecordHTTP(ctx, "online_user", "Failed to query admin list", map[string]any{
 				"error":     err.Error(),
 				"admin_ids": adminIDs,
@@ -184,4 +195,25 @@ func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
 	return response.Success(ctx, "batch_kick_out_success", http.Json{
 		"count": len(ids),
 	})
+}
+
+// parseProtectedIDs 解析受保护的管理员ID字符串（支持逗号分隔）
+func (r *OnlineUserController) parseProtectedIDs(idsStr string) []uint {
+	var ids []uint
+	if idsStr == "" {
+		return ids
+	}
+
+	// 使用字符串分割
+	parts := str.Of(idsStr).Split(",")
+	for _, part := range parts {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
+			if id := cast.ToUint(part); id > 0 {
+				ids = append(ids, id)
+			}
+		}
+	}
+
+	return ids
 }

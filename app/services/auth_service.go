@@ -6,6 +6,8 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
+	"github.com/spf13/cast"
 
 	"goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -263,6 +265,26 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		menus = append(menus, menu)
 	}
 
+	// 检查是否需要隐藏服务监控菜单
+	// 只有当配置值不为空且不等于 "0" 时才隐藏（"0" 表示不隐藏）
+	monitorHidden := facades.Config().GetString("admin.monitor_hidden", "")
+	if monitorHidden != "" && monitorHidden != "0" {
+		// 检查是否是开发者管理员
+		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+		isDeveloperAdmin := s.isDeveloperAdmin(admin.ID, developerIDsStr)
+
+		// 如果不是开发者管理员，则过滤掉服务监控菜单
+		if !isDeveloperAdmin {
+			var filteredMenus []models.Menu
+			for _, menu := range menus {
+				if menu.Slug != "monitor" {
+					filteredMenus = append(filteredMenus, menu)
+				}
+			}
+			menus = filteredMenus
+		}
+	}
+
 	return &admin, permissions, menus, nil
 }
 
@@ -321,4 +343,24 @@ func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, usernam
 	}()
 
 	return nil
+}
+
+// isDeveloperAdmin 检查是否是开发者管理员
+func (s *AuthServiceImpl) isDeveloperAdmin(adminID uint, developerIDsStr string) bool {
+	if developerIDsStr == "" {
+		return false
+	}
+
+	// 解析开发者ID列表
+	parts := str.Of(developerIDsStr).Split(",")
+	for _, part := range parts {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
+			if id := cast.ToUint(part); id > 0 && id == adminID {
+				return true
+			}
+		}
+	}
+
+	return false
 }

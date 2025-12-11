@@ -43,6 +43,17 @@ func init() {
 		// Example in .env file:
 		//   ADMIN_SHOW_BUTTONS_WITHOUT_PERMISSION=false
 		"show_buttons_without_permission": config.Env("ADMIN_SHOW_BUTTONS_WITHOUT_PERMISSION", false), // Default: false (hide buttons)
+
+		// Monitor Hidden
+		//
+		// Whether to hide the service monitor menu from menu management and sidebar.
+		// If set to a non-empty value, the monitor menu will be hidden for all users except developer admins.
+		// Developer admins (ADMIN_DEVELOPER_IDS) will always see the monitor menu regardless of this setting.
+		// If not set or empty, the monitor menu will be shown normally (default behavior).
+		//
+		// Example in .env file:
+		//   ADMIN_MONITOR_HIDDEN=1
+		"monitor_hidden": config.Env("ADMIN_MONITOR_HIDDEN", ""), // Default: empty (show monitor menu)
 	})
 	config.Add("role", map[string]any{
 		// Protected Role Slugs

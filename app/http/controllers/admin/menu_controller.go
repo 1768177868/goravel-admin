@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
+	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
 	adminrequests "goravel/app/http/requests/admin"
@@ -46,6 +47,31 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 	menus, err := r.treeService.BuildMenuTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+	}
+
+	// 检查是否需要隐藏服务监控菜单
+	// 只有当配置值不为空且不等于 "0" 时才隐藏（"0" 表示不隐藏）
+	monitorHidden := facades.Config().GetString("admin.monitor_hidden", "")
+	if monitorHidden != "" && monitorHidden != "0" {
+		// 获取当前管理员ID
+		adminValue := ctx.Value("admin")
+		var adminID uint
+		if adminValue != nil {
+			if admin, ok := adminValue.(models.Admin); ok {
+				adminID = admin.ID
+			} else if adminPtr, ok := adminValue.(*models.Admin); ok && adminPtr != nil {
+				adminID = adminPtr.ID
+			}
+		}
+
+		// 检查是否是开发者管理员
+		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+		isDeveloperAdmin := r.isDeveloperAdmin(adminID, developerIDsStr)
+
+		// 如果不是开发者管理员，则过滤掉服务监控菜单
+		if !isDeveloperAdmin {
+			menus = r.filterMonitorMenu(menus)
+		}
 	}
 
 	return response.Success(ctx, "get_success", http.Json{
@@ -226,4 +252,40 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success")
+}
+
+// isDeveloperAdmin 检查是否是开发者管理员
+func (r *MenuController) isDeveloperAdmin(adminID uint, developerIDsStr string) bool {
+	if developerIDsStr == "" {
+		return false
+	}
+
+	// 解析开发者ID列表
+	parts := str.Of(developerIDsStr).Split(",")
+	for _, part := range parts {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
+			if id := cast.ToUint(part); id > 0 && id == adminID {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// filterMonitorMenu 递归过滤掉服务监控菜单
+func (r *MenuController) filterMonitorMenu(menus []models.Menu) []models.Menu {
+	var filteredMenus []models.Menu
+	for _, menu := range menus {
+		// 如果当前菜单不是服务监控菜单，则保留
+		if menu.Slug != "monitor" {
+			// 递归过滤子菜单
+			if len(menu.Children) > 0 {
+				menu.Children = r.filterMonitorMenu(menu.Children)
+			}
+			filteredMenus = append(filteredMenus, menu)
+		}
+	}
+	return filteredMenus
 }

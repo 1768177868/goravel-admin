@@ -213,6 +213,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		},
 		"config": http.Json{
 			"show_buttons_without_permission": showButtonsWithoutPermission,
+			"monitor_hidden":                  facades.Config().GetString("admin.monitor_hidden", ""),
 		},
 	})
 }
