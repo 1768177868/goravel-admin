@@ -69,4 +69,28 @@ func (receiver *RouteServiceProvider) configureRateLimiting() {
 		}
 		return limit.PerMinute(10).By("login:" + username)
 	})
+
+	// 测试响应速率限制器
+	facades.RateLimiter().For("testResponse", func(ctx contractshttp.Context) contractshttp.Limit {
+		return limit.PerMinute(6).Response(func(ctx contractshttp.Context) {
+
+			method := ctx.Request().Method()
+			ip := ctx.Request().Ip()
+
+			// 示例: 根据请求方法判断
+			if method == "GET" {
+				ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+					"message": "GET请求过于频繁",
+					"ip":      ip,
+				}).Abort()
+				return
+			}
+
+			// 默认响应
+			ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"ip": ip,
+			}).Abort()
+		})
+	})
+
 }
