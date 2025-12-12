@@ -4,6 +4,7 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
+    v-loading="loading"
   >
     <el-form
       ref="formRef"
@@ -12,13 +13,13 @@
       label-width="100px"
     >
       <el-form-item :label="$t('permission.name')" prop="name">
-        <el-input v-model="formData.name" />
+        <el-input v-model="formData.name" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('permission.slug')" prop="slug">
-        <el-input v-model="formData.slug" />
+        <el-input v-model="formData.slug" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('permission.method')" prop="method">
-        <el-select v-model="formData.method" :placeholder="$t('form.select_method')">
+        <el-select v-model="formData.method" :placeholder="$t('form.select_method')" :disabled="loading">
           <el-option label="GET" value="GET" />
           <el-option label="POST" value="POST" />
           <el-option label="PUT" value="PUT" />
@@ -26,10 +27,10 @@
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('permission.path')" prop="path">
-        <el-input v-model="formData.path" />
+        <el-input v-model="formData.path" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('common.description')">
-        <el-input v-model="formData.description" type="textarea" />
+        <el-input v-model="formData.description" type="textarea" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('menu.title')" prop="menu_id">
         <el-popover
@@ -44,6 +45,7 @@
               :placeholder="$t('form.please_select') + $t('menu.title')"
               readonly
               clearable
+              :disabled="loading"
               @clear="formData.menu_id = null"
               style="cursor: pointer"
             >
@@ -68,13 +70,13 @@
         </el-popover>
       </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status">
+        <el-radio-group v-model="formData.status" :disabled="loading">
           <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
           <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" />
+        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -115,6 +117,7 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 const menuSelectVisible = ref(false)
 
 const dialogVisible = computed({
@@ -189,6 +192,7 @@ watch(dialogVisible, (visible) => {
 })
 
 const loadDetail = async (id) => {
+  loading.value = true
   try {
     const res = await getPermissionDetail(id)
     
@@ -211,10 +215,13 @@ const loadDetail = async (id) => {
     }
   } catch (error) {
     console.error('Load permission detail error:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
+  loading.value = false
   formData.id = null
   formData.menu_id = null
   formData.name = ''

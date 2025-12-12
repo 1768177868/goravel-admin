@@ -4,6 +4,7 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
+    v-loading="loading"
   >
     <el-form
       ref="formRef"
@@ -12,7 +13,7 @@
       label-width="100px"
     >
       <el-form-item :label="$t('menu_management.parent_menu')">
-        <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('menu_management.parent_menu')" clearable>
+        <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('menu_management.parent_menu')" clearable :disabled="loading">
           <el-option :label="$t('menu_management.top_menu')" :value="0" />
           <el-option
             v-for="menu in menuOptions"
@@ -23,13 +24,13 @@
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('menu_management.name')" prop="name">
-        <el-input v-model="formData.name" />
+        <el-input v-model="formData.name" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('menu_management.slug')" prop="slug">
-        <el-input v-model="formData.slug" :placeholder="$t('menu_management.slug_placeholder')" />
+        <el-input v-model="formData.slug" :placeholder="$t('menu_management.slug_placeholder')" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('menu_management.link_type')" prop="link_type">
-        <el-radio-group v-model="formData.link_type">
+        <el-radio-group v-model="formData.link_type" :disabled="loading">
           <el-radio :label="1">{{ $t('menu_management.link_type_internal') }}</el-radio>
           <el-radio :label="2">{{ $t('menu_management.link_type_external') }}</el-radio>
         </el-radio-group>
@@ -42,6 +43,7 @@
         <el-input 
           v-model="formData.path" 
           :placeholder="$t('menu_management.path_placeholder_internal')"
+          :disabled="loading"
         />
       </el-form-item>
       <el-form-item 
@@ -52,6 +54,7 @@
         <el-input 
           v-model="formData.path" 
           :placeholder="$t('menu_management.path_placeholder_external')"
+          :disabled="loading"
         />
       </el-form-item>
       <el-form-item 
@@ -59,7 +62,7 @@
         prop="open_type"
         v-if="formData.link_type === 2"
       >
-        <el-radio-group v-model="formData.open_type">
+        <el-radio-group v-model="formData.open_type" :disabled="loading">
           <el-radio :label="1">{{ $t('menu_management.open_type_iframe') }}</el-radio>
           <el-radio :label="2">{{ $t('menu_management.open_type_new_window') }}</el-radio>
         </el-radio-group>
@@ -70,6 +73,7 @@
             v-model="formData.icon"
             :placeholder="$t('menu_management.icon_placeholder')"
             clearable
+            :disabled="loading"
             @clear="clearIcon"
           >
             <template #prefix>
@@ -112,13 +116,13 @@
         </div>
       </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status">
+        <el-radio-group v-model="formData.status" :disabled="loading">
           <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
           <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" />
+        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -159,6 +163,7 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -289,6 +294,7 @@ watch(() => props.editId, async (newId) => {
 })
 
 const loadDetail = async (id) => {
+  loading.value = true
   try {
     const res = await getMenuDetail(id)
     if (res.data && res.data.menu) {
@@ -309,10 +315,13 @@ const loadDetail = async (id) => {
     }
   } catch (error) {
     console.error('Load menu detail error:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
+  loading.value = false
   Object.assign(formData, {
     id: null,
     parent_id: 0,

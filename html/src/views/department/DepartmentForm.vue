@@ -4,6 +4,7 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
+    v-loading="loading"
   >
     <el-form
       ref="formRef"
@@ -12,7 +13,7 @@
       label-width="100px"
     >
       <el-form-item :label="$t('department.parent_department')">
-        <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('department.parent_department')" clearable>
+        <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('department.parent_department')" clearable :disabled="loading">
           <el-option :label="$t('department.top_department')" :value="0" />
           <el-option
             v-for="dept in departmentOptions"
@@ -23,19 +24,19 @@
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('department.name')" prop="name">
-        <el-input v-model="formData.name" />
+        <el-input v-model="formData.name" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('common.description')">
-        <el-input v-model="formData.description" type="textarea" />
+        <el-input v-model="formData.description" type="textarea" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status">
+        <el-radio-group v-model="formData.status" :disabled="loading">
           <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
           <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" />
+        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -75,6 +76,7 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -118,6 +120,7 @@ watch(dialogVisible, (visible) => {
 })
 
 const loadDetail = async (id) => {
+  loading.value = true
   try {
     const res = await getDepartmentDetail(id)
     if (res.data && res.data.department) {
@@ -134,10 +137,13 @@ const loadDetail = async (id) => {
     }
   } catch (error) {
     console.error('Load department detail error:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
+  loading.value = false
   Object.assign(formData, {
     id: null,
     parent_id: 0,

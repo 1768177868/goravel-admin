@@ -4,6 +4,7 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
+    v-loading="loading"
   >
     <el-form
       ref="formRef"
@@ -12,19 +13,19 @@
       label-width="100px"
     >
       <el-form-item :label="$t('table.username')" prop="username">
-        <el-input v-model="formData.username" :disabled="!!formData.id" />
+        <el-input v-model="formData.username" :disabled="!!formData.id || loading" />
       </el-form-item>
       <el-form-item :label="$t('common.password')" prop="password" v-if="!formData.id">
-        <el-input v-model="formData.password" type="password" />
+        <el-input v-model="formData.password" type="password" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('table.nickname')" prop="nickname">
-        <el-input v-model="formData.nickname" />
+        <el-input v-model="formData.nickname" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('table.email')" prop="email">
-        <el-input v-model="formData.email" />
+        <el-input v-model="formData.email" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('table.phone')" prop="phone">
-        <el-input v-model="formData.phone" />
+        <el-input v-model="formData.phone" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('table.department')" prop="department_id">
         <el-popover
@@ -38,6 +39,7 @@
               :model-value="getDepartmentName(formData.department_id)"
               :placeholder="$t('form.select_department')"
               readonly
+              :disabled="loading"
               @click="departmentSelectVisible = !departmentSelectVisible"
               style="cursor: pointer"
             >
@@ -71,7 +73,7 @@
           v-model="formData.role_ids" 
           multiple 
           :placeholder="$t('form.select_role')" 
-          :disabled="isDefaultAdmin"
+          :disabled="isDefaultAdmin || loading"
           style="width: 100%"
         >
           <el-option
@@ -83,7 +85,7 @@
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status" :disabled="isDefaultAdmin">
+        <el-radio-group v-model="formData.status" :disabled="isDefaultAdmin || loading">
           <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
           <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
         </el-radio-group>
@@ -133,6 +135,7 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 const departmentSelectVisible = ref(false)
 
 const ArrowDownIcon = markRaw(ArrowDown)
@@ -214,16 +217,20 @@ watch(dialogVisible, (visible) => {
 })
 
 const loadDetail = async (id) => {
+  loading.value = true
   try {
     // Admin模块的编辑不需要单独获取详情，数据已经在列表中
     // 这里可以根据需要实现
   } catch (error) {
     logger.error('Load admin detail error:', error)
     ErrorHandler.handle(error, { silent: true })
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
+  loading.value = false
   Object.assign(formData, {
     id: null,
     username: '',

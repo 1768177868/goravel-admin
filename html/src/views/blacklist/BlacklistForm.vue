@@ -4,6 +4,7 @@
     :title="dialogTitle"
     width="700px"
     @close="handleDialogClose"
+    v-loading="loading"
   >
     <el-form
       ref="formRef"
@@ -17,6 +18,7 @@
           type="textarea"
           :rows="4"
           :placeholder="$t('blacklist.ip_placeholder')"
+          :disabled="loading"
         />
         <div style="margin-top: 8px; color: #909399; font-size: 12px;">
           {{ $t('blacklist.ip_tip') }}
@@ -28,10 +30,11 @@
           type="textarea"
           :rows="3"
           :placeholder="$t('blacklist.remark_placeholder')"
+          :disabled="loading"
         />
       </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status">
+        <el-radio-group v-model="formData.status" :disabled="loading">
           <el-radio :label="1">{{ $t('blacklist.enabled') }}</el-radio>
           <el-radio :label="0">{{ $t('blacklist.disabled') }}</el-radio>
         </el-radio-group>
@@ -70,6 +73,7 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -134,6 +138,7 @@ watch(dialogVisible, (visible) => {
 })
 
 const loadDetail = async (id) => {
+  loading.value = true
   try {
     const res = await getBlacklistDetail(id)
     if (res.data && res.data.blacklist) {
@@ -147,10 +152,13 @@ const loadDetail = async (id) => {
     }
   } catch (error) {
     console.error('Load blacklist detail error:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
+  loading.value = false
   Object.assign(formData, {
     id: null,
     ip: '',

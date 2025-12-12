@@ -91,6 +91,7 @@
       width="900px"
       @close="handleDialogClose"
       @opened="handleDialogOpened"
+      v-loading="formLoading"
     >
       <el-form
         ref="formRef"
@@ -99,17 +100,17 @@
         label-width="100px"
       >
         <el-form-item :label="$t('role.name')" prop="name">
-          <el-input v-model="formData.name" />
+          <el-input v-model="formData.name" :disabled="formLoading" />
         </el-form-item>
         <el-form-item :label="$t('role.slug')" prop="slug">
           <el-input 
             v-model="formData.slug" 
-            :disabled="isProtectedRole(formData)"
+            :disabled="isProtectedRole(formData) || formLoading"
             :placeholder="isProtectedRole(formData) ? $t('role.protected_role_slug_disabled') : ''"
           />
         </el-form-item>
         <el-form-item :label="$t('common.description')">
-          <el-input v-model="formData.description" type="textarea" />
+          <el-input v-model="formData.description" type="textarea" :disabled="formLoading" />
         </el-form-item>
         <el-form-item 
           v-if="!isProtectedRole(formData)" 
@@ -134,6 +135,7 @@
                 class="menu-permission-tree"
                 :expand-on-click-node="false"
                 :default-expand-all="false"
+                :disabled="formLoading"
                 @check="handleTreeCheck"
               >
                 <template #default="{ node, data }">
@@ -168,7 +170,7 @@
           </div>
         </el-form-item>
         <el-form-item :label="$t('table.status')" prop="status">
-          <el-radio-group v-model.number="formData.status">
+          <el-radio-group v-model.number="formData.status" :disabled="formLoading">
             <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
             <el-radio :label="0" :disabled="isProtectedRole(formData)">{{ $t('common.disabled') }}</el-radio>
           </el-radio-group>
@@ -178,7 +180,7 @@
           </div>
         </el-form-item>
         <el-form-item :label="$t('common.sort')">
-          <el-input-number v-model="formData.sort" :min="0" />
+          <el-input-number v-model="formData.sort" :min="0" :disabled="formLoading" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -217,6 +219,7 @@ const formRef = ref(null)
 const tableRef = ref(null)
 const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
+const formLoading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('role.edit_role') : t('role.add_role'))
@@ -751,6 +754,7 @@ const handleAdd = () => {
 }
 
 const initAddForm = () => {
+  formLoading.value = false
   Object.assign(formData, {
     id: null,
     name: '',
@@ -773,6 +777,7 @@ const initAddForm = () => {
 }
 
 const handleEdit = async (row) => {
+  formLoading.value = true
   try {
     const res = await getRoleDetail(row.id)
     if (res.data && res.data.role) {
@@ -820,6 +825,8 @@ const handleEdit = async (row) => {
     }
   } catch (error) {
     console.error('Load role detail error:', error)
+  } finally {
+    formLoading.value = false
   }
 }
 

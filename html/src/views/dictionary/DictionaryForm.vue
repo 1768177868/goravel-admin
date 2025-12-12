@@ -4,6 +4,7 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
+    v-loading="loading"
   >
     <el-form
       ref="formRef"
@@ -12,22 +13,22 @@
       label-width="100px"
     >
       <el-form-item :label="$t('dictionary.type')" prop="type">
-        <el-input v-model="formData.type" />
+        <el-input v-model="formData.type" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('dictionary.label')" prop="label">
-        <el-input v-model="formData.label" />
+        <el-input v-model="formData.label" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('dictionary.value')" prop="value">
-        <el-input v-model="formData.value" />
+        <el-input v-model="formData.value" :disabled="loading" />
       </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status">
+        <el-radio-group v-model="formData.status" :disabled="loading">
           <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
           <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" />
+        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -63,6 +64,7 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -108,6 +110,7 @@ watch(dialogVisible, (visible) => {
 })
 
 const loadDetail = async (id) => {
+  loading.value = true
   try {
     const res = await getDictionaryDetail(id)
     if (res.data && res.data.dictionary) {
@@ -124,10 +127,13 @@ const loadDetail = async (id) => {
     }
   } catch (error) {
     console.error('Load dictionary detail error:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
+  loading.value = false
   Object.assign(formData, {
     id: null,
     type: '',
