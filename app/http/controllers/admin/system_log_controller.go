@@ -22,20 +22,9 @@ func NewSystemLogController() *SystemLogController {
 
 // findSystemLogByID 根据ID查找系统日志，如果不存在则返回错误响应
 func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*models.SystemLog, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var log models.SystemLog
-	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	if log.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	return &log, nil
+	return response.FindByID[models.SystemLog](ctx, id, &response.FindByIDOptions{
+		NotFoundMessageKey: "log_not_found",
+	})
 }
 
 // buildQuery 构建系统日志查询

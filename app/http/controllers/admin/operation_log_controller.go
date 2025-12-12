@@ -24,24 +24,14 @@ func NewOperationLogController() *OperationLogController {
 // findOperationLogByID 根据ID查找操作日志，如果不存在则返回错误响应
 // withAdmin 为 true 时会预加载 Admin 关联
 func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint, withAdmin bool) (*models.OperationLog, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var log models.OperationLog
-	query := facades.Orm().Query().Where("id", id)
+	var relations []string
 	if withAdmin {
-		query = query.With("Admin")
+		relations = append(relations, "Admin")
 	}
-	if err := query.First(&log); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	if log.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	return &log, nil
+	return response.FindByID[models.OperationLog](ctx, id, &response.FindByIDOptions{
+		WithRelations:      relations,
+		NotFoundMessageKey: "log_not_found",
+	})
 }
 
 // Index 获取操作日志列表

@@ -25,20 +25,9 @@ func NewBlacklistController() *BlacklistController {
 
 // findBlacklistByID 根据ID查找黑名单，如果不存在则返回错误响应
 func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*models.Blacklist, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
-	}
-
-	if blacklist.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "blacklist_not_found")
-	}
-
-	return &blacklist, nil
+	return response.FindByID[models.Blacklist](ctx, id, &response.FindByIDOptions{
+		NotFoundMessageKey: "blacklist_not_found",
+	})
 }
 
 // buildQuery 构建黑名单查询

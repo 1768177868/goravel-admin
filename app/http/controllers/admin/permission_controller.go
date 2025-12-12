@@ -26,24 +26,14 @@ func NewPermissionController() *PermissionController {
 // findPermissionByID 根据ID查找权限，如果不存在则返回错误响应
 // withMenu 为 true 时会预加载 Menu 关联
 func (r *PermissionController) findPermissionByID(ctx http.Context, id uint, withMenu bool) (*models.Permission, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var permission models.Permission
-	query := facades.Orm().Query().Where("id", id)
+	var relations []string
 	if withMenu {
-		query = query.With("Menu")
+		relations = append(relations, "Menu")
 	}
-	if err := query.First(&permission); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "permission_not_found")
-	}
-
-	if permission.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "permission_not_found")
-	}
-
-	return &permission, nil
+	return response.FindByID[models.Permission](ctx, id, &response.FindByIDOptions{
+		WithRelations:      relations,
+		NotFoundMessageKey: "permission_not_found",
+	})
 }
 
 // buildQuery 构建权限查询

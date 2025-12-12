@@ -23,24 +23,14 @@ func NewLoginLogController() *LoginLogController {
 // findLoginLogByID 根据ID查找登录日志，如果不存在则返回错误响应
 // withAdmin 为 true 时会预加载 Admin 关联
 func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdmin bool) (*models.LoginLog, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var log models.LoginLog
-	query := facades.Orm().Query().Where("id", id)
+	var relations []string
 	if withAdmin {
-		query = query.With("Admin")
+		relations = append(relations, "Admin")
 	}
-	if err := query.First(&log); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	if log.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "log_not_found")
-	}
-
-	return &log, nil
+	return response.FindByID[models.LoginLog](ctx, id, &response.FindByIDOptions{
+		WithRelations:      relations,
+		NotFoundMessageKey: "log_not_found",
+	})
 }
 
 // buildQuery 构建登录日志查询

@@ -211,6 +211,41 @@ npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 
 pprof 性能分析工具地址：http://localhost:3000/debug/pprof/
 
+### 二进制压缩
+
+为了减小二进制文件大小，可以使用 UPX（Ultimate Packer for eXecutables）压缩编译后的可执行文件：
+
+**Windows：**
+
+1. 下载 UPX（Windows 64 位版本）：
+   - 官网下载：https://github.com/upx/upx/releases/latest
+   - 选择 `upx-5.0.2-win64.zip`（或最新版本）
+   - 解压到无中文或空格的路径（例如：`F:\tools\upx`）
+   - 确保 `upx.exe` 可访问
+
+2. 压缩二进制文件（PowerShell）：
+   ```powershell
+   # 方式1：临时添加 UPX 到环境变量（推荐）
+   $env:PATH += ";F:\tools\upx"
+   
+   # 进入项目目录
+   cd F:\www\go\admin\goravel-admin
+   
+   # 最高级别压缩（-9）
+   upx -9 main
+   ```
+
+**Linux/macOS：**
+
+```bash
+# 安装 UPX（如果尚未安装）
+# Ubuntu/Debian: sudo apt-get install upx
+# macOS: brew install upx
+
+# 压缩二进制文件
+upx -9 main
+```
+
 ## 文档
 
 在线文档 [https://www.goravel.dev](https://www.goravel.dev)

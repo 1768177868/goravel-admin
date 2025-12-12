@@ -29,20 +29,9 @@ func NewDepartmentController() *DepartmentController {
 
 // findDepartmentByID 根据ID查找部门，如果不存在则返回错误响应
 func (r *DepartmentController) findDepartmentByID(ctx http.Context, id uint) (*models.Department, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var department models.Department
-	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "department_not_found")
-	}
-
-	if department.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "department_not_found")
-	}
-
-	return &department, nil
+	return response.FindByID[models.Department](ctx, id, &response.FindByIDOptions{
+		NotFoundMessageKey: "department_not_found",
+	})
 }
 
 // buildQuery 构建部门查询

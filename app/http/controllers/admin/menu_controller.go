@@ -25,20 +25,9 @@ func NewMenuController() *MenuController {
 
 // findMenuByID 根据ID查找菜单，如果不存在则返回错误响应
 func (r *MenuController) findMenuByID(ctx http.Context, id uint) (*models.Menu, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var menu models.Menu
-	if err := facades.Orm().Query().Where("id", id).First(&menu); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "menu_not_found")
-	}
-
-	if menu.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "menu_not_found")
-	}
-
-	return &menu, nil
+	return response.FindByID[models.Menu](ctx, id, &response.FindByIDOptions{
+		NotFoundMessageKey: "menu_not_found",
+	})
 }
 
 // Index 菜单列表（树形结构）

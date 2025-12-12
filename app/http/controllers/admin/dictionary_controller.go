@@ -22,20 +22,9 @@ func NewDictionaryController() *DictionaryController {
 
 // findDictionaryByID 根据ID查找字典，如果不存在则返回错误响应
 func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*models.Dictionary, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
-	}
-
-	if dictionary.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "dictionary_not_found")
-	}
-
-	return &dictionary, nil
+	return response.FindByID[models.Dictionary](ctx, id, &response.FindByIDOptions{
+		NotFoundMessageKey: "dictionary_not_found",
+	})
 }
 
 // buildQuery 构建字典查询

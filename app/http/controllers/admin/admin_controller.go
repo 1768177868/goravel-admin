@@ -80,27 +80,17 @@ func NewAdminController() *AdminController {
 // withDepartment 为 true 时会预加载 Department 关联
 // withRoles 为 true 时会预加载 Roles 关联
 func (r *AdminController) findAdminByID(ctx http.Context, id uint, withDepartment bool, withRoles bool) (*models.Admin, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var admin models.Admin
-	query := facades.Orm().Query().Where("id", id)
+	var relations []string
 	if withDepartment {
-		query = query.With("Department")
+		relations = append(relations, "Department")
 	}
 	if withRoles {
-		query = query.With("Roles")
+		relations = append(relations, "Roles")
 	}
-	if err := query.First(&admin); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "admin_not_found")
-	}
-
-	if admin.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "admin_not_found")
-	}
-
-	return &admin, nil
+	return response.FindByID[models.Admin](ctx, id, &response.FindByIDOptions{
+		WithRelations:      relations,
+		NotFoundMessageKey: "admin_not_found",
+	})
 }
 
 // buildQuery 构建查询（列表和导出共用）

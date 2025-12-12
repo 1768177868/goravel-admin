@@ -28,24 +28,14 @@ func NewRoleController() *RoleController {
 // findRoleByID 根据ID查找角色，如果不存在则返回错误响应
 // withRelations 为 true 时会预加载 Permissions 和 Menus 关联
 func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations bool) (*models.Role, http.Response) {
-	if id == 0 {
-		return nil, response.Error(ctx, http.StatusBadRequest, "id_required")
-	}
-
-	var role models.Role
-	query := facades.Orm().Query().Where("id", id)
+	var relations []string
 	if withRelations {
-		query = query.With("Permissions").With("Menus")
+		relations = append(relations, "Permissions", "Menus")
 	}
-	if err := query.First(&role); err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, "role_not_found")
-	}
-
-	if role.ID == 0 {
-		return nil, response.Error(ctx, http.StatusNotFound, "role_not_found")
-	}
-
-	return &role, nil
+	return response.FindByID[models.Role](ctx, id, &response.FindByIDOptions{
+		WithRelations:      relations,
+		NotFoundMessageKey: "role_not_found",
+	})
 }
 
 // buildQuery 构建角色查询

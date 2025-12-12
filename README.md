@@ -211,6 +211,42 @@ npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
 
 pprof is available at: http://localhost:3000/debug/pprof/
 
+### Binary Compression
+
+To reduce the binary size, you can use UPX (Ultimate Packer for eXecutables) to compress the compiled executable:
+
+**Windows:**
+
+1. Download UPX (Windows 64-bit version):
+   - Official download: https://github.com/upx/upx/releases/latest
+   - Select `upx-5.0.2-win64.zip` (or the latest version)
+   - Extract the zip to a path without Chinese characters or spaces (e.g., `F:\tools\upx`)
+   - Ensure `upx.exe` is accessible
+
+2. Compress the binary (PowerShell):
+   ```powershell
+   # Option 1: Temporarily add UPX to PATH (recommended)
+   $env:PATH += ";F:\tools\upx"
+   
+   # Navigate to project directory
+   cd F:\www\go\admin\goravel-admin
+   
+   # Maximum compression level (-9)
+   upx -9 main
+   ```
+
+**Linux/macOS:**
+
+```bash
+# Install UPX (if not already installed)
+# Ubuntu/Debian: sudo apt-get install upx
+# macOS: brew install upx
+
+# Compress the binary
+upx -9 main
+```
+
+
 ## Documentation
 
 Online documentation [https://www.goravel.dev](https://www.goravel.dev)
