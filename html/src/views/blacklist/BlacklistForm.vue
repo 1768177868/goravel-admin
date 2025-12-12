@@ -4,14 +4,14 @@
     :title="dialogTitle"
     width="700px"
     @close="handleDialogClose"
-    v-loading="loading"
   >
-    <el-form
-      ref="formRef"
-      :model="formData"
-      :rules="formRules"
-      label-width="120px"
-    >
+    <div v-loading="loading">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-width="120px"
+      >
       <el-form-item :label="$t('blacklist.ip')" prop="ip">
         <el-input
           v-model="formData.ip"
@@ -40,6 +40,7 @@
         </el-radio-group>
       </el-form-item>
     </el-form>
+    </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
       <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>

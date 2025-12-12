@@ -4,14 +4,14 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
-    v-loading="loading"
   >
-    <el-form
-      ref="formRef"
-      :model="formData"
-      :rules="formRules"
-      label-width="100px"
-    >
+    <div v-loading="loading">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-width="100px"
+      >
       <el-form-item :label="$t('dictionary.type')" prop="type">
         <el-input v-model="formData.type" :disabled="loading" />
       </el-form-item>
@@ -31,6 +31,7 @@
         <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
       </el-form-item>
     </el-form>
+    </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
       <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>

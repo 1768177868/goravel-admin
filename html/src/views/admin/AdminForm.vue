@@ -4,14 +4,14 @@
     :title="dialogTitle"
     width="600px"
     @close="handleDialogClose"
-    v-loading="loading"
   >
-    <el-form
-      ref="formRef"
-      :model="formData"
-      :rules="formRules"
-      label-width="100px"
-    >
+    <div v-loading="loading">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-width="100px"
+      >
       <el-form-item :label="$t('table.username')" prop="username">
         <el-input v-model="formData.username" :disabled="!!formData.id || loading" />
       </el-form-item>
@@ -91,6 +91,7 @@
         </el-radio-group>
       </el-form-item>
     </el-form>
+    </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
       <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
@@ -247,8 +248,15 @@ const resetForm = () => {
 }
 
 // 设置表单数据（从外部调用）
-const setFormData = (data) => {
-  Object.assign(formData, data)
+const setFormData = async (data) => {
+  loading.value = true
+  try {
+    // 使用 nextTick 确保 DOM 更新后再设置数据
+    await new Promise(resolve => setTimeout(resolve, 50))
+    Object.assign(formData, data)
+  } finally {
+    loading.value = false
+  }
 }
 
 // 暴露方法供父组件调用

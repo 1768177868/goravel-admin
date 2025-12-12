@@ -373,13 +373,20 @@ const getDepartmentDisplayName = (department) => {
 }
 
 const handleEdit = async (row) => {
+  // 先打开对话框，让表单组件显示loading
+  editId.value = row.id
+  dialogVisible.value = true
+  
+  // 等待对话框打开后再设置数据
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
   // 处理字段映射，支持 PascalCase 和 snake_case
   const adminRoles = row.Roles || row.roles
   
   // 去重角色ID
   const uniqueRoleIds = adminRoles ? [...new Set(adminRoles.map(r => r.id || r.ID).filter(id => id))] : []
   
-  // 设置表单数据
+  // 设置表单数据（setFormData内部会处理loading）
   if (adminFormRef.value) {
     adminFormRef.value.setFormData({
       id: row.id,
@@ -394,9 +401,6 @@ const handleEdit = async (row) => {
       is_super_admin: row.is_super_admin === true || row.IsSuperAdmin === true
     })
   }
-  
-  editId.value = row.id
-  dialogVisible.value = true
 }
 
 const handleFormSuccess = () => {

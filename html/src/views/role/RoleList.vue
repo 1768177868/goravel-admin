@@ -91,14 +91,14 @@
       width="900px"
       @close="handleDialogClose"
       @opened="handleDialogOpened"
-      v-loading="formLoading"
     >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="100px"
-      >
+      <div v-loading="formLoading">
+        <el-form
+          ref="formRef"
+          :model="formData"
+          :rules="formRules"
+          label-width="100px"
+        >
         <el-form-item :label="$t('role.name')" prop="name">
           <el-input v-model="formData.name" :disabled="formLoading" />
         </el-form-item>
@@ -183,6 +183,7 @@
           <el-input-number v-model="formData.sort" :min="0" :disabled="formLoading" />
         </el-form-item>
       </el-form>
+      </div>
       <template #footer>
         <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>

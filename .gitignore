@@ -8,8 +8,6 @@ launch.json
 .env.staging
 .env.*.local
 .env.bak
-goravel.exe
 goravel
 main
-main.exe
-test.exe
+*.exe
