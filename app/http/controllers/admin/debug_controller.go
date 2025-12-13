@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"fmt"
+
 	"github.com/goravel/framework/contracts/http"
 
 	"goravel/app/http/response"
@@ -75,4 +77,22 @@ func (r *DebugController) TraceTest(ctx http.Context) http.Response {
 		}, "Trace test error: %s", message)
 		return response.Error(ctx, http.StatusInternalServerError, "trace_test_error")
 	}
+
+}
+
+// TestErrorLog 测试 ErrorWithLog 日志记录功能
+// 用于手动触发异常，测试日志是否正常写入
+func (r *MenuController) TestErrorLog(ctx http.Context) http.Response {
+	// 创建一个测试错误
+	testErr := fmt.Errorf("测试错误日志记录功能 - 这是一个手动触发的异常测试")
+
+	return response.ErrorWithLog(ctx, "menu-test", testErr)
+
+	// return response.ErrorWithLog(ctx, "menu-test", testErr, map[string]any{
+	// 	"test_type":    "manual_test",
+	// 	"test_purpose": "验证 ErrorWithLog 是否能正确写入日志记录",
+	// 	"test_time":    carbon.Now().ToDateTimeString(),
+	// 	"controller":   "MenuController",
+	// 	"method":       "TestErrorLog",
+	// })
 }
