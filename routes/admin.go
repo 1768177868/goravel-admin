@@ -33,13 +33,18 @@ func Admin() {
 	attachmentController := admin.NewAttachmentController()
 
 	// 登录相关（不需要认证，但需要多语言）
-	facades.Route().Prefix("api/admin").Middleware(middleware.Lang()).Group(func(router route.Router) {
+	// 域名限制：使用配置值，类似 Laravel 的 Route::domain(config('domains.admin'))
+	// 如果配置为空或不传，则不限制域名（允许所有域名）
+	// 示例：middleware.Domain(facades.Config().Get("domains.admin"))
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
 		router.Middleware(httpmiddleware.Throttle("login")).Post("login", adminAuthController.Login)
 		router.Get("login/captcha", adminAuthController.Captcha)
 	})
 
 	// 基础功能（需要认证和多语言，但不需要权限验证和操作日志）
-	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt()).Group(func(router route.Router) {
+	// 域名限制：使用配置值，类似 Laravel 的 Route::domain(config('domains.admin'))
+	// 如果配置为空或不传，则不限制域名（允许所有域名）
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt(), middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
 		// 认证相关
 		router.Get("info", adminAuthController.Info)
 
@@ -64,7 +69,9 @@ func Admin() {
 	})
 
 	// 需要认证、多语言、权限验证和操作日志的路由
-	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
+	// 域名限制：使用配置值，类似 Laravel 的 Route::domain(config('domains.admin'))
+	// 如果配置为空或不传，则不限制域名（允许所有域名）
+	facades.Route().Prefix("api/admin").Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog(), middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
 
 		router.Put("profile", adminAuthController.UpdateProfile)
 
