@@ -2,167 +2,62 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
-	"github.com/spf13/cast"
 
 	"goravel/app/http/response"
-	"goravel/app/http/trans"
-	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/services/option_providers"
 )
 
 type OptionController struct {
-	treeService services.TreeService
+	providers map[string]services.OptionProvider
 }
 
 func NewOptionController() *OptionController {
+
+	// 注册所有选项提供者
+	// 添加新的选项类型时，只需：
+	// 1. 在 app/services/option_providers/ 目录下创建新的提供者文件
+	// 2. 实现 services.OptionProvider 接口
+	// 3. 在此处注册新的提供者
+	providers := make(map[string]services.OptionProvider)
+	providers["role"] = option_providers.NewRoleOptionProvider()
+	providers["department"] = option_providers.NewDepartmentOptionProvider()
+	providers["menu"] = option_providers.NewMenuOptionProvider(services.NewTreeServiceImpl())
+	providers["status"] = option_providers.NewStatusOptionProvider()
+	providers["method"] = option_providers.NewMethodOptionProvider()
+	providers["yes_no"] = option_providers.NewYesNoOptionProvider()
+	// 在此处添加新的选项提供者，例如：
+	// providers["new_type"] = option_providers.NewNewTypeOptionProvider()
+
 	return &OptionController{
-		treeService: services.NewTreeServiceImpl(),
+		providers: providers,
 	}
 }
 
+// Index 获取选项列表
+// 通过 type 参数指定选项类型，例如: /options?type=role
 func (r *OptionController) Index(ctx http.Context) http.Response {
 	optionType := ctx.Request().Query("type", "")
 
-	switch optionType {
-	case "role":
-		return r.getRoleOptions(ctx)
-	case "department":
-		return r.getDepartmentOptions(ctx)
-	case "menu":
-		return r.getMenuOptions(ctx)
-	case "status":
-		return r.getStatusOptions(ctx)
-	case "method":
-		return r.getMethodOptions(ctx)
-	case "yes_no":
-		return r.getYesNoOptions(ctx)
-	default:
+	if optionType == "" {
+		return response.Error(ctx, http.StatusBadRequest, "option_type_required")
+	}
+
+	provider, exists := r.providers[optionType]
+	if !exists {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_option_type")
 	}
-}
 
-func (r *OptionController) getRoleOptions(ctx http.Context) http.Response {
-	var roles []models.Role
-	if err := facades.Orm().Query().Where("status", 1).Order("id asc").Get(&roles); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
-	var options []map[string]any
-	for _, role := range roles {
-		options = append(options, map[string]any{
-			"label": role.Name,
-			"value": cast.ToString(role.ID),
-		})
-	}
-
-	return response.Success(ctx, http.Json{
-		"options": options,
-	})
-}
-
-func (r *OptionController) getDepartmentOptions(ctx http.Context) http.Response {
-	var departments []models.Department
-	if err := facades.Orm().Query().Where("status", 1).Order("sort asc, id asc").Get(&departments); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
-	}
-
-	tree := r.buildDepartmentTree(departments, 0)
-
-	return response.Success(ctx, http.Json{
-		"options": tree,
-		"list":    departments,
-	})
-}
-
-func (r *OptionController) buildDepartmentTree(departments []models.Department, parentID uint) []map[string]any {
-	var tree []map[string]any
-	for _, dept := range departments {
-		if dept.ParentID == parentID {
-			node := map[string]any{
-				"id":   dept.ID,
-				"name": dept.Name,
-			}
-			children := r.buildDepartmentTree(departments, dept.ID)
-			if len(children) > 0 {
-				node["children"] = children
-			}
-			tree = append(tree, node)
-		}
-	}
-	return tree
-}
-
-func (r *OptionController) getMenuOptions(ctx http.Context) http.Response {
-	menus, err := r.treeService.BuildMenuTree(0)
+	data, err := provider.GetOptions(ctx)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
 	}
 
-	tree := r.buildMenuTree(menus)
-
-	return response.Success(ctx, http.Json{
-		"options": tree,
-	})
+	return response.Success(ctx, data)
 }
 
-func (r *OptionController) buildMenuTree(menus []models.Menu) []map[string]any {
-	var tree []map[string]any
-	for _, menu := range menus {
-		// 使用菜单标题和路径构建显示标签
-		label := menu.Title
-		if menu.Path != "" {
-			label = label + " (" + menu.Path + ")"
-		}
-
-		node := map[string]any{
-			"id":    menu.ID,
-			"name":  menu.Title,
-			"label": label,
-			"value": menu.ID,
-		}
-
-		if len(menu.Children) > 0 {
-			node["children"] = r.buildMenuTree(menu.Children)
-		}
-
-		tree = append(tree, node)
-	}
-	return tree
-}
-
-func (r *OptionController) getStatusOptions(ctx http.Context) http.Response {
-	options := []map[string]any{
-		{"label": trans.Get(ctx, "common.enabled"), "value": "1"},
-		{"label": trans.Get(ctx, "common.disabled"), "value": "0"},
-	}
-
-	return response.Success(ctx, http.Json{
-		"options": options,
-	})
-}
-
-func (r *OptionController) getMethodOptions(ctx http.Context) http.Response {
-	options := []map[string]any{
-		{"label": "GET", "value": "GET"},
-		{"label": "POST", "value": "POST"},
-		{"label": "PUT", "value": "PUT"},
-		{"label": "DELETE", "value": "DELETE"},
-		{"label": "PATCH", "value": "PATCH"},
-	}
-
-	return response.Success(ctx, http.Json{
-		"options": options,
-	})
-}
-
-func (r *OptionController) getYesNoOptions(ctx http.Context) http.Response {
-	options := []map[string]any{
-		{"label": trans.Get(ctx, "common.yes"), "value": "1"},
-		{"label": trans.Get(ctx, "common.no"), "value": "0"},
-	}
-
-	return response.Success(ctx, http.Json{
-		"options": options,
-	})
+// RegisterProvider 注册新的选项提供者（可选，用于动态注册）
+// 如果需要在运行时动态添加提供者，可以使用此方法
+func (r *OptionController) RegisterProvider(optionType string, provider services.OptionProvider) {
+	r.providers[optionType] = provider
 }
