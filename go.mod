@@ -27,6 +27,7 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/redis/go-redis/v9 v9.14.0
 	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/swag v1.16.2
