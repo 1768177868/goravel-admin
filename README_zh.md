@@ -139,6 +139,27 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 
 详细的 API 文档请查看 [routes/admin.go](./routes/admin.go)
 
+#### Swagger API 文档
+
+项目包含 Swagger API 文档，支持交互式 API 探索。
+
+**访问 Swagger 文档：**
+
+Swagger JSON 文档访问地址：
+- 本地开发：`http://localhost:3000/swagger/index.html`
+- 生产环境：`https://your-domain.com/swagger/index.html`
+
+**重新生成 Swagger 文档：**
+
+修改 API 路由或添加新接口后，需要重新生成 Swagger 文档：
+
+```bash
+# 生成 Swagger 文档
+swag init
+```
+
+这将根据代码中的 Swagger 注解（示例见 `main.go`）重新生成 `docs/docs.go`、`docs/swagger.json` 和 `docs/swagger.yaml` 文件。
+
 ### 项目结构
 
 ```

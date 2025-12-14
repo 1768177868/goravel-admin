@@ -138,6 +138,27 @@ The admin API endpoints are prefixed with `/api/admin`. All endpoints require JW
 
 For detailed API documentation, see [routes/admin.go](./routes/admin.go)
 
+#### Swagger API Documentation
+
+The project includes Swagger API documentation for interactive API exploration.
+
+**Access Swagger Documentation:**
+
+The Swagger JSON document is available at:
+- Local development: `http://localhost:3000/swagger/index.html`
+- Production: `https://your-domain.com/swagger/index.html`
+
+**Regenerate Swagger Documentation:**
+
+After modifying API routes or adding new endpoints, regenerate the Swagger documentation:
+
+```bash
+# Generate Swagger documentation
+swag init
+```
+
+This will regenerate the `docs/docs.go`, `docs/swagger.json`, and `docs/swagger.yaml` files based on the Swagger annotations in your code (see `main.go` for example annotations).
+
 ### Project Structure
 
 ```
