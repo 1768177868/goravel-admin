@@ -481,13 +481,26 @@ const loadProfile = async () => {
         avatar: admin.Avatar || admin.avatar,
         department_id: admin.DepartmentID || admin.department_id,
         department: department,
-        roles: uniqueRoles
+        roles: uniqueRoles,
+        // 保留权限信息，避免权限丢失
+        permissions: admin.permissions || admin.Permissions || userStore.permissions || []
       }
       
       infoForm.nickname = transformedAdmin.nickname || ''
       infoForm.email = transformedAdmin.email || ''
       infoForm.phone = transformedAdmin.phone || ''
-      userStore.setAdminInfo(transformedAdmin)
+      
+      // 使用 fetchUserInfo 来更新所有信息（包括权限），而不是只调用 setAdminInfo
+      // 这样可以确保权限信息不会丢失
+      await userStore.fetchUserInfo(true)
+      
+      // 更新表单数据（因为 fetchUserInfo 可能已经更新了 adminInfo）
+      const currentAdminInfo = userStore.adminInfo
+      if (currentAdminInfo) {
+        infoForm.nickname = currentAdminInfo.nickname || ''
+        infoForm.email = currentAdminInfo.email || ''
+        infoForm.phone = currentAdminInfo.phone || ''
+      }
     }
   } catch (error) {
     console.error('Load profile error:', error)
