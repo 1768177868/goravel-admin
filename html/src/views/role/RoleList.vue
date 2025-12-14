@@ -117,12 +117,6 @@
           :label="$t('role.menus_and_permissions')"
         >
           <div class="menu-permission-container">
-            <div class="menu-header">
-              <div class="header-left">
-                <el-icon class="header-icon"><MenuIcon /></el-icon>
-                <span class="header-title">{{ $t('role.menus_and_permissions') }}</span>
-              </div>
-            </div>
             <div class="tree-wrapper">
               <el-tree
                 :key="treeKey"
@@ -1154,33 +1148,6 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.menu-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  margin: 0;
-  border-bottom: none;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-icon {
-  font-size: 18px;
-}
-
-.header-title {
-  margin-right: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
 
 .tree-wrapper {
   max-height: 500px;

@@ -1209,8 +1209,8 @@ const initCharts = () => {
           type: 'line',
           smooth: true,
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#f5576c', width: 2 },
-          itemStyle: { color: '#f5576c' }
+          lineStyle: { color: '#F56C6C', width: 2 },
+          itemStyle: { color: '#F56C6C' }
         }],
         tooltip: { 
           trigger: 'axis', 
@@ -1258,8 +1258,8 @@ const initCharts = () => {
           type: 'line',
           smooth: true,
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#4facfe', width: 2 },
-          itemStyle: { color: '#4facfe' }
+          lineStyle: { color: '#409EFF', width: 2 },
+          itemStyle: { color: '#409EFF' }
         }],
         tooltip: { 
           trigger: 'axis', 
@@ -1307,8 +1307,8 @@ const initCharts = () => {
           type: 'line',
           smooth: true,
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#43e97b', width: 2 },
-          itemStyle: { color: '#43e97b' }
+          lineStyle: { color: '#67C23A', width: 2 },
+          itemStyle: { color: '#67C23A' }
         }],
         tooltip: { 
           trigger: 'axis', 
@@ -1358,16 +1358,16 @@ const initCharts = () => {
             data: [],
             type: 'line',
             smooth: true,
-            lineStyle: { color: '#fa709a', width: 2 },
-            itemStyle: { color: '#fa709a' }
+            lineStyle: { color: '#409EFF', width: 2 },
+            itemStyle: { color: '#409EFF' }
           },
           {
             name: t('monitor.net_receive'),
             data: [],
             type: 'line',
             smooth: true,
-            lineStyle: { color: '#fee140', width: 2 },
-            itemStyle: { color: '#fee140' }
+            lineStyle: { color: '#E6A23C', width: 2 },
+            itemStyle: { color: '#E6A23C' }
           }
         ],
         tooltip: { 
@@ -1502,17 +1502,17 @@ const updateCharts = () => {
           { 
             value: cpuPercent, 
             name: t('monitor.cpu'),
-            itemStyle: { color: '#f5576c' }
+            itemStyle: { color: '#F56C6C' }
           },
           { 
             value: memoryPercent, 
             name: t('monitor.memory'),
-            itemStyle: { color: '#4facfe' }
+            itemStyle: { color: '#409EFF' }
           },
           { 
             value: diskPercent, 
             name: t('monitor.disk'),
-            itemStyle: { color: '#43e97b' }
+            itemStyle: { color: '#67C23A' }
           }
         ]
       }]
@@ -1795,24 +1795,24 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .monitor-page {
   padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #f5f7fa;
   min-height: calc(100vh - 60px);
   transition: background 0.3s ease;
 }
 
 .monitor-card {
-  border-radius: 12px;
-  border: none;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
   transition: all 0.3s ease;
   overflow: hidden;
   
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   }
 
   :deep(.el-card__header) {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #409EFF;
     color: white;
     padding: 16px 20px;
     border-bottom: none;
@@ -1826,55 +1826,55 @@ onUnmounted(() => {
 }
 
 .cpu-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: #F56C6C;
 }
 
 .memory-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: #409EFF;
 }
 
 .disk-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: #67C23A;
 }
 
 .network-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: #E6A23C;
 }
 
 .interfaces-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+  background: #909399;
 }
 
 .load-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  background: #409EFF;
 }
 
 .fd-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+  background: #909399;
 }
 
 .runtime-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #409EFF;
 }
 
 .system-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: #909399;
 }
 
 .processes-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #409EFF;
 }
 
 .process-card {
   padding: 16px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  background: #ffffff;
   border-radius: 8px;
   border: 1px solid #e4e7ed;
   height: 100%;
   transition: all 0.3s ease;
   
   &:hover {
-    background: linear-gradient(135deg, #e8f4f8 0%, #f0f9ff 100%);
+    background: #f5f7fa;
     border-color: #409eff;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
@@ -2004,10 +2004,6 @@ onUnmounted(() => {
     font-weight: 700;
     font-size: 18px;
     color: #409eff;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 }
 
@@ -2038,13 +2034,13 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  background: #ffffff;
   border-radius: 8px;
   border: 1px solid #e4e7ed;
   transition: all 0.3s ease;
   
   &:hover {
-    background: linear-gradient(135deg, #e8f4f8 0%, #f0f9ff 100%);
+    background: #f5f7fa;
     border-color: #409eff;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
@@ -2078,9 +2074,9 @@ onUnmounted(() => {
 .load-display {
   text-align: center;
   padding: 30px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
-  border-radius: 12px;
-  border: 2px solid #e4e7ed;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
 }
 
 .load-value {
@@ -2090,10 +2086,7 @@ onUnmounted(() => {
 .load-number {
   font-size: 48px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #409eff;
   display: inline-block;
   margin-right: 8px;
 }
@@ -2113,10 +2106,10 @@ onUnmounted(() => {
 .interfaces-table {
   :deep(.el-table__header) {
     th {
-      background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
+      background: #f5f7fa;
       color: #303133;
       font-weight: 600;
-      border-bottom: 2px solid #409eff;
+      border-bottom: 1px solid #e4e7ed;
     }
   }
   

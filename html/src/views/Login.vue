@@ -312,7 +312,7 @@ const handleLogin = async () => {
   align-items: center;
   min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #409EFF 0%, #66b1ff 50%, #79bbff 100%);
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
 }
@@ -342,7 +342,7 @@ const handleLogin = async () => {
 .bg-shape {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   animation: float 20s infinite ease-in-out;
 }
@@ -388,19 +388,17 @@ const handleLogin = async () => {
   z-index: 1;
   width: 420px;
   padding: 48px 40px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
-              0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.12),
+              0 2px 8px rgba(0, 0, 0, 0.08);
   animation: slideUp 0.6s ease-out;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .login-box:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35),
-              0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+  box-shadow: 0 12px 40px rgba(64, 158, 255, 0.16),
+              0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes slideUp {
@@ -418,7 +416,7 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 36px;
+  margin-bottom: 40px;
 }
 
 .login-logo {
@@ -433,46 +431,39 @@ const handleLogin = async () => {
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  background: #409EFF;
+  border-radius: 10px;
   color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  transition: all 0.3s ease;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-  }
+.logo-icon:hover {
+  background: #66b1ff;
+  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
+  transform: translateY(-2px);
 }
 
 .login-header h2 {
-  color: #2c3e50;
+  color: #303133;
   font-size: 28px;
   font-weight: 600;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.5px;
 }
 
 .login-language-switch :deep(.language-switch) {
   padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
-  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  background: #ffffff;
   transition: all 0.3s ease;
 }
 
 .login-language-switch :deep(.language-switch):hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  border-color: #409EFF;
+  background: #ecf5ff;
+  color: #409EFF;
 }
 
 .login-form {
@@ -483,48 +474,58 @@ const handleLogin = async () => {
   margin-bottom: 24px;
 }
 
+.login-form :deep(.el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
 .login-input :deep(.el-input__wrapper) {
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px #dcdfe6 inset;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
+  padding: 0 12px;
 }
 
 .login-input :deep(.el-input__wrapper):hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 0 0 1px #c0c4cc inset;
 }
 
 .login-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
-  border-color: #667eea;
+  box-shadow: 0 0 0 1px #409EFF inset;
 }
 
 .login-input :deep(.el-input__inner) {
-  font-size: 15px;
-  padding: 0 12px;
+  font-size: 14px;
+  color: #606266;
+  height: 40px;
+  line-height: 40px;
+}
+
+.login-input :deep(.el-input__inner::placeholder) {
+  color: #c0c4cc;
 }
 
 .login-button {
   width: 100%;
-  height: 48px;
+  height: 44px;
   font-size: 16px;
-  font-weight: 600;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-weight: 500;
+  border-radius: 6px;
+  background: #409EFF;
   border: none;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
   transition: all 0.3s ease;
   margin-top: 8px;
 }
 
 .login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  background: #66b1ff;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
 }
 
 .login-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+  background: #3a8ee6;
+  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
 }
 
 .captcha-row {
@@ -536,46 +537,41 @@ const handleLogin = async () => {
 }
 
 .captcha-image {
-  height: 48px;
+  height: 40px;
   width: 170px;
   object-fit: cover;
   cursor: pointer;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  box-shadow: 0 0 0 1px #dcdfe6;
   transition: all 0.3s ease;
 }
 
 .captcha-image:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: #409EFF;
+  box-shadow: 0 0 0 1px #409EFF;
 }
 
 .captcha-refresh {
   white-space: nowrap;
   padding: 0 8px;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transform: translateY(0);
 }
 
 .captcha-refresh:hover {
-  opacity: 0.8;
-  transform: translateY(-1px);
+  color: #409EFF;
 }
 
 .captcha-refresh .refresh-icon {
   font-size: 16px;
-  transition: color 0.3s ease, transform 0.3s ease;
-  transform: scale(1);
-  display: inline-block;
+  transition: transform 0.3s ease;
 }
 
 .captcha-refresh:hover .refresh-icon {
-  color: #409EFF;
-  transform: scale(1.1);
+  transform: rotate(180deg);
 }
 
 /* 响应式设计 */
