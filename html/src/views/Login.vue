@@ -1,9 +1,6 @@
 <template>
   <div class="login-container">
     <div class="login-background">
-      <div class="bg-shape bg-shape-1"></div>
-      <div class="bg-shape bg-shape-2"></div>
-      <div class="bg-shape bg-shape-3"></div>
     </div>
     <div class="login-box">
       <div class="login-header">
