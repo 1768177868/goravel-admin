@@ -90,6 +90,11 @@ request.interceptors.request.use(
 // 防止重复跳转的标志
 let isRedirecting = false
 
+// 防止重复弹出403错误的标志和定时器
+let last403ErrorTime = 0
+let isShowing403Error = false
+const FORBIDDEN_ERROR_COOLDOWN = 3000 // 3秒内的403错误只提示一次
+
 // 处理401错误的统一函数
 const handle401Error = (message) => {
   if (isRedirecting) {
@@ -114,6 +119,26 @@ const handle401Error = (message) => {
   setTimeout(() => {
     isRedirecting = false
   }, 2000)
+}
+
+// 处理403错误的统一函数（带防抖）
+const handle403Error = (message) => {
+  const now = Date.now()
+  
+  // 如果正在显示403错误，或者距离上次显示403错误的时间在冷却期内，则跳过
+  if (isShowing403Error || (now - last403ErrorTime < FORBIDDEN_ERROR_COOLDOWN)) {
+    return
+  }
+  
+  isShowing403Error = true
+  last403ErrorTime = now
+  
+  ElMessage.error(message || t('error.forbidden'))
+  
+  // 3秒后重置标志，允许再次显示403错误
+  setTimeout(() => {
+    isShowing403Error = false
+  }, FORBIDDEN_ERROR_COOLDOWN)
 }
 
 // 处理错误响应，提取错误信息
@@ -164,7 +189,7 @@ request.interceptors.response.use(
         if (res.code === 401) {
           handle401Error(message || t('error.unauthorized'))
         } else if (res.code === 403) {
-          ElMessage.error(message || t('error.forbidden'))
+          handle403Error(message || t('error.forbidden'))
         } else {
           // 显示后端返回的实际错误消息
           ElMessage.error(message || t('error.default'))
@@ -216,7 +241,7 @@ request.interceptors.response.use(
         }
       } else if (status === 403) {
         if (!isAuthEndpoint) {
-          ElMessage.error(message || t('error.forbidden'))
+          handle403Error(message || t('error.forbidden'))
           error.__handled = true
         } else {
           // 登录接口错误，不在这里显示，让 Login.vue 处理

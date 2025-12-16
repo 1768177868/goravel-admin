@@ -778,13 +778,11 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
     // 刷新列表
     loadData()
   } catch (error) {
-    // 如果已取消，不显示错误
     if (chunkUploadCancelled.value) {
       return
     }
     console.error('Chunk upload error:', error)
     chunkUploadStatus.value = 'exception'
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('attachment.upload_failed')
       ElMessage.error(errorMessage)
@@ -827,7 +825,6 @@ const handleUpdateDisplayName = async (row) => {
     ElMessage.success(t('attachment.update_success'))
   } catch (error) {
     console.error('Update display name error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('attachment.update_failed')
       ElMessage.error(errorMessage)
@@ -931,7 +928,6 @@ const handleDownload = async (row) => {
     ElMessage.success(t('attachment.download_success') || '下载成功')
   } catch (error) {
     console.error('Download error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('attachment.download_failed') || '下载失败'
       ElMessage.error(errorMessage)

@@ -504,7 +504,6 @@ const loadProfile = async () => {
     }
   } catch (error) {
     console.error('Load profile error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
       ElMessage.error(errorMessage)
@@ -656,7 +655,6 @@ const handleSaveAvatar = async () => {
     await userStore.fetchUserInfo(true)
   } catch (error) {
     console.error('Update avatar error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
       ElMessage.error(errorMessage)
@@ -675,7 +673,6 @@ const loadGoogleAuthStatus = async () => {
     }
   } catch (error) {
     console.error('Load google auth status error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
       ElMessage.error(errorMessage)

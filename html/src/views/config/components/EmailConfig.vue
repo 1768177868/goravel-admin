@@ -136,7 +136,6 @@ const loadData = async () => {
     }
   } catch (error) {
     console.error('Load email config error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
       ElMessage.error(errorMessage)
