@@ -101,6 +101,33 @@
           </template>
         </el-table-column>
         <el-table-column
+          prop="sender"
+          :label="$t('notification.table.sender')"
+          width="150"
+        >
+          <template #default="{ row }">
+            <template v-if="row.type === 'message' && row.sender_id === userStore.adminInfo?.id">
+              <!-- 自己发送的私信，显示接收人 -->
+              <span class="text-gray-500">
+                {{ $t('notification.sent_to') }}: 
+                <span v-if="row.receiver" class="text-blue-600">
+                  {{ row.receiver.nickname || row.receiver.username }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
+              </span>
+            </template>
+            <template v-else>
+              <!-- 接收的私信或其他类型通知，显示发送人 -->
+              <span v-if="row.sender">
+                {{ row.sender.nickname || row.sender.username }}
+              </span>
+              <span v-else class="text-gray-400">
+                {{ $t('notification.system') }}
+              </span>
+            </template>
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="is_read"
           :label="$t('notification.table.status')"
           width="120"

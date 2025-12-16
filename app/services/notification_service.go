@@ -77,12 +77,19 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int, not
 		pageSize = 20
 	}
 
-	countQuery := facades.Orm().Query().Model(&models.Notification{}).
-		Where("receiver_id = ?", adminID)
-
-	// 如果指定了类型，添加类型筛选
-	if notifType != "" {
-		countQuery = countQuery.Where("type = ?", notifType)
+	// 构建查询条件
+	// 对于私信类型，需要同时查询发送和接收的消息
+	// 对于其他类型，只查询接收的消息
+	countQuery := facades.Orm().Query().Model(&models.Notification{})
+	if notifType == "message" {
+		// 私信：查询发送或接收的消息
+		countQuery = countQuery.Where("(receiver_id = ? OR sender_id = ?) AND type = ?", adminID, adminID, "message")
+	} else if notifType != "" {
+		// 指定了其他类型：只查询接收的消息
+		countQuery = countQuery.Where("receiver_id = ? AND type = ?", adminID, notifType)
+	} else {
+		// 没有指定类型：查询接收的所有消息 + 发送的私信
+		countQuery = countQuery.Where("receiver_id = ? OR (sender_id = ? AND type = ?)", adminID, adminID, "message")
 	}
 
 	// 如果指定了已读/未读状态，添加状态筛选
@@ -97,12 +104,17 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int, not
 		return nil, 0, err
 	}
 
-	listQuery := facades.Orm().Query().Model(&models.Notification{}).
-		Where("receiver_id = ?", adminID)
-
-	// 如果指定了类型，添加类型筛选
-	if notifType != "" {
-		listQuery = listQuery.Where("type = ?", notifType)
+	// 构建列表查询
+	listQuery := facades.Orm().Query().Model(&models.Notification{}).With("Sender").With("Receiver")
+	if notifType == "message" {
+		// 私信：查询发送或接收的消息
+		listQuery = listQuery.Where("(receiver_id = ? OR sender_id = ?) AND type = ?", adminID, adminID, "message")
+	} else if notifType != "" {
+		// 指定了其他类型：只查询接收的消息
+		listQuery = listQuery.Where("receiver_id = ? AND type = ?", adminID, notifType)
+	} else {
+		// 没有指定类型：查询接收的所有消息 + 发送的私信
+		listQuery = listQuery.Where("receiver_id = ? OR (sender_id = ? AND type = ?)", adminID, adminID, "message")
 	}
 
 	// 如果指定了已读/未读状态，添加状态筛选
@@ -128,8 +140,9 @@ func (s *NotificationServiceImpl) ListRecent(adminID uint, limit int) ([]models.
 		limit = 5
 	}
 
-	if err := facades.Orm().Query().Model(&models.Notification{}).
-		Where("receiver_id = ?", adminID).
+	// 查询最近的通知，包括接收的消息和发送的私信
+	if err := facades.Orm().Query().Model(&models.Notification{}).With("Sender").With("Receiver").
+		Where("(receiver_id = ? OR (sender_id = ? AND type = ?))", adminID, adminID, "message").
 		Order("created_at desc").
 		Limit(limit).
 		Find(&notifications); err != nil {

@@ -90,6 +90,8 @@
     "title_max_length": "Title cannot exceed 150 characters",
     "content_required": "Please enter notification content",
     "create_success": "Created successfully",
+    "system": "System",
+    "sent_to": "Sent to",
     "types": {
       "announcement": "Announcement",
       "notice": "Notice",
@@ -99,6 +101,7 @@
       "title": "Title",
       "content": "Content",
       "type": "Type",
+      "sender": "Sender",
       "status": "Status",
       "created_at": "Created At"
     }

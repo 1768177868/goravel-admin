@@ -266,10 +266,7 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 	interval := 1000
 	if intervalStr := ctx.Request().Query("interval", ""); intervalStr != "" {
 		if parsed, err := time.ParseDuration(intervalStr + "ms"); err == nil {
-			interval = int(parsed.Milliseconds())
-			if interval < 500 {
-				interval = 500
-			}
+			interval = max(int(parsed.Milliseconds()), 500)
 			if interval > 5000 {
 				interval = 5000
 			}
@@ -355,7 +352,8 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 			}
 
 			// 根据状态设置不同的消息
-			if export.Status == 1 {
+			switch export.Status {
+			case 1:
 				// 导出成功
 				message["type"] = "completed"
 				message["message"] = "导出任务已完成"
@@ -374,12 +372,12 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 				message["file_url"] = fileURL
 				message["filename"] = export.Filename
 				message["size"] = export.Size
-			} else if export.Status == 0 {
+			case 0:
 				// 导出失败
 				message["type"] = "failed"
 				message["message"] = "导出任务失败"
 				message["status_text"] = "失败"
-			} else {
+			default:
 				// 处理中（Status 可能是其他值，或者我们不知道的状态）
 				message["message"] = "导出任务处理中"
 				message["status_text"] = "处理中"

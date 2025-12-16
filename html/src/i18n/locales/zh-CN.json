@@ -90,6 +90,8 @@
     "title_max_length": "标题不能超过150个字符",
     "content_required": "请输入通知内容",
     "create_success": "创建成功",
+    "system": "系统",
+    "sent_to": "发送给",
     "types": {
       "announcement": "公告",
       "notice": "通知",
@@ -99,6 +101,7 @@
       "title": "标题",
       "content": "内容",
       "type": "类型",
+      "sender": "发送人",
       "status": "状态",
       "created_at": "创建时间"
     }
