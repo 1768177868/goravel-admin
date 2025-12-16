@@ -16,7 +16,7 @@ func (s *PermissionSeeder) Signature() string {
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu models.Menu
-	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu models.Menu
+	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
 	facades.Orm().Query().Where("slug", "role").First(&roleMenu)
@@ -34,6 +34,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "profile").First(&profileMenu)
 	facades.Orm().Query().Where("slug", "export").First(&exportMenu)
 	facades.Orm().Query().Where("slug", "attachment").First(&attachmentMenu)
+	facades.Orm().Query().Where("slug", "notification").First(&notificationMenu)
 	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联（或者可以创建 dashboard 菜单）
 	// 如果 dashboard 菜单不存在，使用 profileMenu 作为后备
 	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
@@ -140,6 +141,8 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "附件批量删除", Slug: "attachment.batch_delete", Method: "POST", Path: "/api/admin/attachments/batch-delete", Description: "批量删除附件", Status: 1, Sort: 8, MenuID: attachmentMenu.ID},
 		// Dashboard 统计
 		{Name: "Dashboard数据", Slug: "dashboard.data", Method: "GET", Path: "/api/admin/dashboard/*", Description: "查看Dashboard统计数据", Status: 1, Sort: 1, MenuID: dashboardMenu.ID},
+		// 通知管理
+		{Name: "创建通知", Slug: "notification.store", Method: "POST", Path: "/api/admin/notifications", Description: "创建通知/公告/私信", Status: 1, Sort: 1, MenuID: notificationMenu.ID},
 	}
 
 	for _, perm := range permissions {

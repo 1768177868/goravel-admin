@@ -329,5 +329,19 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  1,
 	})
 
+	// 创建通知中心菜单
+	createOrUpdateMenu(models.Menu{
+		ParentID:  0,
+		Title:     "通知中心",
+		Slug:      "notification",
+		Icon:      "Bell",
+		Path:      "/notifications",
+		Component: "notification/index",
+		Type:      2,
+		Status:    1,
+		Sort:      5,
+		IsHidden:  0,
+	})
+
 	return nil
 }
