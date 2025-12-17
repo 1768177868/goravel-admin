@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -210,14 +211,7 @@ func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response
 		}
 	}
 
-	// 排序
-	for i := range result[:len(result)-1] {
-		for j := i + 1; j < len(result); j++ {
-			if result[i] > result[j] {
-				result[i], result[j] = result[j], result[i]
-			}
-		}
-	}
+	sort.Strings(result)
 
 	return response.Success(ctx, http.Json{
 		"titles": result,
