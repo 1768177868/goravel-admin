@@ -205,7 +205,7 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 			admins := data.(*[]models.Admin)
 			adminList := make([]http.Json, len(*admins))
 			for i, admin := range *admins {
-				isBound, _ := r.googleAuthenticatorService.IsBound(admin.ID)
+				isBound := admin.GoogleSecret != ""
 				adminList[i] = http.Json{
 					"id":             admin.ID,
 					"username":       admin.Username,
