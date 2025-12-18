@@ -52,9 +52,11 @@
             :tree-node="column.treeNode"
           >
             <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-tag :type="Number(row.status ?? row.Status ?? 1) === 1 ? 'success' : 'danger'">
-                {{ Number(row.status ?? row.Status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-              </el-tag>
+              <el-switch
+                :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+                :disabled="isProtectedRole(row) || getButtonState('role.update').disabled"
+                @change="(val) => handleStatusChange(row, val)"
+              />
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
               <el-button 
@@ -253,7 +255,7 @@ const tableColumns = computed(() => [
   {
     field: 'status',
     title: t('table.status'),
-    width: 80,
+    width: 100,
     sortable: true,
     slot: 'status'
   },
@@ -1083,6 +1085,39 @@ const handleTreeCheck = () => {
 const isProtectedRole = (row) => {
   const slug = row.slug || row.Slug || ''
   return protectedRoleSlugs.value.includes(slug)
+}
+
+const handleStatusChange = async (row, newStatus) => {
+  // 检查是否是受保护角色
+  if (isProtectedRole(row) && !newStatus) {
+    ElMessage.warning(t('role.protected_cannot_disable'))
+    // 恢复开关状态
+    loadData()
+    return
+  }
+
+  try {
+    const statusValue = newStatus ? 1 : 0
+    await updateRole(row.id, {
+      status: statusValue
+    })
+    ElMessage.success(newStatus ? t('role.enable_success') : t('role.disable_success'))
+    // 更新本地数据
+    const role = tableData.value.find(r => r.id === row.id)
+    if (role) {
+      role.status = statusValue
+      role.Status = statusValue
+    }
+  } catch (error) {
+    console.error('Status change error:', error)
+    // 恢复开关状态
+    loadData()
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
+  }
 }
 
 const handleDelete = async (row) => {

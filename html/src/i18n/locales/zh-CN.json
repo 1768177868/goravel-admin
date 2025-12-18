@@ -209,6 +209,8 @@
     "delete_success": "删除成功",
     "create_success": "创建成功",
     "update_success": "更新成功",
+    "enable_success": "启用成功",
+    "disable_success": "禁用成功",
     "protected_cannot_delete": "该角色受保护，无法删除",
     "protected_cannot_disable": "该角色受保护，无法禁用",
     "protected_role_slug_disabled": "受保护角色的标识不能修改",
