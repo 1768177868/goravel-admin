@@ -64,9 +64,11 @@
             :tree-node="column.treeNode"
           >
             <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
-              </el-tag>
+              <el-switch
+                :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+                :disabled="isProtectedAdmin(row.id) || getButtonState('admin.update').disabled"
+                @change="(val) => handleStatusChange(row, val)"
+              />
             </template>
             <template v-else-if="column.slot === 'department'" #default="{ row }">
               {{ getDepartmentDisplayName(row.Department || row.department) }}
@@ -134,6 +136,7 @@ import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
   deleteAdmin,
+  updateAdmin,
   exportAdmin,
   resetPassword,
   kickOutUser,
@@ -227,7 +230,7 @@ const tableColumns = computed(() => [
   {
     field: 'status',
     title: t('table.status'),
-    width: 80,
+    width: 100,
     sortable: true,
     slot: 'status'
   },
@@ -409,6 +412,39 @@ const handleFormSuccess = () => {
 
 const isProtectedAdmin = (adminId) => {
   return protectedAdminIds.value.includes(adminId)
+}
+
+const handleStatusChange = async (row, newStatus) => {
+  // 检查是否是受保护管理员
+  if (isProtectedAdmin(row.id) && !newStatus) {
+    ElMessage.warning(t('admin.protected_cannot_disable'))
+    // 恢复开关状态
+    loadData()
+    return
+  }
+
+  try {
+    const statusValue = newStatus ? 1 : 0
+    await updateAdmin(row.id, {
+      status: statusValue
+    })
+    ElMessage.success(newStatus ? t('admin.enable_success') : t('admin.disable_success'))
+    // 更新本地数据
+    const admin = tableData.value.find(a => a.id === row.id)
+    if (admin) {
+      admin.status = statusValue
+      admin.Status = statusValue
+    }
+  } catch (error) {
+    logger.error('Status change error:', error)
+    // 恢复开关状态
+    loadData()
+    // 如果错误已经在响应拦截器中处理过，就不再重复显示
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
+  }
 }
 
 const handleDelete = async (row) => {
