@@ -66,6 +66,8 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
+		ReadBufferSize:  1024, // 读缓冲区大小
+		WriteBufferSize: 1024, // 写缓冲区大小
 	}
 
 	conn, err := upgrader.Upgrade(ctx.Response().Writer(), ctx.Request().Origin(), nil)
