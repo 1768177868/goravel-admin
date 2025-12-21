@@ -52,10 +52,18 @@ func (s *AdminSeeder) Run() error {
 		Sort:     1,
 	})
 
-	// 创建角色
+	// 清理无效的角色数据（name 为空或 slug 为空）
+	var invalidRoles []models.Role
+	facades.Orm().Query().Where("name = ? OR name = '' OR slug = ? OR slug = ''", "", "").Find(&invalidRoles)
+	if len(invalidRoles) > 0 {
+		for _, role := range invalidRoles {
+			facades.Orm().Query().Delete(&role)
+		}
+	}
+
+	// 创建角色 - 通过 slug 查找（slug 也是唯一的），确保 name 字段总是被设置
 	var superRole models.Role
-	// FirstOrCreate: 第一个参数是查询条件（只包含唯一字段），第二个参数是创建时的默认值
-	if err := facades.Orm().Query().Where("name", "超级管理员").First(&superRole); err != nil {
+	if err := facades.Orm().Query().Where("slug", "super-admin").First(&superRole); err != nil {
 		// 不存在则创建
 		superRole = models.Role{
 			Name:        "超级管理员",
@@ -64,10 +72,16 @@ func (s *AdminSeeder) Run() error {
 			Status:      1,
 			Sort:        0,
 		}
-		facades.Orm().Query().Create(&superRole)
+		if err := facades.Orm().Query().Create(&superRole); err != nil {
+			return err
+		}
 	} else {
 		// 存在则更新其他字段（如果为空或需要更新）
 		update := false
+		if superRole.Name == "" {
+			superRole.Name = "超级管理员"
+			update = true
+		}
 		if superRole.Slug == "" {
 			superRole.Slug = "super-admin"
 			update = true
@@ -85,12 +99,14 @@ func (s *AdminSeeder) Run() error {
 			update = true
 		}
 		if update {
-			facades.Orm().Query().Save(&superRole)
+			if err := facades.Orm().Query().Save(&superRole); err != nil {
+				return err
+			}
 		}
 	}
 
 	var adminRole models.Role
-	if err := facades.Orm().Query().Where("name", "管理员").First(&adminRole); err != nil {
+	if err := facades.Orm().Query().Where("slug", "admin").First(&adminRole); err != nil {
 		// 不存在则创建
 		adminRole = models.Role{
 			Name:        "管理员",
@@ -99,10 +115,16 @@ func (s *AdminSeeder) Run() error {
 			Status:      1,
 			Sort:        1,
 		}
-		facades.Orm().Query().Create(&adminRole)
+		if err := facades.Orm().Query().Create(&adminRole); err != nil {
+			return err
+		}
 	} else {
 		// 存在则更新其他字段（如果为空或需要更新）
 		update := false
+		if adminRole.Name == "" {
+			adminRole.Name = "管理员"
+			update = true
+		}
 		if adminRole.Slug == "" {
 			adminRole.Slug = "admin"
 			update = true
@@ -120,7 +142,9 @@ func (s *AdminSeeder) Run() error {
 			update = true
 		}
 		if update {
-			facades.Orm().Query().Save(&adminRole)
+			if err := facades.Orm().Query().Save(&adminRole); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -135,7 +159,7 @@ func (s *AdminSeeder) Run() error {
 
 	// 创建演示账户角色（只允许查看，不允许编辑创建删除）
 	var demoRole models.Role
-	if err := facades.Orm().Query().Where("name", "演示账户").First(&demoRole); err != nil {
+	if err := facades.Orm().Query().Where("slug", "demo").First(&demoRole); err != nil {
 		// 不存在则创建
 		demoRole = models.Role{
 			Name:        "演示账户",
@@ -144,10 +168,16 @@ func (s *AdminSeeder) Run() error {
 			Status:      1,
 			Sort:        2,
 		}
-		facades.Orm().Query().Create(&demoRole)
+		if err := facades.Orm().Query().Create(&demoRole); err != nil {
+			return err
+		}
 	} else {
 		// 存在则更新其他字段（如果为空或需要更新）
 		update := false
+		if demoRole.Name == "" {
+			demoRole.Name = "演示账户"
+			update = true
+		}
 		if demoRole.Slug == "" {
 			demoRole.Slug = "demo"
 			update = true
@@ -165,7 +195,9 @@ func (s *AdminSeeder) Run() error {
 			update = true
 		}
 		if update {
-			facades.Orm().Query().Save(&demoRole)
+			if err := facades.Orm().Query().Save(&demoRole); err != nil {
+				return err
+			}
 		}
 	}
 
