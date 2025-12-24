@@ -53,20 +53,28 @@ const setupVxeTableI18n = () => {
       'vxe.pager.pagesize': '{size} 条/页',
       'vxe.pager.total': '共 {total} 条记录',
       'vxe.pager.pageClassifier': '页',
+      'vxe.table.emptyText': '暂无数据',
+      'vxe.loading.text': '加载中...',
       'pager.goto': '前往',
       'pager.pagesize': '{size} 条/页',
       'pager.total': '共 {total} 条记录',
-      'pager.pageClassifier': '页'
+      'pager.pageClassifier': '页',
+      'table.emptyText': '暂无数据',
+      'loading.text': '加载中...'
     },
     'en-US': {
       'vxe.pager.goto': 'Go to',
       'vxe.pager.pagesize': '{size} records/page',
       'vxe.pager.total': 'Total {total} records',
       'vxe.pager.pageClassifier': 'page',
+      'vxe.table.emptyText': 'No Data',
+      'vxe.loading.text': 'Loading...',
       'pager.goto': 'Go to',
       'pager.pagesize': '{size} records/page',
       'pager.total': 'Total {total} records',
-      'pager.pageClassifier': 'page'
+      'pager.pageClassifier': 'page',
+      'table.emptyText': 'No Data',
+      'loading.text': 'Loading...'
     }
   }
   
@@ -86,6 +94,20 @@ const setupVxeTableI18n = () => {
       // 如果还是没有找到，尝试添加 vxe. 前缀
       if (!value && !key.startsWith('vxe.')) {
         value = vxeI18nMap[currentLocale]?.[`vxe.${key}`]
+      }
+      
+      // 特殊处理：vxe-table 可能使用 table.emptyText 或 loading.text 格式
+      if (!value) {
+        if (key === 'table.emptyText' || key === 'emptyText') {
+          value = vxeI18nMap[currentLocale]?.['vxe.table.emptyText'] || vxeI18nMap[currentLocale]?.['table.emptyText']
+        } else if (key === 'loading.text' || key === 'loading') {
+          value = vxeI18nMap[currentLocale]?.['vxe.loading.text'] || vxeI18nMap[currentLocale]?.['loading.text']
+        }
+      }
+      
+      // 调试日志（开发环境）- 扩展调试范围
+      if (process.env.NODE_ENV === 'development' && (key.includes('empty') || key.includes('loading'))) {
+        console.log('[VXE i18n]', { key, currentLocale, value })
       }
       
       // 如果找到值且有参数，替换参数

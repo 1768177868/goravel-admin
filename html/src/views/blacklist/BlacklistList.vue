@@ -1,110 +1,80 @@
 <template>
-  <div class="blacklist-list">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('blacklist.title') }}</span>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('blacklist.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><Plus /></el-icon>
-            {{ $t('blacklist.add_blacklist') }}
-          </el-button>
-        </div>
-      </template>
+  <ListPage
+    ref="listPageRef"
+    page-class="blacklist"
+    :title="$t('blacklist.title')"
+    :show-add-button="true"
+    :add-button-text="$t('blacklist.add_blacklist')"
+    :add-button-disabled="getButtonState('blacklist.store').disabled"
+    :search-form="searchForm"
+    :search-fields="searchFields"
+    :initial-search-values="{ ip: '', status: '' }"
+    i18n-prefix="blacklist"
+    :table-data="tableData"
+    :loading="loading"
+    :table-columns="tableColumns"
+    :pagination="pagination"
+    :dialog-visible="dialogVisible"
+    :edit-id="editId"
+    @add="handleAdd"
+    @search="handleSearch"
+    @reset="handleReset"
+    @update:pagination="(val) => Object.assign(pagination, val)"
+    @page-change="handlePageChange"
+    @sort-change="handleSortChange"
+    @form-success="handleFormSuccess"
+  >
+    <!-- 自定义表格列插槽 -->
+    <template #status="{ row }">
+      <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'danger' : 'info'">
+        {{ (row.Status ?? row.status ?? 1) === 1 ? $t('blacklist.enabled') : $t('blacklist.disabled') }}
+      </el-tag>
+    </template>
 
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="{ ip: '', status: '' }"
-        i18n-prefix="blacklist"
-        @search="handleSearch"
-        @reset="handleReset"
-      />
+    <template #ip="{ row }">
+      <div style="word-break: break-all;">
+        {{ formatIP(row.IP || row.ip || '') }}
+      </div>
+    </template>
 
-      <vxe-table
-        ref="tableRef"
-        :data="tableData"
-        :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
-        @sort-change="handleSortChange"
+    <template #operation="{ row }">
+      <el-button 
+        type="primary" 
+        link 
+        :disabled="getButtonState('blacklist.update').disabled"
+        @click="handleEdit(row)"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'danger' : 'info'">
-                {{ (row.Status ?? row.status ?? 1) === 1 ? $t('blacklist.enabled') : $t('blacklist.disabled') }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'ip'" #default="{ row }">
-              <div style="word-break: break-all;">
-                {{ formatIP(row.IP || row.ip || '') }}
-              </div>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('blacklist.update').disabled"
-                @click="handleEdit(row)"
-              >
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('blacklist.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
-        </template>
-      </vxe-table>
+        {{ $t('common.edit') }}
+      </el-button>
+      <el-button 
+        type="danger" 
+        link 
+        :disabled="getButtonState('blacklist.destroy').disabled"
+        @click="handleDelete(row)"
+      >
+        {{ $t('common.delete') }}
+      </el-button>
+    </template>
 
-      <Pagination
-        v-model="pagination"
-        @page-change="handlePageChange"
+    <!-- 表单对话框 -->
+    <template #form>
+      <BlacklistForm
+        v-model="dialogVisible"
+        :edit-id="editId"
+        @success="handleFormSuccess"
       />
-    </el-card>
-
-    <BlacklistForm
-      v-model="dialogVisible"
-      :edit-id="editId"
-      @success="handleFormSuccess"
-    />
-  </div>
+    </template>
+  </ListPage>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import SearchForm from '../../components/SearchForm.vue'
-import Pagination from '../../components/Pagination.vue'
+import ListPage from '../../components/ListPage.vue'
 import BlacklistForm from './BlacklistForm.vue'
 import { useListPage } from '../../composables/useListPage'
+import { useCrud } from '../../composables/useCrud'
 import { usePermission } from '../../composables/usePermission'
 import {
   getBlacklistList,
@@ -113,9 +83,8 @@ import {
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
-const tableRef = ref(null)
-const dialogVisible = ref(false)
-const editId = ref(null)
+const listPageRef = ref(null)
+const tableRef = computed(() => listPageRef.value?.tableRef)
 
 // 字段名映射
 const fieldMapping = {
@@ -150,6 +119,25 @@ const {
     defaultSort: 'id:desc'
   }
 })
+
+// 使用 CRUD composable
+const {
+  dialogVisible,
+  editId,
+  handleAdd,
+  handleEdit,
+  handleFormSuccess: handleFormSuccessCrud,
+  handleDelete: handleDeleteCrud
+} = useCrud({
+  deleteApi: deleteBlacklist,
+  deleteConfirmKey: 'blacklist.delete_confirm',
+  deleteSuccessKey: 'blacklist.delete_success'
+})
+
+
+const handleFormSuccess = () => {
+  handleFormSuccessCrud(loadData)
+}
 
 // 表格列配置
 const tableColumns = computed(() => [
@@ -228,35 +216,9 @@ const formatIP = (ip) => {
   return ip
 }
 
-const handleAdd = () => {
-  editId.value = null
-  dialogVisible.value = true
-}
-
-const handleEdit = (row) => {
-  editId.value = row.id
-  dialogVisible.value = true
-}
-
-const handleFormSuccess = () => {
-  loadData()
-}
-
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('blacklist.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteBlacklist(row.id)
-    ElMessage.success(t('blacklist.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
+// 删除处理（包装 useCrud 的 handleDelete，传入 reloadData）
+const handleDelete = (row) => {
+  handleDeleteCrud(row, loadData)
 }
 
 onMounted(() => {
@@ -270,11 +232,4 @@ onMounted(() => {
   background: white;
   border-radius: 4px;
 }
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 </style>
-
