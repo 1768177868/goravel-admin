@@ -33,6 +33,8 @@
     "create_success": "创建成功",
     "update_success": "更新成功",
     "delete_success": "删除成功",
+    "delete_confirm": "确定要删除吗？",
+    "batch_delete_confirm": "确定要删除选中的 {count} 条数据吗？",
     "column_setting": "列设置",
     "column_setting_tip": "请选择要在表格中显示的列",
     "save_success": "保存成功",

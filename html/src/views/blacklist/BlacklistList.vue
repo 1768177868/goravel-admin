@@ -128,11 +128,7 @@ const {
   handleEdit,
   handleFormSuccess: handleFormSuccessCrud,
   handleDelete: handleDeleteCrud
-} = useCrud({
-  deleteApi: deleteBlacklist,
-  deleteConfirmKey: 'blacklist.delete_confirm',
-  deleteSuccessKey: 'blacklist.delete_success'
-})
+} = useCrud({ deleteApi: deleteBlacklist })
 
 
 const handleFormSuccess = () => {

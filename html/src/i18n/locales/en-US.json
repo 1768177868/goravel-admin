@@ -33,6 +33,8 @@
     "create_success": "Create successful",
     "update_success": "Update successful",
     "delete_success": "Delete successful",
+    "delete_confirm": "Are you sure you want to delete?",
+    "batch_delete_confirm": "Are you sure you want to delete the selected {count} items?",
     "column_setting": "Column Setting",
     "column_setting_tip": "Please select the columns to display in the table",
     "save_success": "Save successful",
