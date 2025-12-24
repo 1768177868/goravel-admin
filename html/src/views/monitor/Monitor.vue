@@ -1228,7 +1228,7 @@ const initCharts = () => {
               let result = time + '<br/>'
               params.forEach(item => {
                 const value = typeof item.value === 'number' ? item.value.toFixed(1) : item.value
-                result += `${item.marker}CPU: ${value}%<br/>`
+                result += `${item.marker}${t('monitor.cpu')}: ${value}%<br/>`
               })
               return result
             }
@@ -1277,7 +1277,7 @@ const initCharts = () => {
               let result = time + '<br/>'
               params.forEach(item => {
                 const value = typeof item.value === 'number' ? item.value.toFixed(1) : item.value
-                result += `${item.marker}内存: ${value}%<br/>`
+                result += `${item.marker}${t('monitor.memory')}: ${value}%<br/>`
               })
               return result
             }

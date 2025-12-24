@@ -2,18 +2,18 @@
   <div v-if="hasError" class="error-boundary">
     <el-result
       icon="error"
-      :title="title"
-      :sub-title="subTitle"
+      :title="title || $t('error_boundary.title')"
+      :sub-title="subTitle || $t('error_boundary.subtitle')"
     >
       <template #extra>
-        <el-button type="primary" @click="handleReset">重试</el-button>
-        <el-button @click="handleReload">刷新页面</el-button>
+        <el-button type="primary" @click="handleReset">{{ $t('error_boundary.retry') }}</el-button>
+        <el-button @click="handleReload">{{ $t('error_boundary.reload') }}</el-button>
       </template>
     </el-result>
     
     <!-- 开发环境显示错误详情 -->
     <el-collapse v-if="isDev && error" class="error-details">
-      <el-collapse-item title="错误详情（开发环境）" name="details">
+      <el-collapse-item :title="$t('error_boundary.error_details')" name="details">
         <pre class="error-stack">{{ errorStack }}</pre>
       </el-collapse-item>
     </el-collapse>
@@ -30,11 +30,11 @@ import { isDev } from '../utils/env'
 const props = defineProps({
   title: {
     type: String,
-    default: '出现错误'
+    default: ''
   },
   subTitle: {
     type: String,
-    default: '页面加载时出现错误，请刷新页面或联系技术支持'
+    default: ''
   },
   onError: {
     type: Function,
@@ -57,10 +57,10 @@ onErrorCaptured((err, instance, info) => {
   
   // 构建错误堆栈信息
   errorStack.value = [
-    `错误信息: ${err.message}`,
-    `错误堆栈: ${err.stack || 'N/A'}`,
-    `组件信息: ${info || 'N/A'}`,
-    `实例: ${instance?.$?.type?.name || 'Unknown'}`
+    `${t('error_boundary.error_message')}: ${err.message}`,
+    `${t('error_boundary.error_stack')}: ${err.stack || 'N/A'}`,
+    `${t('error_boundary.component_info')}: ${info || 'N/A'}`,
+    `${t('error_boundary.instance')}: ${instance?.$?.type?.name || 'Unknown'}`
   ].join('\n')
 
   // 记录错误

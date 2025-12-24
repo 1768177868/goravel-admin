@@ -13,7 +13,7 @@
         >
           <span class="language-option">
             <span class="language-flag">🇨🇳</span>
-            <span>中文</span>
+            <span>{{ $t('common.language_zh') }}</span>
           </span>
         </el-dropdown-item>
         <el-dropdown-item
@@ -22,7 +22,7 @@
         >
           <span class="language-option">
             <span class="language-flag">🇺🇸</span>
-            <span>English</span>
+            <span>{{ $t('common.language_en') }}</span>
           </span>
         </el-dropdown-item>
       </el-dropdown-menu>
@@ -34,6 +34,8 @@
 import { computed, defineComponent, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Storage from '../utils/storage'
+
+const { t } = useI18n()
 
 // 自定义文字图标组件
 const TextIcon = defineComponent({
@@ -57,7 +59,7 @@ const { locale } = useI18n()
 const currentLanguage = computed(() => locale.value)
 
 const currentLanguageText = computed(() => {
-  return currentLanguage.value === 'zh-CN' ? '中文' : 'English'
+  return currentLanguage.value === 'zh-CN' ? t('common.language_zh') : t('common.language_en')
 })
 
 const handleCommand = (command) => {

@@ -23,7 +23,7 @@
     
     <!-- 快速跳转 -->
     <div v-if="showQuickJumper && totalPages > 0" class="pagination-jumper">
-      <span>{{ jumpText }}</span>
+      <span>{{ jumpTextComputed }}</span>
       <el-input-number
         v-model="jumpPage"
         :min="1"
@@ -33,13 +33,16 @@
         style="width: 80px; margin: 0 8px"
         @keyup.enter="handleJump"
       />
-      <el-button :size="buttonSize" @click="handleJump">{{ confirmText }}</el-button>
+      <el-button :size="buttonSize" @click="handleJump">{{ confirmTextComputed }}</el-button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   // 分页数据模型
@@ -110,12 +113,12 @@ const props = defineProps({
   // 跳转文本
   jumpText: {
     type: String,
-    default: '跳至'
+    default: ''
   },
   // 确认文本
   confirmText: {
     type: String,
-    default: '确定'
+    default: ''
   },
   // 输入框尺寸
   inputSize: {
@@ -171,6 +174,16 @@ const totalPages = computed(() => {
   return Math.ceil(total.value / pageSize.value)
 })
 
+// 跳转文本（带默认值）
+const jumpTextComputed = computed(() => {
+  return props.jumpText || t('pagination.jump_to')
+})
+
+// 确认文本（带默认值）
+const confirmTextComputed = computed(() => {
+  return props.confirmText || t('common.confirm')
+})
+
 // 总数文本
 const totalTextComputed = computed(() => {
   if (props.totalText) {
@@ -181,7 +194,7 @@ const totalTextComputed = computed(() => {
   }
   const start = total.value === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1
   const end = Math.min(currentPage.value * pageSize.value, total.value)
-  return `共 ${total.value} 条，显示第 ${start}-${end} 条`
+  return t('pagination.total_text', { total: total.value, start, end })
 })
 
 // 更新模型值

@@ -41,7 +41,9 @@
     "back": "返回",
     "loading": "加载中",
     "more": "更多",
-    "locale": "zh-CN"
+    "locale": "zh-CN",
+    "language_zh": "中文",
+    "language_en": "English"
   },
   "login": {
     "title": "后台管理系统",
@@ -68,7 +70,8 @@
     "forbidden": "没有权限访问",
     "tooManyRequests": "请求过于频繁，请稍后再试",
     "network": "网络错误，请检查网络连接",
-    "timeout": "请求超时，请稍后再试"
+    "timeout": "请求超时，请稍后再试",
+    "page_load_failed": "页面加载失败，请刷新重试"
   },
   "notification": {
     "center": "通知中心",
@@ -730,6 +733,21 @@
     "closeLeft": "关闭左侧",
     "closeRight": "关闭右侧",
     "closeAll": "关闭全部"
+  },
+  "pagination": {
+    "jump_to": "跳至",
+    "total_text": "共 {total} 条，显示第 {start}-{end} 条"
+  },
+  "error_boundary": {
+    "title": "出现错误",
+    "subtitle": "页面加载时出现错误，请刷新页面或联系技术支持",
+    "retry": "重试",
+    "reload": "刷新页面",
+    "error_details": "错误详情（开发环境）",
+    "error_message": "错误信息",
+    "error_stack": "错误堆栈",
+    "component_info": "组件信息",
+    "instance": "实例"
   },
   "breadcrumb": {
     "home": "首页"

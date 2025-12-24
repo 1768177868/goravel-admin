@@ -1156,7 +1156,7 @@ onMounted(async () => {
     ])
   } catch (error) {
     console.error('RoleList onMounted error:', error)
-    ElMessage.error('页面加载失败，请刷新重试')
+    ElMessage.error(t('error.page_load_failed'))
   }
 })
 </script>

@@ -41,7 +41,9 @@
     "back": "Back",
     "loading": "Loading",
     "more": "More",
-    "locale": "en-US"
+    "locale": "en-US",
+    "language_zh": "中文",
+    "language_en": "English"
   },
   "login": {
     "title": "Admin Management System",
@@ -68,7 +70,8 @@
     "forbidden": "No permission to access",
     "tooManyRequests": "Too many requests, please try again later",
     "network": "Network error, please check your connection",
-    "timeout": "Request timeout, please try again later"
+    "timeout": "Request timeout, please try again later",
+    "page_load_failed": "Page load failed, please refresh and try again"
   },
   "notification": {
     "center": "Notification Center",
@@ -730,6 +733,21 @@
     "closeLeft": "Close Left",
     "closeRight": "Close Right",
     "closeAll": "Close All"
+  },
+  "pagination": {
+    "jump_to": "Jump to",
+    "total_text": "Total {total} items, showing {start}-{end}"
+  },
+  "error_boundary": {
+    "title": "An error occurred",
+    "subtitle": "An error occurred while loading the page, please refresh the page or contact technical support",
+    "retry": "Retry",
+    "reload": "Reload Page",
+    "error_details": "Error Details (Development)",
+    "error_message": "Error Message",
+    "error_stack": "Error Stack",
+    "component_info": "Component Info",
+    "instance": "Instance"
   },
   "breadcrumb": {
     "home": "Home"

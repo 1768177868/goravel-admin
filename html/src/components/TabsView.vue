@@ -24,7 +24,7 @@
               v-if="tab.path === activeTab"
               class="refresh-icon"
               @click.stop="handleRefresh(tab.path)"
-              title="刷新"
+              :title="$t('tabs.refresh')"
             >
               <Refresh />
             </el-icon>
