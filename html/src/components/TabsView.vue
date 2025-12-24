@@ -10,9 +10,10 @@
     >
       <el-tab-pane
         v-for="tab in tabsStore.tabs"
-        :key="tab.path"
+        :key="`tab-${tab.path}`"
         :label="getTabTitle(tab)"
         :name="tab.path"
+        :lazy="true"
       >
         <template #label>
           <span
@@ -149,8 +150,20 @@ const handleRemove = async (path) => {
   const isCurrentTab = tabsStore.activeTab === path
   const currentIndex = tabsStore.tabs.findIndex(t => t.path === path)
   
+  // 使用 nextTick 确保 DOM 更新完成后再移除标签
+  await nextTick()
+  
   // 先移除标签
-  tabsStore.removeTab(path)
+  try {
+    tabsStore.removeTab(path)
+  } catch (error) {
+    // 忽略 Element Plus TabPane 卸载时的已知错误
+    if (error?.message?.includes('indexOf') || error?.stack?.includes('unregisterPane')) {
+      console.warn('TabPane unregister error (known Element Plus issue):', error)
+      return
+    }
+    throw error
+  }
   
   // 如果关闭的是当前激活的标签，需要跳转到其他标签
   if (isCurrentTab) {

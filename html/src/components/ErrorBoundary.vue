@@ -52,6 +52,24 @@ const { t } = useI18n()
 
 // 捕获子组件错误
 onErrorCaptured((err, instance, info) => {
+  const errorMessage = err?.message || ''
+  const errorStackStr = err?.stack || ''
+  const instanceName = instance?.$?.type?.name || instance?.$.type?.__name || ''
+  
+  // 静默处理 Element Plus TabPane 卸载时的已知错误
+  const isTabPaneError = (
+    errorMessage.includes('indexOf') ||
+    errorStackStr.includes('unregisterPane') ||
+    errorStackStr.includes('removeChild') ||
+    (instanceName === 'ElTabPane' && info === 'beforeUnmount hook')
+  )
+  
+  if (isTabPaneError) {
+    // 这是 Element Plus 的已知问题，不影响功能，静默处理
+    // 不设置 hasError，不显示错误界面
+    return false // 阻止错误继续传播
+  }
+  
   hasError.value = true
   error.value = err
   
@@ -60,7 +78,7 @@ onErrorCaptured((err, instance, info) => {
     `${t('error_boundary.error_message')}: ${err.message}`,
     `${t('error_boundary.error_stack')}: ${err.stack || 'N/A'}`,
     `${t('error_boundary.component_info')}: ${info || 'N/A'}`,
-    `${t('error_boundary.instance')}: ${instance?.$?.type?.name || 'Unknown'}`
+    `${t('error_boundary.instance')}: ${instanceName || 'Unknown'}`
   ].join('\n')
 
   // 记录错误

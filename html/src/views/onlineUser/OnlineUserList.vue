@@ -7,7 +7,7 @@
           <div>
             <el-button 
               type="danger" 
-              :disabled="selectedRows.length === 0 || getButtonState('admin.kick_out').disabled"
+              :disabled="!selectedRows || selectedRows.length === 0 || getButtonState('admin.kick_out').disabled"
               @click="handleBatchKickOut"
             >
               <el-icon><Delete /></el-icon>
@@ -34,8 +34,7 @@
             v-model="showColumnSetting"
             :visible-columns="visibleColumns"
             :all-columns="allColumns"
-            :default-visible-columns="['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active']"
-            :popover-width="280"
+            :default-visible-columns="defaultVisibleColumns"
             @confirm="handleSaveColumnSetting"
           />
         </div>
@@ -146,31 +145,83 @@ const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableS
   }
 })
 
-// 所有可配置的列（不包括checkbox和operation，它们始终显示）
-const allColumnsConfig = computed(() => [
-  { key: 'username', title: t('online_user.username'), required: false },
-  { key: 'nickname', title: t('online_user.nickname'), required: false },
-  { key: 'avatar', title: t('online_user.avatar'), required: false },
-  { key: 'browser', title: t('online_user.browser'), required: false },
-  { key: 'ip', title: t('online_user.ip'), required: false },
-  { key: 'os', title: t('online_user.os'), required: false },
-  { key: 'session_id', title: t('online_user.session_id'), required: false },
-  { key: 'last_active', title: t('online_user.last_active'), required: false }
+// 所有列的完整配置（必须在 useColumnSetting 之前定义）
+const allTableColumns = computed(() => [
+  { type: 'checkbox', width: 50, fixed: 'left', key: 'checkbox' },
+  {
+    field: 'username',
+    title: t('online_user.username'),
+    width: 120,
+    sortable: false,
+    key: 'username'
+  },
+  {
+    field: 'nickname',
+    title: t('online_user.nickname'),
+    width: 120,
+    sortable: false,
+    key: 'nickname'
+  },
+  {
+    field: 'avatar',
+    slot: 'avatar',
+    title: t('online_user.avatar'),
+    width: 80,
+    key: 'avatar'
+  },
+  {
+    field: 'browser',
+    title: t('online_user.browser'),
+    width: 150,
+    sortable: false,
+    key: 'browser'
+  },
+  {
+    field: 'ip',
+    title: t('online_user.ip'),
+    width: 150,
+    sortable: false,
+    key: 'ip'
+  },
+  {
+    field: 'os',
+    title: t('online_user.os'),
+    width: 150,
+    sortable: false,
+    key: 'os'
+  },
+  {
+    field: 'session_id',
+    title: t('online_user.session_id'),
+    width: 200,
+    key: 'session_id'
+  },
+  {
+    field: 'last_active',
+    slot: 'last_active',
+    title: t('online_user.last_active'),
+    width: 180,
+    sortable: true,
+    key: 'last_active'
+  },
+  {
+    slot: 'operation',
+    title: t('common.operation'),
+    width: 120,
+    fixed: 'right',
+    key: 'operation'
+  }
 ])
 
 // 使用列设置 composable
 const {
+  tableColumns,
   showColumnSetting,
-  visibleColumns,
   allColumns,
-  handleSaveColumnSetting,
-  getVisibleColumns
-} = useColumnSetting({
-  storageKey: 'online_user_column_setting',
-  allColumns: allColumnsConfig,
-  defaultVisibleColumns: ['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active'],
-  alwaysVisibleKeys: ['checkbox', 'operation']
-})
+  visibleColumns,
+  defaultVisibleColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('online_user', allTableColumns)
 
 const searchForm = reactive({
   username: '',
@@ -213,75 +264,6 @@ const searchFields = computed(() => [
     advanced: false
   }
 ])
-
-// 所有列的完整配置
-const allTableColumns = computed(() => [
-  { type: 'checkbox', width: 50, fixed: 'left', key: 'checkbox' },
-  {
-    field: 'username',
-    title: t('online_user.username'),
-    width: 120,
-    sortable: false,
-    key: 'username'
-  },
-  {
-    field: 'nickname',
-    title: t('online_user.nickname'),
-    width: 120,
-    sortable: false,
-    key: 'nickname'
-  },
-  {
-    slot: 'avatar',
-    title: t('online_user.avatar'),
-    width: 80,
-    key: 'avatar'
-  },
-  {
-    field: 'browser',
-    title: t('online_user.browser'),
-    width: 150,
-    sortable: false,
-    key: 'browser'
-  },
-  {
-    field: 'ip',
-    title: t('online_user.ip'),
-    width: 150,
-    sortable: false,
-    key: 'ip'
-  },
-  {
-    field: 'os',
-    title: t('online_user.os'),
-    width: 150,
-    sortable: false,
-    key: 'os'
-  },
-  {
-    field: 'session_id',
-    title: t('online_user.session_id'),
-    width: 200,
-    key: 'session_id'
-  },
-  {
-    slot: 'last_active',
-    title: t('online_user.last_active'),
-    width: 180,
-    sortable: true,
-    key: 'last_active'
-  },
-  {
-    slot: 'operation',
-    title: t('common.operation'),
-    width: 120,
-    fixed: 'right',
-    key: 'operation'
-  }
-])
-
-// 根据visibleColumns过滤显示的列
-const tableColumns = getVisibleColumns(allTableColumns)
 
 const pagination = reactive({
   page: 1,

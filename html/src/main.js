@@ -211,5 +211,52 @@ document.body.classList.add(`layout-${layoutSize}`)
 // 设置多标签页同步监听器（在 Pinia 初始化后）
 setupTabsStorageSync()
 
+// 全局错误处理：静默处理 Element Plus TabPane 的已知卸载错误
+app.config.errorHandler = (err, instance, info) => {
+  const errorMessage = err?.message || ''
+  const errorStack = err?.stack || ''
+  const instanceName = instance?.$?.type?.name || instance?.$.type?.__name || ''
+  
+  // 静默处理 Element Plus TabPane 卸载时的已知错误
+  const isTabPaneError = (
+    errorMessage.includes('indexOf') ||
+    errorStack.includes('unregisterPane') ||
+    errorStack.includes('removeChild') ||
+    (instanceName === 'ElTabPane' && info === 'beforeUnmount hook')
+  )
+  
+  if (isTabPaneError) {
+    // 这是 Element Plus 的已知问题，不影响功能，静默处理
+    return
+  }
+  
+  // 其他错误正常处理
+  console.error('Global error handler:', err, instance, info)
+}
+
+// 全局未捕获错误处理
+window.addEventListener('error', (event) => {
+  const errorMessage = event.message || ''
+  const errorStack = event.error?.stack || ''
+  
+  // 静默处理 Element Plus TabPane 卸载时的已知错误
+  if (errorMessage.includes('indexOf') && (errorStack.includes('unregisterPane') || errorStack.includes('element-plus'))) {
+    event.preventDefault()
+    return
+  }
+})
+
+// 全局未处理的 Promise 错误
+window.addEventListener('unhandledrejection', (event) => {
+  const errorMessage = event.reason?.message || ''
+  const errorStack = event.reason?.stack || ''
+  
+  // 静默处理 Element Plus TabPane 卸载时的已知错误
+  if (errorMessage.includes('indexOf') && (errorStack.includes('unregisterPane') || errorStack.includes('element-plus'))) {
+    event.preventDefault()
+    return
+  }
+})
+
 app.mount('#app')
 

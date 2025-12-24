@@ -5,6 +5,7 @@
     :width="popoverWidth"
     trigger="click"
     popper-class="column-setting-popover"
+    :teleported="true"
     @hide="handleClose"
   >
     <template #reference>
@@ -26,7 +27,7 @@
       <div class="column-list">
         <el-checkbox-group v-model="localVisibleColumns" class="checkbox-group">
           <div
-            v-for="column in allColumns"
+            v-for="column in (allColumns || [])"
             :key="column.key"
             class="column-item"
             :class="{ 'column-item-disabled': column.required }"
@@ -63,7 +64,7 @@
 </template>
 
 <script setup>
-import { ref, watch, markRaw } from 'vue'
+import { ref, watch, markRaw, onBeforeUnmount } from 'vue'
 import { InfoFilled, Setting } from '@element-plus/icons-vue'
 
 const SettingIcon = markRaw(Setting)
@@ -94,14 +95,14 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'confirm'])
 
 const visible = ref(props.modelValue)
-const localVisibleColumns = ref([...props.visibleColumns])
+const localVisibleColumns = ref(Array.isArray(props.visibleColumns) ? [...props.visibleColumns] : [])
 
 // 监听外部 visible 变化
 watch(() => props.modelValue, (newVal) => {
   visible.value = newVal
   if (newVal) {
     // 打开对话框时，重置为当前的 visibleColumns
-    localVisibleColumns.value = [...props.visibleColumns]
+    localVisibleColumns.value = Array.isArray(props.visibleColumns) ? [...props.visibleColumns] : []
   }
 })
 
@@ -113,25 +114,30 @@ watch(visible, (newVal) => {
 // 监听 visibleColumns 变化
 watch(() => props.visibleColumns, (newVal) => {
   if (!visible.value) {
-    localVisibleColumns.value = [...newVal]
+    localVisibleColumns.value = Array.isArray(newVal) ? [...newVal] : []
   }
 }, { deep: true })
 
 // 重置
 const handleReset = () => {
-  localVisibleColumns.value = [...props.defaultVisibleColumns]
+  localVisibleColumns.value = Array.isArray(props.defaultVisibleColumns) ? [...props.defaultVisibleColumns] : []
 }
 
 const handleClose = () => {
   visible.value = false
   // 关闭时恢复为原始值
-  localVisibleColumns.value = [...props.visibleColumns]
+  localVisibleColumns.value = Array.isArray(props.visibleColumns) ? [...props.visibleColumns] : []
 }
 
 const handleConfirm = () => {
-  emit('confirm', [...localVisibleColumns.value])
+  emit('confirm', Array.isArray(localVisibleColumns.value) ? [...localVisibleColumns.value] : [])
   visible.value = false
 }
+
+// 组件卸载前确保 popover 关闭
+onBeforeUnmount(() => {
+  visible.value = false
+})
 </script>
 
 <style scoped>
