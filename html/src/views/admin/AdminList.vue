@@ -132,6 +132,7 @@ import TableActionButtons from '../../components/TableActionButtons.vue'
 import AdminForm from './AdminForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
@@ -157,8 +158,17 @@ const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
 const adminFormRef = ref(null)
-const dialogVisible = ref(false)
-const editId = ref(null)
+
+// 使用 CRUD composable
+const {
+  dialogVisible,
+  editId,
+  handleAdd,
+  handleClose,
+  handleDelete: handleDeleteCrud
+} = useCrud({
+  deleteApi: deleteAdmin
+})
 
 // 字段名映射：前端字段名 -> 数据库字段名
 const fieldMapping = {
@@ -349,11 +359,7 @@ const loadRoles = async () => {
 }
 
 // handleSearch, handleReset, handlePageChange 已由 useListPage 提供
-
-const handleAdd = () => {
-  editId.value = null
-  dialogVisible.value = true
-}
+// handleAdd, handleDelete 已由 useCrud 提供
 
 // 获取去重后的角色列表
 const getUniqueRoles = (roles) => {
@@ -447,27 +453,7 @@ const handleStatusChange = async (row, newStatus) => {
   }
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('admin.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteAdmin(row.id)
-    ElMessage.success(t('admin.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      logger.error('Delete error:', error)
-      // 如果错误已经在响应拦截器中处理过，就不再重复显示
-      if (!error.__handled) {
-        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
-        ElMessage.error(errorMessage)
-      }
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleResetPassword = async (row) => {
   try {
