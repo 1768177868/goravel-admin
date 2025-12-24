@@ -172,26 +172,26 @@ const tableColumns = computed(() => [
   {
     field: 'name',
     title: t('permission.name'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Name || row.name || '-'
   },
   {
     field: 'slug',
     title: t('permission.slug'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Slug || row.slug || '-'
   },
   {
     field: 'method',
     title: t('permission.method'),
     width: 100,
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Method || row.method || '-'
   },
   {
     field: 'path',
     title: t('permission.path'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Path || row.path || '-'
   },
   {
@@ -211,7 +211,7 @@ const tableColumns = computed(() => [
     field: 'status',
     title: t('table.status'),
     width: 80,
-    sortable: true,
+    sortable: false,
     slot: 'status'
   },
   {

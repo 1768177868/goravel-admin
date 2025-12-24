@@ -237,13 +237,13 @@ const tableColumns = computed(() => [
   {
     field: 'name',
     title: t('role.name'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => getDisplayValue(row, 'name')
   },
   {
     field: 'slug',
     title: t('role.slug'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => getDisplayValue(row, 'slug')
   },
   {
@@ -256,7 +256,7 @@ const tableColumns = computed(() => [
     field: 'status',
     title: t('table.status'),
     width: 100,
-    sortable: true,
+    sortable: false,
     slot: 'status'
   },
   {

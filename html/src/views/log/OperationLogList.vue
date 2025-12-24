@@ -456,31 +456,31 @@ const tableColumns = computed(() => [
     field: 'title',
     title: t('log.title'),
     slot: 'title',
-    sortable: true,
+    sortable: false,
     width: 200
   },
   {
     field: 'method',
     title: t('log.method'),
     width: 100,
-    sortable: true
+    sortable: false
   },
   {
     field: 'path',
     title: t('log.path'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'ip',
     title: t('log.ip'),
     width: 150,
-    sortable: true
+    sortable: false
   },
   {
     field: 'status_code',
     title: t('log.status'),
     width: 100,
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => {
       const v = row.status_code
       if (v === 1 || v === '1') {

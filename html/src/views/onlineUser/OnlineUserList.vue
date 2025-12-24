@@ -216,14 +216,14 @@ const allTableColumns = computed(() => [
     field: 'username',
     title: t('online_user.username'),
     width: 120,
-    sortable: true,
+    sortable: false,
     key: 'username'
   },
   {
     field: 'nickname',
     title: t('online_user.nickname'),
     width: 120,
-    sortable: true,
+    sortable: false,
     key: 'nickname'
   },
   {
@@ -236,21 +236,21 @@ const allTableColumns = computed(() => [
     field: 'browser',
     title: t('online_user.browser'),
     width: 150,
-    sortable: true,
+    sortable: false,
     key: 'browser'
   },
   {
     field: 'ip',
     title: t('online_user.ip'),
     width: 150,
-    sortable: true,
+    sortable: false,
     key: 'ip'
   },
   {
     field: 'os',
     title: t('online_user.os'),
     width: 150,
-    sortable: true,
+    sortable: false,
     key: 'os'
   },
   {

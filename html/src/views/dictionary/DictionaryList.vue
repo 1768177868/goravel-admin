@@ -133,19 +133,19 @@ const tableColumns = computed(() => [
   {
     field: 'type',
     title: t('dictionary.type'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Type || row.type || '-'
   },
   {
     field: 'label',
     title: t('dictionary.label'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Label || row.label || '-'
   },
   {
     field: 'value',
     title: t('dictionary.value'),
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.Value || row.value || '-'
   },
   {
@@ -159,7 +159,7 @@ const tableColumns = computed(() => [
     field: 'status',
     title: t('table.status'),
     width: 80,
-    sortable: true,
+    sortable: false,
     slot: 'status'
   },
   {

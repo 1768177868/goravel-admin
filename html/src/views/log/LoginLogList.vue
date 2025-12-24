@@ -217,7 +217,7 @@ const tableColumns = computed(() => [
     field: 'ip',
     title: t('log.ip'),
     width: 150,
-    sortable: true
+    sortable: false
   },
   {
     field: 'location',
@@ -234,7 +234,7 @@ const tableColumns = computed(() => [
     field: 'status',
     title: t('table.status'),
     width: 100,
-    sortable: true,
+    sortable: false,
     slot: 'status'
   },
   {

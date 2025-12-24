@@ -162,7 +162,7 @@ const tableColumns = computed(() => [
   {
     field: 'ip',
     title: t('blacklist.ip'),
-    sortable: true,
+    sortable: false,
     slot: 'ip'
   },
   {
@@ -175,7 +175,7 @@ const tableColumns = computed(() => [
     field: 'status',
     title: t('table.status'),
     width: 100,
-    sortable: true,
+    sortable: false,
     slot: 'status'
   },
   {

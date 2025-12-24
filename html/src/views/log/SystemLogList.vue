@@ -58,7 +58,7 @@
           >
             <template v-if="column.slot === 'level'" #default="{ row }">
               <el-tag :type="getLevelType(row.level)">
-                {{ row.level }}
+                {{ getLevelLabel(row.level) }}
               </el-tag>
             </template>
             <template v-else-if="column.slot === 'context'" #default="{ row }">
@@ -107,7 +107,7 @@
         <el-descriptions-item :label="$t('table.id')">{{ logDetail.id }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.level')">
           <el-tag :type="getLevelType(logDetail.level)">
-            {{ logDetail.level }}
+            {{ getLevelLabel(logDetail.level) }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item :label="$t('log.trace_id')" :span="2">
@@ -205,14 +205,14 @@ const tableColumns = computed(() => [
     field: 'level',
     title: t('log.level'),
     width: 100,
-    sortable: true,
+    sortable: false,
     slot: 'level'
   },
   {
     field: 'trace_id',
     title: t('log.trace_id'),
     width: 220,
-    sortable: true,
+    sortable: false,
     formatter: ({ row }) => row.TraceID || row.trace_id || '-'
   },
   {
@@ -250,10 +250,10 @@ const searchFields = computed(() => [
     type: 'select',
     width: '120px',
     options: [
-      { label: 'error', value: 'error' },
-      { label: 'warning', value: 'warning' },
-      { label: 'info', value: 'info' },
-      { label: 'debug', value: 'debug' }
+      { label: t('log.level_error'), value: 'error' },
+      { label: t('log.level_warning'), value: 'warning' },
+      { label: t('log.level_info'), value: 'info' },
+      { label: t('log.level_debug'), value: 'debug' }
     ],
     advanced: false
   },
@@ -322,6 +322,19 @@ const getLevelType = (level) => {
     'debug': 'info'
   }
   return levelMap[level?.toLowerCase()] || 'info'
+}
+
+// 获取级别的多语言标签
+const getLevelLabel = (level) => {
+  if (!level) return '-'
+  const levelLower = level.toLowerCase()
+  const levelMap = {
+    'error': t('log.level_error'),
+    'warning': t('log.level_warning'),
+    'info': t('log.level_info'),
+    'debug': t('log.level_debug')
+  }
+  return levelMap[levelLower] || level
 }
 
 // 格式化上下文为可读字符串（用于tooltip）

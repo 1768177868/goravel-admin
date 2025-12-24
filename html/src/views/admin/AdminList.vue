@@ -210,28 +210,28 @@ const tableColumns = computed(() => [
   {
     field: 'username',
     title: t('table.username'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'nickname',
     title: t('table.nickname'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'email',
     title: t('table.email'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'phone',
     title: t('table.phone'),
-    sortable: true
+    sortable: false
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 100,
-    sortable: true,
+    sortable: false,
     slot: 'status'
   },
   {
