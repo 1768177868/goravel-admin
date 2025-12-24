@@ -1,12 +1,28 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    :title="$t('common.column_setting')"
-    width="600px"
-    @close="handleClose"
-    class="column-setting-dialog"
+  <el-popover
+    v-model:visible="visible"
+    placement="bottom-end"
+    :width="popoverWidth"
+    trigger="click"
+    popper-class="column-setting-popover"
+    @hide="handleClose"
   >
-    <div class="dialog-content">
+    <template #reference>
+      <slot name="reference">
+        <el-button 
+          type="info" 
+          size="small"
+          :icon="SettingIcon"
+          circle
+          :title="$t('common.column_setting')"
+        />
+      </slot>
+    </template>
+    
+    <div class="popover-content">
+      <div class="popover-header">
+        <span class="popover-title">{{ $t('common.column_setting') }}</span>
+      </div>
       <div class="column-list">
         <el-checkbox-group v-model="localVisibleColumns" class="checkbox-group">
           <div
@@ -33,24 +49,24 @@
           </div>
         </el-checkbox-group>
       </div>
-      <div class="dialog-tips">
+      <div class="popover-tips">
         <el-icon class="tips-icon"><InfoFilled /></el-icon>
         <span>{{ $t('common.column_setting_tip') }}</span>
       </div>
-    </div>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="handleReset">{{ $t('common.reset') }}</el-button>
-        <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleConfirm">{{ $t('common.confirm') }}</el-button>
+      <div class="popover-footer">
+        <el-button size="small" @click="handleReset">{{ $t('common.reset') }}</el-button>
+        <el-button size="small" @click="handleClose">{{ $t('common.cancel') }}</el-button>
+        <el-button size="small" type="primary" @click="handleConfirm">{{ $t('common.confirm') }}</el-button>
       </div>
-    </template>
-  </el-dialog>
+    </div>
+  </el-popover>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { ref, watch, markRaw } from 'vue'
+import { InfoFilled, Setting } from '@element-plus/icons-vue'
+
+const SettingIcon = markRaw(Setting)
 
 const props = defineProps({
   modelValue: {
@@ -68,6 +84,10 @@ const props = defineProps({
   defaultVisibleColumns: {
     type: Array,
     default: () => []
+  },
+  popoverWidth: {
+    type: [String, Number],
+    default: 280
   }
 })
 
@@ -115,18 +135,27 @@ const handleConfirm = () => {
 </script>
 
 <style scoped>
-.column-setting-dialog :deep(.el-dialog__body) {
-  padding: 20px 24px;
+.popover-content {
+  min-width: 260px;
 }
 
-.dialog-content {
-  min-height: 200px;
+.popover-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.popover-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .column-list {
-  max-height: 400px;
+  max-height: 300px;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 4px 0;
+  margin-bottom: 12px;
 }
 
 .column-list::-webkit-scrollbar {
@@ -151,10 +180,11 @@ const handleConfirm = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 6px;
+  border-radius: 4px;
   transition: all 0.3s ease;
   cursor: pointer;
 }
@@ -199,27 +229,29 @@ const handleConfirm = () => {
   font-size: 11px;
 }
 
-.dialog-tips {
+.popover-tips {
   display: flex;
   align-items: center;
-  margin-top: 16px;
-  padding: 12px 16px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
   background: #ecf5ff;
   border: 1px solid #b3d8ff;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #409eff;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .tips-icon {
-  margin-right: 8px;
-  font-size: 16px;
+  margin-right: 6px;
+  font-size: 14px;
 }
 
-.dialog-footer {
+.popover-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e7ed;
 }
 
 /* 响应式设计 */
@@ -227,15 +259,21 @@ const handleConfirm = () => {
   .checkbox-group {
     grid-template-columns: 1fr;
   }
-  
-  .column-setting-dialog :deep(.el-dialog) {
-    width: 90% !important;
-  }
 }
 </style>
 
 <style>
+/* 列设置弹窗样式 */
+.column-setting-popover {
+  padding: 12px;
+}
+
 /* 列设置弹窗夜间模式适配 - 需要非 scoped 样式来覆盖组件内部样式 */
+.dark-mode .column-setting-popover {
+  background-color: var(--bg-color) !important;
+  border-color: var(--border-color-base) !important;
+}
+
 .dark-mode .column-item {
   background-color: var(--bg-color-tertiary) !important;
   border-color: var(--border-color-light) !important;
@@ -274,14 +312,26 @@ const handleConfirm = () => {
   color: var(--text-color-regular) !important;
 }
 
-.dark-mode .dialog-tips {
+.dark-mode .popover-header {
+  border-bottom-color: var(--border-color-base) !important;
+}
+
+.dark-mode .popover-title {
+  color: var(--text-color-primary) !important;
+}
+
+.dark-mode .popover-tips {
   background-color: var(--bg-color-tertiary) !important;
   border-color: var(--border-color-light) !important;
   color: var(--sidebar-active) !important;
 }
 
-.dark-mode .dialog-tips * {
+.dark-mode .popover-tips * {
   color: var(--sidebar-active) !important;
+}
+
+.dark-mode .popover-footer {
+  border-top-color: var(--border-color-base) !important;
 }
 
 .dark-mode .column-list::-webkit-scrollbar-track {

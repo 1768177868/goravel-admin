@@ -5,10 +5,6 @@
         <div class="card-header">
           <span>{{ $t('online_user.title') }}</span>
           <div>
-            <el-button type="info" @click="showColumnSetting = true">
-              <el-icon><Setting /></el-icon>
-              {{ $t('common.column_setting') }}
-            </el-button>
             <el-button 
               type="danger" 
               :disabled="selectedRows.length === 0 || getButtonState('admin.kick_out').disabled"
@@ -29,6 +25,21 @@
         @search="handleSearch"
         @reset="handleReset"
       />
+
+      <!-- 表格工具栏 -->
+      <div class="table-toolbar">
+        <div class="toolbar-left"></div>
+        <div class="toolbar-right">
+          <ColumnSettingDialog
+            v-model="showColumnSetting"
+            :visible-columns="visibleColumns"
+            :all-columns="allColumns"
+            :default-visible-columns="['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active']"
+            :popover-width="280"
+            @confirm="handleSaveColumnSetting"
+          />
+        </div>
+      </div>
 
       <vxe-table
         ref="tableRef"
@@ -86,22 +97,16 @@
       />
     </el-card>
 
-    <!-- 列设置对话框 -->
-    <ColumnSettingDialog
-      v-model="showColumnSetting"
-      :visible-columns="visibleColumns"
-      :all-columns="allColumns"
-      :default-visible-columns="['username', 'nickname', 'avatar', 'browser', 'ip', 'os', 'session_id', 'last_active']"
-      @confirm="handleSaveColumnSetting"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+
+const SettingIcon = markRaw(Setting)
 import { getOnlineUserList, kickOutOnlineUser, batchKickOutOnlineUsers } from '@/api/onlineUser'
 import SearchForm from '@/components/SearchForm.vue'
 import Pagination from '@/components/Pagination.vue'
@@ -465,6 +470,24 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.toolbar-left {
+  flex: 1;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
 
