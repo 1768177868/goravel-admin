@@ -108,6 +108,7 @@
   },
   "menu": {
     "title": "Menu",
+    "notification": "Notifications",
     "notification_center": "Notifications",
     "service_monitor": "Service Monitor",
     "dashboard": "Dashboard",
@@ -910,7 +911,8 @@
     "partition_total": "Total",
     "partition_used": "Used",
     "partition_free": "Free",
-    "partition_percent": "Usage"
+    "partition_percent": "Usage",
+    "refresh_too_frequent": "Refresh too frequent, please wait {seconds} seconds before trying again"
   },
   "operation.unknown": "Unknown Operation"
 }

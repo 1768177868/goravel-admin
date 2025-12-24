@@ -108,6 +108,7 @@
   },
   "menu": {
     "title": "菜单",
+    "notification": "通知中心",
     "notification_center": "通知中心",
     "service_monitor": "服务监控",
     "dashboard": "仪表盘",
@@ -910,7 +911,8 @@
     "partition_total": "总容量",
     "partition_used": "已用",
     "partition_free": "空闲",
-    "partition_percent": "使用率"
+    "partition_percent": "使用率",
+    "refresh_too_frequent": "刷新过于频繁，请等待 {seconds} 秒后再试"
   },
   "operation.unknown": "未知操作"
 }

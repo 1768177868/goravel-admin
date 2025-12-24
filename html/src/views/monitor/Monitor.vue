@@ -1041,6 +1041,10 @@ let lastErrorTime = 0 // 上次错误时间
 const MAX_ERROR_COUNT = 5 // 最大错误次数，超过后降级到轮询
 const ERROR_WINDOW = 10000 // 错误时间窗口（10秒）
 
+// 刷新节流控制
+let lastRefreshTime = 0 // 上次刷新时间
+const MIN_REFRESH_INTERVAL = 2000 // 最小刷新间隔（毫秒），2秒
+
 // 图表引用
 const cpuChartRef = ref(null)
 const memoryChartRef = ref(null)
@@ -1535,6 +1539,20 @@ const loadData = async () => {
   if (refreshing.value) {
     return
   }
+  
+  // 节流控制：检查距离上次刷新的时间间隔
+  const now = Date.now()
+  const timeSinceLastRefresh = now - lastRefreshTime
+  
+  if (timeSinceLastRefresh < MIN_REFRESH_INTERVAL) {
+    // 如果距离上次刷新时间太短，提示用户并忽略本次点击
+    const remainingTime = Math.ceil((MIN_REFRESH_INTERVAL - timeSinceLastRefresh) / 1000)
+    ElMessage.warning(t('monitor.refresh_too_frequent', { seconds: remainingTime }))
+    return
+  }
+  
+  // 更新上次刷新时间
+  lastRefreshTime = now
   
   refreshing.value = true
   loading.value = true
