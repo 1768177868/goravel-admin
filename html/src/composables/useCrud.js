@@ -5,22 +5,36 @@ import logger from '../utils/logger'
 
 /**
  * CRUD 操作通用 composable
- * @param {Object} options 配置选项
- * @param {Function} options.deleteApi - 删除 API 函数
- * @param {String} options.deleteConfirmKey - 删除确认提示的 i18n key
- * @param {String} options.deleteSuccessKey - 删除成功提示的 i18n key
- * @param {String} options.tipKey - 提示标题的 i18n key（默认 'form.tip'）
- * @param {Function} options.onDeleteSuccess - 删除成功后的回调（可选）
- * @param {Function} options.onDeleteError - 删除失败后的回调（可选）
- * @param {Function} options.beforeDelete - 删除前的钩子函数（可选，返回 false 可取消删除）
- * @param {Function} options.afterDelete - 删除后的钩子函数（可选）
+ * 
+ * 使用示例：
+ * 
+ * // 1. 只需要添加/编辑功能（不需要删除）
+ * const { dialogVisible, editId, handleAdd, handleEdit, handleClose, handleFormSuccess } = useCrud()
+ * 
+ * // 2. 需要删除功能
+ * const { handleDelete } = useCrud({ deleteApi: deleteXxx })
+ * 
+ * // 3. 需要批量删除功能（使用专门的批量删除 API）
+ * const { handleBatchDelete } = useCrud({ batchDeleteApi: batchDeleteXxx })
+ * 
+ * // 4. 完整功能
+ * const { handleDelete, handleBatchDelete } = useCrud({ deleteApi, batchDeleteApi })
+ * 
+ * @param {Object} options 配置选项（所有参数都是可选的）
+ * @param {Function} options.deleteApi - 单个删除 API 函数
+ * @param {Function} options.batchDeleteApi - 批量删除 API 函数（接收 ids 数组）
+ * @param {String} options.deleteConfirmKey - 删除确认提示的 i18n key（默认 'common.delete_confirm'）
+ * @param {String} options.deleteSuccessKey - 删除成功提示的 i18n key（默认 'common.delete_success'）
+ * @param {String} options.batchDeleteConfirmKey - 批量删除确认提示的 i18n key（默认 'common.batch_delete_confirm'）
  * @returns {Object} 返回 CRUD 相关的状态和方法
  */
 export function useCrud(options = {}) {
   const {
     deleteApi = null,
+    batchDeleteApi = null,
     deleteConfirmKey = '',
     deleteSuccessKey = '',
+    batchDeleteConfirmKey = '',
     tipKey = 'form.tip',
     onDeleteSuccess = null,
     onDeleteError = null,
@@ -162,11 +176,12 @@ export function useCrud(options = {}) {
    */
   const handleBatchDelete = async (rows, reloadData = null) => {
     if (!rows || rows.length === 0) {
+      ElMessage.warning(t('common.please_select_items'))
       return
     }
 
     try {
-      const confirmKey = deleteConfirmKey || 'common.batch_delete_confirm'
+      const confirmKey = batchDeleteConfirmKey || 'common.batch_delete_confirm'
       const count = rows.length
       
       await ElMessageBox.confirm(
@@ -179,25 +194,21 @@ export function useCrud(options = {}) {
         }
       )
 
-      if (!deleteApi) {
-        logger.error('useCrud: deleteApi is required for batch delete')
-        return
-      }
-
-      // 批量删除（假设 API 支持批量删除）
       const ids = rows.map(row => row.id || row.ID).filter(Boolean)
       if (ids.length === 0) {
         return
       }
 
-      // 这里需要根据实际的批量删除 API 调整
-      // 假设 deleteApi 可以接受数组或需要循环调用
-      if (Array.isArray(ids) && ids.length > 0) {
-        // 如果 API 支持批量删除，直接传递数组
-        // 否则循环调用
+      // 优先使用批量删除 API，否则循环调用单个删除 API
+      if (batchDeleteApi) {
+        await batchDeleteApi(ids)
+      } else if (deleteApi) {
         for (const id of ids) {
           await deleteApi(id)
         }
+      } else {
+        logger.error('useCrud: deleteApi or batchDeleteApi is required for batch delete')
+        return
       }
 
       const successKey = deleteSuccessKey || 'common.delete_success'

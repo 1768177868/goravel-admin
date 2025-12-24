@@ -119,6 +119,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { useCrud } from '../../composables/useCrud'
 import { usePermission } from '../../composables/usePermission'
 import { getMethodOptions } from '../../utils/fieldOptions'
 import {
@@ -137,6 +138,12 @@ const tableRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
+
+// 使用 CRUD composable（删除和批量删除）
+const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
+  deleteApi: deleteOperationLog,
+  batchDeleteApi: batchDeleteOperationLogs
+})
 
 // 预置的操作标题（权限标识），用于下拉选项，即使还没有对应的操作日志也能选择
 // 对应多语言中的 permission.* 配置
@@ -606,49 +613,17 @@ const handleView = async (row) => {
   }
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('log.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteOperationLog(row.id)
-    ElMessage.success(t('log.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleSelectionChange = () => {
   selectedRows.value = tableRef.value?.getCheckboxRecords() || []
 }
 
-const handleBatchDelete = async () => {
-  if (selectedRows.value.length === 0) {
-    ElMessage.warning(t('common.please_select_items'))
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(t('log.batch_delete_confirm', { count: selectedRows.value.length }), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    const ids = selectedRows.value.map(row => row.id)
-    await batchDeleteOperationLogs(ids)
-    ElMessage.success(t('log.delete_success'))
+const handleBatchDelete = () => {
+  handleBatchDeleteCrud(selectedRows.value, () => {
     selectedRows.value = []
     loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Batch delete error:', error)
-    }
-  }
+  })
 }
 
 const handleClean = async () => {
