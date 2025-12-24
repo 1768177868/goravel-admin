@@ -149,6 +149,7 @@ export function useListPage(options = {}) {
 
   /**
    * 搜索处理
+   * 注意：SearchForm 组件内部已经有防抖处理，这里不需要再次防抖
    */
   const handleSearch = () => {
     pagination.page = 1

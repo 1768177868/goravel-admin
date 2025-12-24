@@ -39,8 +39,9 @@
         :data="tableData"
         :loading="loading"
         border
-        :column-config="tableConfig"
+        :column-config="optimizedTableConfig"
         :height="tableHeight"
+        :scroll-y="scrollYConfig"
         :sort-config="{ multiple: false, trigger: 'default' }"
         @sort-change="handleSortChange"
         v-bind="$attrs"
@@ -95,10 +96,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from './SearchForm.vue'
 import Pagination from './Pagination.vue'
+import { useTablePerformance } from '../composables/useTablePerformance'
 
 const props = defineProps({
   // 页面类名
@@ -199,6 +201,16 @@ const emit = defineEmits([
 ])
 
 const tableRef = ref(null)
+
+// 性能优化：虚拟滚动和列渲染优化
+const {
+  scrollYConfig,
+  optimizedTableConfig
+} = useTablePerformance({
+  tableColumns: computed(() => props.tableColumns),
+  tableData: computed(() => props.tableData),
+  tableHeight: props.tableHeight
+})
 
 const handleAdd = () => {
   emit('add')

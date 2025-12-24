@@ -107,7 +107,7 @@ const setupVxeTableI18n = () => {
       
       // 调试日志（开发环境）- 扩展调试范围
       if (process.env.NODE_ENV === 'development' && (key.includes('empty') || key.includes('loading'))) {
-        console.log('[VXE i18n]', { key, currentLocale, value })
+        // console.log('[VXE i18n]', { key, currentLocale, value })
       }
       
       // 如果找到值且有参数，替换参数
@@ -132,7 +132,7 @@ const setupVxeTableI18n = () => {
         
         // 调试日志（开发环境）
         if (process.env.NODE_ENV === 'development' && (key.includes('total') || key.includes('pagesize'))) {
-          console.log('[VXE i18n]', { key, args, params, value })
+          // console.log('[VXE i18n]', { key, args, params, value })
         }
         
         // 替换所有参数占位符
