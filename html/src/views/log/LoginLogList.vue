@@ -120,6 +120,7 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import {
   getLoginLogList,
   getLoginLogDetail,
@@ -135,6 +136,12 @@ const tableRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
+
+// 使用 CRUD composable（删除和批量删除）
+const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
+  deleteApi: deleteLoginLog,
+  batchDeleteApi: batchDeleteLoginLogs
+})
 
 // 字段名映射：前端字段名 -> 数据库字段名
 const fieldMapping = {
@@ -317,49 +324,17 @@ const handleView = async (row) => {
   }
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('log.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteLoginLog(row.id)
-    ElMessage.success(t('log.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleSelectionChange = () => {
   selectedRows.value = tableRef.value?.getCheckboxRecords() || []
 }
 
-const handleBatchDelete = async () => {
-  if (selectedRows.value.length === 0) {
-    ElMessage.warning(t('common.please_select_items'))
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(t('log.batch_delete_confirm', { count: selectedRows.value.length }), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    const ids = selectedRows.value.map(row => row.id)
-    await batchDeleteLoginLogs(ids)
-    ElMessage.success(t('log.delete_success'))
+const handleBatchDelete = () => {
+  handleBatchDeleteCrud(selectedRows.value, () => {
     selectedRows.value = []
     loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Batch delete error:', error)
-    }
-  }
+  })
 }
 
 const handleClean = async () => {
