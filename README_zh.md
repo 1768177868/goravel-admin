@@ -212,7 +212,7 @@ swag init
 ```bash
 # 构建前端应用
 cd html
-npm install && npm run build
+npm install --include=optional && npm run build
 
 # 部署到 Cloudflare Workers
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin

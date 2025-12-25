@@ -212,7 +212,7 @@ Deploy the frontend application to Cloudflare Workers:
 ```bash
 # Build the frontend application
 cd html
-npm install && npm run build
+npm install --include=optional && npm run build
 
 # Deploy to Cloudflare Workers
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
