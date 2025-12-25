@@ -106,6 +106,7 @@ import TableActionButtons from '../../components/TableActionButtons.vue'
 import DictionaryForm from './DictionaryForm.vue'
 import { useTableSort } from '../../composables/useTableSort'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import {
   getDictionaryList,
   deleteDictionary
@@ -115,8 +116,16 @@ const { t } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
 const loading = ref(false)
-const dialogVisible = ref(false)
-const editId = ref(null)
+
+// 使用 CRUD composable
+const {
+  dialogVisible,
+  editId,
+  handleAdd,
+  handleDelete: handleDeleteCrud
+} = useCrud({
+  deleteApi: deleteDictionary
+})
 
 const searchForm = reactive({
   type: ''
@@ -260,11 +269,6 @@ const handlePageChange = ({ currentPage, pageSize }) => {
   loadData()
 }
 
-const handleAdd = () => {
-  editId.value = null
-  dialogVisible.value = true
-}
-
 const handleEdit = (row) => {
   editId.value = row.id
   dialogVisible.value = true
@@ -274,22 +278,7 @@ const handleFormSuccess = () => {
   loadData()
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('dictionary.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteDictionary(row.id)
-    ElMessage.success(t('dictionary.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 onMounted(() => {
   initDefaultSort()

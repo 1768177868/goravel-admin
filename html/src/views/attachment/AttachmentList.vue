@@ -209,6 +209,7 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import axios from 'axios'
 import { 
   getAttachmentList, 
@@ -226,6 +227,12 @@ import Storage from '../../utils/storage'
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
+
+// 使用 CRUD composable
+const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
+  deleteApi: deleteAttachment,
+  batchDeleteApi: batchDeleteAttachments
+})
 
 const tableRef = ref(null)
 const uploadRef = ref(null)
@@ -940,53 +947,17 @@ const handleDownload = async (row) => {
   }
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('attachment.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteAttachment(row.id || row.ID)
-    ElMessage.success(t('attachment.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete attachment error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleSelectionChange = () => {
   selectedRows.value = tableRef.value?.getCheckboxRecords() || []
 }
 
-const handleBatchDelete = async () => {
-  if (selectedRows.value.length === 0) {
-    ElMessage.warning(t('common.please_select_items'))
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      t('attachment.batch_delete_confirm', { count: selectedRows.value.length }), 
-      t('form.tip'), 
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
-    const ids = selectedRows.value.map(row => row.id || row.ID)
-    await batchDeleteAttachments(ids)
-    ElMessage.success(t('attachment.delete_success'))
+const handleBatchDelete = () => {
+  handleBatchDeleteCrud(selectedRows.value, () => {
     selectedRows.value = []
     loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Batch delete error:', error)
-    }
-  }
+  })
 }
 
 onMounted(() => {

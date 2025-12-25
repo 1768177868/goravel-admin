@@ -116,14 +116,23 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import MenuForm from './MenuForm.vue'
 import { getMenuList, deleteMenu } from '../../api/menu'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
 const loading = ref(false)
-const dialogVisible = ref(false)
-const editId = ref(null)
 const isExpanded = ref(false)
+
+// 使用 CRUD composable
+const {
+  dialogVisible,
+  editId,
+  handleAdd,
+  handleDelete: handleDeleteCrud
+} = useCrud({
+  deleteApi: deleteMenu
+})
 
 const tableData = ref([])
 
@@ -221,11 +230,6 @@ const loadData = async () => {
   }
 }
 
-const handleAdd = () => {
-  editId.value = null
-  dialogVisible.value = true
-}
-
 const handleEdit = (row) => {
   editId.value = row.id
   dialogVisible.value = true
@@ -235,22 +239,7 @@ const handleFormSuccess = () => {
   loadData()
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('menu_management.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteMenu(row.id)
-    ElMessage.success(t('menu_management.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleRefresh = () => {
   loadData()

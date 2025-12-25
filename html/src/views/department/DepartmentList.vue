@@ -94,6 +94,7 @@ import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import DepartmentForm from './DepartmentForm.vue'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import {
   getDepartmentList,
   deleteDepartment
@@ -102,8 +103,16 @@ import {
 const { t } = useI18n()
 const { getButtonState } = usePermission()
 const loading = ref(false)
-const dialogVisible = ref(false)
-const editId = ref(null)
+
+// 使用 CRUD composable
+const {
+  dialogVisible,
+  editId,
+  handleAdd,
+  handleDelete: handleDeleteCrud
+} = useCrud({
+  deleteApi: deleteDepartment
+})
 
 const tableData = ref([])
 const hasSearch = ref(false) // 标记是否有搜索条件
@@ -263,11 +272,6 @@ const handleReset = () => {
   loadData()
 }
 
-const handleAdd = () => {
-  editId.value = null
-  dialogVisible.value = true
-}
-
 const handleEdit = (row) => {
   editId.value = row.id
   dialogVisible.value = true
@@ -277,22 +281,7 @@ const handleFormSuccess = () => {
   loadData()
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('department.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteDepartment(row.id)
-    ElMessage.success(t('department.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 onMounted(() => {
   loadData()

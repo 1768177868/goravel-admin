@@ -107,6 +107,7 @@ import Pagination from '../../components/Pagination.vue'
 import PermissionForm from './PermissionForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import { getMenuTitle as getMenuTitleUtil } from '../../utils/menuTranslation'
 import {
   getPermissionList,
@@ -117,8 +118,16 @@ import { getMenuList } from '../../api/menu'
 const { t, te } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
-const dialogVisible = ref(false)
-const editId = ref(null)
+
+// 使用 CRUD composable
+const {
+  dialogVisible,
+  editId,
+  handleAdd,
+  handleDelete: handleDeleteCrud
+} = useCrud({
+  deleteApi: deletePermission
+})
 
 // 字段名映射
 const fieldMapping = {
@@ -366,11 +375,7 @@ const getMenuDisplayTitle = (menu) => {
 }
 
 // loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
-
-const handleAdd = () => {
-  editId.value = null
-  dialogVisible.value = true
-}
+// handleAdd, handleDelete 已由 useCrud 提供
 
 const handleEdit = (row) => {
   editId.value = row.id
@@ -381,22 +386,7 @@ const handleFormSuccess = () => {
   loadData()
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('permission.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deletePermission(row.id)
-    ElMessage.success(t('permission.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 onMounted(() => {
   initDefaultSort()

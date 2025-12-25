@@ -197,6 +197,7 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useTableSort } from '../../composables/useTableSort'
 import { usePermission } from '../../composables/usePermission'
+import { useCrud } from '../../composables/useCrud'
 import { getMenuTranslation } from '../../utils/menuTranslation'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
@@ -218,6 +219,12 @@ const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
 const formLoading = ref(false)
 const submitting = ref(false)
+
+// 使用 CRUD composable（只用删除功能，因为角色有自定义对话框）
+const { handleDelete: handleDeleteCrud } = useCrud({
+  deleteApi: deleteRole
+})
+
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('role.edit_role') : t('role.add_role'))
 
@@ -1120,31 +1127,12 @@ const handleStatusChange = async (row, newStatus) => {
   }
 }
 
-const handleDelete = async (row) => {
+const handleDelete = (row) => {
   if (isProtectedRole(row)) {
     ElMessage.warning(t('role.protected_cannot_delete'))
     return
   }
-  
-  try {
-    await ElMessageBox.confirm(t('role.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteRole(row.id)
-    ElMessage.success(t('role.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete error:', error)
-      // 如果错误已经在响应拦截器中处理过，就不再重复显示
-      if (!error.__handled) {
-        const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
-        ElMessage.error(errorMessage)
-      }
-    }
-  }
+  handleDeleteCrud(row, loadData)
 }
 
 onMounted(async () => {
