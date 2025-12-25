@@ -10,6 +10,24 @@ import (
 	"goravel/app/utils/traceid"
 )
 
+// DebugfHTTP logs a debug message and automatically attaches trace_id from the http context.
+// Debug messages are only shown when APP_DEBUG=true
+func DebugfHTTP(ctx http.Context, format string, args ...any) {
+	if ctx == nil {
+		facades.Log().Debugf(format, args...)
+		return
+	}
+
+	trace := traceid.FromHTTPContext(ctx)
+	facades.Log().Debugf(prependTrace(trace, format), args...)
+}
+
+// Debugf logs a debug message without any context.
+// Debug messages are only shown when APP_DEBUG=true
+func Debugf(format string, args ...any) {
+	facades.Log().Debugf(format, args...)
+}
+
 // InfofHTTP logs an info message and automatically attaches trace_id from the http context.
 func InfofHTTP(ctx http.Context, format string, args ...any) {
 	if ctx == nil {

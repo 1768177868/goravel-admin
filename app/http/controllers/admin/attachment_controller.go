@@ -335,8 +335,8 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			})
 		}
 
-		// 合并成功后，记录日志（用于调试）
-		facades.Log().Infof("Successfully merged chunks for chunkID %s, filename: %s, total_chunks: %d", chunkID, filename, totalChunks)
+		// 合并成功后，记录日志（仅 Debug 模式）
+		facades.Log().Debugf("Successfully merged chunks for chunkID %s, filename: %s, total_chunks: %d", chunkID, filename, totalChunks)
 
 		fileURL := attachmentService.GetFileURL(attachment)
 

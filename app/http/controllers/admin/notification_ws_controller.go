@@ -25,8 +25,8 @@ func NewNotificationWsController() *NotificationWsController {
 }
 
 func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response {
-	// 记录 WebSocket 连接尝试
-	logger.InfofHTTP(ctx, "WebSocket connection attempt from %s, path: %s, upgrade: %s, connection: %s",
+	// 记录 WebSocket 连接尝试（仅 Debug 模式）
+	logger.DebugfHTTP(ctx, "WebSocket connection attempt from %s, path: %s, upgrade: %s, connection: %s",
 		ctx.Request().Ip(),
 		ctx.Request().Path(),
 		ctx.Request().Header("Upgrade", ""),
