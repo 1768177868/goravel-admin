@@ -269,6 +269,20 @@ upx -9 main
 
 ## 文档
 
+### 项目文档
+
+| 文档 | 说明 |
+|------|------|
+| [API.md](./docs/API.md) | 完整 API 接口文档 |
+| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系统架构设计 |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
+| [TESTING.md](./TESTING.md) | 测试指南（单元测试 & 集成测试） |
+| [BUILD.md](./BUILD.md) | 编译打包与部署 |
+| [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
+| [前端开发指南](./html/DEVELOPMENT.md) | 前端开发文档 |
+
+### Goravel 框架文档
+
 在线文档 [https://www.goravel.dev](https://www.goravel.dev)
 
 > 要优化文档，请向文档仓库提交 PR

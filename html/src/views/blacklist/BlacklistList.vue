@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import ListPage from '../../components/ListPage.vue'
@@ -219,6 +219,10 @@ const handleDelete = (row) => {
 
 onMounted(() => {
   initDefaultSort()
+  loadData()
+})
+
+onActivated(() => {
   loadData()
 })
 </script>

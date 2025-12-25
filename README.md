@@ -270,6 +270,20 @@ upx -9 main
 
 ## Documentation
 
+### Project Documentation
+
+| Document | Description |
+|----------|-------------|
+| [API.md](./docs/API.md) | Complete API reference with examples |
+| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture and design |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |
+| [TESTING.md](./TESTING.md) | Testing guide (unit & integration) |
+| [BUILD.md](./BUILD.md) | Build and deployment |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history |
+| [Frontend Guide](./html/DEVELOPMENT.md) | Frontend development guide |
+
+### Goravel Framework
+
 Online documentation [https://www.goravel.dev](https://www.goravel.dev)
 
 > To optimize the documentation, please submit a PR to the documentation
