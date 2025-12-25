@@ -8,18 +8,18 @@ import (
 // 定义业务错误类型
 var (
 	// 认证相关错误
-	ErrAccountDisabled      = NewBusinessError("account_disabled", "账号已被禁用")
+	ErrAccountDisabled       = NewBusinessError("account_disabled", "账号已被禁用")
 	ErrPasswordError         = NewBusinessError("password_error", "密码错误")
-	ErrNotLoggedIn          = NewBusinessError("not_logged_in", "未登录")
+	ErrNotLoggedIn           = NewBusinessError("not_logged_in", "未登录")
 	ErrUsernameOrPasswordErr = NewBusinessError("username_or_password_error", "用户名或密码错误")
-	ErrLoginFailed          = NewBusinessError("login_failed", "登录失败")
+	ErrLoginFailed           = NewBusinessError("login_failed", "登录失败")
 
 	// 验证相关错误
 	ErrValidationFailed = NewBusinessError("validation_failed", "验证失败")
 	ErrInvalidArgument  = NewBusinessError("invalid_argument", "无效的参数")
 
 	// 资源相关错误
-	ErrRecordNotFound = NewBusinessError("record_not_found", "记录不存在")
+	ErrRecordNotFound    = NewBusinessError("record_not_found", "记录不存在")
 	ErrBlacklistNotFound = NewBusinessError("blacklist_not_found", "黑名单不存在")
 
 	// IP 相关错误
@@ -98,4 +98,3 @@ func GetBusinessError(err error) (*BusinessError, bool) {
 	be, ok := err.(*BusinessError)
 	return be, ok
 }
-

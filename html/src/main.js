@@ -211,6 +211,9 @@ document.body.classList.add(`layout-${layoutSize}`)
 // 设置多标签页同步监听器（在 Pinia 初始化后）
 setupTabsStorageSync()
 
+// 导入错误上报器
+import { reportComponentError, reportUnhandledRejection } from './utils/errorReporter'
+
 // 全局错误处理：静默处理 Element Plus TabPane 的已知卸载错误
 app.config.errorHandler = (err, instance, info) => {
   const errorMessage = err?.message || ''
@@ -230,8 +233,8 @@ app.config.errorHandler = (err, instance, info) => {
     return
   }
   
-  // 其他错误正常处理
-  console.error('Global error handler:', err, instance, info)
+  // 上报组件错误
+  reportComponentError(err, instanceName, info)
 }
 
 // 全局未捕获错误处理
@@ -256,6 +259,9 @@ window.addEventListener('unhandledrejection', (event) => {
     event.preventDefault()
     return
   }
+  
+  // 上报未处理的 Promise 错误
+  reportUnhandledRejection(event)
 })
 
 app.mount('#app')
