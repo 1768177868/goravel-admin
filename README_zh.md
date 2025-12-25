@@ -212,7 +212,12 @@ swag init
 ```bash
 # 构建前端应用
 cd html
-npm install --include=optional && npm run build
+# 注意：Cloudflare Workers 构建环境会自动运行 npm ci
+# 如果遇到 Rollup 可选依赖问题，请使用以下构建命令：
+npm install --include=optional @rollup/rollup-linux-x64-gnu && npm run build
+
+# 或者使用项目提供的 CI 构建脚本：
+npm run build:ci
 
 # 部署到 Cloudflare Workers
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin

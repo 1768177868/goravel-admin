@@ -212,7 +212,12 @@ Deploy the frontend application to Cloudflare Workers:
 ```bash
 # Build the frontend application
 cd html
-npm install --include=optional && npm run build
+# Note: Cloudflare Workers build environment automatically runs npm ci
+# If you encounter Rollup optional dependency issues, use the following build command:
+npm install --include=optional @rollup/rollup-linux-x64-gnu && npm run build
+
+# Or use the project's CI build script:
+npm run build:ci
 
 # Deploy to Cloudflare Workers
 npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
