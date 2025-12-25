@@ -37,6 +37,11 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
   <p align="center">系统监控</p>
 </p>
 
+<p align="center">
+  <img src="./images/pages.png" alt="cloudflare" width="800">
+  <p align="center">cloudflare</p>
+</p>
+
 ### 功能特性
 
 #### 核心模块

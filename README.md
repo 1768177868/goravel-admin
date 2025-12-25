@@ -36,6 +36,11 @@ password: demo123
   <p align="center">System Monitoring</p>
 </p>
 
+<p align="center">
+  <img src="./images/pages.png" alt="cloudflare" width="800">
+  <p align="center">cloudflare</p>
+</p>
+
 ### Features
 
 #### Core Modules
