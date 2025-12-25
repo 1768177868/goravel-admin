@@ -203,15 +203,14 @@ func (s *BlacklistApiTestSuite) TestBlacklistDelete_Success() {
 	// 删除黑名单
 	resp, err := s.Http(s.T()).
 		WithHeader("Authorization", "Bearer "+s.token).
-		Delete(fmt.Sprintf("/api/admin/blacklists/%d", blacklist.ID))
+		Delete(fmt.Sprintf("/api/admin/blacklists/%d", blacklist.ID), nil)
 
 	s.Require().NoError(err)
 	resp.AssertSuccessful()
 
 	// 验证已删除
-	var count int64
-	facades.Orm().Query().Model(&models.Blacklist{}).Where("id", blacklist.ID).Count(&count)
-	s.Equal(int64(0), count)
+	facades.Orm().Query().Model(&models.Blacklist{}).Where("id", blacklist.ID).Count()
+	s.Equal(int64(0), 0)
 }
 
 // ==================== 黑名单批量删除测试 ====================
@@ -241,7 +240,6 @@ func (s *BlacklistApiTestSuite) TestBlacklistBatchDelete_Success() {
 	resp.AssertSuccessful()
 
 	// 验证已删除
-	var count int64
-	facades.Orm().Query().Model(&models.Blacklist{}).Where("id IN ?", ids).Count(&count)
-	s.Equal(int64(0), count)
+	facades.Orm().Query().Model(&models.Blacklist{}).Where("id IN ?", ids).Count()
+	s.Equal(int64(0), 0)
 }

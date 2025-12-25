@@ -171,7 +171,7 @@ func (s *PermissionTestSuite) TestAccessWithoutPermission() {
 	s.Require().NoError(err)
 
 	// 绑定角色
-	_, err = facades.Orm().Query().Table("admin_role").Insert(map[string]any{
+	err = facades.Orm().Query().Table("admin_role").Create(map[string]any{
 		"admin_id": admin.ID,
 		"role_id":  role.ID,
 	})
@@ -193,6 +193,7 @@ func (s *PermissionTestSuite) TestAccessWithoutPermission() {
 		Get("/api/admin/admins")
 
 	s.Require().NoError(err)
+	resp.AssertSuccessful()
 	// 可能返回 403 或 200（取决于权限配置）
 	// 这里只验证请求不会出错
 }
