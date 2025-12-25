@@ -12,6 +12,7 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
 	"goravel/app/utils/errorlog"
+	"goravel/app/utils/traceid"
 )
 
 type TokenService interface {
@@ -90,7 +91,10 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 	// 检查是否过期
 	if accessToken.ExpiresAt != nil && accessToken.ExpiresAt.Before(time.Now()) {
 		if _, err := facades.Orm().Query().Delete(&accessToken); err != nil {
-			errorlog.Record(context.Background(), "token", "Failed to delete expired token", map[string]any{
+			// 使用 traceid.EnsureContext 确保有 trace_id，即使使用 context.Background()
+			// 这样可以保证日志的可追踪性
+			ctx, _ := traceid.EnsureContext(context.Background())
+			errorlog.Record(ctx, "token", "Failed to delete expired token", map[string]any{
 				"token_id":     accessToken.ID,
 				"tokenable_id": accessToken.TokenableID,
 				"expires_at":   accessToken.ExpiresAt,

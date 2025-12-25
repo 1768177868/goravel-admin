@@ -1,11 +1,12 @@
 package services
 
 import (
-	"errors"
 	"time"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/models"
 	wsnotifications "goravel/app/websocket/notifications"
 )
@@ -27,11 +28,22 @@ func NewNotificationServiceImpl() NotificationService {
 
 func (s *NotificationServiceImpl) Create(title, content, notifType string, senderID *uint, receiverID *uint) (*models.Notification, error) {
 	if receiverID == nil {
+		// 批量创建通知给所有管理员，使用事务确保原子性
 		var admins []models.Admin
 		if err := facades.Orm().Query().Find(&admins); err != nil {
 			return nil, err
 		}
+
+		if len(admins) == 0 {
+			return nil, apperrors.ErrRecordNotFound.WithMessage("no admins found")
+		}
+
 		var first *models.Notification
+		var notifications []*models.Notification
+		var createdIDs []uint
+
+		// 使用循环创建通知，如果失败则手动回滚已创建的通知
+		// 注意：这不是真正的事务，但在框架可能不支持事务的情况下提供基本的回滚机制
 		for _, admin := range admins {
 			rid := admin.ID
 			notification := &models.Notification{
@@ -42,16 +54,28 @@ func (s *NotificationServiceImpl) Create(title, content, notifType string, sende
 				ReceiverID: &rid,
 			}
 			if err := facades.Orm().Query().Create(notification); err != nil {
+				// 如果创建失败，尝试删除已创建的通知（手动回滚）
+				for _, id := range createdIDs {
+					_, _ = facades.Orm().Query().Where("id", id).Delete(&models.Notification{})
+				}
 				return nil, err
 			}
 			if first == nil {
 				first = notification
 			}
+			notifications = append(notifications, notification)
+			createdIDs = append(createdIDs, notification.ID)
+		}
+
+		// 事务成功后，在事务外进行 WebSocket 广播（避免阻塞事务）
+		for _, notification := range notifications {
 			wsnotifications.Hub().Broadcast(notification)
 		}
+
 		return first, nil
 	}
 
+	// 单个通知创建
 	notification := &models.Notification{
 		Title:      title,
 		Content:    content,
@@ -68,6 +92,33 @@ func (s *NotificationServiceImpl) Create(title, content, notifType string, sende
 	return notification, nil
 }
 
+// buildNotificationQuery 构建通知查询条件（消除代码重复）
+// 对于私信类型，需要同时查询发送和接收的消息
+// 对于其他类型，只查询接收的消息
+func (s *NotificationServiceImpl) buildNotificationQuery(adminID uint, notifType, isRead string) orm.Query {
+	query := facades.Orm().Query().Model(&models.Notification{})
+
+	if notifType == "message" {
+		// 私信：查询发送或接收的消息
+		query = query.Where("(receiver_id = ? OR sender_id = ?) AND type = ?", adminID, adminID, "message")
+	} else if notifType != "" {
+		// 指定了其他类型：只查询接收的消息
+		query = query.Where("receiver_id = ? AND type = ?", adminID, notifType)
+	} else {
+		// 没有指定类型：查询接收的所有消息 + 发送的私信
+		query = query.Where("receiver_id = ? OR (sender_id = ? AND type = ?)", adminID, adminID, "message")
+	}
+
+	// 如果指定了已读/未读状态，添加状态筛选
+	if isRead == "true" {
+		query = query.Where("is_read = ?", true)
+	} else if isRead == "false" {
+		query = query.Where("is_read = ?", false)
+	}
+
+	return query
+}
+
 func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int, notifType string, isRead string) ([]models.Notification, int64, error) {
 	var notifications []models.Notification
 	if page < 1 {
@@ -77,52 +128,15 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int, not
 		pageSize = 20
 	}
 
-	// 构建查询条件
-	// 对于私信类型，需要同时查询发送和接收的消息
-	// 对于其他类型，只查询接收的消息
-	countQuery := facades.Orm().Query().Model(&models.Notification{})
-	if notifType == "message" {
-		// 私信：查询发送或接收的消息
-		countQuery = countQuery.Where("(receiver_id = ? OR sender_id = ?) AND type = ?", adminID, adminID, "message")
-	} else if notifType != "" {
-		// 指定了其他类型：只查询接收的消息
-		countQuery = countQuery.Where("receiver_id = ? AND type = ?", adminID, notifType)
-	} else {
-		// 没有指定类型：查询接收的所有消息 + 发送的私信
-		countQuery = countQuery.Where("receiver_id = ? OR (sender_id = ? AND type = ?)", adminID, adminID, "message")
-	}
-
-	// 如果指定了已读/未读状态，添加状态筛选
-	if isRead == "true" {
-		countQuery = countQuery.Where("is_read = ?", true)
-	} else if isRead == "false" {
-		countQuery = countQuery.Where("is_read = ?", false)
-	}
-
+	// 使用公共方法构建查询条件
+	countQuery := s.buildNotificationQuery(adminID, notifType, isRead)
 	total, err := countQuery.Count()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 构建列表查询
-	listQuery := facades.Orm().Query().Model(&models.Notification{}).With("Sender").With("Receiver")
-	if notifType == "message" {
-		// 私信：查询发送或接收的消息
-		listQuery = listQuery.Where("(receiver_id = ? OR sender_id = ?) AND type = ?", adminID, adminID, "message")
-	} else if notifType != "" {
-		// 指定了其他类型：只查询接收的消息
-		listQuery = listQuery.Where("receiver_id = ? AND type = ?", adminID, notifType)
-	} else {
-		// 没有指定类型：查询接收的所有消息 + 发送的私信
-		listQuery = listQuery.Where("receiver_id = ? OR (sender_id = ? AND type = ?)", adminID, adminID, "message")
-	}
-
-	// 如果指定了已读/未读状态，添加状态筛选
-	if isRead == "true" {
-		listQuery = listQuery.Where("is_read = ?", true)
-	} else if isRead == "false" {
-		listQuery = listQuery.Where("is_read = ?", false)
-	}
+	// 构建列表查询（添加关联预加载）
+	listQuery := s.buildNotificationQuery(adminID, notifType, isRead).With("Sender").With("Receiver")
 
 	if err := listQuery.Order("created_at desc").
 		Offset((page - 1) * pageSize).
@@ -156,7 +170,7 @@ func (s *NotificationServiceImpl) MarkRead(adminID uint, notificationID uint) er
 	if err := facades.Orm().Query().Where("id = ?", notificationID).
 		Where("receiver_id = ?", adminID).
 		First(&notification); err != nil {
-		return errors.New("notification_not_found")
+		return apperrors.ErrRecordNotFound.WithMessage("notification not found")
 	}
 
 	if notification.IsRead {

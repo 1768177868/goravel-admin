@@ -1,6 +1,8 @@
 package listeners
 
 import (
+	"math"
+
 	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
@@ -63,7 +65,19 @@ func (receiver *SendShipmentNotification) Handle(args ...any) error {
 		return errors.ErrInvalidArgument.WithMessage("invalid order ID")
 	}
 
-	facades.Log().Infof("📦 [队列] 发送发货通知，订单 ID: %d, 备注: %s", orderID, remark)
+	// 验证订单ID范围
+	if orderID > math.MaxUint32 {
+		return errors.ErrInvalidArgument.WithMessage("order ID exceeds maximum value")
+	}
+
+	// 限制备注长度，防止过长字符串
+	const maxRemarkLength = 1000
+	if len(remark) > maxRemarkLength {
+		remark = remark[:maxRemarkLength]
+		facades.Log().Infof("[队列] 发货通知备注过长，已截断至 %d 字符", maxRemarkLength)
+	}
+
+	facades.Log().Infof("[队列] 发送发货通知，订单 ID: %d, 备注: %s", orderID, remark)
 	// 实际场景中这里会发送发货通知
 	return nil
 }

@@ -3,6 +3,8 @@ package errorlog
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -56,18 +58,20 @@ func RecordHTTPWithLevel(ctx http.Context, level, module, message string, attrib
 	sanitizedArgs := sanitizeLogArgs(args...)
 
 	// 根据级别选择不同的日志函数
+	// 注意：logger 包目前只有 ErrorfHTTP，所以所有级别都使用它
+	// 但在日志消息中添加级别前缀，便于区分和过滤
+	levelPrefix := "[" + strings.ToUpper(level) + "] "
+	formattedMessage := levelPrefix + fmt.Sprintf(sanitizedFormat, sanitizedArgs...)
+
 	switch level {
 	case "error":
-		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfHTTP(ctx, formattedMessage)
 	case "warning":
-		// warning 级别也使用 ErrorfHTTP（因为 logger 包目前只有 ErrorfHTTP）
-		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfHTTP(ctx, formattedMessage)
 	case "info", "debug":
-		// info 和 debug 级别暂时也使用 ErrorfHTTP
-		// 如果需要区分，可以扩展 logger 包
-		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfHTTP(ctx, formattedMessage)
 	default:
-		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfHTTP(ctx, formattedMessage)
 	}
 
 	// 记录到数据库（所有级别都记录 trace_id）
@@ -117,15 +121,18 @@ func RecordWithLevel(ctx context.Context, level, module, message string, attribu
 	sanitizedArgs := sanitizeLogArgs(args...)
 
 	// 根据级别选择不同的日志函数
+	// 注意：logger 包目前只有 ErrorfContext，所以所有级别都使用它
+	// 但在日志消息中添加级别前缀，便于区分和过滤
+	levelPrefix := "[" + strings.ToUpper(level) + "] "
+	formattedMessage := levelPrefix + fmt.Sprintf(sanitizedFormat, sanitizedArgs...)
+
 	switch level {
 	case "error":
-		logger.ErrorfContext(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfContext(ctx, formattedMessage)
 	case "warning", "info", "debug":
-		// warning, info, debug 级别暂时也使用 ErrorfContext
-		// 如果需要区分，可以扩展 logger 包
-		logger.ErrorfContext(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfContext(ctx, formattedMessage)
 	default:
-		logger.ErrorfContext(ctx, sanitizedFormat, sanitizedArgs...)
+		logger.ErrorfContext(ctx, formattedMessage)
 	}
 
 	// 记录到数据库（所有级别都记录 trace_id）

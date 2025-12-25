@@ -1,6 +1,8 @@
 package listeners
 
 import (
+	"math"
+
 	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
@@ -55,8 +57,13 @@ func (receiver *UpdateInventory) Handle(args ...any) error {
 		return errors.ErrInvalidArgument.WithMessage("invalid order ID")
 	}
 
+	// 验证订单ID范围
+	if orderID > math.MaxUint32 {
+		return errors.ErrInvalidArgument.WithMessage("order ID exceeds maximum value")
+	}
+
 	// 同步执行：立即更新库存（需要立即生效，避免超卖）
-	facades.Log().Infof("📦 [同步] 更新库存，订单 ID: %d", orderID)
+	facades.Log().Infof("[同步] 更新库存，订单 ID: %d", orderID)
 	// 实际场景中这里会立即更新商品库存
 	return nil
 }

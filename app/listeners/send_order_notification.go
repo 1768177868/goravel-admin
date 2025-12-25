@@ -1,6 +1,8 @@
 package listeners
 
 import (
+	"math"
+
 	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
@@ -49,8 +51,13 @@ func (receiver *SendOrderNotification) Handle(args ...any) error {
 		return errors.ErrInvalidArgument.WithMessage("invalid order ID")
 	}
 
+	// 验证订单ID范围
+	if orderID > math.MaxUint32 {
+		return errors.ErrInvalidArgument.WithMessage("order ID exceeds maximum value")
+	}
+
 	// 模拟发送通知（耗时操作）
-	facades.Log().Infof("🔔 [队列] 发送订单通知，订单 ID: %d", orderID)
+	facades.Log().Infof("[队列] 发送订单通知，订单 ID: %d", orderID)
 	// 实际场景中这里会发送短信、推送通知等
 	return nil
 }

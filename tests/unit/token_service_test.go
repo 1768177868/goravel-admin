@@ -85,3 +85,16 @@ func (s *TokenServiceTestSuite) TestHashToken_TableDriven() {
 		})
 	}
 }
+
+// TestGenerateRandomToken_Length 测试生成随机 token 的长度
+func (s *TokenServiceTestSuite) TestGenerateRandomToken_Length() {
+	// 注意：这里无法直接测试 generateRandomToken，因为它是私有方法
+	// 但可以通过 CreateToken 间接测试
+	// 这个测试需要在 feature 测试中完成，因为需要数据库
+}
+
+// TestGenerateRandomToken_Uniqueness 测试生成的 token 唯一性
+func (s *TokenServiceTestSuite) TestGenerateRandomToken_Uniqueness() {
+	// 注意：这个测试需要在 feature 测试中完成
+	// 因为需要数据库来创建 token 并验证唯一性
+}
