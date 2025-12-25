@@ -323,9 +323,61 @@ jobs:
 | 模块类型 | 当前状态 | 目标覆盖率 |
 |----------|----------|------------|
 | 工具函数 | ✅ 已添加 | 80%+ |
-| Composables | ✅ 已添加 | 70%+ |
-| Services | 🔄 待完善 | 60%+ |
-| Controllers | ❌ 待添加 | 40%+ |
+| Composables | ✅ 已添加 (TypeScript) | 70%+ |
+| Services | ✅ 已添加 | 60%+ |
+| Controllers | ✅ 已添加（集成测试） | 40%+ |
+
+---
+
+## Controller 集成测试
+
+后端 Controller 集成测试位于 `tests/feature/` 目录：
+
+### 测试文件
+
+| 文件 | 覆盖内容 |
+|------|----------|
+| `admin_api_test.go` | 管理员登录、信息、列表、角色、菜单、部门、日志等 |
+| `blacklist_api_test.go` | 黑名单 CRUD、IP格式验证、批量删除 |
+| `permission_test.go` | 权限列表、角色权限绑定 |
+
+### 运行集成测试
+
+```bash
+# 运行所有集成测试（需要 Docker）
+go test -v ./tests/feature/...
+
+# 运行特定测试
+go test -v -run TestAdminApiTestSuite ./tests/feature/...
+go test -v -run TestBlacklistApiTestSuite ./tests/feature/...
+```
+
+### 测试示例
+
+```go
+func (s *AdminApiTestSuite) TestLogin_Success() {
+    body := strings.NewReader(`{"username":"admin","password":"admin123"}`)
+    resp, err := s.Http(s.T()).
+        WithHeader("Content-Type", "application/json").
+        Post("/api/admin/login", body)
+
+    s.Require().NoError(err)
+    resp.AssertSuccessful()
+
+    content, err := resp.Content()
+    s.Require().NoError(err)
+
+    var result map[string]any
+    json.Unmarshal([]byte(content), &result)
+    s.Equal(float64(200), result["code"])
+}
+```
+
+### 注意事项
+
+- 集成测试需要 Docker 环境（自动创建测试数据库和 Redis）
+- 每个测试会执行 `RefreshDatabase()` 重置数据库
+- 使用 `Seed()` 填充测试数据
 
 ---
 
