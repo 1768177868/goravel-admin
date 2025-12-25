@@ -4,7 +4,9 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"mime"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -129,16 +131,45 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	datePath := time.Now().Format("2006/01/02")
 	finalPath := fmt.Sprintf("attachments/%s/%s", datePath, uniqueName)
 
-	// 合并分片（必须按顺序读取所有分片）
-	var mergedData []byte
+	// 合并分片（流式写入，避免大文件内存占用过高）
+	// 对于本地存储，直接使用文件系统操作以提高性能
+	var fileSize int64
 	var missingChunks []int // 记录缺失的分片索引
+
+	// 获取存储根目录
+	storageRoot := facades.Config().GetString("filesystems.disks." + s.disk + ".root")
+	if storageRoot == "" {
+		storageRoot = "storage/app"
+	}
+
+	// 构建目标文件的完整路径
+	finalFullPath := filepath.Join(storageRoot, finalPath)
+
+	// 确保目标目录存在
+	if err := os.MkdirAll(filepath.Dir(finalFullPath), 0755); err != nil {
+		return nil, fmt.Errorf("创建目标目录失败: %w", err)
+	}
+
+	// 创建目标文件（流式写入）
+	outFile, err := os.Create(finalFullPath)
+	if err != nil {
+		return nil, fmt.Errorf("创建目标文件失败: %w", err)
+	}
+	defer outFile.Close()
+
+	// 按顺序读取并写入每个分片
 	for i := range make([]int, totalChunks) {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
-		if !storage.Exists(chunkPath) {
+		chunkFullPath := filepath.Join(storageRoot, chunkPath)
+
+		// 检查分片文件是否存在
+		if _, err := os.Stat(chunkFullPath); os.IsNotExist(err) {
 			missingChunks = append(missingChunks, i)
 			continue
 		}
-		chunkContent, err := storage.Get(chunkPath)
+
+		// 打开分片文件
+		chunkFile, err := os.Open(chunkFullPath)
 		if err != nil {
 			// 读取失败，记录到系统日志
 			if s.ctx != nil {
@@ -151,28 +182,40 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 			missingChunks = append(missingChunks, i)
 			continue
 		}
-		mergedData = append(mergedData, []byte(chunkContent)...)
+
+		// 流式复制分片内容到目标文件
+		written, err := io.Copy(outFile, chunkFile)
+		if err != nil {
+			chunkFile.Close()
+			// 如果写入失败，删除已创建的目标文件
+			_ = os.Remove(finalFullPath)
+			return nil, fmt.Errorf("写入分片 %d 失败: %w", i, err)
+		}
+		fileSize += written
+		chunkFile.Close()
+	}
+
+	// 关闭目标文件
+	if err := outFile.Close(); err != nil {
+		_ = os.Remove(finalFullPath)
+		return nil, fmt.Errorf("关闭目标文件失败: %w", err)
 	}
 
 	// 检查是否有缺失的分片
 	if len(missingChunks) > 0 {
+		_ = os.Remove(finalFullPath)
 		return nil, fmt.Errorf("分片缺失: %v (共 %d 个分片缺失)", missingChunks, len(missingChunks))
 	}
 
 	// 检查是否有数据被合并
-	if len(mergedData) == 0 {
+	if fileSize == 0 {
+		_ = os.Remove(finalFullPath)
 		return nil, fmt.Errorf("没有可合并的分片数据")
 	}
 
-	// 保存合并后的文件
-	if err := storage.Put(finalPath, string(mergedData)); err != nil {
-		return nil, fmt.Errorf("保存合并文件失败: %w", err)
-	}
-
-	// 获取文件大小
-	fileSize := int64(len(mergedData))
-	if size, err := storage.Size(finalPath); err == nil {
-		fileSize = size
+	// 验证文件大小（从文件系统获取实际大小）
+	if fileInfo, err := os.Stat(finalFullPath); err == nil {
+		fileSize = fileInfo.Size()
 	}
 
 	// 创建附件记录
