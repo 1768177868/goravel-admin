@@ -97,8 +97,19 @@ export function isSafeUrl(url) {
     const urlObj = new URL(url)
     return safeProtocols.includes(urlObj.protocol.toLowerCase())
   } catch {
-    // 相对 URL 认为是安全的
-    return !url.includes('javascript:') && !url.includes('data:')
+    // 相对 URL：转换为小写后检查危险协议，防止大小写绕过
+    const lowerUrl = url.toLowerCase()
+    const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:']
+    for (const protocol of dangerousProtocols) {
+      if (lowerUrl.includes(protocol)) {
+        return false
+      }
+    }
+    // 检查是否包含危险字符模式
+    if (/javascript\s*:/i.test(url) || /data\s*:/i.test(url)) {
+      return false
+    }
+    return true
   }
 }
 

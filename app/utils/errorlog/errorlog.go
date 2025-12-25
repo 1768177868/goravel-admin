@@ -46,24 +46,36 @@ func RecordHTTP(ctx http.Context, module, message string, attributes map[string]
 //	    "amount": order.Amount,
 //	}, "Payment processed: %d", order.ID)
 func RecordHTTPWithLevel(ctx http.Context, level, module, message string, attributes map[string]any, format string, args ...any) {
+	// 清理和验证日志级别，防止伪造
+	level = sanitizeLogLevel(level)
+
+	// 清理日志格式字符串，防止格式字符串注入
+	sanitizedFormat := sanitizeLogFormat(format)
+
+	// 清理日志参数，防止注入攻击
+	sanitizedArgs := sanitizeLogArgs(args...)
+
 	// 根据级别选择不同的日志函数
 	switch level {
 	case "error":
-		logger.ErrorfHTTP(ctx, format, args...)
+		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
 	case "warning":
 		// warning 级别也使用 ErrorfHTTP（因为 logger 包目前只有 ErrorfHTTP）
-		logger.ErrorfHTTP(ctx, format, args...)
+		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
 	case "info", "debug":
 		// info 和 debug 级别暂时也使用 ErrorfHTTP
 		// 如果需要区分，可以扩展 logger 包
-		logger.ErrorfHTTP(ctx, format, args...)
+		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
 	default:
-		logger.ErrorfHTTP(ctx, format, args...)
+		logger.ErrorfHTTP(ctx, sanitizedFormat, sanitizedArgs...)
 	}
 
 	// 记录到数据库（所有级别都记录 trace_id）
+	// 清理 message 和 attributes，防止注入
 	if ctx != nil {
-		recordToDatabaseHTTPWithLevel(ctx, level, module, message, attributes)
+		sanitizedMessage := sanitizeLogString(message, 500) // 限制消息长度
+		sanitizedAttributes := sanitizeAttributes(attributes)
+		recordToDatabaseHTTPWithLevel(ctx, level, module, sanitizedMessage, sanitizedAttributes)
 	}
 }
 
@@ -95,21 +107,33 @@ func Record(ctx context.Context, module, message string, attributes map[string]a
 //	    }, "Background task completed: %s", taskID)
 //	}(traceCtx)
 func RecordWithLevel(ctx context.Context, level, module, message string, attributes map[string]any, format string, args ...any) {
+	// 清理和验证日志级别，防止伪造
+	level = sanitizeLogLevel(level)
+
+	// 清理日志格式字符串，防止格式字符串注入
+	sanitizedFormat := sanitizeLogFormat(format)
+
+	// 清理日志参数，防止注入攻击
+	sanitizedArgs := sanitizeLogArgs(args...)
+
 	// 根据级别选择不同的日志函数
 	switch level {
 	case "error":
-		logger.ErrorfContext(ctx, format, args...)
+		logger.ErrorfContext(ctx, sanitizedFormat, sanitizedArgs...)
 	case "warning", "info", "debug":
 		// warning, info, debug 级别暂时也使用 ErrorfContext
 		// 如果需要区分，可以扩展 logger 包
-		logger.ErrorfContext(ctx, format, args...)
+		logger.ErrorfContext(ctx, sanitizedFormat, sanitizedArgs...)
 	default:
-		logger.ErrorfContext(ctx, format, args...)
+		logger.ErrorfContext(ctx, sanitizedFormat, sanitizedArgs...)
 	}
 
 	// 记录到数据库（所有级别都记录 trace_id）
+	// 清理 message 和 attributes，防止注入
 	if ctx != nil {
-		recordToDatabaseWithLevel(ctx, level, module, message, attributes)
+		sanitizedMessage := sanitizeLogString(message, 1000) // 限制消息长度
+		sanitizedAttributes := sanitizeAttributes(attributes)
+		recordToDatabaseWithLevel(ctx, level, module, sanitizedMessage, sanitizedAttributes)
 	}
 }
 

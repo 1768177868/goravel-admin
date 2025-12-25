@@ -21,6 +21,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
+	"golang.org/x/sync/singleflight"
 
 	"goravel/app/http/response"
 	"goravel/app/utils/errorlog"
@@ -32,6 +33,8 @@ var (
 	monitorCacheLock sync.RWMutex
 	monitorCacheTime time.Time
 	cacheDuration    = 1 * time.Second // 缓存1秒，SSE推送间隔2秒时可以减少一半的系统调用
+	// singleflight 确保同一时间只有一个 goroutine 执行缓存重建，避免锁竞争
+	monitorCacheGroup singleflight.Group
 )
 
 // 网络带宽监控缓存（用于计算速度和峰值）
@@ -1202,81 +1205,13 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		}
 	}
 
-	// 获取TCP连接统计（限制处理数量，避免连接数过多时阻塞）
+	// 获取TCP连接统计（带超时和采样优化，避免高并发下性能损耗）
 	var tcpConnections map[string]any
-	connections, err := net.Connections("tcp")
-	if err == nil {
-		var established, listen, timeWait, closeWait int
-		var listeningPorts []int
-		portMap := make(map[int]bool)
-		// 限制处理数量，避免连接数过多时阻塞（最多处理10000个连接）
-		maxConnections := 10000
-		processed := 0
-		for _, conn := range connections {
-			if processed >= maxConnections {
-				break
-			}
-			processed++
-			switch conn.Status {
-			case "ESTABLISHED":
-				established++
-			case "LISTEN":
-				listen++
-				port := int(conn.Laddr.Port)
-				if port > 0 && !portMap[port] {
-					listeningPorts = append(listeningPorts, port)
-					portMap[port] = true
-				}
-			case "TIME_WAIT":
-				timeWait++
-			case "CLOSE_WAIT":
-				closeWait++
-			}
-		}
-		tcpConnections = map[string]any{
-			"total":           len(connections),
-			"established":     established,
-			"listen":          listen,
-			"time_wait":       timeWait,
-			"close_wait":      closeWait,
-			"listening_ports": listeningPorts,
-		}
-	} else {
-		tcpConnections = map[string]any{
-			"total":           0,
-			"established":     0,
-			"listen":          0,
-			"time_wait":       0,
-			"close_wait":      0,
-			"listening_ports": []int{},
-		}
-	}
+	tcpConnections = r.getTCPConnectionsWithTimeout(ctx, 2*time.Second)
 
-	// 获取所有磁盘分区信息（限制数量，避免分区过多时阻塞）
+	// 获取所有磁盘分区信息（带超时和并发控制，避免网络磁盘阻塞）
 	var diskPartitions []map[string]any
-	partitions, err := disk.Partitions(false)
-	if err == nil {
-		maxPartitions := 20 // 限制最多处理20个分区
-		count := 0
-		for _, part := range partitions {
-			if count >= maxPartitions {
-				break
-			}
-			usage, err := disk.Usage(part.Mountpoint)
-			if err == nil {
-				diskPartitions = append(diskPartitions, map[string]any{
-					"device":     part.Device,
-					"mountpoint": part.Mountpoint,
-					"fstype":     part.Fstype,
-					"total":      usage.Total,
-					"free":       usage.Free,
-					"used":       usage.Used,
-					"percent":    usage.UsedPercent,
-				})
-				count++
-			}
-		}
-	}
+	diskPartitions = r.getDiskPartitionsWithTimeout(ctx, 3*time.Second)
 
 	// 生成系统告警提示
 	alerts := []map[string]any{}
@@ -1502,12 +1437,39 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	// 检查缓存（仅在SSE流中使用缓存，减少系统调用）
 	monitorCacheLock.RLock()
-	if monitorCache != nil && time.Since(monitorCacheTime) < cacheDuration {
+	cacheValid := monitorCache != nil && time.Since(monitorCacheTime) < cacheDuration
+	if cacheValid {
 		cached := monitorCache
 		monitorCacheLock.RUnlock()
 		return cached
 	}
 	monitorCacheLock.RUnlock()
+
+	// 使用 singleflight 确保同一时间只有一个 goroutine 重建缓存
+	// 其他 goroutine 等待结果，避免重复计算和锁竞争
+	result, _, _ := monitorCacheGroup.Do("collectSystemInfo", func() (any, error) {
+		// 再次检查缓存（double-check），可能在等待期间其他 goroutine 已更新缓存
+		monitorCacheLock.RLock()
+		if monitorCache != nil && time.Since(monitorCacheTime) < cacheDuration {
+			cached := monitorCache
+			monitorCacheLock.RUnlock()
+			return cached, nil
+		}
+		monitorCacheLock.RUnlock()
+
+		// 执行实际的数据收集
+		return r.doCollectSystemInfo(ctx), nil
+	})
+
+	if data, ok := result.(map[string]any); ok {
+		return data
+	}
+	// 如果类型转换失败，执行一次实际收集（兜底）
+	return r.doCollectSystemInfo(ctx)
+}
+
+// doCollectSystemInfo 实际执行系统信息收集（从 collectSystemInfo 提取）
+func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any {
 
 	// CPU信息 - 使用0秒采样，避免阻塞（gopsutil会使用上次采样的差值）
 	cpuPercent, err := cpu.Percent(0, false)
@@ -1779,81 +1741,13 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 		}
 	}
 
-	// 获取TCP连接统计（限制处理数量，避免连接数过多时阻塞）
+	// 获取TCP连接统计（带超时和采样优化，避免高并发下性能损耗）
 	var tcpConnections map[string]any
-	connections, err := net.Connections("tcp")
-	if err == nil {
-		var established, listen, timeWait, closeWait int
-		var listeningPorts []int
-		portMap := make(map[int]bool)
-		// 限制处理数量，避免连接数过多时阻塞（最多处理10000个连接）
-		maxConnections := 10000
-		processed := 0
-		for _, conn := range connections {
-			if processed >= maxConnections {
-				break
-			}
-			processed++
-			switch conn.Status {
-			case "ESTABLISHED":
-				established++
-			case "LISTEN":
-				listen++
-				port := int(conn.Laddr.Port)
-				if port > 0 && !portMap[port] {
-					listeningPorts = append(listeningPorts, port)
-					portMap[port] = true
-				}
-			case "TIME_WAIT":
-				timeWait++
-			case "CLOSE_WAIT":
-				closeWait++
-			}
-		}
-		tcpConnections = map[string]any{
-			"total":           len(connections),
-			"established":     established,
-			"listen":          listen,
-			"time_wait":       timeWait,
-			"close_wait":      closeWait,
-			"listening_ports": listeningPorts,
-		}
-	} else {
-		tcpConnections = map[string]any{
-			"total":           0,
-			"established":     0,
-			"listen":          0,
-			"time_wait":       0,
-			"close_wait":      0,
-			"listening_ports": []int{},
-		}
-	}
+	tcpConnections = r.getTCPConnectionsWithTimeout(ctx, 2*time.Second)
 
-	// 获取所有磁盘分区信息（限制数量，避免分区过多时阻塞）
+	// 获取所有磁盘分区信息（带超时和并发控制，避免网络磁盘阻塞）
 	var diskPartitions []map[string]any
-	partitions, err := disk.Partitions(false)
-	if err == nil {
-		maxPartitions := 20 // 限制最多处理20个分区
-		count := 0
-		for _, part := range partitions {
-			if count >= maxPartitions {
-				break
-			}
-			usage, err := disk.Usage(part.Mountpoint)
-			if err == nil {
-				diskPartitions = append(diskPartitions, map[string]any{
-					"device":     part.Device,
-					"mountpoint": part.Mountpoint,
-					"fstype":     part.Fstype,
-					"total":      usage.Total,
-					"free":       usage.Free,
-					"used":       usage.Used,
-					"percent":    usage.UsedPercent,
-				})
-				count++
-			}
-		}
-	}
+	diskPartitions = r.getDiskPartitionsWithTimeout(ctx, 3*time.Second)
 
 	// 生成系统告警提示
 	alerts := []map[string]any{}
@@ -2001,4 +1895,277 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	monitorCacheLock.Unlock()
 
 	return result
+}
+
+// getTCPConnectionsWithTimeout 获取 TCP 连接统计（带超时和采样优化）
+// 优化策略：
+//   - 添加超时控制（默认 2 秒）
+//   - 连接数超过阈值时使用采样策略（每 N 个连接采样 1 个）
+//   - 限制最大处理数量（10000）
+func (r *MonitorController) getTCPConnectionsWithTimeout(ctx http.Context, timeout time.Duration) map[string]any {
+	// 创建带超时的 context（使用 Background，因为这是异步操作）
+	connCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// 在 goroutine 中执行，支持超时取消
+	connectionsChan := make(chan []net.ConnectionStat, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				errChan <- fmt.Errorf("panic in net.Connections: %v", r)
+			}
+		}()
+		connections, err := net.Connections("tcp")
+		if err != nil {
+			errChan <- err
+			return
+		}
+		connectionsChan <- connections
+	}()
+
+	// 等待结果或超时
+	select {
+	case connections := <-connectionsChan:
+		return r.processTCPConnections(connections)
+	case err := <-errChan:
+		errorlog.RecordHTTP(ctx, "monitor", "Get TCP connections error", map[string]any{
+			"error": err.Error(),
+		}, "Get TCP connections error: %v", err)
+		return r.getEmptyTCPConnections()
+	case <-connCtx.Done():
+		// 超时，返回空数据
+		errorlog.RecordHTTP(ctx, "monitor", "Get TCP connections timeout", map[string]any{
+			"timeout": timeout.String(),
+		}, "Get TCP connections timeout after %v", timeout)
+		return r.getEmptyTCPConnections()
+	}
+}
+
+// processTCPConnections 处理 TCP 连接数据（采样优化）
+func (r *MonitorController) processTCPConnections(connections []net.ConnectionStat) map[string]any {
+	var established, listen, timeWait, closeWait int
+	var listeningPorts []int
+	portMap := make(map[int]bool)
+
+	maxConnections := 10000
+	totalConnections := len(connections)
+
+	// 如果连接数超过阈值，使用采样策略
+	sampleRate := 1
+	if totalConnections > maxConnections {
+		// 采样率：每 N 个连接采样 1 个，确保处理数量不超过 maxConnections
+		sampleRate = totalConnections / maxConnections
+		if sampleRate == 0 {
+			sampleRate = 1
+		}
+	}
+
+	processed := 0
+	for i, conn := range connections {
+		// 采样：只处理满足采样条件的连接
+		if i%sampleRate != 0 {
+			continue
+		}
+
+		if processed >= maxConnections {
+			break
+		}
+		processed++
+
+		switch conn.Status {
+		case "ESTABLISHED":
+			established++
+		case "LISTEN":
+			listen++
+			port := int(conn.Laddr.Port)
+			if port > 0 && !portMap[port] {
+				listeningPorts = append(listeningPorts, port)
+				portMap[port] = true
+			}
+		case "TIME_WAIT":
+			timeWait++
+		case "CLOSE_WAIT":
+			closeWait++
+		}
+	}
+
+	// 如果使用了采样，需要按比例估算总数
+	if sampleRate > 1 {
+		established = established * sampleRate
+		listen = listen * sampleRate
+		timeWait = timeWait * sampleRate
+		closeWait = closeWait * sampleRate
+	}
+
+	return map[string]any{
+		"total":           totalConnections,
+		"established":     established,
+		"listen":          listen,
+		"time_wait":       timeWait,
+		"close_wait":      closeWait,
+		"listening_ports": listeningPorts,
+		"sampled":         sampleRate > 1, // 标记是否使用了采样
+		"sample_rate":     sampleRate,
+	}
+}
+
+// getEmptyTCPConnections 返回空的 TCP 连接统计
+func (r *MonitorController) getEmptyTCPConnections() map[string]any {
+	return map[string]any{
+		"total":           0,
+		"established":     0,
+		"listen":          0,
+		"time_wait":       0,
+		"close_wait":      0,
+		"listening_ports": []int{},
+		"sampled":         false,
+		"sample_rate":     1,
+	}
+}
+
+// getDiskPartitionsWithTimeout 获取磁盘分区信息（带超时和并发控制）
+// 优化策略：
+//   - 添加超时控制（默认 3 秒）
+//   - 并发获取分区信息（限制并发数）
+//   - 单个分区超时保护（1 秒）
+func (r *MonitorController) getDiskPartitionsWithTimeout(ctx http.Context, timeout time.Duration) []map[string]any {
+	// 创建带超时的 context（使用 Background，因为这是异步操作）
+	partCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// 在 goroutine 中获取分区列表
+	partitionsChan := make(chan []disk.PartitionStat, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				errChan <- fmt.Errorf("panic in disk.Partitions: %v", r)
+			}
+		}()
+		partitions, err := disk.Partitions(false)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		partitionsChan <- partitions
+	}()
+
+	var partitions []disk.PartitionStat
+	select {
+	case partitions = <-partitionsChan:
+		// 成功获取分区列表
+	case err := <-errChan:
+		errorlog.RecordHTTP(ctx, "monitor", "Get disk partitions error", map[string]any{
+			"error": err.Error(),
+		}, "Get disk partitions error: %v", err)
+		return []map[string]any{}
+	case <-partCtx.Done():
+		// 超时
+		errorlog.RecordHTTP(ctx, "monitor", "Get disk partitions timeout", map[string]any{
+			"timeout": timeout.String(),
+		}, "Get disk partitions timeout after %v", timeout)
+		return []map[string]any{}
+	}
+
+	// 限制最多处理的分区数量
+	maxPartitions := 20
+	if len(partitions) > maxPartitions {
+		partitions = partitions[:maxPartitions]
+	}
+
+	// 并发获取分区使用情况（限制并发数）
+	maxConcurrency := 5 // 最多 5 个并发
+	semaphore := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var diskPartitions []map[string]any
+
+	// 为每个分区创建带超时的 context
+	partitionTimeout := 1 * time.Second
+	if partitionTimeout > timeout {
+		partitionTimeout = timeout / 2 // 确保不超过总超时时间
+	}
+
+	for _, part := range partitions {
+		wg.Add(1)
+		go func(partition disk.PartitionStat) {
+			defer wg.Done()
+
+			// 获取信号量
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// 创建单个分区的超时 context
+			partitionCtx, partitionCancel := context.WithTimeout(partCtx, partitionTimeout)
+			defer partitionCancel()
+
+			// 在 goroutine 中获取分区使用情况
+			usageChan := make(chan *disk.UsageStat, 1)
+			errChan := make(chan error, 1)
+
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						errChan <- fmt.Errorf("panic in disk.Usage: %v", r)
+					}
+				}()
+				usage, err := disk.Usage(partition.Mountpoint)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				usageChan <- usage
+			}()
+
+			// 等待结果或超时
+			select {
+			case usage := <-usageChan:
+				mu.Lock()
+				diskPartitions = append(diskPartitions, map[string]any{
+					"device":     partition.Device,
+					"mountpoint": partition.Mountpoint,
+					"fstype":     partition.Fstype,
+					"total":      usage.Total,
+					"free":       usage.Free,
+					"used":       usage.Used,
+					"percent":    usage.UsedPercent,
+				})
+				mu.Unlock()
+			case err := <-errChan:
+				// 单个分区获取失败，记录但不影响其他分区
+				errorlog.RecordHTTP(ctx, "monitor", "Get disk usage error", map[string]any{
+					"mountpoint": partition.Mountpoint,
+					"error":      err.Error(),
+				}, "Get disk usage error for %s: %v", partition.Mountpoint, err)
+			case <-partitionCtx.Done():
+				// 单个分区超时，跳过该分区
+				errorlog.RecordHTTP(ctx, "monitor", "Get disk usage timeout", map[string]any{
+					"mountpoint": partition.Mountpoint,
+					"timeout":    partitionTimeout.String(),
+				}, "Get disk usage timeout for %s after %v", partition.Mountpoint, partitionTimeout)
+			}
+		}(part)
+	}
+
+	// 等待所有 goroutine 完成或总超时
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// 所有分区处理完成
+	case <-partCtx.Done():
+		// 总超时，返回已收集的数据
+		errorlog.RecordHTTP(ctx, "monitor", "Get disk partitions total timeout", map[string]any{
+			"timeout": timeout.String(),
+		}, "Get disk partitions total timeout after %v", timeout)
+	}
+
+	return diskPartitions
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/errors"
+	"goravel/app/utils"
 )
 
 // SendEmailArgs 发送邮件任务的参数结构体
@@ -84,8 +85,13 @@ func (r *SendEmail) Handle(args ...any) error {
 		return errors.ErrInvalidArgument.WithMessage("subject is required")
 	}
 
+	// HTML 转义邮件内容，防止 XSS 攻击
+	// 即使邮件客户端支持 HTML，也应该转义用户输入的内容
+	escapedContent := utils.EscapeString(emailArgs.Content)
+	escapedSubject := utils.EscapeString(emailArgs.Subject)
+
 	// 实际场景中这里会调用邮件服务发送邮件
-	err := sendEmail(emailArgs.To, emailArgs.Subject, emailArgs.Content)
+	err := sendEmail(emailArgs.To, escapedSubject, escapedContent)
 	if err != nil {
 		facades.Log().Errorf("📧 [Job] 发送邮件失败 - 收件人: %s, 主题: %s, 错误: %v", emailArgs.To, emailArgs.Subject, err)
 		return err // 返回错误，触发重试

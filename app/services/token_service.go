@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
+	"goravel/app/utils/errorlog"
 )
 
 type TokenService interface {
@@ -72,13 +74,6 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 }
 
 // FindToken 根据token值查找token记录
-// 
-// 参数:
-//   - token: token 字符串
-//
-// 返回:
-//   - *models.PersonalAccessToken: token 记录
-//   - error: 错误信息
 func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken, error) {
 	if token == "" {
 		return nil, apperrors.ErrInvalidArgument.WithMessage("token is empty")
@@ -94,21 +89,19 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 
 	// 检查是否过期
 	if accessToken.ExpiresAt != nil && accessToken.ExpiresAt.Before(time.Now()) {
-		// token已过期，删除它
-		_, _ = facades.Orm().Query().Delete(&accessToken)
-		// 返回错误，表示token已过期
+		if _, err := facades.Orm().Query().Delete(&accessToken); err != nil {
+			errorlog.Record(context.Background(), "token", "Failed to delete expired token", map[string]any{
+				"token_id":     accessToken.ID,
+				"tokenable_id": accessToken.TokenableID,
+				"expires_at":   accessToken.ExpiresAt,
+				"error":        err.Error(),
+			}, "Failed to delete expired token (ID: %d): %v", accessToken.ID, err)
+		}
+
 		return nil, apperrors.ErrInvalidArgument.WithMessage("token expired")
 	}
 
 	return &accessToken, nil
-}
-
-// min 返回两个整数中的较小值
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // DeleteToken 删除token

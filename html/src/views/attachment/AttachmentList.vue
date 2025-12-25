@@ -73,13 +73,39 @@
           <template #default="{ row }">
             <div class="filename-cell">
               <el-image
-                v-if="row.file_type === 'image'"
+                v-if="row.file_type === 'image' && getImageUrl(row)"
                 :src="getImageUrl(row)"
                 :preview-src-list="[getImageUrl(row)]"
                 fit="cover"
                 class="filename-thumbnail"
                 :preview-teleported="true"
-              />
+                :lazy="true"
+                @load="handleImageLoad(row)"
+                @error="handleImageError(row)"
+              >
+                <template #placeholder>
+                  <div class="image-placeholder">
+                    <el-icon class="is-loading"><Loading /></el-icon>
+                  </div>
+                </template>
+                <template #error>
+                  <div class="image-error">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+              <div
+                v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'loading'"
+                class="image-placeholder"
+              >
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+              <div
+                v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'error'"
+                class="image-error"
+              >
+                <el-icon><Picture /></el-icon>
+              </div>
               <span class="filename-text">{{ row.filename || row.Filename }}</span>
             </div>
           </template>
@@ -197,10 +223,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, markRaw } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, markRaw, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Delete } from '@element-plus/icons-vue'
+import { Upload, Delete, Loading, Picture } from '@element-plus/icons-vue'
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const UploadIcon = markRaw(Upload)
@@ -246,7 +272,8 @@ const chunkUploadChunkID = ref('')
 const chunkUploadChunks = ref([])
 const chunkUploadCancelled = ref(false) // 标记是否已取消上传
 // 图片URL缓存（key: attachment_id, value: blob_url 或 直接URL）
-const imageUrlMap = ref(new Map())
+const imageUrlMap = ref(new Map()) // 存储图片 URL
+const imageLoadingMap = ref(new Map()) // 存储图片加载状态: 'loading' | 'loaded' | 'error'
 
 // 大文件阈值（5MB），超过此大小使用分片上传
 const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB per chunk
@@ -314,7 +341,10 @@ const {
     // 加载所有图片的blob URL
     list.forEach(row => {
       if (row.file_type === 'image') {
-        loadImageAsBlob(row)
+        // 异步加载图片，不阻塞列表渲染
+        nextTick(() => {
+          loadImageAsBlob(row)
+        })
       }
     })
   }
@@ -403,13 +433,20 @@ const loadImageAsBlob = async (row) => {
   const attachmentId = row.id || row.ID
   if (!attachmentId) return
   
-  // 如果已经加载过，直接返回
-  if (imageUrlMap.value.has(attachmentId)) {
+  // 如果已经加载过或正在加载，直接返回
+  const currentState = imageLoadingMap.value.get(attachmentId)
+  if (currentState === 'loaded' || currentState === 'loading') {
     return
   }
   
   const fileUrl = row.file_url || row.FileURL
-  if (!fileUrl) return
+  if (!fileUrl) {
+    imageLoadingMap.value.set(attachmentId, 'error')
+    return
+  }
+  
+  // 设置加载状态
+  imageLoadingMap.value.set(attachmentId, 'loading')
   
   // 如果是外部URL（http/https），直接使用
   // 对于云存储（S3、OSS、COS、MinIO等），GetFileURL 会返回：
@@ -418,6 +455,7 @@ const loadImageAsBlob = async (row) => {
   // 这些URL都可以直接在浏览器中访问，不需要JWT认证
   if (fileUrl.startsWith('http')) {
     imageUrlMap.value.set(attachmentId, fileUrl)
+    // 对于外部URL，让浏览器自己加载，不设置状态，等待 @load 或 @error 事件
     return
   }
   
@@ -446,9 +484,12 @@ const loadImageAsBlob = async (row) => {
     const blob = new Blob([response.data])
     const blobUrl = URL.createObjectURL(blob)
     imageUrlMap.value.set(attachmentId, blobUrl)
+    // 设置加载成功状态（但实际加载由浏览器完成，等待 @load 事件）
+    imageLoadingMap.value.set(attachmentId, 'loading')
   } catch (error) {
     console.error('Failed to load image:', error)
-    // 加载失败时设置为空，避免重复请求
+    // 加载失败时设置为错误状态
+    imageLoadingMap.value.set(attachmentId, 'error')
     imageUrlMap.value.set(attachmentId, '')
   }
 }
@@ -460,7 +501,58 @@ const getImageUrl = (row) => {
   if (!attachmentId) return ''
   
   // 从缓存中获取
-  return imageUrlMap.value.get(attachmentId) || ''
+  const url = imageUrlMap.value.get(attachmentId)
+  // 如果有URL，返回URL；如果没有URL但状态是loading，返回空字符串（显示加载占位符）
+  return url || ''
+}
+
+// 获取图片加载状态
+const getImageLoadingState = (row) => {
+  if (!row) return ''
+  const attachmentId = row.id || row.ID
+  if (!attachmentId) return ''
+  
+  const state = imageLoadingMap.value.get(attachmentId)
+  const url = imageUrlMap.value.get(attachmentId)
+  
+  // 如果有URL但没有状态，说明是外部URL，让浏览器自己处理
+  if (url && !state) {
+    return ''
+  }
+  
+  // 如果有URL且状态是loading，说明正在加载
+  if (url && state === 'loading') {
+    return 'loading'
+  }
+  
+  // 如果状态是error，返回error
+  if (state === 'error') {
+    return 'error'
+  }
+  
+  // 如果状态是loaded，返回空（正常显示）
+  if (state === 'loaded') {
+    return ''
+  }
+  
+  // 默认返回loading（还没有开始加载或正在加载）
+  return 'loading'
+}
+
+// 图片加载成功处理
+const handleImageLoad = (row) => {
+  const attachmentId = row.id || row.ID
+  if (attachmentId) {
+    imageLoadingMap.value.set(attachmentId, 'loaded')
+  }
+}
+
+// 图片加载失败处理
+const handleImageError = (row) => {
+  const attachmentId = row.id || row.ID
+  if (attachmentId) {
+    imageLoadingMap.value.set(attachmentId, 'error')
+  }
 }
 
 
@@ -1041,6 +1133,38 @@ onActivated(() => {
   border-radius: 4px;
   flex-shrink: 0;
   border: 1px solid #e4e7ed;
+}
+
+.image-placeholder {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.image-placeholder .el-icon {
+  font-size: 20px;
+  color: #909399;
+}
+
+.image-error {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fef0f0;
+  border-radius: 4px;
+  border: 1px solid #fde2e2;
+}
+
+.image-error .el-icon {
+  font-size: 20px;
+  color: #f56c6c;
 }
 
 .filename-text {
