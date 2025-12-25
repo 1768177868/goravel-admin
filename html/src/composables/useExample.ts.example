@@ -1,0 +1,91 @@
+/**
+ * TypeScript Composable 示例
+ * 
+ * 这是一个展示如何使用 TypeScript 编写 composable 的示例文件
+ * 将 .ts.example 改为 .ts 即可启用
+ * 
+ * 注意：现有的 .js 文件不需要修改，可以继续使用
+ * TypeScript 支持是可选的，新文件可以选择使用 .ts 或 .js
+ */
+
+import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import type { Admin, Pagination } from '../types'
+
+// 定义 composable 的参数类型
+interface UseExampleOptions {
+  initialValue?: number
+  maxValue?: number
+}
+
+// 定义 composable 的返回类型
+interface UseExampleReturn {
+  count: Ref<number>
+  doubleCount: ComputedRef<number>
+  increment: () => void
+  decrement: () => void
+  reset: () => void
+}
+
+/**
+ * 示例 composable
+ * @param options 配置选项
+ * @returns composable 返回值
+ */
+export function useExample(options: UseExampleOptions = {}): UseExampleReturn {
+  const { initialValue = 0, maxValue = 100 } = options
+
+  const count = ref(initialValue)
+
+  const doubleCount = computed(() => count.value * 2)
+
+  const increment = () => {
+    if (count.value < maxValue) {
+      count.value++
+    }
+  }
+
+  const decrement = () => {
+    if (count.value > 0) {
+      count.value--
+    }
+  }
+
+  const reset = () => {
+    count.value = initialValue
+  }
+
+  return {
+    count,
+    doubleCount,
+    increment,
+    decrement,
+    reset
+  }
+}
+
+// ==================== 使用示例 ====================
+
+/**
+ * 展示如何在组件中使用类型
+ */
+function exampleUsage() {
+  // 使用 composable
+  const { count, doubleCount, increment } = useExample({ initialValue: 10 })
+  
+  // 类型安全的数据操作
+  const admin: Admin = {
+    id: 1,
+    username: 'admin',
+    status: 1
+  }
+  
+  // 分页类型
+  const pagination: Pagination = {
+    page: 1,
+    pageSize: 10,
+    total: 100
+  }
+  
+  console.log(count.value, doubleCount.value, admin.username, pagination.total)
+}
+

@@ -4,10 +4,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import logger from '../utils/logger'
 
 /**
+ * @typedef {import('../types/composables').UseCrudOptions} UseCrudOptions
+ * @typedef {import('../types/composables').UseCrudReturn} UseCrudReturn
+ */
+
+/**
  * CRUD 操作通用 composable
  * 
- * 使用示例：
+ * @description 提供通用的增删改查操作，支持按需使用
  * 
+ * @example
  * // 1. 只需要添加/编辑功能（不需要删除）
  * const { dialogVisible, editId, handleAdd, handleEdit, handleClose, handleFormSuccess } = useCrud()
  * 
@@ -20,13 +26,8 @@ import logger from '../utils/logger'
  * // 4. 完整功能
  * const { handleDelete, handleBatchDelete } = useCrud({ deleteApi, batchDeleteApi })
  * 
- * @param {Object} options 配置选项（所有参数都是可选的）
- * @param {Function} options.deleteApi - 单个删除 API 函数
- * @param {Function} options.batchDeleteApi - 批量删除 API 函数（接收 ids 数组）
- * @param {String} options.deleteConfirmKey - 删除确认提示的 i18n key（默认 'common.delete_confirm'）
- * @param {String} options.deleteSuccessKey - 删除成功提示的 i18n key（默认 'common.delete_success'）
- * @param {String} options.batchDeleteConfirmKey - 批量删除确认提示的 i18n key（默认 'common.batch_delete_confirm'）
- * @returns {Object} 返回 CRUD 相关的状态和方法
+ * @param {UseCrudOptions} [options={}] 配置选项（所有参数都是可选的）
+ * @returns {UseCrudReturn} 返回 CRUD 相关的状态和方法
  */
 export function useCrud(options = {}) {
   const {
