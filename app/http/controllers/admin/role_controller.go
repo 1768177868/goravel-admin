@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -34,7 +35,7 @@ func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations b
 	}
 	return response.FindByID[models.Role](ctx, id, &response.FindByIDOptions{
 		WithRelations:      relations,
-		NotFoundMessageKey: "role_not_found",
+		NotFoundMessageKey: apperrors.ErrRoleNotFound.Code,
 	})
 }
 
@@ -103,19 +104,19 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	// 检查名称是否已存在
 	exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", roleCreate.Name).Exists()
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
 	if exists {
-		return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleNameExists.Code)
 	}
 
 	// 检查标识是否已存在
 	exists, err = facades.Orm().Query().Model(&models.Role{}).Where("slug", roleCreate.Slug).Exists()
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
 	if exists {
-		return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleSlugExists.Code)
 	}
 
 	now := carbon.Now()
@@ -228,10 +229,10 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		// 检查名称是否已被其他角色使用（排除当前角色）
 		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", roleUpdate.Name).Where("id != ?", id).Exists()
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}
 		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "role_name_exists")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleNameExists.Code)
 		}
 		role.Name = roleUpdate.Name
 	}
@@ -240,15 +241,15 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		if roleUpdate.Slug != role.Slug {
 			// 受保护角色的标识不能修改
 			if isProtected {
-				return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_modify_slug")
+				return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotModifySlug.Code)
 			}
 			// 检查标识是否已被其他角色使用（排除当前角色）
 			exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
 			if err != nil {
-				return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+				return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 			}
 			if exists {
-				return response.Error(ctx, http.StatusBadRequest, "role_slug_exists")
+				return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleSlugExists.Code)
 			}
 			role.Slug = roleUpdate.Slug
 		}
@@ -261,7 +262,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	if _, exists := allInputs["status"]; exists {
 		// 受保护角色不能禁用
 		if isProtected && roleUpdate.Status == 0 {
-			return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_disable")
+			return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDisable.Code)
 		}
 		role.Status = roleUpdate.Status
 	}
@@ -313,7 +314,7 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 
 	// 检查是否是受保护的角色（通过slug判断）
 	if r.isProtectedRole(role.Slug) {
-		return response.Error(ctx, http.StatusForbidden, "role_protected_cannot_delete")
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDelete.Code)
 	}
 
 	if _, err := facades.Orm().Query().Delete(role); err != nil {

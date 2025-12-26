@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -23,7 +24,7 @@ func NewNotificationController() *NotificationController {
 func (r *NotificationController) Index(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
@@ -33,7 +34,7 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 	notifications, total, err := r.service.List(admin.ID, page, pageSize, notifType, isRead)
 	if err != nil {
 		logger.ErrorfHTTP(ctx, "list notifications error: %v", err)
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 	count, err := r.service.UnreadCount(admin.ID)
 	if err != nil {
@@ -55,12 +56,12 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 func (r *NotificationController) UnreadCount(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	count, err := r.service.UnreadCount(admin.ID)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -71,13 +72,13 @@ func (r *NotificationController) UnreadCount(ctx http.Context) http.Response {
 func (r *NotificationController) Recent(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	limit := cast.ToInt(ctx.Request().Query("limit", "5"))
 	notifications, err := r.service.ListRecent(admin.ID, limit)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	count, _ := r.service.UnreadCount(admin.ID)
@@ -91,19 +92,20 @@ func (r *NotificationController) Recent(ctx http.Context) http.Response {
 func (r *NotificationController) MarkRead(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	id := cast.ToUint(ctx.Request().Route("id"))
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "params_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsRequired.Code)
 	}
 
 	if err := r.service.MarkRead(admin.ID, id); err != nil {
-		if err.Error() == "notification_not_found" {
-			return response.Error(ctx, http.StatusNotFound, "notification_not_found")
+		// 使用业务错误类型，直接提取错误码
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
 		}
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -114,11 +116,11 @@ func (r *NotificationController) MarkRead(ctx http.Context) http.Response {
 func (r *NotificationController) MarkAllRead(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	if err := r.service.MarkAllRead(admin.ID); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 	}
 
 	return response.Success(ctx)
@@ -127,14 +129,14 @@ func (r *NotificationController) MarkAllRead(ctx http.Context) http.Response {
 func (r *NotificationController) Store(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
 	if admin == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	title := ctx.Request().Input("title")
 	content := ctx.Request().Input("content")
 	notificationType := ctx.Request().Input("type", "announcement")
 	if title == "" || content == "" {
-		return response.Error(ctx, http.StatusBadRequest, "params_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsRequired.Code)
 	}
 
 	var receiverID *uint
@@ -149,7 +151,7 @@ func (r *NotificationController) Store(ctx http.Context) http.Response {
 	senderID := admin.ID
 	notification, err := r.service.Create(title, content, notificationType, &senderID, receiverID)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
 
 	if notification == nil {

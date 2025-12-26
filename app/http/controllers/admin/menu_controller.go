@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -26,7 +27,7 @@ func NewMenuController() *MenuController {
 // findMenuByID 根据ID查找菜单，如果不存在则返回错误响应
 func (r *MenuController) findMenuByID(ctx http.Context, id uint) (*models.Menu, http.Response) {
 	return response.FindByID[models.Menu](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: "menu_not_found",
+		NotFoundMessageKey: apperrors.ErrMenuNotFound.Code,
 	})
 }
 
@@ -34,7 +35,7 @@ func (r *MenuController) findMenuByID(ctx http.Context, id uint) (*models.Menu, 
 func (r *MenuController) Index(ctx http.Context) http.Response {
 	menus, err := r.treeService.BuildMenuTree(0)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	// 检查是否需要隐藏服务监控菜单
@@ -95,10 +96,10 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	// 检查 slug 是否已存在
 	exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuCreate.Slug).Exists()
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
 	if exists {
-		return response.Error(ctx, http.StatusBadRequest, "menu_slug_exists")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuSlugExists.Code)
 	}
 
 	now := carbon.Now()
@@ -166,10 +167,10 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		// 检查 slug 是否已被其他菜单使用
 		exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuUpdate.Slug).Where("id != ?", id).Exists()
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}
 		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "menu_slug_exists")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuSlugExists.Code)
 		}
 		menu.Slug = menuUpdate.Slug
 	}
@@ -227,10 +228,10 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 
 	hasChildren, err := r.treeService.HasMenuChildren(id)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 	if hasChildren {
-		return response.Error(ctx, http.StatusBadRequest, "menu_has_children")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuHasChildren.Code)
 	}
 
 	if _, err := facades.Orm().Query().Delete(menu); err != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/response"
 	"goravel/app/utils/errorlog"
 	"goravel/app/utils/traceid"
@@ -37,7 +38,7 @@ func (r *DebugController) TraceTest(ctx http.Context) http.Response {
 			"message":  message,
 			"level":    "warning",
 		}, "Trace test warning: %s", message)
-		return response.Error(ctx, http.StatusBadRequest, "trace_test_warning")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTraceTestWarning.Code)
 
 	case "info":
 		errorlog.RecordHTTPWithLevel(ctx, "info", "trace-test", "Trace test info log", map[string]any{
@@ -75,7 +76,7 @@ func (r *DebugController) TraceTest(ctx http.Context) http.Response {
 			"message":  message,
 			"level":    "error",
 		}, "Trace test error: %s", message)
-		return response.Error(ctx, http.StatusInternalServerError, "trace_test_error")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrTraceTestError.Code)
 	}
 
 }

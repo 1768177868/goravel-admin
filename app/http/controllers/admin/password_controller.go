@@ -5,6 +5,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -20,7 +21,7 @@ func NewPasswordController() *PasswordController {
 func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -29,11 +30,11 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
 	// 使用请求验证
@@ -48,12 +49,12 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 
 	// 验证旧密码是否正确
 	if !facades.Hash().Check(updatePasswordRequest.OldPassword, admin.Password) {
-		return response.Error(ctx, http.StatusBadRequest, "old_password_error")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrOldPasswordError.Code)
 	}
 
 	hashedPassword, err := facades.Hash().Make(updatePasswordRequest.NewPassword)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
 	}
 
 	admin.Password = hashedPassword
@@ -82,12 +83,12 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("id", id).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
 	hashedPassword, err := facades.Hash().Make(resetPasswordRequest.Password)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
 	}
 
 	admin.Password = hashedPassword

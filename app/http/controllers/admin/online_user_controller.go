@@ -10,6 +10,7 @@ import (
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/constants"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
@@ -147,13 +148,13 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
 	tokenID := helpers.GetUintRoute(ctx, "id")
 	if tokenID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "token_id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTokenIDRequired.Code)
 	}
 
 	// 查询token是否存在
 	var token models.PersonalAccessToken
 	if err := facades.Orm().Query().Where("id", tokenID).First(&token); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "token_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrTokenNotFound.Code)
 	}
 
 	// 删除token
@@ -170,13 +171,13 @@ func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
 func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
 	tokenIDs := ctx.Request().Input("token_ids")
 	if tokenIDs == "" {
-		return response.Error(ctx, http.StatusBadRequest, "token_ids_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTokenIDsRequired.Code)
 	}
 
 	// 使用工具函数解析 token IDs
 	ids := helpers.ParseIDsFromString(tokenIDs)
 	if len(ids) == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_token_ids")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTokenIDs.Code)
 	}
 
 	// 批量删除token

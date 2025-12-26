@@ -10,6 +10,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -113,12 +114,12 @@ func (r *ExportController) buildQuery(ctx http.Context) orm.Query {
 func (r *ExportController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	var export models.Export
 	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "record_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	// 尝试删除源文件（忽略失败，仅记录日志）
@@ -147,16 +148,16 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 func (r *ExportController) Download(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	var export models.Export
 	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "record_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	if export.Path == "" || export.Disk == "" {
-		return response.Error(ctx, http.StatusBadRequest, "file_path_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
 	}
 
 	// 获取存储驱动
@@ -207,11 +208,11 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "params_error")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsError.Code)
 	}
 
 	if len(req.IDs) == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "ids_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDsRequired.Code)
 	}
 
 	ids := req.IDs
@@ -258,7 +259,7 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 		// 尝试从查询参数获取
 		exportID = helpers.GetUintQuery(ctx, "id", 0)
 		if exportID == 0 {
-			return response.Error(ctx, http.StatusBadRequest, "id_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 		}
 	}
 

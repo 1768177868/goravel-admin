@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/constants"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
@@ -29,7 +30,7 @@ func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdm
 	}
 	return response.FindByID[models.LoginLog](ctx, id, &response.FindByIDOptions{
 		WithRelations:      relations,
-		NotFoundMessageKey: "log_not_found",
+		NotFoundMessageKey: apperrors.ErrLogNotFound.Code,
 	})
 }
 
@@ -120,11 +121,11 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "params_error")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsError.Code)
 	}
 
 	if len(req.IDs) == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "ids_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDsRequired.Code)
 	}
 
 	ids := req.IDs

@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -89,7 +90,7 @@ func (r *AdminController) findAdminByID(ctx http.Context, id uint, withDepartmen
 	}
 	return response.FindByID[models.Admin](ctx, id, &response.FindByIDOptions{
 		WithRelations:      relations,
-		NotFoundMessageKey: "admin_not_found",
+		NotFoundMessageKey: apperrors.ErrAdminNotFound.Code,
 	})
 }
 
@@ -307,16 +308,16 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	// 检查用户名是否已存在
 	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", adminCreate.Username).Exists()
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
 	if exists {
-		return response.Error(ctx, http.StatusBadRequest, "username_exists")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUsernameExists.Code)
 	}
 
 	// 加密密码
 	hashedPassword, err := facades.Hash().Make(adminCreate.Password)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
 	}
 
 	now := carbon.Now()
@@ -424,7 +425,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
 		isSuperAdmin := admin.ID == superAdminID
 		if (isProtected || isSuperAdmin) && adminUpdate.Status == 0 {
-			return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_disable")
+			return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminProtectedCannotDisable.Code)
 		}
 		admin.Status = adminUpdate.Status
 	}
@@ -432,7 +433,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	if adminUpdate.Password != "" {
 		hashedPassword, err := facades.Hash().Make(adminUpdate.Password)
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
 		}
 		admin.Password = hashedPassword
 	}
@@ -491,7 +492,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		// 只有当角色ID真正改变时才阻止修改
 		// 如果角色ID没有改变，允许调用 SyncRoles 来清理重复数据
 		if roleIDsChanged && isSuperAdmin {
-			return response.Error(ctx, http.StatusForbidden, "admin_cannot_modify_roles")
+			return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminCannotModifyRoles.Code)
 		}
 
 		// 即使角色ID没有改变，也调用 SyncRoles 来清理重复数据
@@ -529,7 +530,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 
 	allProtectedIDs := r.getAllProtectedAdminIDs()
 	if allProtectedIDs[id] {
-		return response.Error(ctx, http.StatusForbidden, "admin_protected_cannot_delete")
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminProtectedCannotDelete.Code)
 	}
 
 	adminValue := ctx.Value("admin")
@@ -542,7 +543,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 		}
 
 		if currentAdmin.ID > 0 && currentAdmin.ID == id {
-			return response.Error(ctx, http.StatusForbidden, "admin_cannot_delete_self")
+			return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminCannotDeleteSelf.Code)
 		}
 	}
 
@@ -580,19 +581,19 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	// 获取要解绑的管理员ID
 	targetAdminID := cast.ToUint(ctx.Request().Route("id"))
 	if targetAdminID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	// 检查目标管理员是否存在
 	var targetAdmin models.Admin
 	if err := facades.Orm().Query().Where("id", targetAdminID).First(&targetAdmin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
 	// 从context中获取当前管理员信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var currentAdmin models.Admin
@@ -601,7 +602,7 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		currentAdmin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 检查当前管理员是否已绑定谷歌验证码
@@ -613,13 +614,13 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	if !isBound {
-		return response.Error(ctx, http.StatusForbidden, "google_authenticator_not_bound")
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrGoogleAuthenticatorNotBound.Code)
 	}
 
 	// 需要验证码确认
 	code := ctx.Request().Input("code")
 	if code == "" {
-		return response.Error(ctx, http.StatusBadRequest, "code_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrCodeRequired.Code)
 	}
 
 	// 获取当前管理员的密钥
@@ -631,12 +632,12 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	if secret == "" {
-		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_not_bound")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleAuthenticatorNotBound.Code)
 	}
 
 	// 验证当前管理员的验证码
 	if !r.googleAuthenticatorService.Verify(secret, code) {
-		return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 	}
 
 	// 检查目标管理员是否已绑定
@@ -648,7 +649,7 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	if !targetIsBound {
-		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_not_bound")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleAuthenticatorNotBound.Code)
 	}
 
 	// 解绑目标管理员的谷歌验证码
@@ -733,7 +734,7 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 
 	var admins []models.Admin
 	if err := query.With("Department").With("Roles").Get(&admins); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	headers := []string{

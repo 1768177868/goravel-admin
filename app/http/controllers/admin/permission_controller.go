@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -32,7 +33,7 @@ func (r *PermissionController) findPermissionByID(ctx http.Context, id uint, wit
 	}
 	return response.FindByID[models.Permission](ctx, id, &response.FindByIDOptions{
 		WithRelations:      relations,
-		NotFoundMessageKey: "permission_not_found",
+		NotFoundMessageKey: apperrors.ErrPermissionNotFound.Code,
 	})
 }
 
@@ -125,7 +126,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	menuID := cast.ToUint(ctx.Request().Input("menu_id", "0"))
 
 	if name == "" || slug == "" {
-		return response.Error(ctx, http.StatusBadRequest, "permission_name_and_slug_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameAndSlugRequired.Code)
 	}
 
 	exists, err := facades.Orm().Query().Model(&models.Permission{}).
@@ -133,10 +134,10 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		OrWhere("slug", slug).
 		Exists()
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "create_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
 	if exists {
-		return response.Error(ctx, http.StatusBadRequest, "permission_name_or_slug_exists")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameOrSlugExists.Code)
 	}
 
 	now := carbon.Now()
@@ -191,20 +192,20 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	if name != "" {
 		exists, err := facades.Orm().Query().Model(&models.Permission{}).Where("name", name).Where("id <> ?", id).Exists()
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}
 		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "permission_name_exists")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameExists.Code)
 		}
 		permission.Name = name
 	}
 	if slug != "" {
 		exists, err := facades.Orm().Query().Model(&models.Permission{}).Where("slug", slug).Where("id <> ?", id).Exists()
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "update_failed")
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}
 		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "permission_slug_exists")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionSlugExists.Code)
 		}
 		permission.Slug = slug
 	}

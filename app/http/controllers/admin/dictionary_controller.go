@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -23,7 +24,7 @@ func NewDictionaryController() *DictionaryController {
 // findDictionaryByID 根据ID查找字典，如果不存在则返回错误响应
 func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*models.Dictionary, http.Response) {
 	return response.FindByID[models.Dictionary](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: "dictionary_not_found",
+		NotFoundMessageKey: apperrors.ErrDictionaryNotFound.Code,
 	})
 }
 
@@ -194,12 +195,12 @@ func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 func (r *DictionaryController) GetByType(ctx http.Context) http.Response {
 	dictType := ctx.Request().Route("type")
 	if dictType == "" {
-		return response.Error(ctx, http.StatusBadRequest, "dictionary_type_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDictionaryTypeRequired.Code)
 	}
 
 	var dictionaries []models.Dictionary
 	if err := facades.Orm().Query().Where("type", dictType).Where("status", 1).Order("sort asc, id asc").Get(&dictionaries); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	return response.Success(ctx, http.Json{

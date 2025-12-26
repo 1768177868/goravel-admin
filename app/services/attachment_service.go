@@ -14,6 +14,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils"
@@ -72,7 +73,7 @@ func (s *AttachmentServiceImpl) InitChunkUpload(filename string, totalSize int64
 	cloudStorageDrivers := []string{"s3", "oss", "cos", "minio", "qiniu"}
 	for _, driver := range cloudStorageDrivers {
 		if s.disk == driver {
-			return "", fmt.Errorf("大文件分片上传仅支持本地存储，当前存储驱动为: %s", driver)
+			return "", apperrors.ErrChunkUploadOnlyLocalStorage.WithMessage(fmt.Sprintf("大文件分片上传仅支持本地存储，当前存储驱动为: %s", driver))
 		}
 	}
 

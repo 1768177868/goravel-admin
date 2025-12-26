@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/constants"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
@@ -23,7 +24,7 @@ func NewSystemLogController() *SystemLogController {
 // findSystemLogByID 根据ID查找系统日志，如果不存在则返回错误响应
 func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*models.SystemLog, http.Response) {
 	return response.FindByID[models.SystemLog](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: "log_not_found",
+		NotFoundMessageKey: apperrors.ErrLogNotFound.Code,
 	})
 }
 
@@ -113,11 +114,11 @@ func (r *SystemLogController) BatchDestroy(ctx http.Context) http.Response {
 
 	// 使用结构体绑定
 	if err := ctx.Request().Bind(&req); err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "params_error")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsError.Code)
 	}
 
 	if len(req.IDs) == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "ids_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDsRequired.Code)
 	}
 
 	ids := req.IDs

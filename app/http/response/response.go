@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/services"
@@ -593,7 +594,7 @@ type FindByIDOptions struct {
 func FindByID[T any](ctx http.Context, id uint, options *FindByIDOptions) (*T, http.Response) {
 	// 验证ID
 	if id == 0 {
-		return nil, Error(ctx, http.StatusBadRequest, "id_required")
+		return nil, Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	// 创建查询
@@ -609,8 +610,8 @@ func FindByID[T any](ctx http.Context, id uint, options *FindByIDOptions) (*T, h
 	// 查询记录
 	var model T
 	if err := query.First(&model); err != nil {
-		// 确定错误消息键
-		messageKey := "record_not_found"
+		// 确定错误消息键，默认使用 record_not_found
+		messageKey := apperrors.ErrRecordNotFound.Code
 		if options != nil && options.NotFoundMessageKey != "" {
 			messageKey = options.NotFoundMessageKey
 		}
@@ -621,7 +622,8 @@ func FindByID[T any](ctx http.Context, id uint, options *FindByIDOptions) (*T, h
 	// 通过反射检查 ID 字段，如果 ID 为 0，说明记录不存在
 	modelPtr := &model
 	if !hasValidID(modelPtr) {
-		messageKey := "record_not_found"
+		// 确定错误消息键，默认使用 record_not_found
+		messageKey := apperrors.ErrRecordNotFound.Code
 		if options != nil && options.NotFoundMessageKey != "" {
 			messageKey = options.NotFoundMessageKey
 		}

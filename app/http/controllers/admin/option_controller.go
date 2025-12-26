@@ -3,6 +3,7 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/response"
 	"goravel/app/services"
 	"goravel/app/services/option_providers"
@@ -41,17 +42,17 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 	optionType := ctx.Request().Query("type", "")
 
 	if optionType == "" {
-		return response.Error(ctx, http.StatusBadRequest, "option_type_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrOptionTypeRequired.Code)
 	}
 
 	provider, exists := r.providers[optionType]
 	if !exists {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_option_type")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidOptionType.Code)
 	}
 
 	data, err := provider.GetOptions(ctx)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	return response.Success(ctx, data)

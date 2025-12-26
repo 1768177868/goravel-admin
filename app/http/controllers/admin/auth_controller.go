@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -47,18 +48,18 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	// 先验证用户名和密码（但不生成token）
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
 	if admin.Status == 0 {
-		return response.Error(ctx, http.StatusForbidden, "account_disabled")
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAccountDisabled.Code)
 	}
 
 	// 验证密码
 	if !facades.Hash().Check(loginRequest.Password, admin.Password) {
 		// 记录登录失败日志
 		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, trans.Get(ctx, "password_error"))
-		return response.Error(ctx, http.StatusUnauthorized, "username_or_password_error")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
 	// 检查是否绑定了谷歌验证码
@@ -73,7 +74,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	if isBound {
 		googleCode := loginRequest.GoogleCode
 		if googleCode == "" {
-			return response.Error(ctx, http.StatusBadRequest, "google_code_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeRequired.Code)
 		}
 
 		// 获取管理员的密钥
@@ -88,7 +89,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		if !r.googleAuthenticatorService.Verify(secret, googleCode) {
 			// 记录登录失败日志
 			r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, trans.Get(ctx, "google_code_error"))
-			return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
 	} else {
 		// 如果没有绑定谷歌验证码，验证图形验证码（如果启用了）
@@ -170,7 +171,7 @@ func (r *AuthController) Captcha(ctx http.Context) http.Response {
 func (r *AuthController) Info(ctx http.Context) http.Response {
 	admin, permissions, menus, err := r.authService.GetAdminInfo(ctx)
 	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 获取配置：是否显示无权限的按钮
@@ -213,7 +214,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -223,16 +224,16 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		// 尝试指针类型
 		if adminPtr == nil {
-			return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+			return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 		}
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 重新查询admin以确保获取最新数据
 	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "admin_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
 	nickname := ctx.Request().Input("nickname")
@@ -290,7 +291,7 @@ func (r *AuthController) Refresh(ctx http.Context) http.Response {
 	// 从请求头获取token
 	token := ctx.Request().Header("Authorization", "")
 	if token == "" {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
 
 	// 移除Bearer前缀
@@ -312,7 +313,7 @@ func (r *AuthController) Refresh(ctx http.Context) http.Response {
 	newToken, err := facades.Auth(ctx).Guard("admin").Refresh()
 	if err != nil {
 		// 刷新失败，返回错误
-		return response.Error(ctx, http.StatusUnauthorized, "token_refresh_failed")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrTokenRefreshFailed.Code)
 	}
 
 	// 刷新成功，返回新token
@@ -366,12 +367,12 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	admin, ok := adminValue.(models.Admin)
 	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 获取用户的所有token
@@ -420,23 +421,23 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	admin, ok := adminValue.(models.Admin)
 	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 获取要删除的token ID
 	tokenIDStr := ctx.Request().Route("id")
 	if tokenIDStr == "" {
-		return response.Error(ctx, http.StatusBadRequest, "token_id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTokenIDRequired.Code)
 	}
 
 	tokenID, err := strconv.ParseUint(tokenIDStr, 10, 32)
 	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_token_id")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTokenID.Code)
 	}
 
 	// 查询token是否存在且属于当前用户
@@ -446,7 +447,7 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 		Where("tokenable_type", "admin").
 		Where("tokenable_id", admin.ID).
 		First(&token); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "token_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrTokenNotFound.Code)
 	}
 
 	// 删除token（直接通过ID删除，因为数据库中存储的是hash值，无法获取原始token）
@@ -466,12 +467,12 @@ func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	admin, ok := adminValue.(models.Admin)
 	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 删除用户的所有token
@@ -490,7 +491,7 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -499,24 +500,24 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 获取要踢出的用户ID
 	userIDStr := ctx.Request().Route("id")
 	if userIDStr == "" {
-		return response.Error(ctx, http.StatusBadRequest, "user_id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUserIDRequired.Code)
 	}
 
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
 	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "invalid_user_id")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID.Code)
 	}
 
 	// 查询用户是否存在
 	var targetAdmin models.Admin
 	if err := facades.Orm().Query().Where("id", userID).First(&targetAdmin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "user_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrUserNotFound.Code)
 	}
 
 	// 删除用户的所有token
@@ -536,7 +537,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -545,7 +546,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 检查是否已经绑定
@@ -557,7 +558,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	}
 
 	if isBound {
-		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_already_bound")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleAuthenticatorAlreadyBound.Code)
 	}
 
 	// 生成密钥和二维码
@@ -592,7 +593,7 @@ func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -601,20 +602,20 @@ func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	secret := ctx.Request().Input("secret")
 	code := ctx.Request().Input("code")
 
 	if secret == "" || code == "" {
-		return response.Error(ctx, http.StatusBadRequest, "secret_and_code_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrSecretAndCodeRequired.Code)
 	}
 
 	// 绑定谷歌验证码
 	if err := r.googleAuthenticatorService.Bind(admin.ID, secret, code); err != nil {
 		if err.Error() == "invalid_code" {
-			return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -629,7 +630,7 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -638,13 +639,13 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 需要验证码确认
 	code := ctx.Request().Input("code")
 	if code == "" {
-		return response.Error(ctx, http.StatusBadRequest, "code_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrCodeRequired.Code)
 	}
 
 	// 获取管理员的密钥
@@ -656,12 +657,12 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	}
 
 	if secret == "" {
-		return response.Error(ctx, http.StatusBadRequest, "google_authenticator_not_bound")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleAuthenticatorNotBound.Code)
 	}
 
 	// 验证验证码
 	if !r.googleAuthenticatorService.Verify(secret, code) {
-		return response.Error(ctx, http.StatusBadRequest, "google_code_invalid")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 	}
 
 	// 解绑谷歌验证码
@@ -679,7 +680,7 @@ func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Res
 	// 从context中获取admin信息（由JWT中间件设置）
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	var admin models.Admin
@@ -688,7 +689,7 @@ func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Res
 	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
 		admin = *adminPtr
 	} else {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 检查是否绑定

@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/goravel/framework/support/str"
+
+	apperrors "goravel/app/errors"
 )
 
 // IsIPInBlacklist 检查IP是否在黑名单中
@@ -84,10 +86,10 @@ func isIPInRange(ip, startIP, endIP net.IP) bool {
 }
 
 // ValidateBlacklistIP 验证黑名单IP格式
-// 返回错误信息，如果格式正确返回空字符串
-func ValidateBlacklistIP(ipStr string) string {
+// 返回业务错误类型，如果格式正确返回 nil
+func ValidateBlacklistIP(ipStr string) error {
 	if ipStr == "" {
-		return "IP地址不能为空"
+		return apperrors.ErrIPAddressRequired
 	}
 
 	ipList := strings.SplitSeq(ipStr, ",")
@@ -101,7 +103,7 @@ func ValidateBlacklistIP(ipStr string) string {
 		if str.Of(ip).Contains("/") {
 			_, _, err := net.ParseCIDR(ip)
 			if err != nil {
-				return fmt.Sprintf("CIDR格式错误: %s", ip)
+				return apperrors.ErrInvalidCIDRFormat.WithMessage(fmt.Sprintf("CIDR格式错误: %s", ip))
 			}
 			continue
 		}
@@ -110,15 +112,15 @@ func ValidateBlacklistIP(ipStr string) string {
 		if str.Of(ip).Contains("-") {
 			parts := str.Of(ip).Split("-")
 			if len(parts) != 2 {
-				return fmt.Sprintf("IP范围格式错误: %s (格式应为: 192.168.1.1-192.168.1.100)", ip)
+				return apperrors.ErrInvalidIPRangeFormat.WithMessage(fmt.Sprintf("IP范围格式错误: %s (格式应为: 192.168.1.1-192.168.1.100)", ip))
 			}
 			startIP := net.ParseIP(str.Of(parts[0]).Trim().String())
 			endIP := net.ParseIP(str.Of(parts[1]).Trim().String())
 			if startIP == nil {
-				return fmt.Sprintf("起始IP格式错误: %s", parts[0])
+				return apperrors.ErrInvalidIPFormat.WithMessage(fmt.Sprintf("起始IP格式错误: %s", parts[0]))
 			}
 			if endIP == nil {
-				return fmt.Sprintf("结束IP格式错误: %s", parts[1])
+				return apperrors.ErrInvalidIPFormat.WithMessage(fmt.Sprintf("结束IP格式错误: %s", parts[1]))
 			}
 			// 验证范围是否有效（结束IP应该大于等于起始IP）
 			if !isIPInRange(endIP, startIP, endIP) && !endIP.Equal(startIP) {
@@ -128,7 +130,7 @@ func ValidateBlacklistIP(ipStr string) string {
 				if startBytes != nil && endBytes != nil {
 					for i := range 4 {
 						if endBytes[i] < startBytes[i] {
-							return fmt.Sprintf("结束IP必须大于等于起始IP: %s", ip)
+							return apperrors.ErrInvalidIPRangeOrder.WithMessage(fmt.Sprintf("结束IP必须大于等于起始IP: %s", ip))
 						}
 						if endBytes[i] > startBytes[i] {
 							break
@@ -142,11 +144,11 @@ func ValidateBlacklistIP(ipStr string) string {
 		// 检查单个IP格式
 		parsedIP := net.ParseIP(ip)
 		if parsedIP == nil {
-			return fmt.Sprintf("IP地址格式错误: %s", ip)
+			return apperrors.ErrInvalidIPFormat.WithMessage(fmt.Sprintf("IP地址格式错误: %s", ip))
 		}
 	}
 
-	return ""
+	return nil
 }
 
 // FormatIPRange 格式化IP范围显示

@@ -5,13 +5,13 @@ import (
 	"mime"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -99,7 +99,7 @@ func (r *AttachmentController) buildQuery(ctx http.Context) orm.Query {
 func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	file, err := ctx.Request().File("file")
 	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "file_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFileRequired.Code)
 	}
 
 	filename := file.GetClientOriginalName()
@@ -177,25 +177,25 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		// 初始化分片上传
 		filename := ctx.Request().Input("filename", "")
 		if filename == "" {
-			return response.Error(ctx, http.StatusBadRequest, "filename_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilenameRequired.Code)
 		}
 
 		totalSizeStr := ctx.Request().Input("total_size", "0")
 		totalSize, err := strconv.ParseInt(totalSizeStr, 10, 64)
 		if err != nil {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalSize.Code)
 		}
 		if totalSize <= 0 {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_total_size")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalSize.Code)
 		}
 
 		chunkSizeStr := ctx.Request().Input("chunk_size", "0")
 		chunkSize, err := strconv.ParseInt(chunkSizeStr, 10, 64)
 		if err != nil {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidChunkSize.Code)
 		}
 		if chunkSize <= 0 {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_size")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidChunkSize.Code)
 		}
 
 		totalChunksStr := ctx.Request().Input("total_chunks", "0")
@@ -205,11 +205,11 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			if floatVal, floatErr := strconv.ParseFloat(totalChunksStr, 64); floatErr == nil {
 				totalChunks = int(floatVal)
 			} else {
-				return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+				return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalChunks.Code)
 			}
 		}
 		if totalChunks <= 0 {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalChunks.Code)
 		}
 
 		// 验证分片数量计算的合理性
@@ -220,9 +220,9 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 
 		chunkID, err := attachmentService.InitChunkUpload(filename, totalSize, chunkSize, totalChunks)
 		if err != nil {
-			// 检查是否是存储驱动不支持的错误
-			if strings.Contains(err.Error(), "大文件分片上传仅支持本地存储") {
-				return response.Error(ctx, http.StatusBadRequest, "chunk_upload_only_local_storage")
+			// 使用业务错误类型，直接提取错误码
+			if businessErr, ok := apperrors.GetBusinessError(err); ok {
+				return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 			}
 
 			// 返回详细的错误信息
@@ -242,17 +242,17 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		// 上传分片
 		chunkID := ctx.Request().Input("chunk_id", "")
 		if chunkID == "" {
-			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrChunkIDRequired.Code)
 		}
 
 		chunkIndex, err := strconv.Atoi(ctx.Request().Input("chunk_index", "-1"))
 		if err != nil || chunkIndex < 0 {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_chunk_index")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidChunkIndex.Code)
 		}
 
 		file, err := ctx.Request().File("chunk")
 		if err != nil {
-			return response.Error(ctx, http.StatusBadRequest, "chunk_file_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrChunkFileRequired.Code)
 		}
 
 		// 读取分片数据：先将文件保存到临时位置，然后读取
@@ -297,12 +297,12 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		// 合并分片
 		chunkID := ctx.Request().Input("chunk_id", "")
 		if chunkID == "" {
-			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrChunkIDRequired.Code)
 		}
 
 		filename := ctx.Request().Input("filename", "")
 		if filename == "" {
-			return response.Error(ctx, http.StatusBadRequest, "filename_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilenameRequired.Code)
 		}
 
 		totalChunksStr := ctx.Request().Input("total_chunks", "0")
@@ -312,11 +312,11 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			if floatVal, floatErr := strconv.ParseFloat(totalChunksStr, 64); floatErr == nil {
 				totalChunks = int(floatVal)
 			} else {
-				return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+				return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalChunks.Code)
 			}
 		}
 		if totalChunks <= 0 {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalChunks.Code)
 		}
 
 		// 获取MIME类型：直接根据文件扩展名推断（前端传递的 mime_type 可能不准确）
@@ -356,7 +356,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			chunkID = ctx.Request().Input("chunk_id", "")
 		}
 		if chunkID == "" {
-			return response.Error(ctx, http.StatusBadRequest, "chunk_id_required")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrChunkIDRequired.Code)
 		}
 
 		totalChunks, err := strconv.Atoi(ctx.Request().Query("total_chunks", "0"))
@@ -364,7 +364,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			totalChunks, err = strconv.Atoi(ctx.Request().Input("total_chunks", "0"))
 		}
 		if err != nil || totalChunks <= 0 {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_total_chunks")
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalChunks.Code)
 		}
 
 		progress, err := attachmentService.GetChunkProgress(chunkID, totalChunks)
@@ -377,7 +377,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		return response.Success(ctx, progress)
 
 	default:
-		return response.Error(ctx, http.StatusBadRequest, "invalid_action")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidAction.Code)
 	}
 }
 
@@ -385,16 +385,16 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 func (r *AttachmentController) Download(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "record_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	if attachment.Path == "" || attachment.Disk == "" {
-		return response.Error(ctx, http.StatusBadRequest, "file_path_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
 	}
 
 	// 对于云存储，尝试生成临时URL并重定向，避免通过服务器中转
@@ -455,16 +455,16 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "record_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	if attachment.Path == "" || attachment.Disk == "" {
-		return response.Error(ctx, http.StatusBadRequest, "file_path_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
 	}
 
 	// 对于云存储，尝试生成临时URL并重定向，避免通过服务器中转
@@ -522,12 +522,12 @@ func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 func (r *AttachmentController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "record_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	attachmentService := services.NewAttachmentService(ctx)
@@ -549,11 +549,11 @@ func (r *AttachmentController) BatchDestroy(ctx http.Context) http.Response {
 	var req AttachmentBatchDestroyRequest
 
 	if err := ctx.Request().Bind(&req); err != nil {
-		return response.Error(ctx, http.StatusBadRequest, "params_error")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsError.Code)
 	}
 
 	if len(req.IDs) == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "ids_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDsRequired.Code)
 	}
 
 	ids := req.IDs
@@ -586,12 +586,12 @@ func (r *AttachmentController) BatchDestroy(ctx http.Context) http.Response {
 func (r *AttachmentController) UpdateDisplayName(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "id_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "record_not_found")
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	displayName := ctx.Request().Input("display_name", "")

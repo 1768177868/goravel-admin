@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -30,7 +31,7 @@ func NewDepartmentController() *DepartmentController {
 // findDepartmentByID 根据ID查找部门，如果不存在则返回错误响应
 func (r *DepartmentController) findDepartmentByID(ctx http.Context, id uint) (*models.Department, http.Response) {
 	return response.FindByID[models.Department](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: "department_not_found",
+		NotFoundMessageKey: apperrors.ErrDepartmentNotFound.Code,
 	})
 }
 
@@ -80,7 +81,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 
 		var departments []models.Department
 		if err := query.Get(&departments); err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 		}
 
 		return response.Success(ctx, http.Json{
@@ -91,7 +92,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	// 无搜索条件时返回树形结构
 	departments, err := r.treeService.BuildDepartmentTree(0)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -228,19 +229,19 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 	// 检查是否有子部门
 	hasChildren, err := r.treeService.HasDepartmentChildren(id)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 	if hasChildren {
-		return response.Error(ctx, http.StatusBadRequest, "department_has_children")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDepartmentHasChildren.Code)
 	}
 
 	// 检查是否有管理员
 	hasAdmins, err := r.departmentService.HasAdmins(id)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "query_failed")
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 	if hasAdmins {
-		return response.Error(ctx, http.StatusBadRequest, "department_has_admins")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDepartmentHasAdmins.Code)
 	}
 
 	if _, err := facades.Orm().Query().Delete(department); err != nil {

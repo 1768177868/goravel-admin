@@ -10,6 +10,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/response"
 	"goravel/app/models"
 )
@@ -25,7 +26,7 @@ func NewConfigController() *ConfigController {
 func (r *ConfigController) GetByGroup(ctx http.Context) http.Response {
 	group := ctx.Request().Route("group")
 	if group == "" {
-		return response.Error(ctx, http.StatusBadRequest, "config_group_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrConfigGroupRequired.Code)
 	}
 
 	var configs []models.Config
@@ -50,12 +51,12 @@ func (r *ConfigController) GetByGroup(ctx http.Context) http.Response {
 func (r *ConfigController) Save(ctx http.Context) http.Response {
 	group := ctx.Request().Input("group")
 	if group == "" {
-		return response.Error(ctx, http.StatusBadRequest, "config_group_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrConfigGroupRequired.Code)
 	}
 
 	configsMap := ctx.Request().InputMap("configs")
 	if len(configsMap) == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "configs_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrConfigsRequired.Code)
 	}
 
 	// 获取该分组下的所有配置（即使查询失败也继续，使用空数组）
@@ -139,18 +140,18 @@ func (r *ConfigController) TestEmail(ctx http.Context) http.Response {
 
 	// 验证必填字段
 	if emailHost == "" || emailPort == 0 || emailUsername == "" || emailFrom == "" {
-		return response.Error(ctx, http.StatusBadRequest, "email_config_required")
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrEmailConfigRequired.Code)
 	}
 
 	// 获取当前登录的管理员邮箱作为测试收件人
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	admin, ok := adminValue.(models.Admin)
 	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
 	// 如果没有邮箱，使用发件人邮箱作为测试收件人
