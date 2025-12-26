@@ -5,7 +5,7 @@
       v-if="systemInfo.alerts && systemInfo.alerts.length > 0"
       v-for="(alert, index) in systemInfo.alerts"
       :key="index"
-      :title="alert.message"
+      :title="getAlertMessage(alert)"
       :type="alert.level === 'high' ? 'error' : 'warning'"
       :closable="false"
       show-icon
@@ -1089,7 +1089,13 @@ const startSSEStream = () => {
         errorCount = 0
         lastErrorTime = 0
         
-        if (data.type === 'system_info') {
+        if (data.type === 'connected') {
+          // SSE 连接成功消息（前端根据当前语言翻译）
+          if (data.message_key) {
+            const message = t(`messages.${data.message_key}`)
+            console.log('SSE connected:', message)
+          }
+        } else if (data.type === 'system_info') {
           systemInfo.value = data.data || {}
           loading.value = false
           // 更新历史数据和图表
@@ -1716,6 +1722,25 @@ const getProcessStatusType = (status) => {
     return 'warning'
   }
   return 'info'
+}
+
+// 获取告警消息（根据 message_key 和 value 翻译）
+const getAlertMessage = (alert) => {
+  if (!alert) return ''
+  
+  // 如果已经有 message 字段（兼容旧数据），直接返回
+  if (alert.message) {
+    return alert.message
+  }
+  
+  // 根据 message_key 和 value 翻译
+  if (alert.message_key && alert.value !== undefined) {
+    const messageKey = `messages.${alert.message_key}`
+    // 使用 i18n 翻译，value 作为参数
+    return t(messageKey, { value: alert.value.toFixed(2) })
+  }
+  
+  return ''
 }
 
 // 清理函数：关闭SSE连接和定时器

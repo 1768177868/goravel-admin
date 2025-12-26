@@ -938,6 +938,16 @@
     "partition_percent": "使用率",
     "refresh_too_frequent": "刷新过于频繁，请等待 {seconds} 秒后再试"
   },
-  "operation.unknown": "未知操作"
+  "operation.unknown": "未知操作",
+  "messages": {
+    "monitor_sse_connected": "SSE连接已建立,开始推送系统监控数据",
+    "monitor_memory_usage_high": "内存使用率过高: {value}%",
+    "monitor_memory_usage_medium": "内存使用率较高: {value}%",
+    "monitor_disk_usage_high": "磁盘使用率过高: {value}%",
+    "monitor_disk_usage_medium": "磁盘使用率较高: {value}%",
+    "monitor_cpu_usage_high": "CPU使用率过高: {value}%",
+    "monitor_cpu_usage_medium": "CPU使用率较高: {value}%",
+    "monitor_file_descriptors_usage_high": "文件描述符使用率过高: {value}%"
+  }
 }
 

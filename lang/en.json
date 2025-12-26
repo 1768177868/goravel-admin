@@ -199,6 +199,14 @@
     "validation_confirm_password_required": "Confirm password cannot be empty",
     "validation_old_password": "Old Password",
     "validation_new_password": "New Password",
-    "validation_confirm_password": "Confirm Password"
+    "validation_confirm_password": "Confirm Password",
+    "monitor_sse_connected": "SSE connection established, starting to push system monitoring data",
+    "monitor_memory_usage_high": "Memory usage is too high: {value}%",
+    "monitor_memory_usage_medium": "Memory usage is relatively high: {value}%",
+    "monitor_disk_usage_high": "Disk usage is too high: {value}%",
+    "monitor_disk_usage_medium": "Disk usage is relatively high: {value}%",
+    "monitor_cpu_usage_high": "CPU usage is too high: {value}%",
+    "monitor_cpu_usage_medium": "CPU usage is relatively high: {value}%",
+    "monitor_file_descriptors_usage_high": "File descriptors usage is too high: {value}%"
   }
 }

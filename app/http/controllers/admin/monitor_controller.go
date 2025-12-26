@@ -1213,63 +1213,8 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	var diskPartitions []map[string]any
 	diskPartitions = r.getDiskPartitionsWithTimeout(ctx, 3*time.Second)
 
-	// 生成系统告警提示
-	alerts := []map[string]any{}
-	if memInfo.UsedPercent > 90 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "high",
-			"message": fmt.Sprintf("内存使用率过高: %.2f%%", memInfo.UsedPercent),
-			"metric":  "memory",
-		})
-	} else if memInfo.UsedPercent > 80 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "medium",
-			"message": fmt.Sprintf("内存使用率较高: %.2f%%", memInfo.UsedPercent),
-			"metric":  "memory",
-		})
-	}
-	if diskInfo.UsedPercent > 90 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "high",
-			"message": fmt.Sprintf("磁盘使用率过高: %.2f%%", diskInfo.UsedPercent),
-			"metric":  "disk",
-		})
-	} else if diskInfo.UsedPercent > 80 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "medium",
-			"message": fmt.Sprintf("磁盘使用率较高: %.2f%%", diskInfo.UsedPercent),
-			"metric":  "disk",
-		})
-	}
-	if cpuPercent[0] > 90 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "high",
-			"message": fmt.Sprintf("CPU使用率过高: %.2f%%", cpuPercent[0]),
-			"metric":  "cpu",
-		})
-	} else if cpuPercent[0] > 80 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "medium",
-			"message": fmt.Sprintf("CPU使用率较高: %.2f%%", cpuPercent[0]),
-			"metric":  "cpu",
-		})
-	}
-	if runtime.GOOS != "windows" {
-		if percent, ok := fileDescriptors["percent"].(float64); ok && percent > 90 {
-			alerts = append(alerts, map[string]any{
-				"type":    "warning",
-				"level":   "high",
-				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", percent),
-				"metric":  "file_descriptors",
-			})
-		}
-	}
+	// 生成系统告警提示（根据当前语言动态生成）
+	alerts := r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDescriptors)
 
 	return response.Success(ctx, http.Json{
 		"os": runtime.GOOS, // 操作系统类型
@@ -1348,21 +1293,15 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 	interval := 2
 	if intervalStr := ctx.Request().Query("interval", ""); intervalStr != "" {
 		if parsed, err := time.ParseDuration(intervalStr + "s"); err == nil {
-			interval = int(parsed.Seconds())
-			if interval < 1 {
-				interval = 1
-			}
-			if interval > 10 {
-				interval = 10
-			}
+			interval = min(max(int(parsed.Seconds()), 1), 10)
 		}
 	}
 
-	// 发送初始连接消息
+	// 发送初始连接消息（返回原始数据，由前端根据当前语言翻译）
 	initMsg := map[string]any{
-		"type":     "connected",
-		"message":  "SSE连接已建立，开始推送系统监控数据",
-		"interval": interval,
+		"type":        "connected",
+		"message_key": "monitor_sse_connected",
+		"interval":    interval,
 	}
 	initData, _ := json.Marshal(initMsg)
 	fmt.Fprintf(writer, "data: %s\n\n", string(initData))
@@ -1433,6 +1372,76 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 	}
 }
 
+// generateAlerts 生成系统告警提示（返回原始数据，由前端根据当前语言翻译）
+// 返回的告警数据包含：type, level, metric, value, message_key
+// 前端可以根据 message_key 和 value 自行翻译显示
+func (r *MonitorController) generateAlerts(ctx http.Context, memInfo *mem.VirtualMemoryStat, diskInfo *disk.UsageStat, cpuPercent []float64, fileDescriptors map[string]any) []map[string]any {
+	alerts := []map[string]any{}
+	if memInfo.UsedPercent > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":        "warning",
+			"level":       "high",
+			"metric":      "memory",
+			"value":       memInfo.UsedPercent,
+			"message_key": "monitor_memory_usage_high",
+		})
+	} else if memInfo.UsedPercent > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":        "warning",
+			"level":       "medium",
+			"metric":      "memory",
+			"value":       memInfo.UsedPercent,
+			"message_key": "monitor_memory_usage_medium",
+		})
+	}
+	if diskInfo.UsedPercent > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":        "warning",
+			"level":       "high",
+			"metric":      "disk",
+			"value":       diskInfo.UsedPercent,
+			"message_key": "monitor_disk_usage_high",
+		})
+	} else if diskInfo.UsedPercent > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":        "warning",
+			"level":       "medium",
+			"metric":      "disk",
+			"value":       diskInfo.UsedPercent,
+			"message_key": "monitor_disk_usage_medium",
+		})
+	}
+	if len(cpuPercent) > 0 && cpuPercent[0] > 90 {
+		alerts = append(alerts, map[string]any{
+			"type":        "warning",
+			"level":       "high",
+			"metric":      "cpu",
+			"value":       cpuPercent[0],
+			"message_key": "monitor_cpu_usage_high",
+		})
+	} else if len(cpuPercent) > 0 && cpuPercent[0] > 80 {
+		alerts = append(alerts, map[string]any{
+			"type":        "warning",
+			"level":       "medium",
+			"metric":      "cpu",
+			"value":       cpuPercent[0],
+			"message_key": "monitor_cpu_usage_medium",
+		})
+	}
+	if runtime.GOOS != "windows" {
+		if percent, ok := fileDescriptors["percent"].(float64); ok && percent > 90 {
+			alerts = append(alerts, map[string]any{
+				"type":        "warning",
+				"level":       "high",
+				"metric":      "file_descriptors",
+				"value":       percent,
+				"message_key": "monitor_file_descriptors_usage_high",
+			})
+		}
+	}
+	return alerts
+}
+
 // collectSystemInfo 收集系统监控信息（从 GetSystemInfo 提取的逻辑）
 func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	// 检查缓存（仅在SSE流中使用缓存，减少系统调用）
@@ -1441,7 +1450,33 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	if cacheValid {
 		cached := monitorCache
 		monitorCacheLock.RUnlock()
-		return cached
+		// 从缓存中提取数据并动态生成告警消息
+		result := make(map[string]any)
+		for k, v := range cached {
+			result[k] = v
+		}
+		// 从缓存的数据中提取监控指标，动态生成告警消息
+		if memInfoMap, ok := result["memory"].(map[string]any); ok {
+			if diskInfoMap, ok2 := result["disk"].(map[string]any); ok2 {
+				if cpuInfoMap, ok3 := result["cpu"].(map[string]any); ok3 {
+					if fileDesc, ok4 := result["file_descriptors"].(map[string]any); ok4 {
+						// 构造临时对象用于生成告警
+						memInfo := &mem.VirtualMemoryStat{
+							UsedPercent: getFloat64(memInfoMap["percent"]),
+						}
+						diskInfo := &disk.UsageStat{
+							UsedPercent: getFloat64(diskInfoMap["percent"]),
+						}
+						var cpuPercent []float64
+						if cpuPercentVal, ok5 := cpuInfoMap["percent"].(float64); ok5 {
+							cpuPercent = []float64{cpuPercentVal}
+						}
+						result["alerts"] = r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDesc)
+					}
+				}
+			}
+		}
+		return result
 	}
 	monitorCacheLock.RUnlock()
 
@@ -1462,10 +1497,45 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	})
 
 	if data, ok := result.(map[string]any); ok {
+		// 从缓存的数据中提取监控指标，动态生成告警消息
+		if memInfoMap, ok1 := data["memory"].(map[string]any); ok1 {
+			if diskInfoMap, ok2 := data["disk"].(map[string]any); ok2 {
+				if cpuInfoMap, ok3 := data["cpu"].(map[string]any); ok3 {
+					if fileDesc, ok4 := data["file_descriptors"].(map[string]any); ok4 {
+						// 构造临时对象用于生成告警
+						memInfo := &mem.VirtualMemoryStat{
+							UsedPercent: getFloat64(memInfoMap["percent"]),
+						}
+						diskInfo := &disk.UsageStat{
+							UsedPercent: getFloat64(diskInfoMap["percent"]),
+						}
+						var cpuPercent []float64
+						if cpuPercentVal, ok5 := cpuInfoMap["percent"].(float64); ok5 {
+							cpuPercent = []float64{cpuPercentVal}
+						}
+						data["alerts"] = r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDesc)
+					}
+				}
+			}
+		}
 		return data
 	}
 	// 如果类型转换失败，执行一次实际收集（兜底）
 	return r.doCollectSystemInfo(ctx)
+}
+
+// getFloat64 从 interface{} 安全地获取 float64 值
+func getFloat64(v any) float64 {
+	if f, ok := v.(float64); ok {
+		return f
+	}
+	if i, ok := v.(int); ok {
+		return float64(i)
+	}
+	if i, ok := v.(int64); ok {
+		return float64(i)
+	}
+	return 0
 }
 
 // doCollectSystemInfo 实际执行系统信息收集（从 collectSystemInfo 提取）
@@ -1749,63 +1819,7 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 	var diskPartitions []map[string]any
 	diskPartitions = r.getDiskPartitionsWithTimeout(ctx, 3*time.Second)
 
-	// 生成系统告警提示
-	alerts := []map[string]any{}
-	if memInfo.UsedPercent > 90 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "high",
-			"message": fmt.Sprintf("内存使用率过高: %.2f%%", memInfo.UsedPercent),
-			"metric":  "memory",
-		})
-	} else if memInfo.UsedPercent > 80 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "medium",
-			"message": fmt.Sprintf("内存使用率较高: %.2f%%", memInfo.UsedPercent),
-			"metric":  "memory",
-		})
-	}
-	if diskInfo.UsedPercent > 90 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "high",
-			"message": fmt.Sprintf("磁盘使用率过高: %.2f%%", diskInfo.UsedPercent),
-			"metric":  "disk",
-		})
-	} else if diskInfo.UsedPercent > 80 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "medium",
-			"message": fmt.Sprintf("磁盘使用率较高: %.2f%%", diskInfo.UsedPercent),
-			"metric":  "disk",
-		})
-	}
-	if cpuPercent[0] > 90 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "high",
-			"message": fmt.Sprintf("CPU使用率过高: %.2f%%", cpuPercent[0]),
-			"metric":  "cpu",
-		})
-	} else if cpuPercent[0] > 80 {
-		alerts = append(alerts, map[string]any{
-			"type":    "warning",
-			"level":   "medium",
-			"message": fmt.Sprintf("CPU使用率较高: %.2f%%", cpuPercent[0]),
-			"metric":  "cpu",
-		})
-	}
-	if runtime.GOOS != "windows" {
-		if percent, ok := fileDescriptors["percent"].(float64); ok && percent > 90 {
-			alerts = append(alerts, map[string]any{
-				"type":    "warning",
-				"level":   "high",
-				"message": fmt.Sprintf("文件描述符使用率过高: %.2f%%", percent),
-				"metric":  "file_descriptors",
-			})
-		}
-	}
+	// 注意：告警消息不在 doCollectSystemInfo 中生成，而是在 collectSystemInfo 返回时根据当前语言动态生成
 
 	result := map[string]any{
 		"os": runtime.GOOS,
@@ -1885,14 +1899,18 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 			"go_version": runtime.Version(),
 		},
 		"processes": r.getProcessesInfo(ctx),
-		"alerts":    alerts,
+		// 注意：alerts 不包含在缓存中，会在返回时根据当前语言动态生成
 	}
 
 	// 更新缓存（仅在collectSystemInfo中缓存，用于SSE流）
+	// 注意：缓存中不包含 alerts，因为告警消息需要根据当前语言动态生成
 	monitorCacheLock.Lock()
 	monitorCache = result
 	monitorCacheTime = time.Now()
 	monitorCacheLock.Unlock()
+
+	// 在返回前，根据当前语言动态生成告警消息
+	result["alerts"] = r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDescriptors)
 
 	return result
 }

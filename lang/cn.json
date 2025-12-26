@@ -203,6 +203,14 @@
     "validation_confirm_password_required": "确认密码不能为空",
     "validation_old_password": "原密码",
     "validation_new_password": "新密码",
-    "validation_confirm_password": "确认密码"
+    "validation_confirm_password": "确认密码",
+    "monitor_sse_connected": "SSE连接已建立,开始推送系统监控数据",
+    "monitor_memory_usage_high": "内存使用率过高: {value}%",
+    "monitor_memory_usage_medium": "内存使用率较高: {value}%",
+    "monitor_disk_usage_high": "磁盘使用率过高: {value}%",
+    "monitor_disk_usage_medium": "磁盘使用率较高: {value}%",
+    "monitor_cpu_usage_high": "CPU使用率过高: {value}%",
+    "monitor_cpu_usage_medium": "CPU使用率较高: {value}%",
+    "monitor_file_descriptors_usage_high": "文件描述符使用率过高: {value}%"
   }
 }
