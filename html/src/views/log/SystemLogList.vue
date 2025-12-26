@@ -242,7 +242,7 @@ const tableColumns = computed(() => [
   },
   {
     title: t('table.operation'),
-    width: 100,
+    width: 150,
     fixed: 'right',
     slot: 'operation',
     sortable: false

@@ -5,53 +5,6 @@
         <div class="card-header">
           <span>{{ $t('notification.center') }}</span>
           <div class="header-actions">
-            <el-select
-              v-model="filterType"
-              style="width: 150px; margin-right: 10px"
-              @change="handleTypeChange"
-              clearable
-              :placeholder="$t('notification.table.type')"
-            >
-              <el-option
-                :label="$t('common.all')"
-                value=""
-              />
-              <el-option
-                :label="$t('notification.types.announcement')"
-                value="announcement"
-              />
-              <el-option
-                :label="$t('notification.types.notice')"
-                value="notice"
-              />
-              <el-option
-                :label="$t('notification.types.message')"
-                value="message"
-              />
-            </el-select>
-            <el-select
-              v-model="filterIsRead"
-              style="width: 150px; margin-right: 10px"
-              @change="handleIsReadChange"
-              clearable
-              :placeholder="$t('notification.table.status')"
-            >
-              <el-option
-                :label="$t('common.all')"
-                value=""
-              />
-              <el-option
-                :label="$t('notification.unread')"
-                value="false"
-              />
-              <el-option
-                :label="$t('notification.read')"
-                value="true"
-              />
-            </el-select>
-            <el-button @click="loadData">
-              {{ $t('tabs.refresh') }}
-            </el-button>
             <el-button
               type="primary"
               :disabled="!canCreate"
@@ -72,113 +25,101 @@
         </div>
       </template>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        border
-        style="width: 100%"
-      >
-        <el-table-column
-          prop="title"
-          :label="$t('notification.table.title')"
-          min-width="160"
-        />
-        <el-table-column
-          prop="content"
-          :label="$t('notification.table.content')"
-          min-width="260"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="type"
-          :label="$t('notification.table.type')"
-          width="120"
-        >
-          <template #default="{ row }">
-            <el-tag size="small">
-              {{ typeLabel(row.type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="sender"
-          :label="$t('notification.table.sender')"
-          width="150"
-        >
-          <template #default="{ row }">
-            <template v-if="row.type === 'message' && row.sender_id === userStore.adminInfo?.id">
-              <!-- 自己发送的私信，显示接收人 -->
-              <span class="text-gray-500">
-                {{ $t('notification.sent_to') }}: 
-                <span v-if="row.receiver" class="text-blue-600">
-                  {{ row.receiver.nickname || row.receiver.username }}
-                </span>
-                <span v-else class="text-gray-400">-</span>
-              </span>
-            </template>
-            <template v-else>
-              <!-- 接收的私信或其他类型通知，显示发送人 -->
-              <span v-if="row.sender">
-                {{ row.sender.nickname || row.sender.username }}
-              </span>
-              <span v-else class="text-gray-400">
-                {{ $t('notification.system') }}
-              </span>
-            </template>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="is_read"
-          :label="$t('notification.table.status')"
-          width="120"
-        >
-          <template #default="{ row }">
-            <el-tag
-              size="small"
-              :type="row.is_read ? 'info' : 'danger'"
-              effect="plain"
-            >
-              {{ row.is_read ? $t('notification.read') : $t('notification.unread') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="created_at"
-          :label="$t('notification.table.created_at')"
-          width="180"
-        >
-          <template #default="{ row }">
-            {{ formatDate(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          :label="$t('common.operation')"
-          width="140"
-        >
-          <template #default="{ row }">
-            <el-button
-              v-if="!row.is_read"
-              type="primary"
-              link
-              @click="handleMarkRead(row)"
-            >
-              {{ $t('notification.mark_read') }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 搜索表单 -->
+      <SearchForm
+        :model="searchForm"
+        :fields="searchFields"
+        :initial-values="initialSearchForm"
+        :loading="loading"
+        i18n-prefix="notification"
+        @search="handleSearch"
+        @reset="handleReset"
+      />
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          layout="total, prev, pager, next, sizes"
-          :page-sizes="[10, 20, 30, 50]"
-          @current-change="handlePageChange"
-          @size-change="handleSizeChange"
-        />
-      </div>
+      <!-- vxe-table -->
+      <vxe-table
+        ref="tableRef"
+        :data="tableData"
+        :loading="loading"
+        border
+        :column-config="{ resizable: true }"
+        height="600"
+        :sort-config="{ multiple: false, trigger: 'default' }"
+        @sort-change="handleSortChange"
+      >
+        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
+          <vxe-column
+            v-if="column.type === 'checkbox'"
+            type="checkbox"
+            :width="column.width"
+            :fixed="column.fixed"
+          />
+          <vxe-column
+            v-else
+            :field="column.field"
+            :title="column.title"
+            :width="column.width"
+            :sortable="column.sortable"
+            :fixed="column.fixed"
+            :formatter="column.formatter"
+          >
+            <template v-if="column.slot === 'type'" #default="{ row }">
+              <el-tag size="small">
+                {{ typeLabel(row.type) }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'sender'" #default="{ row }">
+              <template v-if="row.type === 'message' && row.sender_id === userStore.adminInfo?.id">
+                <!-- 自己发送的私信，显示接收人 -->
+                <span class="text-gray-500">
+                  {{ $t('notification.sent_to') }}: 
+                  <span v-if="row.receiver" class="text-blue-600">
+                    {{ row.receiver.nickname || row.receiver.username }}
+                  </span>
+                  <span v-else class="text-gray-400">-</span>
+                </span>
+              </template>
+              <template v-else>
+                <!-- 接收的私信或其他类型通知，显示发送人 -->
+                <span v-if="row.sender">
+                  {{ row.sender.nickname || row.sender.username }}
+                </span>
+                <span v-else class="text-gray-400">
+                  {{ $t('notification.system') }}
+                </span>
+              </template>
+            </template>
+            <template v-else-if="column.slot === 'is_read'" #default="{ row }">
+              <el-tag
+                size="small"
+                :type="row.is_read ? 'info' : 'danger'"
+                effect="plain"
+              >
+                {{ row.is_read ? $t('notification.read') : $t('notification.unread') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'created_at'" #default="{ row }">
+              {{ formatDate(row.created_at) }}
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button
+                v-if="!row.is_read"
+                type="primary"
+                link
+                @click="handleMarkRead(row)"
+              >
+                {{ $t('notification.mark_read') }}
+              </el-button>
+            </template>
+          </vxe-column>
+        </template>
+      </vxe-table>
+
+      <!-- 分页 -->
+      <Pagination
+        v-model="pagination"
+        @page-change="handlePageChange"
+      />
     </el-card>
 
     <!-- 创建通知对话框 -->
@@ -275,6 +216,9 @@ import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
+import { useListPage } from '../../composables/useListPage'
 import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
 import { fetchNotifications, createNotification } from '../../api/notification'
@@ -287,6 +231,7 @@ const userStore = useUserStore()
 // 权限检查
 const canCreate = computed(() => userStore.shouldShowButton('notification.store'))
 
+const tableRef = ref(null)
 const formRef = ref(null)
 const dialogVisible = ref(false)
 const submitting = ref(false)
@@ -324,70 +269,179 @@ const formRules = {
   ]
 }
 
-const list = ref([])
-const loading = ref(false)
-const filterType = ref('')
-const filterIsRead = ref('')
-const pagination = reactive({
-  page: 1,
-  pageSize: 20,
-  total: 0
-})
+// 字段名映射：前端字段名 -> 数据库字段名
+const fieldMapping = {
+  'id': 'id',
+  'type': 'type',
+  'is_read': 'is_read',
+  'created_at': 'created_at'
+}
 
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize
+// 初始搜索表单数据
+const initialSearchForm = {
+  type: '',
+  is_read: ''
+}
+
+// 搜索字段配置
+const searchFields = computed(() => [
+  {
+    prop: 'type',
+    label: t('notification.table.type'),
+    type: 'select',
+    options: [
+      { label: t('common.all'), value: '' },
+      { label: t('notification.types.announcement'), value: 'announcement' },
+      { label: t('notification.types.notice'), value: 'notice' },
+      { label: t('notification.types.message'), value: 'message' }
+    ],
+    clearable: true
+  },
+  {
+    prop: 'is_read',
+    label: t('notification.table.status'),
+    type: 'select',
+    options: [
+      { label: t('common.all'), value: '' },
+      { label: t('notification.unread'), value: 'false' },
+      { label: t('notification.read'), value: 'true' }
+    ],
+    clearable: true
+  }
+])
+
+// 表格列配置
+const tableColumns = computed(() => [
+  {
+    field: 'title',
+    title: t('notification.table.title'),
+    minWidth: 160
+  },
+  {
+    field: 'content',
+    title: t('notification.table.content'),
+    minWidth: 260
+  },
+  {
+    field: 'type',
+    title: t('notification.table.type'),
+    width: 150,
+    slot: 'type'
+  },
+  {
+    field: 'sender',
+    title: t('notification.table.sender'),
+    width: 160,
+    slot: 'sender'
+  },
+  {
+    field: 'is_read',
+    title: t('notification.table.status'),
+    width: 120,
+    slot: 'is_read'
+  },
+  {
+    field: 'created_at',
+    title: t('notification.table.created_at'),
+    width: 180,
+    sortable: true,
+    slot: 'created_at'
+  },
+  {
+    field: 'operation',
+    title: t('common.operation'),
+    width: 140,
+    fixed: 'right',
+    slot: 'operation'
+  }
+])
+
+// 自定义参数构建函数（适配 notifications API 的返回格式）
+const buildParams = (searchForm, pagination, orderBy) => {
+  const params = {
+    page: pagination.page,
+    page_size: pagination.pageSize
+  }
+
+  // 添加排序参数
+  if (orderBy) {
+    params.order_by = orderBy
+  }
+
+  // 添加搜索条件（只添加有值的字段）
+  if (searchForm.type) {
+    params.type = searchForm.type
+  }
+  if (searchForm.is_read !== '' && searchForm.is_read !== null && searchForm.is_read !== undefined) {
+    params.is_read = searchForm.is_read
+  }
+
+  return params
+}
+
+// 自定义 fetchApi 包装函数（适配 notifications API 的返回格式）
+const fetchNotificationsWrapper = async (params) => {
+  const res = await fetchNotifications(params)
+  // 将 notifications API 的返回格式转换为 useListPage 期望的格式
+  if (res && res.data) {
+    return {
+      ...res,
+      data: {
+        list: res.data.notifications || [],
+        total: res.data.pagination?.total || 0,
+        unread_count: res.data.unread_count || 0,
+        pagination: res.data.pagination
+      }
     }
-    // 如果选择了类型筛选，添加到参数中
-    if (filterType.value) {
-      params.type = filterType.value
-    }
-    // 如果选择了已读/未读筛选，添加到参数中
-    if (filterIsRead.value !== '') {
-      params.is_read = filterIsRead.value
-    }
-    const { data } = await fetchNotifications(params)
-    list.value = data.notifications || []
-    pagination.total = data.pagination?.total || list.value.length
-    notificationStore.unreadCount = data.unread_count || 0
-  } catch (error) {
-    console.error('Load notifications list failed:', error)
-    if (!error.__handled) {
-      const errorMessage = error.response?.data?.message || error.message || t('error.default')
-      ElMessage.error(errorMessage)
-    }
-  } finally {
-    loading.value = false
+  }
+  return res
+}
+
+// 数据转换函数（适配 API 返回格式）
+const transformNotificationData = (notification) => {
+  return {
+    id: notification.id || notification.ID,
+    type: notification.type || notification.Type || '',
+    title: notification.title || notification.Title || '',
+    content: notification.content || notification.Content || '',
+    sender: notification.sender || notification.Sender || null,
+    sender_id: notification.sender_id || notification.SenderID || null,
+    receiver: notification.receiver || notification.Receiver || null,
+    receiver_id: notification.receiver_id || notification.ReceiverID || null,
+    is_read: notification.is_read || notification.IsRead || false,
+    read_at: notification.read_at || notification.ReadAt || null,
+    created_at: notification.created_at || notification.CreatedAt || ''
   }
 }
 
-const handlePageChange = (page) => {
-  pagination.page = page
-  loadData()
-}
-
-const handleSizeChange = (size) => {
-  pagination.pageSize = size
-  pagination.page = 1
-  loadData()
-}
-
-const handleTypeChange = (value) => {
-  // 处理清空筛选器的情况（value 可能为 null）
-  filterType.value = value || ''
-  pagination.page = 1
-  loadData()
-}
-
-const handleIsReadChange = (value) => {
-  // 处理清空筛选器的情况（value 可能为 null 或 undefined）
-  filterIsRead.value = value || ''
-  pagination.page = 1
-  loadData()
-}
+// 使用列表页面 composable
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSortChange
+} = useListPage({
+  fetchApi: fetchNotificationsWrapper,
+  initialSearchForm,
+  buildParams,
+  transformData: transformNotificationData,
+  sortOptions: {
+    tableRef,
+    fieldMapping,
+    defaultSort: 'id:desc'
+  },
+  onLoadSuccess: (res) => {
+    // 更新未读数量
+    if (res.data && res.data.unread_count !== undefined) {
+      notificationStore.unreadCount = res.data.unread_count || 0
+    }
+  }
+})
 
 const handleMarkRead = async (row) => {
   await notificationStore.markAsRead(row.id)
@@ -397,7 +451,8 @@ const handleMarkRead = async (row) => {
 
 const handleMarkAll = async () => {
   await notificationStore.markAllRead()
-  list.value = list.value.map(item => ({ ...item, is_read: true }))
+  // 重新加载数据
+  await loadData()
 }
 
 const formatDate = (value) => {
@@ -534,11 +589,4 @@ onMounted(() => {
   display: flex;
   gap: 10px;
 }
-
-.pagination-wrapper {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
-}
 </style>
-
