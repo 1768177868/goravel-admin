@@ -2,7 +2,7 @@
 
 [English](./README.md) | 中文
 
-## 关于 Goravel
+## 关于 Goravel 
 
 Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为起始脚手架，帮助 Gopher 快速构建自己的应用程序。
 
@@ -13,6 +13,10 @@ Goravel 是一个功能完整、可扩展性良好的 Web 应用框架。作为�
 ## 后台管理系统
 
 本项目包含一个基于 Goravel 框架构建的完整后台管理系统。
+
+```bash
+git clone https://github.com/1768177868/goravel-admin.git
+```
 
 > 演示站 https://admin.xuancheng888.top
 

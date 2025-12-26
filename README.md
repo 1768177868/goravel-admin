@@ -14,6 +14,10 @@ Welcome to star, PR and issues！
 
 This project includes a complete admin management system built with Goravel framework.
 
+```bash
+git clone https://github.com/1768177868/goravel-admin.git
+```
+
 > Demo https://admin.xuancheng888.top 
 
 username: demo  
