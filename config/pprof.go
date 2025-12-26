@@ -20,6 +20,17 @@ func init() {
 		// 如果设置，需要在请求头 X-Pprof-Token 或查询参数 token 中提供
 		// 示例：PPROF_TOKEN=your-secret-token-here
 		"token": config.Env("PPROF_TOKEN", ""),
+		// 最大失败尝试次数（防止暴力破解）
+		// 超过此次数后，IP 将被临时封禁
+		// 示例：PPROF_MAX_ATTEMPTS=5
+		"max_attempts": config.Env("PPROF_MAX_ATTEMPTS", 5),
+		// 封禁时长（秒）
+		// IP 被封禁后，需要等待此时间后才能再次尝试
+		// 示例：PPROF_BLOCK_DURATION=300（5分钟）
+		"block_duration": config.Env("PPROF_BLOCK_DURATION", 300),
+		// 失败计数重置时长（秒）
+		// 如果在此时间内没有新的失败尝试，失败计数将被重置
+		// 示例：PPROF_RESET_DURATION=600（10分钟）
+		"reset_duration": config.Env("PPROF_RESET_DURATION", 600),
 	})
 }
-
