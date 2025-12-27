@@ -253,6 +253,8 @@ SELECT * FROM table_name WHERE MATCH(`title`) AGAINST('高性能' IN BOOLEAN MOD
 
 -- # 优化全文索引，减少索引碎片
 REPAIR TABLE table_name
+-- 或更轻量的优化（不锁表）
+OPTIMIZE TABLE table_name;
 
 -- 若需匹配单字（如 “微”“信”）
 -- 临时设置（会话级）

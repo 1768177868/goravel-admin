@@ -1,11 +1,11 @@
 package database
 
 import (
-	"github.com/goravel/framework/contracts/database/schema"
-	"github.com/goravel/framework/contracts/database/seeder"
-
 	"goravel/database/migrations"
 	"goravel/database/seeders"
+
+	"github.com/goravel/framework/contracts/database/schema"
+	"github.com/goravel/framework/contracts/database/seeder"
 )
 
 type Kernel struct {
@@ -40,9 +40,9 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000024AddGoogleSecretToAdmins{},
 		&migrations.M20250101000025AddLinkTypeToMenus{},
 		&migrations.M20250101000026ModifyMenusPathLength{},
+		&migrations.M20251227063517AddFulltextIndexToOperationLogsRequest{},
 	}
 }
-
 func (kernel Kernel) Seeders() []seeder.Seeder {
 	return []seeder.Seeder{
 		&seeders.DatabaseSeeder{},

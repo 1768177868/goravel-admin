@@ -9,11 +9,12 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/constants"
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/utils"
 )
 
 type OperationLogController struct {
@@ -95,7 +96,8 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 		query = query.Where("status = ?", status)
 	}
 	if request != "" {
-		query = query.Where("request LIKE ?", "%"+request+"%")
+		// 使用工具函数应用全文索引搜索
+		query = utils.ApplyFulltextSearch(query, "request", request)
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)
