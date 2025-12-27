@@ -228,6 +228,39 @@ WHERE object_schema = 'database_name'
 ORDER BY sum_timer_wait DESC;
 ```
 
+## 创建全文索引 ngram
+```sql
+CREATE TABLE table_name(
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    title VARCHAR (200),
+    content TEXT,
+    -- # 建立全文索引，同时使用ngram全文分析器
+    FULLTEXT (title) WITH PARSER ngram
+) ENGINE = INNODB;
+
+-- # 通过 alter table 的方式来添加
+ALTER TABLE table_name ADD FULLTEXT INDEX full_index_title(title) WITH PARSER ngram;
+
+-- # 为title创建全文索引并且使用ngram全文解析器进行分词
+CREATE FULLTEXT INDEX full_index_title ON table_name(title) WITH PARSER `ngram`;
+
+-- # 使用双引号把要搜素的词括起来，效果类似于like '%高性能%'
+select * ,(MATCH ( `title`  ) AGAINST ( '"高性能"' )  )AS score 
+from table_name 
+where MATCH(title) AGAINST('"高性能"' IN BOOLEAN MODE) order by score Desc;
+
+SELECT * FROM table_name WHERE MATCH(`title`) AGAINST('高性能' IN BOOLEAN MODE);
+
+-- # 优化全文索引，减少索引碎片
+REPAIR TABLE table_name
+
+-- 若需匹配单字（如 “微”“信”）
+-- 临时设置（会话级）
+SET SESSION ngram_token_size = 1;
+-- 永久设置（修改 my.cnf 后重启 MySQL）
+-- ngram_token_size = 1
+```
+
 ## 查询和分析
 
 ```sql

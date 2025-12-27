@@ -56,12 +56,18 @@
             :fixed="column.fixed"
             :formatter="column.formatter"
             :tree-node="column.treeNode"
+            :show-overflow="column.showOverflow"
           >
             <template v-if="column.slot === 'admin'" #default="{ row }">
               {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
             </template>
             <template v-else-if="column.slot === 'title'" #default="{ row }">
               {{ getOperationTitle(row.title || row.Title) }}
+            </template>
+            <template v-else-if="column.slot === 'request'" #default="{ row }">
+              <span :title="formatRequestParams(row.request || row.Request)">
+                {{ formatRequestParams(row.request || row.Request) }}
+              </span>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
               <el-button 
@@ -233,6 +239,7 @@ const initialSearchForm = {
   title: '',
   ip: '',
   status: '',
+  request: '',
   start_time: getSevenDaysAgo(),
   end_time: ''
 }
@@ -270,6 +277,33 @@ const transformOperationLogData = (log) => {
     params: params,
     request: log.Request || log.request || null,
     response: log.Response || log.response || null
+  }
+}
+
+// 格式化请求参数显示
+const formatRequestParams = (request) => {
+  if (!request) return '-'
+  
+  try {
+    // 如果是字符串，尝试解析为 JSON
+    const parsed = typeof request === 'string' ? JSON.parse(request) : request
+    // 如果是对象，转换为格式化的 JSON 字符串（限制长度）
+    if (typeof parsed === 'object' && parsed !== null) {
+      const jsonStr = JSON.stringify(parsed, null, 2)
+      // 如果太长，截取前 100 个字符
+      if (jsonStr.length > 100) {
+        return jsonStr.substring(0, 100) + '...'
+      }
+      return jsonStr
+    }
+    return String(parsed)
+  } catch (e) {
+    // 如果不是 JSON，直接返回字符串（限制长度）
+    const str = String(request)
+    if (str.length > 100) {
+      return str.substring(0, 100) + '...'
+    }
+    return str
   }
 }
 
@@ -500,6 +534,14 @@ const tableColumns = computed(() => [
     }
   },
   {
+    field: 'request',
+    title: t('log.request_params'),
+    slot: 'request',
+    sortable: false,
+    width: 250,
+    showOverflow: 'tooltip'
+  },
+  {
     field: 'created_at',
     title: t('log.operation_time'),
     width: 180,
@@ -577,6 +619,13 @@ const searchFields = computed(() => {
         { label: t('log.failed'), value: '0' }
       ],
       clearable: true,
+      advanced: true
+    },
+    {
+      prop: 'request',
+      label: t('log.request_params'),
+      type: 'input',
+      width: '200px',
       advanced: true
     },
     {

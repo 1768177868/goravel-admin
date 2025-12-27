@@ -57,6 +57,7 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 	title := ctx.Request().Query("title", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
+	request := ctx.Request().Query("request", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
 
@@ -92,6 +93,9 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 	}
 	if status != "" {
 		query = query.Where("status = ?", status)
+	}
+	if request != "" {
+		query = query.Where("request LIKE ?", "%"+request+"%")
 	}
 	if startTime != "" {
 		query = query.Where("created_at >= ?", startTime)
