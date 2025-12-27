@@ -140,7 +140,7 @@ git clone https://github.com/1768177868/goravel-admin.git
 
 ### 构建与部署
 
-详细的编译打包和部署说明，包括跨平台编译、Docker 部署、systemd 服务配置等，请参考 [BUILD.md](./BUILD.md)。
+详细的编译打包和部署说明，包括跨平台编译、Docker 部署、systemd 服务配置等，请参考 [BUILD.md](./docs/BUILD.md)。
 
 ### API 文档
 
@@ -192,82 +192,20 @@ swag init
 │       ├── api/                 # API 客户端
 │       └── store/               # Pinia 状态管理
 ├── config/                       # 配置文件
-├── BUILD.md                      # 编译打包和部署文档
+├── docs/                         # 文档目录
+│   ├── API.md                    # API 接口文档
+│   ├── ARCHITECTURE.md           # 架构设计文档
+│   ├── BUILD.md                  # 编译打包与部署
+│   ├── SHARDING_MIGRATION.md     # 数据库分表指南
+│   └── ...                       # 其他文档
+├── CONTRIBUTING.md               # 贡献指南
+├── CHANGELOG.md                  # 版本变更记录
 └── images/                       # 截图文件
 ```
 
 ### 数据库分表
 
-项目支持按月分表策略，已实现订单表的按月分表功能。如需为其他表添加分表功能，请按以下步骤操作：
-
-#### 1. 在 Migration 中定义表创建函数
-
-在对应的 migration 文件中添加创建分表的函数，例如 `database/migrations/20250128000001_create_orders_table.go`：
-
-```go
-// CreateOrdersShardingTable 创建订单主表分表（供服务层和命令层调用）
-func CreateOrdersShardingTable(tableName string) error {
-	return facades.Schema().Create(tableName, func(table schema.Blueprint) {
-		table.BigIncrements("id")
-		table.String("order_no", 50).Comment("订单号")
-		// ... 其他字段定义
-		table.Index("order_no")
-		table.Comment(fmt.Sprintf("订单主表 - %s", tableName))
-	})
-}
-```
-
-#### 2. 在 ShardingService 中注册表创建函数
-
-在 `app/services/sharding_service.go` 的 `registerOrderTables` 方法中（或创建新的注册方法）注册表创建函数：
-
-```go
-// registerOrderTables 注册订单表的创建函数
-func (s *ShardingServiceImpl) registerOrderTables() {
-	// 注册订单主表（调用 migrations 中的函数）
-	s.RegisterTableCreator("orders", migrations.CreateOrdersShardingTable)
-	
-	// 注册订单详情表（调用 migrations 中的函数）
-	s.RegisterTableCreator("order_details", migrations.CreateOrderDetailsShardingTable)
-}
-```
-
-#### 3. 在服务层使用分表
-
-在服务层使用 `ShardingService` 确保分表存在：
-
-```go
-// 确保分表存在（使用订单的创建时间）
-now := time.Now().UTC()
-tableName := utils.GetShardingTableName("orders", now)
-if err := s.shardingService.EnsureShardingTable(tableName, "orders"); err != nil {
-	return err
-}
-
-// 使用分表进行查询
-facades.Orm().Query().Table(tableName).Where("id", orderID).First(&order)
-```
-
-#### 4. 创建分表命令（可选）
-
-如需手动创建分表，可以参考 `app/console/commands/create_order_sharding_tables.go` 创建类似的命令。
-
-#### 5. 定时任务（可选）
-
-在 `app/console/kernel.go` 中添加定时任务，自动创建未来的分表：
-
-```go
-// 每月1号凌晨1点执行，创建下个月的订单分表
-facades.Schedule().Command("order:create-sharding-tables --months=1 --month=" + time.Now().AddDate(0, 1, 0).Format("200601")).MonthlyOn(1, "01:00").OnOneServer()
-```
-
-#### 注意事项
-
-- 分表键字段使用 `created_at`（由 `orm.Model` 自动提供），类型为 `time.Time`
-- 查询跨月数据时，需要查询多个分表并合并结果（已在 `OrderService` 中实现）
-- 分表名称格式为：`{base_table_name}_{YYYYMM}`，例如 `orders_202501`
-- 表结构定义统一在 migrations 中，便于维护和版本控制
-- 通过订单号中的年月信息可以直接定位分表，提高查询效率
+项目支持按月分表策略，已实现订单表的按月分表功能。关于如何创建、使用和修改分表的详细文档，请参考 [docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md)。
 
 ### 安全特性
 
@@ -362,9 +300,10 @@ upx -9 main
 |------|------|
 | [API.md](./docs/API.md) | 完整 API 接口文档 |
 | [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系统架构设计 |
+| [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | 数据库分表指南（创建、使用和修改分表） |
+| [BUILD.md](./docs/BUILD.md) | 编译打包与部署 |
+| [TESTING.md](./docs/TESTING.md) | 测试指南（单元测试 & 集成测试） |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
-| [TESTING.md](./TESTING.md) | 测试指南（单元测试 & 集成测试） |
-| [BUILD.md](./BUILD.md) | 编译打包与部署 |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
 | [前端开发指南](./html/DEVELOPMENT.md) | 前端开发文档 |
 

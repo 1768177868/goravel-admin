@@ -2,7 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"regexp"
 	"time"
+
+	"github.com/goravel/framework/facades"
 )
 
 // GetShardingTableName 根据时间获取分表名称
@@ -85,4 +88,85 @@ func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, er
 	}
 
 	return true, nil
+}
+
+// GetAllExistingShardingTables 获取数据库中所有已存在的分表名称
+// baseTableName: 基础表名，如 "orders" 或 "order_details"
+// 返回: 已存在的分表名称列表
+func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
+	var tableNames []string
+
+	// 获取当前数据库名
+	dbName := facades.Config().GetString("database.connections.mysql.database")
+	if dbName == "" {
+		dbName = facades.Config().GetString("database.connections.postgresql.database")
+	}
+
+	// 构建表名匹配模式：orders_YYYYMM 或 order_details_YYYYMM
+	pattern := fmt.Sprintf("%s_%%", baseTableName)
+
+	// 查询所有匹配的表名
+	query := `
+		SELECT table_name 
+		FROM information_schema.tables 
+		WHERE table_schema = ? 
+		AND table_name LIKE ?
+		ORDER BY table_name
+	`
+
+	// 执行查询，使用 Scan 获取结果
+	var rows []map[string]any
+	if err := facades.Orm().Query().Raw(query, dbName, pattern).Scan(&rows); err != nil {
+		return nil, fmt.Errorf("查询分表失败: %v", err)
+	}
+
+	// 验证表名格式（确保是有效的分表名称，格式为 baseTableName_YYYYMM）
+	patternRegex := regexp.MustCompile(fmt.Sprintf("^%s_\\d{6}$", regexp.QuoteMeta(baseTableName)))
+
+	for _, row := range rows {
+		if tableName, ok := row["table_name"].(string); ok {
+			// 验证表名格式
+			if patternRegex.MatchString(tableName) {
+				tableNames = append(tableNames, tableName)
+			}
+		}
+	}
+
+	return tableNames, nil
+}
+
+// GetAllExistingShardingTablesByPattern 通过表名模式获取所有已存在的分表
+// 这是一个更通用的方法，可以通过自定义模式匹配
+// pattern: 表名匹配模式，如 "orders_%" 或 "order_details_%"
+func GetAllExistingShardingTablesByPattern(pattern string) ([]string, error) {
+	var tableNames []string
+
+	// 获取当前数据库名
+	dbName := facades.Config().GetString("database.connections.mysql.database")
+	if dbName == "" {
+		dbName = facades.Config().GetString("database.connections.postgresql.database")
+	}
+
+	// 查询所有匹配的表名
+	query := `
+		SELECT table_name 
+		FROM information_schema.tables 
+		WHERE table_schema = ? 
+		AND table_name LIKE ?
+		ORDER BY table_name
+	`
+
+	// 执行查询，使用 Scan 获取结果
+	var rows []map[string]any
+	if err := facades.Orm().Query().Raw(query, dbName, pattern).Scan(&rows); err != nil {
+		return nil, fmt.Errorf("查询分表失败: %v", err)
+	}
+
+	for _, row := range rows {
+		if tableName, ok := row["table_name"].(string); ok {
+			tableNames = append(tableNames, tableName)
+		}
+	}
+
+	return tableNames, nil
 }

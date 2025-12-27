@@ -139,7 +139,7 @@ password: demo123
 
 ### Build & Deployment
 
-For detailed build and deployment instructions, including cross-platform compilation, Docker deployment, and systemd service setup, please refer to [BUILD.md](./BUILD.md).
+For detailed build and deployment instructions, including cross-platform compilation, Docker deployment, and systemd service setup, please refer to [BUILD.md](./docs/BUILD.md).
 
 ### API Documentation
 
@@ -191,82 +191,20 @@ This will regenerate the `docs/docs.go`, `docs/swagger.json`, and `docs/swagger.
 │       ├── api/                 # API client
 │       └── store/               # Pinia stores
 ├── config/                       # Configuration files
-├── BUILD.md                      # Build and deployment documentation
+├── docs/                         # Documentation
+│   ├── API.md                    # API documentation
+│   ├── ARCHITECTURE.md           # Architecture documentation
+│   ├── BUILD.md                  # Build and deployment
+│   ├── SHARDING_MIGRATION.md     # Database sharding guide
+│   └── ...                       # Other documentation
+├── CONTRIBUTING.md               # Contribution guidelines
+├── CHANGELOG.md                  # Version history
 └── images/                       # Screenshots
 ```
 
 ### Database Sharding
 
-The project supports monthly sharding strategy and has implemented monthly sharding for order tables. To add sharding functionality for other tables, follow these steps:
-
-#### 1. Define Table Creation Function in Migration
-
-Add a function to create sharded tables in the corresponding migration file, for example `database/migrations/20250128000001_create_orders_table.go`:
-
-```go
-// CreateOrdersShardingTable creates a sharded order table (called by service and command layers)
-func CreateOrdersShardingTable(tableName string) error {
-	return facades.Schema().Create(tableName, func(table schema.Blueprint) {
-		table.BigIncrements("id")
-		table.String("order_no", 50).Comment("Order No.")
-		// ... other field definitions
-		table.Index("order_no")
-		table.Comment(fmt.Sprintf("Order Table - %s", tableName))
-	})
-}
-```
-
-#### 2. Register Table Creator in ShardingService
-
-Register the table creation function in `app/services/sharding_service.go` in the `registerOrderTables` method (or create a new registration method):
-
-```go
-// registerOrderTables registers order table creation functions
-func (s *ShardingServiceImpl) registerOrderTables() {
-	// Register order main table (calls function from migrations)
-	s.RegisterTableCreator("orders", migrations.CreateOrdersShardingTable)
-	
-	// Register order details table (calls function from migrations)
-	s.RegisterTableCreator("order_details", migrations.CreateOrderDetailsShardingTable)
-}
-```
-
-#### 3. Use Sharding in Service Layer
-
-Use `ShardingService` in the service layer to ensure sharded tables exist:
-
-```go
-// Ensure sharded table exists (uses order's created_at)
-now := time.Now().UTC()
-tableName := utils.GetShardingTableName("orders", now)
-if err := s.shardingService.EnsureShardingTable(tableName, "orders"); err != nil {
-	return err
-}
-
-// Query using sharded table
-facades.Orm().Query().Table(tableName).Where("id", orderID).First(&order)
-```
-
-#### 4. Create Sharding Table Command (Optional)
-
-If you need to manually create sharded tables, you can refer to `app/console/commands/create_order_sharding_tables.go` to create a similar command.
-
-#### 5. Scheduled Task (Optional)
-
-Add a scheduled task in `app/console/kernel.go` to automatically create future sharded tables:
-
-```go
-// Execute on the 1st of each month at 01:00, create next month's order sharded tables
-facades.Schedule().Command("order:create-sharding-tables --months=1 --month=" + time.Now().AddDate(0, 1, 0).Format("200601")).MonthlyOn(1, "01:00").OnOneServer()
-```
-
-#### Notes
-
-- The sharding key field uses `created_at` (automatically provided by `orm.Model`), which is of type `time.Time`
-- When querying data across months, you need to query multiple sharded tables and merge the results (already implemented in `OrderService`)
-- Sharded table name format: `{base_table_name}_{YYYYMM}`, e.g., `orders_202501`
-- Table structure definitions are unified in migrations for easy maintenance and version control
-- The year-month information in the order number can directly locate the sharded table, improving query efficiency
+The project supports monthly sharding strategy and has implemented monthly sharding for order tables. For detailed documentation on how to create, use, and modify sharding tables, please refer to [docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md).
 
 ### Security Features
 
@@ -363,9 +301,10 @@ upx -9 main
 |----------|-------------|
 | [API.md](./docs/API.md) | Complete API reference with examples |
 | [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture and design |
+| [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | Database sharding guide (creating, using, and modifying sharding tables) |
+| [BUILD.md](./docs/BUILD.md) | Build and deployment |
+| [TESTING.md](./docs/TESTING.md) | Testing guide (unit & integration) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |
-| [TESTING.md](./TESTING.md) | Testing guide (unit & integration) |
-| [BUILD.md](./BUILD.md) | Build and deployment |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
 | [Frontend Guide](./html/DEVELOPMENT.md) | Frontend development guide |
 
