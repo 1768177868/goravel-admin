@@ -31,6 +31,7 @@ func Admin() {
 	optionController := admin.NewOptionController()
 	exportController := admin.NewExportController()
 	attachmentController := admin.NewAttachmentController()
+	orderController := admin.NewOrderController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -77,12 +78,8 @@ func Admin() {
 			router.Put("admins/{id}/password", passwordController.ResetPassword)
 
 			// 管理员管理
-			router.Get("admins", adminController.Index)
+			router.Resource("admins", adminController)
 			router.Post("admins/export", adminController.Export)
-			router.Get("admins/{id}", adminController.Show)
-			router.Post("admins", adminController.Store)
-			router.Put("admins/{id}", adminController.Update)
-			router.Delete("admins/{id}", adminController.Destroy)
 			router.Delete("admins/{id}/tokens", adminAuthController.KickOutUser)                     // 踢出指定用户的所有token
 			router.Post("admins/{id}/unbind-google-auth", adminController.UnbindGoogleAuthenticator) // 解绑管理员的谷歌验证码
 
@@ -121,7 +118,7 @@ func Admin() {
 			router.Get("operation-logs/{id}", operationLogController.Show)
 			router.Delete("operation-logs/{id}", operationLogController.Destroy)
 			router.Post("operation-logs/batch-delete", operationLogController.BatchDestroy)
-			router.Post("operation-logs/clean", operationLogController.Clean)
+			// router.Post("operation-logs/clean", operationLogController.Clean)
 
 			// 导出管理
 			router.Get("exports", exportController.Index)
@@ -136,14 +133,14 @@ func Admin() {
 			router.Get("login-logs/{id}", loginLogController.Show)
 			router.Delete("login-logs/{id}", loginLogController.Destroy)
 			router.Post("login-logs/batch-delete", loginLogController.BatchDestroy)
-			router.Post("login-logs/clean", loginLogController.Clean)
+			// router.Post("login-logs/clean", loginLogController.Clean)
 
 			// 系统日志
 			router.Get("system-logs", systemLogController.Index)
 			router.Get("system-logs/{id}", systemLogController.Show)
 			router.Delete("system-logs/{id}", systemLogController.Destroy)
 			router.Post("system-logs/batch-delete", systemLogController.BatchDestroy)
-			router.Post("system-logs/clean", systemLogController.Clean)
+			// router.Post("system-logs/clean", systemLogController.Clean)
 
 			// Dashboard 统计
 			// 原路由：按需查询特定数据（适合一次性查询或按需刷新）
@@ -179,6 +176,11 @@ func Admin() {
 			router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)
 			router.Delete("attachments/{id}", attachmentController.Destroy)
 			router.Post("attachments/batch-delete", attachmentController.BatchDestroy)
+
+			// 订单管理
+			router.Resource("orders", orderController)
+			router.Post("orders/export", orderController.Export)
+
 		})
 
 	})

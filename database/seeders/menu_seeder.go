@@ -247,6 +247,19 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "订单管理",
+		Slug:      "order",
+		Icon:      "ShoppingCart",
+		Path:      "/orders",
+		Component: "order/index",
+		Type:      2,
+		Status:    1,
+		Sort:      12,
+		IsHidden:  0,
+	})
+
 	// 创建日志管理父菜单
 	logMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,

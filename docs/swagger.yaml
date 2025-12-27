@@ -111,6 +111,30 @@ definitions:
         example: admin
         type: string
     type: object
+  admin.OrderProductItem:
+    properties:
+      price:
+        description: 单价
+        example: 99.99
+        type: number
+      product_id:
+        description: 商品ID
+        example: 1
+        type: integer
+      product_name:
+        description: 商品名称
+        example: 商品名称
+        type: string
+      quantity:
+        description: 数量
+        example: 2
+        type: integer
+    required:
+    - price
+    - product_id
+    - product_name
+    - quantity
+    type: object
   admin.PaginatedAdminResponse:
     properties:
       code:
@@ -607,6 +631,325 @@ paths:
       summary: 导出管理员列表
       tags:
       - 管理员管理
+  /api/admin/orders:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取订单列表，支持多条件筛选，查询时间范围不能超过3个月
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 用户ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 订单号（模糊搜索）
+        in: query
+        name: order_no
+        type: string
+      - description: 订单状态（pending/paid/cancelled）
+        in: query
+        name: status
+        type: string
+      - description: 最小金额
+        in: query
+        name: min_amount
+        type: number
+      - description: 最大金额
+        in: query
+        name: max_amount
+        type: number
+      - description: 开始时间（格式：2006-01-02 15:04:05）
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间（格式：2006-01-02 15:04:05）
+        in: query
+        name: end_time
+        type: string
+      - description: 排序（格式：字段:asc/desc，如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取订单列表
+      tags:
+      - 订单管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新订单，自动防止重复提交
+      parameters:
+      - description: 用户ID
+        in: body
+        name: user_id
+        required: true
+        schema:
+          type: integer
+      - description: 订单金额
+        in: body
+        name: amount
+        required: true
+        schema:
+          type: number
+      - description: 商品列表
+        in: body
+        name: products
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/admin.OrderProductItem'
+          type: array
+      - description: 请求ID（用于防重复提交，不传则自动生成）
+        in: body
+        name: request_id
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误或重复提交
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建订单
+      tags:
+      - 订单管理
+  /api/admin/orders/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除订单及其详情
+      parameters:
+      - description: 订单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除订单
+      tags:
+      - 订单管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取订单详细信息，包括订单详情列表
+      parameters:
+      - description: 订单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 订单不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取订单详情
+      tags:
+      - 订单管理
+    put:
+      consumes:
+      - application/json
+      description: 更新订单信息（主要是状态）
+      parameters:
+      - description: 订单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 订单状态
+        in: body
+        name: status
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新订单
+      tags:
+      - 订单管理
+  /api/admin/orders/export:
+    post:
+      consumes:
+      - application/json
+      description: 根据筛选条件导出订单列表为CSV文件，支持与列表查询相同的筛选条件，查询时间范围不能超过3个月
+      parameters:
+      - description: 用户ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 订单号（模糊搜索）
+        in: query
+        name: order_no
+        type: string
+      - description: 订单状态（pending/paid/cancelled）
+        in: query
+        name: status
+        type: string
+      - description: 最小金额
+        in: query
+        name: min_amount
+        type: number
+      - description: 最大金额
+        in: query
+        name: max_amount
+        type: number
+      - description: 开始时间（格式：2006-01-02 15:04:05）
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间（格式：2006-01-02 15:04:05）
+        in: query
+        name: end_time
+        type: string
+      - description: 排序（格式：字段:asc/desc，如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出成功，返回文件下载信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 导出订单列表
+      tags:
+      - 订单管理
+  /swagger:
+    get:
+      consumes:
+      - application/json
+      description: Description
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      summary: Summary
+      tags:
+      - example
 securityDefinitions:
   BearerAuth:
     description: JWT 认证，格式：Bearer {token}

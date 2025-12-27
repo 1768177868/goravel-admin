@@ -13,10 +13,14 @@ type Kernel struct {
 
 func (kernel *Kernel) Schedule() []schedule.Event {
 	return []schedule.Event{
-		// 每天凌晨2点执行，清理3个月前的日志
-		facades.Schedule().Command("app:clear-logs").DailyAt("02:00").OnOneServer(),
-		// 每天凌晨3点执行，清理3天前的分片文件
-		facades.Schedule().Command("app:clear-chunks").DailyAt("03:00").OnOneServer(),
+		// 每天凌晨2点执行（北京时间），清理6个月前的日志
+		// 北京时间 02:00 = UTC 18:00（前一天）
+		facades.Schedule().Command("app:clear-logs").DailyAt("18:00").OnOneServer(),
+		// 每天凌晨3点执行（北京时间），清理3天前的分片文件
+		// 北京时间 03:00 = UTC 19:00（前一天）
+		facades.Schedule().Command("app:clear-chunks").DailyAt("19:00").OnOneServer(),
+		// 每月1号凌晨1点执行（UTC时间），创建下个月的订单分表
+		facades.Schedule().Command("order:create-sharding-tables").Monthly().OnOneServer(),
 	}
 }
 func (kernel *Kernel) Commands() []console.Command {
@@ -26,5 +30,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.CreateToken{},
 		&commands.QueueStats{},
 		&commands.QueueClear{},
+		commands.NewCreateOrderShardingTables(),
 	}
 }

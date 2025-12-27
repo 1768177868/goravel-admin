@@ -15,7 +15,7 @@ func (s *PermissionSeeder) Signature() string {
 
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
-	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu models.Menu
+	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu, orderMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
@@ -35,6 +35,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "export").First(&exportMenu)
 	facades.Orm().Query().Where("slug", "attachment").First(&attachmentMenu)
 	facades.Orm().Query().Where("slug", "notification").First(&notificationMenu)
+	facades.Orm().Query().Where("slug", "order").First(&orderMenu)
 	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联（或者可以创建 dashboard 菜单）
 	// 如果 dashboard 菜单不存在，使用 profileMenu 作为后备
 	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
@@ -143,6 +144,13 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "Dashboard数据", Slug: "dashboard.data", Method: "GET", Path: "/api/admin/dashboard/*", Description: "查看Dashboard统计数据", Status: 1, Sort: 1, MenuID: dashboardMenu.ID},
 		// 通知管理
 		{Name: "创建通知", Slug: "notification.store", Method: "POST", Path: "/api/admin/notifications", Description: "创建通知/公告/私信", Status: 1, Sort: 1, MenuID: notificationMenu.ID},
+		// 订单管理
+		{Name: "订单列表", Slug: "order.index", Method: "GET", Path: "/api/admin/orders", Description: "查看订单列表", Status: 1, Sort: 1, MenuID: orderMenu.ID},
+		{Name: "订单详情", Slug: "order.show", Method: "GET", Path: "/api/admin/orders/*", Description: "查看订单详情", Status: 1, Sort: 2, MenuID: orderMenu.ID},
+		{Name: "订单创建", Slug: "order.store", Method: "POST", Path: "/api/admin/orders", Description: "创建订单", Status: 1, Sort: 3, MenuID: orderMenu.ID},
+		{Name: "订单更新", Slug: "order.update", Method: "PUT", Path: "/api/admin/orders/*", Description: "更新订单", Status: 1, Sort: 4, MenuID: orderMenu.ID},
+		{Name: "订单删除", Slug: "order.destroy", Method: "DELETE", Path: "/api/admin/orders/*", Description: "删除订单", Status: 1, Sort: 5, MenuID: orderMenu.ID},
+		{Name: "订单导出", Slug: "order.export", Method: "POST", Path: "/api/admin/orders/export", Description: "导出订单列表", Status: 1, Sort: 6, MenuID: orderMenu.ID},
 	}
 
 	for _, perm := range permissions {

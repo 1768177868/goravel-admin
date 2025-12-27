@@ -21,7 +21,7 @@ func (r *ClearLogs) Signature() string {
 
 // Description The console command description.
 func (r *ClearLogs) Description() string {
-	return "清理3个月前的日志记录（操作日志、登录日志、系统日志）"
+	return "清理6个月前的日志记录（操作日志、登录日志、系统日志）"
 }
 
 // Extend The console command extend.
@@ -31,14 +31,14 @@ func (r *ClearLogs) Extend() command.Extend {
 
 // Handle Execute the console command.
 func (r *ClearLogs) Handle(ctx console.Context) error {
-	// 计算3个月前的日期
-	threeMonthsAgo := time.Now().AddDate(0, -3, 0)
+	// 计算6个月前的日期
+	monthsAgo := time.Now().AddDate(0, -6, 0)
 
-	ctx.Info("开始清理3个月前的日志...")
+	ctx.Info("开始清理6个月前的日志...")
 
 	// 清理操作日志
 	operationLogResult, err := facades.Orm().Query().Model(&models.OperationLog{}).
-		Where("created_at < ?", threeMonthsAgo).
+		Where("created_at < ?", monthsAgo).
 		Delete(&models.OperationLog{})
 	if err != nil {
 		ctx.Error("清理操作日志失败: " + err.Error())
@@ -48,7 +48,7 @@ func (r *ClearLogs) Handle(ctx console.Context) error {
 
 	// 清理登录日志
 	loginLogResult, err := facades.Orm().Query().Model(&models.LoginLog{}).
-		Where("created_at < ?", threeMonthsAgo).
+		Where("created_at < ?", monthsAgo).
 		Delete(&models.LoginLog{})
 	if err != nil {
 		ctx.Error("清理登录日志失败: " + err.Error())
@@ -58,7 +58,7 @@ func (r *ClearLogs) Handle(ctx console.Context) error {
 
 	// 清理系统日志
 	systemLogResult, err := facades.Orm().Query().Model(&models.SystemLog{}).
-		Where("created_at < ?", threeMonthsAgo).
+		Where("created_at < ?", monthsAgo).
 		Delete(&models.SystemLog{})
 	if err != nil {
 		ctx.Error("清理系统日志失败: " + err.Error())

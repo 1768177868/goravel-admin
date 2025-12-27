@@ -81,4 +81,3 @@ func IsPostgreSQL() bool {
 	dbConnection := facades.Config().GetString("database.default", "sqlite")
 	return dbConnection == "postgres"
 }
-

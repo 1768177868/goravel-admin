@@ -128,6 +128,8 @@ import { useListPage } from '../../composables/useListPage'
 import { useCrud } from '../../composables/useCrud'
 import { usePermission } from '../../composables/usePermission'
 import { getMethodOptions } from '../../utils/fieldOptions'
+import { getSevenDaysAgo } from '../../utils/dateUtils'
+import { validateTimeRange, OPERATION_LOG_MAX_TIME_RANGE_MONTHS } from '../../utils/timeRangeValidator'
 import {
   getOperationLogList,
   getOperationLogDetail,
@@ -212,24 +214,7 @@ const fieldMapping = {
   'created_at': 'created_at'
 }
 
-// 格式化日期为 YYYY-MM-DD HH:mm:ss
-const formatDateTime = (date) => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-}
-
-// 获取7天前的日期时间
-const getSevenDaysAgo = () => {
-  const date = new Date()
-  date.setDate(date.getDate() - 7)
-  date.setHours(0, 0, 0, 0) // 设置为当天的00:00:00
-  return formatDateTime(date)
-}
+// 使用共用的日期工具函数（已从 utils/dateUtils 导入）
 
 // 初始搜索表单数据
 const initialSearchForm = {
@@ -314,7 +299,7 @@ const {
   loading,
   searchForm,
   loadData,
-  handleSearch,
+  handleSearch: handleSearchBase,
   handleReset,
   handlePageChange,
   handleSortChange,
@@ -329,6 +314,20 @@ const {
   },
   transformData: transformOperationLogData
 })
+
+// 包装搜索处理，添加时间范围验证
+const handleSearch = () => {
+  // 验证时间范围
+  if (searchForm.start_time && searchForm.end_time) {
+    const validation = validateTimeRange(searchForm.start_time, searchForm.end_time, OPERATION_LOG_MAX_TIME_RANGE_MONTHS)
+    if (!validation.valid) {
+      ElMessage.warning(validation.error || t('log.time_range_exceeded'))
+      return
+    }
+  }
+  
+  handleSearchBase()
+}
 
 // 将复数形式转换为单数形式，以匹配权限配置中的 slug
 // 支持处理：复数形式（roles）、连字符形式（operation-logs）、下划线形式（operation_logs）

@@ -39,6 +39,24 @@ func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint,
 
 // Index 获取操作日志列表
 func (r *OperationLogController) Index(ctx http.Context) http.Response {
+	// 验证时间范围（操作日志查询限制为3个月，可通过配置修改）
+	startTimeStr := ctx.Request().Query("start_time", "")
+	endTimeStr := ctx.Request().Query("end_time", "")
+	if startTimeStr != "" && endTimeStr != "" {
+		startTimeUTC := helpers.GetTimeQueryParam(ctx, "start_time")
+		endTimeUTC := helpers.GetTimeQueryParam(ctx, "end_time")
+		if startTimeUTC != "" && endTimeUTC != "" {
+			startTime, err1 := time.Parse("2006-01-02 15:04:05", startTimeUTC)
+			endTime, err2 := time.Parse("2006-01-02 15:04:05", endTimeUTC)
+			if err1 == nil && err2 == nil {
+				valid, err := utils.ValidateTimeRange(startTime, endTime, 3)
+				if !valid {
+					return response.Error(ctx, http.StatusBadRequest, err.Error())
+				}
+			}
+		}
+	}
+
 	query := r.buildQuery(ctx)
 	var logs []models.OperationLog
 	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
@@ -59,8 +77,8 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	request := ctx.Request().Query("request", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTimeStr := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTimeStr := helpers.GetTimeQueryParam(ctx, "end_time")
 
 	if adminID != "" {
 		query = query.Where("admin_id", adminID)
@@ -99,11 +117,11 @@ func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
 		// 使用工具函数应用全文索引搜索
 		query = utils.ApplyFulltextSearch(query, "request", request)
 	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
+	if startTimeStr != "" {
+		query = query.Where("created_at >= ?", startTimeStr)
 	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
+	if endTimeStr != "" {
+		query = query.Where("created_at <= ?", endTimeStr)
 	}
 
 	orderBy := ctx.Request().Query("order_by", "")

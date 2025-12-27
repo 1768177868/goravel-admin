@@ -146,6 +146,12 @@ const routes = [
         meta: { titleKey: 'menu.blacklist_management' }
       },
       {
+        path: 'orders',
+        name: 'Orders',
+        component: () => lazyLoad(() => import('../views/order/OrderList.vue')),
+        meta: { titleKey: 'menu.order_management' }
+      },
+      {
         path: 'online-users',
         name: 'OnlineUser',
         component: () => lazyLoad(() => import('../views/onlineUser/OnlineUserList.vue')),

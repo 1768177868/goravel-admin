@@ -41,6 +41,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000025AddLinkTypeToMenus{},
 		&migrations.M20250101000026ModifyMenusPathLength{},
 		&migrations.M20251227063517AddFulltextIndexToOperationLogsRequest{},
+		&migrations.M20250128000001CreateOrdersTable{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {
