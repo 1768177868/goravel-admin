@@ -34,6 +34,7 @@
             </el-button>
             
             <el-table
+              :key="tableKey"
               :data="formData.products"
               border
               style="width: 100%; margin-top: 10px"
@@ -138,7 +139,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -159,6 +160,7 @@ const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
+const tableKey = ref(0) // 用于强制重新渲染表格
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -251,39 +253,67 @@ const formRules = computed(() => ({
 }))
 
 // 监听 dialogVisible 变化
-watch(dialogVisible, (visible) => {
+watch(dialogVisible, async (visible) => {
   if (visible) {
-    resetForm()
+    // 对话框打开时重置表单，确保每次打开都是干净的状态
+    await resetForm()
+  } else {
+    // 对话框关闭时也重置表单，确保数据不会残留
+    await resetForm()
   }
 })
 
-const resetForm = () => {
+const resetForm = async () => {
   loading.value = false
+  submitting.value = false
+  
   // 完全重置表单数据
   formData.user_id = null
   formData.remark = ''
-  // 完全清空商品数组（使用 length = 0 更彻底）
-  formData.products.length = 0
-  // 默认添加一个空的商品行（用于新订单）
+  
+  // 完全清空商品数组（使用 splice 确保彻底清空所有引用）
+  while (formData.products.length > 0) {
+    formData.products.pop()
+  }
+  
+  // 等待 DOM 更新
+  await nextTick()
+  
+  // 强制重新渲染表格（通过改变 key，必须在添加数据前）
+  tableKey.value++
+  
+  // 等待 key 变化生效
+  await nextTick()
+  
+  // 默认添加一个空的商品行（用于新订单）- 创建全新的对象
   formData.products.push({
     product_id: null,
     product_name: '',
     price: 0,
     quantity: 1
   })
+  
+  // 等待 DOM 更新后再重置表单验证
+  await nextTick()
+  
   // 重置表单验证状态
-  formRef.value?.resetFields()
-  // 清除表单验证错误
-  formRef.value?.clearValidate()
+  if (formRef.value) {
+    formRef.value.resetFields()
+    formRef.value.clearValidate()
+  }
+  
   // 重新计算金额
   calculateAmount()
 }
 
-const handleDialogClose = () => {
-  // 关闭对话框时重置表单（如果还没有重置的话）
-  if (formData.products.length > 0) {
-    resetForm()
-  }
+// 组件挂载时也重置一次，确保初始状态是干净的
+onMounted(() => {
+  resetForm()
+})
+
+const handleDialogClose = async () => {
+  // 关闭对话框时总是重置表单，确保下次打开时是干净的
+  await resetForm()
   emit('update:modelValue', false)
 }
 
@@ -322,10 +352,9 @@ const handleSubmit = async () => {
 
     await createOrder(requestData)
     ElMessage.success(t('order.create_success'))
-    // 立即重置表单（清空商品列表等）
-    resetForm()
     emit('success')
-    handleDialogClose()
+    // 关闭对话框（会自动触发 resetForm）
+    await handleDialogClose()
   } catch (error) {
     logger.error('Create order error:', error)
     ErrorHandler.handle(error, { silent: true })
