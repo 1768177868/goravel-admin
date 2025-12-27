@@ -124,7 +124,28 @@ func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 	patternRegex := regexp.MustCompile(fmt.Sprintf("^%s_\\d{6}$", regexp.QuoteMeta(baseTableName)))
 
 	for _, row := range rows {
-		if tableName, ok := row["table_name"].(string); ok {
+		// 尝试不同的字段名格式（MySQL 可能返回不同的大小写）
+		var tableName string
+		var ok bool
+
+		// 尝试 table_name (小写)
+		if tableName, ok = row["table_name"].(string); !ok {
+			// 尝试 TABLE_NAME (大写)
+			if tableName, ok = row["TABLE_NAME"].(string); !ok {
+				// 尝试遍历所有键
+				for key, value := range row {
+					if (key == "table_name" || key == "TABLE_NAME" || key == "Table_Name") && value != nil {
+						if str, ok := value.(string); ok {
+							tableName = str
+							ok = true
+							break
+						}
+					}
+				}
+			}
+		}
+
+		if ok && tableName != "" {
 			// 验证表名格式
 			if patternRegex.MatchString(tableName) {
 				tableNames = append(tableNames, tableName)

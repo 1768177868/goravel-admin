@@ -34,7 +34,7 @@ func (r *M20250101000018AddTitleToOperationLogs) Up() error {
 	// 如果列不存在，则添加
 	if !hasTitle {
 		return facades.Schema().Table("operation_logs", func(table schema.Blueprint) {
-			table.String("title", 255).Nullable().Comment("操作标题")
+			table.String("title", 255).Nullable().Comment("操作标题").After("method")
 		})
 	}
 
@@ -49,4 +49,3 @@ func (r *M20250101000018AddTitleToOperationLogs) Down() error {
 	}
 	return nil
 }
-
