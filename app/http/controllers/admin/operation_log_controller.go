@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
+	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/utils"
 )
@@ -42,15 +44,44 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	// 验证时间范围（操作日志查询限制为3个月，可通过配置修改）
 	startTimeStr := ctx.Request().Query("start_time", "")
 	endTimeStr := ctx.Request().Query("end_time", "")
-	if startTimeStr != "" && endTimeStr != "" {
+
+	// 如果只填了开始时间，结束时间默认为当前时间
+	if startTimeStr != "" {
 		startTimeUTC := helpers.GetTimeQueryParam(ctx, "start_time")
-		endTimeUTC := helpers.GetTimeQueryParam(ctx, "end_time")
-		if startTimeUTC != "" && endTimeUTC != "" {
+		if startTimeUTC != "" {
 			startTime, err1 := time.Parse("2006-01-02 15:04:05", startTimeUTC)
-			endTime, err2 := time.Parse("2006-01-02 15:04:05", endTimeUTC)
-			if err1 == nil && err2 == nil {
+			if err1 == nil {
+				// 如果结束时间为空，使用当前时间
+				var endTime time.Time
+				if endTimeStr != "" {
+					endTimeUTC := helpers.GetTimeQueryParam(ctx, "end_time")
+					if endTimeUTC != "" {
+						var err2 error
+						endTime, err2 = time.Parse("2006-01-02 15:04:05", endTimeUTC)
+						if err2 != nil {
+							endTime = time.Now().UTC()
+						}
+					} else {
+						endTime = time.Now().UTC()
+					}
+				} else {
+					endTime = time.Now().UTC()
+				}
+
 				valid, err := utils.ValidateTimeRange(startTime, endTime, 3)
 				if !valid {
+					// 如果是 TimeRangeError，使用翻译键和参数进行翻译
+					if timeRangeErr, ok := err.(*utils.TimeRangeError); ok {
+						message := trans.Get(ctx, timeRangeErr.Key)
+						// 如果有参数，替换占位符 {key}
+						if timeRangeErr.Params != nil {
+							for key, value := range timeRangeErr.Params {
+								placeholder := fmt.Sprintf("{%s}", key)
+								message = strings.ReplaceAll(message, placeholder, fmt.Sprintf("%v", value))
+							}
+						}
+						return response.Error(ctx, http.StatusBadRequest, message)
+					}
 					return response.Error(ctx, http.StatusBadRequest, err.Error())
 				}
 			}

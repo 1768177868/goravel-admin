@@ -422,6 +422,8 @@
     "export_success": "导出成功",
     "create_success": "创建成功",
     "products": "商品列表",
+    "time_range_exceeded": "查询时间范围不能超过{months}个月",
+    "start_time_after_end_time": "开始时间不能晚于结束时间",
     "add_product": "添加商品",
     "product_id": "商品ID",
     "product_name_placeholder": "请输入商品名称",
@@ -608,7 +610,8 @@
     "select_users_first": "请先选择要踢下线的用户"
   },
   "log": {
-    "time_range_exceeded": "查询时间范围不能超过3个月",
+    "time_range_exceeded": "查询时间范围不能超过{months}个月",
+    "start_time_after_end_time": "开始时间不能晚于结束时间",
     "operation_log": "操作日志",
     "login_log": "登录日志",
     "system_log": "系统日志",

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -66,6 +67,18 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 	// 验证时间范围（订单查询限制为3个月，可通过配置修改）
 	valid, err := utils.ValidateTimeRange(startTime, endTime, 3)
 	if !valid {
+		// 如果是 TimeRangeError，使用翻译键和参数进行翻译
+		if timeRangeErr, ok := err.(*utils.TimeRangeError); ok {
+			message := trans.Get(ctx, timeRangeErr.Key)
+			// 如果有参数，替换占位符 {key}
+			if timeRangeErr.Params != nil {
+				for key, value := range timeRangeErr.Params {
+					placeholder := fmt.Sprintf("{%s}", key)
+					message = strings.ReplaceAll(message, placeholder, fmt.Sprintf("%v", value))
+				}
+			}
+			return services.OrderFilters{}, response.Error(ctx, http.StatusBadRequest, message)
+		}
 		return services.OrderFilters{}, response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
 

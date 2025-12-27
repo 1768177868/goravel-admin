@@ -42,15 +42,29 @@ func GetShardingTableNames(baseTableName string, startTime, endTime time.Time) [
 // 可以通过配置覆盖，用于限制查询时间范围，避免跨太多分表
 const DefaultMaxTimeRangeMonths = 3
 
+// TimeRangeError 时间范围验证错误
+type TimeRangeError struct {
+	Key    string
+	Params map[string]any
+}
+
+func (e *TimeRangeError) Error() string {
+	// 返回翻译键，由调用方进行翻译
+	return e.Key
+}
+
 // ValidateTimeRange 验证时间范围是否超过指定月数
 // startTime: 开始时间
 // endTime: 结束时间
 // maxMonths: 最大允许的月数，如果为0则使用默认值 DefaultMaxTimeRangeMonths
-// 返回: 是否有效，错误信息
+// 返回: 是否有效，错误信息（错误信息包含翻译键和参数）
 func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, error) {
 	// 检查开始时间是否晚于结束时间
 	if startTime.After(endTime) {
-		return false, fmt.Errorf("开始时间不能晚于结束时间")
+		return false, &TimeRangeError{
+			Key:    "start_time_after_end_time",
+			Params: nil,
+		}
 	}
 
 	// 确定最大月数
@@ -62,7 +76,12 @@ func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, er
 	// 检查时间范围是否超过指定月数
 	maxTimeLater := startTime.AddDate(0, maxMonthsValue, 0)
 	if endTime.After(maxTimeLater) {
-		return false, fmt.Errorf("查询时间范围不能超过%d个月", maxMonthsValue)
+		return false, &TimeRangeError{
+			Key: "time_range_exceeded",
+			Params: map[string]any{
+				"months": maxMonthsValue,
+			},
+		}
 	}
 
 	return true, nil

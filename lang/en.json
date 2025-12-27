@@ -214,6 +214,8 @@
     "monitor_disk_usage_medium": "Disk usage is relatively high: {value}%",
     "monitor_cpu_usage_high": "CPU usage is too high: {value}%",
     "monitor_cpu_usage_medium": "CPU usage is relatively high: {value}%",
-    "monitor_file_descriptors_usage_high": "File descriptors usage is too high: {value}%"
+    "monitor_file_descriptors_usage_high": "File descriptors usage is too high: {value}%",
+    "time_range_exceeded": "Query time range cannot exceed {months} months",
+    "start_time_after_end_time": "Start time cannot be later than end time"
   }
 }

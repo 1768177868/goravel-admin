@@ -7,7 +7,7 @@
  * @param {string|Date} startTime - 开始时间（字符串格式：YYYY-MM-DD HH:mm:ss 或 Date 对象）
  * @param {string|Date} endTime - 结束时间（字符串格式：YYYY-MM-DD HH:mm:ss 或 Date 对象）
  * @param {number} maxMonths - 最大允许的月数，默认 3 个月
- * @returns {{ valid: boolean, error?: string }} 验证结果
+ * @returns {{ valid: boolean, error?: string, errorKey?: string, errorParams?: object }} 验证结果
  */
 export function validateTimeRange(startTime, endTime, maxMonths = 3) {
   if (!startTime || !endTime) {
@@ -25,7 +25,11 @@ export function validateTimeRange(startTime, endTime, maxMonths = 3) {
 
   // 检查开始时间是否晚于结束时间
   if (start > end) {
-    return { valid: false, error: '开始时间不能晚于结束时间' }
+    return { 
+      valid: false, 
+      errorKey: 'start_time_after_end_time',
+      error: '开始时间不能晚于结束时间' // 保留作为后备
+    }
   }
 
   // 计算时间差（月数）
@@ -39,7 +43,12 @@ export function validateTimeRange(startTime, endTime, maxMonths = 3) {
 
   // 检查是否超过最大月数
   if (monthsDiff >= maxMonths) {
-    return { valid: false, error: `查询时间范围不能超过${maxMonths}个月` }
+    return { 
+      valid: false, 
+      errorKey: 'time_range_exceeded',
+      errorParams: { months: maxMonths },
+      error: `查询时间范围不能超过${maxMonths}个月` // 保留作为后备
+    }
   }
 
   return { valid: true }

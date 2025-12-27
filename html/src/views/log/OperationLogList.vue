@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
@@ -315,15 +315,83 @@ const {
   transformData: transformOperationLogData
 })
 
+// 获取当前时间的字符串格式（YYYY-MM-DD HH:mm:ss）
+const getCurrentTimeString = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const seconds = String(now.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+// 验证时间范围的函数
+const validateTimeRangeForSearch = () => {
+  // 如果只填了开始时间，结束时间默认为当前时间
+  if (searchForm.start_time) {
+    const endTime = searchForm.end_time || getCurrentTimeString()
+    const validation = validateTimeRange(searchForm.start_time, endTime, OPERATION_LOG_MAX_TIME_RANGE_MONTHS)
+    if (!validation.valid) {
+      // 优先使用翻译键
+      let errorMessage = validation.error
+      if (validation.errorKey) {
+        const translationKey = `log.${validation.errorKey}`
+        if (validation.errorParams) {
+          errorMessage = t(translationKey, validation.errorParams)
+        } else {
+          errorMessage = t(translationKey)
+        }
+      }
+      ElMessage.warning(errorMessage)
+      return false
+    }
+  }
+  return true
+}
+
+// 监听开始时间和结束时间的变化，实时验证
+const isInitialized = ref(false)
+watch(
+  () => [searchForm.start_time, searchForm.end_time],
+  ([newStartTime, newEndTime], [oldStartTime, oldEndTime]) => {
+    // 跳过初始化时的触发
+    if (!isInitialized.value) {
+      isInitialized.value = true
+      return
+    }
+    
+    // 只在开始时间或结束时间发生变化时验证
+    if (newStartTime !== oldStartTime || newEndTime !== oldEndTime) {
+      // 如果只填了开始时间，结束时间默认为当前时间
+      if (newStartTime) {
+        const endTime = newEndTime || getCurrentTimeString()
+        const validation = validateTimeRange(newStartTime, endTime, OPERATION_LOG_MAX_TIME_RANGE_MONTHS)
+        if (!validation.valid) {
+          // 优先使用翻译键
+          let errorMessage = validation.error
+          if (validation.errorKey) {
+            const translationKey = `log.${validation.errorKey}`
+            if (validation.errorParams) {
+              errorMessage = t(translationKey, validation.errorParams)
+            } else {
+              errorMessage = t(translationKey)
+            }
+          }
+          ElMessage.warning(errorMessage)
+        }
+      }
+    }
+  },
+  { immediate: false }
+)
+
 // 包装搜索处理，添加时间范围验证
 const handleSearch = () => {
   // 验证时间范围
-  if (searchForm.start_time && searchForm.end_time) {
-    const validation = validateTimeRange(searchForm.start_time, searchForm.end_time, OPERATION_LOG_MAX_TIME_RANGE_MONTHS)
-    if (!validation.valid) {
-      ElMessage.warning(validation.error || t('log.time_range_exceeded'))
-      return
-    }
+  if (!validateTimeRangeForSearch()) {
+    return
   }
   
   handleSearchBase()

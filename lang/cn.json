@@ -218,6 +218,8 @@
     "monitor_disk_usage_medium": "磁盘使用率较高: {value}%",
     "monitor_cpu_usage_high": "CPU使用率过高: {value}%",
     "monitor_cpu_usage_medium": "CPU使用率较高: {value}%",
-    "monitor_file_descriptors_usage_high": "文件描述符使用率过高: {value}%"
+    "monitor_file_descriptors_usage_high": "文件描述符使用率过高: {value}%",
+    "time_range_exceeded": "查询时间范围不能超过{months}个月",
+    "start_time_after_end_time": "开始时间不能晚于结束时间"
   }
 }

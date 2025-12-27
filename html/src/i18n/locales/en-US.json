@@ -422,6 +422,8 @@
     "export_success": "Export successful",
     "create_success": "Create successful",
     "products": "Products",
+    "time_range_exceeded": "Query time range cannot exceed {months} months",
+    "start_time_after_end_time": "Start time cannot be later than end time",
     "add_product": "Add Product",
     "product_id": "Product ID",
     "product_name_placeholder": "Please enter product name",
@@ -608,7 +610,8 @@
     "select_users_first": "Please select users to kick out first"
   },
   "log": {
-    "time_range_exceeded": "Query time range cannot exceed 3 months",
+    "time_range_exceeded": "Query time range cannot exceed {months} months",
+    "start_time_after_end_time": "Start time cannot be later than end time",
     "operation_log": "Operation Log",
     "login_log": "Login Log",
     "system_log": "System Log",
