@@ -52,10 +52,7 @@ func (r *M20251228004525AddPaymentMethodToOrdersShardingTables) Up() error {
 
 	// 分批处理
 	for i := 0; i < totalTables; i += batchSize {
-		end := i + batchSize
-		if end > totalTables {
-			end = totalTables
-		}
+		end := min(i+batchSize, totalTables)
 
 		batch := ordersTables[i:end]
 		progress := fmt.Sprintf("[%d/%d]", i+1, totalTables)
@@ -102,11 +99,12 @@ func (r *M20251228004525AddPaymentMethodToOrdersShardingTables) Up() error {
 			// 根据执行时间动态调整等待时间，让数据库恢复
 			// 执行时间短则等待时间短，执行时间长则等待时间长
 			if modifiedCount < totalTables {
-				// 最小等待10秒，最大等待60秒
-				// 等待时间 = 执行时间的20%，但不少于10秒，不超过60秒
-				waitTime := duration / 5
-				if waitTime < 10*time.Second {
-					waitTime = 10 * time.Second
+				// 最小等待2秒，最大等待60秒
+				// 等待时间 = 执行时间的50%，但不少于2秒，不超过60秒
+				// MySQL 8.0.29+ INSTANT ADD COLUMN 几乎瞬间完成，所以最小等待很短
+				waitTime := duration / 2
+				if waitTime < 2*time.Second {
+					waitTime = 2 * time.Second
 				}
 				if waitTime > 60*time.Second {
 					waitTime = 60 * time.Second
