@@ -480,40 +480,78 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		return resp
 	}
 
-	// 获取所有订单（不分页）
-	orders, err := r.orderService.GetAllOrdersForExport(filters)
+	// 获取所有订单及详情（不分页）
+	ordersWithDetails, err := r.orderService.GetAllOrdersWithDetailsForExport(filters)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
 			"filters": filters,
 		})
 	}
 
-	// 准备表头（使用翻译键）
+	// 准备表头（使用翻译键，包含商品信息）
 	headers := []string{
 		"export_header_id",
 		"export_header_order_no",
 		"export_header_user_id",
 		"export_header_amount",
 		"export_header_status",
+		"export_header_item_index",    // 商品序号
+		"export_header_product_id",    // 商品ID
+		"export_header_product_name",  // 商品名称
+		"export_header_price",         // 单价
+		"export_header_quantity",      // 数量
+		"export_header_subtotal",      // 小计
 		"export_header_remark",
 		"export_header_created_at",
-		"export_header_updated_at",
 	}
 
-	// 准备数据
+	// 准备数据（展开模式：每个商品一行）
 	var data [][]string
-	for _, order := range orders {
-		row := []string{
-			cast.ToString(order.ID),
-			order.OrderNo,
-			cast.ToString(order.UserID),
-			fmt.Sprintf("%.2f", order.Amount),
-			r.formatOrderStatus(ctx, order.Status),
-			order.Remark,
-			r.formatTime(order.CreatedAt),
-			r.formatTime(order.UpdatedAt),
+	for _, orderWithDetails := range ordersWithDetails {
+		order := orderWithDetails.Order
+		details := orderWithDetails.Details
+
+		// 如果订单没有商品，至少输出一行订单信息
+		if len(details) == 0 {
+			row := []string{
+				cast.ToString(order.ID),
+				order.OrderNo,
+				cast.ToString(order.UserID),
+				fmt.Sprintf("%.2f", order.Amount),
+				r.formatOrderStatus(ctx, order.Status),
+				"", // 商品序号
+				"", // 商品ID
+				"", // 商品名称
+				"", // 单价
+				"", // 数量
+				"", // 小计
+				order.Remark,
+				r.formatTime(order.CreatedAt),
+			}
+			data = append(data, row)
+		} else {
+			// 每个商品一行，添加商品序号（如：1/2, 2/2）
+			totalItems := len(details)
+			for idx, detail := range details {
+				itemIndex := fmt.Sprintf("%d/%d", idx+1, totalItems)
+				row := []string{
+					cast.ToString(order.ID),
+					order.OrderNo,
+					cast.ToString(order.UserID),
+					fmt.Sprintf("%.2f", order.Amount),
+					r.formatOrderStatus(ctx, order.Status),
+					itemIndex,
+					cast.ToString(detail.ProductID),
+					detail.ProductName,
+					fmt.Sprintf("%.2f", detail.Price),
+					cast.ToString(detail.Quantity),
+					fmt.Sprintf("%.2f", detail.Subtotal),
+					order.Remark,
+					r.formatTime(order.CreatedAt),
+				}
+				data = append(data, row)
+			}
 		}
-		data = append(data, row)
 	}
 
 	return response.Export(ctx, "export_success", headers, data, "orders")

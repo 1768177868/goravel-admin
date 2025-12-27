@@ -27,6 +27,8 @@ type OrderService interface {
 	GetOrdersWithDetails(filters OrderFilters, page, pageSize int) ([]OrderWithDetails, int64, error)
 	// GetAllOrdersForExport 获取所有订单用于导出（限制不超过3个月，不分页）
 	GetAllOrdersForExport(filters OrderFilters) ([]models.Order, error)
+	// GetAllOrdersWithDetailsForExport 获取所有订单及详情用于导出（限制不超过3个月，不分页）
+	GetAllOrdersWithDetailsForExport(filters OrderFilters) ([]OrderWithDetails, error)
 	// UpdateOrderStatus 更新订单状态（已废弃，使用 UpdateOrder）
 	UpdateOrderStatus(orderID uint, orderTime time.Time, status string) error
 	// UpdateOrder 更新订单（状态和备注）
@@ -519,6 +521,92 @@ func (s *OrderServiceImpl) GetAllOrdersForExport(filters OrderFilters) ([]models
 	// 这里简化处理，如果需要更精确的排序，可以在合并后统一排序
 
 	return allOrders, nil
+}
+
+// GetAllOrdersWithDetailsForExport 获取所有订单及详情用于导出（限制不超过3个月，不分页）
+func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters) ([]OrderWithDetails, error) {
+	// 验证时间范围不超过3个月
+	valid, err := utils.ValidateTimeRange(filters.StartTime, filters.EndTime)
+	if !valid {
+		return nil, err
+	}
+
+	// 获取需要查询的所有分表
+	tableNames := utils.GetShardingTableNames("orders", filters.StartTime, filters.EndTime)
+	if len(tableNames) == 0 {
+		return []OrderWithDetails{}, nil
+	}
+
+	// 查询所有分表并合并结果
+	var allOrders []models.Order
+
+	for _, tableName := range tableNames {
+		query := facades.Orm().Query().Table(tableName).
+			Where("created_at >= ?", filters.StartTime).
+			Where("created_at <= ?", filters.EndTime)
+
+		// 用户ID筛选
+		if filters.UserID > 0 {
+			query = query.Where("user_id", filters.UserID)
+		}
+
+		// 订单号模糊搜索
+		if filters.OrderNo != "" {
+			query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
+		}
+
+		// 订单状态筛选
+		if filters.Status != "" {
+			query = query.Where("status", filters.Status)
+		}
+
+		// 金额范围筛选
+		if filters.MinAmount > 0 {
+			query = query.Where("amount >= ?", filters.MinAmount)
+		}
+		if filters.MaxAmount > 0 {
+			query = query.Where("amount <= ?", filters.MaxAmount)
+		}
+
+		// 排序
+		orderBy := filters.OrderBy
+		if orderBy == "" {
+			orderBy = "created_at:desc"
+		}
+		query = s.applyOrderBy(query, orderBy)
+
+		var orders []models.Order
+		if err := query.Find(&orders); err != nil {
+			// 如果某个分表查询失败，继续查询其他分表
+			continue
+		}
+		allOrders = append(allOrders, orders...)
+	}
+
+	// 批量查询订单详情
+	result := make([]OrderWithDetails, len(allOrders))
+	for i, order := range allOrders {
+		result[i] = OrderWithDetails{
+			Order:   order,
+			Details: []models.OrderDetail{},
+		}
+
+		// 根据订单的 created_at 确定详情分表
+		// 通过格式化字符串再解析的方式转换
+		timeStr := order.CreatedAt.ToDateTimeString()
+		createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
+		utcLoc, _ := time.LoadLocation("UTC")
+		createdAt = createdAt.In(utcLoc)
+
+		// 查询订单详情
+		detailTableName := utils.GetShardingTableName("order_details", createdAt)
+		var details []models.OrderDetail
+		if err := facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Find(&details); err == nil {
+			result[i].Details = details
+		}
+	}
+
+	return result, nil
 }
 
 // UpdateOrderStatus 更新订单状态（已废弃，保留以兼容旧接口）
