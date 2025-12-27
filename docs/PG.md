@@ -33,7 +33,7 @@ sudo su - postgres
 /www/server/pgsql/bin/pg_ctl restart -D /www/server/pgsql/data
 
 # 重新创建扩展并验证
-/www/server/pgsql/bin/psql -U postgres -d database_name -p 5432 -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+/www/server/pgsql/bin/psql -U postgres -d database_name -p 5432 -c "CREATE EXTENSION IF NOT EXISTS citext;"
 /www/server/pgsql/bin/psql -U postgres -d database_name -p 5432 -c "\dx"
 
 # 可选（最常用的扩展）
@@ -146,6 +146,7 @@ SELECT * FROM pg_stat_user_tables WHERE relname = 'table_name';
 ```sql
 -- 列出所有索引
 \di
+\di table_name*
 -- 或
 SELECT indexname FROM pg_indexes WHERE tablename = 'table_name';
 
@@ -162,7 +163,7 @@ CREATE UNIQUE INDEX idx_name ON table_name(column_name);
 CREATE INDEX idx_name ON table_name(column1, column2);
 
 -- 创建 GIN 索引（用于全文搜索、数组等）
-CREATE INDEX idx_name ON table_name USING GIN(column_name);
+CREATE INDEX idx_name ON table_name USING GIN(column_name gin_trgm_ops);
 
 -- 创建 GIST 索引（用于几何数据、范围等）
 CREATE INDEX idx_name ON table_name USING GIST(column_name);
