@@ -8,10 +8,60 @@ import (
 	"github.com/goravel/framework/facades"
 	"gorm.io/sharding"
 
+	"goravel/app/constants"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 	"goravel/database"
 )
+
+// uintShardingAlgorithm 自定义分片算法函数，支持 uint 类型
+// 根据 user_id 计算分表索引（0 到 UserBalanceLogsShards-1）
+func uintShardingAlgorithm(value any) (suffix string, err error) {
+	numberOfShards := constants.UserBalanceLogsShards
+	var shardIndex int
+
+	switch v := value.(type) {
+	case uint:
+		shardIndex = int(v) % numberOfShards
+	case uint8:
+		shardIndex = int(v) % numberOfShards
+	case uint16:
+		shardIndex = int(v) % numberOfShards
+	case uint32:
+		shardIndex = int(v) % numberOfShards
+	case uint64:
+		shardIndex = int(v) % numberOfShards
+	case int:
+		shardIndex = v % numberOfShards
+		if shardIndex < 0 {
+			shardIndex = -shardIndex
+		}
+	case int8:
+		shardIndex = int(v) % numberOfShards
+		if shardIndex < 0 {
+			shardIndex = -shardIndex
+		}
+	case int16:
+		shardIndex = int(v) % numberOfShards
+		if shardIndex < 0 {
+			shardIndex = -shardIndex
+		}
+	case int32:
+		shardIndex = int(v) % numberOfShards
+		if shardIndex < 0 {
+			shardIndex = -shardIndex
+		}
+	case int64:
+		shardIndex = int(v) % numberOfShards
+		if shardIndex < 0 {
+			shardIndex = -shardIndex
+		}
+	default:
+		return "", fmt.Errorf("不支持的 ShardingKey 类型: %T", value)
+	}
+
+	return fmt.Sprintf("_%d", shardIndex), nil
+}
 
 type DatabaseServiceProvider struct {
 }
@@ -43,12 +93,14 @@ func (receiver *DatabaseServiceProvider) initGormSharding() error {
 	}
 
 	// 配置 user_balance_logs 表的分表
-	// ShardingKey: user_id - 分表键
-	// NumberOfShards: 64 - 分表数量（建议为 2 的幂次）
+	// ShardingKey: user_id - 分表键（uint 类型）
+	// NumberOfShards: 使用 constants.UserBalanceLogsShards 常量（建议为 2 的幂次）
+	// ShardingAlgorithm: 自定义算法函数，支持 uint 类型
 	// PrimaryKeyGenerator: PKSnowflake - 主键生成器（确保全局唯一）
 	err = db.Use(sharding.Register(sharding.Config{
 		ShardingKey:         "user_id",
-		NumberOfShards:      64,
+		NumberOfShards:      constants.UserBalanceLogsShards,
+		ShardingAlgorithm:   uintShardingAlgorithm,
 		PrimaryKeyGenerator: sharding.PKSnowflake,
 	}, "user_balance_logs"))
 	if err != nil {
@@ -59,6 +111,6 @@ func (receiver *DatabaseServiceProvider) initGormSharding() error {
 		return fmt.Errorf("注册 GORM Sharding 插件失败: %v", err)
 	}
 
-	facades.Log().Info("GORM Sharding 插件配置成功: user_balance_logs 表将按 user_id 分表（64个分表）")
+	facades.Log().Infof("GORM Sharding 插件配置成功: user_balance_logs 表将按 user_id 分表（%d个分表）", constants.UserBalanceLogsShards)
 	return nil
 }

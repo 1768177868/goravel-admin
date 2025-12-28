@@ -1,10 +1,9 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -45,7 +44,7 @@ func (s *LoginLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.LoginLog
 	}
 
 	if err := query.First(&log); err != nil {
-		return nil, fmt.Errorf("登录日志不存在: %v", err)
+		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 
 	return &log, nil

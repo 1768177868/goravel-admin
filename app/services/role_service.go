@@ -1,12 +1,12 @@
 package services
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -53,7 +53,7 @@ func (s *RoleServiceImpl) GetByID(id uint, withRelations bool) (*models.Role, er
 	}
 
 	if err := query.First(&role); err != nil {
-		return nil, fmt.Errorf("角色不存在: %v", err)
+		return nil, apperrors.ErrRoleNotFound.WithError(err)
 	}
 
 	return &role, nil

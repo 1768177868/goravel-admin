@@ -60,7 +60,9 @@
               />
             </template>
             <template v-else-if="column.slot === 'balance'" #default="{ row }">
-              <span style="color: #409EFF; font-weight: bold;">¥{{ formatMoney(row.balance || 0) }}</span>
+              <span style="color: #409EFF; font-weight: bold;">
+                {{ formatBalance(row.balance || 0, row.currency) }}
+              </span>
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
               <TableActionButtons
@@ -108,7 +110,8 @@ import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getUserList,
   deleteUser,
-  updateUser
+  updateUser,
+  updateBalance
 } from '../../api/user'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
@@ -147,6 +150,21 @@ const fieldMapping = {
   'created_at': 'created_at'
 }
 
+// 转换用户数据（确保字段名统一）
+const transformUserData = (user) => {
+  return {
+    id: user.id || user.ID,
+    username: user.username || user.Username || '',
+    nickname: user.nickname || user.Nickname || '',
+    email: user.email || user.Email || '',
+    phone: user.phone || user.Phone || '',
+    balance: user.balance || user.Balance || 0,
+    currency: user.currency || user.Currency || null,
+    status: user.status !== undefined ? user.status : (user.Status !== undefined ? user.Status : 1),
+    created_at: user.created_at || user.CreatedAt || ''
+  }
+}
+
 const {
   pagination,
   tableData,
@@ -170,7 +188,8 @@ const {
     tableRef,
     fieldMapping,
     defaultSort: 'id:desc'
-  }
+  },
+  transformData: transformUserData
 })
 
 const searchFields = computed(() => [
@@ -255,7 +274,7 @@ const tableColumns = computed(() => [
   {
     field: 'operation',
     title: t('table.operation'),
-    width: 200,
+    width: 220,
     fixed: 'right',
     slot: 'operation'
   }
@@ -264,13 +283,13 @@ const tableColumns = computed(() => [
 const getPrimaryActions = (row) => {
   return [
     {
+      key: 'edit',
       label: t('common.edit'),
-      action: 'edit',
       permission: 'user.update'
     },
     {
+      key: 'updateBalance',
       label: t('user.update_balance'),
-      action: 'updateBalance',
       permission: 'user.update',
       type: 'warning'
     }
@@ -280,21 +299,23 @@ const getPrimaryActions = (row) => {
 const getMoreActions = (row) => {
   return [
     {
+      key: 'balanceLogs',
+      command: 'balanceLogs',
       label: t('user.balance_logs'),
-      action: 'balanceLogs',
       permission: 'user.balance_logs'
     },
     {
+      key: 'delete',
+      command: 'delete',
       label: t('common.delete'),
-      action: 'delete',
       permission: 'user.destroy',
       type: 'danger'
     }
   ]
 }
 
-const handleAction = async (action, row) => {
-  switch (action) {
+const handleAction = async (command, row) => {
+  switch (command) {
     case 'edit':
       handleEdit(row)
       break
@@ -307,23 +328,108 @@ const handleAction = async (action, row) => {
     case 'delete':
       handleDelete(row)
       break
+    default:
+      logger.warn('Unknown action command:', command)
   }
 }
 
 const handleEdit = (row) => {
-  editId.value = row.id
+  editId.value = row.id || row.ID
   dialogVisible.value = true
 }
 
-const handleUpdateBalance = (row) => {
-  // 跳转到余额更新页面或打开对话框
-  // 这里可以打开一个对话框来更新余额
-  ElMessage.info('余额更新功能待实现')
+const handleUpdateBalance = async (row) => {
+  try {
+    // 第一步：输入金额
+    const { value: amountStr } = await ElMessageBox.prompt(
+      t('user.update_balance_prompt'),
+      t('user.update_balance'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        inputType: 'number',
+        inputPlaceholder: t('user.amount_placeholder'),
+        inputValidator: (value) => {
+          if (!value || Number(value) === 0) {
+            return t('user.amount_required')
+          }
+          return true
+        }
+      }
+    )
+
+    const amount = Number(amountStr)
+    if (amount === 0) {
+      ElMessage.error(t('user.amount_cannot_be_zero'))
+      return
+    }
+
+    // 第二步：选择变动类型（使用 prompt 输入编号）
+    const typeOptions = [
+      { value: 'income', label: t('user.balance_income') },
+      { value: 'expense', label: t('user.balance_expense') },
+      { value: 'refund', label: t('user.balance_refund') }
+    ]
+
+    const typeMessage = `${t('user.select_change_type_prompt')}\n\n${typeOptions.map((opt, idx) => `${idx + 1}. ${opt.label}`).join('\n')}`
+    
+    const { value: typeIndex } = await ElMessageBox.prompt(
+      typeMessage,
+      t('user.select_change_type'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        inputType: 'number',
+        inputPlaceholder: '1-3',
+        inputValidator: (value) => {
+          const num = Number(value)
+          if (!value || num < 1 || num > 3) {
+            return t('user.invalid_selection')
+          }
+          return true
+        }
+      }
+    )
+
+    const selectedIndex = Number(typeIndex) - 1
+    if (selectedIndex < 0 || selectedIndex >= typeOptions.length) {
+      return
+    }
+
+    const logType = typeOptions[selectedIndex].value
+
+    // 第三步：确认操作
+    await ElMessageBox.confirm(
+      `${t('user.balance_update_confirm')}\n${t('user.amount')}: ${Math.abs(amount).toFixed(2)}\n${t('user.change_type')}: ${typeOptions[selectedIndex].label}`,
+      t('common.confirm'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    )
+
+    // 执行更新
+    const userId = row.id || row.ID
+    await updateBalance(userId, {
+      amount: Math.abs(amount),
+      type: logType,
+      source: 'manual',
+      description: t('user.manual_balance_adjustment')
+    })
+    ElMessage.success(t('user.balance_update_success'))
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      ErrorHandler.handle(error)
+    }
+  }
 }
 
 const handleBalanceLogs = (row) => {
   // 跳转到余额变动记录页面
-  window.location.href = `/user-balance-logs?user_id=${row.id}`
+  const userId = row.id || row.ID
+  window.location.href = `/user-balance-logs?user_id=${userId}`
 }
 
 const handleDelete = async (row) => {
@@ -332,7 +438,8 @@ const handleDelete = async (row) => {
 
 const handleStatusChange = async (row, val) => {
   try {
-    await updateUser(row.id, { status: val ? 1 : 0 })
+    const userId = row.id || row.ID
+    await updateUser(userId, { status: val ? 1 : 0 })
     ElMessage.success(t('common.update_success'))
     loadData()
   } catch (error) {
@@ -345,8 +452,11 @@ const handleFormSuccess = () => {
   loadData()
 }
 
-const formatMoney = (amount) => {
-  return Number(amount).toFixed(2)
+const formatBalance = (amount, currency) => {
+  const symbol = currency?.symbol || '¥'
+  const decimalPlaces = currency?.decimal_places ?? 2
+  const formatted = Number(amount).toFixed(decimalPlaces)
+  return `${symbol}${formatted}`
 }
 
 onMounted(() => {

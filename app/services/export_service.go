@@ -11,6 +11,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils"
@@ -92,7 +93,7 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 					"error":    err.Error(),
 				}, "写入CSV表头失败: %w", err)
 			}
-			return "", fmt.Errorf("写入CSV表头失败: %w", err)
+			return "", apperrors.ErrWriteCSVHeaderFailed.WithError(err)
 		}
 	}
 
@@ -105,7 +106,7 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 					"error":    err.Error(),
 				}, "写入CSV数据失败: %w", err)
 			}
-			return "", fmt.Errorf("写入CSV数据失败: %w", err)
+			return "", apperrors.ErrWriteCSVDataFailed.WithError(err)
 		}
 	}
 
@@ -117,7 +118,7 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 				"error":    err.Error(),
 			}, "CSV写入失败: %w", err)
 		}
-		return "", fmt.Errorf("CSV写入失败: %w", err)
+		return "", apperrors.ErrCSVWriteFailed.WithError(err)
 	}
 
 	// 获取存储驱动
@@ -132,7 +133,7 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 				"error":     err.Error(),
 			}, "保存文件失败: %w", err)
 		}
-		return "", fmt.Errorf("保存文件失败: %w", err)
+		return "", apperrors.ErrSaveFileFailed.WithError(err)
 	}
 
 	// 获取文件大小（如果存储驱动支持 Size 方法）
@@ -187,7 +188,7 @@ func (s *ExportServiceImpl) ExportToFile(headers []string, data [][]string, file
 	case "csv":
 		return s.ExportToCSV(headers, data, filename)
 	case "xlsx":
-		return "", fmt.Errorf("Excel导出功能暂未实现，请使用CSV格式")
+		return "", apperrors.ErrExcelNotImplemented
 	default:
 		return s.ExportToCSV(headers, data, filename)
 	}

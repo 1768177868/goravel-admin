@@ -414,6 +414,7 @@ const pluralToSingular = (plural) => {
     'dictionaries': 'dictionary',
     'blacklists': 'blacklist',
     'admins': 'admin',
+    'users': 'user',
     'operation_logs': 'operation_log',
     'login_logs': 'login_log',
     'system_logs': 'system_log',
@@ -422,7 +423,8 @@ const pluralToSingular = (plural) => {
     'operation-logs': 'operation_log',
     'login-logs': 'login_log',
     'system-logs': 'system_log',
-    'online-admins': 'online-admin'
+    'online-admins': 'online-admin',
+    'user-balance-logs': 'user_balance_log'
   }
 
   // 先检查完整匹配

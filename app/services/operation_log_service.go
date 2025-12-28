@@ -1,10 +1,9 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils"
@@ -50,7 +49,7 @@ func (s *OperationLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.Oper
 	}
 
 	if err := query.First(&log); err != nil {
-		return nil, fmt.Errorf("操作日志不存在: %v", err)
+		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 
 	return &log, nil

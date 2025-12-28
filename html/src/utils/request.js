@@ -143,12 +143,29 @@ const handle403Error = (message) => {
 
 // 处理错误响应，提取错误信息
 const extractErrorInfo = (data) => {
-  const message = data?.message || data?.data?.message || ''
+  let message = data?.message || data?.data?.message || ''
   const errorCode = data?.error_code || data?.data?.error_code || ''
   const code = data?.code || 0
   
+  // 如果 message 看起来像是一个错误码（包含下划线且没有中文字符），尝试使用 i18n 翻译
+  // 或者如果 message 等于 errorCode，也尝试翻译
+  if (errorCode && (message === errorCode || (message.includes('_') && !/[\u4e00-\u9fa5]/.test(message)))) {
+    // 尝试使用 common 命名空间翻译（因为 operation_failed 在 common 下）
+    const translated = t(`common.${errorCode}`)
+    // 如果翻译成功（返回的不是键本身），使用翻译后的文本
+    if (translated && translated !== `common.${errorCode}`) {
+      message = translated
+    } else {
+      // 如果 common 下没有，尝试 messages 命名空间
+      const translatedMessages = t(`messages.${errorCode}`)
+      if (translatedMessages && translatedMessages !== `messages.${errorCode}`) {
+        message = translatedMessages
+      }
+    }
+  }
+  
   return {
-    message,      // 后端已翻译的消息
+    message,      // 后端已翻译的消息（如果后端未翻译，前端会尝试翻译）
     errorCode,    // 错误码（如 'google_code_required'）
     code          // HTTP 状态码或业务状态码
   }

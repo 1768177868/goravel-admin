@@ -1,10 +1,9 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -41,7 +40,7 @@ func NewDepartmentServiceImpl(treeService TreeService) *DepartmentServiceImpl {
 func (s *DepartmentServiceImpl) GetByID(id uint) (*models.Department, error) {
 	var department models.Department
 	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
-		return nil, fmt.Errorf("部门不存在: %v", err)
+		return nil, apperrors.ErrDepartmentNotFound.WithError(err)
 	}
 	return &department, nil
 }

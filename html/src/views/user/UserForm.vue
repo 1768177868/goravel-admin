@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { createUser, updateUser, getUserDetail } from '../../api/user'
@@ -76,28 +76,46 @@ const dialogTitle = computed(() => {
   return props.editId ? t('user.edit_user') : t('user.add_user')
 })
 
-const formData = ref({
+const formData = reactive({
   id: null,
   username: '',
   password: '',
   nickname: '',
   email: '',
   phone: '',
-  status: 1
+  status: 0 // 默认禁用状态
 })
 
-const formRules = {
-  username: [
-    { required: true, message: t('form.username_required'), trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: t('form.password_required'), trigger: 'blur' },
-    { min: 6, message: t('form.password_min_length'), trigger: 'blur' }
-  ],
-  email: [
-    { type: 'email', message: t('form.email_invalid'), trigger: 'blur' }
-  ]
-}
+// 动态验证规则：根据是否为编辑模式调整
+const formRules = computed(() => {
+  const rules = {
+    email: [
+      { type: 'email', message: t('form.email_invalid'), trigger: 'blur' }
+    ]
+  }
+  
+  // 创建时，username 和 password 是必填的
+  if (!props.editId) {
+    rules.username = [
+      { required: true, message: t('form.username_required'), trigger: 'blur' },
+      { min: 3, message: t('form.username_min'), trigger: 'blur' },
+      { max: 50, message: t('form.username_max'), trigger: 'blur' }
+    ]
+    rules.password = [
+      { required: true, message: t('form.password_required'), trigger: 'blur' },
+      { min: 6, message: t('form.password_min_length'), trigger: 'blur' },
+      { max: 50, message: t('form.password_max_length'), trigger: 'blur' }
+    ]
+  } else {
+    // 编辑时，username 和 password 不是必填的（username 不可修改，password 可选）
+    rules.password = [
+      { min: 6, message: t('form.password_min_length'), trigger: 'blur' },
+      { max: 50, message: t('form.password_max_length'), trigger: 'blur' }
+    ]
+  }
+  
+  return rules
+})
 
 watch(() => props.editId, async (newId) => {
   if (newId && dialogVisible.value) {
@@ -124,17 +142,19 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await getUserDetail(props.editId)
-    if (res.code === 0 && res.data.user) {
+    if (res.code === 200 && res.data && res.data.user) {
       const user = res.data.user
-      formData.value = {
-        id: user.id,
-        username: user.username || '',
-        password: '',
-        nickname: user.nickname || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        status: user.status ?? 1
-      }
+      // 兼容大小写字段名，确保 status 是数字类型
+      const userStatus = user.status !== undefined ? user.status : (user.Status !== undefined ? user.Status : 1)
+      Object.assign(formData, {
+        id: user.id || user.ID || null,
+        username: user.username || user.Username || '',
+        password: '', // 编辑时不填充密码
+        nickname: user.nickname || user.Nickname || '',
+        email: user.email || user.Email || '',
+        phone: user.phone || user.Phone || '',
+        status: Number(userStatus) // 确保是数字类型
+      })
     }
   } catch (error) {
     ErrorHandler.handle(error)
@@ -144,15 +164,15 @@ const loadData = async () => {
 }
 
 const resetForm = () => {
-  formData.value = {
+  Object.assign(formData, {
     id: null,
     username: '',
     password: '',
     nickname: '',
     email: '',
     phone: '',
-    status: 1
-  }
+    status: 0 // 默认禁用状态
+  })
   formRef.value?.resetFields()
 }
 
@@ -173,10 +193,29 @@ const handleSubmit = async () => {
     submitting.value = true
     try {
       if (props.editId) {
-        await updateUser(props.editId, formData.value)
+        // 编辑时，不提交 username（因为不可修改）
+        // 确保 status 是数字类型（0 或 1）
+        const updateData = { 
+          ...formData,
+          status: Number(formData.status) || 0
+        }
+        delete updateData.username
+        delete updateData.id
+        // 确保 status 是 0 或 1
+        updateData.status = updateData.status === 1 ? 1 : 0
+        await updateUser(props.editId, updateData)
         ElMessage.success(t('common.update_success'))
       } else {
-        await createUser(formData.value)
+        // 创建时，提交所有数据（包括 username）
+        // 确保 status 是数字类型（0 或 1）
+        const createData = { 
+          ...formData,
+          status: Number(formData.status) || 0
+        }
+        delete createData.id
+        // 确保 status 是 0 或 1
+        createData.status = createData.status === 1 ? 1 : 0
+        await createUser(createData)
         ElMessage.success(t('common.create_success'))
       }
       emit('success')

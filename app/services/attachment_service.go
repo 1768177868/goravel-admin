@@ -57,14 +57,14 @@ type AttachmentService interface {
 
 // AttachmentFilters 附件查询过滤器
 type AttachmentFilters struct {
-	AdminID    string
-	Filename   string
+	AdminID     string
+	Filename    string
 	DisplayName string
-	FileType   string
-	Extension  string
-	StartTime  string
-	EndTime    string
-	OrderBy    string
+	FileType    string
+	Extension   string
+	StartTime   string
+	EndTime     string
+	OrderBy     string
 }
 
 type AttachmentServiceImpl struct {
@@ -110,7 +110,7 @@ func (s *AttachmentServiceImpl) InitChunkUpload(filename string, totalSize int64
 // 注意：不再使用服务端缓存，直接保存分片文件
 func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chunkData []byte) error {
 	if chunkIndex < 0 {
-		return fmt.Errorf("分片索引无效")
+		return apperrors.ErrInvalidChunkIndex
 	}
 
 	// 保存分片到临时目录
@@ -125,7 +125,7 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 				"error":       err.Error(),
 			}, "保存分片失败: %w", err)
 		}
-		return fmt.Errorf("保存分片失败: %w", err)
+		return apperrors.ErrSaveChunkFailed.WithError(err)
 	}
 
 	return nil
@@ -141,7 +141,9 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	for i := range indices {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if !storage.Exists(chunkPath) {
-			return nil, fmt.Errorf("分片 %d 不存在", i)
+			return nil, apperrors.ErrChunkNotFound.WithParams(map[string]interface{}{
+				"chunk_index": i,
+			})
 		}
 	}
 
@@ -183,7 +185,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 				"error":     err.Error(),
 			}, "创建目标目录失败: %w", err)
 		}
-		return nil, fmt.Errorf("创建目标目录失败: %w", err)
+		return nil, apperrors.ErrCreateDirectoryFailed.WithError(err)
 	}
 
 	// 创建目标文件（流式写入）
@@ -191,12 +193,12 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	if err != nil {
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "创建目标文件失败", map[string]any{
-				"chunk_id": chunkID,
+				"chunk_id":  chunkID,
 				"file_path": finalFullPath,
 				"error":     err.Error(),
 			}, "创建目标文件失败: %w", err)
 		}
-		return nil, fmt.Errorf("创建目标文件失败: %w", err)
+		return nil, apperrors.ErrCreateFileFailed.WithError(err)
 	}
 	defer outFile.Close()
 
@@ -240,7 +242,9 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 					"error":       err.Error(),
 				}, "写入分片 %d 失败: %w", i, err)
 			}
-			return nil, fmt.Errorf("写入分片 %d 失败: %w", i, err)
+			return nil, apperrors.ErrWriteChunkFailed.WithError(err).WithParams(map[string]interface{}{
+				"chunk_index": i,
+			})
 		}
 		fileSize += written
 		chunkFile.Close()
@@ -256,19 +260,22 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 				"error":     err.Error(),
 			}, "关闭目标文件失败: %w", err)
 		}
-		return nil, fmt.Errorf("关闭目标文件失败: %w", err)
+		return nil, apperrors.ErrCloseFileFailed.WithError(err)
 	}
 
 	// 检查是否有缺失的分片
 	if len(missingChunks) > 0 {
 		_ = os.Remove(finalFullPath)
-		return nil, fmt.Errorf("分片缺失: %v (共 %d 个分片缺失)", missingChunks, len(missingChunks))
+		return nil, apperrors.ErrChunkMissing.WithParams(map[string]interface{}{
+			"missing_chunks": missingChunks,
+			"count":          len(missingChunks),
+		})
 	}
 
 	// 检查是否有数据被合并
 	if fileSize == 0 {
 		_ = os.Remove(finalFullPath)
-		return nil, fmt.Errorf("没有可合并的分片数据")
+		return nil, apperrors.ErrNoChunkDataToMerge
 	}
 
 	// 验证文件大小（从文件系统获取实际大小）
@@ -309,7 +316,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 				"error":     err.Error(),
 			}, "创建附件记录失败: %w", err)
 		}
-		return nil, fmt.Errorf("创建附件记录失败: %w", err)
+		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
 	// 合并成功后才清理分片文件（确保数据已保存到数据库）
@@ -410,7 +417,7 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 				"error":     err.Error(),
 			}, "保存文件失败: %w", err)
 		}
-		return nil, fmt.Errorf("保存文件失败: %w", err)
+		return nil, apperrors.ErrSaveFileFailed.WithError(err)
 	}
 
 	// 获取文件大小
@@ -449,7 +456,7 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 				"error":     err.Error(),
 			}, "创建附件记录失败: %w", err)
 		}
-		return nil, fmt.Errorf("创建附件记录失败: %w", err)
+		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
 	return attachment, nil
@@ -516,7 +523,7 @@ func (s *AttachmentServiceImpl) GetFileType(mimeType string) string {
 func (s *AttachmentServiceImpl) GetByID(id uint) (*models.Attachment, error) {
 	var attachment models.Attachment
 	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		return nil, fmt.Errorf("附件不存在: %v", err)
+		return nil, apperrors.ErrAttachmentNotFound.WithError(err)
 	}
 	return &attachment, nil
 }
@@ -530,7 +537,7 @@ func (s *AttachmentServiceImpl) GetByIDs(ids []uint) ([]models.Attachment, error
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	var attachments []models.Attachment
 	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&attachments); err != nil {
-		return nil, fmt.Errorf("查询附件失败: %v", err)
+		return nil, apperrors.ErrQueryFailed.WithError(err)
 	}
 	return attachments, nil
 }
@@ -578,7 +585,7 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 	// 分页查询
 	var attachments []models.Attachment
 	err = query.With("Admin").
-		Offset((page-1)*pageSize).
+		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&attachments)
 	if err != nil {
@@ -600,11 +607,11 @@ func (s *AttachmentServiceImpl) UpdateDisplayName(id uint, displayName string) e
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "更新附件显示名称失败", map[string]any{
 				"attachment_id": id,
-				"display_name":   displayName,
-				"error":          err.Error(),
+				"display_name":  displayName,
+				"error":         err.Error(),
 			}, "更新附件显示名称失败: %v", err)
 		}
-		return fmt.Errorf("更新附件显示名称失败: %v", err)
+		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
 	return nil
@@ -619,12 +626,12 @@ func (s *AttachmentServiceImpl) DeleteFile(attachment *models.Attachment) error 
 			if s.ctx != nil {
 				errorlog.RecordHTTP(s.ctx, "attachment", "删除文件失败", map[string]any{
 					"attachment_id": attachment.ID,
-					"file_path":      attachment.Path,
-					"disk":           attachment.Disk,
-					"error":          err.Error(),
+					"file_path":     attachment.Path,
+					"disk":          attachment.Disk,
+					"error":         err.Error(),
 				}, "删除文件失败: %w", err)
 			}
-			return fmt.Errorf("删除文件失败: %w", err)
+			return apperrors.ErrDeleteFileFailed.WithError(err)
 		}
 	}
 
@@ -633,10 +640,10 @@ func (s *AttachmentServiceImpl) DeleteFile(attachment *models.Attachment) error 
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "删除附件记录失败", map[string]any{
 				"attachment_id": attachment.ID,
-				"error":          err.Error(),
+				"error":         err.Error(),
 			}, "删除附件记录失败: %w", err)
 		}
-		return fmt.Errorf("删除附件记录失败: %w", err)
+		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 
 	return nil

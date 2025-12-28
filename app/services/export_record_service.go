@@ -6,6 +6,7 @@ import (
 
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils/errorlog"
@@ -46,7 +47,7 @@ func NewExportRecordService() ExportRecordService {
 func (s *ExportRecordServiceImpl) GetByID(id uint) (*models.Export, error) {
 	var export models.Export
 	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
-		return nil, fmt.Errorf("导出记录不存在: %v", err)
+		return nil, apperrors.ErrExportRecordNotFound.WithError(err)
 	}
 	return &export, nil
 }
@@ -60,7 +61,7 @@ func (s *ExportRecordServiceImpl) GetByIDs(ids []uint) ([]models.Export, error) 
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	var exports []models.Export
 	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&exports); err != nil {
-		return nil, fmt.Errorf("查询导出记录失败: %v", err)
+		return nil, apperrors.ErrQueryFailed.WithError(err)
 	}
 	return exports, nil
 }
@@ -127,7 +128,7 @@ func (s *ExportRecordServiceImpl) Delete(id uint) error {
 			"export_id": id,
 			"error":     err.Error(),
 		}, "删除导出记录失败: %v", err)
-		return fmt.Errorf("删除导出记录失败: %v", err)
+		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 
 	return nil
@@ -146,7 +147,7 @@ func (s *ExportRecordServiceImpl) BatchDelete(ids []uint) error {
 			"count": len(ids),
 			"error": err.Error(),
 		}, "批量删除导出记录失败: %v", err)
-		return fmt.Errorf("批量删除导出记录失败: %v", err)
+		return apperrors.ErrBatchDeleteExportFailed.WithError(err)
 	}
 
 	return nil

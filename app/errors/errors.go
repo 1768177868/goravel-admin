@@ -59,6 +59,17 @@ var (
 	ErrInvalidChunkSize            = NewBusinessError("invalid_chunk_size", "分片大小无效")
 	ErrChunkFileRequired           = NewBusinessError("chunk_file_required", "分片文件不能为空")
 	ErrInvalidAction               = NewBusinessError("invalid_action", "无效的操作")
+	ErrAttachmentNotFound          = NewBusinessError("attachment_not_found", "附件不存在")
+	ErrChunkNotFound               = NewBusinessError("chunk_not_found", "分片不存在")
+	ErrChunkMissing                = NewBusinessError("chunk_missing", "分片缺失")
+	ErrNoChunkDataToMerge          = NewBusinessError("no_chunk_data_to_merge", "没有可合并的分片数据")
+	ErrSaveChunkFailed             = NewBusinessError("save_chunk_failed", "保存分片失败")
+	ErrCreateDirectoryFailed       = NewBusinessError("create_directory_failed", "创建目标目录失败")
+	ErrCreateFileFailed            = NewBusinessError("create_file_failed", "创建目标文件失败")
+	ErrWriteChunkFailed            = NewBusinessError("write_chunk_failed", "写入分片失败")
+	ErrCloseFileFailed             = NewBusinessError("close_file_failed", "关闭目标文件失败")
+	ErrSaveFileFailed              = NewBusinessError("save_file_failed", "保存文件失败")
+	ErrDeleteFileFailed            = NewBusinessError("delete_file_failed", "删除文件失败")
 
 	// 数据存在性错误
 	ErrUsernameExists                = NewBusinessError("username_exists", "用户名已存在")
@@ -89,6 +100,32 @@ var (
 	ErrEmailConfigRequired             = NewBusinessError("email_config_required", "邮箱配置不能为空")
 	ErrOptionTypeRequired              = NewBusinessError("option_type_required", "选项类型不能为空")
 	ErrInvalidOptionType               = NewBusinessError("invalid_option_type", "无效的选项类型")
+
+	// 余额相关错误
+	ErrInsufficientBalance = NewBusinessError("insufficient_balance", "余额不足")
+	ErrInvalidBalanceType  = NewBusinessError("invalid_balance_type", "无效的变动类型")
+
+	// 订单相关错误
+	ErrOrderNotFound           = NewBusinessError("order_not_found", "订单不存在")
+	ErrOrderIDRequired         = NewBusinessError("order_id_required", "订单ID不能为空")
+	ErrGetLockFailed           = NewBusinessError("get_lock_failed", "获取锁失败")
+	ErrGenerateOrderNoFailed   = NewBusinessError("generate_order_no_failed", "生成唯一订单号失败，请重试")
+	ErrCreateOrderFailed       = NewBusinessError("create_order_failed", "创建订单失败")
+	ErrCreateOrderDetailFailed = NewBusinessError("create_order_detail_failed", "创建订单详情失败")
+	ErrQueryOrderDetailFailed  = NewBusinessError("query_order_detail_failed", "查询订单详情失败")
+	ErrDeleteOrderDetailFailed = NewBusinessError("delete_order_detail_failed", "删除订单详情失败")
+
+	// 导出相关错误
+	ErrExportRecordNotFound    = NewBusinessError("export_record_not_found", "导出记录不存在")
+	ErrWriteCSVHeaderFailed    = NewBusinessError("write_csv_header_failed", "写入CSV表头失败")
+	ErrWriteCSVDataFailed      = NewBusinessError("write_csv_data_failed", "写入CSV数据失败")
+	ErrCSVWriteFailed          = NewBusinessError("csv_write_failed", "CSV写入失败")
+	ErrExcelNotImplemented     = NewBusinessError("excel_not_implemented", "Excel导出功能暂未实现，请使用CSV格式")
+	ErrBatchDeleteExportFailed = NewBusinessError("batch_delete_export_failed", "批量删除导出记录失败")
+
+	// 分表相关错误
+	ErrBaseTableNotRegistered    = NewBusinessError("base_table_not_registered", "未注册的基础表名")
+	ErrCreateShardingTableFailed = NewBusinessError("create_sharding_table_failed", "创建分表失败")
 
 	// 操作相关错误
 	ErrCreateFailed          = NewBusinessError("create_failed", "创建失败")
@@ -122,6 +159,7 @@ type BusinessError struct {
 	Code    string
 	Message string
 	Err     error
+	Params  map[string]interface{} // 用于存储动态参数（如余额值）
 }
 
 // NewBusinessError 创建新的业务错误
@@ -154,6 +192,17 @@ func (e *BusinessError) WithError(err error) *BusinessError {
 // WithMessage 设置自定义消息
 func (e *BusinessError) WithMessage(message string) *BusinessError {
 	e.Message = message
+	return e
+}
+
+// WithParams 设置动态参数
+func (e *BusinessError) WithParams(params map[string]interface{}) *BusinessError {
+	if e.Params == nil {
+		e.Params = make(map[string]interface{})
+	}
+	for k, v := range params {
+		e.Params[k] = v
+	}
 	return e
 }
 

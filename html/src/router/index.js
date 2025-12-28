@@ -297,20 +297,24 @@ function addDynamicRoutes(menus) {
   }
 
   // 添加新路由到主布局路由
-  // 根据错误信息，Vue Router 4.2.5 要求路径必须以 "/" 开头
-  // 即使对于子路由也是如此（这可能是一个特殊要求或版本差异）
+  // Vue Router 的子路由路径应该是相对路径（不带前导斜杠）
+  // 但为了匹配 URL 路径（如 /users），我们需要确保路径格式正确
   const parentName = mainLayoutRoute.name || 'MainLayout'
   routesToAdd.forEach(route => {
-    // 确保路径以 "/" 开头（根据错误信息的要求）
-    const routeWithSlash = {
+    // 子路由路径应该是相对路径（不带前导斜杠）
+    // 这样 Vue Router 会自动处理路径匹配
+    const routePath = route.path.startsWith('/') ? route.path.slice(1) : route.path
+    
+    const routeConfig = {
       ...route,
-      path: route.path.startsWith('/') ? route.path : '/' + route.path
+      path: routePath
     }
     
     try {
-      router.addRoute(parentName, routeWithSlash)
+      router.addRoute(parentName, routeConfig)
+      logger.debug(`Added route: ${routePath} (parent: ${parentName})`)
     } catch (error) {
-      logger.error(`Failed to add route ${route.path}:`, error)
+      logger.error(`Failed to add route ${routePath}:`, error)
     }
   })
   
@@ -356,17 +360,20 @@ router.beforeEach((to, from, next) => {
       
       // 如果用户信息已获取过，但菜单为空，需要重新获取菜单（不阻塞导航）
       if (userStore.userInfoFetched && menusEmpty && userStore.adminInfo) {
-        // 后台异步获取菜单，不阻塞导航
-        userStore.fetchUserInfo(true).then(() => {
+        // 阻塞导航，等待菜单加载完成（因为当前路由可能依赖动态路由）
+        userStore.fetchUserInfo().then(() => {
           // 获取菜单后添加动态路由
           if (userStore.menus && userStore.menus.length > 0 && !dynamicRoutesAdded) {
             addDynamicRoutes(userStore.menus)
             dynamicRoutesAdded = true
           }
+          // 路由添加后，使用 next() 重试导航
+          next(to.fullPath)
         }).catch((error) => {
-          logger.error('Failed to refresh menus in background:', error)
+          logger.error('Failed to refresh menus:', error)
+          // 如果获取失败，跳转到首页
+          next('/')
         })
-        next()
         return
       }
       
@@ -376,6 +383,16 @@ router.beforeEach((to, from, next) => {
         if (!dynamicRoutesAdded && userStore.menus && userStore.menus.length > 0) {
           addDynamicRoutes(userStore.menus)
           dynamicRoutesAdded = true
+          // 路由添加后，使用 next() 重试导航
+          next(to.fullPath)
+          return
+        }
+        // 检查路由是否存在
+        const route = router.resolve(to.fullPath)
+        if (!route.name && to.path !== '/') {
+          // 路由不存在，可能是路径不匹配，尝试重试
+          next(to.fullPath)
+          return
         }
         next()
         return
@@ -390,7 +407,8 @@ router.beforeEach((to, from, next) => {
             addDynamicRoutes(userStore.menus)
             dynamicRoutesAdded = true
           }
-          next()
+          // 路由添加后，使用 next() 重试导航
+          next(to.fullPath)
         }).catch((error) => {
           // 如果获取用户信息失败（可能是401），拦截器会处理跳转
           // 这里只需要阻止导航
@@ -401,6 +419,16 @@ router.beforeEach((to, from, next) => {
         if (!dynamicRoutesAdded && userStore.menus && userStore.menus.length > 0) {
           addDynamicRoutes(userStore.menus)
           dynamicRoutesAdded = true
+          // 路由添加后，使用 next() 重试导航
+          next(to.fullPath)
+          return
+        }
+        // 检查路由是否存在
+        const route = router.resolve(to.fullPath)
+        if (!route.name && to.path !== '/') {
+          // 路由不存在，可能是路径不匹配，尝试重试
+          next(to.fullPath)
+          return
         }
         // 标记为已获取，避免后续路由切换时重复检查
         userStore.userInfoFetched = true
@@ -410,9 +438,29 @@ router.beforeEach((to, from, next) => {
   }
 })
 
-// 捕获路由错误（包括动态导入失败）
+// 捕获路由错误（包括动态导入失败和路由未找到）
 router.onError((error) => {
   logger.error('Router error:', error)
+  
+  // 如果是路由未找到的错误，尝试重新加载动态路由
+  if (error.message && (
+    error.message.includes('No match found') ||
+    error.message.includes('No match') ||
+    error.name === 'NavigationFailure'
+  )) {
+    const userStore = useUserStore()
+    // 如果用户已登录但路由未找到，可能是动态路由未加载
+    if (userStore.isLoggedIn && userStore.menus && userStore.menus.length > 0 && !dynamicRoutesAdded) {
+      logger.warn('Route not found, attempting to reload dynamic routes')
+      addDynamicRoutes(userStore.menus)
+      dynamicRoutesAdded = true
+      // 重试导航
+      router.push(router.currentRoute.value.fullPath).catch(() => {
+        // 如果重试失败，跳转到首页
+        router.push('/').catch(() => {})
+      })
+    }
+  }
   
   // 检查是否是动态导入失败
   if (error.message && (

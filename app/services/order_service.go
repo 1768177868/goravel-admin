@@ -11,6 +11,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/oklog/ulid/v2"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/models"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
@@ -105,7 +106,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			"lock_key":   lockKey,
 			"error":      err.Error(),
 		}, "获取锁失败: %v", err)
-		return nil, nil, fmt.Errorf("获取锁失败: %v", err)
+		return nil, nil, apperrors.ErrGetLockFailed.WithError(err)
 	}
 
 	// 确保释放锁
@@ -159,7 +160,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 					"request_id": requestID,
 					"retries":    maxRetries,
 				}, "生成唯一订单号失败，请重试")
-				return nil, nil, fmt.Errorf("生成唯一订单号失败，请重试")
+				return nil, nil, apperrors.ErrGenerateOrderNoFailed
 			}
 			// 继续下一次重试
 			continue
@@ -173,7 +174,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			"amount":     amount,
 			"error":      err.Error(),
 		}, "创建订单失败: %v", err)
-		return nil, nil, fmt.Errorf("创建订单失败: %v", err)
+		return nil, nil, apperrors.ErrCreateOrderFailed.WithError(err)
 	}
 
 	// 创建订单详情记录
@@ -207,7 +208,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 				"product_id": product.ProductID,
 				"error":      err.Error(),
 			}, "创建订单详情失败: %v", err)
-			return nil, nil, fmt.Errorf("创建订单详情失败: %v", err)
+			return nil, nil, apperrors.ErrCreateOrderDetailFailed.WithError(err)
 		}
 
 		details = append(details, detail)
@@ -236,7 +237,7 @@ func (s *OrderServiceImpl) findOrderByID(orderID uint, orderNo ...string) (*mode
 
 	// 如果没有订单号或通过订单号查找失败，使用ID遍历分表
 	if orderID == 0 {
-		return nil, fmt.Errorf("订单ID不能为空")
+		return nil, apperrors.ErrOrderIDRequired
 	}
 
 	// 查询最近6个月的分表（足够覆盖大部分场景）
@@ -252,7 +253,7 @@ func (s *OrderServiceImpl) findOrderByID(orderID uint, orderNo ...string) (*mode
 		}
 	}
 
-	return nil, fmt.Errorf("订单不存在")
+	return nil, apperrors.ErrOrderNotFound
 }
 
 // GetOrderByID 根据ID查询订单
@@ -274,7 +275,7 @@ func (s *OrderServiceImpl) GetOrderByID(orderID uint, orderTime time.Time) (*mod
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
 	var details []models.OrderDetail
 	if err := facades.Orm().Query().Table(detailTableName).Where("order_id", orderID).Find(&details); err != nil {
-		return nil, nil, fmt.Errorf("查询订单详情失败: %v", err)
+		return nil, nil, apperrors.ErrQueryOrderDetailFailed.WithError(err)
 	}
 
 	return order, details, nil
@@ -298,7 +299,7 @@ func (s *OrderServiceImpl) GetOrderByOrderNo(orderNo string) (*models.Order, []m
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
 	var details []models.OrderDetail
 	if err := facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Find(&details); err != nil {
-		return nil, nil, fmt.Errorf("查询订单详情失败: %v", err)
+		return nil, nil, apperrors.ErrQueryOrderDetailFailed.WithError(err)
 	}
 
 	return order, details, nil
@@ -641,7 +642,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time) error 
 			"order_id": orderID,
 			"error":    err.Error(),
 		}, "删除订单详情失败: %v", err)
-		return fmt.Errorf("删除订单详情失败: %v", err)
+		return apperrors.ErrDeleteOrderDetailFailed.WithError(err)
 	}
 
 	// 软删除订单主表（Goravel 的 Delete 方法会自动使用软删除，如果模型有 SoftDeletes）
@@ -705,7 +706,7 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 				return &order, nil
 			}
 		}
-		return nil, fmt.Errorf("订单不存在")
+		return nil, apperrors.ErrOrderNotFound
 	}
 
 	// 解析年月字符串为时间
@@ -723,7 +724,7 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 				return &order, nil
 			}
 		}
-		return nil, fmt.Errorf("订单不存在")
+		return nil, apperrors.ErrOrderNotFound
 	}
 
 	// 使用解析的年月确定分表
@@ -735,5 +736,5 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 		return &order, nil
 	}
 
-	return nil, fmt.Errorf("订单不存在")
+	return nil, apperrors.ErrOrderNotFound
 }

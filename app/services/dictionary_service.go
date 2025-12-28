@@ -1,10 +1,9 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -38,7 +37,7 @@ func NewDictionaryService() DictionaryService {
 func (s *DictionaryServiceImpl) GetByID(id uint) (*models.Dictionary, error) {
 	var dictionary models.Dictionary
 	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
-		return nil, fmt.Errorf("字典不存在: %v", err)
+		return nil, apperrors.ErrDictionaryNotFound.WithError(err)
 	}
 	return &dictionary, nil
 }

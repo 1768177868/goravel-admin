@@ -1,11 +1,10 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -51,7 +50,7 @@ func (s *PermissionServiceImpl) GetByID(id uint, withMenu bool) (*models.Permiss
 	}
 
 	if err := query.First(&permission); err != nil {
-		return nil, fmt.Errorf("权限不存在: %v", err)
+		return nil, apperrors.ErrPermissionNotFound.WithError(err)
 	}
 
 	return &permission, nil

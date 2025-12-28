@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"slices"
 
 	"github.com/goravel/framework/contracts/database/orm"
@@ -9,6 +8,7 @@ import (
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -67,7 +67,7 @@ func (s *AdminServiceImpl) GetByID(id uint, withDepartment bool, withRoles bool)
 	}
 
 	if err := query.First(&admin); err != nil {
-		return nil, fmt.Errorf("管理员不存在: %v", err)
+		return nil, apperrors.ErrAdminNotFound.WithError(err)
 	}
 
 	return &admin, nil
@@ -182,7 +182,7 @@ func (s *AdminServiceImpl) GetAllAdminsForExport(filters AdminFilters) ([]models
 	// 不分页，获取所有数据
 	var admins []models.Admin
 	if err := query.With("Department").With("Roles").Find(&admins); err != nil {
-		return nil, fmt.Errorf("查询管理员失败: %v", err)
+		return nil, apperrors.ErrQueryFailed.WithError(err)
 	}
 
 	return admins, nil

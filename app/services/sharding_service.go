@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/utils/errorlog"
 	"goravel/database/migrations"
 )
@@ -35,6 +35,9 @@ func NewShardingService() ShardingService {
 	// 注册订单相关表的创建函数
 	service.registerOrderTables()
 
+	// 注册用户余额变动记录表的创建函数
+	service.registerUserBalanceLogTables()
+
 	return service
 }
 
@@ -47,6 +50,12 @@ func (s *ShardingServiceImpl) registerOrderTables() {
 	s.RegisterTableCreator("order_details", migrations.CreateOrderDetailsShardingTable)
 }
 
+// registerUserBalanceLogTables 注册用户余额变动记录表的创建函数
+func (s *ShardingServiceImpl) registerUserBalanceLogTables() {
+	// 注册用户余额变动记录表（调用 migrations 中的函数）
+	s.RegisterTableCreator("user_balance_logs", migrations.CreateUserBalanceLogsShardingTable)
+}
+
 // RegisterTableCreator 注册表的创建函数
 func (s *ShardingServiceImpl) RegisterTableCreator(baseTableName string, creator TableCreator) {
 	s.creators[baseTableName] = creator
@@ -56,7 +65,9 @@ func (s *ShardingServiceImpl) RegisterTableCreator(baseTableName string, creator
 func (s *ShardingServiceImpl) CreateShardingTable(tableName, baseTableName string) error {
 	creator, exists := s.creators[baseTableName]
 	if !exists {
-		return fmt.Errorf("未注册的基础表名: %s", baseTableName)
+		return apperrors.ErrBaseTableNotRegistered.WithParams(map[string]interface{}{
+			"base_table_name": baseTableName,
+		})
 	}
 
 	return creator(tableName)
@@ -76,7 +87,9 @@ func (s *ShardingServiceImpl) EnsureShardingTable(tableName, baseTableName strin
 			"base_table_name": baseTableName,
 			"error":          err.Error(),
 		}, "创建分表 %s 失败: %v", tableName, err)
-		return fmt.Errorf("创建分表 %s 失败: %v", tableName, err)
+		return apperrors.ErrCreateShardingTableFailed.WithError(err).WithParams(map[string]interface{}{
+			"table_name": tableName,
+		})
 	}
 
 	facades.Log().Infof("自动创建分表: %s", tableName)

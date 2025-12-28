@@ -1,10 +1,9 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
@@ -36,7 +35,7 @@ func NewBlacklistService() BlacklistService {
 func (s *BlacklistServiceImpl) GetByID(id uint) (*models.Blacklist, error) {
 	var blacklist models.Blacklist
 	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
-		return nil, fmt.Errorf("黑名单不存在: %v", err)
+		return nil, apperrors.ErrBlacklistNotFound.WithError(err)
 	}
 	return &blacklist, nil
 }

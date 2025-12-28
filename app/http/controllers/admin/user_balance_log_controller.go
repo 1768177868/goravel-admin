@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/services"
@@ -25,7 +26,7 @@ func NewUserBalanceLogController() *UserBalanceLogController {
 func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 	userID := cast.ToUint(ctx.Request().Query("user_id", "0"))
 	if userID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "user_id 不能为空，GORM Sharding 需要 ShardingKey")
+		return response.Error(ctx, http.StatusBadRequest, "user_id_required_for_sharding")
 	}
 
 	page := cast.ToInt(ctx.Request().Query("page", "1"))
@@ -61,6 +62,9 @@ func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 
 	logs, total, err := r.balanceLogService.GetLogs(filters, page, pageSize)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -76,7 +80,7 @@ func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 	userID := cast.ToUint(ctx.Request().Query("user_id", "0"))
 	if userID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "user_id 不能为空")
+		return response.Error(ctx, http.StatusBadRequest, "user_id_required")
 	}
 
 	startTimeStr := ctx.Request().Query("start_time", "")
@@ -92,6 +96,9 @@ func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 
 	stats, err := r.balanceLogService.GetUserStatistics(userID, startTime, endTime)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -104,17 +111,17 @@ func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 func (r *UserBalanceLogController) Store(ctx http.Context) http.Response {
 	userID := cast.ToUint(ctx.Request().Input("user_id", "0"))
 	if userID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "user_id 不能为空，GORM Sharding 需要 ShardingKey")
+		return response.Error(ctx, http.StatusBadRequest, "user_id_required_for_sharding")
 	}
 
 	logType := ctx.Request().Input("type", "")
 	if logType == "" {
-		return response.Error(ctx, http.StatusBadRequest, "type 不能为空")
+		return response.Error(ctx, http.StatusBadRequest, "balance_type_required")
 	}
 
 	amount := cast.ToFloat64(ctx.Request().Input("amount", "0"))
 	if amount == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "amount 不能为0")
+		return response.Error(ctx, http.StatusBadRequest, "amount_cannot_be_zero")
 	}
 
 	balance := cast.ToFloat64(ctx.Request().Input("balance", "0"))
@@ -139,18 +146,24 @@ func (r *UserBalanceLogController) Store(ctx http.Context) http.Response {
 	if balance == 0 {
 		currentBalance, err := r.balanceLogService.GetUserBalance(userID)
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "获取用户余额失败: "+err.Error())
+			// 检查是否是业务错误
+			if businessErr, ok := apperrors.GetBusinessError(err); ok {
+				return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
+			}
+			return response.Error(ctx, http.StatusInternalServerError, "get_user_balance_failed")
 		}
 		balance = currentBalance
 	}
 
 	log, err := r.balanceLogService.CreateLog(userID, logType, amount, balance, source, sourceID, description, operatorID, status, remark)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.Success(ctx, http.Json{
-		"message": "余额变动记录创建成功",
-		"data":    log,
+	return response.Success(ctx, "balance_log_create_success", http.Json{
+		"data": log,
 	})
 }

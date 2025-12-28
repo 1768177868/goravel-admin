@@ -24,6 +24,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3007,
+      // 启用 History API fallback，支持直接访问路由（如 /users）
+      // 这对于 Vue Router 的 History 模式是必需的
+      strictPort: false,
       // API 代理已禁用，使用 VITE_API_BASE_URL 直接连接
       // 但 WebSocket 需要代理，因为浏览器无法直接跨域连接 WebSocket
       proxy: {

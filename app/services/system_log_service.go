@@ -3,11 +3,11 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils/traceid"
@@ -46,7 +46,7 @@ func NewSystemLogService() SystemLogService {
 func (s *SystemLogServiceImpl) GetByID(id uint) (*models.SystemLog, error) {
 	var log models.SystemLog
 	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
-		return nil, fmt.Errorf("系统日志不存在: %v", err)
+		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 	return &log, nil
 }

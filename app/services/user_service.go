@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/goravel/framework/facades"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/models"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
@@ -47,7 +47,7 @@ func NewUserService() UserService {
 func (s *UserServiceImpl) GetByID(id uint) (*models.User, error) {
 	var user models.User
 	if err := facades.Orm().Query().Where("id", id).First(&user); err != nil {
-		return nil, fmt.Errorf("用户不存在: %v", err)
+		return nil, apperrors.ErrUserNotFound.WithError(err)
 	}
 
 	// 加载货币信息
@@ -68,13 +68,13 @@ func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]mo
 	query := facades.Orm().Query().Model(&models.User{})
 
 	if filters.Username != "" {
-		query.Where("username", filters.Username)
+		query.Where("username", "like", "%"+filters.Username+"%")
 	}
 	if filters.Email != "" {
-		query.Where("email", filters.Email)
+		query.Where("email", "like", "%"+filters.Email+"%")
 	}
 	if filters.Phone != "" {
-		query.Where("phone", filters.Phone)
+		query.Where("phone", "like", "%"+filters.Phone+"%")
 	}
 	if filters.Status != "" {
 		query = query.Where("status", filters.Status)
@@ -124,7 +124,27 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 
 // Update 更新用户
 func (s *UserServiceImpl) Update(id uint, user *models.User) error {
-	_, err := facades.Orm().Query().Where("id", id).Update(user)
+	// 如果密码为空，则不更新密码字段
+	updateData := map[string]interface{}{
+		"nickname":    user.Nickname,
+		"avatar":      user.Avatar,
+		"email":       user.Email,
+		"phone":       user.Phone,
+		"status":      user.Status,
+		"currency_id": user.CurrencyID,
+	}
+
+	// 只有用户名不为空时才更新用户名（通常用户名不允许修改，但保留此逻辑以防需要）
+	if user.Username != "" {
+		updateData["username"] = user.Username
+	}
+
+	// 只有密码不为空时才更新密码
+	if user.Password != "" {
+		updateData["password"] = user.Password
+	}
+
+	_, err := facades.Orm().Query().Model(&models.User{}).Where("id", id).Update(updateData)
 	return err
 }
 
@@ -150,14 +170,18 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 	case "expense":
 		newBalance = user.Balance - amount
 		if newBalance < 0 {
-			return fmt.Errorf("余额不足，当前余额: %.2f", user.Balance)
+			return apperrors.ErrInsufficientBalance.WithParams(map[string]interface{}{
+				"balance": user.Balance,
+			})
 		}
 	default:
-		return fmt.Errorf("无效的变动类型: %s", logType)
+		return apperrors.ErrInvalidBalanceType.WithParams(map[string]interface{}{
+			"type": logType,
+		})
 	}
 
 	// 1. 更新用户余额
-	_, err = facades.Orm().Query().Where("id", userID).Update(map[string]interface{}{
+	_, err = facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]interface{}{
 		"balance": newBalance,
 	})
 	if err != nil {
@@ -168,14 +192,24 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 			"new_balance": newBalance,
 			"error":       err.Error(),
 		}, "更新用户余额失败: %v", err)
-		return fmt.Errorf("更新用户余额失败: %v", err)
+		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
 	// 2. 创建余额变动记录（使用 GORM Sharding）
 	_, err = s.balanceLogService.CreateLog(userID, logType, amount, newBalance, source, sourceID, description, operatorID, "success", remark)
 	if err != nil {
-		// 如果创建记录失败，尝试回滚余额（这里简化处理，实际应该使用事务）
-		// 注意：Goravel 框架的事务可能需要特殊处理
+		// 如果创建记录失败，尝试回滚余额更新
+		// 注意：由于涉及分表，无法使用跨表事务，这里手动回滚
+		rollbackErr := s.rollbackBalance(userID, user.Balance)
+		if rollbackErr != nil {
+			errorlog.Record(context.Background(), "user", "回滚余额失败", map[string]any{
+				"user_id":      userID,
+				"old_balance":  user.Balance,
+				"new_balance":  newBalance,
+				"rollback_err": rollbackErr.Error(),
+			}, "回滚余额失败: %v", rollbackErr)
+		}
+
 		errorlog.Record(context.Background(), "user", "创建余额变动记录失败", map[string]any{
 			"user_id":     userID,
 			"amount":      amount,
@@ -183,8 +217,16 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 			"new_balance": newBalance,
 			"error":       err.Error(),
 		}, "创建余额变动记录失败: %v", err)
-		return fmt.Errorf("创建余额变动记录失败: %v", err)
+		return apperrors.ErrCreateFailed.WithError(err)
 	}
 
 	return nil
+}
+
+// rollbackBalance 回滚余额到指定值
+func (s *UserServiceImpl) rollbackBalance(userID uint, balance float64) error {
+	_, err := facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]interface{}{
+		"balance": balance,
+	})
+	return err
 }
