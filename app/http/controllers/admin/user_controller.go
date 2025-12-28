@@ -1,9 +1,6 @@
 package admin
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -13,7 +10,6 @@ import (
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils/traceid"
@@ -239,63 +235,14 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 	if err := r.userService.UpdateBalance(userID, amount, logType, source, sourceID, description, operatorID, remark); err != nil {
 		// 检查是否是业务错误
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			// 获取翻译后的消息
-			messageKey := businessErr.Code
-			message := trans.Get(ctx, messageKey)
+			// 直接获取格式化后的消息（包含翻译和占位符替换）
+			message := businessErr.GetFormattedMessage(ctx)
 
-			// 如果有参数，替换参数占位符
-			if len(businessErr.Params) > 0 {
-				for key, value := range businessErr.Params {
-					// 支持 {key} 和 ${key} 格式
-					placeholder1 := fmt.Sprintf("{%s}", key)
-					placeholder2 := fmt.Sprintf("${%s}", key)
-
-					var valueStr string
-					switch v := value.(type) {
-					case float64:
-						valueStr = fmt.Sprintf("%.2f", v)
-					case float32:
-						valueStr = fmt.Sprintf("%.2f", v)
-					default:
-						valueStr = fmt.Sprintf("%v", v)
-					}
-
-					message = strings.ReplaceAll(message, placeholder1, valueStr)
-					message = strings.ReplaceAll(message, placeholder2, valueStr)
-				}
-			}
-
-			// 如果翻译后的消息和 key 相同，说明没有找到翻译，使用默认消息
-			if message == messageKey {
-				message = businessErr.Message
-				// 如果默认消息中有参数，也替换（使用 fmt.Sprintf 格式化）
-				if len(businessErr.Params) > 0 {
-					// 对于余额不足错误，格式化余额值
-					if balance, ok := businessErr.Params["balance"]; ok {
-						var balanceStr string
-						switch v := balance.(type) {
-						case float64:
-							balanceStr = fmt.Sprintf("%.2f", v)
-						case float32:
-							balanceStr = fmt.Sprintf("%.2f", v)
-						default:
-							balanceStr = fmt.Sprintf("%v", v)
-						}
-						message = fmt.Sprintf("%s，当前余额: %s", message, balanceStr)
-					}
-					// 对于无效类型错误，格式化类型值
-					if typeVal, ok := businessErr.Params["type"]; ok {
-						typeStr := fmt.Sprintf("%v", typeVal)
-						message = fmt.Sprintf("%s: %s", message, typeStr)
-					}
-				}
-			}
-
-			// 直接构造响应，使用替换后的 message
+			// 构造响应
 			responseData := http.Json{
 				"code":       http.StatusBadRequest,
 				"message":    message,
-				"error_code": messageKey,
+				"error_code": businessErr.Code,
 			}
 
 			// 自动包含 trace_id

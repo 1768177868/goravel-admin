@@ -3,6 +3,11 @@ package errors
 import (
 	stderrors "errors"
 	"fmt"
+	"strings"
+
+	"goravel/app/http/trans"
+
+	"github.com/goravel/framework/contracts/http"
 )
 
 // 定义业务错误类型
@@ -196,6 +201,9 @@ func (e *BusinessError) WithMessage(message string) *BusinessError {
 }
 
 // WithParams 设置动态参数
+// 参数会在控制器中用于替换翻译后消息中的占位符
+// 例如：翻译文件中有 "insufficient_balance": "余额不足，当前余额: {balance}"
+// 使用 WithParams(map[string]interface{}{"balance": 100}) 后，控制器会替换为 "余额不足，当前余额: 100.00"
 func (e *BusinessError) WithParams(params map[string]interface{}) *BusinessError {
 	if e.Params == nil {
 		e.Params = make(map[string]interface{})
@@ -233,4 +241,62 @@ func IsBusinessError(err error) bool {
 func GetBusinessError(err error) (*BusinessError, bool) {
 	be, ok := err.(*BusinessError)
 	return be, ok
+}
+
+// GetFormattedMessage 获取格式化后的消息（支持多语言和占位符替换）
+// 自动处理翻译和占位符替换，简化控制器代码
+// 使用示例：
+//
+//	message := businessErr.GetFormattedMessage(ctx)
+func (e *BusinessError) GetFormattedMessage(ctx http.Context) string {
+	// 1. 获取翻译后的消息
+	message := trans.Get(ctx, e.Code)
+
+	// 2. 如果翻译不存在（返回的是 key），使用默认消息
+	if message == e.Code {
+		message = e.Message
+	}
+
+	// 3. 如果有参数，替换占位符
+	if len(e.Params) > 0 {
+		message = e.replacePlaceholders(message)
+	}
+
+	return message
+}
+
+// replacePlaceholders 替换消息中的占位符
+// 支持 {key} 和 ${key} 格式
+func (e *BusinessError) replacePlaceholders(message string) string {
+	result := message
+	for key, value := range e.Params {
+		// 支持 {key} 和 ${key} 格式
+		placeholder1 := fmt.Sprintf("{%s}", key)
+		placeholder2 := fmt.Sprintf("${%s}", key)
+
+		// 格式化值
+		valueStr := e.formatValue(value)
+
+		// 替换占位符
+		result = strings.ReplaceAll(result, placeholder1, valueStr)
+		result = strings.ReplaceAll(result, placeholder2, valueStr)
+	}
+	return result
+}
+
+// formatValue 格式化参数值
+// float64/float32 保留2位小数，整数保持原样，其他类型使用 %v
+func (e *BusinessError) formatValue(value interface{}) string {
+	switch v := value.(type) {
+	case float64:
+		return fmt.Sprintf("%.2f", v)
+	case float32:
+		return fmt.Sprintf("%.2f", v)
+	case int, int8, int16, int32, int64:
+		return fmt.Sprintf("%d", v)
+	case uint, uint8, uint16, uint32, uint64:
+		return fmt.Sprintf("%d", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
