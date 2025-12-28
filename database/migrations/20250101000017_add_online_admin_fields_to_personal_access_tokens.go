@@ -5,14 +5,14 @@ import (
 	"github.com/goravel/framework/facades"
 )
 
-type M20250101000017AddOnlineUserFieldsToPersonalAccessTokens struct {
+type M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens struct {
 }
 
-func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Signature() string {
-	return "20250101000017_add_online_user_fields_to_personal_access_tokens"
+func (r *M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens) Signature() string {
+	return "20250101000017_add_online_admin_fields_to_personal_access_tokens"
 }
 
-func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Up() error {
+func (r *M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens) Up() error {
 	if !facades.Schema().HasTable("personal_access_tokens") {
 		return nil
 	}
@@ -29,7 +29,7 @@ func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Up() error {
 		columnMap[column.Name] = true
 	}
 
-	// 构建需要添加的列
+	// 构建需要添加的列（用于在线管理员监控）
 	columnsToAdd := []struct {
 		name    string
 		length  int
@@ -63,7 +63,7 @@ func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Up() error {
 	return nil
 }
 
-func (r *M20250101000017AddOnlineUserFieldsToPersonalAccessTokens) Down() error {
+func (r *M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens) Down() error {
 	if facades.Schema().HasTable("personal_access_tokens") {
 		return facades.Schema().Table("personal_access_tokens", func(table schema.Blueprint) {
 			table.DropColumn("browser", "ip", "os", "session_id")

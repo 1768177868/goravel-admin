@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', slug: '', method: '', path: '', status: '', menu_id: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="permission"
         @search="handleSearch"
         @reset="handleReset"
@@ -118,6 +118,16 @@ import { getMenuList } from '../../api/menu'
 const { t, te } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  name: '',
+  slug: '',
+  method: '',
+  path: '',
+  status: '',
+  menu_id: ''
+}
 
 // 使用 CRUD composable
 const {

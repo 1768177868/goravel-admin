@@ -6,7 +6,6 @@ import (
 	nethttp "net/http"
 	"time"
 
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -19,10 +18,13 @@ import (
 )
 
 type ExportController struct {
+	exportRecordService services.ExportRecordService
 }
 
 func NewExportController() *ExportController {
-	return &ExportController{}
+	return &ExportController{
+		exportRecordService: services.NewExportRecordService(),
+	}
 }
 
 // Index 导出记录列表
@@ -32,20 +34,10 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 		helpers.GetIntQuery(ctx, "page_size", 10),
 	)
 
-	query := r.buildQuery(ctx)
+	filters := r.buildFilters(ctx)
 
-	total, err := query.Count()
+	exports, total, err := r.exportRecordService.GetList(filters, page, pageSize)
 	if err != nil {
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	orderBy := ctx.Request().Query("order_by", "id:desc")
-	query = helpers.ApplySort(query, orderBy, "id:desc")
-
-	offset := (page - 1) * pageSize
-
-	var exports []models.Export
-	if err := query.With("Admin").Offset(offset).Limit(pageSize).Get(&exports); err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -77,37 +69,25 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 	return response.Paginate(ctx, resultWithURL, total, page, pageSize)
 }
 
-// buildQuery 构建导出记录查询
-func (r *ExportController) buildQuery(ctx http.Context) orm.Query {
-	query := facades.Orm().Query().Model(&models.Export{})
-
+// buildFilters 构建导出记录查询过滤器
+func (r *ExportController) buildFilters(ctx http.Context) services.ExportRecordFilters {
 	adminID := ctx.Request().Query("admin_id", "")
 	filename := ctx.Request().Query("filename", "")
 	disk := ctx.Request().Query("disk", "")
 	status := ctx.Request().Query("status", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	orderBy := ctx.Request().Query("order_by", "")
 
-	if adminID != "" {
-		query = query.Where("admin_id", adminID)
+	return services.ExportRecordFilters{
+		AdminID:   adminID,
+		Filename:  filename,
+		Disk:      disk,
+		Status:    status,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
 	}
-	if filename != "" {
-		query = query.Where("filename LIKE ?", "%"+filename+"%")
-	}
-	if disk != "" {
-		query = query.Where("disk = ?", disk)
-	}
-	if status != "" {
-		query = query.Where("status = ?", status)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
-	return query
 }
 
 // Destroy 删除导出记录并删除源文件
@@ -117,8 +97,8 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var export models.Export
-	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
+	export, err := r.exportRecordService.GetByID(id)
+	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
@@ -135,9 +115,9 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 		}
 	}
 
-	if _, err := facades.Orm().Query().Delete(&export); err != nil {
+	if err := r.exportRecordService.Delete(id); err != nil {
 		return response.ErrorWithLog(ctx, "export", err, map[string]any{
-			"exportId": export.ID,
+			"exportId": id,
 		})
 	}
 
@@ -151,8 +131,8 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var export models.Export
-	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
+	export, err := r.exportRecordService.GetByID(id)
+	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
@@ -216,32 +196,27 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 	}
 
 	ids := req.IDs
-	idsAny := helpers.ConvertUintSliceToAny(ids)
 
-	// 查询要删除的导出记录
-	var exports []models.Export
-	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&exports); err != nil {
-		return response.ErrorWithLog(ctx, "export", err, map[string]any{
-			"ids": ids,
-		})
-	}
-
-	// 尝试删除源文件（忽略失败，仅记录日志）
-	for _, export := range exports {
-		if export.Path != "" && export.Disk != "" {
-			storage := facades.Storage().Disk(export.Disk)
-			if err := storage.Delete(export.Path); err != nil {
-				errorlog.RecordHTTP(ctx, "export", "Failed to delete export source file in batch delete", map[string]any{
-					"error": err.Error(),
-					"disk":  export.Disk,
-					"path":  export.Path,
-				}, "Delete export source file in batch delete error: %v", err)
+	// 查询要删除的导出记录（用于删除源文件）
+	exports, err := r.exportRecordService.GetByIDs(ids)
+	if err == nil {
+		// 尝试删除源文件（忽略失败，仅记录日志）
+		for _, export := range exports {
+			if export.Path != "" && export.Disk != "" {
+				storage := facades.Storage().Disk(export.Disk)
+				if err := storage.Delete(export.Path); err != nil {
+					errorlog.RecordHTTP(ctx, "export", "Failed to delete export source file in batch delete", map[string]any{
+						"error": err.Error(),
+						"disk":  export.Disk,
+						"path":  export.Path,
+					}, "Delete export source file in batch delete error: %v", err)
+				}
 			}
 		}
 	}
 
 	// 批量删除数据库记录
-	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
+	if err := r.exportRecordService.BatchDelete(ids); err != nil {
 		return response.ErrorWithLog(ctx, "export", err, map[string]any{
 			"ids": ids,
 		})
@@ -314,8 +289,8 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 			return nil
 		case <-ticker.C:
 			// 查询导出任务
-			var export models.Export
-			if err := facades.Orm().Query().Where("id", exportID).First(&export); err != nil {
+			export, err := r.exportRecordService.GetByID(exportID)
+			if err != nil {
 				// 导出任务不存在或已删除
 				errorMsg := map[string]any{
 					"type":    "error",

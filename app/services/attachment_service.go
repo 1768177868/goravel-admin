@@ -21,6 +21,12 @@ import (
 )
 
 type AttachmentService interface {
+	// GetByID 根据ID获取附件
+	GetByID(id uint) (*models.Attachment, error)
+	// GetByIDs 根据ID列表获取附件
+	GetByIDs(ids []uint) ([]models.Attachment, error)
+	// GetList 获取附件列表
+	GetList(filters AttachmentFilters, page, pageSize int) ([]models.Attachment, int64, error)
 	// InitChunkUpload 初始化分片上传（不再使用服务端缓存）
 	InitChunkUpload(filename string, totalSize int64, chunkSize int64, totalChunks int) (string, error)
 
@@ -44,6 +50,20 @@ type AttachmentService interface {
 
 	// DeleteFile 删除文件
 	DeleteFile(attachment *models.Attachment) error
+	// UpdateDisplayName 更新显示名称
+	UpdateDisplayName(id uint, displayName string) error
+}
+
+// AttachmentFilters 附件查询过滤器
+type AttachmentFilters struct {
+	AdminID    string
+	Filename   string
+	DisplayName string
+	FileType   string
+	Extension  string
+	StartTime  string
+	EndTime    string
+	OrderBy    string
 }
 
 type AttachmentServiceImpl struct {
@@ -431,6 +451,97 @@ func (s *AttachmentServiceImpl) GetFileType(mimeType string) string {
 		return "document"
 	}
 	return "other"
+}
+
+// GetByID 根据ID获取附件
+func (s *AttachmentServiceImpl) GetByID(id uint) (*models.Attachment, error) {
+	var attachment models.Attachment
+	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+		return nil, fmt.Errorf("附件不存在: %v", err)
+	}
+	return &attachment, nil
+}
+
+// GetByIDs 根据ID列表获取附件
+func (s *AttachmentServiceImpl) GetByIDs(ids []uint) ([]models.Attachment, error) {
+	if len(ids) == 0 {
+		return []models.Attachment{}, nil
+	}
+
+	idsAny := helpers.ConvertUintSliceToAny(ids)
+	var attachments []models.Attachment
+	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&attachments); err != nil {
+		return nil, fmt.Errorf("查询附件失败: %v", err)
+	}
+	return attachments, nil
+}
+
+// GetList 获取附件列表
+func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSize int) ([]models.Attachment, int64, error) {
+	query := facades.Orm().Query().Model(&models.Attachment{})
+
+	// 应用筛选条件
+	if filters.AdminID != "" {
+		query = query.Where("admin_id", filters.AdminID)
+	}
+	if filters.Filename != "" {
+		query = query.Where("filename LIKE ?", "%"+filters.Filename+"%")
+	}
+	if filters.DisplayName != "" {
+		query = query.Where("display_name LIKE ?", "%"+filters.DisplayName+"%")
+	}
+	if filters.FileType != "" {
+		query = query.Where("file_type = ?", filters.FileType)
+	}
+	if filters.Extension != "" {
+		query = query.Where("extension = ?", filters.Extension)
+	}
+	if filters.StartTime != "" {
+		query = query.Where("created_at >= ?", filters.StartTime)
+	}
+	if filters.EndTime != "" {
+		query = query.Where("created_at <= ?", filters.EndTime)
+	}
+
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "id:desc"
+	}
+	query = helpers.ApplySort(query, orderBy, "id:desc")
+
+	// 获取总数
+	total, err := query.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	var attachments []models.Attachment
+	err = query.With("Admin").
+		Offset((page-1)*pageSize).
+		Limit(pageSize).
+		Find(&attachments)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return attachments, total, nil
+}
+
+// UpdateDisplayName 更新显示名称
+func (s *AttachmentServiceImpl) UpdateDisplayName(id uint, displayName string) error {
+	var attachment models.Attachment
+	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+		return fmt.Errorf("附件不存在: %v", err)
+	}
+
+	attachment.DisplayName = displayName
+	if err := facades.Orm().Query().Save(&attachment); err != nil {
+		return fmt.Errorf("更新附件显示名称失败: %v", err)
+	}
+
+	return nil
 }
 
 // DeleteFile 删除文件

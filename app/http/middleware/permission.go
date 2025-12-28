@@ -8,10 +8,9 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils/errorlog"
 	"goravel/app/utils/logger"
 )
-
-var systemLogService = services.NewSystemLogService()
 
 // Permission 权限验证中间件
 func Permission() http.Middleware {
@@ -39,11 +38,11 @@ func Permission() http.Middleware {
 		adminService := services.NewAdminServiceImpl()
 		if err := adminService.LoadRelationsWithPermissions(&admin); err != nil {
 			logger.ErrorfHTTP(ctx, "permission middleware load relations failed: %v", err)
-			_ = systemLogService.RecordHTTP(ctx, "error", "permission", "Failed to load admin relations with permissions", map[string]any{
+			errorlog.RecordHTTP(ctx, "permission", "Failed to load admin relations with permissions", map[string]any{
 				"error":    err.Error(),
 				"admin_id": admin.ID,
 				"path":     ctx.Request().Path(),
-			})
+			}, "Load admin relations failed: %v", err)
 			_ = ctx.Response().Json(http.StatusInternalServerError, http.Json{
 				"code":    500,
 				"message": trans.Get(ctx, "load_permissions_failed"),

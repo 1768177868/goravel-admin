@@ -1,9 +1,9 @@
 <template>
-  <div class="online-user-list">
+  <div class="online-admin-list">
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('online_user.title') }}</span>
+          <span>{{ $t('online_admin.title') }}</span>
           <div>
             <el-button 
               type="danger" 
@@ -11,7 +11,7 @@
               @click="handleBatchKickOut"
             >
               <el-icon><Delete /></el-icon>
-              {{ $t('online_user.batch_kick_out') }}
+              {{ $t('online_admin.batch_kick_out') }}
             </el-button>
           </div>
         </div>
@@ -20,8 +20,8 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', ip: '', browser: '', os: '' }"
-        i18n-prefix="online_user"
+        :initial-values="initialSearchValues"
+        i18n-prefix="online_admin"
         @search="handleSearch"
         @reset="handleReset"
       />
@@ -83,7 +83,7 @@
                 :disabled="getButtonState('admin.kick_out').disabled"
                 @click="handleKickOut(row)"
               >
-                {{ $t('online_user.kick_out') }}
+                {{ $t('online_admin.kick_out') }}
               </el-button>
             </template>
           </vxe-column>
@@ -106,7 +106,7 @@ import { Delete, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
 const SettingIcon = markRaw(Setting)
-import { getOnlineUserList, kickOutOnlineUser, batchKickOutOnlineUsers } from '@/api/onlineUser'
+import { getOnlineAdminList, kickOutOnlineAdmin, batchKickOutOnlineAdmins } from '@/api/onlineAdmin'
 import SearchForm from '@/components/SearchForm.vue'
 import Pagination from '@/components/Pagination.vue'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog.vue'
@@ -121,6 +121,14 @@ const tableRef = ref(null)
 const loading = ref(false)
 const tableData = ref([])
 const selectedRows = ref([])
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  username: '',
+  ip: '',
+  browser: '',
+  os: ''
+}
 
 // 字段名映射：前端字段名 -> 数据库字段名
 const fieldMapping = {
@@ -150,14 +158,14 @@ const allTableColumns = computed(() => [
   { type: 'checkbox', width: 50, fixed: 'left', key: 'checkbox' },
   {
     field: 'username',
-    title: t('online_user.username'),
+    title: t('online_admin.username'),
     width: 120,
     sortable: false,
     key: 'username'
   },
   {
     field: 'nickname',
-    title: t('online_user.nickname'),
+    title: t('online_admin.nickname'),
     width: 120,
     sortable: false,
     key: 'nickname'
@@ -165,41 +173,41 @@ const allTableColumns = computed(() => [
   {
     field: 'avatar',
     slot: 'avatar',
-    title: t('online_user.avatar'),
+    title: t('online_admin.avatar'),
     width: 80,
     key: 'avatar'
   },
   {
     field: 'browser',
-    title: t('online_user.browser'),
+    title: t('online_admin.browser'),
     width: 150,
     sortable: false,
     key: 'browser'
   },
   {
     field: 'ip',
-    title: t('online_user.ip'),
+    title: t('online_admin.ip'),
     width: 150,
     sortable: false,
     key: 'ip'
   },
   {
     field: 'os',
-    title: t('online_user.os'),
+    title: t('online_admin.os'),
     width: 150,
     sortable: false,
     key: 'os'
   },
   {
     field: 'session_id',
-    title: t('online_user.session_id'),
+    title: t('online_admin.session_id'),
     width: 200,
     key: 'session_id'
   },
   {
     field: 'last_active',
     slot: 'last_active',
-    title: t('online_user.last_active'),
+    title: t('online_admin.last_active'),
     width: 180,
     sortable: true,
     key: 'last_active'
@@ -221,7 +229,7 @@ const {
   visibleColumns,
   defaultVisibleColumns,
   handleSaveColumnSetting
-} = useColumnSetting('online_user', allTableColumns)
+} = useColumnSetting('online_admin', allTableColumns)
 
 const searchForm = reactive({
   username: '',
@@ -233,34 +241,34 @@ const searchForm = reactive({
 const searchFields = computed(() => [
   {
     prop: 'username',
-    label: t('online_user.username'),
+    label: t('online_admin.username'),
     type: 'input',
     width: '200px',
-    placeholder: t('online_user.username_placeholder'),
+    placeholder: t('online_admin.username_placeholder'),
     advanced: false
   },
   {
     prop: 'ip',
-    label: t('online_user.ip'),
+    label: t('online_admin.ip'),
     type: 'input',
     width: '200px',
-    placeholder: t('online_user.ip_placeholder'),
+    placeholder: t('online_admin.ip_placeholder'),
     advanced: false
   },
   {
     prop: 'browser',
-    label: t('online_user.browser'),
+    label: t('online_admin.browser'),
     type: 'input',
     width: '200px',
-    placeholder: t('online_user.browser_placeholder'),
+    placeholder: t('online_admin.browser_placeholder'),
     advanced: false
   },
   {
     prop: 'os',
-    label: t('online_user.os'),
+    label: t('online_admin.os'),
     type: 'input',
     width: '200px',
-    placeholder: t('online_user.os_placeholder'),
+    placeholder: t('online_admin.os_placeholder'),
     advanced: false
   }
 ])
@@ -309,7 +317,7 @@ const fetchData = async () => {
       order_by: buildOrderBy(),
       ...searchForm
     }
-    const res = await getOnlineUserList(params)
+    const res = await getOnlineAdminList(params)
     if (res.code === 200) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
@@ -317,7 +325,7 @@ const fetchData = async () => {
       ElMessage.error(res.message || t('common.operation_failed'))
     }
   } catch (error) {
-    console.error('Fetch online users error:', error)
+    console.error('Fetch online admins error:', error)
     // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error?.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
@@ -378,15 +386,15 @@ const handleCheckboxAll = ({ checked, records }) => {
 const handleKickOut = async (row) => {
   try {
     await ElMessageBox.confirm(
-      t('online_user.kick_out_confirm', { username: row.username }),
+      t('online_admin.kick_out_confirm', { username: row.username }),
       t('common.confirm'),
       {
         type: 'warning'
       }
     )
-    const res = await kickOutOnlineUser(row.id)
+    const res = await kickOutOnlineAdmin(row.id)
     if (res.code === 200) {
-      ElMessage.success(t('online_user.kick_out_success'))
+      ElMessage.success(t('online_admin.kick_out_success'))
       fetchData()
     } else {
       ElMessage.error(res.message || t('common.operation_failed'))
@@ -405,21 +413,21 @@ const handleKickOut = async (row) => {
 
 const handleBatchKickOut = async () => {
   if (selectedRows.value.length === 0) {
-    ElMessage.warning(t('online_user.select_users_first'))
+    ElMessage.warning(t('online_admin.select_admins_first'))
     return
   }
   try {
     await ElMessageBox.confirm(
-      t('online_user.batch_kick_out_confirm', { count: selectedRows.value.length }),
+      t('online_admin.batch_kick_out_confirm', { count: selectedRows.value.length }),
       t('common.confirm'),
       {
         type: 'warning'
       }
     )
     const tokenIds = selectedRows.value.map(row => row.id)
-    const res = await batchKickOutOnlineUsers(tokenIds)
+    const res = await batchKickOutOnlineAdmins(tokenIds)
     if (res.code === 200) {
-      ElMessage.success(t('online_user.batch_kick_out_success'))
+      ElMessage.success(t('online_admin.batch_kick_out_success'))
       selectedRows.value = []
       fetchData()
     } else {
@@ -444,7 +452,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.online-user-list {
+.online-admin-list {
   padding: 20px;
 }
 

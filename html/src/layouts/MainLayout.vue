@@ -68,9 +68,9 @@
               <el-icon><Warning /></el-icon>
               <template #title>{{ $t('menu.blacklist_management') }}</template>
             </el-menu-item>
-            <el-menu-item index="/online-users">
+            <el-menu-item index="/online-admins">
               <el-icon><User /></el-icon>
-              <template #title>{{ $t('menu.online_user_management') }}</template>
+              <template #title>{{ $t('menu.online_admin_management') }}</template>
             </el-menu-item>
             <el-menu-item index="/exports">
               <el-icon><Document /></el-icon>

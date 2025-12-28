@@ -15,7 +15,7 @@ func (s *PermissionSeeder) Signature() string {
 
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
-	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineUserMenu, orderMenu models.Menu
+	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
@@ -26,7 +26,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "dictionary").First(&dictionaryMenu)
 	facades.Orm().Query().Where("slug", "config").First(&configMenu)
 	facades.Orm().Query().Where("slug", "blacklist").First(&blacklistMenu)
-	facades.Orm().Query().Where("slug", "online-user").First(&onlineUserMenu)
+	facades.Orm().Query().Where("slug", "online-admin").First(&onlineAdminMenu)
 	facades.Orm().Query().Where("slug", "operation-log").First(&operationLogMenu)
 	facades.Orm().Query().Where("slug", "login-log").First(&loginLogMenu)
 	facades.Orm().Query().Where("slug", "system-log").First(&systemLogMenu)
@@ -36,6 +36,7 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "attachment").First(&attachmentMenu)
 	facades.Orm().Query().Where("slug", "notification").First(&notificationMenu)
 	facades.Orm().Query().Where("slug", "order").First(&orderMenu)
+	facades.Orm().Query().Where("slug", "user").First(&userMenu)
 	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联（或者可以创建 dashboard 菜单）
 	// 如果 dashboard 菜单不存在，使用 profileMenu 作为后备
 	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
@@ -97,10 +98,10 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "黑名单更新", Slug: "blacklist.update", Method: "PUT", Path: "/api/admin/blacklists/*", Description: "更新黑名单", Status: 1, Sort: 4, MenuID: blacklistMenu.ID},
 		{Name: "黑名单删除", Slug: "blacklist.destroy", Method: "DELETE", Path: "/api/admin/blacklists/*", Description: "删除黑名单", Status: 1, Sort: 5, MenuID: blacklistMenu.ID},
 
-		// 在线用户管理
-		{Name: "在线用户列表", Slug: "online-user.index", Method: "GET", Path: "/api/admin/online-users", Description: "查看在线用户列表", Status: 1, Sort: 1, MenuID: onlineUserMenu.ID},
-		{Name: "踢下线", Slug: "online-user.kick-out", Method: "DELETE", Path: "/api/admin/online-users/*", Description: "踢下线用户", Status: 1, Sort: 2, MenuID: onlineUserMenu.ID},
-		{Name: "批量踢下线", Slug: "online-user.batch-kick-out", Method: "POST", Path: "/api/admin/online-users/batch-kick-out", Description: "批量踢下线用户", Status: 1, Sort: 3, MenuID: onlineUserMenu.ID},
+		// 在线管理员管理
+		{Name: "在线管理员列表", Slug: "online-admin.index", Method: "GET", Path: "/api/admin/online-admins", Description: "查看在线管理员列表", Status: 1, Sort: 1, MenuID: onlineAdminMenu.ID},
+		{Name: "踢下线", Slug: "online-admin.kick-out", Method: "DELETE", Path: "/api/admin/online-admins/*", Description: "踢下线管理员", Status: 1, Sort: 2, MenuID: onlineAdminMenu.ID},
+		{Name: "批量踢下线", Slug: "online-admin.batch-kick-out", Method: "POST", Path: "/api/admin/online-admins/batch-kick-out", Description: "批量踢下线管理员", Status: 1, Sort: 3, MenuID: onlineAdminMenu.ID},
 		// 操作日志
 		{Name: "操作日志列表", Slug: "operation_log.index", Method: "GET", Path: "/api/admin/operation-logs", Description: "查看操作日志列表", Status: 1, Sort: 1, MenuID: operationLogMenu.ID},
 		{Name: "操作日志详情", Slug: "operation_log.show", Method: "GET", Path: "/api/admin/operation-logs/*", Description: "查看操作日志详情", Status: 1, Sort: 2, MenuID: operationLogMenu.ID},
@@ -151,6 +152,17 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "订单更新", Slug: "order.update", Method: "PUT", Path: "/api/admin/orders/*", Description: "更新订单", Status: 1, Sort: 4, MenuID: orderMenu.ID},
 		{Name: "订单删除", Slug: "order.destroy", Method: "DELETE", Path: "/api/admin/orders/*", Description: "删除订单", Status: 1, Sort: 5, MenuID: orderMenu.ID},
 		{Name: "订单导出", Slug: "order.export", Method: "POST", Path: "/api/admin/orders/export", Description: "导出订单列表", Status: 1, Sort: 6, MenuID: orderMenu.ID},
+		// 用户管理
+		{Name: "用户列表", Slug: "user.index", Method: "GET", Path: "/api/admin/users", Description: "查看用户列表", Status: 1, Sort: 1, MenuID: userMenu.ID},
+		{Name: "用户详情", Slug: "user.show", Method: "GET", Path: "/api/admin/users/*", Description: "查看用户详情", Status: 1, Sort: 2, MenuID: userMenu.ID},
+		{Name: "用户创建", Slug: "user.store", Method: "POST", Path: "/api/admin/users", Description: "创建用户", Status: 1, Sort: 3, MenuID: userMenu.ID},
+		{Name: "用户更新", Slug: "user.update", Method: "PUT", Path: "/api/admin/users/*", Description: "更新用户", Status: 1, Sort: 4, MenuID: userMenu.ID},
+		{Name: "用户删除", Slug: "user.destroy", Method: "DELETE", Path: "/api/admin/users/*", Description: "删除用户", Status: 1, Sort: 5, MenuID: userMenu.ID},
+		{Name: "更新余额", Slug: "user.update_balance", Method: "POST", Path: "/api/admin/users/*/update-balance", Description: "更新用户余额", Status: 1, Sort: 6, MenuID: userMenu.ID},
+		// 用户余额变动记录
+		{Name: "余额记录列表", Slug: "user_balance_log.index", Method: "GET", Path: "/api/admin/user-balance-logs", Description: "查看用户余额变动记录列表", Status: 1, Sort: 7, MenuID: userMenu.ID},
+		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 8, MenuID: userMenu.ID},
+		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 9, MenuID: userMenu.ID},
 	}
 
 	for _, perm := range permissions {

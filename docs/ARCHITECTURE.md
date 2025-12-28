@@ -124,7 +124,6 @@ func (a *AdminController) Index(ctx http.Context) http.Response {
     // 1. 获取查询参数
     // 2. 调用 Service 获取数据
     // 3. 返回统一响应
-    return response.PaginateQuery(ctx, query, &list, nil)
 }
 ```
 
@@ -180,9 +179,6 @@ Request → TraceID → JWT Auth → Permission → Controller → OperationLog 
 ```go
 // 成功响应
 response.Success(ctx, data)
-
-// 分页响应
-response.PaginateQuery(ctx, query, &list, options)
 
 // 错误响应
 response.Error(ctx, http.StatusBadRequest, "错误信息")

@@ -475,34 +475,10 @@ func (s *OrderServiceImpl) GetAllOrdersForExport(filters OrderFilters) ([]models
 	var allOrders []models.Order
 
 	for _, tableName := range tableNames {
-		query := facades.Orm().Query().Table(tableName).
-			Where("created_at >= ?", filters.StartTime).
-			Where("created_at <= ?", filters.EndTime)
+		// 使用 buildShardingQuery 构建查询
+		query := s.buildShardingQuery(tableName, filters)
 
-		// 用户ID筛选
-		if filters.UserID > 0 {
-			query = query.Where("user_id", filters.UserID)
-		}
-
-		// 订单号模糊搜索
-		if filters.OrderNo != "" {
-			query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
-		}
-
-		// 订单状态筛选
-		if filters.Status != "" {
-			query = query.Where("status", filters.Status)
-		}
-
-		// 金额范围筛选
-		if filters.MinAmount > 0 {
-			query = query.Where("amount >= ?", filters.MinAmount)
-		}
-		if filters.MaxAmount > 0 {
-			query = query.Where("amount <= ?", filters.MaxAmount)
-		}
-
-		// 排序
+		// 应用排序
 		orderBy := filters.OrderBy
 		if orderBy == "" {
 			orderBy = "created_at:desc"
@@ -541,34 +517,10 @@ func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters
 	var allOrders []models.Order
 
 	for _, tableName := range tableNames {
-		query := facades.Orm().Query().Table(tableName).
-			Where("created_at >= ?", filters.StartTime).
-			Where("created_at <= ?", filters.EndTime)
+		// 使用 buildShardingQuery 构建查询
+		query := s.buildShardingQuery(tableName, filters)
 
-		// 用户ID筛选
-		if filters.UserID > 0 {
-			query = query.Where("user_id", filters.UserID)
-		}
-
-		// 订单号模糊搜索
-		if filters.OrderNo != "" {
-			query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
-		}
-
-		// 订单状态筛选
-		if filters.Status != "" {
-			query = query.Where("status", filters.Status)
-		}
-
-		// 金额范围筛选
-		if filters.MinAmount > 0 {
-			query = query.Where("amount >= ?", filters.MinAmount)
-		}
-		if filters.MaxAmount > 0 {
-			query = query.Where("amount <= ?", filters.MaxAmount)
-		}
-
-		// 排序
+		// 应用排序
 		orderBy := filters.OrderBy
 		if orderBy == "" {
 			orderBy = "created_at:desc"

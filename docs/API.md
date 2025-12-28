@@ -728,26 +728,26 @@ Authorization: Bearer {token}
 
 ---
 
-## 在线用户
+## 在线管理员
 
-### 获取在线用户列表
+### 获取在线管理员列表
 
 ```http
-GET /online-users
+GET /online-admins
 Authorization: Bearer {token}
 ```
 
 ### 强制下线
 
 ```http
-DELETE /online-users/{token_id}
+DELETE /online-admins/{token_id}
 Authorization: Bearer {token}
 ```
 
 ### 批量强制下线
 
 ```http
-DELETE /online-users/batch
+POST /online-admins/batch-kick-out
 Authorization: Bearer {token}
 ```
 

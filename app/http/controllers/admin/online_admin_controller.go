@@ -10,30 +10,30 @@ import (
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/constants"
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 )
 
-type OnlineUserController struct {
+type OnlineAdminController struct {
 }
 
-func NewOnlineUserController() *OnlineUserController {
-	return &OnlineUserController{}
+func NewOnlineAdminController() *OnlineAdminController {
+	return &OnlineAdminController{}
 }
 
-// Index 获取在线用户列表
-// buildQuery 构建在线用户查询（基于 token）
-func (r *OnlineUserController) buildQuery(ctx http.Context) orm.Query {
+// Index 获取在线管理员列表
+// buildQuery 构建在线管理员查询（基于 token）
+func (r *OnlineAdminController) buildQuery(ctx http.Context) orm.Query {
 	ip := ctx.Request().Query("ip", "")
 	browser := ctx.Request().Query("browser", "")
 	os := ctx.Request().Query("os", "")
 
-	// 只查询最近15分钟内有活动的token（在线用户）
+	// 只查询最近15分钟内有活动的token（在线管理员）
 	// 默认只显示admin类型的token
-	onlineThreshold := time.Now().Add(-constants.OnlineUserThreshold)
+	onlineThreshold := time.Now().Add(-constants.OnlineAdminThreshold)
 	query := facades.Orm().Query().Model(&models.PersonalAccessToken{}).
 		Where("tokenable_type", "admin").
 		Where("last_used_at IS NOT NULL").
@@ -57,8 +57,8 @@ func (r *OnlineUserController) buildQuery(ctx http.Context) orm.Query {
 	return query
 }
 
-// 只显示最近15分钟内有活动的用户（根据 OnlineUserThreshold 常量判断）
-func (r *OnlineUserController) Index(ctx http.Context) http.Response {
+// 只显示最近15分钟内有活动的管理员（根据 OnlineAdminThreshold 常量判断）
+func (r *OnlineAdminController) Index(ctx http.Context) http.Response {
 	// 验证并规范化分页参数
 	page, pageSize := helpers.ValidatePagination(
 		helpers.GetIntQuery(ctx, "page", 1),
@@ -71,7 +71,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 
 	var tokens []models.PersonalAccessToken
 	if err := query.Get(&tokens); err != nil {
-		return response.ErrorWithLog(ctx, "online_user", err)
+		return response.ErrorWithLog(ctx, "online_admin", err)
 	}
 
 	// 批量查询所有 admin 信息，避免 N+1 查询
@@ -98,7 +98,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 
 		var admins []models.Admin
 		if err := query.Find(&admins); err != nil {
-			return response.ErrorWithLog(ctx, "online_user", err, map[string]any{
+			return response.ErrorWithLog(ctx, "online_admin", err, map[string]any{
 				"admin_ids": adminIDs,
 			})
 		}
@@ -110,7 +110,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 	}
 
 	// 组装数据，同时过滤 username
-	var onlineUsers []http.Json
+	var onlineAdmins []http.Json
 	for _, token := range tokens {
 		admin, ok := adminMap[token.TokenableID]
 		if !ok {
@@ -122,7 +122,7 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 			continue
 		}
 
-		onlineUser := http.Json{
+		onlineAdmin := http.Json{
 			"id":          token.ID,
 			"admin_id":    admin.ID,
 			"username":    admin.Username,
@@ -135,17 +135,17 @@ func (r *OnlineUserController) Index(ctx http.Context) http.Response {
 			"last_active": token.LastUsedAt,
 			"created_at":  token.CreatedAt,
 		}
-		onlineUsers = append(onlineUsers, onlineUser)
+		onlineAdmins = append(onlineAdmins, onlineAdmin)
 	}
 
 	// 使用工具函数进行分页
-	paginatedUsers, total := helpers.PaginateSlice(onlineUsers, page, pageSize)
+	paginatedAdmins, total := helpers.PaginateSlice(onlineAdmins, page, pageSize)
 
-	return response.Paginate(ctx, paginatedUsers, total, page, pageSize)
+	return response.Paginate(ctx, paginatedAdmins, total, page, pageSize)
 }
 
 // KickOut 踢下线（删除token）
-func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
+func (r *OnlineAdminController) KickOut(ctx http.Context) http.Response {
 	tokenID := helpers.GetUintRoute(ctx, "id")
 	if tokenID == 0 {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTokenIDRequired.Code)
@@ -159,7 +159,7 @@ func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
 
 	// 删除token
 	if _, err := facades.Orm().Query().Delete(&token); err != nil {
-		return response.ErrorWithLog(ctx, "online_user", err, map[string]any{
+		return response.ErrorWithLog(ctx, "online_admin", err, map[string]any{
 			"token_id": tokenID,
 		})
 	}
@@ -168,7 +168,7 @@ func (r *OnlineUserController) KickOut(ctx http.Context) http.Response {
 }
 
 // BatchKickOut 批量踢下线
-func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
+func (r *OnlineAdminController) BatchKickOut(ctx http.Context) http.Response {
 	tokenIDs := ctx.Request().Input("token_ids")
 	if tokenIDs == "" {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTokenIDsRequired.Code)
@@ -183,7 +183,7 @@ func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
 	// 批量删除token
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.PersonalAccessToken{}); err != nil {
-		return response.ErrorWithLog(ctx, "online_user", err, map[string]any{
+		return response.ErrorWithLog(ctx, "online_admin", err, map[string]any{
 			"token_ids": ids,
 		})
 	}
@@ -194,7 +194,7 @@ func (r *OnlineUserController) BatchKickOut(ctx http.Context) http.Response {
 }
 
 // parseProtectedIDs 解析受保护的管理员ID字符串（支持逗号分隔）
-func (r *OnlineUserController) parseProtectedIDs(idsStr string) []uint {
+func (r *OnlineAdminController) parseProtectedIDs(idsStr string) []uint {
 	var ids []uint
 	if idsStr == "" {
 		return ids

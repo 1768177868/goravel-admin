@@ -417,12 +417,12 @@ const pluralToSingular = (plural) => {
     'operation_logs': 'operation_log',
     'login_logs': 'login_log',
     'system_logs': 'system_log',
-    'online_users': 'online-user',
+    'online_admins': 'online-admin',
     // 连字符形式也支持
     'operation-logs': 'operation_log',
     'login-logs': 'login_log',
     'system-logs': 'system_log',
-    'online-users': 'online-user'
+    'online-admins': 'online-admin'
   }
 
   // 先检查完整匹配

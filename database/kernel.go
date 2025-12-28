@@ -32,7 +32,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000012CreateSystemLogsTable{},
 		&migrations.M20250201000016AddTraceIdToSystemLogsTable{},
 		&migrations.M20250101000014CreatePersonalAccessTokensTable{},
-		&migrations.M20250101000017AddOnlineUserFieldsToPersonalAccessTokens{},
+		&migrations.M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens{},
 		&migrations.M20250201000003CreateNotificationsTable{},
 		&migrations.M20250301000021CreateExportsTable{},
 		&migrations.M20250301000022CreateAttachmentsTable{},
@@ -43,6 +43,13 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251227063517AddFulltextIndexToOperationLogsRequest{},
 		&migrations.M20250128000001CreateOrdersTable{},
 		&migrations.M20251228004525AddPaymentMethodToOrdersShardingTables{},
+		// 货币表（需要在用户表之前创建）
+		&migrations.M20250130000003CreateCurrenciesTable{},
+		&migrations.M20250130000005AddDecimalPlacesToCurrenciesTable{}, // 添加小数位数字段
+		// 用户相关表
+		&migrations.M20250130000001CreateUsersTable{},
+		&migrations.M20250130000004AddCurrencyIdToUsersTable{}, // 添加货币字段（如果用户表已存在）
+		&migrations.M20250130000002CreateUserBalanceLogsTable{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {
@@ -52,5 +59,6 @@ func (kernel Kernel) Seeders() []seeder.Seeder {
 		&seeders.PermissionSeeder{}, // 权限（依赖菜单）
 		&seeders.AdminSeeder{},      // 管理员、部门、角色（最后执行，关联权限和菜单）
 		&seeders.DictionarySeeder{}, // 字典数据
+		&seeders.CurrencySeeder{},   // 货币数据（需要在用户表之前创建）
 	}
 }

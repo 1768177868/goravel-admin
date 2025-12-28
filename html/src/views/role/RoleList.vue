@@ -18,7 +18,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', status: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="role"
         @search="handleSearch"
         @reset="handleReset"
@@ -216,6 +216,12 @@ const { getButtonState } = usePermission()
 const formRef = ref(null)
 const tableRef = ref(null)
 const menuPermissionTreeRef = ref(null)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  name: '',
+  status: ''
+}
 const loading = ref(false)
 const formLoading = ref(false)
 const submitting = ref(false)

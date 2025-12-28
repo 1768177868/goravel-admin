@@ -53,7 +53,7 @@ password: demo123
   - Role-based access control (RBAC)
   - Permission management
   - Multi-token management
-  - Online user monitoring and kick-out
+  - Online admin monitoring and kick-out
 
 - **Admin Management**
   - Admin user management

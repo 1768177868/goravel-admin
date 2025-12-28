@@ -21,7 +21,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', ip: '', status: '', start_time: '', end_time: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
@@ -134,6 +134,15 @@ const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const detailVisible = ref(false)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  username: '',
+  ip: '',
+  status: '',
+  start_time: '',
+  end_time: ''
+}
 const logDetail = ref(null)
 const selectedRows = ref([])
 

@@ -204,8 +204,8 @@ export interface Blacklist {
   created_at?: string
 }
 
-/** 在线用户 */
-export interface OnlineUser {
+/** 在线管理员 */
+export interface OnlineAdmin {
   id: number
   admin_id: number
   token: string

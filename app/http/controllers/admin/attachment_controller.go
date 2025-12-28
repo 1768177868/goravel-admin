@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -20,6 +20,7 @@ import (
 )
 
 type AttachmentController struct {
+	attachmentService services.AttachmentService
 }
 
 func NewAttachmentController() *AttachmentController {
@@ -28,36 +29,41 @@ func NewAttachmentController() *AttachmentController {
 
 // Index 附件列表
 func (r *AttachmentController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var attachments []models.Attachment
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	filters := r.buildFilters(ctx)
+
 	attachmentService := services.NewAttachmentService(ctx)
+	attachments, total, err := attachmentService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "attachment", err)
+	}
+
 	type AttachmentWithURL struct {
 		models.Attachment
 		FileURL string `json:"file_url"`
 	}
 
-	return response.PaginateQuery(ctx, query, &attachments, &response.PaginateQueryOptions{
-		WithRelations: []string{"Admin"},
-		ErrorModule:   "attachment",
-		Transform: func(data any) any {
-			attachments := data.(*[]models.Attachment)
-			var resultWithURL []AttachmentWithURL
-			for _, a := range *attachments {
-				fileURL := attachmentService.GetFileURL(&a)
-				resultWithURL = append(resultWithURL, AttachmentWithURL{
-					Attachment: a,
-					FileURL:    fileURL,
-				})
-			}
-			return resultWithURL
-		},
+	var resultWithURL []AttachmentWithURL
+	for _, a := range attachments {
+		fileURL := attachmentService.GetFileURL(&a)
+		resultWithURL = append(resultWithURL, AttachmentWithURL{
+			Attachment: a,
+			FileURL:    fileURL,
+		})
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      resultWithURL,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
 }
 
-// buildQuery 构建附件查询
-func (r *AttachmentController) buildQuery(ctx http.Context) orm.Query {
-	query := facades.Orm().Query().Model(&models.Attachment{})
-
+// buildFilters 构建查询过滤器
+func (r *AttachmentController) buildFilters(ctx http.Context) services.AttachmentFilters {
 	adminID := ctx.Request().Query("admin_id", "")
 	filename := ctx.Request().Query("filename", "")
 	displayName := ctx.Request().Query("display_name", "")
@@ -65,34 +71,18 @@ func (r *AttachmentController) buildQuery(ctx http.Context) orm.Query {
 	extension := ctx.Request().Query("extension", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	if adminID != "" {
-		query = query.Where("admin_id", adminID)
-	}
-	if filename != "" {
-		query = query.Where("filename LIKE ?", "%"+filename+"%")
-	}
-	if displayName != "" {
-		query = query.Where("display_name LIKE ?", "%"+displayName+"%")
-	}
-	if fileType != "" {
-		query = query.Where("file_type = ?", fileType)
-	}
-	if extension != "" {
-		query = query.Where("extension = ?", extension)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 id desc
-	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	return query
+	return services.AttachmentFilters{
+		AdminID:     adminID,
+		Filename:    filename,
+		DisplayName: displayName,
+		FileType:    fileType,
+		Extension:   extension,
+		StartTime:   startTime,
+		EndTime:     endTime,
+		OrderBy:     orderBy,
+	}
 }
 
 // Upload 普通文件上传（小文件）
@@ -388,8 +378,9 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+	attachmentService := services.NewAttachmentService(ctx)
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
@@ -408,7 +399,7 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 
 		// 如果生成临时URL失败，尝试从配置获取基础URL
 		attachmentService := services.NewAttachmentService(ctx)
-		directURL := attachmentService.GetFileURL(&attachment)
+		directURL := attachmentService.GetFileURL(attachment)
 		if directURL != "" && directURL != fmt.Sprintf("/api/admin/attachments/%d/preview", attachment.ID) {
 			return ctx.Response().Redirect(http.StatusFound, directURL)
 		}
@@ -458,8 +449,9 @@ func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+	attachmentService := services.NewAttachmentService(ctx)
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
@@ -479,7 +471,7 @@ func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 
 		// 如果生成临时URL失败，尝试从配置获取基础URL
 		attachmentService := services.NewAttachmentService(ctx)
-		directURL := attachmentService.GetFileURL(&attachment)
+		directURL := attachmentService.GetFileURL(attachment)
 		if directURL != "" && directURL != fmt.Sprintf("/api/admin/attachments/%d/preview", attachment.ID) {
 			return ctx.Response().Redirect(http.StatusFound, directURL)
 		}
@@ -525,13 +517,13 @@ func (r *AttachmentController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+	attachmentService := services.NewAttachmentService(ctx)
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
-	attachmentService := services.NewAttachmentService(ctx)
-	if err := attachmentService.DeleteFile(&attachment); err != nil {
+	if err := attachmentService.DeleteFile(attachment); err != nil {
 		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
 			"attachId": attachment.ID,
 		})
@@ -557,18 +549,17 @@ func (r *AttachmentController) BatchDestroy(ctx http.Context) http.Response {
 	}
 
 	ids := req.IDs
-	idsAny := helpers.ConvertUintSliceToAny(ids)
 
 	// 查询要删除的附件
-	var attachments []models.Attachment
-	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&attachments); err != nil {
+	attachmentService := services.NewAttachmentService(ctx)
+	attachments, err := attachmentService.GetByIDs(ids)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
 			"ids": ids,
 		})
 	}
 
 	// 删除文件和记录
-	attachmentService := services.NewAttachmentService(ctx)
 	for _, attachment := range attachments {
 		if err := attachmentService.DeleteFile(&attachment); err != nil {
 			// 批量删除中单个文件删除失败只记录日志，不影响主流程
@@ -589,18 +580,19 @@ func (r *AttachmentController) UpdateDisplayName(ctx http.Context) http.Response
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
-		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
-	}
-
+	attachmentService := services.NewAttachmentService(ctx)
 	displayName := ctx.Request().Input("display_name", "")
-	attachment.DisplayName = displayName
 
-	if err := facades.Orm().Query().Save(&attachment); err != nil {
+	if err := attachmentService.UpdateDisplayName(id, displayName); err != nil {
 		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
 			"attachId": id,
 		})
+	}
+
+	// 重新获取更新后的附件
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
 	return response.Success(ctx, http.Json{

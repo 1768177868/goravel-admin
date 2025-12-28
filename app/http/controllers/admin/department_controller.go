@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -30,41 +29,29 @@ func NewDepartmentController() *DepartmentController {
 
 // findDepartmentByID 根据ID查找部门，如果不存在则返回错误响应
 func (r *DepartmentController) findDepartmentByID(ctx http.Context, id uint) (*models.Department, http.Response) {
-	return response.FindByID[models.Department](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: apperrors.ErrDepartmentNotFound.Code,
-	})
+	department, err := r.departmentService.GetByID(id)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrDepartmentNotFound.Code)
+	}
+	return department, nil
 }
 
-// buildQuery 构建部门查询
-func (r *DepartmentController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *DepartmentController) buildFilters(ctx http.Context) services.DepartmentFilters {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.Department{})
-
-	if name != "" {
-		// 使用模型字段名，GORM 会自动转换为数据库字段名
-		// 或者直接使用数据库字段名（根据迁移文件，字段名是 name）
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	if status != "" {
-		query = query.Where("status", status)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 sort asc, id asc
-	query = helpers.ApplySort(query, orderBy, "sort:asc,id:asc")
 
-	return query
+	return services.DepartmentFilters{
+		Name:      name,
+		Status:    status,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 部门列表（树形结构）
@@ -77,10 +64,10 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 
 	// 如果有搜索条件，返回扁平列表；否则返回树形结构
 	if name != "" || status != "" || startTime != "" || endTime != "" {
-		query := r.buildQuery(ctx)
-
-		var departments []models.Department
-		if err := query.Get(&departments); err != nil {
+		filters := r.buildFilters(ctx)
+		// 搜索时获取所有匹配的记录，不限制分页
+		departments, _, err := r.departmentService.GetList(filters, 1, 10000)
+		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 		}
 

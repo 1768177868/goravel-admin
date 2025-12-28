@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -12,56 +11,63 @@ import (
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/services"
 )
 
 type DictionaryController struct {
+	dictionaryService services.DictionaryService
 }
 
 func NewDictionaryController() *DictionaryController {
-	return &DictionaryController{}
+	return &DictionaryController{
+		dictionaryService: services.NewDictionaryService(),
+	}
 }
 
 // findDictionaryByID 根据ID查找字典，如果不存在则返回错误响应
 func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*models.Dictionary, http.Response) {
-	return response.FindByID[models.Dictionary](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: apperrors.ErrDictionaryNotFound.Code,
-	})
+	dictionary, err := r.dictionaryService.GetByID(id)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrDictionaryNotFound.Code)
+	}
+	return dictionary, nil
 }
 
-// buildQuery 构建字典查询
-func (r *DictionaryController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *DictionaryController) buildFilters(ctx http.Context) services.DictionaryFilters {
 	dictType := ctx.Request().Query("type", "")
 	status := ctx.Request().Query("status", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.Dictionary{})
-
-	if dictType != "" {
-		query = query.Where("type LIKE ?", "%"+dictType+"%")
-	}
-	if status != "" {
-		query = query.Where("status", status)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 sort asc, id desc
-	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
 
-	return query
+	return services.DictionaryFilters{
+		Type:      dictType,
+		Status:    status,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 字典列表
 func (r *DictionaryController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var dictionaries []models.Dictionary
-	return response.PaginateQuery(ctx, query, &dictionaries, nil)
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	filters := r.buildFilters(ctx)
+
+	dictionaries, total, err := r.dictionaryService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      dictionaries,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 // Show 字典详情
@@ -198,8 +204,8 @@ func (r *DictionaryController) GetByType(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDictionaryTypeRequired.Code)
 	}
 
-	var dictionaries []models.Dictionary
-	if err := facades.Orm().Query().Where("type", dictType).Where("status", 1).Order("sort asc, id asc").Get(&dictionaries); err != nil {
+	dictionaries, err := r.dictionaryService.GetByType(dictType)
+	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 

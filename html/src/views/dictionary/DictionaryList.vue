@@ -18,7 +18,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ type: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="dictionary"
         @search="handleSearch"
         @reset="handleReset"
@@ -116,6 +116,11 @@ const { t } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
 const loading = ref(false)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  type: ''
+}
 
 // 使用 CRUD composable
 const {

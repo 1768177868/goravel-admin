@@ -1,6 +1,6 @@
 /**
  * 从路径提取可能的 slug
- * 例如：/admins -> admin, /online-users -> online-user, /operation-logs -> operation-log
+ * 例如：/admins -> admin, /online-admins -> online-admin, /operation-logs -> operation-log
  */
 function extractSlugFromPath(path) {
   if (!path) return null
@@ -29,9 +29,9 @@ export function getMenuTranslation(t, te, slug) {
   
   // 尝试多种 slug 格式
   const slugVariants = [
-    slug, // 原始 slug（如 online-user）
-    slug.replace(/-/g, '_'), // 连字符转下划线（如 online_user）
-    slug.replace(/_/g, '-') // 下划线转连字符（如 online-user）
+    slug, // 原始 slug（如 online-admin）
+    slug.replace(/-/g, '_'), // 连字符转下划线（如 online_admin）
+    slug.replace(/_/g, '-') // 下划线转连字符（如 online-admin）
   ]
   
   // 去重

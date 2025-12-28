@@ -171,11 +171,11 @@ func (s *MenuSeeder) Run() error {
 
 	createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
-		Title:     "在线用户",
-		Slug:      "online-user",
+		Title:     "在线管理员",
+		Slug:      "online-admin",
 		Icon:      "User",
-		Path:      "/online-users",
-		Component: "onlineUser/index",
+		Path:      "/online-admins",
+		Component: "onlineAdmin/index",
 		Type:      2,
 		Status:    1,
 		Sort:      6,
@@ -257,6 +257,19 @@ func (s *MenuSeeder) Run() error {
 		Type:      2,
 		Status:    1,
 		Sort:      12,
+		IsHidden:  0,
+	})
+
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "用户管理",
+		Slug:      "user",
+		Icon:      "User",
+		Path:      "/users",
+		Component: "user/index",
+		Type:      2,
+		Status:    1,
+		Sort:      13,
 		IsHidden:  0,
 	})
 

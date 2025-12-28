@@ -1,15 +1,21 @@
 package services
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
 
 type RoleService interface {
+	// GetByID 根据ID获取角色
+	GetByID(id uint, withRelations bool) (*models.Role, error)
+	// GetList 获取角色列表
+	GetList(filters RoleFilters, page, pageSize int) ([]models.Role, int64, error)
 	// LoadRelations 加载角色的关联数据（权限、菜单）
 	LoadRelations(role *models.Role) error
 	// SyncPermissions 同步角色权限关联
@@ -20,11 +26,78 @@ type RoleService interface {
 	ParseIDsFromRequest(ctx http.Context, key string) []uint
 }
 
+// RoleFilters 角色查询过滤器
+type RoleFilters struct {
+	Name      string
+	Status    string
+	StartTime string
+	EndTime   string
+	OrderBy   string
+}
+
 type RoleServiceImpl struct {
 }
 
 func NewRoleServiceImpl() *RoleServiceImpl {
 	return &RoleServiceImpl{}
+}
+
+// GetByID 根据ID获取角色
+func (s *RoleServiceImpl) GetByID(id uint, withRelations bool) (*models.Role, error) {
+	var role models.Role
+	query := facades.Orm().Query().Where("id", id)
+
+	// 预加载关联
+	if withRelations {
+		query = query.With("Permissions").With("Menus")
+	}
+
+	if err := query.First(&role); err != nil {
+		return nil, fmt.Errorf("角色不存在: %v", err)
+	}
+
+	return &role, nil
+}
+
+// GetList 获取角色列表
+func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]models.Role, int64, error) {
+	query := facades.Orm().Query().Model(&models.Role{})
+
+	// 应用筛选条件
+	if filters.Name != "" {
+		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
+	}
+	if filters.Status != "" {
+		query = query.Where("status", filters.Status)
+	}
+	if filters.StartTime != "" {
+		query = query.Where("created_at >= ?", filters.StartTime)
+	}
+	if filters.EndTime != "" {
+		query = query.Where("created_at <= ?", filters.EndTime)
+	}
+
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "sort:asc,created_at:desc"
+	}
+	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
+
+	// 获取总数
+	total, err := query.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	var roles []models.Role
+	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&roles)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return roles, total, nil
 }
 
 // LoadRelations 加载角色的关联数据（权限、菜单）
@@ -76,4 +149,3 @@ func (s *RoleServiceImpl) ParseIDsFromRequest(ctx http.Context, key string) []ui
 	}
 	return ids
 }
-

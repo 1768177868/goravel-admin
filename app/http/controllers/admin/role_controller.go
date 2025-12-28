@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -29,51 +28,49 @@ func NewRoleController() *RoleController {
 // findRoleByID 根据ID查找角色，如果不存在则返回错误响应
 // withRelations 为 true 时会预加载 Permissions 和 Menus 关联
 func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations bool) (*models.Role, http.Response) {
-	var relations []string
-	if withRelations {
-		relations = append(relations, "Permissions", "Menus")
+	role, err := r.roleService.GetByID(id, withRelations)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrRoleNotFound.Code)
 	}
-	return response.FindByID[models.Role](ctx, id, &response.FindByIDOptions{
-		WithRelations:      relations,
-		NotFoundMessageKey: apperrors.ErrRoleNotFound.Code,
-	})
+	return role, nil
 }
 
-// buildQuery 构建角色查询
-func (r *RoleController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *RoleController) buildFilters(ctx http.Context) services.RoleFilters {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
 	// 使用辅助函数自动转换时区
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.Role{})
-
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	if status != "" {
-		query = query.Where("status", status)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序（默认按排序字段升序，创建时间倒序）
-	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
 
-	return query
+	return services.RoleFilters{
+		Name:      name,
+		Status:    status,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 角色列表
 func (r *RoleController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var roles []models.Role
-	return response.PaginateQuery(ctx, query, &roles, nil)
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	filters := r.buildFilters(ctx)
+
+	roles, total, err := r.roleService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      roles,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 // Show 角色详情

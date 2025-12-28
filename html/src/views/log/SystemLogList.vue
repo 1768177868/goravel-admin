@@ -21,7 +21,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ level: '', module: '', trace_id: '', message: '', start_time: '', end_time: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
@@ -156,6 +156,16 @@ const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  level: '',
+  module: '',
+  trace_id: '',
+  message: '',
+  start_time: '',
+  end_time: ''
+}
 
 const pagination = reactive({
   page: 1,

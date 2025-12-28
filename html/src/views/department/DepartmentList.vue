@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', status: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="department"
         @search="handleSearch"
         @reset="handleReset"
@@ -103,6 +103,12 @@ import {
 const { t } = useI18n()
 const { getButtonState } = usePermission()
 const loading = ref(false)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  name: '',
+  status: ''
+}
 
 // 使用 CRUD composable
 const {

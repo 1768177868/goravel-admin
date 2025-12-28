@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -12,57 +11,64 @@ import (
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/services"
 	"goravel/app/utils"
 )
 
 type BlacklistController struct {
+	blacklistService services.BlacklistService
 }
 
 func NewBlacklistController() *BlacklistController {
-	return &BlacklistController{}
+	return &BlacklistController{
+		blacklistService: services.NewBlacklistService(),
+	}
 }
 
 // findBlacklistByID 根据ID查找黑名单，如果不存在则返回错误响应
 func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*models.Blacklist, http.Response) {
-	return response.FindByID[models.Blacklist](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: apperrors.ErrBlacklistNotFound.Code,
-	})
+	blacklist, err := r.blacklistService.GetByID(id)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrBlacklistNotFound.Code)
+	}
+	return blacklist, nil
 }
 
-// buildQuery 构建黑名单查询
-func (r *BlacklistController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *BlacklistController) buildFilters(ctx http.Context) services.BlacklistFilters {
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.Blacklist{})
-
-	if ip != "" {
-		query = query.Where("ip LIKE ?", "%"+ip+"%")
-	}
-	if status != "" {
-		query = query.Where("status", status)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 id desc
-	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	return query
+	return services.BlacklistFilters{
+		IP:        ip,
+		Status:    status,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 黑名单列表
 func (r *BlacklistController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var blacklists []models.Blacklist
-	return response.PaginateQuery(ctx, query, &blacklists, nil)
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	filters := r.buildFilters(ctx)
+
+	blacklists, total, err := r.blacklistService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      blacklists,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 // Show 黑名单详情

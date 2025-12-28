@@ -19,7 +19,7 @@ func Admin() {
 	dictionaryController := admin.NewDictionaryController()
 	configController := admin.NewConfigController()
 	blacklistController := admin.NewBlacklistController()
-	onlineUserController := admin.NewOnlineUserController()
+	onlineAdminController := admin.NewOnlineAdminController()
 	operationLogController := admin.NewOperationLogController()
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
@@ -32,6 +32,8 @@ func Admin() {
 	exportController := admin.NewExportController()
 	attachmentController := admin.NewAttachmentController()
 	orderController := admin.NewOrderController()
+	userController := admin.NewUserController()
+	userBalanceLogController := admin.NewUserBalanceLogController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -107,10 +109,10 @@ func Admin() {
 			// 黑名单管理
 			router.Resource("blacklists", blacklistController)
 
-			// 在线用户管理
-			router.Get("online-users", onlineUserController.Index)
-			router.Delete("online-users/{id}", onlineUserController.KickOut)
-			router.Post("online-users/batch-kick-out", onlineUserController.BatchKickOut)
+			// 在线管理员管理
+			router.Get("online-admins", onlineAdminController.Index)
+			router.Delete("online-admins/{id}", onlineAdminController.KickOut)
+			router.Post("online-admins/batch-kick-out", onlineAdminController.BatchKickOut)
 
 			// 操作日志
 			router.Get("operation-logs", operationLogController.Index)
@@ -180,6 +182,15 @@ func Admin() {
 			// 订单管理
 			router.Resource("orders", orderController)
 			router.Post("orders/export", orderController.Export)
+
+			// 用户管理
+			router.Resource("users", userController)
+			router.Post("users/{id}/update-balance", userController.UpdateBalance)
+
+			// 用户余额变动记录
+			router.Get("user-balance-logs", userBalanceLogController.Index)
+			router.Post("user-balance-logs", userBalanceLogController.Store)
+			router.Get("user-balance-logs/statistics", userBalanceLogController.Statistics)
 
 		})
 

@@ -3,7 +3,6 @@ package admin
 import (
 	"time"
 
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -12,65 +11,67 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/services"
+	"github.com/spf13/cast"
 )
 
 type SystemLogController struct {
+	systemLogService services.SystemLogService
 }
 
 func NewSystemLogController() *SystemLogController {
-	return &SystemLogController{}
+	return &SystemLogController{
+		systemLogService: services.NewSystemLogService(),
+	}
 }
 
 // findSystemLogByID 根据ID查找系统日志，如果不存在则返回错误响应
 func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*models.SystemLog, http.Response) {
-	return response.FindByID[models.SystemLog](ctx, id, &response.FindByIDOptions{
-		NotFoundMessageKey: apperrors.ErrLogNotFound.Code,
-	})
+	log, err := r.systemLogService.GetByID(id)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrLogNotFound.Code)
+	}
+	return log, nil
 }
 
-// buildQuery 构建系统日志查询
-func (r *SystemLogController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *SystemLogController) buildFilters(ctx http.Context) services.SystemLogFilters {
 	level := ctx.Request().Query("level", "")
 	module := ctx.Request().Query("module", "")
 	traceID := ctx.Request().Query("trace_id", "")
 	message := ctx.Request().Query("message", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.SystemLog{})
-
-	if level != "" {
-		query = query.Where("level = ?", level)
-	}
-	if module != "" {
-		query = query.Where("module LIKE ?", "%"+module+"%")
-	}
-	if traceID != "" {
-		query = query.Where("trace_id LIKE ?", "%"+traceID+"%")
-	}
-	if message != "" {
-		query = query.Where("message LIKE ?", "%"+message+"%")
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 id desc
-	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	return query
+	return services.SystemLogFilters{
+		Level:     level,
+		Module:    module,
+		TraceID:   traceID,
+		Message:   message,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 获取系统日志列表
 func (r *SystemLogController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var logs []models.SystemLog
-	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
-		ErrorModule: "system-log",
+	filters := r.buildFilters(ctx)
+
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	logs, total, err := r.systemLogService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "system-log", err)
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      logs,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
 }
 

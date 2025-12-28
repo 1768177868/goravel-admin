@@ -1,26 +1,26 @@
 import request from '../utils/request'
 
-// 获取在线用户列表
-export function getOnlineUserList(params) {
+// 获取在线管理员列表
+export function getOnlineAdminList(params) {
   return request({
-    url: '/online-users',
+    url: '/online-admins',
     method: 'get',
     params
   })
 }
 
 // 踢下线（删除token）
-export function kickOutOnlineUser(id) {
+export function kickOutOnlineAdmin(id) {
   return request({
-    url: `/online-users/${id}`,
+    url: `/online-admins/${id}`,
     method: 'delete'
   })
 }
 
 // 批量踢下线
-export function batchKickOutOnlineUsers(tokenIds) {
+export function batchKickOutOnlineAdmins(tokenIds) {
   return request({
-    url: '/online-users/batch-kick-out',
+    url: '/online-admins/batch-kick-out',
     method: 'post',
     data: {
       token_ids: tokenIds.join(',')

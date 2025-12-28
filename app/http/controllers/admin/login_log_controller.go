@@ -3,7 +3,6 @@ package admin
 import (
 	"time"
 
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -12,72 +11,68 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/services"
+	"github.com/spf13/cast"
 )
 
 type LoginLogController struct {
+	loginLogService services.LoginLogService
 }
 
 func NewLoginLogController() *LoginLogController {
-	return &LoginLogController{}
+	return &LoginLogController{
+		loginLogService: services.NewLoginLogService(),
+	}
 }
 
 // findLoginLogByID 根据ID查找登录日志，如果不存在则返回错误响应
 // withAdmin 为 true 时会预加载 Admin 关联
 func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdmin bool) (*models.LoginLog, http.Response) {
-	var relations []string
-	if withAdmin {
-		relations = append(relations, "Admin")
+	log, err := r.loginLogService.GetByID(id, withAdmin)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrLogNotFound.Code)
 	}
-	return response.FindByID[models.LoginLog](ctx, id, &response.FindByIDOptions{
-		WithRelations:      relations,
-		NotFoundMessageKey: apperrors.ErrLogNotFound.Code,
-	})
+	return log, nil
 }
 
-// buildQuery 构建登录日志查询
-func (r *LoginLogController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *LoginLogController) buildFilters(ctx http.Context) services.LoginLogFilters {
 	adminID := ctx.Request().Query("admin_id", "")
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.LoginLog{})
-
-	if adminID != "" {
-		query = query.Where("admin_id", adminID)
-	}
-	if username != "" {
-		query = query.Where("username LIKE ?", "%"+username+"%")
-	}
-	if ip != "" {
-		query = query.Where("ip LIKE ?", "%"+ip+"%")
-	}
-	if status != "" {
-		query = query.Where("status = ?", status)
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 id desc
-	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	return query
+	return services.LoginLogFilters{
+		AdminID:   adminID,
+		Username:  username,
+		IP:        ip,
+		Status:    status,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 获取登录日志列表
 func (r *LoginLogController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var logs []models.LoginLog
-	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
-		WithRelations: []string{"Admin"},
-		ErrorModule:   "login-log",
+	filters := r.buildFilters(ctx)
+
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	logs, total, err := r.loginLogService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "login-log", err)
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      logs,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
 }
 

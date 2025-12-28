@@ -152,10 +152,22 @@ const routes = [
         meta: { titleKey: 'menu.order_management' }
       },
       {
-        path: 'online-users',
-        name: 'OnlineUser',
-        component: () => lazyLoad(() => import('../views/onlineUser/OnlineUserList.vue')),
-        meta: { titleKey: 'menu.online_user_management' }
+        path: 'users',
+        name: 'Users',
+        component: () => lazyLoad(() => import('../views/user/UserList.vue')),
+        meta: { titleKey: 'menu.user_management' }
+      },
+      {
+        path: 'user-balance-logs',
+        name: 'UserBalanceLogs',
+        component: () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
+        meta: { titleKey: 'menu.user_balance_log' }
+      },
+      {
+        path: 'online-admins',
+        name: 'OnlineAdmin',
+        component: () => lazyLoad(() => import('../views/onlineAdmin/OnlineAdminList.vue')),
+        meta: { titleKey: 'menu.online_admin_management' }
       },
       {
         path: 'operation-logs',

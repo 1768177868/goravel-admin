@@ -3,25 +3,102 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils/traceid"
 )
 
 type SystemLogService interface {
+	// GetByID 根据ID获取系统日志
+	GetByID(id uint) (*models.SystemLog, error)
+	// GetList 获取系统日志列表
+	GetList(filters SystemLogFilters, page, pageSize int) ([]models.SystemLog, int64, error)
+	// RecordHTTP 记录系统日志（HTTP context）
 	RecordHTTP(ctx http.Context, level, module, message string, attributes map[string]any) error
+	// Record 记录系统日志（标准 context）
 	Record(ctx context.Context, level, module, message string, attributes map[string]any) error
 }
 
-type SystemLogServiceImpl struct{}
+// SystemLogFilters 系统日志查询过滤器
+type SystemLogFilters struct {
+	Level     string
+	Module    string
+	TraceID   string
+	Message   string
+	StartTime string
+	EndTime   string
+	OrderBy   string
+}
 
-func NewSystemLogService() *SystemLogServiceImpl {
+type SystemLogServiceImpl struct {
+}
+
+func NewSystemLogService() SystemLogService {
 	return &SystemLogServiceImpl{}
 }
 
+// GetByID 根据ID获取系统日志
+func (s *SystemLogServiceImpl) GetByID(id uint) (*models.SystemLog, error) {
+	var log models.SystemLog
+	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
+		return nil, fmt.Errorf("系统日志不存在: %v", err)
+	}
+	return &log, nil
+}
+
+// GetList 获取系统日志列表
+func (s *SystemLogServiceImpl) GetList(filters SystemLogFilters, page, pageSize int) ([]models.SystemLog, int64, error) {
+	query := facades.Orm().Query().Model(&models.SystemLog{})
+
+	// 应用筛选条件
+	if filters.Level != "" {
+		query = query.Where("level = ?", filters.Level)
+	}
+	if filters.Module != "" {
+		query = query.Where("module LIKE ?", "%"+filters.Module+"%")
+	}
+	if filters.TraceID != "" {
+		query = query.Where("trace_id LIKE ?", "%"+filters.TraceID+"%")
+	}
+	if filters.Message != "" {
+		query = query.Where("message LIKE ?", "%"+filters.Message+"%")
+	}
+	if filters.StartTime != "" {
+		query = query.Where("created_at >= ?", filters.StartTime)
+	}
+	if filters.EndTime != "" {
+		query = query.Where("created_at <= ?", filters.EndTime)
+	}
+
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "id:desc"
+	}
+	query = helpers.ApplySort(query, orderBy, "id:desc")
+
+	// 获取总数
+	total, err := query.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	var logs []models.SystemLog
+	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&logs)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return logs, total, nil
+}
+
+// RecordHTTP 记录系统日志（HTTP context）
 func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, message string, attributes map[string]any) error {
 	var contextJSON string
 	if len(attributes) > 0 {
@@ -45,14 +122,14 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 		UserAgent: ctx.Request().Header("User-Agent", ""),
 	}
 
-	return facades.Orm().Query().Create(&log)
+	if err := facades.Orm().Query().Create(&log); err != nil {
+		return err
+	}
+	return nil
 }
 
+// Record 记录系统日志（标准 context）
 func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, message string, attributes map[string]any) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	var contextJSON string
 	if len(attributes) > 0 {
 		if data, err := json.Marshal(attributes); err == nil {
@@ -60,10 +137,7 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 		}
 	}
 
-	var traceID string
-	if id, ok := ctx.Value(traceid.ContextKey).(string); ok {
-		traceID = id
-	}
+	traceID := traceid.FromContext(ctx)
 	if traceID == "" {
 		var newCtx context.Context
 		newCtx, traceID = traceid.EnsureContext(ctx)
@@ -71,12 +145,15 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 	}
 
 	log := models.SystemLog{
-		Level:   level,
-		Module:  module,
-		TraceID: traceID,
-		Message: message,
-		Context: contextJSON,
+		Level:     level,
+		Module:    module,
+		TraceID:   traceID,
+		Message:   message,
+		Context:   contextJSON,
 	}
 
-	return facades.Orm().Query().Create(&log)
+	if err := facades.Orm().Query().Create(&log); err != nil {
+		return err
+	}
+	return nil
 }

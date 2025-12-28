@@ -155,7 +155,7 @@ const dashboardData = ref({
   user_access_source: [],
   weekly_user_activity: [],
   monthly_sales: [],
-  online_user_count: 0
+  online_admin_count: 0
 })
 
 let dashboardEventSource = null

@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', status: '', role_id: '', department_id: '', is_2fa_bound: '' }"
+        :initial-values="initialSearchValues"
         i18n-prefix="admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -158,6 +158,15 @@ const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
 const adminFormRef = ref(null)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  username: '',
+  status: '',
+  role_id: '',
+  department_id: '',
+  is_2fa_bound: ''
+}
 
 // 使用 CRUD composable
 const {

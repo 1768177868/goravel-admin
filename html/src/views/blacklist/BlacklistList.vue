@@ -8,7 +8,7 @@
     :add-button-disabled="getButtonState('blacklist.store').disabled"
     :search-form="searchForm"
     :search-fields="searchFields"
-    :initial-search-values="{ ip: '', status: '' }"
+    :initial-search-values="initialSearchValues"
     i18n-prefix="blacklist"
     :table-data="tableData"
     :loading="loading"
@@ -85,6 +85,12 @@ const { t } = useI18n()
 const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const tableRef = computed(() => listPageRef.value?.tableRef)
+
+// 初始搜索值（避免每次渲染创建新对象）
+const initialSearchValues = {
+  ip: '',
+  status: ''
+}
 
 // 字段名映射
 const fieldMapping = {

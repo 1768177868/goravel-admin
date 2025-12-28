@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     :title="dialogTitle"
-    width="900px"
+    width="1000px"
     @close="handleDialogClose"
   >
     <div v-loading="loading">
@@ -17,7 +17,7 @@
             v-model="formData.user_id"
             :min="1"
             :disabled="loading"
-            style="width: 100%"
+       
           />
         </el-form-item>
 

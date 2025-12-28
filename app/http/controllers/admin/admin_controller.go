@@ -1,11 +1,9 @@
 package admin
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
-	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -81,22 +79,16 @@ func NewAdminController() *AdminController {
 // withDepartment 为 true 时会预加载 Department 关联
 // withRoles 为 true 时会预加载 Roles 关联
 func (r *AdminController) findAdminByID(ctx http.Context, id uint, withDepartment bool, withRoles bool) (*models.Admin, http.Response) {
-	var relations []string
-	if withDepartment {
-		relations = append(relations, "Department")
+	admin, err := r.adminService.GetByID(id, withDepartment, withRoles)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
-	if withRoles {
-		relations = append(relations, "Roles")
-	}
-	return response.FindByID[models.Admin](ctx, id, &response.FindByIDOptions{
-		WithRelations:      relations,
-		NotFoundMessageKey: apperrors.ErrAdminNotFound.Code,
-	})
+	return admin, nil
 }
 
-// buildQuery 构建查询（列表和导出共用）
+// buildFilters 构建查询过滤器（列表和导出共用）
 // 同时支持查询参数（GET）和请求体参数（POST）
-func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
+func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 	// 优先从请求体读取，如果没有则从查询参数读取（兼容 GET 和 POST）
 	username := ctx.Request().Input("username", ctx.Request().Query("username", ""))
 	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
@@ -116,59 +108,16 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 		endTime = helpers.ConvertTimeToUTC(ctx, endTimeStr)
 	}
 
-	query := facades.Orm().Query().Model(&models.Admin{})
-
-	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
-	developerIDs := r.parseProtectedIDs(developerIDsStr)
-	if len(developerIDs) > 0 {
-		query = query.Where("id NOT IN ?", developerIDs)
+	return services.AdminFilters{
+		Username:     username,
+		Status:       status,
+		RoleID:       roleID,
+		DepartmentID: departmentID,
+		Is2FABound:   is2FABound,
+		StartTime:    startTime,
+		EndTime:      endTime,
+		OrderBy:      orderBy,
 	}
-
-	if username != "" {
-		query = query.Where("username LIKE ?", "%"+username+"%")
-	}
-	if status != "" {
-		query = query.Where("status", status)
-	}
-	if roleID != "" {
-		roleIDUint := cast.ToUint(roleID)
-		if roleIDUint > 0 {
-			query = query.Where("id IN (SELECT admin_id FROM admin_role WHERE role_id = ?)", roleIDUint)
-		}
-	}
-	if departmentID != "" {
-		departmentIDUint := cast.ToUint(departmentID)
-		if departmentIDUint > 0 {
-			departmentIDs := r.getDepartmentAndChildrenIDs(departmentIDUint)
-			if len(departmentIDs) > 0 {
-				idsAny := make([]any, len(departmentIDs))
-				for i, id := range departmentIDs {
-					idsAny[i] = id
-				}
-				query = query.WhereIn("department_id", idsAny)
-			}
-		}
-	}
-	if is2FABound != "" {
-		switch is2FABound {
-		case "1":
-			// 已绑定：google_secret IS NOT NULL AND google_secret != ''
-			query = query.Where("google_secret IS NOT NULL AND google_secret != ?", "")
-		case "0":
-			// 未绑定：google_secret IS NULL OR google_secret = ''
-			query = query.Where("(google_secret IS NULL OR google_secret = ?)", "")
-		}
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
-	query = helpers.ApplySort(query, orderBy, "created_at:desc")
-
-	return query
 }
 
 // Index 管理员列表
@@ -194,38 +143,46 @@ func (r *AdminController) buildQuery(ctx http.Context) orm.Query {
 // @Router       /api/admin/admins [get]
 // @Security     BearerAuth
 func (r *AdminController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var admins []models.Admin
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	filters := r.buildFilters(ctx)
+
+	admins, total, err := r.adminService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
 
 	// 获取超级管理员ID
 	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
 
-	return response.PaginateQuery(ctx, query, &admins, &response.PaginateQueryOptions{
-		WithRelations: []string{"Department", "Roles"},
-		Transform: func(data any) any {
-			admins := data.(*[]models.Admin)
-			adminList := make([]http.Json, len(*admins))
-			for i, admin := range *admins {
-				isBound := admin.GoogleSecret != ""
-				adminList[i] = http.Json{
-					"id":             admin.ID,
-					"username":       admin.Username,
-					"nickname":       admin.Nickname,
-					"avatar":         admin.Avatar,
-					"email":          admin.Email,
-					"phone":          admin.Phone,
-					"status":         admin.Status,
-					"is_2fa_bound":   isBound,
-					"is_super_admin": admin.ID == superAdminID,
-					"department_id":  admin.DepartmentID,
-					"department":     admin.Department,
-					"roles":          admin.Roles,
-					"created_at":     admin.CreatedAt,
-					"updated_at":     admin.UpdatedAt,
-				}
-			}
-			return adminList
-		},
+	// 转换数据格式
+	adminList := make([]http.Json, len(admins))
+	for i, admin := range admins {
+		isBound := admin.GoogleSecret != ""
+		adminList[i] = http.Json{
+			"id":             admin.ID,
+			"username":       admin.Username,
+			"nickname":       admin.Nickname,
+			"avatar":         admin.Avatar,
+			"email":          admin.Email,
+			"phone":          admin.Phone,
+			"status":         admin.Status,
+			"is_2fa_bound":   isBound,
+			"is_super_admin": admin.ID == superAdminID,
+			"department_id":  admin.DepartmentID,
+			"department":     admin.Department,
+			"roles":          admin.Roles,
+			"created_at":     admin.CreatedAt,
+			"updated_at":     admin.UpdatedAt,
+		}
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      adminList,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
 }
 
@@ -663,56 +620,9 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	return response.Success(ctx, "unbind_success")
 }
 
-// parseProtectedIDs 解析受保护的管理员ID字符串（支持逗号分隔）
-func (r *AdminController) parseProtectedIDs(idsStr string) []uint {
-	var ids []uint
-	if idsStr == "" {
-		return ids
-	}
-
-	// 使用字符串分割
-	parts := str.Of(idsStr).Split(",")
-	for _, part := range parts {
-		part = str.Of(part).Trim().String()
-		if !str.Of(part).IsEmpty() {
-			if id := cast.ToUint(part); id > 0 {
-				ids = append(ids, id)
-			}
-		}
-	}
-
-	return ids
-}
-
+// getAllProtectedAdminIDs 获取所有受保护的管理员ID（用于删除等操作）
 func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
-	allProtectedIDs := make(map[uint]bool)
-	// 添加超级管理员ID（从配置读取，默认1）
-	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
-	allProtectedIDs[superAdminID] = true
-	// 添加开发者管理员ID
-	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
-	developerIDs := r.parseProtectedIDs(developerIDsStr)
-	for _, did := range developerIDs {
-		allProtectedIDs[did] = true
-	}
-	return allProtectedIDs
-}
-
-func (r *AdminController) getDepartmentAndChildrenIDs(departmentID uint) []uint {
-	var departmentIDs []uint
-	departmentIDs = append(departmentIDs, departmentID)
-	r.getChildrenDepartmentIDs(departmentID, &departmentIDs)
-	return departmentIDs
-}
-
-func (r *AdminController) getChildrenDepartmentIDs(parentID uint, departmentIDs *[]uint) {
-	var children []models.Department
-	if err := facades.Orm().Query().Where("parent_id", parentID).Get(&children); err == nil {
-		for _, child := range children {
-			*departmentIDs = append(*departmentIDs, child.ID)
-			r.getChildrenDepartmentIDs(child.ID, departmentIDs)
-		}
-	}
+	return r.adminService.GetProtectedAdminIDs()
 }
 
 // Export 导出管理员列表
@@ -730,11 +640,12 @@ func (r *AdminController) getChildrenDepartmentIDs(parentID uint, departmentIDs 
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth
 func (r *AdminController) Export(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
+	filters := r.buildFilters(ctx)
 
-	var admins []models.Admin
-	if err := query.With("Department").With("Roles").Get(&admins); err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
+	// 导出时获取所有数据，不分页
+	admins, err := r.adminService.GetAllAdminsForExport(filters)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
 	headers := []string{

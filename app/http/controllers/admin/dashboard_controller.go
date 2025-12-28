@@ -33,18 +33,18 @@ func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 		Where("status", 1).
 		Count()
 
-	// 获取在线用户数
-	onlineUserCount := r.getOnlineUserCount()
+	// 获取在线管理员数
+	onlineAdminCount := r.getOnlineAdminCount()
 
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
 		"data": map[string]any{
-			"admin_count":  countData["admins"],
-			"role_count":   countData["roles"],
-			"menu_count":   countData["menus"],
-			"today_visits": todayVisits,
-			"online_users": onlineUserCount,
+			"admin_count":   countData["admins"],
+			"role_count":    countData["roles"],
+			"menu_count":    countData["menus"],
+			"today_visits":  todayVisits,
+			"online_admins": onlineAdminCount,
 		},
 	})
 }
@@ -313,9 +313,9 @@ func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]
 	monthlySalesData := r.getMonthlySalesData()
 	data["monthly_sales"] = monthlySalesData
 
-	// 5. 获取在线用户数
-	onlineUserCount := r.getOnlineUserCount()
-	data["online_user_count"] = onlineUserCount
+	// 5. 获取在线管理员数
+	onlineAdminCount := r.getOnlineAdminCount()
+	data["online_admin_count"] = onlineAdminCount
 
 	return data
 }
@@ -434,9 +434,9 @@ func (r *DashboardController) getMonthlyOperationData() []map[string]any {
 	return monthlyData
 }
 
-// getOnlineUserCount 获取在线用户数
-func (r *DashboardController) getOnlineUserCount() int64 {
-	// 统计最近15分钟内有活动的用户（在线用户）
+// getOnlineAdminCount 获取在线管理员数
+func (r *DashboardController) getOnlineAdminCount() int64 {
+	// 统计最近15分钟内有活动的管理员（在线管理员）
 	onlineThreshold := time.Now().Add(-15 * time.Minute)
 	count, _ := facades.Orm().Query().Model(&models.PersonalAccessToken{}).
 		Where("tokenable_type", "admin").

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -15,30 +14,29 @@ import (
 )
 
 type PermissionController struct {
-	treeService services.TreeService
+	permissionService services.PermissionService
+	treeService       services.TreeService
 }
 
 func NewPermissionController() *PermissionController {
 	return &PermissionController{
-		treeService: services.NewTreeServiceImpl(),
+		permissionService: services.NewPermissionService(),
+		treeService:       services.NewTreeServiceImpl(),
 	}
 }
 
 // findPermissionByID 根据ID查找权限，如果不存在则返回错误响应
 // withMenu 为 true 时会预加载 Menu 关联
 func (r *PermissionController) findPermissionByID(ctx http.Context, id uint, withMenu bool) (*models.Permission, http.Response) {
-	var relations []string
-	if withMenu {
-		relations = append(relations, "Menu")
+	permission, err := r.permissionService.GetByID(id, withMenu)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrPermissionNotFound.Code)
 	}
-	return response.FindByID[models.Permission](ctx, id, &response.FindByIDOptions{
-		WithRelations:      relations,
-		NotFoundMessageKey: apperrors.ErrPermissionNotFound.Code,
-	})
+	return permission, nil
 }
 
-// buildQuery 构建权限查询
-func (r *PermissionController) buildQuery(ctx http.Context) orm.Query {
+// buildFilters 构建查询过滤器
+func (r *PermissionController) buildFilters(ctx http.Context) services.PermissionFilters {
 	name := ctx.Request().Query("name", "")
 	slug := ctx.Request().Query("slug", "")
 	method := ctx.Request().Query("method", "")
@@ -47,57 +45,38 @@ func (r *PermissionController) buildQuery(ctx http.Context) orm.Query {
 	menuID := ctx.Request().Query("menu_id", "")
 	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
 	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	query := facades.Orm().Query().Model(&models.Permission{})
-
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	if slug != "" {
-		query = query.Where("slug LIKE ?", "%"+slug+"%")
-	}
-	if path != "" {
-		query = query.Where("path LIKE ?", "%"+path+"%")
-	}
-	if method != "" {
-		query = query.Where("method", method)
-	}
-	if status != "" {
-		query = query.Where("status", status)
-	}
-	if menuID != "" {
-		// 获取菜单及其所有子菜单的ID列表
-		menuIDs, err := r.treeService.GetMenuChildrenIDs(cast.ToUint(menuID))
-		if err != nil {
-			// 如果获取菜单ID失败，返回空查询
-			return query.Where("1 = 0")
-		}
-		// 使用 IN 查询，查询该菜单及其所有子菜单的权限
-		if len(menuIDs) > 0 {
-			idsAny := helpers.ConvertUintSliceToAny(menuIDs)
-			query = query.WhereIn("menu_id", idsAny)
-		}
-	}
-	if startTime != "" {
-		query = query.Where("created_at >= ?", startTime)
-	}
-	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
-	}
-
 	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 sort asc, id desc
-	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
 
-	return query
+	return services.PermissionFilters{
+		Name:      name,
+		Slug:      slug,
+		Method:    method,
+		Path:      path,
+		Status:    status,
+		MenuID:    menuID,
+		StartTime: startTime,
+		EndTime:   endTime,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 权限列表
 func (r *PermissionController) Index(ctx http.Context) http.Response {
-	query := r.buildQuery(ctx)
-	var permissions []models.Permission
-	return response.PaginateQuery(ctx, query, &permissions, &response.PaginateQueryOptions{
-		WithRelations: []string{"Menu"},
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	filters := r.buildFilters(ctx)
+
+	permissions, total, err := r.permissionService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "permission", err)
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      permissions,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
 }
 

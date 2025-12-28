@@ -1,14 +1,25 @@
 package services
 
 import (
+	"fmt"
 	"slices"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
+	"github.com/spf13/cast"
 
+	"goravel/app/http/helpers"
 	"goravel/app/models"
 )
 
 type AdminService interface {
+	// GetByID 根据ID获取管理员
+	GetByID(id uint, withDepartment bool, withRoles bool) (*models.Admin, error)
+	// GetList 获取管理员列表
+	GetList(filters AdminFilters, page, pageSize int) ([]models.Admin, int64, error)
+	// GetAllAdminsForExport 获取所有管理员用于导出（不分页）
+	GetAllAdminsForExport(filters AdminFilters) ([]models.Admin, error)
 	// LoadRelations 加载管理员的关联数据（部门、角色）
 	LoadRelations(admin *models.Admin) error
 	// LoadRelationsWithPermissions 加载管理员的关联数据（包括权限和菜单）
@@ -17,6 +28,22 @@ type AdminService interface {
 	LoadRelationsForList(admins []models.Admin) error
 	// SyncRoles 同步管理员角色关联
 	SyncRoles(admin *models.Admin, roleIDs []uint) error
+	// GetProtectedAdminIDs 获取所有受保护的管理员ID
+	GetProtectedAdminIDs() map[uint]bool
+	// GetDepartmentAndChildrenIDs 获取部门及其子部门ID
+	GetDepartmentAndChildrenIDs(departmentID uint) []uint
+}
+
+// AdminFilters 管理员查询过滤器
+type AdminFilters struct {
+	Username     string
+	Status       string
+	RoleID       string
+	DepartmentID string
+	Is2FABound   string
+	StartTime    string
+	EndTime      string
+	OrderBy      string
 }
 
 type AdminServiceImpl struct {
@@ -24,6 +51,196 @@ type AdminServiceImpl struct {
 
 func NewAdminServiceImpl() *AdminServiceImpl {
 	return &AdminServiceImpl{}
+}
+
+// GetByID 根据ID获取管理员
+func (s *AdminServiceImpl) GetByID(id uint, withDepartment bool, withRoles bool) (*models.Admin, error) {
+	var admin models.Admin
+	query := facades.Orm().Query().Where("id", id)
+
+	// 预加载关联
+	if withDepartment {
+		query = query.With("Department")
+	}
+	if withRoles {
+		query = query.With("Roles")
+	}
+
+	if err := query.First(&admin); err != nil {
+		return nil, fmt.Errorf("管理员不存在: %v", err)
+	}
+
+	return &admin, nil
+}
+
+// buildQuery 构建查询（公共方法，用于列表和导出）
+func (s *AdminServiceImpl) buildQuery(filters AdminFilters) orm.Query {
+	query := facades.Orm().Query().Model(&models.Admin{})
+
+	// 排除受保护的管理员
+	protectedIDs := s.GetProtectedAdminIDs()
+	if len(protectedIDs) > 0 {
+		var ids []uint
+		for id := range protectedIDs {
+			ids = append(ids, id)
+		}
+		if len(ids) > 0 {
+			query = query.Where("id NOT IN ?", ids)
+		}
+	}
+
+	// 应用筛选条件
+	if filters.Username != "" {
+		query = query.Where("username LIKE ?", "%"+filters.Username+"%")
+	}
+	if filters.Status != "" {
+		query = query.Where("status", filters.Status)
+	}
+	if filters.RoleID != "" {
+		roleIDUint := cast.ToUint(filters.RoleID)
+		if roleIDUint > 0 {
+			query = query.Where("id IN (SELECT admin_id FROM admin_role WHERE role_id = ?)", roleIDUint)
+		}
+	}
+	if filters.DepartmentID != "" {
+		departmentIDUint := cast.ToUint(filters.DepartmentID)
+		if departmentIDUint > 0 {
+			departmentIDs := s.GetDepartmentAndChildrenIDs(departmentIDUint)
+			if len(departmentIDs) > 0 {
+				idsAny := make([]any, len(departmentIDs))
+				for i, id := range departmentIDs {
+					idsAny[i] = id
+				}
+				query = query.WhereIn("department_id", idsAny)
+			} else {
+				// 如果部门不存在，返回空结果
+				query = query.Where("1 = 0")
+			}
+		}
+	}
+	if filters.Is2FABound != "" {
+		switch filters.Is2FABound {
+		case "1":
+			// 已绑定：google_secret IS NOT NULL AND google_secret != ''
+			query = query.Where("google_secret IS NOT NULL AND google_secret != ?", "")
+		case "0":
+			// 未绑定：google_secret IS NULL OR google_secret = ''
+			query = query.Where("(google_secret IS NULL OR google_secret = ?)", "")
+		}
+	}
+	if filters.StartTime != "" {
+		query = query.Where("created_at >= ?", filters.StartTime)
+	}
+	if filters.EndTime != "" {
+		query = query.Where("created_at <= ?", filters.EndTime)
+	}
+
+	return query
+}
+
+// GetList 获取管理员列表
+func (s *AdminServiceImpl) GetList(filters AdminFilters, page, pageSize int) ([]models.Admin, int64, error) {
+	query := s.buildQuery(filters)
+
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "created_at:desc"
+	}
+	query = helpers.ApplySort(query, orderBy, "created_at:desc")
+
+	// 获取总数
+	total, err := query.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	var admins []models.Admin
+	err = query.With("Department").With("Roles").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&admins)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return admins, total, nil
+}
+
+// GetAllAdminsForExport 获取所有管理员用于导出（不分页）
+func (s *AdminServiceImpl) GetAllAdminsForExport(filters AdminFilters) ([]models.Admin, error) {
+	query := s.buildQuery(filters)
+
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "created_at:desc"
+	}
+	query = helpers.ApplySort(query, orderBy, "created_at:desc")
+
+	// 不分页，获取所有数据
+	var admins []models.Admin
+	if err := query.With("Department").With("Roles").Find(&admins); err != nil {
+		return nil, fmt.Errorf("查询管理员失败: %v", err)
+	}
+
+	return admins, nil
+}
+
+// GetProtectedAdminIDs 获取所有受保护的管理员ID
+func (s *AdminServiceImpl) GetProtectedAdminIDs() map[uint]bool {
+	allProtectedIDs := make(map[uint]bool)
+	// 添加超级管理员ID（从配置读取，默认1）
+	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+	allProtectedIDs[superAdminID] = true
+	// 添加开发者管理员ID
+	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+	developerIDs := s.parseProtectedIDs(developerIDsStr)
+	for _, did := range developerIDs {
+		allProtectedIDs[did] = true
+	}
+	return allProtectedIDs
+}
+
+// parseProtectedIDs 解析受保护的管理员ID字符串（支持逗号分隔）
+func (s *AdminServiceImpl) parseProtectedIDs(idsStr string) []uint {
+	var ids []uint
+	if idsStr == "" {
+		return ids
+	}
+
+	// 使用字符串分割
+	parts := str.Of(idsStr).Split(",")
+	for _, part := range parts {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
+			if id := cast.ToUint(part); id > 0 {
+				ids = append(ids, id)
+			}
+		}
+	}
+
+	return ids
+}
+
+// GetDepartmentAndChildrenIDs 获取部门及其子部门ID
+func (s *AdminServiceImpl) GetDepartmentAndChildrenIDs(departmentID uint) []uint {
+	var departmentIDs []uint
+	departmentIDs = append(departmentIDs, departmentID)
+	s.getChildrenDepartmentIDs(departmentID, &departmentIDs)
+	return departmentIDs
+}
+
+// getChildrenDepartmentIDs 递归获取子部门ID
+func (s *AdminServiceImpl) getChildrenDepartmentIDs(parentID uint, departmentIDs *[]uint) {
+	var children []models.Department
+	if err := facades.Orm().Query().Where("parent_id", parentID).Get(&children); err == nil {
+		for _, child := range children {
+			*departmentIDs = append(*departmentIDs, child.ID)
+			s.getChildrenDepartmentIDs(child.ID, departmentIDs)
+		}
+	}
 }
 
 // LoadRelations 加载管理员的关联数据（部门、角色）

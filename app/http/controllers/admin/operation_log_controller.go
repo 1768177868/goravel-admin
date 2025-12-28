@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -16,27 +15,59 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
 	"goravel/app/models"
+	"goravel/app/services"
 	"goravel/app/utils"
+
+	"github.com/spf13/cast"
 )
 
 type OperationLogController struct {
+	operationLogService services.OperationLogService
 }
 
 func NewOperationLogController() *OperationLogController {
-	return &OperationLogController{}
+	return &OperationLogController{
+		operationLogService: services.NewOperationLogService(),
+	}
 }
 
 // findOperationLogByID 根据ID查找操作日志，如果不存在则返回错误响应
 // withAdmin 为 true 时会预加载 Admin 关联
 func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint, withAdmin bool) (*models.OperationLog, http.Response) {
-	var relations []string
-	if withAdmin {
-		relations = append(relations, "Admin")
+	log, err := r.operationLogService.GetByID(id, withAdmin)
+	if err != nil {
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrLogNotFound.Code)
 	}
-	return response.FindByID[models.OperationLog](ctx, id, &response.FindByIDOptions{
-		WithRelations:      relations,
-		NotFoundMessageKey: apperrors.ErrLogNotFound.Code,
-	})
+	return log, nil
+}
+
+// buildFilters 构建查询过滤器
+func (r *OperationLogController) buildFilters(ctx http.Context) services.OperationLogFilters {
+	adminID := ctx.Request().Query("admin_id", "")
+	username := ctx.Request().Query("username", "")
+	method := ctx.Request().Query("method", "")
+	path := ctx.Request().Query("path", "")
+	title := ctx.Request().Query("title", "")
+	ip := ctx.Request().Query("ip", "")
+	status := ctx.Request().Query("status", "")
+	request := ctx.Request().Query("request", "")
+	startTimeStr := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTimeStr := helpers.GetTimeQueryParam(ctx, "end_time")
+	orderBy := ctx.Request().Query("order_by", "")
+
+	return services.OperationLogFilters{
+		AdminID:   adminID,
+		Username:  username,
+		Method:    method,
+		Path:      path,
+		Title:     title,
+		IP:        ip,
+		Status:    status,
+		Request:   request,
+		StartTime: startTimeStr,
+		EndTime:   endTimeStr,
+		OrderBy:   orderBy,
+	}
 }
 
 // Index 获取操作日志列表
@@ -88,78 +119,22 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 		}
 	}
 
-	query := r.buildQuery(ctx)
-	var logs []models.OperationLog
-	return response.PaginateQuery(ctx, query, &logs, &response.PaginateQueryOptions{
-		WithRelations: []string{"Admin"},
-		ErrorModule:   "operation-log",
+	filters := r.buildFilters(ctx)
+
+	page := cast.ToInt(ctx.Request().Query("page", "1"))
+	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+
+	logs, total, err := r.operationLogService.GetList(filters, page, pageSize)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "operation-log", err)
+	}
+
+	return response.Success(ctx, http.Json{
+		"list":      logs,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
-}
-
-// buildQuery 构建操作日志查询
-func (r *OperationLogController) buildQuery(ctx http.Context) orm.Query {
-	query := facades.Orm().Query().Model(&models.OperationLog{})
-
-	adminID := ctx.Request().Query("admin_id", "")
-	username := ctx.Request().Query("username", "")
-	method := ctx.Request().Query("method", "")
-	path := ctx.Request().Query("path", "")
-	title := ctx.Request().Query("title", "")
-	ip := ctx.Request().Query("ip", "")
-	status := ctx.Request().Query("status", "")
-	request := ctx.Request().Query("request", "")
-	startTimeStr := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTimeStr := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	if adminID != "" {
-		query = query.Where("admin_id", adminID)
-	}
-	if username != "" {
-		var adminIDs []uint
-		var admins []models.Admin
-		if err := facades.Orm().Query().Where("username LIKE ?", "%"+username+"%").Get(&admins); err == nil {
-			for _, admin := range admins {
-				adminIDs = append(adminIDs, admin.ID)
-			}
-			if len(adminIDs) > 0 {
-				idsAny := helpers.ConvertUintSliceToAny(adminIDs)
-				query = query.WhereIn("admin_id", idsAny)
-			} else {
-				query = query.Where("admin_id", 0)
-			}
-		}
-	}
-	if method != "" {
-		query = query.Where("method = ?", method)
-	}
-	if path != "" {
-		query = query.Where("path LIKE ?", "%"+path+"%")
-	}
-	if title != "" {
-		query = query.Where("title LIKE ?", "%"+title+"%")
-	}
-	if ip != "" {
-		query = query.Where("ip LIKE ?", "%"+ip+"%")
-	}
-	if status != "" {
-		query = query.Where("status = ?", status)
-	}
-	if request != "" {
-		// 使用工具函数应用全文索引搜索
-		query = utils.ApplyFulltextSearch(query, "request", request)
-	}
-	if startTimeStr != "" {
-		query = query.Where("created_at >= ?", startTimeStr)
-	}
-	if endTimeStr != "" {
-		query = query.Where("created_at <= ?", endTimeStr)
-	}
-
-	orderBy := ctx.Request().Query("order_by", "")
-	// 应用排序，默认排序为 id desc
-	query = helpers.ApplySort(query, orderBy, "id:desc")
-
-	return query
 }
 
 // Show 获取操作日志详情
