@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"goravel/app/models"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type UserBalanceLogService interface {
@@ -85,6 +87,12 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 	// 插件会自动路由到对应的分表
 	err := facades.Orm().Query().Create(log)
 	if err != nil {
+		errorlog.Record(context.Background(), "user-balance-log", "创建余额变动记录失败", map[string]any{
+			"user_id":  userID,
+			"log_type": logType,
+			"amount":   amount,
+			"error":    err.Error(),
+		}, "创建余额变动记录失败: %v", err)
 		return nil, fmt.Errorf("创建余额变动记录失败: %v", err)
 	}
 

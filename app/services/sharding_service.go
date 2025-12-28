@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/utils/errorlog"
 	"goravel/database/migrations"
 )
 
@@ -69,6 +71,11 @@ func (s *ShardingServiceImpl) EnsureShardingTable(tableName, baseTableName strin
 
 	// 创建表
 	if err := s.CreateShardingTable(tableName, baseTableName); err != nil {
+		errorlog.Record(context.Background(), "sharding", "创建分表失败", map[string]any{
+			"table_name":     tableName,
+			"base_table_name": baseTableName,
+			"error":          err.Error(),
+		}, "创建分表 %s 失败: %v", tableName, err)
 		return fmt.Errorf("创建分表 %s 失败: %v", tableName, err)
 	}
 

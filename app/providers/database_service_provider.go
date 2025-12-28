@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goravel/framework/contracts/foundation"
@@ -8,6 +9,7 @@ import (
 	"gorm.io/sharding"
 
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 	"goravel/database"
 )
 
@@ -36,6 +38,7 @@ func (receiver *DatabaseServiceProvider) initGormSharding() error {
 	// 尝试获取原生 GORM DB 实例
 	db, err := utils.GetGormDB()
 	if err != nil {
+		errorlog.Record(context.Background(), "database", "获取 GORM DB 实例失败", nil, "获取 GORM DB 实例失败: %v", err)
 		return fmt.Errorf("获取 GORM DB 实例失败: %v", err)
 	}
 
@@ -49,6 +52,10 @@ func (receiver *DatabaseServiceProvider) initGormSharding() error {
 		PrimaryKeyGenerator: sharding.PKSnowflake,
 	}, "user_balance_logs"))
 	if err != nil {
+		errorlog.Record(context.Background(), "database", "注册 GORM Sharding 插件失败", map[string]any{
+			"table": "user_balance_logs",
+			"error": err.Error(),
+		}, "注册 GORM Sharding 插件失败: %v", err)
 		return fmt.Errorf("注册 GORM Sharding 插件失败: %v", err)
 	}
 

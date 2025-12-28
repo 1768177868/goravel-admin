@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"image/png"
@@ -10,6 +11,8 @@ import (
 	"github.com/pquerna/otp/totp"
 
 	"github.com/goravel/framework/facades"
+
+	"goravel/app/utils/errorlog"
 )
 
 type GoogleAuthenticatorService interface {
@@ -74,6 +77,11 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 	// 从URL创建key对象（这样可以确保格式完全符合标准）
 	key, err := otp.NewKeyFromURL(otpURL)
 	if err != nil {
+		errorlog.Record(context.Background(), "google-authenticator", "创建密钥失败", map[string]any{
+			"app_name":    appName,
+			"account_name": accountName,
+			"error":       err.Error(),
+		}, "failed to create key from URL: %w", err)
 		return "", fmt.Errorf("failed to create key from URL: %w", err)
 	}
 
@@ -81,11 +89,21 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 	var buf bytes.Buffer
 	img, err := key.Image(200, 200)
 	if err != nil {
+		errorlog.Record(context.Background(), "google-authenticator", "生成二维码图片失败", map[string]any{
+			"app_name":    appName,
+			"account_name": accountName,
+			"error":       err.Error(),
+		}, "failed to generate QR code image: %w", err)
 		return "", fmt.Errorf("failed to generate QR code image: %w", err)
 	}
 
 	// 将图片编码为PNG
 	if err := png.Encode(&buf, img); err != nil {
+		errorlog.Record(context.Background(), "google-authenticator", "编码PNG失败", map[string]any{
+			"app_name":    appName,
+			"account_name": accountName,
+			"error":       err.Error(),
+		}, "failed to encode PNG: %w", err)
 		return "", fmt.Errorf("failed to encode PNG: %w", err)
 	}
 

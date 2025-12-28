@@ -1,11 +1,14 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
 	"github.com/goravel/framework/facades"
 	"gorm.io/gorm"
+
+	"goravel/app/utils/errorlog"
 )
 
 // GetGormDB 尝试获取原生 GORM DB 实例
@@ -13,6 +16,7 @@ import (
 func GetGormDB() (*gorm.DB, error) {
 	orm := facades.Orm()
 	if orm == nil {
+		errorlog.Record(context.Background(), "database", "ORM 未初始化", nil, "ORM 未初始化")
 		return nil, fmt.Errorf("ORM 未初始化")
 	}
 
@@ -66,5 +70,7 @@ func GetGormDB() (*gorm.DB, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("无法通过反射获取原生 GORM DB 实例，请检查 Goravel 框架实现或使用直接创建连接的方式")
+	err := fmt.Errorf("无法通过反射获取原生 GORM DB 实例，请检查 Goravel 框架实现或使用直接创建连接的方式")
+	errorlog.Record(context.Background(), "database", "无法获取 GORM DB 实例", nil, "无法通过反射获取原生 GORM DB 实例，请检查 Goravel 框架实现或使用直接创建连接的方式")
+	return nil, err
 }

@@ -14,6 +14,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type ExportService interface {
@@ -85,6 +86,12 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 	// 写入表头
 	if len(headers) > 0 {
 		if err := writer.Write(headers); err != nil {
+			if s.ctx != nil {
+				errorlog.RecordHTTP(s.ctx, "export", "写入CSV表头失败", map[string]any{
+					"filename": filename,
+					"error":    err.Error(),
+				}, "写入CSV表头失败: %w", err)
+			}
 			return "", fmt.Errorf("写入CSV表头失败: %w", err)
 		}
 	}
@@ -92,12 +99,24 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 	// 写入数据
 	for _, row := range data {
 		if err := writer.Write(row); err != nil {
+			if s.ctx != nil {
+				errorlog.RecordHTTP(s.ctx, "export", "写入CSV数据失败", map[string]any{
+					"filename": filename,
+					"error":    err.Error(),
+				}, "写入CSV数据失败: %w", err)
+			}
 			return "", fmt.Errorf("写入CSV数据失败: %w", err)
 		}
 	}
 
 	writer.Flush()
 	if err := writer.Error(); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "export", "CSV写入失败", map[string]any{
+				"filename": filename,
+				"error":    err.Error(),
+			}, "CSV写入失败: %w", err)
+		}
 		return "", fmt.Errorf("CSV写入失败: %w", err)
 	}
 
@@ -106,6 +125,13 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 
 	// 写入文件
 	if err := storage.Put(filePath, buf.String()); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "export", "保存文件失败", map[string]any{
+				"filename":  filename,
+				"file_path": filePath,
+				"error":     err.Error(),
+			}, "保存文件失败: %w", err)
+		}
 		return "", fmt.Errorf("保存文件失败: %w", err)
 	}
 

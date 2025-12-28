@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"goravel/app/models"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type OrderService interface {
@@ -97,6 +99,12 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 
 	// 设置锁，过期时间5秒
 	if err := facades.Cache().Put(lockKey, lockValue, 5*time.Second); err != nil {
+		errorlog.Record(context.Background(), "order", "获取锁失败", map[string]any{
+			"user_id":    userID,
+			"request_id": requestID,
+			"lock_key":   lockKey,
+			"error":      err.Error(),
+		}, "获取锁失败: %v", err)
 		return nil, nil, fmt.Errorf("获取锁失败: %v", err)
 	}
 
@@ -146,6 +154,11 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			if i == maxRetries-1 {
 				// 最后一次重试也失败，返回错误
 				_ = facades.Cache().Forget(lockKey)
+				errorlog.Record(context.Background(), "order", "生成唯一订单号失败", map[string]any{
+					"user_id":    userID,
+					"request_id": requestID,
+					"retries":    maxRetries,
+				}, "生成唯一订单号失败，请重试")
 				return nil, nil, fmt.Errorf("生成唯一订单号失败，请重试")
 			}
 			// 继续下一次重试
@@ -154,6 +167,12 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 
 		// 其他错误，直接返回
 		_ = facades.Cache().Forget(lockKey)
+		errorlog.Record(context.Background(), "order", "创建订单失败", map[string]any{
+			"user_id":    userID,
+			"request_id": requestID,
+			"amount":     amount,
+			"error":      err.Error(),
+		}, "创建订单失败: %v", err)
 		return nil, nil, fmt.Errorf("创建订单失败: %v", err)
 	}
 
@@ -182,6 +201,12 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			// 如果详情创建失败，删除已创建的订单
 			_, _ = facades.Orm().Query().Table(tableName).Where("id", order.ID).Delete(&models.Order{})
 			_ = facades.Cache().Forget(lockKey)
+			errorlog.Record(context.Background(), "order", "创建订单详情失败", map[string]any{
+				"order_id":   order.ID,
+				"user_id":    userID,
+				"product_id": product.ProductID,
+				"error":      err.Error(),
+			}, "创建订单详情失败: %v", err)
 			return nil, nil, fmt.Errorf("创建订单详情失败: %v", err)
 		}
 
@@ -612,6 +637,10 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time) error 
 	// 软删除订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
 	if _, err := facades.Orm().Query().Table(detailTableName).Where("order_id", orderID).Delete(&models.OrderDetail{}); err != nil {
+		errorlog.Record(context.Background(), "order", "删除订单详情失败", map[string]any{
+			"order_id": orderID,
+			"error":    err.Error(),
+		}, "删除订单详情失败: %v", err)
 		return fmt.Errorf("删除订单详情失败: %v", err)
 	}
 

@@ -1,11 +1,15 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/facades"
+
+	"goravel/app/utils/errorlog"
 )
 
 // GetShardingTableName 根据时间获取分表名称
@@ -117,11 +121,17 @@ func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 	// 执行查询，使用 Scan 获取结果
 	var rows []map[string]any
 	if err := facades.Orm().Query().Raw(query, dbName, pattern).Scan(&rows); err != nil {
+		errorlog.Record(context.Background(), "sharding", "查询分表失败", map[string]any{
+			"pattern": pattern,
+			"error":   err.Error(),
+		}, "查询分表失败: %v", err)
 		return nil, fmt.Errorf("查询分表失败: %v", err)
 	}
 
 	// 验证表名格式（确保是有效的分表名称，格式为 baseTableName_YYYYMM）
-	patternRegex := regexp.MustCompile(fmt.Sprintf("^%s_\\d{6}$", regexp.QuoteMeta(baseTableName)))
+	// 从 pattern 中提取基础表名（移除末尾的 %）
+	baseTableNameFromPattern := strings.TrimSuffix(pattern, "_%")
+	patternRegex := regexp.MustCompile(fmt.Sprintf("^%s_\\d{6}$", regexp.QuoteMeta(baseTableNameFromPattern)))
 
 	for _, row := range rows {
 		// 尝试不同的字段名格式（MySQL 可能返回不同的大小写）
@@ -180,6 +190,10 @@ func GetAllExistingShardingTablesByPattern(pattern string) ([]string, error) {
 	// 执行查询，使用 Scan 获取结果
 	var rows []map[string]any
 	if err := facades.Orm().Query().Raw(query, dbName, pattern).Scan(&rows); err != nil {
+		errorlog.Record(context.Background(), "sharding", "查询分表失败", map[string]any{
+			"pattern": pattern,
+			"error":   err.Error(),
+		}, "查询分表失败: %v", err)
 		return nil, fmt.Errorf("查询分表失败: %v", err)
 	}
 

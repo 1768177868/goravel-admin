@@ -1,12 +1,14 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/http/helpers"
 	"goravel/app/models"
+	"goravel/app/utils/errorlog"
 )
 
 type ExportRecordService interface {
@@ -121,6 +123,10 @@ func (s *ExportRecordServiceImpl) Delete(id uint) error {
 	}
 
 	if _, err := facades.Orm().Query().Delete(&export); err != nil {
+		errorlog.Record(context.Background(), "export-record", "删除导出记录失败", map[string]any{
+			"export_id": id,
+			"error":     err.Error(),
+		}, "删除导出记录失败: %v", err)
 		return fmt.Errorf("删除导出记录失败: %v", err)
 	}
 
@@ -135,6 +141,11 @@ func (s *ExportRecordServiceImpl) BatchDelete(ids []uint) error {
 
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
+		errorlog.Record(context.Background(), "export-record", "批量删除导出记录失败", map[string]any{
+			"ids":   ids,
+			"count": len(ids),
+			"error": err.Error(),
+		}, "批量删除导出记录失败: %v", err)
 		return fmt.Errorf("批量删除导出记录失败: %v", err)
 	}
 

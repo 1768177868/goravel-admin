@@ -10,6 +10,8 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 	"github.com/redis/go-redis/v9"
+
+	"goravel/app/utils/errorlog"
 )
 
 type QueueClear struct {
@@ -197,6 +199,10 @@ func (r *QueueClear) getRedisConnectionName(queueConnectionName string) string {
 func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
 	redisClient, err := r.createRedisClient(redisConnectionName)
 	if err != nil {
+		errorlog.Record(context.Background(), "queue", "创建 Redis 客户端失败", map[string]any{
+			"connection": redisConnectionName,
+			"error":      err.Error(),
+		}, "创建 Redis 客户端失败: %v", err)
 		return nil, fmt.Errorf("创建 Redis 客户端失败: %v", err)
 	}
 	defer redisClient.Close()
@@ -207,6 +213,11 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	pendingKey := fmt.Sprintf("queues:%s", queueName)
 	pendingLen, err := redisClient.LLen(ctx, pendingKey).Result()
 	if err != nil {
+		errorlog.Record(context.Background(), "queue", "查询待执行队列失败", map[string]any{
+			"queue_name": queueName,
+			"key":        pendingKey,
+			"error":      err.Error(),
+		}, "查询待执行队列失败: %v", err)
 		return nil, fmt.Errorf("查询待执行队列失败: %v", err)
 	}
 	stats.Pending = pendingLen
@@ -214,6 +225,11 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	reservedKey := fmt.Sprintf("queues:%s:reserved", queueName)
 	reservedLen, err := redisClient.HLen(ctx, reservedKey).Result()
 	if err != nil {
+		errorlog.Record(context.Background(), "queue", "查询正在执行队列失败", map[string]any{
+			"queue_name": queueName,
+			"key":        reservedKey,
+			"error":      err.Error(),
+		}, "查询正在执行队列失败: %v", err)
 		return nil, fmt.Errorf("查询正在执行队列失败: %v", err)
 	}
 	stats.Reserved = reservedLen
@@ -221,6 +237,11 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	delayedKey := fmt.Sprintf("queues:%s:delayed", queueName)
 	delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
 	if err != nil {
+		errorlog.Record(context.Background(), "queue", "查询延迟队列失败", map[string]any{
+			"queue_name": queueName,
+			"key":        delayedKey,
+			"error":      err.Error(),
+		}, "查询延迟队列失败: %v", err)
 		return nil, fmt.Errorf("查询延迟队列失败: %v", err)
 	}
 	stats.Delayed = delayedLen
@@ -276,6 +297,10 @@ func (r *QueueClear) createRedisClient(connectionName string) (*redis.Client, er
 	ctx := context.Background()
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
+		errorlog.Record(context.Background(), "queue", "Redis 连接失败", map[string]any{
+			"connection": connectionName,
+			"error":      err.Error(),
+		}, "Redis 连接失败: %v", err)
 		return nil, fmt.Errorf("Redis 连接失败: %v", err)
 	}
 

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"goravel/app/services"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type CreateOrderShardingTables struct {
@@ -101,6 +103,11 @@ func (r *CreateOrderShardingTables) Handle(ctx console.Context) error {
 			skippedCount++
 		} else {
 			if err := r.shardingService.CreateShardingTable(tableName, "orders"); err != nil {
+				errorlog.Record(context.Background(), "sharding", "创建分表失败", map[string]any{
+					"table_name":      tableName,
+					"base_table_name": "orders",
+					"error":           err.Error(),
+				}, "创建分表 %s 失败: %v", tableName, err)
 				return fmt.Errorf("创建分表 %s 失败: %v", tableName, err)
 			}
 			ctx.Info(fmt.Sprintf("✓ 创建分表: %s", tableName))
@@ -112,6 +119,11 @@ func (r *CreateOrderShardingTables) Handle(ctx console.Context) error {
 			ctx.Info(fmt.Sprintf("分表 %s 已存在，跳过", detailTableName))
 		} else {
 			if err := r.shardingService.CreateShardingTable(detailTableName, "order_details"); err != nil {
+				errorlog.Record(context.Background(), "sharding", "创建分表失败", map[string]any{
+					"table_name":      detailTableName,
+					"base_table_name": "order_details",
+					"error":           err.Error(),
+				}, "创建分表 %s 失败: %v", detailTableName, err)
 				return fmt.Errorf("创建分表 %s 失败: %v", detailTableName, err)
 			}
 			ctx.Info(fmt.Sprintf("✓ 创建分表: %s", detailTableName))

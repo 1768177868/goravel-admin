@@ -1,12 +1,14 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type UserService interface {
@@ -159,6 +161,13 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 		"balance": newBalance,
 	})
 	if err != nil {
+		errorlog.Record(context.Background(), "user", "更新用户余额失败", map[string]any{
+			"user_id":     userID,
+			"amount":      amount,
+			"log_type":    logType,
+			"new_balance": newBalance,
+			"error":       err.Error(),
+		}, "更新用户余额失败: %v", err)
 		return fmt.Errorf("更新用户余额失败: %v", err)
 	}
 
@@ -167,6 +176,13 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 	if err != nil {
 		// 如果创建记录失败，尝试回滚余额（这里简化处理，实际应该使用事务）
 		// 注意：Goravel 框架的事务可能需要特殊处理
+		errorlog.Record(context.Background(), "user", "创建余额变动记录失败", map[string]any{
+			"user_id":     userID,
+			"amount":      amount,
+			"log_type":    logType,
+			"new_balance": newBalance,
+			"error":       err.Error(),
+		}, "创建余额变动记录失败: %v", err)
 		return fmt.Errorf("创建余额变动记录失败: %v", err)
 	}
 

@@ -18,6 +18,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/models"
 	"goravel/app/utils"
+	"goravel/app/utils/errorlog"
 )
 
 type AttachmentService interface {
@@ -117,6 +118,13 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 	chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, chunkIndex)
 
 	if err := storage.Put(chunkPath, string(chunkData)); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "保存分片失败", map[string]any{
+				"chunk_id":    chunkID,
+				"chunk_index": chunkIndex,
+				"error":       err.Error(),
+			}, "保存分片失败: %w", err)
+		}
 		return fmt.Errorf("保存分片失败: %w", err)
 	}
 
@@ -168,12 +176,26 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 
 	// 确保目标目录存在
 	if err := os.MkdirAll(filepath.Dir(finalFullPath), 0755); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "创建目标目录失败", map[string]any{
+				"chunk_id":  chunkID,
+				"directory": filepath.Dir(finalFullPath),
+				"error":     err.Error(),
+			}, "创建目标目录失败: %w", err)
+		}
 		return nil, fmt.Errorf("创建目标目录失败: %w", err)
 	}
 
 	// 创建目标文件（流式写入）
 	outFile, err := os.Create(finalFullPath)
 	if err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "创建目标文件失败", map[string]any{
+				"chunk_id": chunkID,
+				"file_path": finalFullPath,
+				"error":     err.Error(),
+			}, "创建目标文件失败: %w", err)
+		}
 		return nil, fmt.Errorf("创建目标文件失败: %w", err)
 	}
 	defer outFile.Close()
@@ -210,6 +232,14 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 			chunkFile.Close()
 			// 如果写入失败，删除已创建的目标文件
 			_ = os.Remove(finalFullPath)
+			if s.ctx != nil {
+				errorlog.RecordHTTP(s.ctx, "attachment", "写入分片失败", map[string]any{
+					"chunk_id":    chunkID,
+					"chunk_index": i,
+					"file_path":   finalFullPath,
+					"error":       err.Error(),
+				}, "写入分片 %d 失败: %w", i, err)
+			}
 			return nil, fmt.Errorf("写入分片 %d 失败: %w", i, err)
 		}
 		fileSize += written
@@ -219,6 +249,13 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	// 关闭目标文件
 	if err := outFile.Close(); err != nil {
 		_ = os.Remove(finalFullPath)
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "关闭目标文件失败", map[string]any{
+				"chunk_id":  chunkID,
+				"file_path": finalFullPath,
+				"error":     err.Error(),
+			}, "关闭目标文件失败: %w", err)
+		}
 		return nil, fmt.Errorf("关闭目标文件失败: %w", err)
 	}
 
@@ -264,6 +301,14 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	if err := facades.Orm().Query().Create(attachment); err != nil {
 		// 如果创建记录失败，删除已上传的文件
 		_ = storage.Delete(finalPath)
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "创建附件记录失败", map[string]any{
+				"chunk_id":  chunkID,
+				"file_path": finalPath,
+				"filename":  filename,
+				"error":     err.Error(),
+			}, "创建附件记录失败: %w", err)
+		}
 		return nil, fmt.Errorf("创建附件记录失败: %w", err)
 	}
 
@@ -358,6 +403,13 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 	// 保存文件
 	storage := facades.Storage().Disk(s.disk)
 	if err := storage.Put(finalPath, string(fileData)); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "保存文件失败", map[string]any{
+				"filename":  filename,
+				"file_path": finalPath,
+				"error":     err.Error(),
+			}, "保存文件失败: %w", err)
+		}
 		return nil, fmt.Errorf("保存文件失败: %w", err)
 	}
 
@@ -390,6 +442,13 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 
 	if err := facades.Orm().Query().Create(attachment); err != nil {
 		_ = storage.Delete(finalPath)
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "创建附件记录失败", map[string]any{
+				"filename":  filename,
+				"file_path": finalPath,
+				"error":     err.Error(),
+			}, "创建附件记录失败: %w", err)
+		}
 		return nil, fmt.Errorf("创建附件记录失败: %w", err)
 	}
 
@@ -538,6 +597,13 @@ func (s *AttachmentServiceImpl) UpdateDisplayName(id uint, displayName string) e
 
 	attachment.DisplayName = displayName
 	if err := facades.Orm().Query().Save(&attachment); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "更新附件显示名称失败", map[string]any{
+				"attachment_id": id,
+				"display_name":   displayName,
+				"error":          err.Error(),
+			}, "更新附件显示名称失败: %v", err)
+		}
 		return fmt.Errorf("更新附件显示名称失败: %v", err)
 	}
 
@@ -550,12 +616,26 @@ func (s *AttachmentServiceImpl) DeleteFile(attachment *models.Attachment) error 
 	if attachment.Path != "" && attachment.Disk != "" {
 		storage := facades.Storage().Disk(attachment.Disk)
 		if err := storage.Delete(attachment.Path); err != nil {
+			if s.ctx != nil {
+				errorlog.RecordHTTP(s.ctx, "attachment", "删除文件失败", map[string]any{
+					"attachment_id": attachment.ID,
+					"file_path":      attachment.Path,
+					"disk":           attachment.Disk,
+					"error":          err.Error(),
+				}, "删除文件失败: %w", err)
+			}
 			return fmt.Errorf("删除文件失败: %w", err)
 		}
 	}
 
 	// 删除数据库记录
 	if _, err := facades.Orm().Query().Delete(attachment); err != nil {
+		if s.ctx != nil {
+			errorlog.RecordHTTP(s.ctx, "attachment", "删除附件记录失败", map[string]any{
+				"attachment_id": attachment.ID,
+				"error":          err.Error(),
+			}, "删除附件记录失败: %w", err)
+		}
 		return fmt.Errorf("删除附件记录失败: %w", err)
 	}
 
