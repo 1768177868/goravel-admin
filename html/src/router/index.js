@@ -121,6 +121,7 @@ const componentImportMap = {
   'order/index': () => lazyLoad(() => import('../views/order/OrderList.vue')),
   'user/index': () => lazyLoad(() => import('../views/user/UserList.vue')),
   'user-balance-log/index': () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
+  'user-balance-logs/index': () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
   'onlineAdmin/index': () => lazyLoad(() => import('../views/onlineAdmin/OnlineAdminList.vue')),
   'log/operation/index': () => lazyLoad(() => import('../views/log/OperationLogList.vue')),
   'log/login/index': () => lazyLoad(() => import('../views/log/LoginLogList.vue')),
@@ -387,8 +388,8 @@ router.beforeEach((to, from, next) => {
           next(to.fullPath)
           return
         }
-        // 检查路由是否存在
-        const route = router.resolve(to.fullPath)
+        // 检查路由是否存在（只检查路径，不包含查询参数）
+        const route = router.resolve(to.path)
         if (!route.name && to.path !== '/') {
           // 路由不存在，可能是路径不匹配，尝试重试
           next(to.fullPath)
@@ -423,8 +424,8 @@ router.beforeEach((to, from, next) => {
           next(to.fullPath)
           return
         }
-        // 检查路由是否存在
-        const route = router.resolve(to.fullPath)
+        // 检查路由是否存在（只检查路径，不包含查询参数）
+        const route = router.resolve(to.path)
         if (!route.name && to.path !== '/') {
           // 路由不存在，可能是路径不匹配，尝试重试
           next(to.fullPath)

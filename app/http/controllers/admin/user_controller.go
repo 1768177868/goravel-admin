@@ -123,9 +123,7 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 	}
 
 	var user models.User
-	if err := facades.Orm().Query().
-		Model(&models.User{}).
-		Create(userData); err != nil {
+	if err := facades.Orm().Query().Table("users").Create(userData); err != nil {
 		return response.ErrorWithLog(ctx, "user", err, map[string]any{
 			"username": userCreate.Username,
 		})

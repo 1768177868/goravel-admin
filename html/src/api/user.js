@@ -22,7 +22,7 @@ export const {
   detail: getUserDetail,
   create: createUser,
   update: updateUser,
-  remove: deleteUser,
+  delete: deleteUser,
   updateBalance
 } = userApi
 

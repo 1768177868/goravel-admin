@@ -139,7 +139,7 @@ const loadData = async () => {
       ...searchForm
     }
     const res = await getUserBalanceLogList(params)
-    if (res.code === 0) {
+    if (res.code === 200) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
     }
@@ -162,7 +162,7 @@ const loadStatistics = async () => {
       end_time: searchForm.end_time
     }
     const res = await getUserBalanceStatistics(params)
-    if (res.code === 0) {
+    if (res.code === 200) {
       statistics.value = res.data.statistics
     }
   } catch (error) {
