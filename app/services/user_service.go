@@ -119,7 +119,36 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 			user.CurrencyID = cnyCurrency.ID
 		}
 	}
-	return facades.Orm().Query().Create(user)
+	// 使用 map 创建，确保 Status 为 0 时也能正确保存（与管理员创建方式一致）
+	// GORM 在处理结构体时可能会忽略零值字段，使用 map 可以确保所有字段都被保存
+	userData := map[string]interface{}{
+		"username":      user.Username,
+		"password":      user.Password,
+		"nickname":      user.Nickname,
+		"avatar":        user.Avatar,
+		"email":         user.Email,
+		"phone":         user.Phone,
+		"balance":       user.Balance,
+		"currency_id":   user.CurrencyID,
+		"status":        user.Status,
+		"last_login_at": user.LastLoginAt,
+	}
+	if err := facades.Orm().Query().Table("users").Create(userData); err != nil {
+		return err
+	}
+	// 将创建后的 ID 赋值回 user 对象（GORM 会将生成的 ID 填充到 map 中）
+	if id, ok := userData["id"].(uint); ok {
+		user.ID = id
+	} else if id, ok := userData["id"].(uint64); ok {
+		user.ID = uint(id)
+	} else {
+		// 如果 map 中没有 ID，通过用户名查询获取（与管理员创建方式一致）
+		var createdUser models.User
+		if err := facades.Orm().Query().Where("username", user.Username).First(&createdUser); err == nil {
+			user.ID = createdUser.ID
+		}
+	}
+	return nil
 }
 
 // Update 更新用户

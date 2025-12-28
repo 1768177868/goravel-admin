@@ -6,6 +6,7 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -84,26 +85,57 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
+	// 检查用户名是否已存在（虽然验证规则中有 not_exists，但这里显式检查以提供更好的错误处理）
+	exists, err := facades.Orm().Query().Model(&models.User{}).Where("username", userCreate.Username).Exists()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
+	}
+	if exists {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUsernameExists.Code)
+	}
+
 	// 密码加密
 	hashedPassword, err := facades.Hash().Make(userCreate.Password)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
 	}
 
-	user := models.User{
-		Username: userCreate.Username,
-		Password: hashedPassword,
-		Nickname: userCreate.Nickname,
-		Email:    userCreate.Email,
-		Phone:    userCreate.Phone,
-		Status:   userCreate.Status,
+	// 如果未设置货币ID，默认使用人民币
+	var currencyID uint
+	var cnyCurrency models.Currency
+	if err := facades.Orm().Query().Where("code", "CNY").First(&cnyCurrency); err == nil {
+		currencyID = cnyCurrency.ID
 	}
 
-	if err := r.userService.Create(&user); err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	now := carbon.Now()
+	userData := map[string]any{
+		"username":    userCreate.Username,
+		"password":    hashedPassword,
+		"nickname":    userCreate.Nickname,
+		"avatar":      "",
+		"email":       userCreate.Email,
+		"phone":       userCreate.Phone,
+		"balance":     0,
+		"currency_id": currencyID,
+		"status":      userCreate.Status,
+		"created_at":  now,
+		"updated_at":  now,
+	}
+
+	var user models.User
+	if err := facades.Orm().Query().
+		Model(&models.User{}).
+		Create(userData); err != nil {
+		return response.ErrorWithLog(ctx, "user", err, map[string]any{
+			"username": userCreate.Username,
+		})
+	}
+
+	// 查询创建后的用户
+	if err := facades.Orm().Query().Where("username", userCreate.Username).First(&user); err != nil {
+		return response.ErrorWithLog(ctx, "user", err, map[string]any{
+			"username": userCreate.Username,
+		})
 	}
 
 	return response.Success(ctx, http.Json{
