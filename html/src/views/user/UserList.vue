@@ -97,6 +97,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
@@ -120,6 +121,7 @@ const PlusIcon = markRaw(Plus)
 
 const { getButtonState } = usePermission()
 const { t } = useI18n()
+const router = useRouter()
 const tableRef = ref(null)
 const userFormRef = ref(null)
 
@@ -429,7 +431,10 @@ const handleUpdateBalance = async (row) => {
 const handleBalanceLogs = (row) => {
   // 跳转到余额变动记录页面
   const userId = row.id || row.ID
-  window.location.href = `/user-balance-logs?user_id=${userId}`
+  router.push({
+    path: '/user-balance-logs',
+    query: { user_id: userId }
+  })
 }
 
 const handleDelete = async (row) => {
