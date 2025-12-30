@@ -12,7 +12,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils/traceid"
 )
 
 type UserController struct {
@@ -233,27 +232,8 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 	}
 
 	if err := r.userService.UpdateBalance(userID, amount, logType, source, sourceID, description, operatorID, remark); err != nil {
-		// 检查是否是业务错误
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			// 直接获取格式化后的消息（包含翻译和占位符替换）
-			message := businessErr.GetFormattedMessage(ctx)
-
-			// 构造响应
-			responseData := http.Json{
-				"code":       http.StatusBadRequest,
-				"message":    message,
-				"error_code": businessErr.Code,
-			}
-
-			// 自动包含 trace_id
-			if traceID := traceid.FromHTTPContext(ctx); traceID != "" {
-				responseData["trace_id"] = traceID
-			}
-
-			return ctx.Response().Json(http.StatusBadRequest, responseData)
-		}
-		// 如果不是业务错误，返回通用错误
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		// response.Error 会自动检测 BusinessError 并处理占位符替换
+		return response.Error(ctx, http.StatusBadRequest, err)
 	}
 
 	return response.Success(ctx, "balance_update_success", http.Json{})

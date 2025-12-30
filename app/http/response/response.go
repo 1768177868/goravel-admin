@@ -98,9 +98,37 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 }
 
 // Error 错误响应（支持多语言，自动包含 trace_id 和 error_code）
+// 支持两种调用方式：
+//  1. response.Error(ctx, code, messageKey) - 使用翻译键
+//  2. response.Error(ctx, code, err) - 自动检测 BusinessError 并处理占位符替换
+//
 // 当 code >= 500 时，如果 context 中包含错误日志信息，会自动记录日志
-func Error(ctx http.Context, code int, messageKey string) http.Response {
-	message := trans.Get(ctx, messageKey)
+func Error(ctx http.Context, code int, messageOrErr interface{}) http.Response {
+	var message string
+	var messageKey string
+
+	// 判断第二个参数是 error 还是 string
+	switch v := messageOrErr.(type) {
+	case error:
+		// 如果是 error，检查是否是 BusinessError
+		if businessErr, ok := apperrors.GetBusinessError(v); ok {
+			// 使用 GetFormattedMessage 自动处理翻译和占位符替换
+			message = businessErr.GetFormattedMessage(ctx)
+			messageKey = businessErr.Code
+		} else {
+			// 普通错误，直接使用错误消息
+			message = v.Error()
+			messageKey = "operation_failed"
+		}
+	case string:
+		// 如果是 string，当作翻译键处理
+		messageKey = v
+		message = trans.Get(ctx, messageKey)
+	default:
+		// 其他类型，转换为字符串
+		messageKey = "operation_failed"
+		message = trans.Get(ctx, messageKey)
+	}
 
 	response := http.Json{
 		"code":       code,
