@@ -433,7 +433,7 @@ const handleBalanceLogs = (row) => {
 }
 
 const handleDelete = async (row) => {
-  await handleDeleteCrud(row)
+  await handleDeleteCrud(row,loadData)
 }
 
 const handleStatusChange = async (row, val) => {
