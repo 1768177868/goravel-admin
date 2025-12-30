@@ -1,5 +1,5 @@
 <template>
-  <div class="dictionary-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -213,16 +213,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dictionary-list {
-  background: white;
-  border-radius: 4px;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 </style>
 

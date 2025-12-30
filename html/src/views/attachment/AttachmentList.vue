@@ -1,5 +1,5 @@
 <template>
-  <div class="attachment-list">
+  <div class="list-page">
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
@@ -1119,21 +1119,7 @@ onActivated(() => {
 </script>
 
 <style scoped>
-.attachment-list {
-  background: white;
-  border-radius: 4px;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
 
 .preview-container {
   text-align: center;

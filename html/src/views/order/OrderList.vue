@@ -1,5 +1,5 @@
 <template>
-  <div class="order-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -736,16 +736,7 @@ onMounted(async () => {
   font-weight: bold;
   color: #303133;
 }
-.order-list {
-  background: white;
-  border-radius: 4px;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .order-detail {
   padding: 20px 0;

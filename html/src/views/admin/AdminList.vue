@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -590,16 +590,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.admin-list {
-  background: white;
-  border-radius: 4px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+/* 样式已移至全局 style.css */
 
 
 </style>

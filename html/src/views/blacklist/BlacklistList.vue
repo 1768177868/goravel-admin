@@ -1,5 +1,5 @@
 <template>
-  <div class="blacklist-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -235,14 +235,5 @@ onActivated(() => {
 </script>
 
 <style scoped>
-.blacklist-list {
-  background: white;
-  border-radius: 4px;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 </style>

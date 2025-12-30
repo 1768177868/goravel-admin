@@ -1,5 +1,5 @@
 <template>
-  <div class="log-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -465,21 +465,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.log-list {
-  background: white;
-  border-radius: 4px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
 
 </style>
 

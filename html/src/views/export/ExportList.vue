@@ -1,5 +1,5 @@
 <template>
-  <div class="export-list">
+  <div class="list-page">
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
@@ -608,21 +608,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.export-list {
-  background: white;
-  border-radius: 4px;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
 </style>
 
 

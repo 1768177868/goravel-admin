@@ -41,3 +41,20 @@ body {
   width: 100%;
   height: 100vh;
 }
+
+/* 列表页公共样式 */
+.list-page {
+  background: white;
+  border-radius: 4px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}

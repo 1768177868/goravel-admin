@@ -1,5 +1,5 @@
 <template>
-  <div class="config-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -53,15 +53,6 @@ const handleTabChange = (tabName) => {
 </script>
 
 <style scoped>
-.config-list {
-  background: white;
-  border-radius: 4px;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 </style>
 

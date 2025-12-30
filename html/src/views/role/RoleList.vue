@@ -1,5 +1,5 @@
 <template>
-  <div class="role-list">
+  <div class="list-page">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -1085,17 +1085,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.role-list {
-  background: var(--card-bg, white);
-  border-radius: 4px;
-  transition: background-color 0.3s ease;
-}
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 
 .menu-permission-container {
