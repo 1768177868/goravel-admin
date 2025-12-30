@@ -206,11 +206,6 @@ const handleDelete = (row) => {
   handleDeleteCrud(row, loadData)
 }
 
-const handleEdit = (row) => {
-  editId.value = row.id
-  dialogVisible.value = true
-}
-
 // 操作按钮配置
 const operationActions = computed(() => [
   {
@@ -243,5 +238,11 @@ onActivated(() => {
 .blacklist-list {
   background: white;
   border-radius: 4px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

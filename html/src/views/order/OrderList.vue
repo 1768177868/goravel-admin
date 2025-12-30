@@ -229,14 +229,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import OrderForm from './OrderForm.vue'
 import { useListPage } from '../../composables/useListPage'
@@ -715,8 +714,10 @@ const handleFormSuccess = () => {
 
 onMounted(async () => {
   try {
-    initDefaultSort()
     await loadData()
+    // 等待表格渲染完成后再初始化排序
+    await nextTick()
+    initDefaultSort()
   } catch (error) {
     logger.error('OrderList onMounted error:', error)
     ErrorHandler.handle(error)

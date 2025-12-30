@@ -45,8 +45,11 @@ export function useTableSort(options = {}) {
     // 设置表格的默认排序
     if (tableRef?.value) {
       nextTick(() => {
-        if (tableRef.value) {
-          tableRef.value.setSort(sortConfig.value.data)
+        // 检查 tableRef.value 是否有 setSort 方法（vxe-table 实例）
+        // 或者检查 tableRef.value.tableRef 是否有 setSort 方法（VxeTable 组件）
+        const tableInstance = tableRef.value?.setSort ? tableRef.value : (tableRef.value?.tableRef || null)
+        if (tableInstance && typeof tableInstance.setSort === 'function') {
+          tableInstance.setSort(sortConfig.value.data)
         }
       })
     }
@@ -109,7 +112,12 @@ export function useTableSort(options = {}) {
   const resetSort = () => {
     sortConfig.value.data = []
     if (tableRef?.value) {
-      tableRef.value.clearSort()
+      // 检查 tableRef.value 是否有 clearSort 方法（vxe-table 实例）
+      // 或者检查 tableRef.value.tableRef 是否有 clearSort 方法（VxeTable 组件）
+      const tableInstance = tableRef.value?.clearSort ? tableRef.value : (tableRef.value?.tableRef || null)
+      if (tableInstance && typeof tableInstance.clearSort === 'function') {
+        tableInstance.clearSort()
+      }
     }
   }
 
@@ -118,7 +126,12 @@ export function useTableSort(options = {}) {
     if (Array.isArray(sorts)) {
       sortConfig.value.data = sorts
       if (tableRef?.value) {
-        tableRef.value.setSort(sorts)
+        // 检查 tableRef.value 是否有 setSort 方法（vxe-table 实例）
+        // 或者检查 tableRef.value.tableRef 是否有 setSort 方法（VxeTable 组件）
+        const tableInstance = tableRef.value?.setSort ? tableRef.value : (tableRef.value?.tableRef || null)
+        if (tableInstance && typeof tableInstance.setSort === 'function') {
+          tableInstance.setSort(sorts)
+        }
       }
     }
   }
