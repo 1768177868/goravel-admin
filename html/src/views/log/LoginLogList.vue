@@ -6,6 +6,14 @@
           <span>{{ $t('menu.login_log') }}</span>
           <div class="header-actions">
             <el-button 
+              type="warning" 
+              :disabled="getButtonState('login_log.clean').disabled"
+              @click="handleClean"
+            >
+              <el-icon><Delete /></el-icon>
+              {{ $t('log.clean') || '清空日志' }}
+            </el-button>
+            <el-button 
               type="danger" 
               :disabled="selectedRows.length === 0"
               @click="handleBatchDelete"
@@ -418,14 +426,30 @@ const handleBatchDelete = () => {
 
 const handleClean = async () => {
   try {
-    await ElMessageBox.confirm(t('log.clean_confirm'), t('form.warning'), {
+    // 构建搜索参数
+    const searchParams = buildSearchParams(searchForm, {})
+    
+    // 如果有搜索条件，提示用户将清空符合条件的日志
+    const hasSearchConditions = Object.keys(searchParams).some(key => {
+      const value = searchParams[key]
+      return value !== '' && value !== null && value !== undefined
+    })
+    
+    const confirmMessage = hasSearchConditions 
+      ? t('log.clean_filtered_confirm')
+      : t('log.clean_confirm')
+    
+    await ElMessageBox.confirm(confirmMessage, t('form.warning'), {
       confirmButtonText: t('common.confirm'),
       cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
-    await cleanLoginLogs()
+    
+    // 传递搜索条件给清空 API
+    await cleanLoginLogs(searchParams)
     ElMessage.success(t('log.clean_success'))
     selectedRows.value = []
+    selectedIds.value.clear()
     loadData()
   } catch (error) {
     if (error !== 'cancel') {

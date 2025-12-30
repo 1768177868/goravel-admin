@@ -641,6 +641,7 @@
     "start_time_after_end_time": "Start time cannot be later than end time",
     "clean": "Clean Logs",
     "clean_confirm": "Are you sure to clean all logs? This operation cannot be undone!",
+    "clean_filtered_confirm": "Are you sure to clean logs matching the current search conditions? This operation cannot be undone!",
     "clean_success": "Clean successful",
     "delete_confirm": "Are you sure to delete this log?",
     "delete_success": "Delete successful",

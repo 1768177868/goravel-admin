@@ -47,9 +47,9 @@
         </template>
 
         <template #request="{ row }">
-          <span :title="formatRequestParams(row.request || row.Request)">
-            {{ formatRequestParams(row.request || row.Request) }}
-          </span>
+          <div class="request-params-cell">
+            <pre class="request-params-inline">{{ formatRequestParams(row.request || row.Request) }}</pre>
+          </div>
         </template>
 
         <template #operation="{ row }">
@@ -81,7 +81,20 @@
         <el-descriptions-item :label="$t('log.status_code')">{{ logDetail.status_code }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.operation_time')" :span="2">{{ logDetail.created_at }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.request_params')" :span="2">
-          <pre>{{ JSON.stringify(logDetail.params || logDetail.request || {}, null, 2) }}</pre>
+          <div class="request-params-detail">
+            <div class="request-params-header">
+              <el-button 
+                type="primary" 
+                link 
+                size="small"
+                @click="copyRequestParams"
+              >
+                <el-icon><DocumentCopy /></el-icon>
+                {{ $t('common.copy') }}
+              </el-button>
+            </div>
+            <pre ref="requestParamsPre" class="request-params-content">{{ formatRequestParamsFull(logDetail.params || logDetail.request || {}) }}</pre>
+          </div>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -92,7 +105,7 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { Delete, DocumentCopy } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
@@ -236,30 +249,64 @@ const transformOperationLogData = (log) => {
   }
 }
 
-// 格式化请求参数显示
+const requestParamsPre = ref(null)
+
+// 格式化请求参数显示（用于表格和详情）
 const formatRequestParams = (request) => {
   if (!request) return '-'
   
   try {
     // 如果是字符串，尝试解析为 JSON
     const parsed = typeof request === 'string' ? JSON.parse(request) : request
-    // 如果是对象，转换为格式化的 JSON 字符串（限制长度）
+    // 如果是对象，转换为格式化的 JSON 字符串
     if (typeof parsed === 'object' && parsed !== null) {
-      const jsonStr = JSON.stringify(parsed, null, 2)
-      // 如果太长，截取前 100 个字符
-      if (jsonStr.length > 100) {
-        return jsonStr.substring(0, 100) + '...'
-      }
-      return jsonStr
+      return JSON.stringify(parsed, null, 2)
     }
     return String(parsed)
   } catch (e) {
-    // 如果不是 JSON，直接返回字符串（限制长度）
-    const str = String(request)
-    if (str.length > 100) {
-      return str.substring(0, 100) + '...'
+    // 如果不是 JSON，直接返回字符串
+    return String(request)
+  }
+}
+
+// 格式化请求参数完整内容（用于详情显示）
+const formatRequestParamsFull = (request) => {
+  if (!request) return '-'
+  
+  try {
+    const parsed = typeof request === 'string' ? JSON.parse(request) : request
+    if (typeof parsed === 'object' && parsed !== null) {
+      return JSON.stringify(parsed, null, 2)
     }
-    return str
+    return String(parsed)
+  } catch (e) {
+    return String(request)
+  }
+}
+
+// 复制请求参数
+const copyRequestParams = async () => {
+  if (!requestParamsPre.value) return
+  
+  const text = requestParamsPre.value.textContent
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(t('common.copy_success') || '复制成功')
+  } catch (err) {
+    // 降级方案
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+      ElMessage.success(t('common.copy_success') || '复制成功')
+    } catch (e) {
+      ElMessage.error(t('common.copy_failed') || '复制失败')
+    }
+    document.body.removeChild(textarea)
   }
 }
 
@@ -810,24 +857,6 @@ const handleBatchDelete = () => {
   })
 }
 
-const handleClean = async () => {
-  try {
-    await ElMessageBox.confirm(t('log.clean_confirm'), t('form.warning'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await cleanOperationLogs()
-    ElMessage.success(t('log.clean_success'))
-    selectedRows.value = []
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Clean error:', error)
-    }
-  }
-}
-
 // 加载标题选项
 const loadTitleOptions = async () => {
   try {
@@ -903,6 +932,51 @@ pre {
   background: #f5f5f5;
   border-radius: 4px;
   overflow-x: auto;
+}
+
+.request-params-cell {
+  display: flex;
+  align-items: flex-start;
+}
+
+.request-params-inline {
+  margin: 0;
+  padding: 4px 8px;
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #606266;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+}
+
+.request-params-detail {
+  width: 100%;
+}
+
+.request-params-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.request-params-content {
+  margin: 0;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
+  word-break: break-all;
+  white-space: pre-wrap;
 }
 </style>
 

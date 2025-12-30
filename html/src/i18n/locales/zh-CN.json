@@ -641,6 +641,7 @@
     "start_time_after_end_time": "开始时间不能晚于结束时间",
     "clean": "清空日志",
     "clean_confirm": "确定要清空所有日志吗？此操作不可恢复！",
+    "clean_filtered_confirm": "确定要清空符合当前搜索条件的日志吗？此操作不可恢复！",
     "clean_success": "清空成功",
     "delete_confirm": "确定要删除该日志吗？",
     "delete_success": "删除成功",

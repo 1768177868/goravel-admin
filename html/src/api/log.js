@@ -38,10 +38,11 @@ export function batchDeleteOperationLogs(ids) {
   })
 }
 
-export function cleanOperationLogs() {
+export function cleanOperationLogs(params = {}) {
   return request({
     url: '/operation-logs/clean',
-    method: 'post'
+    method: 'post',
+    data: params
   })
 }
 
@@ -76,10 +77,11 @@ export function batchDeleteLoginLogs(ids) {
   })
 }
 
-export function cleanLoginLogs() {
+export function cleanLoginLogs(params = {}) {
   return request({
     url: '/login-logs/clean',
-    method: 'post'
+    method: 'post',
+    data: params
   })
 }
 
@@ -114,10 +116,11 @@ export function batchDeleteSystemLogs(ids) {
   })
 }
 
-export function cleanSystemLogs() {
+export function cleanSystemLogs(params = {}) {
   return request({
     url: '/system-logs/clean',
-    method: 'post'
+    method: 'post',
+    data: params
   })
 }
 

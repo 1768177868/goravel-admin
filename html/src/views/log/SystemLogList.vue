@@ -498,24 +498,6 @@ const handleBatchDelete = () => {
   })
 }
 
-const handleClean = async () => {
-  try {
-    await ElMessageBox.confirm(t('log.clean_confirm'), t('form.warning'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await cleanSystemLogs()
-    ElMessage.success(t('log.clean_success'))
-    selectedRows.value = []
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Clean error:', error)
-    }
-  }
-}
-
 onMounted(() => {
   initDefaultSort()
   loadData()
