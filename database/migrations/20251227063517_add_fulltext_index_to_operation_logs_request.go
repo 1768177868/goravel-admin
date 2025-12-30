@@ -49,11 +49,29 @@ func (r *M20251227063517AddFulltextIndexToOperationLogsRequest) Up() error {
 			// 创建 GIN 索引
 			sql := "CREATE INDEX ft_request ON operation_logs USING GIN(request gin_trgm_ops)"
 			return query.Raw(sql).Scan(&dummy)
+		} else if strings.Contains(dbType, "MariaDB") {
+			// MariaDB: 不支持 ngram 解析器，直接使用普通全文索引
+			var dummy string
+			sql := "CREATE FULLTEXT INDEX ft_request ON operation_logs(request)"
+			return query.Raw(sql).Scan(&dummy)
 		} else {
-			// MySQL: 创建 ngram 全文索引
+			// MySQL: 尝试创建 ngram 全文索引，如果失败则使用普通全文索引
 			var dummy string
 			sql := "CREATE FULLTEXT INDEX ft_request ON operation_logs(request) WITH PARSER ngram"
-			return query.Raw(sql).Scan(&dummy)
+			err := query.Raw(sql).Scan(&dummy)
+
+			// 如果 ngram 解析器不可用，回退到普通全文索引
+			if err != nil {
+				errStr := err.Error()
+				if strings.Contains(errStr, "ngram") && (strings.Contains(errStr, "not defined") || strings.Contains(errStr, "not supported")) {
+					// ngram 解析器不可用，使用普通全文索引
+					sql = "CREATE FULLTEXT INDEX ft_request ON operation_logs(request)"
+					return query.Raw(sql).Scan(&dummy)
+				}
+				return err
+			}
+
+			return nil
 		}
 	}
 
