@@ -237,7 +237,6 @@ const DeleteIcon = markRaw(Delete)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
-import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import axios from 'axios'
@@ -315,80 +314,29 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData: baseLoadData,
-  handleSearch: baseHandleSearch,
-  handleReset: baseHandleReset,
+  loadData,
+  handleSearch,
+  handleReset,
   handleSortChange,
-  initDefaultSort,
-  buildOrderBy,
-  resetSort
+  initDefaultSort
 } = useListPage({
   fetchApi: getAttachmentList,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value)
+  tableRef: computed(() => tableRef.value),
+  transformData: transformAttachmentData,
+  onLoadSuccess: () => {
+    // 加载所有图片的blob URL
+    tableData.value.forEach(row => {
+      if (row.file_type === 'image') {
+        nextTick(() => {
+          loadImageAsBlob(row)
+        })
+      }
+    })
+  }
 })
-
-// 重写 loadData 以支持数据转换和图片加载
-const loadData = async (pageParams = null) => {
-  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
-  const page = pageParams?.currentPage ?? pagination.page
-  const pageSize = pageParams?.pageSize ?? pagination.pageSize
-  
-  // 更新 pagination（确保同步）
-  if (pageParams) {
-    pagination.page = page
-    pagination.pageSize = pageSize
-  }
-  
-  const params = buildSearchParams(searchForm, {
-    page,
-    page_size: pageSize,
-    order_by: buildOrderBy()
-  })
-  
-  loading.value = true
-  try {
-    const res = await getAttachmentList(params)
-    if (res.data) {
-      const list = (res.data.list || []).map(transformAttachmentData)
-      tableData.value = list
-      pagination.total = res.data.total || 0
-      
-      // 加载所有图片的blob URL
-      list.forEach(row => {
-        if (row.file_type === 'image') {
-          nextTick(() => {
-            loadImageAsBlob(row)
-          })
-        }
-      })
-    }
-  } catch (error) {
-    console.error('Load attachment list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// 重写 handleSearch 和 handleReset 以使用自定义的 loadData
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
-  })
-  // 重置排序
-  resetSort()
-  // 重置并加载
-  pagination.page = 1
-  loadData()
-}
 
 // 表格列配置
 const tableColumns = computed(() => [

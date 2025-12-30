@@ -68,13 +68,13 @@ func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]mo
 	query := facades.Orm().Query().Model(&models.User{})
 
 	if filters.Username != "" {
-		query.Where("username", "like", "%"+filters.Username+"%")
+		query = query.Where("username LIKE ?", "%"+filters.Username+"%")
 	}
 	if filters.Email != "" {
-		query.Where("email", "like", "%"+filters.Email+"%")
+		query = query.Where("email LIKE ?", "%"+filters.Email+"%")
 	}
 	if filters.Phone != "" {
-		query.Where("phone", "like", "%"+filters.Phone+"%")
+		query = query.Where("phone LIKE ?", "%"+filters.Phone+"%")
 	}
 	if filters.Status != "" {
 		query = query.Where("status", filters.Status)

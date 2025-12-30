@@ -100,7 +100,6 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import { useListPage } from '../../composables/useListPage'
-import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { getExportList, deleteExport, batchDeleteExports, createExportProgressSSE } from '../../api/export'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
@@ -147,70 +146,19 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData: baseLoadData,
-  handleSearch: baseHandleSearch,
-  handleReset: baseHandleReset,
+  loadData,
+  handleSearch,
+  handleReset,
   handleSortChange,
-  initDefaultSort,
-  buildOrderBy,
-  resetSort
+  initDefaultSort
 } = useListPage({
   fetchApi: getExportList,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  tableRef: computed(() => tableRef.value?.tableRef),
+  transformData: transformExportData
 })
-
-// 重写 loadData 以支持数据转换
-const loadData = async (pageParams = null) => {
-  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
-  const page = pageParams?.currentPage ?? pagination.page
-  const pageSize = pageParams?.pageSize ?? pagination.pageSize
-  
-  // 更新 pagination（确保同步）
-  if (pageParams) {
-    pagination.page = page
-    pagination.pageSize = pageSize
-  }
-  
-  const params = buildSearchParams(searchForm, {
-    page,
-    page_size: pageSize,
-    order_by: buildOrderBy()
-  })
-  
-  loading.value = true
-  try {
-    const res = await getExportList(params)
-    if (res.data) {
-      tableData.value = (res.data.list || []).map(transformExportData)
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load export list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// 重写 handleSearch 和 handleReset 以使用自定义的 loadData
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
-  })
-  // 重置排序
-  resetSort()
-  // 重置并加载
-  pagination.page = 1
-  loadData()
-}
 
 // 表格列配置
 const tableColumns = computed(() => [

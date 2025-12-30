@@ -7,10 +7,12 @@ import { ref, reactive } from 'vue'
  * @param {Object} options 配置选项
  * @param {Function} options.fetchApi - 获取数据的 API 函数
  * @param {Function} options.buildParams - 构建请求参数的自定义函数（可选）
+ * @param {Function} options.transformData - 数据转换函数（可选）
+ * @param {Function} options.onLoadSuccess - 加载成功回调（可选）
  * @returns {Object} 返回分页、数据、加载状态和加载函数
  */
 export function useTableData(options = {}) {
-  const { fetchApi, buildParams = null } = options
+  const { fetchApi, buildParams = null, transformData = null, onLoadSuccess = null } = options
 
   // 分页对象（统一格式）
   const pagination = reactive({
@@ -60,9 +62,22 @@ export function useTableData(options = {}) {
       const res = await fetchApi(params)
 
       if (res && res.data) {
-        // 自动更新表格数据和总数
-        tableData.value = res.data.list || res.data.data || []
+        // 获取原始数据
+        const rawList = res.data.list || res.data.data || []
+        
+        // 如果提供了数据转换函数，应用它
+        if (transformData && typeof transformData === 'function') {
+          tableData.value = rawList.map(transformData)
+        } else {
+          tableData.value = rawList
+        }
+        
         pagination.total = res.data.total || 0
+        
+        // 如果提供了加载成功回调，调用它
+        if (onLoadSuccess && typeof onLoadSuccess === 'function') {
+          onLoadSuccess(res, tableData.value)
+        }
       }
     } catch (error) {
       console.error('Load table data error:', error)

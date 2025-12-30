@@ -13,6 +13,8 @@ import { buildSearchParams } from '../utils/buildSearchParams'
  * @param {Object} options.fieldMapping - 字段映射（可选）
  * @param {String} options.defaultSort - 默认排序（可选）
  * @param {Object} options.tableRef - 表格引用（可选）
+ * @param {Function} options.transformData - 数据转换函数（可选）
+ * @param {Function} options.onLoadSuccess - 加载成功回调（可选）
  * @returns {Object} 返回列表页面需要的所有状态和方法
  */
 export function useListPage(options = {}) {
@@ -21,7 +23,9 @@ export function useListPage(options = {}) {
     initialSearchForm = {},
     fieldMapping = {},
     defaultSort = 'id:desc',
-    tableRef = null
+    tableRef = null,
+    transformData = null,
+    onLoadSuccess = null
   } = options
 
   // 搜索表单
@@ -29,7 +33,9 @@ export function useListPage(options = {}) {
 
   // 使用表格数据 composable
   const { pagination, tableData, loading, loadData: baseLoadData, resetAndLoad: baseResetAndLoad } = useTableData({
-    fetchApi
+    fetchApi,
+    transformData,
+    onLoadSuccess
   })
 
   // 使用排序 composable

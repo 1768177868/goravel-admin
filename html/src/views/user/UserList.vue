@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', email: '', phone: '', status: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="user"
         @search="handleSearch"
         @reset="handleReset"
@@ -89,7 +89,6 @@ import UserForm from './UserForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
-import { buildSearchParams } from '../../utils/buildSearchParams'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getUserList,
@@ -146,70 +145,19 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData: baseLoadData,
-  handleSearch: baseHandleSearch,
-  handleReset: baseHandleReset,
+  loadData,
+  handleSearch,
+  handleReset,
   handleSortChange,
-  initDefaultSort,
-  buildOrderBy,
-  resetSort
+  initDefaultSort
 } = useListPage({
   fetchApi: getUserList,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  tableRef: computed(() => tableRef.value?.tableRef),
+  transformData: transformUserData
 })
-
-// 重写 loadData 以支持数据转换
-const loadData = async (pageParams = null) => {
-  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
-  const page = pageParams?.currentPage ?? pagination.page
-  const pageSize = pageParams?.pageSize ?? pagination.pageSize
-  
-  // 更新 pagination（确保同步）
-  if (pageParams) {
-    pagination.page = page
-    pagination.pageSize = pageSize
-  }
-  
-  const params = buildSearchParams(searchForm, {
-    page,
-    page_size: pageSize,
-    order_by: buildOrderBy()
-  })
-  
-  loading.value = true
-  try {
-    const res = await getUserList(params)
-    if (res.data) {
-      tableData.value = (res.data.list || []).map(transformUserData)
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load user list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// 重写 handleSearch 和 handleReset 以使用自定义的 loadData
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
-  })
-  // 重置排序
-  resetSort()
-  // 重置并加载
-  pagination.page = 1
-  loadData()
-}
 
 const searchFields = computed(() => [
   {
@@ -492,6 +440,5 @@ onMounted(() => {
   padding: 20px;
 }
 
-/* .card-header 样式已移至全局 style.css */
 </style>
 

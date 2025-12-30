@@ -368,8 +368,6 @@ onMounted(() => {
   padding: 20px;
 }
 
-/* .card-header 样式已移至全局 style.css */
-
 .table-toolbar {
   display: flex;
   justify-content: space-between;

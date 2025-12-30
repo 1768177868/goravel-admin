@@ -138,7 +138,6 @@ import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import { useListPage } from '../../composables/useListPage'
-import { buildSearchParams } from '../../utils/buildSearchParams'
 import { useCrud } from '../../composables/useCrud'
 import { usePermission } from '../../composables/usePermission'
 import { getMethodOptions } from '../../utils/fieldOptions'
@@ -380,66 +379,32 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData: baseLoadData,
-  handleSearch: handleSearchBase,
+  loadData,
+  handleSearch: baseHandleSearch,
   handleReset: baseHandleReset,
-  handlePageChange,
   handleSortChange,
-  initDefaultSort,
-  buildOrderBy,
-  resetSort
+  initDefaultSort
 } = useListPage({
   fetchApi: getOperationLogList,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  tableRef: computed(() => tableRef.value?.tableRef),
+  transformData: transformOperationLogData,
+  onLoadSuccess: () => {
+    // 数据加载后，恢复选中状态
+    nextTick(() => {
+      if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
+        const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
+        rowsToSelect.forEach(row => {
+          tableRef.value.tableRef.setCheckboxRow(row, true)
+        })
+        // 更新 selectedRows
+        selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
+      }
+    })
+  }
 })
-
-// 重写 loadData 以支持数据转换和恢复选中状态
-const loadData = async (pageParams = null) => {
-  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
-  const page = pageParams?.currentPage ?? pagination.page
-  const pageSize = pageParams?.pageSize ?? pagination.pageSize
-  
-  // 更新 pagination（确保同步）
-  if (pageParams) {
-    pagination.page = page
-    pagination.pageSize = pageSize
-  }
-  
-  const params = buildSearchParams(searchForm, {
-    page,
-    page_size: pageSize,
-    order_by: buildOrderBy()
-  })
-  
-  loading.value = true
-  try {
-    const res = await getOperationLogList(params)
-    if (res.data) {
-      const logs = res.data.list || []
-      tableData.value = logs.map(transformOperationLogData)
-      pagination.total = res.data.total || 0
-      
-      // 数据加载后，恢复选中状态
-      nextTick(() => {
-        if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
-          const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
-          rowsToSelect.forEach(row => {
-            tableRef.value.tableRef.setCheckboxRow(row, true)
-          })
-          // 更新 selectedRows
-          selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
-        }
-      })
-    }
-  } catch (error) {
-    console.error('Load operation log list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
 
 // 获取当前时间的字符串格式（YYYY-MM-DD HH:mm:ss）
 const getCurrentTimeString = () => {
@@ -523,23 +488,14 @@ const handleSearch = () => {
   // 清除选中状态
   selectedRows.value = []
   selectedIds.value.clear()
-  pagination.page = 1
-  loadData()
+  baseHandleSearch()
 }
 
-// 重写 handleReset，清除选中状态并使用自定义的 loadData
+// 重写 handleReset，清除选中状态
 const handleReset = () => {
   selectedRows.value = []
   selectedIds.value.clear()
-  // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
-  })
-  // 重置排序
-  resetSort()
-  // 重置并加载
-  pagination.page = 1
-  loadData()
+  baseHandleReset()
 }
 
 // 将复数形式转换为单数形式，以匹配权限配置中的 slug

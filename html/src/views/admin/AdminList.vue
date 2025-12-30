@@ -590,7 +590,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 样式已移至全局 style.css */
+
 
 
 </style>

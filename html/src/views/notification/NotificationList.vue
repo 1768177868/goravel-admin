@@ -333,29 +333,6 @@ const tableColumns = computed(() => [
   }
 ])
 
-// 自定义参数构建函数（适配 notifications API 的返回格式）
-const buildParams = (searchForm, pagination, orderBy) => {
-  const params = {
-    page: pagination.page,
-    page_size: pagination.pageSize
-  }
-
-  // 添加排序参数
-  if (orderBy) {
-    params.order_by = orderBy
-  }
-
-  // 添加搜索条件（只添加有值的字段）
-  if (searchForm.type) {
-    params.type = searchForm.type
-  }
-  if (searchForm.is_read !== '' && searchForm.is_read !== null && searchForm.is_read !== undefined) {
-    params.is_read = searchForm.is_read
-  }
-
-  return params
-}
-
 // 自定义 fetchApi 包装函数（适配 notifications API 的返回格式）
 const fetchNotificationsWrapper = async (params) => {
   const res = await fetchNotifications(params)
@@ -391,15 +368,13 @@ const transformNotificationData = (notification) => {
   }
 }
 
-// 使用 useListPage，但需要自定义 buildParams
+// 使用 useListPage，但需要自定义参数构建（is_read 需要特殊处理）
 const {
   pagination,
   tableData,
   loading,
   searchForm,
   loadData: baseLoadData,
-  handleSearch: baseHandleSearch,
-  handleReset: baseHandleReset,
   handleSortChange,
   buildOrderBy
 } = useListPage({
@@ -407,10 +382,17 @@ const {
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  tableRef: computed(() => tableRef.value?.tableRef),
+  transformData: transformNotificationData,
+  onLoadSuccess: (res) => {
+    // 更新未读数量
+    if (res && res.data && res.data.unread_count !== undefined) {
+      notificationStore.unreadCount = res.data.unread_count || 0
+    }
+  }
 })
 
-// 重写 loadData 以支持自定义逻辑（包括更新未读数量）
+// 重写 loadData 以支持自定义参数构建（is_read 需要特殊处理）
 const loadData = async () => {
   const params = {
     page: pagination.page,
@@ -441,35 +423,8 @@ const loadData = async () => {
     }
   }
   
-  loading.value = true
-  try {
-    const res = await fetchNotificationsWrapper(params)
-    
-    if (res && res.data) {
-      // fetchNotificationsWrapper 已经将数据转换为 { list, total, pagination, unread_count } 格式
-      // 所以这里应该使用 res.data.list
-      const notifications = res.data.list || []
-      const transformed = notifications.map(transformNotificationData)
-      tableData.value = transformed
-      pagination.total = res.data.total || res.data.pagination?.total || 0
-      
-      // 更新未读数量
-      if (res.data.unread_count !== undefined) {
-        notificationStore.unreadCount = res.data.unread_count || 0
-      }
-    } else {
-      // 如果没有数据，确保 tableData 是空数组
-      tableData.value = []
-      pagination.total = 0
-    }
-  } catch (error) {
-    console.error('Load notifications error:', error)
-    ElMessage.error(error.response?.data?.message || error.message || t('error.default'))
-    tableData.value = []
-    pagination.total = 0
-  } finally {
-    loading.value = false
-  }
+  // 调用 baseLoadData，这样 transformData 和 onLoadSuccess 会被自动调用
+  await baseLoadData(params)
 }
 
 // 重写 handleSearch 和 handleReset，确保调用自定义的 loadData

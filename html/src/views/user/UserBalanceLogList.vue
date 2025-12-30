@@ -123,11 +123,7 @@ const {
   pagination,
   tableData,
   loading,
-  searchForm,
-  loadData: baseLoadData,
-  handleSearch: handleSearchBase,
-  handleReset: handleResetBase,
-  buildOrderBy
+  searchForm
 } = useListPage({
   fetchApi: getUserBalanceLogList,
   initialSearchForm: initialSearchValues,
@@ -235,13 +231,19 @@ const loadStatistics = async () => {
 
 // 搜索处理（同时加载列表和统计）
 const handleSearch = () => {
-  handleSearchBase()
+  pagination.page = 1
+  loadData()
   loadStatistics()
 }
 
 // 重置处理（同时加载列表和统计）
 const handleReset = () => {
-  handleResetBase()
+  // 重置搜索表单
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = initialSearchValues[key] !== undefined ? initialSearchValues[key] : ''
+  })
+  pagination.page = 1
+  loadData()
   loadStatistics()
 }
 
@@ -272,8 +274,6 @@ onMounted(() => {
 .user-balance-log-list {
   padding: 20px;
 }
-
-/* .card-header 样式已移至全局 style.css */
 
 .header-left {
   display: flex;

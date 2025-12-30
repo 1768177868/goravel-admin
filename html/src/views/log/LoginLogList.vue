@@ -174,87 +174,44 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData: baseLoadData,
+  loadData,
   handleSearch: baseHandleSearch,
   handleReset: baseHandleReset,
-  handlePageChange,
   handleSortChange,
-  initDefaultSort,
-  buildOrderBy,
-  resetSort
+  initDefaultSort
 } = useListPage({
   fetchApi: getLoginLogList,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  tableRef: computed(() => tableRef.value?.tableRef),
+  transformData: transformLoginLogData,
+  onLoadSuccess: () => {
+    // 数据加载后，恢复选中状态
+    nextTick(() => {
+      if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
+        const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
+        rowsToSelect.forEach(row => {
+          tableRef.value.tableRef.setCheckboxRow(row, true)
+        })
+        // 更新 selectedRows
+        selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
+      }
+    })
+  }
 })
 
-// 重写 loadData 以支持数据转换和恢复选中状态
-const loadData = async (pageParams = null) => {
-  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
-  const page = pageParams?.currentPage ?? pagination.page
-  const pageSize = pageParams?.pageSize ?? pagination.pageSize
-  
-  // 更新 pagination（确保同步）
-  if (pageParams) {
-    pagination.page = page
-    pagination.pageSize = pageSize
-  }
-  
-  const params = buildSearchParams(searchForm, {
-    page,
-    page_size: pageSize,
-    order_by: buildOrderBy()
-  })
-  
-  loading.value = true
-  try {
-    const res = await getLoginLogList(params)
-    if (res.data) {
-      const logs = res.data.list || []
-      tableData.value = logs.map(transformLoginLogData)
-      pagination.total = res.data.total || 0
-      
-      // 数据加载后，恢复选中状态
-      nextTick(() => {
-        if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
-          const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
-          rowsToSelect.forEach(row => {
-            tableRef.value.tableRef.setCheckboxRow(row, true)
-          })
-          // 更新 selectedRows
-          selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
-        }
-      })
-    }
-  } catch (error) {
-    console.error('Load login log list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// 重写 handleSearch 和 handleReset，清除选中状态并使用自定义的 loadData
+// 重写 handleSearch 和 handleReset，清除选中状态
 const handleSearch = () => {
   selectedRows.value = []
   selectedIds.value.clear()
-  pagination.page = 1
-  loadData()
+  baseHandleSearch()
 }
 
 const handleReset = () => {
   selectedRows.value = []
   selectedIds.value.clear()
-  // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
-  })
-  // 重置排序
-  resetSort()
-  // 重置并加载
-  pagination.page = 1
-  loadData()
+  baseHandleReset()
 }
 
 // 表格列配置（使用 vxe-table columns）
