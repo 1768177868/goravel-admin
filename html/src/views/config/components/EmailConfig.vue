@@ -214,41 +214,12 @@ const handleTest = async () => {
 onMounted(() => {
   loadData()
   
-  // 在夜间模式下，强制设置邮箱账号和密码输入框的背景色
-  const applyInputStyles = () => {
-    if (document.body.classList.contains('dark-mode')) {
-      nextTick(() => {
-        // 查找邮箱账号和密码输入框
-        const usernameInput = document.querySelector('.email-config .el-form-item[prop="email_username"] .el-input__wrapper')
-        const passwordInput = document.querySelector('.email-config .el-form-item[prop="email_password"] .el-input__wrapper')
-        const passwordInner = document.querySelector('.email-config .el-form-item[prop="email_password"] .el-input__wrapper .el-input__inner')
-        
-        if (usernameInput) {
-          usernameInput.style.setProperty('background-color', '#252526', 'important')
-          const inner = usernameInput.querySelector('.el-input__inner')
-          if (inner) {
-            inner.style.setProperty('background-color', '#252526', 'important')
-            inner.style.setProperty('color', '#e5eaf3', 'important')
-          }
-        }
-        
-        if (passwordInput) {
-          passwordInput.style.setProperty('background-color', '#252526', 'important')
-          if (passwordInner) {
-            passwordInner.style.setProperty('background-color', '#252526', 'important')
-            passwordInner.style.setProperty('color', '#e5eaf3', 'important')
-          }
-        }
-      })
-    }
-  }
-  
   // 立即应用
-  applyInputStyles()
+  // applyInputStyles()
   
   // 监听主题变化
   const observer = new MutationObserver(() => {
-    applyInputStyles()
+    // applyInputStyles()
   })
   
   observer.observe(document.body, {
@@ -271,139 +242,6 @@ defineExpose({
 <style scoped>
 .email-config {
   padding: 20px 0;
-}
-</style>
-
-<style>
-/* 邮箱配置页面夜间模式适配 - 使用深度选择器确保样式生效 */
-.dark-mode .email-config :deep(.el-input__wrapper) {
-  background-color: #252526 !important;
-  border-color: #3d3e40 !important;
-}
-
-.dark-mode .email-config :deep(.el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-input[type="password"] .el-input__wrapper),
-.dark-mode .email-config :deep(.el-input[type="password"] .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-input.show-password .el-input__wrapper),
-.dark-mode .email-config :deep(.el-input.show-password .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-input.show-password .el-input__suffix) {
-  background-color: transparent !important;
-}
-
-.dark-mode .email-config :deep(.el-input.show-password .el-input__suffix .el-input__icon) {
-  background-color: transparent !important;
-  color: #909399 !important;
-}
-
-.dark-mode .email-config :deep(.el-input-number .el-input__wrapper) {
-  background-color: #252526 !important;
-  border-color: #3d3e40 !important;
-}
-
-.dark-mode .email-config :deep(.el-input-number .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-select .el-input__wrapper) {
-  background-color: #252526 !important;
-  border-color: #3d3e40 !important;
-}
-
-.dark-mode .email-config :deep(.el-select .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config [style*="color: #909399"] {
-  color: #909399 !important;
-}
-
-/* 更通用的选择器，确保所有输入框都被覆盖 */
-.dark-mode .email-config :deep(.el-form-item .el-input__wrapper) {
-  background-color: #252526 !important;
-  border-color: #3d3e40 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item .el-input__wrapper::before),
-.dark-mode .email-config :deep(.el-form-item .el-input__wrapper::after) {
-  background-color: transparent !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item .el-input__wrapper *) {
-  background-color: transparent !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-}
-
-/* 针对邮箱账号和密码输入框的特殊处理 - 使用属性选择器 */
-.dark-mode .email-config :deep(.el-form-item[prop="email_username"] .el-input__wrapper),
-.dark-mode .email-config :deep(.el-form-item[prop="email_username"] .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item[prop="email_password"] .el-input__wrapper),
-.dark-mode .email-config :deep(.el-form-item[prop="email_password"] .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item[prop="email_password"] .el-input.show-password .el-input__wrapper),
-.dark-mode .email-config :deep(.el-form-item[prop="email_password"] .el-input.show-password .el-input__wrapper .el-input__inner) {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item[prop="email_password"] .el-input.show-password .el-input__suffix) {
-  background-color: transparent !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item[prop="email_password"] .el-input.show-password .el-input__suffix .el-input__icon) {
-  background-color: transparent !important;
-  color: #909399 !important;
-}
-
-/* 使用更具体的选择器，确保覆盖所有可能的样式 */
-.dark-mode .email-config :deep(.el-form-item) .el-input__wrapper {
-  background-color: #252526 !important;
-  border-color: #3d3e40 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item) .el-input__wrapper .el-input__inner {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item) .el-input[type="password"] .el-input__wrapper,
-.dark-mode .email-config :deep(.el-form-item) .el-input[type="password"] .el-input__wrapper .el-input__inner {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
-}
-
-.dark-mode .email-config :deep(.el-form-item) .el-input.show-password .el-input__wrapper,
-.dark-mode .email-config :deep(.el-form-item) .el-input.show-password .el-input__wrapper .el-input__inner {
-  background-color: #252526 !important;
-  color: #e5eaf3 !important;
 }
 </style>
 

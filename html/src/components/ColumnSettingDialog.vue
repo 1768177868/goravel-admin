@@ -266,90 +266,10 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
-</style>
 
-<style>
 /* 列设置弹窗样式 */
 .column-setting-popover {
   padding: 12px;
-}
-
-/* 列设置弹窗夜间模式适配 - 需要非 scoped 样式来覆盖组件内部样式 */
-.dark-mode .column-setting-popover {
-  background-color: var(--bg-color) !important;
-  border-color: var(--border-color-base) !important;
-}
-
-.dark-mode .column-item {
-  background-color: var(--bg-color-tertiary) !important;
-  border-color: var(--border-color-light) !important;
-  color: var(--text-color-primary) !important;
-}
-
-.dark-mode .column-item:hover {
-  background-color: var(--bg-color-tertiary) !important;
-  border-color: var(--sidebar-active) !important;
-}
-
-.dark-mode .column-item-disabled {
-  background-color: var(--bg-color-tertiary) !important;
-  border-color: var(--border-color-light) !important;
-  opacity: 0.7;
-}
-
-.dark-mode .column-item-disabled:hover {
-  background-color: var(--bg-color-tertiary) !important;
-  border-color: var(--border-color-light) !important;
-}
-
-.dark-mode .column-checkbox :deep(.el-checkbox__label) {
-  color: var(--text-color-primary) !important;
-}
-
-.dark-mode .column-title {
-  color: var(--text-color-primary) !important;
-}
-
-.dark-mode .column-item * {
-  color: var(--text-color-primary) !important;
-}
-
-.dark-mode .column-item-disabled * {
-  color: var(--text-color-regular) !important;
-}
-
-.dark-mode .popover-header {
-  border-bottom-color: var(--border-color-base) !important;
-}
-
-.dark-mode .popover-title {
-  color: var(--text-color-primary) !important;
-}
-
-.dark-mode .popover-tips {
-  background-color: var(--bg-color-tertiary) !important;
-  border-color: var(--border-color-light) !important;
-  color: var(--sidebar-active) !important;
-}
-
-.dark-mode .popover-tips * {
-  color: var(--sidebar-active) !important;
-}
-
-.dark-mode .popover-footer {
-  border-top-color: var(--border-color-base) !important;
-}
-
-.dark-mode .column-list::-webkit-scrollbar-track {
-  background: var(--bg-color-tertiary) !important;
-}
-
-.dark-mode .column-list::-webkit-scrollbar-thumb {
-  background: var(--border-color-base) !important;
-}
-
-.dark-mode .column-list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-color-secondary) !important;
 }
 </style>
 
