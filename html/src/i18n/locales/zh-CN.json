@@ -146,6 +146,8 @@
     "order": "订单",
     "user_management": "用户管理",
     "user": "用户",
+    "user_balance_log": "用户余额变动记录",
+    "user-balance-log": "用户余额变动记录",
     "monitor": "服务监控",
     "log_management": "日志管理",
     "operation_log": "操作日志",
@@ -228,6 +230,11 @@
     "balance_income": "收入",
     "balance_expense": "支出",
     "balance_refund": "退款",
+    "source_order": "订单",
+    "source_recharge": "充值",
+    "source_withdraw": "提现",
+    "source_manual": "手动",
+    "back": "返回",
     "select_change_type_prompt": "请选择变动类型",
     "select_change_type": "选择变动类型",
     "invalid_selection": "无效的选择，请输入 1-3",
@@ -868,6 +875,12 @@
   },
   "breadcrumb": {
     "home": "首页"
+  },
+  "notFound": {
+    "title": "页面不存在",
+    "message": "抱歉，您访问的页面不存在",
+    "backHome": "返回首页",
+    "goBack": "返回上一页"
   },
   "layout": {
     "title": "布局大小",

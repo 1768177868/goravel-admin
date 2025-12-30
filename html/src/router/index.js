@@ -98,6 +98,14 @@ const staticRoutes = [
         name: 'Iframe',
         component: () => lazyLoad(() => import('../views/iframe/IframeView.vue')),
         meta: { titleKey: 'menu.external_link' }
+      },
+      {
+        // 404 路由，必须放在最后，作为 catch-all 路由
+        // 在子路由中使用相对路径（不带前导斜杠）
+        path: ':pathMatch(.*)*',
+        name: 'NotFound',
+        component: () => lazyLoad(() => import('../views/NotFound.vue')),
+        meta: { titleKey: 'notFound.title' }
       }
     ]
   }

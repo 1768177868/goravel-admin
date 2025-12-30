@@ -99,10 +99,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTabsStore } from '../store/tabs'
+import { getMenuTranslation } from '../utils/menuTranslation'
 import {
   Refresh,
   Close,
@@ -113,7 +114,7 @@ import {
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const tabsStore = useTabsStore()
 
 const activeTab = computed({
@@ -141,7 +142,31 @@ const canCloseRight = computed(() => {
 
 const getTabTitle = (tab) => {
   if (tab.titleKey) {
-    return t(tab.titleKey)
+    // 如果是 menu.xxx 格式，使用智能翻译
+    if (tab.titleKey.startsWith('menu.')) {
+      const slug = tab.titleKey.replace('menu.', '')
+      const translated = getMenuTranslation(t, te, slug)
+      if (translated) {
+        return translated
+      }
+    }
+    // 如果智能翻译失败，尝试直接翻译
+    if (te(tab.titleKey)) {
+      return t(tab.titleKey)
+    }
+    // 如果翻译键不存在，返回原始键（避免显示翻译键本身）
+    // 尝试从路径提取可能的标题
+    if (tab.path) {
+      const pathParts = tab.path.split('/').filter(p => p)
+      if (pathParts.length > 0) {
+        const lastPart = pathParts[pathParts.length - 1]
+        const extractedSlug = lastPart.split('?')[0] // 移除查询参数
+        const translated = getMenuTranslation(t, te, extractedSlug)
+        if (translated) {
+          return translated
+        }
+      }
+    }
   }
   return tab.title || tab.name
 }

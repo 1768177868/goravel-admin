@@ -3,28 +3,37 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('user.balance_logs') }}</span>
+          <div class="header-left">
+            <el-button 
+              type="primary" 
+              link 
+              :icon="ArrowLeft" 
+              @click="handleBack"
+              style="margin-right: 10px;"
+            >
+              {{ $t('user.back') }}
+            </el-button>
+            <span>{{ $t('user.balance_logs') }}</span>
+            <span v-if="searchForm.user_id" class="user-id-display">({{ $t('user.user_id') }}: {{ searchForm.user_id }})</span>
+          </div>
         </div>
       </template>
 
       <!-- 搜索表单 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item :label="$t('user.user_id')">
-          <el-input v-model="searchForm.user_id" :placeholder="$t('user.user_id_placeholder')" style="width: 200px" />
-        </el-form-item>
         <el-form-item :label="$t('user.type')">
           <el-select v-model="searchForm.type" :placeholder="$t('user.type_placeholder')" clearable style="width: 150px">
-            <el-option label="收入" value="income" />
-            <el-option label="支出" value="expense" />
-            <el-option label="退款" value="refund" />
+            <el-option :label="$t('user.balance_income')" value="income" />
+            <el-option :label="$t('user.balance_expense')" value="expense" />
+            <el-option :label="$t('user.balance_refund')" value="refund" />
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('user.source')">
           <el-select v-model="searchForm.source" :placeholder="$t('user.source_placeholder')" clearable style="width: 150px">
-            <el-option label="订单" value="order" />
-            <el-option label="充值" value="recharge" />
-            <el-option label="提现" value="withdraw" />
-            <el-option label="手动" value="manual" />
+            <el-option :label="$t('user.source_order')" value="order" />
+            <el-option :label="$t('user.source_recharge')" value="recharge" />
+            <el-option :label="$t('user.source_withdraw')" value="withdraw" />
+            <el-option :label="$t('user.source_manual')" value="manual" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -65,9 +74,9 @@
         <vxe-column field="id" :title="$t('table.id')" width="80" />
         <vxe-column field="type" :title="$t('user.type')" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.type === 'income'" type="success">收入</el-tag>
-            <el-tag v-else-if="row.type === 'expense'" type="danger">支出</el-tag>
-            <el-tag v-else-if="row.type === 'refund'" type="warning">退款</el-tag>
+            <el-tag v-if="row.type === 'income'" type="success">{{ $t('user.balance_income') }}</el-tag>
+            <el-tag v-else-if="row.type === 'expense'" type="danger">{{ $t('user.balance_expense') }}</el-tag>
+            <el-tag v-else-if="row.type === 'refund'" type="warning">{{ $t('user.balance_refund') }}</el-tag>
           </template>
         </vxe-column>
         <vxe-column field="amount" :title="$t('user.amount')" width="120">
@@ -82,7 +91,15 @@
             <span style="color: #409EFF; font-weight: bold;">¥{{ formatMoney(row.balance) }}</span>
           </template>
         </vxe-column>
-        <vxe-column field="source" :title="$t('user.source')" width="100" />
+        <vxe-column field="source" :title="$t('user.source')" width="100">
+          <template #default="{ row }">
+            <span v-if="row.source === 'order'">{{ $t('user.source_order') }}</span>
+            <span v-else-if="row.source === 'recharge'">{{ $t('user.source_recharge') }}</span>
+            <span v-else-if="row.source === 'withdraw'">{{ $t('user.source_withdraw') }}</span>
+            <span v-else-if="row.source === 'manual'">{{ $t('user.source_manual') }}</span>
+            <span v-else>{{ row.source }}</span>
+          </template>
+        </vxe-column>
         <vxe-column field="description" :title="$t('user.description')" min-width="200" />
         <vxe-column field="created_at" :title="$t('table.created_at')" width="180" />
       </vxe-table>
@@ -99,13 +116,15 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import Pagination from '../../components/Pagination.vue'
 import { getUserBalanceLogList, getUserBalanceStatistics } from '../../api/userBalanceLog'
 import ErrorHandler from '../../utils/errorHandler'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const tableData = ref([])
@@ -188,6 +207,15 @@ const handlePageChange = () => {
   loadData()
 }
 
+const handleBack = () => {
+  // 返回上一页，如果没有历史记录则返回用户列表
+  if (window.history.length > 1) {
+    router.go(-1)
+  } else {
+    router.push('/users')
+  }
+}
+
 const formatMoney = (amount) => {
   return Number(amount || 0).toFixed(2)
 }
@@ -209,6 +237,17 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.user-id-display {
+  margin-left: 10px;
+  color: #909399;
+  font-size: 14px;
 }
 
 .search-form {

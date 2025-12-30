@@ -260,7 +260,7 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	createOrUpdateMenu(models.Menu{
+	userMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "用户管理",
 		Slug:      "user",
@@ -271,6 +271,20 @@ func (s *MenuSeeder) Run() error {
 		Status:    1,
 		Sort:      13,
 		IsHidden:  0,
+	})
+
+	// 创建用户余额变动记录菜单（隐藏，从用户列表跳转）
+	createOrUpdateMenu(models.Menu{
+		ParentID:  userMenu.ID,
+		Title:     "用户余额变动记录",
+		Slug:      "user-balance-log",
+		Icon:      "Document",
+		Path:      "/user-balance-logs",
+		Component: "user-balance-logs/index",
+		Type:      2,
+		Status:    1,
+		Sort:      1,
+		IsHidden:  1, // 隐藏，不在菜单中显示
 	})
 
 	// 创建日志管理父菜单

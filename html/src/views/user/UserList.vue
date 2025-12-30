@@ -255,7 +255,7 @@ const tableColumns = computed(() => [
     field: 'balance',
     title: t('user.balance'),
     width: 120,
-    sortable: false,
+    sortable: true,
     slot: 'balance'
   },
   {
