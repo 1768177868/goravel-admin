@@ -48,7 +48,34 @@
 
         <template #request="{ row }">
           <div class="request-params-cell">
-            <pre class="request-params-inline">{{ formatRequestParams(row.request || row.Request) }}</pre>
+            <el-popover
+              v-if="hasRequestParams(row.request || row.Request)"
+              placement="top"
+              :width="600"
+              trigger="hover"
+              :title="$t('log.request_params')"
+            >
+              <template #reference>
+                <div class="request-preview">
+                  <span class="preview-text">{{ getRequestPreview(row.request || row.Request) }}</span>
+                </div>
+              </template>
+              <div class="request-params-popover">
+                <div class="request-params-header">
+                  <el-button 
+                    type="primary" 
+                    link 
+                    size="small"
+                    @click="copyRequestParamsToClipboard(row.request || row.Request)"
+                  >
+                    <el-icon><DocumentCopy /></el-icon>
+                    {{ $t('common.copy') }}
+                  </el-button>
+                </div>
+                <pre class="request-params-content">{{ formatRequestParamsFull(row.request || row.Request) }}</pre>
+              </div>
+            </el-popover>
+            <span v-else class="text-muted">-</span>
           </div>
         </template>
 
@@ -251,21 +278,58 @@ const transformOperationLogData = (log) => {
 
 const requestParamsPre = ref(null)
 
-// 格式化请求参数显示（用于表格和详情）
-const formatRequestParams = (request) => {
+// 检查是否有请求参数
+const hasRequestParams = (request) => {
+  if (!request) return false
+  try {
+    const parsed = typeof request === 'string' ? JSON.parse(request) : request
+    if (typeof parsed === 'object' && parsed !== null) {
+      return Object.keys(parsed).length > 0
+    }
+    return String(parsed).trim().length > 0
+  } catch (e) {
+    return String(request).trim().length > 0
+  }
+}
+
+// 获取请求参数的简洁预览（用于表格显示）
+const getRequestPreview = (request) => {
   if (!request) return '-'
   
   try {
-    // 如果是字符串，尝试解析为 JSON
     const parsed = typeof request === 'string' ? JSON.parse(request) : request
-    // 如果是对象，转换为格式化的 JSON 字符串
     if (typeof parsed === 'object' && parsed !== null) {
-      return JSON.stringify(parsed, null, 2)
+      const keys = Object.keys(parsed)
+      if (keys.length === 0) return '-'
+      // 显示前3个字段名
+      const previewKeys = keys.slice(0, 3)
+      const preview = previewKeys.map(key => {
+        const value = parsed[key]
+        if (typeof value === 'object' && value !== null) {
+          return `${key}: {...}`
+        }
+        const valueStr = String(value)
+        return `${key}: ${valueStr.length > 20 ? valueStr.substring(0, 20) + '...' : valueStr}`
+      }).join(', ')
+      return keys.length > 3 ? `${preview} ... (${keys.length} fields)` : preview
     }
-    return String(parsed)
+    const str = String(parsed)
+    return str.length > 50 ? str.substring(0, 50) + '...' : str
   } catch (e) {
-    // 如果不是 JSON，直接返回字符串
-    return String(request)
+    const str = String(request)
+    return str.length > 50 ? str.substring(0, 50) + '...' : str
+  }
+}
+
+// 复制请求参数到剪贴板
+const copyRequestParamsToClipboard = async (request) => {
+  try {
+    const content = formatRequestParamsFull(request)
+    await navigator.clipboard.writeText(content)
+    ElMessage.success(t('common.copy_success') || '复制成功')
+  } catch (err) {
+    console.error('Failed to copy: ', err)
+    ElMessage.error(t('common.copy_failed') || '复制失败')
   }
 }
 
@@ -936,22 +1000,54 @@ pre {
 
 .request-params-cell {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  width: 100%;
 }
 
-.request-params-inline {
-  margin: 0;
-  padding: 4px 8px;
-  background: #f5f7fa;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
+.request-preview {
+  width: 100%;
+  cursor: pointer;
+}
+
+.preview-text {
   font-size: 12px;
-  line-height: 1.5;
   color: #606266;
-  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  display: block;
+}
+
+.text-muted {
+  color: #909399;
+}
+
+.request-params-popover {
+  max-height: 500px;
+  overflow: hidden;
+}
+
+.request-params-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.request-params-content {
+  margin: 0;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
   overflow-x: auto;
-  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
   word-break: break-all;
+  white-space: pre-wrap;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
 

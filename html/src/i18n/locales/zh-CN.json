@@ -43,6 +43,9 @@
     "back": "返回",
     "loading": "加载中",
     "more": "更多",
+    "copy": "复制",
+    "copy_success": "复制成功",
+    "copy_failed": "复制失败",
     "locale": "zh-CN",
     "language_zh": "中文",
     "language_en": "English"

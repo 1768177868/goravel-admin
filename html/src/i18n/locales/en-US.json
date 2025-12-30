@@ -43,6 +43,9 @@
     "back": "Back",
     "loading": "Loading",
     "more": "More",
+    "copy": "Copy",
+    "copy_success": "Copy successful",
+    "copy_failed": "Copy failed",
     "locale": "en-US",
     "language_zh": "中文",
     "language_en": "English"
