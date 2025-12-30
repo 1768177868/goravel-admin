@@ -2,7 +2,7 @@
   <ListPage
     ref="listPageRef"
     page-class="blacklist"
-    :title="$t('blacklist.title')"
+    :title="$t('menu.blacklist')"
     :show-add-button="true"
     :add-button-text="$t('blacklist.add_blacklist')"
     :add-button-disabled="getButtonState('blacklist.store').disabled"

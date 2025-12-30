@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('permission.title') }}</span>
+          <span>{{ $t('menu.permission') }}</span>
           <el-button 
             type="primary" 
             :disabled="getButtonState('permission.store').disabled"

@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('dictionary.title') }}</span>
+          <span>{{ $t('menu.dictionary') }}</span>
           <el-button 
             type="primary" 
             :disabled="getButtonState('dictionary.store').disabled"

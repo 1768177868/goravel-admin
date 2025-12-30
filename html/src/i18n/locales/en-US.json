@@ -118,42 +118,25 @@
     "service_monitor": "Service Monitor",
     "dashboard": "Dashboard",
     "profile": "Profile",
-    "_comment": "Translation keys automatically handle hyphen/underscore conversion and _management suffix, only need to add one standard format",
-    "system_management": "System Management",
-    "admin_management": "Admin Management",
+    "system": "System",
     "admin": "Admin",
-    "role_management": "Role Management",
     "role": "Role",
-    "permission_management": "Permission Management",
-    "menu_management": "Menu Management",
+    "permission": "Permission",
     "menu": "Menu",
-    "department_management": "Department Management",
     "department": "Department",
-    "dictionary_management": "Dictionary Management",
     "dictionary": "Dictionary",
-    "config": "Configuration Management",
-    "config_management": "Configuration Management",
+    "config": "Configuration",
     "blacklist": "IP Blacklist",
-    "blacklist_management": "IP Blacklist",
-    "online-admin": "Online Admins",
     "online_admin": "Online Admins",
-    "online_admin_management": "Online Admins",
-    "export": "Export Management",
-    "export_management": "Export Management",
-    "attachment_management": "Attachment Management",
+    "export": "Export",
     "attachment": "Attachment",
-    "order_management": "Order Management",
     "order": "Order",
-    "user_management": "User Management",
     "user": "User",
     "user_balance_log": "User Balance Log",
-    "user-balance-log": "User Balance Log",
     "monitor": "Service Monitor",
-    "log_management": "Log Management",
+    "log": "Log",
     "operation_log": "Operation Log",
-    "operation-log": "Operation Log",
     "login_log": "Login Log",
-    "login-log": "Login Log",
     "system_log": "System Log",
     "external_link": "External Link",
     "type_directory": "Directory",
@@ -161,7 +144,6 @@
     "type_button": "Button"
   },
   "admin": {
-    "title": "Admin List",
     "add_admin": "Add Admin",
     "edit_admin": "Edit Admin",
     "username": "Username",
@@ -198,7 +180,6 @@
     "unbind_google_auth_failed": "Unbind failed"
   },
   "user": {
-    "title": "User List",
     "add_user": "Add User",
     "edit_user": "Edit User",
     "username": "Username",
@@ -244,7 +225,6 @@
     "balance_update_success": "Balance updated successfully"
   },
   "role": {
-    "title": "Role List",
     "add_role": "Add Role",
     "edit_role": "Edit Role",
     "name": "Role Name",
@@ -255,20 +235,6 @@
     "other_permissions": "Other Permissions",
     "select_all": "Select All",
     "unselect_all": "Unselect All",
-    "module_admin": "Admin Management",
-    "module_role": "Role Management",
-    "module_permission": "Permission Management",
-    "module_menu": "Menu Management",
-    "module_department": "Department Management",
-    "module_dictionary": "Dictionary Management",
-    "module_config": "Configuration Management",
-    "module_monitor": "Service Monitor",
-    "module_blacklist": "IP Blacklist",
-    "module_online_admin": "Online Admins",
-    "module_export": "Export Management",
-    "module_operation_log": "Operation Log",
-    "module_login_log": "Login Log",
-    "module_system_log": "System Log",
     "module_auth": "Authentication",
     "module_profile": "Profile",
     "other_module": "Other Modules",
@@ -286,7 +252,6 @@
     "super_admin_has_all_permissions": "Super admin has all permissions, no need to set menus and permissions"
   },
   "permission": {
-    "title": "Permission List",
     "add_permission": "Add Permission",
     "edit_permission": "Edit Permission",
     "name": "Permission Name",
@@ -377,9 +342,6 @@
     "config.test_email": "Test Email Configuration",
     "configs.store": "Save Configuration",
     "configs.update": "Update Configuration",
-    "online-admin.index": "View Online Admin List",
-    "online-admin.kick-out": "Kick Out Admin",
-    "online-admin.batch-kick-out": "Batch Kick Out Admins",
     "online_admin.index": "View Online Admin List",
     "online_admin.kick_out": "Kick Out Admin",
     "online_admin.batch_kick_out": "Batch Kick Out Admins",
@@ -399,7 +361,6 @@
     "notification.store": "Create Notification"
   },
   "menu_management": {
-    "title": "Menu List",
     "add_menu": "Add Menu",
     "edit_menu": "Edit Menu",
     "expand_all": "Expand All",
@@ -437,7 +398,6 @@
     "update_success": "Update successful"
   },
   "department": {
-    "title": "Department List",
     "add_department": "Add Department",
     "edit_department": "Edit Department",
     "parent_department": "Parent Department",
@@ -450,7 +410,6 @@
     "update_success": "Update successful"
   },
   "dictionary": {
-    "title": "Dictionary List",
     "add_dictionary": "Add Dictionary",
     "edit_dictionary": "Edit Dictionary",
     "type": "Type",
@@ -465,7 +424,6 @@
     "update_success": "Update successful"
   },
   "order": {
-    "title": "Order List",
     "add_order": "Add Order",
     "edit_order": "Edit Order",
     "order_no": "Order No",
@@ -511,7 +469,6 @@
     "remark_placeholder": "Please enter remark (optional)"
   },
   "config": {
-    "title": "Configuration Management",
     "website_config": "Website Configuration",
     "email_config": "Email Configuration",
     "captcha_config": "Captcha Configuration",
@@ -638,7 +595,6 @@
     "delete_success": "Delete successful"
   },
   "blacklist": {
-    "title": "IP Blacklist",
     "add_blacklist": "Add Blacklist",
     "edit_blacklist": "Edit Blacklist",
     "ip": "IP Address",
@@ -658,7 +614,6 @@
     "ip_blocked": "Your IP address has been blocked"
   },
   "online_admin": {
-    "title": "Online Admins",
     "username": "Username",
     "username_placeholder": "Please enter username",
     "nickname": "Nickname",
@@ -684,9 +639,6 @@
   "log": {
     "time_range_exceeded": "Query time range cannot exceed {months} months",
     "start_time_after_end_time": "Start time cannot be later than end time",
-    "operation_log": "Operation Log",
-    "login_log": "Login Log",
-    "system_log": "System Log",
     "clean": "Clean Logs",
     "clean_confirm": "Are you sure to clean all logs? This operation cannot be undone!",
     "clean_success": "Clean successful",
@@ -695,11 +647,7 @@
     "batch_delete_confirm": "Are you sure to delete {count} selected logs?",
     "detail": "Log Detail",
     "module": "Module",
-    "module_system_log": "System Log",
-    "module_attachment": "Attachment",
     "module_auth": "Authentication",
-    "module_monitor": "Monitor",
-    "module_operation_log": "Operation Log",
     "module_recover": "Error Recovery",
     "module_payment": "Payment",
     "module_background_task": "Background Task",
@@ -735,7 +683,6 @@
     "collapse": "Collapse"
   },
   "export": {
-    "title": "Export Management",
     "filename": "Filename",
     "disk": "Storage Disk",
     "path": "File Path",
@@ -751,7 +698,6 @@
     "monitor_failed": "Failed to start monitoring"
   },
   "attachment": {
-    "title": "Attachment Management",
     "upload": "Upload File",
     "filename": "Filename",
     "display_name": "Display Name",
@@ -798,7 +744,7 @@
   "header": {
     "logout": "Logout",
     "logout_confirm": "Are you sure to logout?",
-    "system_management": "Management System",
+    "system": "System",
     "fullscreen": "Fullscreen",
     "profile": "Profile",
     "timezone": "Timezone",

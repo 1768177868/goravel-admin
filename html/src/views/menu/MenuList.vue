@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('menu_management.title') }}</span>
+          <span>{{ $t('menu.menu') }}</span>
           <div class="header-actions">
             <el-button @click="handleRefresh">
               <el-icon><Refresh /></el-icon>

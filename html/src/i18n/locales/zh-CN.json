@@ -118,42 +118,25 @@
     "service_monitor": "服务监控",
     "dashboard": "仪表盘",
     "profile": "个人中心",
-    "_comment": "以下翻译键会自动处理连字符/下划线转换和 _management 后缀，只需添加一个标准格式即可",
-    "system_management": "系统管理",
-    "admin_management": "管理员管理",
+    "system": "系统",
     "admin": "管理员",
-    "role_management": "角色管理",
     "role": "角色",
-    "permission_management": "权限管理",
-    "menu_management": "菜单管理",
+    "permission": "权限",
     "menu": "菜单",
-    "department_management": "部门管理",
     "department": "部门",
-    "dictionary_management": "字典管理",
     "dictionary": "字典",
-    "config": "配置管理",
-    "config_management": "配置管理",
+    "config": "配置",
     "blacklist": "IP黑名单",
-    "blacklist_management": "IP黑名单",
-    "online-admin": "在线管理员",
     "online_admin": "在线管理员",
-    "online_admin_management": "在线管理员",
-    "export": "导出管理",
-    "export_management": "导出管理",
-    "attachment_management": "附件管理",
+    "export": "导出",
     "attachment": "附件",
-    "order_management": "订单管理",
     "order": "订单",
-    "user_management": "用户管理",
     "user": "用户",
     "user_balance_log": "用户余额变动记录",
-    "user-balance-log": "用户余额变动记录",
     "monitor": "服务监控",
-    "log_management": "日志管理",
+    "log": "日志",
     "operation_log": "操作日志",
-    "operation-log": "操作日志",
     "login_log": "登录日志",
-    "login-log": "登录日志",
     "system_log": "系统日志",
     "external_link": "外部链接",
     "type_directory": "目录",
@@ -161,7 +144,6 @@
     "type_button": "按钮"
   },
   "admin": {
-    "title": "管理员列表",
     "add_admin": "添加管理员",
     "edit_admin": "编辑管理员",
     "username": "用户名",
@@ -198,7 +180,6 @@
     "unbind_google_auth_failed": "解绑失败"
   },
   "user": {
-    "title": "用户列表",
     "add_user": "添加用户",
     "edit_user": "编辑用户",
     "username": "用户名",
@@ -244,7 +225,6 @@
     "balance_update_success": "余额更新成功"
   },
   "role": {
-    "title": "角色列表",
     "add_role": "添加角色",
     "edit_role": "编辑角色",
     "name": "角色名称",
@@ -255,21 +235,7 @@
     "other_permissions": "其他权限",
     "select_all": "全选",
     "unselect_all": "取消全选",
-    "module_admin": "管理员管理",
-    "module_role": "角色管理",
-    "module_permission": "权限管理",
-    "module_menu": "菜单管理",
-    "module_department": "部门管理",
-    "module_dictionary": "字典管理",
-    "module_config": "配置管理",
-    "module_monitor": "服务监控",
-    "module_blacklist": "IP黑名单",
-    "module_online_admin": "在线管理员",
-    "module_export": "导出管理",
-    "module_operation_log": "操作日志",
-    "module_login_log": "登录日志",
-    "module_system_log": "系统日志",
-    "module_auth": "认证管理",
+    "module_auth": "认证",
     "module_profile": "个人中心",
     "other_module": "其他模块",
     "name_required": "请输入角色名称",
@@ -286,7 +252,6 @@
     "super_admin_has_all_permissions": "超级管理员拥有所有权限，无需设置菜单和权限"
   },
   "permission": {
-    "title": "权限列表",
     "add_permission": "添加权限",
     "edit_permission": "编辑权限",
     "name": "权限名称",
@@ -377,9 +342,6 @@
     "config.test_email": "测试邮箱配置",
     "configs.store": "保存配置",
     "configs.update": "更新配置",
-    "online-admin.index": "查看在线管理员列表",
-    "online-admin.kick-out": "踢下线管理员",
-    "online-admin.batch-kick-out": "批量踢下线管理员",
     "online_admin.index": "查看在线管理员列表",
     "online_admin.kick_out": "踢下线管理员",
     "online_admin.batch_kick_out": "批量踢下线管理员",
@@ -399,7 +361,6 @@
     "notification.store": "创建通知"
   },
   "menu_management": {
-    "title": "菜单列表",
     "add_menu": "添加菜单",
     "edit_menu": "编辑菜单",
     "expand_all": "展开全部",
@@ -437,7 +398,6 @@
     "update_success": "更新成功"
   },
   "department": {
-    "title": "部门列表",
     "add_department": "添加部门",
     "edit_department": "编辑部门",
     "parent_department": "父部门",
@@ -450,7 +410,6 @@
     "update_success": "更新成功"
   },
   "dictionary": {
-    "title": "字典列表",
     "add_dictionary": "添加字典",
     "edit_dictionary": "编辑字典",
     "type": "类型",
@@ -465,7 +424,6 @@
     "update_success": "更新成功"
   },
   "order": {
-    "title": "订单列表",
     "add_order": "添加订单",
     "edit_order": "编辑订单",
     "order_no": "订单号",
@@ -511,7 +469,6 @@
     "remark_placeholder": "请输入备注（可选）"
   },
   "config": {
-    "title": "配置管理",
     "website_config": "网站配置",
     "email_config": "邮箱配置",
     "site_name": "网站名称",
@@ -638,7 +595,6 @@
     "delete_success": "删除成功"
   },
   "blacklist": {
-    "title": "IP黑名单",
     "add_blacklist": "添加黑名单",
     "edit_blacklist": "编辑黑名单",
     "ip": "IP地址",
@@ -658,7 +614,6 @@
     "ip_blocked": "您的IP地址已被封禁，无法访问"
   },
   "online_admin": {
-    "title": "在线管理员",
     "username": "用户名",
     "username_placeholder": "请输入用户名",
     "nickname": "昵称",
@@ -684,9 +639,6 @@
   "log": {
     "time_range_exceeded": "查询时间范围不能超过{months}个月",
     "start_time_after_end_time": "开始时间不能晚于结束时间",
-    "operation_log": "操作日志",
-    "login_log": "登录日志",
-    "system_log": "系统日志",
     "clean": "清空日志",
     "clean_confirm": "确定要清空所有日志吗？此操作不可恢复！",
     "clean_success": "清空成功",
@@ -695,11 +647,7 @@
     "batch_delete_confirm": "确定要删除选中的 {count} 条日志吗？",
     "detail": "日志详情",
     "module": "模块",
-    "module_system_log": "系统日志",
-    "module_attachment": "附件管理",
     "module_auth": "认证授权",
-    "module_monitor": "服务监控",
-    "module_operation_log": "操作日志",
     "module_recover": "错误恢复",
     "module_payment": "支付",
     "module_background_task": "后台任务",
@@ -735,7 +683,6 @@
     "collapse": "收起"
   },
   "export": {
-    "title": "导出管理",
     "filename": "文件名",
     "disk": "存储驱动",
     "path": "文件路径",
@@ -751,7 +698,6 @@
     "monitor_failed": "启动监控失败"
   },
   "attachment": {
-    "title": "附件管理",
     "upload": "上传文件",
     "filename": "文件名",
     "display_name": "显示名称",
@@ -798,7 +744,7 @@
   "header": {
     "logout": "退出登录",
     "logout_confirm": "确定要退出登录吗？",
-    "system_management": "管理系统",
+    "system": "系统",
     "fullscreen": "全屏",
     "profile": "个人中心",
     "timezone": "时区",

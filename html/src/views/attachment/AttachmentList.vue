@@ -3,7 +3,7 @@
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <span>{{ $t('attachment.title') }}</span>
+          <span>{{ $t('menu.attachment') }}</span>
           <div class="header-actions">
             <el-upload
               ref="uploadRef"

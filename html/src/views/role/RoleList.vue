@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('role.title') }}</span>
+          <span>{{ $t('menu.role') }}</span>
           <el-button 
             type="primary" 
             :disabled="getButtonState('role.store').disabled"
@@ -472,6 +472,14 @@ const getModuleNameFromPath = (path) => {
   if (parts.length >= 3) {
     const module = parts[parts.length - 1]
     const singular = module.replace(/s$/, '').replace(/-/g, '_')
+    
+    // 优先使用菜单翻译（统一使用 menu.*）
+    const menuKey = `menu.${singular}`
+    if (typeof te === 'function' && te(menuKey)) {
+      return t(menuKey)
+    }
+    
+    // 回退到 role.module_*（用于其他模块）
     const translationKey = `role.module_${singular}`
     const translated = t(translationKey)
     if (translated !== translationKey) {

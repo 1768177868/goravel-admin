@@ -6,7 +6,7 @@
       :class="{ 'is-collapse': appStore.sidebarCollapsed }"
     >
       <div class="logo">
-        <h3 v-if="!appStore.sidebarCollapsed">{{ $t('header.system_management') }}</h3>
+        <h3 v-if="!appStore.sidebarCollapsed">{{ $t('header.system') }}</h3>
         <el-icon v-else><Setting /></el-icon>
       </div>
       <el-menu
@@ -34,53 +34,53 @@
           <el-sub-menu index="system">
             <template #title>
               <el-icon><Setting /></el-icon>
-              <span>{{ $t('menu.system_management') }}</span>
+              <span>{{ $t('menu.system') }}</span>
             </template>
             <el-menu-item index="/admins">
               <el-icon><User /></el-icon>
-              <template #title>{{ $t('menu.admin_management') }}</template>
+              <template #title>{{ $t('menu.admin') }}</template>
             </el-menu-item>
             <el-menu-item index="/roles">
               <el-icon><Avatar /></el-icon>
-              <template #title>{{ $t('menu.role_management') }}</template>
+              <template #title>{{ $t('menu.role') }}</template>
             </el-menu-item>
             <el-menu-item index="/permissions">
               <el-icon><Key /></el-icon>
-              <template #title>{{ $t('menu.permission_management') }}</template>
+              <template #title>{{ $t('menu.permission') }}</template>
             </el-menu-item>
             <el-menu-item index="/menus">
               <el-icon><Menu /></el-icon>
-              <template #title>{{ $t('menu.menu_management') }}</template>
+              <template #title>{{ $t('menu.menu') }}</template>
             </el-menu-item>
             <el-menu-item index="/departments">
               <el-icon><OfficeBuilding /></el-icon>
-              <template #title>{{ $t('menu.department_management') }}</template>
+              <template #title>{{ $t('menu.department') }}</template>
             </el-menu-item>
             <el-menu-item index="/dictionaries">
               <el-icon><Document /></el-icon>
-              <template #title>{{ $t('menu.dictionary_management') }}</template>
+              <template #title>{{ $t('menu.dictionary') }}</template>
             </el-menu-item>
             <el-menu-item index="/configs">
               <el-icon><Setting /></el-icon>
-              <template #title>{{ $t('menu.config_management') }}</template>
+              <template #title>{{ $t('menu.config') }}</template>
             </el-menu-item>
             <el-menu-item index="/blacklists">
               <el-icon><Warning /></el-icon>
-              <template #title>{{ $t('menu.blacklist_management') }}</template>
+              <template #title>{{ $t('menu.blacklist') }}</template>
             </el-menu-item>
             <el-menu-item index="/online-admins">
               <el-icon><User /></el-icon>
-              <template #title>{{ $t('menu.online_admin_management') }}</template>
+              <template #title>{{ $t('menu.online_admin') }}</template>
             </el-menu-item>
             <el-menu-item index="/exports">
               <el-icon><Document /></el-icon>
-              <template #title>{{ $t('menu.export_management') }}</template>
+              <template #title>{{ $t('menu.export') }}</template>
             </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="logs">
             <template #title>
               <el-icon><Document /></el-icon>
-              <span>{{ $t('menu.log_management') }}</span>
+              <span>{{ $t('menu.log') }}</span>
             </template>
             <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
             <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>

@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('config.title') }}</span>
+          <span>{{ $t('menu.config') }}</span>
         </div>
       </template>
 

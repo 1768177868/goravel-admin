@@ -23,12 +23,12 @@
       <el-row :gutter="20">
         <el-col :span="12">
           <el-form-item :label="$t('config.email_username')" prop="email_username">
-            <el-input v-model="formData.email_username" :placeholder="$t('config.email_username_placeholder')" />
+            <el-input v-model="formData.email_username" :placeholder="$t('config.email_username_placeholder')" autocomplete="off" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item :label="$t('config.email_password')" prop="email_password">
-            <el-input v-model="formData.email_password" type="password" show-password :placeholder="$t('config.email_password_placeholder')" />
+            <el-input v-model="formData.email_password" type="password" show-password :placeholder="$t('config.email_password_placeholder')" autocomplete="new-password" />
           </el-form-item>
         </el-col>
       </el-row>

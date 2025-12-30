@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('log.system_log') }}</span>
+          <span>{{ $t('menu.system_log') }}</span>
           <div class="header-actions">
             <el-button 
               type="danger" 
@@ -320,11 +320,11 @@ const searchFields = computed(() => [
 // 获取模块选项（带多语言）
 const getModuleOptions = (t) => {
   return [
-    { label: t('log.module_system_log'), value: 'system-log' },
-    { label: t('log.module_attachment'), value: 'attachment' },
+    { label: t('menu.system_log'), value: 'system-log' },
+    { label: t('menu.attachment'), value: 'attachment' },
     { label: t('log.module_auth'), value: 'auth' },
-    { label: t('log.module_monitor'), value: 'monitor' },
-    { label: t('log.module_operation_log'), value: 'operation-log' },
+    { label: t('menu.monitor'), value: 'monitor' },
+    { label: t('menu.operation_log'), value: 'operation-log' },
     { label: t('log.module_recover'), value: 'recover' },
     { label: t('log.module_payment'), value: 'payment' },
     { label: t('log.module_background_task'), value: 'background-task' }

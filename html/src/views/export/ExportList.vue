@@ -3,7 +3,7 @@
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <span>{{ $t('export.title') }}</span>
+          <span>{{ $t('menu.export') }}</span>
           <div class="header-actions">
             <el-button 
               type="danger" 

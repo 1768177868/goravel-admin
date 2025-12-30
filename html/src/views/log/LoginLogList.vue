@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ $t('log.login_log') }}</span>
+          <span>{{ $t('menu.login_log') }}</span>
           <div class="header-actions">
             <el-button 
               type="danger" 
