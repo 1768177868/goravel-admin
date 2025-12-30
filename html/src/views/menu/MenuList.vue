@@ -74,6 +74,13 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="is_hidden" :label="$t('menu_management.is_hidden')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.is_hidden === 0 ? 'success' : 'info'">
+              {{ row.is_hidden === 0 ? $t('menu_management.is_hidden_show') : $t('menu_management.is_hidden_hide') }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" />
         <el-table-column :label="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
@@ -199,6 +206,7 @@ const transformMenuData = (menu) => {
     icon: menu.Icon || menu.icon || '',
     status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
     sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
+    is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),
     link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
     open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1),
     created_at: menu.created_at || '',

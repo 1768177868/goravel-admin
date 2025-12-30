@@ -121,6 +121,13 @@
           <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
         </el-radio-group>
       </el-form-item>
+      <el-form-item :label="$t('menu_management.is_hidden')">
+        <el-radio-group v-model="formData.is_hidden" :disabled="loading">
+          <el-radio :label="0">{{ $t('menu_management.is_hidden_show') }}</el-radio>
+          <el-radio :label="1">{{ $t('menu_management.is_hidden_hide') }}</el-radio>
+        </el-radio-group>
+        <!-- <div class="form-item-tip">{{ $t('menu_management.is_hidden_tip') }}</div> -->
+      </el-form-item>
       <el-form-item :label="$t('common.sort')">
         <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
       </el-form-item>
@@ -182,6 +189,7 @@ const formData = reactive({
   icon: '',
   status: 1,
   sort: 0,
+  is_hidden: 0, // 0: 显示, 1: 隐藏
   link_type: 1, // 1: 内部页面, 2: 外部链接
   open_type: 1 // 1: iframe嵌套, 2: 新窗口打开
 })
@@ -310,6 +318,7 @@ const loadDetail = async (id) => {
         icon: menu.Icon || menu.icon || '',
         status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
         sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
+        is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),
         link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
         open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1)
       })
@@ -332,6 +341,7 @@ const resetForm = () => {
     icon: '',
     status: 1,
     sort: 0,
+    is_hidden: 0,
     link_type: 1,
     open_type: 1
   })
@@ -353,6 +363,7 @@ const handleSubmit = async () => {
           icon: formData.icon,
           status: formData.status,
           sort: formData.sort,
+          is_hidden: formData.is_hidden,
           parent_id: formData.parent_id === 0 ? null : formData.parent_id,
           link_type: formData.link_type,
           open_type: formData.open_type
@@ -415,6 +426,13 @@ const handleDialogClose = () => {
 
 .selected-icon {
   margin-right: 6px;
+}
+
+.form-item-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 </style>
 
