@@ -744,7 +744,7 @@
   "header": {
     "logout": "退出登录",
     "logout_confirm": "确定要退出登录吗？",
-    "system": "系统",
+    "system": "管理系统",
     "fullscreen": "全屏",
     "profile": "个人中心",
     "timezone": "时区",

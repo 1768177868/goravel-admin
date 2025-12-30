@@ -744,7 +744,7 @@
   "header": {
     "logout": "Logout",
     "logout_confirm": "Are you sure to logout?",
-    "system": "System",
+    "system": "Management System",
     "fullscreen": "Fullscreen",
     "profile": "Profile",
     "timezone": "Timezone",
