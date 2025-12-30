@@ -15,6 +15,7 @@ import { buildSearchParams } from '../utils/buildSearchParams'
  * @param {Object} options.tableRef - 表格引用（可选）
  * @param {Function} options.transformData - 数据转换函数（可选）
  * @param {Function} options.onLoadSuccess - 加载成功回调（可选）
+ * @param {Function} options.buildParams - 自定义参数构建函数（可选），接收 (searchForm, baseParams) 参数，返回构建后的参数对象
  * @returns {Object} 返回列表页面需要的所有状态和方法
  */
 export function useListPage(options = {}) {
@@ -25,7 +26,8 @@ export function useListPage(options = {}) {
     defaultSort = 'id:desc',
     tableRef = null,
     transformData = null,
-    onLoadSuccess = null
+    onLoadSuccess = null,
+    buildParams = null
   } = options
 
   // 搜索表单
@@ -64,11 +66,21 @@ export function useListPage(options = {}) {
       pagination.pageSize = pageSize
     }
     
-    const params = buildSearchParams(searchForm, {
+    // 基础参数
+    const baseParams = {
       page,
       page_size: pageSize,
       order_by: buildOrderBy()
-    })
+    }
+    
+    // 如果提供了自定义参数构建函数，使用它；否则使用默认的 buildSearchParams
+    let params
+    if (buildParams && typeof buildParams === 'function') {
+      params = buildParams(searchForm, baseParams)
+    } else {
+      params = buildSearchParams(searchForm, baseParams)
+    }
+    
     await baseLoadData(params)
   }
 
@@ -88,17 +100,30 @@ export function useListPage(options = {}) {
   }
 
   /**
-   * 重置搜索条件
+   * 清空搜索表单（不刷新数据）
    */
-  const handleReset = () => {
+  const clearSearchForm = () => {
     // 重置搜索表单
     Object.keys(searchForm).forEach(key => {
       searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
     })
     // 重置排序
     resetSort()
-    // 重置并加载
-    enhancedResetAndLoad()
+  }
+
+  /**
+   * 重置搜索条件
+   * @param {Object} formData - 重置后的表单数据（由 SearchForm 组件传递，可选）
+   * @param {Object} options - 选项对象，包含 reload 属性（是否刷新数据，默认为 true）
+   */
+  const handleReset = (formData = null, options = {}) => {
+    // 清空搜索表单
+    clearSearchForm()
+    // 如果需要刷新，则重置并加载（默认为 true，保持向后兼容）
+    const shouldReload = options.reload !== false
+    if (shouldReload) {
+      enhancedResetAndLoad()
+    }
   }
 
   return {
@@ -113,6 +138,7 @@ export function useListPage(options = {}) {
     resetAndLoad: enhancedResetAndLoad,
     handleSearch,
     handleReset,
+    clearSearchForm, // 只清空表单，不刷新数据
     
     // 排序相关
     buildOrderBy,

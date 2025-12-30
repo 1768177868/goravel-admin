@@ -201,6 +201,7 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import { useListPage } from '../../composables/useListPage'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
 import { fetchNotifications, createNotification } from '../../api/notification'
@@ -368,15 +369,34 @@ const transformNotificationData = (notification) => {
   }
 }
 
-// 使用 useListPage，但需要自定义参数构建（is_read 需要特殊处理）
+// 自定义参数构建函数（只处理 is_read 的特殊转换，其他字段由 buildSearchParams 统一处理）
+const buildNotificationParams = (searchForm, baseParams) => {
+  // 先使用 buildSearchParams 处理所有字段（包括 trim 等）
+  const params = buildSearchParams(searchForm, baseParams)
+  
+  // 特殊处理 is_read：字符串 'true'/'false' 转换为布尔值
+  if (searchForm.is_read !== '' && searchForm.is_read !== null && searchForm.is_read !== undefined) {
+    if (searchForm.is_read === 'true') {
+      params.is_read = true
+    } else if (searchForm.is_read === 'false') {
+      params.is_read = false
+    }
+    // 如果已经是布尔值或其他类型，保持原样（buildSearchParams 已处理）
+  }
+  
+  return params
+}
+
 const {
   pagination,
   tableData,
   loading,
   searchForm,
-  loadData: baseLoadData,
+  loadData,
+  handleSearch,
+  handleReset,
   handleSortChange,
-  buildOrderBy
+  initDefaultSort
 } = useListPage({
   fetchApi: fetchNotificationsWrapper,
   initialSearchForm,
@@ -384,6 +404,7 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef),
   transformData: transformNotificationData,
+  buildParams: buildNotificationParams, // 使用自定义参数构建函数
   onLoadSuccess: (res) => {
     // 更新未读数量
     if (res && res.data && res.data.unread_count !== undefined) {
@@ -391,48 +412,6 @@ const {
     }
   }
 })
-
-// 重写 loadData 以支持自定义参数构建（is_read 需要特殊处理）
-const loadData = async () => {
-  const params = {
-    page: pagination.page,
-    page_size: pagination.pageSize
-  }
-  
-  // 添加排序参数
-  const orderBy = buildOrderBy()
-  if (orderBy) {
-    params.order_by = orderBy
-  }
-  
-  // 添加搜索条件（只添加有值的字段）
-  if (searchForm.type && searchForm.type.trim()) {
-    params.type = searchForm.type.trim()
-  }
-  
-  // is_read 可能是字符串 'true'/'false' 或空字符串
-  // 只有当不是空字符串时才添加
-  if (searchForm.is_read !== '' && searchForm.is_read !== null && searchForm.is_read !== undefined) {
-    // 如果是字符串 'true' 或 'false'，转换为布尔值
-    if (searchForm.is_read === 'true') {
-      params.is_read = true
-    } else if (searchForm.is_read === 'false') {
-      params.is_read = false
-    } else {
-      params.is_read = searchForm.is_read
-    }
-  }
-  
-  // 调用 baseLoadData，这样 transformData 和 onLoadSuccess 会被自动调用
-  await baseLoadData(params)
-}
-
-// 重写 handleSearch 和 handleReset，确保调用自定义的 loadData
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
 
 const handleMarkRead = async (row) => {
   await notificationStore.markAsRead(row.id)

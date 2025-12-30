@@ -206,6 +206,11 @@ const props = defineProps({
   i18nPrefix: {
     type: String,
     default: ''
+  },
+  // 重置时是否自动刷新数据，默认为 true
+  resetReload: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -361,7 +366,8 @@ const handleReset = () => {
     emit('expand-change', false)
   }
   
-  emit('reset', props.model)
+  // 传递重置后的表单数据和是否刷新的选项
+  emit('reset', props.model, { reload: props.resetReload })
 }
 
 watch(() => props.initialValues, (newVal) => {
