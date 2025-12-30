@@ -7,11 +7,11 @@
           <div class="header-actions">
             <el-button 
               type="danger" 
-              :disabled="selectedRows.length === 0"
+              :disabled="!selectedRows || selectedRows.length === 0"
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>
-              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
+              {{ $t('common.delete_selected') }} ({{ selectedRows?.length || 0 }})
             </el-button>
           </div>
         </div>
@@ -21,7 +21,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ level: '', module: '', trace_id: '', message: '', start_time: '', end_time: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
@@ -141,14 +141,49 @@ const initialSearchForm = {
   end_time: ''
 }
 
+// 转换系统日志数据（PascalCase -> snake_case）
+// 必须在 useListPage 之前定义，因为 useListPage 会使用它
+const transformSystemLogData = (log) => {
+  if (!log) {
+    return {
+      id: 0,
+      level: '',
+      trace_id: '',
+      message: '',
+      context: null,
+      created_at: ''
+    }
+  }
+  
+  let context = null
+  try {
+    if (log.Context) {
+      context = typeof log.Context === 'string' ? JSON.parse(log.Context) : log.Context
+    } else if (log.context) {
+      context = typeof log.context === 'string' ? JSON.parse(log.context) : log.context
+    }
+  } catch (e) {
+    context = log.Context || log.context || null
+  }
+  
+  return {
+    id: log.ID || log.id || 0,
+    level: log.Level || log.level || '',
+    trace_id: log.TraceID || log.trace_id || '',
+    message: log.Message || log.message || '',
+    context: context,
+    created_at: log.CreatedAt || log.created_at || ''
+  }
+}
+
 const {
   pagination,
   tableData,
   loading,
   searchForm,
   loadData,
-  handleSearch: baseHandleSearch,
-  handleReset: baseHandleReset,
+  handleSearch,
+  handleReset,
   handleSortChange,
   initDefaultSort
 } = useListPage({
@@ -158,6 +193,16 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef),
   transformData: transformSystemLogData,
+  onSearch: () => {
+    // 搜索前清除选中状态
+    selectedRows.value = []
+    selectedIds.value.clear()
+  },
+  onReset: () => {
+    // 重置前清除选中状态
+    selectedRows.value = []
+    selectedIds.value.clear()
+  },
   onLoadSuccess: () => {
     // 数据加载后，恢复选中状态
     nextTick(() => {
@@ -361,52 +406,21 @@ const formatContextPreview = (context) => {
   }
 }
 
-// 转换系统日志数据（PascalCase -> snake_case）
-const transformSystemLogData = (log) => {
-  let context = null
-  try {
-    if (log.Context) {
-      context = typeof log.Context === 'string' ? JSON.parse(log.Context) : log.Context
-    } else if (log.context) {
-      context = typeof log.context === 'string' ? JSON.parse(log.context) : log.context
-    }
-  } catch (e) {
-    context = log.Context || log.context || null
-  }
-  
-  return {
-    id: log.ID || log.id,
-    level: log.Level || log.level || '',
-    trace_id: log.TraceID || log.trace_id || '',
-    message: log.Message || log.message || '',
-    context: context,
-    created_at: log.CreatedAt || log.created_at || ''
-  }
-}
-
-// 重写 handleSearch 和 handleReset，清除选中状态
-const handleSearch = () => {
-  selectedRows.value = []
-  selectedIds.value.clear()
-  baseHandleSearch()
-}
-
-const handleReset = () => {
-  selectedRows.value = []
-  selectedIds.value.clear()
-  baseHandleReset()
-}
+// 使用回调清除选中状态，无需重写方法
 
 const handleView = async (row) => {
   try {
     const res = await getSystemLogDetail(row.id)
-    if (res.data) {
+    if (res && res.data) {
       const log = res.data.system_log || res.data.log || res.data
-      logDetail.value = transformSystemLogData(log)
-      detailVisible.value = true
+      if (log) {
+        logDetail.value = transformSystemLogData(log)
+        detailVisible.value = true
+      }
     }
   } catch (error) {
     console.error('Load system log detail error:', error)
+    ElMessage.error(error.response?.data?.message || error.message || t('error.default'))
   }
 }
 

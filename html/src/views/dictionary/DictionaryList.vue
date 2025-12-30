@@ -18,7 +18,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ type: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="dictionary"
         @search="handleSearch"
         @reset="handleReset"

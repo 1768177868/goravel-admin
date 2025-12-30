@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', status: '', role_id: '', department_id: '', is_2fa_bound: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -175,6 +175,15 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 初始搜索表单（用于 SearchForm 的 initial-values）
+const initialSearchForm = {
+  username: '',
+  status: '',
+  role_id: '',
+  department_id: '',
+  is_2fa_bound: ''
+}
 
 // 表格列配置（使用 vxe-table columns）
 const tableColumns = computed(() => [

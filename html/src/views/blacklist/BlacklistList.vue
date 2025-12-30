@@ -18,7 +18,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ ip: '', status: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="blacklist"
         @search="handleSearch"
         @reset="handleReset"

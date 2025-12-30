@@ -20,7 +20,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ username: '', ip: '', browser: '', os: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="online_admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -126,6 +126,14 @@ const {
   defaultSort: 'last_used_at:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 初始搜索表单（用于 SearchForm 的 initial-values）
+const initialSearchForm = {
+  username: '',
+  ip: '',
+  browser: '',
+  os: ''
+}
 
 // 所有列的完整配置（必须在 useColumnSetting 之前定义）
 const allTableColumns = computed(() => [

@@ -28,7 +28,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', status: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="department"
         @search="handleSearch"
         @reset="handleReset"
@@ -124,6 +124,12 @@ const {
 })
 
 const tableData = ref([])
+
+// 初始搜索表单
+const initialSearchForm = {
+  name: '',
+  status: ''
+}
 
 const searchForm = reactive({
   name: '',

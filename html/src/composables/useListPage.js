@@ -16,6 +16,8 @@ import { buildSearchParams } from '../utils/buildSearchParams'
  * @param {Function} options.transformData - 数据转换函数（可选）
  * @param {Function} options.onLoadSuccess - 加载成功回调（可选）
  * @param {Function} options.buildParams - 自定义参数构建函数（可选），接收 (searchForm, baseParams) 参数，返回构建后的参数对象
+ * @param {Function} options.onSearch - 搜索前回调（可选），在搜索执行前调用
+ * @param {Function} options.onReset - 重置前回调（可选），在重置执行前调用
  * @returns {Object} 返回列表页面需要的所有状态和方法
  */
 export function useListPage(options = {}) {
@@ -27,7 +29,9 @@ export function useListPage(options = {}) {
     tableRef = null,
     transformData = null,
     onLoadSuccess = null,
-    buildParams = null
+    buildParams = null,
+    onSearch = null,
+    onReset = null
   } = options
 
   // 搜索表单
@@ -96,6 +100,10 @@ export function useListPage(options = {}) {
    * 搜索处理（自动重置到第一页并加载）
    */
   const handleSearch = () => {
+    // 如果提供了搜索前回调，先执行它
+    if (onSearch && typeof onSearch === 'function') {
+      onSearch()
+    }
     enhancedResetAndLoad()
   }
 
@@ -117,6 +125,10 @@ export function useListPage(options = {}) {
    * @param {Object} options - 选项对象，包含 reload 属性（是否刷新数据，默认为 true）
    */
   const handleReset = (formData = null, options = {}) => {
+    // 如果提供了重置前回调，先执行它
+    if (onReset && typeof onReset === 'function') {
+      onReset()
+    }
     // 清空搜索表单
     clearSearchForm()
     // 如果需要刷新，则重置并加载（默认为 true，保持向后兼容）

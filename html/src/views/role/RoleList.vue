@@ -18,7 +18,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', status: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="role"
         @search="handleSearch"
         @reset="handleReset"
@@ -328,6 +328,12 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 初始搜索表单（用于 SearchForm 的 initial-values）
+const initialSearchForm = {
+  name: '',
+  status: ''
+}
 
 // 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
 const getMenuTitle = (menu) => {

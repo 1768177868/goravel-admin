@@ -391,6 +391,16 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef),
   transformData: transformOperationLogData,
+  onSearch: () => {
+    // 搜索前清除选中状态
+    selectedRows.value = []
+    selectedIds.value.clear()
+  },
+  onReset: () => {
+    // 重置前清除选中状态
+    selectedRows.value = []
+    selectedIds.value.clear()
+  },
   onLoadSuccess: () => {
     // 数据加载后，恢复选中状态
     nextTick(() => {
@@ -484,19 +494,12 @@ const handleSearch = () => {
   if (!validateTimeRangeForSearch()) {
     return
   }
-  
-  // 清除选中状态
-  selectedRows.value = []
-  selectedIds.value.clear()
+  // 调用 baseHandleSearch（onSearch 回调已处理清除选中状态）
   baseHandleSearch()
 }
 
-// 重写 handleReset，清除选中状态
-const handleReset = () => {
-  selectedRows.value = []
-  selectedIds.value.clear()
-  baseHandleReset()
-}
+// 使用 baseHandleReset（onReset 回调已处理清除选中状态）
+const handleReset = baseHandleReset
 
 // 将复数形式转换为单数形式，以匹配权限配置中的 slug
 // 支持处理：复数形式（roles）、连字符形式（operation-logs）、下划线形式（operation_logs）

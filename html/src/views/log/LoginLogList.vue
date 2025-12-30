@@ -175,8 +175,8 @@ const {
   loading,
   searchForm,
   loadData,
-  handleSearch: baseHandleSearch,
-  handleReset: baseHandleReset,
+  handleSearch,
+  handleReset,
   handleSortChange,
   initDefaultSort
 } = useListPage({
@@ -186,6 +186,16 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef),
   transformData: transformLoginLogData,
+  onSearch: () => {
+    // 搜索前清除选中状态
+    selectedRows.value = []
+    selectedIds.value.clear()
+  },
+  onReset: () => {
+    // 重置前清除选中状态
+    selectedRows.value = []
+    selectedIds.value.clear()
+  },
   onLoadSuccess: () => {
     // 数据加载后，恢复选中状态
     nextTick(() => {
@@ -201,18 +211,7 @@ const {
   }
 })
 
-// 重写 handleSearch 和 handleReset，清除选中状态
-const handleSearch = () => {
-  selectedRows.value = []
-  selectedIds.value.clear()
-  baseHandleSearch()
-}
-
-const handleReset = () => {
-  selectedRows.value = []
-  selectedIds.value.clear()
-  baseHandleReset()
-}
+// 使用回调清除选中状态，无需重写方法
 
 // 表格列配置（使用 vxe-table columns）
 const tableColumns = computed(() => [

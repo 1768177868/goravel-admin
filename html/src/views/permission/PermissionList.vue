@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="{ name: '', slug: '', method: '', path: '', status: '', menu_id: '' }"
+        :initial-values="initialSearchForm"
         i18n-prefix="permission"
         @search="handleSearch"
         @reset="handleReset"
@@ -125,6 +125,16 @@ const {
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 初始搜索表单（用于 SearchForm 的 initial-values）
+const initialSearchForm = {
+  name: '',
+  slug: '',
+  method: '',
+  path: '',
+  status: '',
+  menu_id: ''
+}
 
 // 表格列配置
 const tableColumns = computed(() => [
