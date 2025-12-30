@@ -433,14 +433,6 @@ const handleSearch = () => {
   loadData()
 }
 
-const handleReset = () => {
-  // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
-  })
-  pagination.page = 1
-  loadData()
-}
 
 const handleMarkRead = async (row) => {
   await notificationStore.markAsRead(row.id)
