@@ -21,84 +21,55 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ level: '', module: '', trace_id: '', message: '', start_time: '', end_time: '' }"
         i18n-prefix="log"
         @search="handleSearch"
         @reset="handleReset"
       />
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
+        @sort-change="handleSortChange"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
-        @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-          >
-            <template v-if="column.slot === 'level'" #default="{ row }">
-              <el-tag :type="getLevelType(row.level)">
-                {{ getLevelLabel(row.level) }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'context'" #default="{ row }">
-              <el-tooltip
-                v-if="row.context"
-                :content="formatContext(row.context)"
-                placement="top"
-                effect="dark"
-              >
-                <div class="context-preview">
-                  {{ formatContextPreview(row.context) }}
-                </div>
-              </el-tooltip>
-              <span v-else>-</span>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('system_log.show').disabled"
-                @click="handleView(row)"
-              >
-                {{ $t('common.view') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('system_log.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
+        <template #level="{ row }">
+          <el-tag :type="getLevelType(row.level)">
+            {{ getLevelLabel(row.level) }}
+          </el-tag>
         </template>
-      </vxe-table>
+
+        <template #context="{ row }">
+          <el-tooltip
+            v-if="row.context"
+            :content="formatContext(row.context)"
+            placement="top"
+            effect="dark"
+          >
+            <div class="context-preview">
+              {{ formatContextPreview(row.context) }}
+            </div>
+          </el-tooltip>
+          <span v-else>-</span>
+        </template>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="operationActions"
+            :get-button-state="getButtonState"
+          />
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -125,13 +96,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
+import { useListPage } from '../../composables/useListPage'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import {
@@ -152,13 +126,14 @@ const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud
 })
 
 const tableRef = ref(null)
-const loading = ref(false)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
+// 维护跨页选中的ID集合
+const selectedIds = ref(new Set())
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
+// 初始搜索表单
+const initialSearchForm = {
   level: '',
   module: '',
   trace_id: '',
@@ -167,43 +142,24 @@ const initialSearchValues = {
   end_time: ''
 }
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const tableData = ref([])
-
-const searchForm = reactive({
-  level: '',
-  module: '',
-  trace_id: '',
-  message: '',
-  start_time: '',
-  end_time: ''
-})
-
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'level': 'level',
-  'module': 'module',
-  'trace_id': 'trace_id',
-  'message': 'message',
-  'context': 'context',
-  'created_at': 'created_at'
-}
-
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData: baseLoadData,
+  handleSearch: baseHandleSearch,
+  handleReset: baseHandleReset,
+  handleSortChange,
+  initDefaultSort,
+  buildOrderBy,
+  resetSort
+} = useListPage({
+  fetchApi: getSystemLogList,
+  initialSearchForm,
+  fieldMapping: {},
   defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
-  }
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
 
 // 表格列配置（使用 vxe-table columns）
@@ -417,26 +373,43 @@ const transformSystemLogData = (log) => {
   }
 }
 
-const loadData = async () => {
+// 重写 loadData 以支持数据转换和恢复选中状态
+const loadData = async (pageParams = null) => {
+  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
+  const page = pageParams?.currentPage ?? pagination.page
+  const pageSize = pageParams?.pageSize ?? pagination.pageSize
+  
+  // 更新 pagination（确保同步）
+  if (pageParams) {
+    pagination.page = page
+    pagination.pageSize = pageSize
+  }
+  
+  const params = buildSearchParams(searchForm, {
+    page,
+    page_size: pageSize,
+    order_by: buildOrderBy()
+  })
+  
   loading.value = true
   try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      order_by: buildOrderBy(),
-      ...searchForm
-    }
-    // 移除空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
     const res = await getSystemLogList(params)
     if (res.data) {
       const logs = res.data.list || []
       tableData.value = logs.map(log => transformSystemLogData(log))
       pagination.total = res.data.total || 0
+      
+      // 数据加载后，恢复选中状态
+      nextTick(() => {
+        if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
+          const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
+          rowsToSelect.forEach(row => {
+            tableRef.value.tableRef.setCheckboxRow(row, true)
+          })
+          // 更新 selectedRows
+          selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
+        }
+      })
     }
   } catch (error) {
     console.error('Load system log list error:', error)
@@ -445,23 +418,25 @@ const loadData = async () => {
   }
 }
 
+// 重写 handleSearch 和 handleReset，清除选中状态并使用自定义的 loadData
 const handleSearch = () => {
+  selectedRows.value = []
+  selectedIds.value.clear()
   pagination.page = 1
   loadData()
 }
 
 const handleReset = () => {
+  selectedRows.value = []
+  selectedIds.value.clear()
+  // 重置搜索表单
   Object.keys(searchForm).forEach(key => {
-    searchForm[key] = ''
+    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
   })
+  // 重置排序
   resetSort()
+  // 重置并加载
   pagination.page = 1
-  loadData()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
   loadData()
 }
 
@@ -480,13 +455,45 @@ const handleView = async (row) => {
 
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
+// 操作按钮配置
+const operationActions = computed(() => [
+  {
+    key: 'view',
+    label: t('common.view'),
+    type: 'primary',
+    permission: 'system_log.show',
+    handler: handleView
+  },
+  {
+    key: 'delete',
+    label: t('common.delete'),
+    type: 'danger',
+    permission: 'system_log.destroy',
+    handler: handleDelete
+  }
+])
+
 const handleSelectionChange = () => {
-  selectedRows.value = tableRef.value?.getCheckboxRecords() || []
+  // 使用 vxe-table 的 getCheckboxRecords 方法获取选中的行
+  if (tableRef.value?.tableRef) {
+    const currentSelected = tableRef.value.tableRef.getCheckboxRecords() || []
+    selectedRows.value = currentSelected
+    
+    // 更新选中ID集合：先移除当前页的所有ID，再添加当前选中的ID
+    tableData.value.forEach(row => {
+      selectedIds.value.delete(row.id)
+    })
+    currentSelected.forEach(row => {
+      selectedIds.value.add(row.id)
+    })
+  }
 }
 
 const handleBatchDelete = () => {
   handleBatchDeleteCrud(selectedRows.value, () => {
+    // 清除选中状态
     selectedRows.value = []
+    selectedIds.value.clear()
     loadData()
   })
 }

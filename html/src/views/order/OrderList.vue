@@ -35,7 +35,7 @@
         </template>
       </SearchForm>
 
-      <!-- vxe-table -->
+      <!-- vxe-table with expand row -->
       <vxe-table
         ref="tableRef"
         :data="tableData"
@@ -81,10 +81,10 @@
             </div>
           </template>
         </vxe-column>
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
+        <template v-for="(column, index) in tableColumns" :key="column.field || column.slot || index">
           <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
+            v-if="column.type"
+            :type="column.type"
             :width="column.width"
             :fixed="column.fixed"
           />
@@ -96,7 +96,6 @@
             :sortable="column.sortable"
             :fixed="column.fixed"
             :formatter="column.formatter"
-            :tree-node="column.treeNode"
           >
             <template v-if="column.slot === 'status'" #default="{ row }">
               <el-tag :type="getStatusTagType(row.status || row.Status)">
@@ -105,9 +104,6 @@
             </template>
             <template v-else-if="column.slot === 'amount'" #default="{ row }">
               {{ formatAmount(row.amount || row.Amount) }}
-            </template>
-            <template v-else-if="column.field === 'remark'" #default="{ row }">
-              {{ row.remark || row.Remark || '-' }}
             </template>
             <template v-else-if="column.slot === 'operation'" #default="{ row }">
               <TableActionButtons
@@ -121,10 +117,10 @@
         </template>
       </vxe-table>
 
-      <!-- 分页 -->
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -240,6 +236,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import OrderForm from './OrderForm.vue'
 import { useListPage } from '../../composables/useListPage'
@@ -291,16 +288,6 @@ const editFormRules = computed(() => ({
   ]
 }))
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'order_no': 'order_no',
-  'user_id': 'user_id',
-  'amount': 'amount',
-  'status': 'status',
-  'created_at': 'created_at'
-}
-
 // 初始搜索表单数据（开始时间默认为一周前）
 const initialSearchForm = {
   user_id: '',
@@ -321,17 +308,14 @@ const {
   loadData,
   handleSearch: handleSearchBase,
   handleReset,
-  handlePageChange,
   handleSortChange,
   initDefaultSort
 } = useListPage({
   fetchApi: getOrderList,
   initialSearchForm,
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'created_at:desc'
-  }
+  fieldMapping: {},
+  defaultSort: 'created_at:desc',
+  tableRef: computed(() => tableRef.value)
 })
 
 // 获取当前时间的字符串格式（YYYY-MM-DD HH:mm:ss）

@@ -36,89 +36,70 @@
         @reset="handleReset"
       />
 
-      <!-- vxe-table -->
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-          >
-            <template v-if="column.slot === 'type'" #default="{ row }">
-              <el-tag size="small">
-                {{ typeLabel(row.type) }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'sender'" #default="{ row }">
-              <template v-if="row.type === 'message' && row.sender_id === userStore.adminInfo?.id">
-                <!-- 自己发送的私信，显示接收人 -->
-                <span class="text-gray-500">
-                  {{ $t('notification.sent_to') }}: 
-                  <span v-if="row.receiver" class="text-blue-600">
-                    {{ row.receiver.nickname || row.receiver.username }}
-                  </span>
-                  <span v-else class="text-gray-400">-</span>
-                </span>
-              </template>
-              <template v-else>
-                <!-- 接收的私信或其他类型通知，显示发送人 -->
-                <span v-if="row.sender">
-                  {{ row.sender.nickname || row.sender.username }}
-                </span>
-                <span v-else class="text-gray-400">
-                  {{ $t('notification.system') }}
-                </span>
-              </template>
-            </template>
-            <template v-else-if="column.slot === 'is_read'" #default="{ row }">
-              <el-tag
-                size="small"
-                :type="row.is_read ? 'info' : 'danger'"
-                effect="plain"
-              >
-                {{ row.is_read ? $t('notification.read') : $t('notification.unread') }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'created_at'" #default="{ row }">
-              {{ formatDate(row.created_at) }}
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button
-                v-if="!row.is_read"
-                type="primary"
-                link
-                @click="handleMarkRead(row)"
-              >
-                {{ $t('notification.mark_read') }}
-              </el-button>
-            </template>
-          </vxe-column>
+        <template #type="{ row }">
+          <el-tag size="small">
+            {{ typeLabel(row.type) }}
+          </el-tag>
         </template>
-      </vxe-table>
 
-      <!-- 分页 -->
+        <template #sender="{ row }">
+          <template v-if="row.type === 'message' && row.sender_id === userStore.adminInfo?.id">
+            <span class="text-gray-500">
+              {{ $t('notification.sent_to') }}: 
+              <span v-if="row.receiver" class="text-blue-600">
+                {{ row.receiver.nickname || row.receiver.username }}
+              </span>
+              <span v-else class="text-gray-400">-</span>
+            </span>
+          </template>
+          <template v-else>
+            <span v-if="row.sender">
+              {{ row.sender.nickname || row.sender.username }}
+            </span>
+            <span v-else class="text-gray-400">
+              {{ $t('notification.system') }}
+            </span>
+          </template>
+        </template>
+
+        <template #is_read="{ row }">
+          <el-tag
+            size="small"
+            :type="row.is_read ? 'info' : 'danger'"
+            effect="plain"
+          >
+            {{ row.is_read ? $t('notification.read') : $t('notification.unread') }}
+          </el-tag>
+        </template>
+
+        <template #created_at="{ row }">
+          {{ formatDate(row.created_at) }}
+        </template>
+
+        <template #operation="{ row }">
+          <el-button
+            v-if="!row.is_read"
+            type="primary"
+            link
+            @click="handleMarkRead(row)"
+          >
+            {{ $t('notification.mark_read') }}
+          </el-button>
+        </template>
+      </VxeTable>
+
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -218,6 +199,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
 import { useListPage } from '../../composables/useListPage'
 import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
@@ -269,13 +251,8 @@ const formRules = {
   ]
 }
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'type': 'type',
-  'is_read': 'is_read',
-  'created_at': 'created_at'
-}
+// 字段名映射：前端字段名 -> 数据库字段名（只包含不同的字段）
+const fieldMapping = {} // 所有字段名都相同，无需映射
 
 // 初始搜索表单数据
 const initialSearchForm = {
@@ -414,34 +391,101 @@ const transformNotificationData = (notification) => {
   }
 }
 
-// 使用列表页面 composable
+// 使用 useListPage，但需要自定义 buildParams
 const {
   pagination,
   tableData,
   loading,
   searchForm,
-  loadData,
-  handleSearch,
-  handleReset,
-  handlePageChange,
-  handleSortChange
+  loadData: baseLoadData,
+  handleSearch: baseHandleSearch,
+  handleReset: baseHandleReset,
+  handleSortChange,
+  buildOrderBy
 } = useListPage({
   fetchApi: fetchNotificationsWrapper,
   initialSearchForm,
-  buildParams,
-  transformData: transformNotificationData,
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  },
-  onLoadSuccess: (res) => {
-    // 更新未读数量
-    if (res.data && res.data.unread_count !== undefined) {
-      notificationStore.unreadCount = res.data.unread_count || 0
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
+})
+
+// 重写 loadData 以支持自定义逻辑（包括更新未读数量）
+const loadData = async () => {
+  const params = {
+    page: pagination.page,
+    page_size: pagination.pageSize
+  }
+  
+  // 添加排序参数
+  const orderBy = buildOrderBy()
+  if (orderBy) {
+    params.order_by = orderBy
+  }
+  
+  // 添加搜索条件（只添加有值的字段）
+  if (searchForm.type && searchForm.type.trim()) {
+    params.type = searchForm.type.trim()
+  }
+  
+  // is_read 可能是字符串 'true'/'false' 或空字符串
+  // 只有当不是空字符串时才添加
+  if (searchForm.is_read !== '' && searchForm.is_read !== null && searchForm.is_read !== undefined) {
+    // 如果是字符串 'true' 或 'false'，转换为布尔值
+    if (searchForm.is_read === 'true') {
+      params.is_read = true
+    } else if (searchForm.is_read === 'false') {
+      params.is_read = false
+    } else {
+      params.is_read = searchForm.is_read
     }
   }
-})
+  
+  loading.value = true
+  try {
+    const res = await fetchNotificationsWrapper(params)
+    
+    if (res && res.data) {
+      // fetchNotificationsWrapper 已经将数据转换为 { list, total, pagination, unread_count } 格式
+      // 所以这里应该使用 res.data.list
+      const notifications = res.data.list || []
+      const transformed = notifications.map(transformNotificationData)
+      tableData.value = transformed
+      pagination.total = res.data.total || res.data.pagination?.total || 0
+      
+      // 更新未读数量
+      if (res.data.unread_count !== undefined) {
+        notificationStore.unreadCount = res.data.unread_count || 0
+      }
+    } else {
+      // 如果没有数据，确保 tableData 是空数组
+      tableData.value = []
+      pagination.total = 0
+    }
+  } catch (error) {
+    console.error('Load notifications error:', error)
+    ElMessage.error(error.response?.data?.message || error.message || t('error.default'))
+    tableData.value = []
+    pagination.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重写 handleSearch 和 handleReset，确保调用自定义的 loadData
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  // 重置搜索表单
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
+  })
+  pagination.page = 1
+  loadData()
+}
 
 const handleMarkRead = async (row) => {
   await notificationStore.markAsRead(row.id)
@@ -501,6 +545,7 @@ const handleAdd = () => {
   formData.receiver_id = ''
   formData.title = ''
   formData.content = ''
+
   // 清除验证（延迟执行，确保表单已渲染）
   setTimeout(() => {
     if (formRef.value) {
@@ -547,8 +592,11 @@ const handleSubmit = async () => {
       await createNotification(data)
       ElMessage.success(t('notification.create_success'))
       dialogVisible.value = false
-      // 重新加载列表
+      
+      // 重置到第一页并重新加载列表
+      pagination.page = 1
       await loadData()
+      
       // 刷新未读数量
       await notificationStore.fetchUnread()
     } catch (error) {

@@ -28,75 +28,46 @@
         @reset="handleReset"
       />
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
+        @sort-change="handleSortChange"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
-        @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-            :show-overflow="column.showOverflow"
-          >
-            <template v-if="column.slot === 'admin'" #default="{ row }">
-              {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
-            </template>
-            <template v-else-if="column.slot === 'title'" #default="{ row }">
-              {{ getOperationTitle(row.title || row.Title) }}
-            </template>
-            <template v-else-if="column.slot === 'request'" #default="{ row }">
-              <span :title="formatRequestParams(row.request || row.Request)">
-                {{ formatRequestParams(row.request || row.Request) }}
-              </span>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('operation_log.show').disabled"
-                @click="handleView(row)"
-              >
-                {{ $t('common.view') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('operation_log.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
+        <template #admin="{ row }">
+          {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
         </template>
-      </vxe-table>
+
+        <template #title="{ row }">
+          {{ getOperationTitle(row.title || row.Title) }}
+        </template>
+
+        <template #request="{ row }">
+          <span :title="formatRequestParams(row.request || row.Request)">
+            {{ formatRequestParams(row.request || row.Request) }}
+          </span>
+        </template>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="operationActions"
+            :get-button-state="getButtonState"
+          />
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
+        :auto-load="true"
+        :on-page-change="loadData"
         :show-total="true"
         :show-quick-jumper="true"
         :align="'right'"
-        @page-change="handlePageChange"
       />
     </el-card>
 
@@ -124,7 +95,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import { useListPage } from '../../composables/useListPage'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { useCrud } from '../../composables/useCrud'
 import { usePermission } from '../../composables/usePermission'
 import { getMethodOptions } from '../../utils/fieldOptions'
@@ -146,6 +120,8 @@ const tableRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
+// 维护跨页选中的ID集合
+const selectedIds = ref(new Set())
 
 // 使用 CRUD composable（删除和批量删除）
 const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
@@ -204,14 +180,9 @@ const defaultTitleSlugs = [
 
 const titleOptions = ref([])
 
-// 字段名映射：前端字段名 -> 数据库字段名
+// 字段名映射：前端字段名 -> 数据库字段名（只包含不同的字段）
 const fieldMapping = {
-  'id': 'id',
-  'method': 'method',
-  'path': 'path',
-  'ip': 'ip',
-  'status_code': 'status', // 前端使用 status_code，数据库字段是 status
-  'created_at': 'created_at'
+  'status_code': 'status' // 前端使用 status_code，数据库字段是 status
 }
 
 // 使用共用的日期工具函数（已从 utils/dateUtils 导入）
@@ -298,22 +269,66 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData,
+  loadData: baseLoadData,
   handleSearch: handleSearchBase,
-  handleReset,
+  handleReset: baseHandleReset,
   handlePageChange,
   handleSortChange,
-  initDefaultSort
+  initDefaultSort,
+  buildOrderBy,
+  resetSort
 } = useListPage({
   fetchApi: getOperationLogList,
   initialSearchForm,
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  },
-  transformData: transformOperationLogData
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 重写 loadData 以支持数据转换和恢复选中状态
+const loadData = async (pageParams = null) => {
+  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
+  const page = pageParams?.currentPage ?? pagination.page
+  const pageSize = pageParams?.pageSize ?? pagination.pageSize
+  
+  // 更新 pagination（确保同步）
+  if (pageParams) {
+    pagination.page = page
+    pagination.pageSize = pageSize
+  }
+  
+  const params = buildSearchParams(searchForm, {
+    page,
+    page_size: pageSize,
+    order_by: buildOrderBy()
+  })
+  
+  loading.value = true
+  try {
+    const res = await getOperationLogList(params)
+    if (res.data) {
+      const logs = res.data.list || []
+      tableData.value = logs.map(transformOperationLogData)
+      pagination.total = res.data.total || 0
+      
+      // 数据加载后，恢复选中状态
+      nextTick(() => {
+        if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
+          const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
+          rowsToSelect.forEach(row => {
+            tableRef.value.tableRef.setCheckboxRow(row, true)
+          })
+          // 更新 selectedRows
+          selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Load operation log list error:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 // 获取当前时间的字符串格式（YYYY-MM-DD HH:mm:ss）
 const getCurrentTimeString = () => {
@@ -394,7 +409,26 @@ const handleSearch = () => {
     return
   }
   
-  handleSearchBase()
+  // 清除选中状态
+  selectedRows.value = []
+  selectedIds.value.clear()
+  pagination.page = 1
+  loadData()
+}
+
+// 重写 handleReset，清除选中状态并使用自定义的 loadData
+const handleReset = () => {
+  selectedRows.value = []
+  selectedIds.value.clear()
+  // 重置搜索表单
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
+  })
+  // 重置排序
+  resetSort()
+  // 重置并加载
+  pagination.page = 1
+  loadData()
 }
 
 // 将复数形式转换为单数形式，以匹配权限配置中的 slug
@@ -733,13 +767,45 @@ const handleView = async (row) => {
 
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
+// 操作按钮配置
+const operationActions = computed(() => [
+  {
+    key: 'view',
+    label: t('common.view'),
+    type: 'primary',
+    permission: 'operation_log.show',
+    handler: handleView
+  },
+  {
+    key: 'delete',
+    label: t('common.delete'),
+    type: 'danger',
+    permission: 'operation_log.destroy',
+    handler: handleDelete
+  }
+])
+
 const handleSelectionChange = () => {
-  selectedRows.value = tableRef.value?.getCheckboxRecords() || []
+  // 使用 vxe-table 的 getCheckboxRecords 方法获取选中的行
+  if (tableRef.value?.tableRef) {
+    const currentSelected = tableRef.value.tableRef.getCheckboxRecords() || []
+    selectedRows.value = currentSelected
+    
+    // 更新选中ID集合：先移除当前页的所有ID，再添加当前选中的ID
+    tableData.value.forEach(row => {
+      selectedIds.value.delete(row.id)
+    })
+    currentSelected.forEach(row => {
+      selectedIds.value.add(row.id)
+    })
+  }
 }
 
 const handleBatchDelete = () => {
   handleBatchDeleteCrud(selectedRows.value, () => {
+    // 清除选中状态
     selectedRows.value = []
+    selectedIds.value.clear()
     loadData()
   })
 }

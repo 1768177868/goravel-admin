@@ -4,14 +4,23 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu.department') }}</span>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('department.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><Plus /></el-icon>
-            {{ $t('department.add_department') }}
-          </el-button>
+          <div class="header-actions">
+            <el-button 
+              v-if="!hasSearch"
+              @click="handleToggleExpand"
+            >
+              <el-icon><component :is="isExpanded ? 'Fold' : 'Expand'" /></el-icon>
+              {{ isExpanded ? $t('menu_management.collapse_all') : $t('menu_management.expand_all') }}
+            </el-button>
+            <el-button 
+              type="primary" 
+              :disabled="getButtonState('department.store').disabled"
+              @click="handleAdd"
+            >
+              <el-icon><Plus /></el-icon>
+              {{ $t('department.add_department') }}
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -19,62 +28,60 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ name: '', status: '' }"
         i18n-prefix="department"
         @search="handleSearch"
         @reset="handleReset"
       />
 
-      <vxe-table
+      <el-table
+        ref="tableRef"
         :data="tableData"
         :loading="loading"
         border
-        :column-config="{ resizable: true }"
-        :tree-config="hasSearch ? false : { childrenField: 'children', expandAll: false, indent: 20 }"
+        row-key="id"
+        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+        :default-expand-all="isExpanded"
+        style="width: 100%"
         height="600"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
-                {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('department.update').disabled"
-                @click="handleEdit(row)"
-              >
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('department.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
-        </template>
-      </vxe-table>
+        <el-table-column type="index" width="60" :label="$t('table.seq')" />
+        <el-table-column prop="name" :label="$t('department.name')" min-width="200" />
+        <el-table-column prop="remark" :label="$t('common.description')" min-width="200">
+          <template #default="{ row }">
+            {{ row.remark || row.description || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="sort" :label="$t('common.sort')" width="80" />
+        <el-table-column prop="status" :label="$t('table.status')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
+              {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" />
+        <el-table-column :label="$t('table.operation')" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button 
+              type="primary" 
+              link 
+              :disabled="getButtonState('department.update').disabled"
+              @click="handleEdit(row)"
+            >
+              {{ $t('common.edit') }}
+            </el-button>
+            <el-button 
+              type="danger" 
+              link 
+              :disabled="getButtonState('department.destroy').disabled"
+              @click="handleDelete(row)"
+            >
+              {{ $t('common.delete') }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </el-card>
 
     <DepartmentForm
@@ -90,9 +97,10 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Refresh, Fold, Expand } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import DepartmentForm from './DepartmentForm.vue'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import {
@@ -102,15 +110,10 @@ import {
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
+const tableRef = ref(null)
 const loading = ref(false)
+const isExpanded = ref(false)
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  name: '',
-  status: ''
-}
-
-// 使用 CRUD composable
 const {
   dialogVisible,
   editId,
@@ -121,11 +124,14 @@ const {
 })
 
 const tableData = ref([])
-const hasSearch = ref(false) // 标记是否有搜索条件
 
 const searchForm = reactive({
   name: '',
   status: ''
+})
+
+const hasSearch = computed(() => {
+  return !!(searchForm.name || searchForm.status)
 })
 
 // 搜索表单字段配置
@@ -150,45 +156,7 @@ const searchFields = computed(() => [
   }
 ])
 
-// 表格列配置（使用 vxe-table columns）
-// 树形结构不需要排序功能
-const tableColumns = computed(() => [
-  {
-    field: 'name',
-    title: t('department.name'),
-    treeNode: true,
-    formatter: ({ row }) => row.Name || row.name || '-'
-  },
-  {
-    field: 'remark',
-    title: t('common.description'),
-    formatter: ({ row }) => row.Remark || row.remark || row.description || '-'
-  },
-  {
-    field: 'sort',
-    title: t('common.sort'),
-    width: 80,
-    formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0)
-  },
-  {
-    field: 'status',
-    title: t('table.status'),
-    width: 80,
-    slot: 'status'
-  },
-  {
-    field: 'created_at',
-    title: t('table.created_at'),
-    formatter: ({ row }) => row.created_at || row.CreatedAt || '-'
-  },
-  {
-    title: t('table.operation'),
-    width: 150,
-    fixed: 'right',
-    slot: 'operation'
-  }
-])
-
+// 扁平化部门选项（递归处理树形结构）
 const departmentOptions = computed(() => {
   const flatten = (departments, parentId = 0) => {
     const result = []
@@ -228,6 +196,7 @@ const transformDepartmentData = (dept) => {
     created_at: dept.created_at || dept.CreatedAt || ''
   }
   
+  // 只有当有子节点时才添加 children 字段
   if (transformedChildren.length > 0) {
     result.children = transformedChildren
   }
@@ -238,20 +207,7 @@ const transformDepartmentData = (dept) => {
 const loadData = async () => {
   loading.value = true
   try {
-    const params = {}
-    // 检查是否有搜索条件
-    if (searchForm.name || searchForm.status) {
-      hasSearch.value = true
-      if (searchForm.name && searchForm.name.trim()) {
-        params.name = searchForm.name.trim()
-      }
-      if (searchForm.status) {
-        params.status = searchForm.status
-      }
-    } else {
-      hasSearch.value = false
-    }
-    
+    const params = buildSearchParams(searchForm)
     const res = await getDepartmentList(params)
     
     if (res.data && res.data.list) {
@@ -272,9 +228,8 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  Object.keys(searchForm).forEach(key => {
-    searchForm[key] = ''
-  })
+  searchForm.name = ''
+  searchForm.status = ''
   loadData()
 }
 
@@ -288,6 +243,35 @@ const handleFormSuccess = () => {
 }
 
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
+
+const handleRefresh = () => {
+  loadData()
+}
+
+const handleToggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+  
+  if (tableRef.value) {
+    // Element Plus 的 el-table 使用 toggleRowExpansion 方法
+    // 递归处理所有节点
+    const toggleNode = (rows) => {
+      if (Array.isArray(rows)) {
+        rows.forEach(row => {
+          // 切换当前节点的展开状态
+          tableRef.value.toggleRowExpansion(row, isExpanded.value)
+          
+          // 如果有子节点，递归处理
+          if (row.children && row.children.length > 0) {
+            toggleNode(row.children)
+          }
+        })
+      }
+    }
+    
+    // 处理所有顶级节点
+    toggleNode(tableData.value)
+  }
+}
 
 onMounted(() => {
   loadData()
@@ -305,5 +289,9 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
 }
-</style>
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+</style>

@@ -67,108 +67,111 @@
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
       >
-        <vxe-column type="checkbox" width="60" />
-        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
-        <vxe-column field="filename" :title="$t('attachment.filename')" min-width="200">
-          <template #default="{ row }">
-            <div class="filename-cell">
-              <el-image
-                v-if="row.file_type === 'image' && getImageUrl(row)"
-                :src="getImageUrl(row)"
-                :preview-src-list="[getImageUrl(row)]"
-                fit="cover"
-                class="filename-thumbnail"
-                :preview-teleported="true"
-                :lazy="true"
-                @load="handleImageLoad(row)"
-                @error="handleImageError(row)"
-              >
-                <template #placeholder>
-                  <div class="image-placeholder">
-                    <el-icon class="is-loading"><Loading /></el-icon>
-                  </div>
-                </template>
-                <template #error>
-                  <div class="image-error">
-                    <el-icon><Picture /></el-icon>
-                  </div>
-                </template>
-              </el-image>
-              <div
-                v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'loading'"
-                class="image-placeholder"
-              >
-                <el-icon class="is-loading"><Loading /></el-icon>
+        <template v-for="(column, index) in tableColumns" :key="column.field || column.slot || column.type || index">
+          <vxe-column
+            v-if="column.type"
+            :type="column.type"
+            :width="column.width"
+            :fixed="column.fixed"
+          />
+          <vxe-column
+            v-else
+            :field="column.field"
+            :title="column.title"
+            :width="column.width"
+            :min-width="column.minWidth"
+            :sortable="column.sortable"
+            :fixed="column.fixed"
+            :formatter="column.formatter"
+          >
+            <template v-if="column.slot === 'filename'" #default="{ row }">
+              <div class="filename-cell">
+                <el-image
+                  v-if="row.file_type === 'image' && getImageUrl(row)"
+                  :src="getImageUrl(row)"
+                  :preview-src-list="[getImageUrl(row)]"
+                  fit="cover"
+                  class="filename-thumbnail"
+                  :preview-teleported="true"
+                  :lazy="true"
+                  @load="handleImageLoad(row)"
+                  @error="handleImageError(row)"
+                >
+                  <template #placeholder>
+                    <div class="image-placeholder">
+                      <el-icon class="is-loading"><Loading /></el-icon>
+                    </div>
+                  </template>
+                  <template #error>
+                    <div class="image-error">
+                      <el-icon><Picture /></el-icon>
+                    </div>
+                  </template>
+                </el-image>
+                <div
+                  v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'loading'"
+                  class="image-placeholder"
+                >
+                  <el-icon class="is-loading"><Loading /></el-icon>
+                </div>
+                <div
+                  v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'error'"
+                  class="image-error"
+                >
+                  <el-icon><Picture /></el-icon>
+                </div>
+                <span class="filename-text">{{ row.filename || row.Filename }}</span>
               </div>
-              <div
-                v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'error'"
-                class="image-error"
+            </template>
+            <template v-else-if="column.slot === 'display_name'" #default="{ row }">
+              <el-input
+                v-model="row.display_name"
+                :placeholder="$t('attachment.display_name_placeholder')"
+                size="small"
+                @blur="handleUpdateDisplayName(row)"
+                @keyup.enter="handleUpdateDisplayName(row)"
+              />
+            </template>
+            <template v-else-if="column.slot === 'file_type'" #default="{ row }">
+              <el-tag :type="getFileTypeTagType(row.file_type)">
+                {{ getFileTypeLabel(row.file_type) }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'disk'" #default="{ row }">
+              <el-tag size="small" type="info">
+                {{ row.disk || row.Disk || '-' }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.slot === 'operation'" #default="{ row }">
+              <el-button 
+                type="success" 
+                link 
+                :disabled="downloadingIds.has(row.id || row.ID)"
+                :loading="downloadingIds.has(row.id || row.ID)"
+                @click="handleDownload(row)"
               >
-                <el-icon><Picture /></el-icon>
-              </div>
-              <span class="filename-text">{{ row.filename || row.Filename }}</span>
-            </div>
-          </template>
-        </vxe-column>
-        <vxe-column field="display_name" :title="$t('attachment.display_name')" min-width="200">
-          <template #default="{ row }">
-            <el-input
-              v-model="row.display_name"
-              :placeholder="$t('attachment.display_name_placeholder')"
-              size="small"
-              @blur="handleUpdateDisplayName(row)"
-              @keyup.enter="handleUpdateDisplayName(row)"
-            />
-          </template>
-        </vxe-column>
-        <vxe-column field="file_type" :title="$t('attachment.file_type')" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getFileTypeTagType(row.file_type)">
-              {{ getFileTypeLabel(row.file_type) }}
-            </el-tag>
-          </template>
-        </vxe-column>
-        <vxe-column field="disk" :title="$t('attachment.disk')" width="100">
-          <template #default="{ row }">
-            <el-tag size="small" type="info">
-              {{ row.disk || row.Disk || '-' }}
-            </el-tag>
-          </template>
-        </vxe-column>
-        <vxe-column field="extension" :title="$t('attachment.extension')" width="100" />
-        <vxe-column field="size" :title="$t('attachment.size')" width="140" :formatter="formatSize" />
-        <vxe-column field="mime_type" :title="$t('attachment.mime_type')" min-width="150" />
-        <vxe-column field="admin" :title="$t('log.admin')" width="140" :formatter="formatAdmin" />
-        <vxe-column field="created_at" :title="$t('table.created_at')" width="180" sortable />
-        <vxe-column :title="$t('table.operation')" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button 
-              type="success" 
-              link 
-              :disabled="downloadingIds.has(row.id || row.ID)"
-              :loading="downloadingIds.has(row.id || row.ID)"
-              @click="handleDownload(row)"
-            >
-              {{ $t('common.download') }}
-            </el-button>
-            <el-button 
-              type="danger" 
-              link 
-              :disabled="getButtonState('attachment.destroy').disabled"
-              @click="handleDelete(row)"
-            >
-              {{ $t('common.delete') }}
-            </el-button>
-          </template>
-        </vxe-column>
+                {{ $t('common.download') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('attachment.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
+            </template>
+          </vxe-column>
+        </template>
       </vxe-table>
 
       <Pagination
         v-model="pagination"
+        :auto-load="true"
+        :on-page-change="loadData"
         :show-total="true"
         :show-quick-jumper="true"
         :align="'right'"
-        @page-change="handlePageChange"
       />
     </el-card>
 
@@ -234,6 +237,7 @@ const DeleteIcon = markRaw(Delete)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import axios from 'axios'
@@ -296,59 +300,111 @@ const transformAttachmentData = (item) => {
   }
 }
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'filename': 'filename',
-  'display_name': 'display_name',
-  'file_type': 'file_type',
-  'disk': 'disk',
-  'extension': 'extension',
-  'size': 'size',
-  'mime_type': 'mime_type',
-  'created_at': 'created_at'
+// 初始搜索表单
+const initialSearchForm = {
+  filename: '',
+  display_name: '',
+  file_type: '',
+  extension: '',
+  start_time: '',
+  end_time: ''
 }
 
-// 使用列表页面 composable
 const {
   pagination,
   tableData,
   loading,
   searchForm,
-  loadData,
-  handleSearch,
-  handleReset,
-  handlePageChange,
+  loadData: baseLoadData,
+  handleSearch: baseHandleSearch,
+  handleReset: baseHandleReset,
   handleSortChange,
-  initDefaultSort
+  initDefaultSort,
+  buildOrderBy,
+  resetSort
 } = useListPage({
   fetchApi: getAttachmentList,
-  initialSearchForm: {
-    filename: '',
-    display_name: '',
-    file_type: '',
-    extension: '',
-    start_time: '',
-    end_time: ''
-  },
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  },
-  transformData: transformAttachmentData,
-  onLoadSuccess: (res, list) => {
-    // 加载所有图片的blob URL
-    list.forEach(row => {
-      if (row.file_type === 'image') {
-        // 异步加载图片，不阻塞列表渲染
-        nextTick(() => {
-          loadImageAsBlob(row)
-        })
-      }
-    })
-  }
+  initialSearchForm,
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value)
 })
+
+// 重写 loadData 以支持数据转换和图片加载
+const loadData = async (pageParams = null) => {
+  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
+  const page = pageParams?.currentPage ?? pagination.page
+  const pageSize = pageParams?.pageSize ?? pagination.pageSize
+  
+  // 更新 pagination（确保同步）
+  if (pageParams) {
+    pagination.page = page
+    pagination.pageSize = pageSize
+  }
+  
+  const params = buildSearchParams(searchForm, {
+    page,
+    page_size: pageSize,
+    order_by: buildOrderBy()
+  })
+  
+  loading.value = true
+  try {
+    const res = await getAttachmentList(params)
+    if (res.data) {
+      const list = (res.data.list || []).map(transformAttachmentData)
+      tableData.value = list
+      pagination.total = res.data.total || 0
+      
+      // 加载所有图片的blob URL
+      list.forEach(row => {
+        if (row.file_type === 'image') {
+          nextTick(() => {
+            loadImageAsBlob(row)
+          })
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Load attachment list error:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重写 handleSearch 和 handleReset 以使用自定义的 loadData
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  // 重置搜索表单
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
+  })
+  // 重置排序
+  resetSort()
+  // 重置并加载
+  pagination.page = 1
+  loadData()
+}
+
+// 表格列配置
+const tableColumns = computed(() => [
+  { type: 'checkbox', width: 60 },
+  { field: 'id', title: t('table.id'), width: 80, sortable: true },
+  { field: 'filename', title: t('attachment.filename'), minWidth: 200, slot: 'filename' },
+  { field: 'display_name', title: t('attachment.display_name'), minWidth: 200, slot: 'display_name' },
+  { field: 'file_type', title: t('attachment.file_type'), width: 120, slot: 'file_type' },
+  { field: 'disk', title: t('attachment.disk'), width: 100, slot: 'disk' },
+  { field: 'extension', title: t('attachment.extension'), width: 100 },
+  { field: 'size', title: t('attachment.size'), width: 140, formatter: formatSize },
+  { field: 'mime_type', title: t('attachment.mime_type'), minWidth: 150 },
+  { field: 'admin', title: t('log.admin'), width: 140, formatter: formatAdmin },
+  { field: 'created_at', title: t('table.created_at'), width: 180, sortable: true },
+  { title: t('table.operation'), width: 200, fixed: 'right', slot: 'operation' }
+])
 
 const searchFields = computed(() => [
   {

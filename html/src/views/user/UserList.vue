@@ -19,68 +19,49 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ username: '', email: '', phone: '', status: '' }"
         i18n-prefix="user"
         @search="handleSearch"
         @reset="handleReset"
       />
 
-      <!-- vxe-table -->
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
+        <template #status="{ row }">
+          <el-switch
+            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+            :disabled="getButtonState('user.update').disabled"
+            @change="(val) => handleStatusChange(row, val)"
           />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-switch
-                :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-                :disabled="getButtonState('user.update').disabled"
-                @change="(val) => handleStatusChange(row, val)"
-              />
-            </template>
-            <template v-else-if="column.slot === 'balance'" #default="{ row }">
-              <span style="color: #409EFF; font-weight: bold;">
-                {{ formatBalance(row.balance || 0, row.currency) }}
-              </span>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <TableActionButtons
-                :row="row"
-                :primary-actions="getPrimaryActions(row)"
-                :more-actions="getMoreActions(row)"
-                :get-button-state="getButtonState"
-                @action="handleAction"
-              />
-            </template>
-          </vxe-column>
         </template>
-      </vxe-table>
 
-      <!-- 分页 -->
+        <template #balance="{ row }">
+          <span style="color: #409EFF; font-weight: bold;">
+            {{ formatBalance(row.balance || 0, row.currency) }}
+          </span>
+        </template>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="getPrimaryActions(row)"
+            :more-actions="getMoreActions(row)"
+            :get-button-state="getButtonState"
+            @action="handleAction"
+          />
+        </template>
+      </VxeTable>
+
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -102,11 +83,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import UserForm from './UserForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getUserList,
@@ -125,14 +108,6 @@ const router = useRouter()
 const tableRef = ref(null)
 const userFormRef = ref(null)
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  username: '',
-  email: '',
-  phone: '',
-  status: ''
-}
-
 const {
   dialogVisible,
   editId,
@@ -142,15 +117,6 @@ const {
 } = useCrud({
   deleteApi: deleteUser
 })
-
-const fieldMapping = {
-  'id': 'id',
-  'username': 'username',
-  'email': 'email',
-  'phone': 'phone',
-  'status': 'status',
-  'created_at': 'created_at'
-}
 
 // 转换用户数据（确保字段名统一）
 const transformUserData = (user) => {
@@ -167,32 +133,83 @@ const transformUserData = (user) => {
   }
 }
 
+// 初始搜索表单
+const initialSearchForm = {
+  username: '',
+  email: '',
+  phone: '',
+  status: ''
+}
+
 const {
   pagination,
   tableData,
   loading,
   searchForm,
-  loadData,
-  handleSearch,
-  handleReset,
-  handlePageChange,
+  loadData: baseLoadData,
+  handleSearch: baseHandleSearch,
+  handleReset: baseHandleReset,
   handleSortChange,
-  initDefaultSort
+  initDefaultSort,
+  buildOrderBy,
+  resetSort
 } = useListPage({
   fetchApi: getUserList,
-  initialSearchForm: {
-    username: '',
-    email: '',
-    phone: '',
-    status: ''
-  },
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  },
-  transformData: transformUserData
+  initialSearchForm,
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 重写 loadData 以支持数据转换
+const loadData = async (pageParams = null) => {
+  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
+  const page = pageParams?.currentPage ?? pagination.page
+  const pageSize = pageParams?.pageSize ?? pagination.pageSize
+  
+  // 更新 pagination（确保同步）
+  if (pageParams) {
+    pagination.page = page
+    pagination.pageSize = pageSize
+  }
+  
+  const params = buildSearchParams(searchForm, {
+    page,
+    page_size: pageSize,
+    order_by: buildOrderBy()
+  })
+  
+  loading.value = true
+  try {
+    const res = await getUserList(params)
+    if (res.data) {
+      tableData.value = (res.data.list || []).map(transformUserData)
+      pagination.total = res.data.total || 0
+    }
+  } catch (error) {
+    console.error('Load user list error:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重写 handleSearch 和 handleReset 以使用自定义的 loadData
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  // 重置搜索表单
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
+  })
+  // 重置排序
+  resetSort()
+  // 重置并加载
+  pagination.page = 1
+  loadData()
+}
 
 const searchFields = computed(() => [
   {

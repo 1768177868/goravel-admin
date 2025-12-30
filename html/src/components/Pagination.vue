@@ -142,6 +142,16 @@ const props = defineProps({
     type: String,
     default: 'right',
     validator: (value) => ['left', 'center', 'right'].includes(value)
+  },
+  // 是否自动加载（分页变化时自动触发回调）
+  autoLoad: {
+    type: Boolean,
+    default: false
+  },
+  // 自动加载的回调函数
+  onPageChange: {
+    type: Function,
+    default: null
   }
 })
 
@@ -215,6 +225,11 @@ const handlePageChange = ({ currentPage, pageSize }) => {
   })
   emit('page-change', { currentPage, pageSize })
   jumpPage.value = currentPage
+  
+  // 如果启用了自动加载，触发回调
+  if (props.autoLoad && props.onPageChange) {
+    props.onPageChange({ currentPage, pageSize })
+  }
 }
 
 // 每页条数变化处理
@@ -225,6 +240,11 @@ const handlePageSizeChange = ({ pageSize }) => {
   })
   emit('page-size-change', { pageSize })
   emit('page-change', { currentPage: 1, pageSize })
+  
+  // 如果启用了自动加载，触发回调
+  if (props.autoLoad && props.onPageChange) {
+    props.onPageChange({ currentPage: 1, pageSize })
+  }
 }
 
 // 快速跳转

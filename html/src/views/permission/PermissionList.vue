@@ -19,72 +19,43 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ name: '', slug: '', method: '', path: '', status: '', menu_id: '' }"
         i18n-prefix="permission"
         @search="handleSearch"
         @reset="handleReset"
       />
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
-                {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'menu'" #default="{ row }">
-              <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('permission.update').disabled"
-                @click="handleEdit(row)"
-              >
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('permission.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
+        <template #status="{ row }">
+          <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
+            {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+          </el-tag>
         </template>
-      </vxe-table>
+
+        <template #menu="{ row }">
+          <span>{{ getMenuDisplayTitle(row.Menu || row.menu) }}</span>
+        </template>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="operationActions"
+            :get-button-state="getButtonState"
+          />
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -98,12 +69,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import PermissionForm from './PermissionForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
@@ -119,17 +92,6 @@ const { t, te } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  name: '',
-  slug: '',
-  method: '',
-  path: '',
-  status: '',
-  menu_id: ''
-}
-
-// 使用 CRUD composable
 const {
   dialogVisible,
   editId,
@@ -139,19 +101,6 @@ const {
   deleteApi: deletePermission
 })
 
-// 字段名映射
-const fieldMapping = {
-  'id': 'id',
-  'name': 'name',
-  'slug': 'slug',
-  'method': 'method',
-  'path': 'path',
-  'status': 'status',
-  'sort': 'sort',
-  'created_at': 'created_at'
-}
-
-// 使用列表页面 composable
 const {
   pagination,
   tableData,
@@ -160,7 +109,6 @@ const {
   loadData,
   handleSearch,
   handleReset,
-  handlePageChange,
   handleSortChange,
   initDefaultSort
 } = useListPage({
@@ -173,11 +121,9 @@ const {
     status: '',
     menu_id: ''
   },
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  }
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
 
 // 表格列配置
@@ -384,9 +330,6 @@ const getMenuDisplayTitle = (menu) => {
   return getMenuTitle(menuObj)
 }
 
-// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
-// handleAdd, handleDelete 已由 useCrud 提供
-
 const handleEdit = (row) => {
   editId.value = row.id
   dialogVisible.value = true
@@ -397,6 +340,24 @@ const handleFormSuccess = () => {
 }
 
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
+
+// 操作按钮配置
+const operationActions = computed(() => [
+  {
+    key: 'edit',
+    label: t('common.edit'),
+    type: 'primary',
+    permission: 'permission.update',
+    handler: handleEdit
+  },
+  {
+    key: 'delete',
+    label: t('common.delete'),
+    type: 'danger',
+    permission: 'permission.destroy',
+    handler: handleDelete
+  }
+])
 
 onMounted(() => {
   initDefaultSort()

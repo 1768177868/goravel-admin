@@ -25,81 +25,67 @@
         @reset="handleReset"
       />
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        stripe
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
       >
-        <vxe-column type="checkbox" width="60" />
-        <vxe-column field="id" :title="$t('table.id')" width="80" sortable />
-        <vxe-column field="filename" :title="$t('export.filename')" min-width="200" />
-        <vxe-column field="disk" :title="$t('export.disk')" width="120" />
-        <vxe-column field="path" :title="$t('export.path')" min-width="260" />
-        <vxe-column field="extension" :title="$t('export.extension')" width="100" />
-        <vxe-column field="size" :title="$t('export.size')" width="140" :formatter="formatSize" />
-        <vxe-column field="status" :title="$t('log.status')" width="150">
-          <template #default="{ row }">
-            <div>
-              <el-tag :type="getStatusTagType(row.status || row.Status)">
-                {{ formatStatus({ row }) }}
-              </el-tag>
-              <el-progress
-                v-if="isExportProcessing(row)"
-                :percentage="getExportProgress(row)"
-                :status="getExportProgressStatus(row)"
-                :stroke-width="4"
-                style="margin-top: 4px;"
-              />
-            </div>
-          </template>
-        </vxe-column>
-        <vxe-column field="admin" :title="$t('log.admin')" width="140" :formatter="formatAdmin" />
-        <vxe-column field="created_at" :title="$t('table.created_at')" width="180" sortable />
-        <vxe-column :title="$t('table.operation')" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button 
+        <template #status="{ row }">
+          <div>
+            <el-tag :type="getStatusTagType(row.status || row.Status)">
+              {{ formatStatus({ row }) }}
+            </el-tag>
+            <el-progress
               v-if="isExportProcessing(row)"
-              type="info" 
-              link 
-              size="small"
-              @click="handleMonitorExport(row)"
-            >
-              {{ monitoringExports.has(row.id || row.ID) ? ($t('export.stop_monitor') || '停止监控') : ($t('export.monitor_progress') || '监控进度') }}
-            </el-button>
-            <el-button 
-              type="primary" 
-              link 
-              :disabled="downloadingIds.has(row.id || row.ID) || !isExportCompleted(row)"
-              :loading="downloadingIds.has(row.id || row.ID)"
-              @click="handleDownload(row)"
-            >
-              {{ $t('common.view') }}
-            </el-button>
-            <el-button 
-              type="danger" 
-              link 
-              :disabled="getButtonState('export.destroy').disabled"
-              @click="handleDelete(row)"
-            >
-              {{ $t('common.delete') }}
-            </el-button>
-          </template>
-        </vxe-column>
-      </vxe-table>
+              :percentage="getExportProgress(row)"
+              :status="getExportProgressStatus(row)"
+              :stroke-width="4"
+              style="margin-top: 4px;"
+            />
+          </div>
+        </template>
+        <template #operation="{ row }">
+          <el-button 
+            v-if="isExportProcessing(row)"
+            type="info" 
+            link 
+            size="small"
+            @click="handleMonitorExport(row)"
+          >
+            {{ monitoringExports.has(row.id || row.ID) ? ($t('export.stop_monitor') || '停止监控') : ($t('export.monitor_progress') || '监控进度') }}
+          </el-button>
+          <el-button 
+            type="primary" 
+            link 
+            :disabled="downloadingIds.has(row.id || row.ID) || !isExportCompleted(row)"
+            :loading="downloadingIds.has(row.id || row.ID)"
+            @click="handleDownload(row)"
+          >
+            {{ $t('common.view') }}
+          </el-button>
+          <el-button 
+            type="danger" 
+            link 
+            :disabled="getButtonState('export.destroy').disabled"
+            @click="handleDelete(row)"
+          >
+            {{ $t('common.delete') }}
+          </el-button>
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
+        :auto-load="true"
+        :on-page-change="loadData"
         :show-total="true"
         :show-quick-jumper="true"
         :align="'right'"
-        @page-change="handlePageChange"
       />
     </el-card>
   </div>
@@ -112,7 +98,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
 import { useListPage } from '../../composables/useListPage'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { getExportList, deleteExport, batchDeleteExports, createExportProgressSSE } from '../../api/export'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
@@ -144,16 +132,13 @@ const transformExportData = (item) => {
   }
 }
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'filename': 'filename',
-  'disk': 'disk',
-  'path': 'path',
-  'extension': 'extension',
-  'size': 'size',
-  'status': 'status',
-  'created_at': 'created_at'
+// 初始搜索表单
+const initialSearchForm = {
+  filename: '',
+  disk: '',
+  status: '',
+  start_time: '',
+  end_time: ''
 }
 
 // 使用列表页面 composable
@@ -162,28 +147,85 @@ const {
   tableData,
   loading,
   searchForm,
-  loadData,
-  handleSearch,
-  handleReset,
-  handlePageChange,
+  loadData: baseLoadData,
+  handleSearch: baseHandleSearch,
+  handleReset: baseHandleReset,
   handleSortChange,
-  initDefaultSort
+  initDefaultSort,
+  buildOrderBy,
+  resetSort
 } = useListPage({
   fetchApi: getExportList,
-  initialSearchForm: {
-    filename: '',
-    disk: '',
-    status: '',
-    start_time: '',
-    end_time: ''
-  },
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  },
-  transformData: transformExportData
+  initialSearchForm,
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+// 重写 loadData 以支持数据转换
+const loadData = async (pageParams = null) => {
+  // 如果提供了分页参数，使用它们；否则使用 pagination 的值
+  const page = pageParams?.currentPage ?? pagination.page
+  const pageSize = pageParams?.pageSize ?? pagination.pageSize
+  
+  // 更新 pagination（确保同步）
+  if (pageParams) {
+    pagination.page = page
+    pagination.pageSize = pageSize
+  }
+  
+  const params = buildSearchParams(searchForm, {
+    page,
+    page_size: pageSize,
+    order_by: buildOrderBy()
+  })
+  
+  loading.value = true
+  try {
+    const res = await getExportList(params)
+    if (res.data) {
+      tableData.value = (res.data.list || []).map(transformExportData)
+      pagination.total = res.data.total || 0
+    }
+  } catch (error) {
+    console.error('Load export list error:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重写 handleSearch 和 handleReset 以使用自定义的 loadData
+const handleSearch = () => {
+  pagination.page = 1
+  loadData()
+}
+
+const handleReset = () => {
+  // 重置搜索表单
+  Object.keys(searchForm).forEach(key => {
+    searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
+  })
+  // 重置排序
+  resetSort()
+  // 重置并加载
+  pagination.page = 1
+  loadData()
+}
+
+// 表格列配置
+const tableColumns = computed(() => [
+  { type: 'checkbox', width: 60 },
+  { field: 'id', title: t('table.id'), width: 80, sortable: true },
+  { field: 'filename', title: t('export.filename'), minWidth: 200 },
+  { field: 'disk', title: t('export.disk'), width: 120 },
+  { field: 'path', title: t('export.path'), minWidth: 260 },
+  { field: 'extension', title: t('export.extension'), width: 100 },
+  { field: 'size', title: t('export.size'), width: 140, formatter: formatSize },
+  { field: 'status', title: t('log.status'), width: 150, slot: 'status' },
+  { field: 'admin', title: t('log.admin'), width: 140, formatter: formatAdmin },
+  { field: 'created_at', title: t('table.created_at'), width: 180, sortable: true },
+  { title: t('table.operation'), width: 200, fixed: 'right', slot: 'operation' }
+])
 
 const searchFields = computed(() => [
   {
@@ -505,7 +547,7 @@ const handleDelete = async (row) => {
 }
 
 const handleSelectionChange = () => {
-  selectedRows.value = tableRef.value?.getCheckboxRecords() || []
+  selectedRows.value = tableRef.value?.tableRef?.getCheckboxRecords() || []
 }
 
 const handleBatchDelete = async () => {

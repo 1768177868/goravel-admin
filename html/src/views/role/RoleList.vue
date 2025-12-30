@@ -18,72 +18,41 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ name: '', status: '' }"
         i18n-prefix="role"
         @search="handleSearch"
         @reset="handleReset"
       />
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
+        <template #status="{ row }">
+          <el-switch
+            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+            :disabled="isProtectedRole(row) || getButtonState('role.update').disabled"
+            @change="(val) => handleStatusChange(row, val)"
           />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-switch
-                :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-                :disabled="isProtectedRole(row) || getButtonState('role.update').disabled"
-                @change="(val) => handleStatusChange(row, val)"
-              />
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                :disabled="getButtonState('role.update').disabled"
-                @click="handleEdit(row)"
-              >
-                {{ $t('common.edit') }}
-              </el-button>
-              <el-button 
-                v-if="!isProtectedRole(row)"
-                type="danger" 
-                link 
-                :disabled="getButtonState('role.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
         </template>
-      </vxe-table>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="getPrimaryActions(row)"
+            :get-button-state="getButtonState"
+          />
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -195,7 +164,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, InfoFilled, Menu, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
-import { useTableSort } from '../../composables/useTableSort'
+import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
+import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import { getMenuTranslation } from '../../utils/menuTranslation'
@@ -217,12 +188,6 @@ const formRef = ref(null)
 const tableRef = ref(null)
 const menuPermissionTreeRef = ref(null)
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  name: '',
-  status: ''
-}
-const loading = ref(false)
 const formLoading = ref(false)
 const submitting = ref(false)
 
@@ -233,11 +198,6 @@ const { handleDelete: handleDeleteCrud } = useCrud({
 
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => formData.id ? t('role.edit_role') : t('role.add_role'))
-
-const searchForm = reactive({
-  name: '',
-  status: ''
-})
 
 // 表格列配置
 const tableColumns = computed(() => [
@@ -327,13 +287,6 @@ const searchFields = computed(() => [
   }
 ])
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const tableData = ref([])
 const menuPermissionTree = ref([])
 const checkedKeys = ref([])
 const treeKey = ref(0)
@@ -355,63 +308,26 @@ const formRules = computed(() => ({
   slug: [{ required: true, message: t('role.slug_required'), trigger: 'blur' }]
 }))
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'name': 'name',
-  'slug': 'slug',
-  'description': 'description',
-  'status': 'status',
-  'sort': 'sort',
-  'created_at': 'created_at'
-}
-
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getRoleList,
+  initialSearchForm: {
+    name: '',
+    status: ''
+  },
+  fieldMapping: {},
   defaultSort: 'id:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    loadData()
-  }
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize
-    }
-    if (searchForm.name && searchForm.name.trim()) {
-      params.name = searchForm.name.trim()
-    }
-    if (searchForm.status) {
-      params.status = searchForm.status
-    }
-    
-    const res = await getRoleList(params)
-    if (res.data) {
-      const roles = res.data.list || []
-      tableData.value = roles.map(role => ({
-        ...role,
-        id: role.ID || role.id,
-        name: role.Name || role.name,
-        slug: role.Slug || role.slug,
-        description: role.Description || role.description,
-        status: role.Status !== undefined ? Number(role.Status) : (role.status !== undefined ? Number(role.status) : 1),
-        sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0),
-        created_at: role.CreatedAt || role.created_at
-      }))
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('Load role list error:', error)
-  } finally {
-    loading.value = false
-  }
-}
 
 // 获取菜单标题（优先使用 slug，如果没有则使用 path 和 title 映射，最后使用原始标题）
 const getMenuTitle = (menu) => {
@@ -742,23 +658,7 @@ const loadMenuPermissionTree = async () => {
   }
 }
 
-const handleSearch = () => {
-  pagination.page = 1
-  loadData()
-}
-
-const handleReset = () => {
-  searchForm.name = ''
-  searchForm.status = ''
-  resetSort()
-  handleSearch()
-}
-
-const handlePageChange = ({ currentPage, pageSize }) => {
-  pagination.page = currentPage
-  pagination.pageSize = pageSize
-  loadData()
-}
+// handleSearch, handleReset 已由 useListPage 提供
 
 const handleAdd = () => {
   if (dialogVisible.value) {
@@ -1147,6 +1047,27 @@ const handleDelete = (row) => {
     return
   }
   handleDeleteCrud(row, loadData)
+}
+
+// 获取主要操作按钮配置
+const getPrimaryActions = (row) => {
+  return [
+    {
+      key: 'edit',
+      label: t('common.edit'),
+      type: 'primary',
+      permission: 'role.update',
+      handler: handleEdit
+    },
+    {
+      key: 'delete',
+      label: t('common.delete'),
+      type: 'danger',
+      permission: 'role.destroy',
+      show: () => !isProtectedRole(row),
+      handler: handleDelete
+    }
+  ]
 }
 
 onMounted(async () => {

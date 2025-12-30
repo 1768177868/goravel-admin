@@ -20,7 +20,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ username: '', ip: '', browser: '', os: '' }"
         i18n-prefix="online_admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -40,59 +40,40 @@
         </div>
       </div>
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
-        @checkbox-change="handleCheckboxChange"
-        @checkbox-all="handleCheckboxAll"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-          >
-            <template v-if="column.slot === 'avatar'" #default="{ row }">
-              <el-avatar :size="32" :src="row.avatar">
-                {{ row.nickname ? row.nickname.charAt(0) : (row.username ? row.username.charAt(0) : 'U') }}
-              </el-avatar>
-            </template>
-            <template v-else-if="column.slot === 'last_active'" #default="{ row }">
-              {{ formatTime(row.last_active) }}
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('admin.kick_out').disabled"
-                @click="handleKickOut(row)"
-              >
-                {{ $t('online_admin.kick_out') }}
-              </el-button>
-            </template>
-          </vxe-column>
+        <template #avatar="{ row }">
+          <el-avatar :size="32" :src="row.avatar">
+            {{ row.nickname ? row.nickname.charAt(0) : (row.username ? row.username.charAt(0) : 'U') }}
+          </el-avatar>
         </template>
-      </vxe-table>
+
+        <template #last_active="{ row }">
+          {{ formatTime(row.last_active) }}
+        </template>
+
+        <template #operation="{ row }">
+          <el-button 
+            type="danger" 
+            link 
+            :disabled="getButtonState('admin.kick_out').disabled"
+            @click="handleKickOut(row)"
+          >
+            {{ $t('online_admin.kick_out') }}
+          </el-button>
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -100,7 +81,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { ref, onMounted, computed, markRaw } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -109,48 +90,41 @@ const SettingIcon = markRaw(Setting)
 import { getOnlineAdminList, kickOutOnlineAdmin, batchKickOutOnlineAdmins } from '@/api/onlineAdmin'
 import SearchForm from '@/components/SearchForm.vue'
 import Pagination from '@/components/Pagination.vue'
+import VxeTable from '@/components/VxeTable.vue'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog.vue'
 import { useColumnSetting } from '@/composables/useColumnSetting'
 import { usePermission } from '@/composables/usePermission'
-import { useTableSort } from '@/composables/useTableSort'
+import { useListPage } from '@/composables/useListPage'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
-const loading = ref(false)
-const tableData = ref([])
 const selectedRows = ref([])
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  username: '',
-  ip: '',
-  browser: '',
-  os: ''
-}
-
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'username': 'username',
-  'nickname': 'nickname',
-  'browser': 'browser',
-  'ip': 'ip',
-  'os': 'os',
-  'session_id': 'session_id',
-  'last_active': 'last_used_at'
-}
-
-// 使用排序 composable
-const { buildOrderBy, handleSortChange, resetSort, initDefaultSort } = useTableSort({
-  tableRef,
-  fieldMapping,
+const {
+  pagination,
+  tableData,
+  loading,
+  searchForm,
+  loadData,
+  handleSearch,
+  handleReset,
+  handleSortChange,
+  initDefaultSort
+} = useListPage({
+  fetchApi: getOnlineAdminList,
+  initialSearchForm: {
+    username: '',
+    ip: '',
+    browser: '',
+    os: ''
+  },
+  fieldMapping: {
+    'last_active': 'last_used_at'
+  },
   defaultSort: 'last_used_at:desc',
-  onSortChange: () => {
-    pagination.page = 1
-    fetchData()
-  }
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
 
 // 所有列的完整配置（必须在 useColumnSetting 之前定义）
@@ -231,13 +205,6 @@ const {
   handleSaveColumnSetting
 } = useColumnSetting('online_admin', allTableColumns)
 
-const searchForm = reactive({
-  username: '',
-  ip: '',
-  browser: '',
-  os: ''
-})
-
 const searchFields = computed(() => [
   {
     prop: 'username',
@@ -273,12 +240,6 @@ const searchFields = computed(() => [
   }
 ])
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
 // 格式化时间
 const formatTime = (time) => {
   if (!time) return '-'
@@ -308,56 +269,7 @@ const formatTime = (time) => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-const fetchData = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-      order_by: buildOrderBy(),
-      ...searchForm
-    }
-    const res = await getOnlineAdminList(params)
-    if (res.code === 200) {
-      tableData.value = res.data.list || []
-      pagination.total = res.data.total || 0
-    } else {
-      ElMessage.error(res.message || t('common.operation_failed'))
-    }
-  } catch (error) {
-    console.error('Fetch online admins error:', error)
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
-    if (!error?.__handled) {
-      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
-      ElMessage.error(errorMessage)
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pagination.page = 1
-  fetchData()
-}
-
-const handleReset = () => {
-  Object.assign(searchForm, {
-    username: '',
-    ip: '',
-    browser: '',
-    os: ''
-  })
-  resetSort()
-  pagination.page = 1
-  fetchData()
-}
-
-const handlePageChange = (page, pageSize) => {
-  pagination.page = page
-  pagination.pageSize = pageSize
-  fetchData()
-}
+// loadData, handleSearch, handleReset 已由 useListPage 提供
 
 const handleCheckboxChange = ({ row, checked }) => {
   if (!selectedRows.value) {
@@ -395,7 +307,7 @@ const handleKickOut = async (row) => {
     const res = await kickOutOnlineAdmin(row.id)
     if (res.code === 200) {
       ElMessage.success(t('online_admin.kick_out_success'))
-      fetchData()
+      loadData()
     } else {
       ElMessage.error(res.message || t('common.operation_failed'))
     }
@@ -429,7 +341,7 @@ const handleBatchKickOut = async () => {
     if (res.code === 200) {
       ElMessage.success(t('online_admin.batch_kick_out_success'))
       selectedRows.value = []
-      fetchData()
+      loadData()
     } else {
       ElMessage.error(res.message || t('common.operation_failed'))
     }
@@ -447,7 +359,7 @@ const handleBatchKickOut = async () => {
 
 onMounted(() => {
   initDefaultSort()
-  fetchData()
+  loadData()
 })
 </script>
 

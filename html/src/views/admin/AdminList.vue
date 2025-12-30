@@ -19,7 +19,7 @@
       <SearchForm
         :model="searchForm"
         :fields="searchFields"
-        :initial-values="initialSearchValues"
+        :initial-values="{ username: '', status: '', role_id: '', department_id: '', is_2fa_bound: '' }"
         i18n-prefix="admin"
         @search="handleSearch"
         @reset="handleReset"
@@ -35,76 +35,58 @@
         </template>
       </SearchForm>
 
-      <!-- vxe-table -->
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
+        <template #status="{ row }">
+          <el-switch
+            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+            :disabled="isProtectedAdmin(row.id) || getButtonState('admin.update').disabled"
+            @change="(val) => handleStatusChange(row, val)"
           />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-switch
-                :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-                :disabled="isProtectedAdmin(row.id) || getButtonState('admin.update').disabled"
-                @change="(val) => handleStatusChange(row, val)"
-              />
-            </template>
-            <template v-else-if="column.slot === 'department'" #default="{ row }">
-              {{ getDepartmentDisplayName(row.Department || row.department) }}
-            </template>
-            <template v-else-if="column.slot === 'roles'" #default="{ row }">
-              <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
-                <el-tag
-                  v-for="role in getUniqueRoles(row.Roles || row.roles)"
-                  :key="role.id || role.ID"
-                  style="margin-right: 5px;"
-                >
-                  {{ role.Name || role.name }}
-                </el-tag>
-              </template>
-              <span v-else>-</span>
-            </template>
-            <template v-else-if="column.slot === 'is_2fa_bound'" #default="{ row }">
-              {{ (row.is_2fa_bound || row.Is2FABound) ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <TableActionButtons
-                :row="row"
-                :primary-actions="getPrimaryActions(row)"
-                :more-actions="getMoreActions(row)"
-                :get-button-state="getButtonState"
-                @action="handleAction"
-              />
-            </template>
-          </vxe-column>
         </template>
-      </vxe-table>
 
-      <!-- 分页 -->
+        <template #department="{ row }">
+          {{ getDepartmentDisplayName(row.Department || row.department) }}
+        </template>
+
+        <template #roles="{ row }">
+          <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
+            <el-tag
+              v-for="role in getUniqueRoles(row.Roles || row.roles)"
+              :key="role.id || role.ID"
+              style="margin-right: 5px;"
+            >
+              {{ role.Name || role.name }}
+            </el-tag>
+          </template>
+          <span v-else>-</span>
+        </template>
+
+        <template #is_2fa_bound="{ row }">
+          {{ (row.is_2fa_bound || row.Is2FABound) ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
+        </template>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="getPrimaryActions(row)"
+            :more-actions="getMoreActions(row)"
+            :get-button-state="getButtonState"
+            @action="handleAction"
+          />
+        </template>
+      </VxeTable>
+
       <Pagination
         v-model="pagination"
-        @page-change="handlePageChange"
+        :auto-load="true"
+        :on-page-change="loadData"
       />
     </el-card>
 
@@ -128,6 +110,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import AdminForm from './AdminForm.vue'
 import { useListPage } from '../../composables/useListPage'
@@ -159,16 +142,6 @@ const router = useRouter()
 const tableRef = ref(null)
 const adminFormRef = ref(null)
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  username: '',
-  status: '',
-  role_id: '',
-  department_id: '',
-  is_2fa_bound: ''
-}
-
-// 使用 CRUD composable
 const {
   dialogVisible,
   editId,
@@ -179,18 +152,6 @@ const {
   deleteApi: deleteAdmin
 })
 
-// 字段名映射：前端字段名 -> 数据库字段名
-const fieldMapping = {
-  'id': 'id',
-  'username': 'username',
-  'nickname': 'nickname',
-  'email': 'email',
-  'phone': 'phone',
-  'status': 'status',
-  'created_at': 'created_at'
-}
-
-// 使用列表页面 composable
 const {
   pagination,
   tableData,
@@ -199,7 +160,6 @@ const {
   loadData,
   handleSearch,
   handleReset,
-  handlePageChange,
   handleSortChange,
   initDefaultSort
 } = useListPage({
@@ -211,11 +171,9 @@ const {
     department_id: '',
     is_2fa_bound: ''
   },
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  }
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
 
 // 表格列配置（使用 vxe-table columns）
@@ -315,7 +273,7 @@ const searchFields = computed(() => [
   },
   {
     prop: 'role_id',
-    label: t('role.title'),
+    label: t('menu.role'),
     type: 'select',
     width: '150px',
     filterable: true,

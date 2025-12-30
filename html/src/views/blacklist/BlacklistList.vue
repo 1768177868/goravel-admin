@@ -1,77 +1,81 @@
 <template>
-  <ListPage
-    ref="listPageRef"
-    page-class="blacklist"
-    :title="$t('menu.blacklist')"
-    :show-add-button="true"
-    :add-button-text="$t('blacklist.add_blacklist')"
-    :add-button-disabled="getButtonState('blacklist.store').disabled"
-    :search-form="searchForm"
-    :search-fields="searchFields"
-    :initial-search-values="initialSearchValues"
-    i18n-prefix="blacklist"
-    :table-data="tableData"
-    :loading="loading"
-    :table-columns="tableColumns"
-    :pagination="pagination"
-    :dialog-visible="dialogVisible"
-    :edit-id="editId"
-    @add="handleAdd"
-    @search="handleSearch"
-    @reset="handleReset"
-    @update:pagination="(val) => Object.assign(pagination, val)"
-    @page-change="handlePageChange"
-    @sort-change="handleSortChange"
-    @form-success="handleFormSuccess"
-  >
-    <!-- 自定义表格列插槽 -->
-    <template #status="{ row }">
-      <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'danger' : 'info'">
-        {{ (row.Status ?? row.status ?? 1) === 1 ? $t('blacklist.enabled') : $t('blacklist.disabled') }}
-      </el-tag>
-    </template>
+  <div class="blacklist-list">
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>{{ $t('menu.blacklist') }}</span>
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('blacklist.store').disabled"
+            @click="handleAdd"
+          >
+            <el-icon><Plus /></el-icon>
+            {{ $t('blacklist.add_blacklist') }}
+          </el-button>
+        </div>
+      </template>
 
-    <template #ip="{ row }">
-      <div style="word-break: break-all;">
-        {{ formatIP(row.IP || row.ip || '') }}
-      </div>
-    </template>
-
-    <template #operation="{ row }">
-      <el-button 
-        type="primary" 
-        link 
-        :disabled="getButtonState('blacklist.update').disabled"
-        @click="handleEdit(row)"
-      >
-        {{ $t('common.edit') }}
-      </el-button>
-      <el-button 
-        type="danger" 
-        link 
-        :disabled="getButtonState('blacklist.destroy').disabled"
-        @click="handleDelete(row)"
-      >
-        {{ $t('common.delete') }}
-      </el-button>
-    </template>
-
-    <!-- 表单对话框 -->
-    <template #form>
-      <BlacklistForm
-        v-model="dialogVisible"
-        :edit-id="editId"
-        @success="handleFormSuccess"
+      <SearchForm
+        :model="searchForm"
+        :fields="searchFields"
+        :initial-values="{ ip: '', status: '' }"
+        i18n-prefix="blacklist"
+        @search="handleSearch"
+        @reset="handleReset"
       />
-    </template>
-  </ListPage>
+
+      <VxeTable
+        ref="tableRef"
+        :data="tableData"
+        :loading="loading"
+        :columns="tableColumns"
+        :height="600"
+        @sort-change="handleSortChange"
+      >
+        <template #ip="{ row }">
+          <div style="word-break: break-all;">
+            {{ formatIP(row.IP || row.ip || '') }}
+          </div>
+        </template>
+
+        <template #status="{ row }">
+          <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'danger' : 'info'">
+            {{ (row.Status ?? row.status ?? 1) === 1 ? $t('blacklist.enabled') : $t('blacklist.disabled') }}
+          </el-tag>
+        </template>
+
+        <template #operation="{ row }">
+          <TableActionButtons
+            :row="row"
+            :primary-actions="operationActions"
+            :get-button-state="getButtonState"
+          />
+        </template>
+      </VxeTable>
+
+      <Pagination
+        v-model="pagination"
+        :auto-load="true"
+        :on-page-change="loadData"
+      />
+    </el-card>
+
+    <BlacklistForm
+      v-model="dialogVisible"
+      :edit-id="editId"
+      @success="handleFormSuccess"
+    />
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onActivated } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
-import ListPage from '../../components/ListPage.vue'
+import SearchForm from '../../components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import BlacklistForm from './BlacklistForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { useCrud } from '../../composables/useCrud'
@@ -83,25 +87,8 @@ import {
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
-const listPageRef = ref(null)
-const tableRef = computed(() => listPageRef.value?.tableRef)
+const tableRef = ref(null)
 
-// 初始搜索值（避免每次渲染创建新对象）
-const initialSearchValues = {
-  ip: '',
-  status: ''
-}
-
-// 字段名映射
-const fieldMapping = {
-  'id': 'id',
-  'ip': 'ip',
-  'remark': 'remark',
-  'status': 'status',
-  'created_at': 'created_at'
-}
-
-// 使用列表页面 composable
 const {
   pagination,
   tableData,
@@ -110,7 +97,6 @@ const {
   loadData,
   handleSearch,
   handleReset,
-  handlePageChange,
   handleSortChange,
   initDefaultSort
 } = useListPage({
@@ -119,11 +105,9 @@ const {
     ip: '',
     status: ''
   },
-  sortOptions: {
-    tableRef,
-    fieldMapping,
-    defaultSort: 'id:desc'
-  }
+  fieldMapping: {},
+  defaultSort: 'id:desc',
+  tableRef: computed(() => tableRef.value?.tableRef)
 })
 
 // 使用 CRUD composable
@@ -218,10 +202,32 @@ const formatIP = (ip) => {
   return ip
 }
 
-// 删除处理（包装 useCrud 的 handleDelete，传入 reloadData）
 const handleDelete = (row) => {
   handleDeleteCrud(row, loadData)
 }
+
+const handleEdit = (row) => {
+  editId.value = row.id
+  dialogVisible.value = true
+}
+
+// 操作按钮配置
+const operationActions = computed(() => [
+  {
+    key: 'edit',
+    label: t('common.edit'),
+    type: 'primary',
+    permission: 'blacklist.update',
+    handler: handleEdit
+  },
+  {
+    key: 'delete',
+    label: t('common.delete'),
+    type: 'danger',
+    permission: 'blacklist.destroy',
+    handler: handleDelete
+  }
+])
 
 onMounted(() => {
   initDefaultSort()
