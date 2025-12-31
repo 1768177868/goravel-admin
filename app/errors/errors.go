@@ -164,7 +164,7 @@ type BusinessError struct {
 	Code    string
 	Message string
 	Err     error
-	Params  map[string]interface{} // 用于存储动态参数（如余额值）
+	Params  map[string]any // 用于存储动态参数（如余额值）
 }
 
 // NewBusinessError 创建新的业务错误
@@ -203,10 +203,10 @@ func (e *BusinessError) WithMessage(message string) *BusinessError {
 // WithParams 设置动态参数
 // 参数会在控制器中用于替换翻译后消息中的占位符
 // 例如：翻译文件中有 "insufficient_balance": "余额不足，当前余额: {balance}"
-// 使用 WithParams(map[string]interface{}{"balance": 100}) 后，控制器会替换为 "余额不足，当前余额: 100.00"
-func (e *BusinessError) WithParams(params map[string]interface{}) *BusinessError {
+// 使用 WithParams(map[string]any{"balance": 100}) 后，控制器会替换为 "余额不足，当前余额: 100.00"
+func (e *BusinessError) WithParams(params map[string]any) *BusinessError {
 	if e.Params == nil {
-		e.Params = make(map[string]interface{})
+		e.Params = make(map[string]any)
 	}
 	for k, v := range params {
 		e.Params[k] = v
@@ -286,7 +286,7 @@ func (e *BusinessError) replacePlaceholders(message string) string {
 
 // formatValue 格式化参数值
 // float64/float32 保留2位小数，整数保持原样，其他类型使用 %v
-func (e *BusinessError) formatValue(value interface{}) string {
+func (e *BusinessError) formatValue(value any) string {
 	switch v := value.(type) {
 	case float64:
 		return fmt.Sprintf("%.2f", v)

@@ -33,11 +33,10 @@ func (receiver *RouteServiceProvider) Boot(app foundation.Application) {
 
 	receiver.configureRateLimiting()
 
-	// Add routes
 	routes.Web()
 	routes.Api()
 	routes.Admin()
-	routes.Pprof() // 性能分析路由（仅在调试模式下启用）
+	routes.Pprof()
 }
 
 func (receiver *RouteServiceProvider) configureRateLimiting() {

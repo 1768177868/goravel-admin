@@ -18,12 +18,18 @@ type UserService interface {
 	GetList(filters UserFilters, page, pageSize int) ([]models.User, int64, error)
 	// Create 创建用户
 	Create(user *models.User) error
+	// CreateWithValidation 创建用户（包含验证、密码加密、默认货币设置）
+	CreateWithValidation(username, password, nickname, email, phone string, status uint8) (*models.User, error)
 	// Update 更新用户
 	Update(id uint, user *models.User) error
 	// Delete 删除用户（软删除）
 	Delete(id uint) error
 	// UpdateBalance 更新用户余额（同时创建余额变动记录）
 	UpdateBalance(userID uint, amount float64, logType string, source string, sourceID *uint, description string, operatorID *uint, remark string) error
+	// ResetPassword 重置用户密码
+	ResetPassword(userID uint, newPassword string) error
+	// ValidateUserExists 验证用户是否存在（用户名、邮箱、手机号）
+	ValidateUserExists(username, email, phone string, excludeID uint) error
 }
 
 type UserFilters struct {
@@ -121,7 +127,7 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 	}
 	// 使用 map 创建，确保 Status 为 0 时也能正确保存（与管理员创建方式一致）
 	// GORM 在处理结构体时可能会忽略零值字段，使用 map 可以确保所有字段都被保存
-	userData := map[string]interface{}{
+	userData := map[string]any{
 		"username":      user.Username,
 		"password":      user.Password,
 		"nickname":      user.Nickname,
@@ -154,7 +160,7 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 // Update 更新用户
 func (s *UserServiceImpl) Update(id uint, user *models.User) error {
 	// 如果密码为空，则不更新密码字段
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"nickname":    user.Nickname,
 		"avatar":      user.Avatar,
 		"email":       user.Email,
@@ -199,18 +205,18 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 	case "expense":
 		newBalance = user.Balance - amount
 		if newBalance < 0 {
-			return apperrors.ErrInsufficientBalance.WithParams(map[string]interface{}{
+			return apperrors.ErrInsufficientBalance.WithParams(map[string]any{
 				"balance": user.Balance,
 			})
 		}
 	default:
-		return apperrors.ErrInvalidBalanceType.WithParams(map[string]interface{}{
+		return apperrors.ErrInvalidBalanceType.WithParams(map[string]any{
 			"type": logType,
 		})
 	}
 
 	// 1. 更新用户余额
-	_, err = facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]interface{}{
+	_, err = facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]any{
 		"balance": newBalance,
 	})
 	if err != nil {
@@ -254,8 +260,129 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 
 // rollbackBalance 回滚余额到指定值
 func (s *UserServiceImpl) rollbackBalance(userID uint, balance float64) error {
-	_, err := facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]interface{}{
+	_, err := facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]any{
 		"balance": balance,
 	})
 	return err
+}
+
+// ValidateUserExists 验证用户是否存在（用户名、邮箱、手机号）
+func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excludeID uint) error {
+	// 检查用户名是否已存在
+	if username != "" {
+		query := facades.Orm().Query().Model(&models.User{}).Where("username", username)
+		if excludeID > 0 {
+			query = query.Where("id != ?", excludeID)
+		}
+		exists, err := query.Exists()
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.ErrUsernameExists
+		}
+	}
+
+	// 检查邮箱是否已存在（如果提供了邮箱）
+	if email != "" {
+		query := facades.Orm().Query().Model(&models.User{}).Where("email", email)
+		if excludeID > 0 {
+			query = query.Where("id != ?", excludeID)
+		}
+		exists, err := query.Exists()
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.NewBusinessError("email_already_exists", "邮箱已存在")
+		}
+	}
+
+	// 检查手机号是否已存在（如果提供了手机号）
+	if phone != "" {
+		query := facades.Orm().Query().Model(&models.User{}).Where("phone", phone)
+		if excludeID > 0 {
+			query = query.Where("id != ?", excludeID)
+		}
+		exists, err := query.Exists()
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.NewBusinessError("phone_already_exists", "手机号已存在")
+		}
+	}
+
+	return nil
+}
+
+// CreateWithValidation 创建用户（包含验证、密码加密、默认货币设置）
+func (s *UserServiceImpl) CreateWithValidation(username, password, nickname, email, phone string, status uint8) (*models.User, error) {
+	// 验证用户是否存在
+	if err := s.ValidateUserExists(username, email, phone, 0); err != nil {
+		return nil, err
+	}
+
+	// 密码加密
+	hashedPassword, err := facades.Hash().Make(password)
+	if err != nil {
+		return nil, apperrors.NewBusinessError("password_encrypt_failed", "密码加密失败").WithError(err)
+	}
+
+	// 如果未设置货币ID，默认使用人民币
+	var currencyID uint
+	var cnyCurrency models.Currency
+	if err := facades.Orm().Query().Where("code", "CNY").First(&cnyCurrency); err == nil {
+		currencyID = cnyCurrency.ID
+	}
+
+	// 创建用户
+	user := &models.User{
+		Username:   username,
+		Password:   hashedPassword,
+		Nickname:   nickname,
+		Avatar:     "",
+		Email:      email,
+		Phone:      phone,
+		Balance:    0,
+		CurrencyID: currencyID,
+		Status:     status,
+	}
+
+	if err := s.Create(user); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	// 查询创建后的用户（确保获取完整信息）
+	createdUser, err := s.GetByID(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdUser, nil
+}
+
+// ResetPassword 重置用户密码
+func (s *UserServiceImpl) ResetPassword(userID uint, newPassword string) error {
+	// 检查用户是否存在
+	_, err := s.GetByID(userID)
+	if err != nil {
+		return err
+	}
+
+	// 密码加密
+	hashedPassword, err := facades.Hash().Make(newPassword)
+	if err != nil {
+		return apperrors.ErrPasswordEncryptFailed.WithError(err)
+	}
+
+	// 更新密码
+	_, err = facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]any{
+		"password": hashedPassword,
+	})
+	if err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+
+	return nil
 }

@@ -3,7 +3,6 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -80,74 +79,19 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 检查用户名是否已存在（虽然验证规则中有 not_exists，但这里显式检查以提供更好的错误处理）
-	exists, err := facades.Orm().Query().Model(&models.User{}).Where("username", userCreate.Username).Exists()
+	// 使用服务方法创建用户（包含验证、密码加密、默认货币设置）
+	user, err := r.userService.CreateWithValidation(
+		userCreate.Username,
+		userCreate.Password,
+		userCreate.Nickname,
+		userCreate.Email,
+		userCreate.Phone,
+		userCreate.Status,
+	)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUsernameExists.Code)
-	}
-
-	// 检查邮箱是否已存在（如果提供了邮箱）
-	if userCreate.Email != "" {
-		exists, err := facades.Orm().Query().Model(&models.User{}).Where("email", userCreate.Email).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "email_already_exists")
-		}
-	}
-
-	// 检查手机号是否已存在（如果提供了手机号）
-	if userCreate.Phone != "" {
-		exists, err := facades.Orm().Query().Model(&models.User{}).Where("phone", userCreate.Phone).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "phone_already_exists")
-		}
-	}
-
-	// 密码加密
-	hashedPassword, err := facades.Hash().Make(userCreate.Password)
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
-	}
-
-	// 如果未设置货币ID，默认使用人民币
-	var currencyID uint
-	var cnyCurrency models.Currency
-	if err := facades.Orm().Query().Where("code", "CNY").First(&cnyCurrency); err == nil {
-		currencyID = cnyCurrency.ID
-	}
-
-	now := carbon.Now()
-	userData := map[string]any{
-		"username":    userCreate.Username,
-		"password":    hashedPassword,
-		"nickname":    userCreate.Nickname,
-		"avatar":      "",
-		"email":       userCreate.Email,
-		"phone":       userCreate.Phone,
-		"balance":     0,
-		"currency_id": currencyID,
-		"status":      userCreate.Status,
-		"created_at":  now,
-		"updated_at":  now,
-	}
-
-	var user models.User
-	if err := facades.Orm().Query().Table("users").Create(userData); err != nil {
-		return response.ErrorWithLog(ctx, "user", err, map[string]any{
-			"username": userCreate.Username,
-		})
-	}
-
-	// 查询创建后的用户
-	if err := facades.Orm().Query().Where("username", userCreate.Username).First(&user); err != nil {
 		return response.ErrorWithLog(ctx, "user", err, map[string]any{
 			"username": userCreate.Username,
 		})
@@ -172,26 +116,12 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 检查邮箱是否已存在（排除当前用户）
-	if userUpdate.Email != "" && id > 0 {
-		exists, err := facades.Orm().Query().Model(&models.User{}).Where("email", userUpdate.Email).Where("id != ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
+	// 使用服务方法验证用户是否存在（排除当前用户）
+	if err := r.userService.ValidateUserExists("", userUpdate.Email, userUpdate.Phone, id); err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "email_already_exists")
-		}
-	}
-
-	// 检查手机号是否已存在（排除当前用户）
-	if userUpdate.Phone != "" && id > 0 {
-		exists, err := facades.Orm().Query().Model(&models.User{}).Where("phone", userUpdate.Phone).Where("id != ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "phone_already_exists")
-		}
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 	}
 
 	user := models.User{
@@ -289,20 +219,13 @@ func (r *UserController) ResetPassword(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	var user models.User
-	if err := facades.Orm().Query().Where("id", id).First(&user); err != nil {
-		return response.Error(ctx, http.StatusNotFound, apperrors.ErrUserNotFound.Code)
-	}
-
-	hashedPassword, err := facades.Hash().Make(resetPasswordRequest.Password)
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
-	}
-
-	user.Password = hashedPassword
-	if err := facades.Orm().Query().Save(&user); err != nil {
+	// 使用服务方法重置密码
+	if err := r.userService.ResetPassword(id, resetPasswordRequest.Password); err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "password", err, map[string]any{
-			"user_id": user.ID,
+			"user_id": id,
 		})
 	}
 

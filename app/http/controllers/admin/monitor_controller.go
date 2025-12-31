@@ -1524,7 +1524,7 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 	return r.doCollectSystemInfo(ctx)
 }
 
-// getFloat64 从 interface{} 安全地获取 float64 值
+// getFloat64 从 any 安全地获取 float64 值
 func getFloat64(v any) float64 {
 	if f, ok := v.(float64); ok {
 		return f

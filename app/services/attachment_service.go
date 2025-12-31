@@ -141,7 +141,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	for i := range indices {
 		chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, i)
 		if !storage.Exists(chunkPath) {
-			return nil, apperrors.ErrChunkNotFound.WithParams(map[string]interface{}{
+			return nil, apperrors.ErrChunkNotFound.WithParams(map[string]any{
 				"chunk_index": i,
 			})
 		}
@@ -242,7 +242,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 					"error":       err.Error(),
 				}, "写入分片 %d 失败: %w", i, err)
 			}
-			return nil, apperrors.ErrWriteChunkFailed.WithError(err).WithParams(map[string]interface{}{
+			return nil, apperrors.ErrWriteChunkFailed.WithError(err).WithParams(map[string]any{
 				"chunk_index": i,
 			})
 		}
@@ -266,7 +266,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 	// 检查是否有缺失的分片
 	if len(missingChunks) > 0 {
 		_ = os.Remove(finalFullPath)
-		return nil, apperrors.ErrChunkMissing.WithParams(map[string]interface{}{
+		return nil, apperrors.ErrChunkMissing.WithParams(map[string]any{
 			"missing_chunks": missingChunks,
 			"count":          len(missingChunks),
 		})

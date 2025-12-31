@@ -5,19 +5,22 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 
 	apperrors "goravel/app/errors"
 	apirequests "goravel/app/http/requests/api"
 	"goravel/app/http/response"
 	"goravel/app/models"
+	"goravel/app/services"
 )
 
 type AuthController struct {
+	userService services.UserService
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{}
+	return &AuthController{
+		userService: services.NewUserService(),
+	}
 }
 
 // Register 用户注册
@@ -31,74 +34,19 @@ func (r *AuthController) Register(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 检查用户名是否已存在
-	exists, err := facades.Orm().Query().Model(&models.User{}).Where("username", registerRequest.Username).Exists()
+	// 使用服务方法创建用户（包含验证、密码加密、默认货币设置）
+	user, err := r.userService.CreateWithValidation(
+		registerRequest.Username,
+		registerRequest.Password,
+		registerRequest.Nickname,
+		registerRequest.Email,
+		registerRequest.Phone,
+		1, // C端注册默认启用
+	)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUsernameExists.Code)
-	}
-
-	// 检查邮箱是否已存在（如果提供了邮箱）
-	if registerRequest.Email != "" {
-		exists, err := facades.Orm().Query().Model(&models.User{}).Where("email", registerRequest.Email).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "email_already_exists")
-		}
-	}
-
-	// 检查手机号是否已存在（如果提供了手机号）
-	if registerRequest.Phone != "" {
-		exists, err := facades.Orm().Query().Model(&models.User{}).Where("phone", registerRequest.Phone).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, "phone_already_exists")
-		}
-	}
-
-	// 密码加密
-	hashedPassword, err := facades.Hash().Make(registerRequest.Password)
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
-	}
-
-	// 如果未设置货币ID，默认使用人民币
-	var currencyID uint
-	var cnyCurrency models.Currency
-	if err := facades.Orm().Query().Where("code", "CNY").First(&cnyCurrency); err == nil {
-		currencyID = cnyCurrency.ID
-	}
-
-	now := carbon.Now()
-	userData := map[string]any{
-		"username":    registerRequest.Username,
-		"password":    hashedPassword,
-		"nickname":    registerRequest.Nickname,
-		"avatar":      "",
-		"email":       registerRequest.Email,
-		"phone":       registerRequest.Phone,
-		"balance":     0,
-		"currency_id": currencyID,
-		"status":      1, // 默认启用
-		"created_at":  now,
-		"updated_at":  now,
-	}
-
-	var user models.User
-	if err := facades.Orm().Query().Table("users").Create(userData); err != nil {
-		return response.ErrorWithLog(ctx, "user", err, map[string]any{
-			"username": registerRequest.Username,
-		})
-	}
-
-	// 查询创建后的用户
-	if err := facades.Orm().Query().Where("username", registerRequest.Username).First(&user); err != nil {
 		return response.ErrorWithLog(ctx, "user", err, map[string]any{
 			"username": registerRequest.Username,
 		})

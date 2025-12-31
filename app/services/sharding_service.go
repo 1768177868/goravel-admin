@@ -65,7 +65,7 @@ func (s *ShardingServiceImpl) RegisterTableCreator(baseTableName string, creator
 func (s *ShardingServiceImpl) CreateShardingTable(tableName, baseTableName string) error {
 	creator, exists := s.creators[baseTableName]
 	if !exists {
-		return apperrors.ErrBaseTableNotRegistered.WithParams(map[string]interface{}{
+		return apperrors.ErrBaseTableNotRegistered.WithParams(map[string]any{
 			"base_table_name": baseTableName,
 		})
 	}
@@ -83,11 +83,11 @@ func (s *ShardingServiceImpl) EnsureShardingTable(tableName, baseTableName strin
 	// 创建表
 	if err := s.CreateShardingTable(tableName, baseTableName); err != nil {
 		errorlog.Record(context.Background(), "sharding", "创建分表失败", map[string]any{
-			"table_name":     tableName,
+			"table_name":      tableName,
 			"base_table_name": baseTableName,
-			"error":          err.Error(),
+			"error":           err.Error(),
 		}, "创建分表 %s 失败: %v", tableName, err)
-		return apperrors.ErrCreateShardingTableFailed.WithError(err).WithParams(map[string]interface{}{
+		return apperrors.ErrCreateShardingTableFailed.WithError(err).WithParams(map[string]any{
 			"table_name": tableName,
 		})
 	}

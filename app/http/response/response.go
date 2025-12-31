@@ -103,7 +103,7 @@ func SuccessWithHeader(ctx http.Context, messageKey string, headerKey, headerVal
 //  2. response.Error(ctx, code, err) - 自动检测 BusinessError 并处理占位符替换
 //
 // 当 code >= 500 时，如果 context 中包含错误日志信息，会自动记录日志
-func Error(ctx http.Context, code int, messageOrErr interface{}) http.Response {
+func Error(ctx http.Context, code int, messageOrErr any) http.Response {
 	var message string
 	var messageKey string
 
