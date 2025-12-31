@@ -44,12 +44,20 @@ export function deleteOrder(id) {
   })
 }
 
-// 导出订单
+// 导出订单（异步）
 export function exportOrder(params) {
   return request({
     url: '/orders/export',
     method: 'post',
     data: params
+  })
+}
+
+// 查询导出状态
+export function getExportStatus(exportId) {
+  return request({
+    url: `/orders/export/status/${exportId}`,
+    method: 'get'
   })
 }
 

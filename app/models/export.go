@@ -13,7 +13,15 @@ type Export struct {
 	Filename  string `gorm:"size:255;comment:文件名"`
 	Extension string `gorm:"size:20;comment:文件后缀"`
 	Size      int64  `gorm:"comment:文件大小(字节)"`
-	Status    uint8  `gorm:"default:1;comment:状态 1:成功 0:失败"`
+	Status    uint8  `gorm:"default:0;comment:状态 0:处理中 1:成功 2:失败"`
+	ErrorMsg  string `gorm:"type:text;comment:错误信息"`
 }
+
+// 导出状态常量
+const (
+	ExportStatusProcessing uint8 = 0 // 处理中
+	ExportStatusSuccess    uint8 = 1 // 成功
+	ExportStatusFailed     uint8 = 2 // 失败
+)
 
 

@@ -27,5 +27,6 @@ func (receiver *QueueServiceProvider) Jobs() []queue.Job {
 		&jobs.SendEmail{},
 		&jobs.ProcessImage{},
 		&jobs.GenerateReport{},
+		&jobs.ExportOrders{},
 	}
 }

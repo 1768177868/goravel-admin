@@ -247,6 +247,8 @@ import {
   updateOrder,
   deleteOrder,
   exportOrder
+  exportOrder,
+  getExportStatus
 } from '../../api/order'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
@@ -690,15 +692,73 @@ const handleAction = (command, row) => {
   }
 }
 
-// 导出订单
+// 导出订单（异步）
 const handleExport = async () => {
   try {
-    await exportOrder(searchForm)
-    ElMessage.success(t('order.export_success'))
-    router.push('/exports')
+    // 提交导出任务
+    const response = await exportOrder(searchForm)
+    const exportId = response.data?.export_id || response.data?.data?.export_id
+    
+    if (!exportId) {
+      ElMessage.error(t('order.export_failed') || '导出失败')
+      return
+    }
+
+    // 显示提交成功消息
+    ElMessage.success(t('order.export_task_submitted') || response.data?.message || '导出任务已提交，请稍后查看导出记录')
+    
+    // 开始轮询查询导出状态
+    const pollInterval = 2000 // 每2秒查询一次
+    const maxPollTime = 300000 // 最多轮询5分钟
+    const startTime = Date.now()
+    
+    const pollExportStatus = async () => {
+      try {
+        const statusResponse = await getExportStatus(exportId)
+        const statusData = statusResponse.data?.data || statusResponse.data
+        const status = statusData?.status
+        
+        if (status === 1) {
+          // 导出成功
+          ElMessage.success(t('order.export_success') || '导出成功')
+          // 跳转到导出记录页面
+          router.push('/exports')
+          return
+        } else if (status === 2) {
+          // 导出失败
+          const errorMsg = statusData?.error_msg || t('order.export_failed') || '导出失败'
+          ElMessage.error(errorMsg)
+          return
+        } else if (status === 0) {
+          // 处理中，继续轮询
+          if (Date.now() - startTime < maxPollTime) {
+            setTimeout(pollExportStatus, pollInterval)
+          } else {
+            // 超时，提示用户去导出记录页面查看
+            ElMessage.warning(t('order.export_timeout') || '导出任务处理时间较长，请前往导出记录页面查看进度')
+            router.push('/exports')
+          }
+        }
+      } catch (error) {
+        logger.error('Poll export status error:', error)
+        // 如果查询失败，提示用户去导出记录页面查看
+        ElMessage.warning(t('order.export_check_manually') || '请前往导出记录页面查看导出进度')
+        router.push('/exports')
+      }
+    }
+    
+    // 延迟一下再开始轮询，给服务器一点处理时间
+    setTimeout(pollExportStatus, 1000)
+    
   } catch (error) {
     logger.error('Export order error:', error)
-    ErrorHandler.handle(error, { silent: true })
+    
+    // 检查是否是重复提交错误
+    if (error.response?.status === 429) {
+      ElMessage.warning(t('order.export_in_progress') || '导出任务正在处理中，请勿重复提交')
+    } else {
+      ErrorHandler.handle(error, { silent: true })
+    }
   }
 }
 

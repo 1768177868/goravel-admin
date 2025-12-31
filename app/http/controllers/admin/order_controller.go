@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/queue"
+	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
+	"goravel/app/jobs"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -474,85 +477,173 @@ func (r *OrderController) Destroy(ctx http.Context) http.Response {
 // @Router       /api/admin/orders/export [post]
 // @Security     BearerAuth
 func (r *OrderController) Export(ctx http.Context) http.Response {
-	// 构建筛选条件（列表和导出共用）
+	// 1. 防重复点击：使用 Redis 锁
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	}
+
+	lockKey := fmt.Sprintf("export:orders:lock:%d", adminID)
+	lockValue := fmt.Sprintf("%d_%d", adminID, time.Now().Unix())
+
+	// 检查是否已有导出任务在处理中
+	var cachedValue string
+	if facades.Cache().Get(lockKey, &cachedValue) == nil && cachedValue != "" {
+		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+	}
+
+	// 设置锁，过期时间30秒（防止短时间重复点击）
+	if err := facades.Cache().Put(lockKey, lockValue, 30*time.Second); err != nil {
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	// 确保释放锁
+	defer func() {
+		_ = facades.Cache().Forget(lockKey)
+	}()
+
+	// 2. 构建筛选条件
 	filters, resp := r.buildFilters(ctx)
 	if resp != nil {
 		return resp
 	}
 
-	// 获取所有订单及详情（不分页）
-	ordersWithDetails, err := r.orderService.GetAllOrdersWithDetailsForExport(filters)
+	// 3. 创建导出记录（状态为处理中）
+	// 获取存储驱动配置
+	disk := utils.GetConfigValue("storage", "file_disk", "")
+	if disk == "" {
+		disk = utils.GetConfigValue("storage", "export_disk", "")
+	}
+	if disk == "" {
+		disk = "local"
+	}
+
+	exportRecord := models.Export{
+		AdminID: adminID,
+		Status:  models.ExportStatusProcessing,
+		Disk:    disk,
+		Path:    "", // 处理完成后更新
+	}
+	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	// 4. 将筛选条件序列化为 JSON
+	filtersMap := map[string]interface{}{
+		"user_id":    filters.UserID,
+		"order_no":   filters.OrderNo,
+		"status":     filters.Status,
+		"min_amount": filters.MinAmount,
+		"max_amount": filters.MaxAmount,
+		"order_by":   filters.OrderBy,
+	}
+	if !filters.StartTime.IsZero() {
+		filtersMap["start_time"] = filters.StartTime.Format("2006-01-02 15:04:05")
+	}
+	if !filters.EndTime.IsZero() {
+		filtersMap["end_time"] = filters.EndTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 5. 异步执行导出任务
+	// 将参数转换为 map，框架会自动处理
+	exportArgsMap := map[string]any{
+		"export_id": exportRecord.ID,
+		"admin_id":  adminID,
+		"filters":   filtersMap,
+		"type":      "orders",
+	}
+
+	// 使用 queue.Arg 包装参数（参考测试代码的格式）
+	exportArgs := []queue.Arg{
+		{
+			Type:  "map[string]interface{}",
+			Value: exportArgsMap,
+		},
+	}
+
+	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).Dispatch(); err != nil {
+		// 如果任务提交失败，更新导出记录状态
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	// 6. 返回导出记录ID，前端可以轮询查询状态
+	return response.Success(ctx, http.Json{
+		"export_id": exportRecord.ID,
+		"message":   trans.Get(ctx, "export_task_submitted"),
+	})
+}
+
+// GetExportStatus 查询导出状态
+// @Summary      查询导出状态
+// @Description  根据导出记录ID查询导出任务的状态
+// @Tags         订单管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "导出记录ID"
+// @Success      200  {object}  map[string]any
+// @Failure      400  {object}  map[string]any  "参数错误"
+// @Failure      401  {object}  map[string]any  "未登录"
+// @Failure      403  {object}  map[string]any  "无权限"
+// @Failure      500  {object}  map[string]any  "服务器错误"
+// @Router       /api/admin/orders/export/status/{id} [get]
+// @Security     BearerAuth
+func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
+	exportID := helpers.GetUintRoute(ctx, "id")
+	if exportID == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "export_id_required")
+	}
+
+	exportRecordService := services.NewExportRecordService()
+	exportRecord, err := exportRecordService.GetByID(exportID)
 	if err != nil {
-		return response.ErrorWithLog(ctx, "order", err, map[string]any{
-			"filters": filters,
-		})
+		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 准备表头（使用翻译键，包含商品信息）
-	headers := []string{
-		"export_header_id",
-		"export_header_order_no",
-		"export_header_user_id",
-		"export_header_amount",
-		"export_header_status",
-		"export_header_item_index",    // 商品序号
-		"export_header_product_id",    // 商品ID
-		"export_header_product_name",  // 商品名称
-		"export_header_price",         // 单价
-		"export_header_quantity",      // 数量
-		"export_header_subtotal",      // 小计
-		"export_header_remark",
-		"export_header_created_at",
+	// 检查权限：只能查看自己的导出记录
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	}
+	if exportRecord.AdminID != adminID {
+		return response.Error(ctx, http.StatusForbidden, "forbidden")
 	}
 
-	// 准备数据（展开模式：每个商品一行）
-	var data [][]string
-	for _, orderWithDetails := range ordersWithDetails {
-		order := orderWithDetails.Order
-		details := orderWithDetails.Details
-
-		// 如果订单没有商品，至少输出一行订单信息
-		if len(details) == 0 {
-			row := []string{
-				cast.ToString(order.ID),
-				order.OrderNo,
-				cast.ToString(order.UserID),
-				fmt.Sprintf("%.2f", order.Amount),
-				r.formatOrderStatus(ctx, order.Status),
-				"", // 商品序号
-				"", // 商品ID
-				"", // 商品名称
-				"", // 单价
-				"", // 数量
-				"", // 小计
-				order.Remark,
-				r.formatTime(order.CreatedAt),
-			}
-			data = append(data, row)
+	// 生成文件URL
+	fileURL := ""
+	if exportRecord.Path != "" && exportRecord.Status == models.ExportStatusSuccess {
+		exportService := services.NewExportService(ctx)
+		if exportRecord.Disk == "local" || exportRecord.Disk == "public" {
+			fileURL = fmt.Sprintf("/api/admin/exports/%d/download", exportRecord.ID)
 		} else {
-			// 每个商品一行，添加商品序号（如：1/2, 2/2）
-			totalItems := len(details)
-			for idx, detail := range details {
-				itemIndex := fmt.Sprintf("%d/%d", idx+1, totalItems)
-				row := []string{
-					cast.ToString(order.ID),
-					order.OrderNo,
-					cast.ToString(order.UserID),
-					fmt.Sprintf("%.2f", order.Amount),
-					r.formatOrderStatus(ctx, order.Status),
-					itemIndex,
-					cast.ToString(detail.ProductID),
-					detail.ProductName,
-					fmt.Sprintf("%.2f", detail.Price),
-					cast.ToString(detail.Quantity),
-					fmt.Sprintf("%.2f", detail.Subtotal),
-					order.Remark,
-					r.formatTime(order.CreatedAt),
-				}
-				data = append(data, row)
-			}
+			fileURL = exportService.GetExportURL(exportRecord.Path)
 		}
 	}
 
-	return response.Export(ctx, "export_success", headers, data, "orders")
+	return response.Success(ctx, http.Json{
+		"id":          exportRecord.ID,
+		"status":      exportRecord.Status,
+		"status_text": r.getExportStatusText(exportRecord.Status),
+		"file_url":    fileURL,
+		"filename":    exportRecord.Filename,
+		"size":        exportRecord.Size,
+		"error_msg":   exportRecord.ErrorMsg,
+		"created_at":  exportRecord.CreatedAt.ToDateTimeString(),
+		"updated_at":  exportRecord.UpdatedAt.ToDateTimeString(),
+	})
+}
+
+func (r *OrderController) getExportStatusText(status uint8) string {
+	switch status {
+	case models.ExportStatusProcessing:
+		return "处理中"
+	case models.ExportStatusSuccess:
+		return "成功"
+	case models.ExportStatusFailed:
+		return "失败"
+	default:
+		return "未知"
+	}
 }
