@@ -706,8 +706,11 @@ const handleExport = async () => {
     // 显示提交成功消息
     ElMessage.success(t('order.export_task_submitted') || response.data?.message || '导出任务已提交，请稍后查看导出记录')
     
-    // 开始轮询查询导出状态
-    const pollInterval = 2000 // 每2秒查询一次
+    // 立即跳转到导出记录页面
+    router.push('/exports')
+    
+    // 开始轮询查询导出状态（在后台进行）
+    const pollInterval = 3000 // 每3秒查询一次
     const maxPollTime = 300000 // 最多轮询5分钟
     const startTime = Date.now()
     

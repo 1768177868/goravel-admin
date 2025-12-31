@@ -23,8 +23,9 @@ type ExportService interface {
 	// headers: CSV表头
 	// data: 数据行，每行是一个字符串切片
 	// filename: 文件名（不含扩展名）
+	// skipAutoCreate: 是否跳过自动创建导出记录（用于异步任务）
 	// 返回: 文件路径和错误
-	ExportToCSV(headers []string, data [][]string, filename string) (string, error)
+	ExportToCSV(headers []string, data [][]string, filename string, skipAutoCreate ...bool) (string, error)
 
 	// ExportToFile 导出数据到文件（根据配置的格式）
 	// headers: 表头
@@ -75,7 +76,9 @@ func NewExportService(ctx http.Context) ExportService {
 	}
 }
 
-func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filename string) (string, error) {
+// ExportToCSV 导出数据到CSV文件
+// skipAutoCreate: 是否跳过自动创建导出记录（用于异步任务，避免重复创建）
+func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filename string, skipAutoCreate ...bool) (string, error) {
 	timestamp := time.Now().Format("20060102_150405")
 	filename = fmt.Sprintf("%s_%s.csv", filename, timestamp)
 	filePath := filepath.Join(s.path, filename)
@@ -143,41 +146,45 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 	}
 
 	// 记录导出日志到数据库（尽量避免影响主流程，错误仅记日志）
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
+	// 如果 skipAutoCreate 为 true，则跳过自动创建（用于异步任务）
+	shouldSkip := len(skipAutoCreate) > 0 && skipAutoCreate[0]
+	if !shouldSkip {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
+				}
+			}()
+
+			adminID := uint(0)
+			if s.ctx != nil {
+				if id, err := helpers.GetAdminIDFromContext(s.ctx); err == nil {
+					adminID = id
+				}
+			}
+
+			ext := ""
+			if dot := strings.LastIndex(filename, "."); dot != -1 {
+				ext = filename[dot+1:]
+			} else if dot := strings.LastIndex(filePath, "."); dot != -1 {
+				ext = filePath[dot+1:]
+			}
+
+			exportRecord := models.Export{
+				AdminID:   adminID,
+				Disk:      s.disk,
+				Path:      filePath,
+				Filename:  filepath.Base(filePath),
+				Extension: ext,
+				Size:      size,
+				Status:    1,
+			}
+
+			if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+				facades.Log().Errorf("ExportService: failed to record export log: %v", err)
 			}
 		}()
-
-		adminID := uint(0)
-		if s.ctx != nil {
-			if id, err := helpers.GetAdminIDFromContext(s.ctx); err == nil {
-				adminID = id
-			}
-		}
-
-		ext := ""
-		if dot := strings.LastIndex(filename, "."); dot != -1 {
-			ext = filename[dot+1:]
-		} else if dot := strings.LastIndex(filePath, "."); dot != -1 {
-			ext = filePath[dot+1:]
-		}
-
-		exportRecord := models.Export{
-			AdminID:   adminID,
-			Disk:      s.disk,
-			Path:      filePath,
-			Filename:  filepath.Base(filePath),
-			Extension: ext,
-			Size:      size,
-			Status:    1,
-		}
-
-		if err := facades.Orm().Query().Create(&exportRecord); err != nil {
-			facades.Log().Errorf("ExportService: failed to record export log: %v", err)
-		}
-	}()
+	}
 
 	return filePath, nil
 }

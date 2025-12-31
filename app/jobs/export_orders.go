@@ -158,8 +158,8 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		return fmt.Errorf("获取订单数据失败: %v", err)
 	}
 
-	// 准备表头（使用翻译键，包含商品信息）
-	headers := []string{
+	// 准备表头（翻译键，需要翻译）
+	headerKeys := []string{
 		"export_header_id",
 		"export_header_order_no",
 		"export_header_user_id",
@@ -173,6 +173,18 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		"export_header_subtotal",      // 小计
 		"export_header_remark",
 		"export_header_created_at",
+	}
+	
+	// 翻译表头（使用默认语言 cn）
+	headers := make([]string, len(headerKeys))
+	for i, key := range headerKeys {
+		translated := facades.Lang(nil).Get("messages." + key)
+		if translated == "messages."+key || translated == "" {
+			// 如果翻译失败，使用原始键
+			headers[i] = key
+		} else {
+			headers[i] = translated
+		}
 	}
 
 	// 准备数据（展开模式：每个商品一行）
@@ -241,10 +253,10 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		}
 	}
 
-	// 使用 ExportService 导出
+	// 使用 ExportService 导出（跳过自动创建记录，因为我们已经有了导出记录）
 	exportService := services.NewExportService(nil) // 异步任务没有 context
 	filename := fmt.Sprintf("orders_%d", time.Now().Unix())
-	filePath, err := exportService.ExportToCSV(headers, data, filename)
+	filePath, err := exportService.ExportToCSV(headers, data, filename, true) // skipAutoCreate=true
 	if err != nil {
 		return fmt.Errorf("导出文件失败: %v", err)
 	}
