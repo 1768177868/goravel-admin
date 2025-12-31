@@ -34,17 +34,19 @@ func (r *UserCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *UserCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"username.required": trans.Get(ctx, "validation_username_required"),
-		"username.min_len":  trans.Get(ctx, "validation_username_min"),
-		"username.max_len":  trans.Get(ctx, "validation_username_max"),
-		"password.required": trans.Get(ctx, "validation_password_required"),
-		"password.min_len":  trans.Get(ctx, "validation_password_min"),
-		"password.max_len":  trans.Get(ctx, "validation_password_max"),
-		"nickname.max_len":  trans.Get(ctx, "validation_nickname_max"),
-		"email.email":       trans.Get(ctx, "validation_email_format"),
-		"email.max_len":     trans.Get(ctx, "validation_email_max"),
-		"phone.max_len":     trans.Get(ctx, "validation_phone_max"),
-		"status.in":         trans.Get(ctx, "validation_status_in"),
+		"username.required":  trans.Get(ctx, "validation_username_required"),
+		"username.min_len":   trans.Get(ctx, "validation_username_min"),
+		"username.max_len":   trans.Get(ctx, "validation_username_max"),
+		"username.not_exists": trans.Get(ctx, "username_exists"),
+		"password.required":  trans.Get(ctx, "validation_password_required"),
+		"password.min_len":   trans.Get(ctx, "validation_password_min"),
+		"password.max_len":   trans.Get(ctx, "validation_password_max"),
+		"nickname.max_len":   trans.Get(ctx, "validation_nickname_max"),
+		"email.email":        trans.Get(ctx, "validation_email_format"),
+		"email.max_len":      trans.Get(ctx, "validation_email_max"),
+		"email.not_exists":   trans.Get(ctx, "email_already_exists"),
+		"phone.max_len":      trans.Get(ctx, "validation_phone_max"),
+		"status.in":          trans.Get(ctx, "validation_status_in"),
 	}
 }
 

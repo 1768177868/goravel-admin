@@ -173,17 +173,23 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 	}
 
 	// 检查邮箱是否已存在（排除当前用户）
-	if userUpdate.Email != "" {
-		var existingUser models.User
-		if err := facades.Orm().Query().Where("email", userUpdate.Email).Where("id", "!=", id).First(&existingUser); err == nil {
+	if userUpdate.Email != "" && id > 0 {
+		exists, err := facades.Orm().Query().Model(&models.User{}).Where("email", userUpdate.Email).Where("id != ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
+		}
+		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "email_already_exists")
 		}
 	}
 
 	// 检查手机号是否已存在（排除当前用户）
-	if userUpdate.Phone != "" {
-		var existingUser models.User
-		if err := facades.Orm().Query().Where("phone", userUpdate.Phone).Where("id", "!=", id).First(&existingUser); err == nil {
+	if userUpdate.Phone != "" && id > 0 {
+		exists, err := facades.Orm().Query().Model(&models.User{}).Where("phone", userUpdate.Phone).Where("id != ?", id).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
+		}
+		if exists {
 			return response.Error(ctx, http.StatusBadRequest, "phone_already_exists")
 		}
 	}
