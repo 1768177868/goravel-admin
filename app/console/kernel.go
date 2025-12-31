@@ -31,5 +31,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.QueueStats{},
 		&commands.QueueClear{},
 		commands.NewCreateOrderShardingTables(),
+		&commands.GenerateTestOrders{},
 	}
 }
