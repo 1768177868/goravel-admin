@@ -246,7 +246,6 @@ import {
   getOrderDetail,
   updateOrder,
   deleteOrder,
-  exportOrder
   exportOrder,
   getExportStatus
 } from '../../api/order'
