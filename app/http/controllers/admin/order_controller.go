@@ -530,7 +530,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 	}
 
 	// 4. 将筛选条件序列化为 JSON
-	filtersMap := map[string]interface{}{
+	filtersMap := map[string]any{
 		"user_id":    filters.UserID,
 		"order_no":   filters.OrderNo,
 		"status":     filters.Status,

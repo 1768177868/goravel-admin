@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/errors"
+	"goravel/app/utils"
 )
 
 // GenerateReportArgs 生成报表任务的参数结构体
@@ -42,10 +43,11 @@ func (r *GenerateReport) Handle(args ...any) error {
 		startDate = v.StartDate
 		endDate = v.EndDate
 	case map[string]any:
-		if sd, ok := v["start_date"].(string); ok {
+		// 使用泛型辅助函数简化类型断言
+		if sd, ok := utils.GetString(v, "start_date"); ok {
 			startDate = sd
 		}
-		if ed, ok := v["end_date"].(string); ok {
+		if ed, ok := utils.GetString(v, "end_date"); ok {
 			endDate = ed
 		}
 	case string:

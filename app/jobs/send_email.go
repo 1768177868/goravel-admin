@@ -42,14 +42,14 @@ func (r *SendEmail) Handle(args ...any) error {
 	case SendEmailArgs:
 		emailArgs = v
 	case map[string]any:
-		// 从 map 转换
-		if to, ok := v["to"].(string); ok {
+		// 从 map 转换（使用泛型辅助函数）
+		if to, ok := utils.GetString(v, "to"); ok {
 			emailArgs.To = to
 		}
-		if subject, ok := v["subject"].(string); ok {
+		if subject, ok := utils.GetString(v, "subject"); ok {
 			emailArgs.Subject = subject
 		}
-		if content, ok := v["content"].(string); ok {
+		if content, ok := utils.GetString(v, "content"); ok {
 			emailArgs.Content = content
 		}
 	default:

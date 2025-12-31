@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/errors"
+	"goravel/app/utils"
 )
 
 // ProcessImageArgs 处理图片任务的参数结构体
@@ -38,9 +39,10 @@ func (r *ProcessImage) Handle(args ...any) error {
 	case string:
 		imagePath = v
 	case map[string]any:
-		if path, ok := v["image_path"].(string); ok {
+		// 使用泛型辅助函数简化类型断言
+		if path, ok := utils.GetString(v, "image_path"); ok {
 			imagePath = path
-		} else if path, ok := v["path"].(string); ok {
+		} else if path, ok := utils.GetString(v, "path"); ok {
 			imagePath = path
 		}
 	default:

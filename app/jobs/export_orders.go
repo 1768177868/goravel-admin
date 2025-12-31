@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -14,16 +13,17 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
 // ExportOrdersArgs 导出订单任务的参数
 type ExportOrdersArgs struct {
-	ExportID uint                   `json:"export_id"` // 导出记录ID
-	AdminID  uint                   `json:"admin_id"`  // 管理员ID
-	Filters  map[string]interface{} `json:"filters"`   // 筛选条件（JSON序列化）
-	Type     string                 `json:"type"`      // 导出类型，如 "orders"
-	Language string                 `json:"language"`  // 语言代码，如 "cn" 或 "en"
+	ExportID uint           `json:"export_id"` // 导出记录ID
+	AdminID  uint           `json:"admin_id"`  // 管理员ID
+	Filters  map[string]any `json:"filters"`   // 筛选条件（JSON序列化）
+	Type     string         `json:"type"`      // 导出类型，如 "orders"
+	Language string         `json:"language"`  // 语言代码，如 "cn" 或 "en"
 }
 
 // ExportOrders 导出订单异步任务
@@ -53,24 +53,17 @@ func (r *ExportOrders) Handle(args ...any) error {
 		}
 	case map[string]any:
 		// 直接使用 map，框架应该已经解包了
-		if exportID, ok := v["export_id"].(float64); ok {
-			exportArgs.ExportID = uint(exportID)
-		} else if exportID, ok := v["export_id"].(uint); ok {
+		// 使用泛型辅助函数简化类型断言
+		if exportID, ok := utils.GetUint(v, "export_id"); ok {
 			exportArgs.ExportID = exportID
-		} else if exportID, ok := v["export_id"].(int); ok {
-			exportArgs.ExportID = uint(exportID)
 		}
-		if adminID, ok := v["admin_id"].(float64); ok {
-			exportArgs.AdminID = uint(adminID)
-		} else if adminID, ok := v["admin_id"].(uint); ok {
+		if adminID, ok := utils.GetUint(v, "admin_id"); ok {
 			exportArgs.AdminID = adminID
-		} else if adminID, ok := v["admin_id"].(int); ok {
-			exportArgs.AdminID = uint(adminID)
 		}
-		if filters, ok := v["filters"].(map[string]interface{}); ok {
+		if filters, ok := utils.GetMap(v, "filters"); ok {
 			exportArgs.Filters = filters
 		}
-		if exportType, ok := v["type"].(string); ok {
+		if exportType, ok := utils.GetString(v, "type"); ok {
 			exportArgs.Type = exportType
 		}
 	default:
@@ -154,35 +147,33 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 	// 构建筛选条件（从 args.Filters 反序列化）
 	filters := services.OrderFilters{}
 
-	// 解析筛选条件
-	if userID, ok := args.Filters["user_id"].(float64); ok {
-		filters.UserID = uint(userID)
-	} else if userID, ok := args.Filters["user_id"].(uint); ok {
+	// 解析筛选条件（使用泛型辅助函数简化类型断言）
+	if userID, ok := utils.GetUint(args.Filters, "user_id"); ok {
 		filters.UserID = userID
 	}
-	if orderNo, ok := args.Filters["order_no"].(string); ok {
+	if orderNo, ok := utils.GetString(args.Filters, "order_no"); ok {
 		filters.OrderNo = orderNo
 	}
-	if status, ok := args.Filters["status"].(string); ok {
+	if status, ok := utils.GetString(args.Filters, "status"); ok {
 		filters.Status = status
 	}
-	if minAmount, ok := args.Filters["min_amount"].(float64); ok {
+	if minAmount, ok := utils.GetValue[float64](args.Filters, "min_amount"); ok {
 		filters.MinAmount = minAmount
 	}
-	if maxAmount, ok := args.Filters["max_amount"].(float64); ok {
+	if maxAmount, ok := utils.GetValue[float64](args.Filters, "max_amount"); ok {
 		filters.MaxAmount = maxAmount
 	}
-	if orderBy, ok := args.Filters["order_by"].(string); ok {
+	if orderBy, ok := utils.GetString(args.Filters, "order_by"); ok {
 		filters.OrderBy = orderBy
 	}
 
-	// 解析时间
-	if startTimeStr, ok := args.Filters["start_time"].(string); ok && startTimeStr != "" {
+	// 解析时间（使用泛型辅助函数）
+	if startTimeStr, ok := utils.GetString(args.Filters, "start_time"); ok && startTimeStr != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", startTimeStr); err == nil {
 			filters.StartTime = t.UTC()
 		}
 	}
-	if endTimeStr, ok := args.Filters["end_time"].(string); ok && endTimeStr != "" {
+	if endTimeStr, ok := utils.GetString(args.Filters, "end_time"); ok && endTimeStr != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", endTimeStr); err == nil {
 			filters.EndTime = t.UTC()
 		}
@@ -233,8 +224,8 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		lang = facades.Config().GetString("app.locale", "cn")
 	}
 
-	// 直接读取语言文件进行翻译
-	headers := r.translateHeaders(headerKeys, lang)
+	// 直接读取语言文件进行翻译（使用通用工具函数）
+	headers := utils.TranslateHeaders(headerKeys, lang)
 
 	// 准备数据（展开模式：每个商品一行）
 	var data [][]string
@@ -368,49 +359,4 @@ func (r *ExportOrders) ShouldRetry(err error) bool {
 func (r *ExportOrders) RetryAfter(err error) time.Duration {
 	// 递增延迟：第1次重试延迟5秒，第2次10秒，第3次20秒...
 	return 5 * time.Second
-}
-
-// translateHeaders 翻译表头（直接读取语言文件）
-func (r *ExportOrders) translateHeaders(headerKeys []string, lang string) []string {
-	headers := make([]string, len(headerKeys))
-
-	// 获取语言文件路径（使用框架配置的路径）
-	langPath := facades.Config().GetString("app.lang_path", "lang")
-	langFile := filepath.Join(langPath, fmt.Sprintf("%s.json", lang))
-
-	// 尝试读取语言文件
-	langData, err := os.ReadFile(langFile)
-	if err != nil {
-		// 如果读取失败，使用原始键
-		facades.Log().Warningf("读取语言文件失败: %s, error=%v, 使用原始键", langFile, err)
-		return append([]string(nil), headerKeys...)
-	}
-
-	// 解析 JSON
-	var langMap map[string]interface{}
-	if err := json.Unmarshal(langData, &langMap); err != nil {
-		facades.Log().Warningf("解析语言文件失败: %s, error=%v, 使用原始键", langFile, err)
-		return append([]string(nil), headerKeys...)
-	}
-
-	// 获取 messages 对象
-	messages, ok := langMap["messages"].(map[string]interface{})
-	if !ok {
-		facades.Log().Warningf("语言文件中没有 messages 对象: %s, 使用原始键", langFile)
-		return append([]string(nil), headerKeys...)
-	}
-
-	// 翻译每个键
-	for i, key := range headerKeys {
-		fullKey := "messages." + key
-		if value, ok := messages[key].(string); ok && value != "" {
-			headers[i] = value
-		} else {
-			// 如果翻译失败，使用原始键
-			headers[i] = key
-			facades.Log().Debugf("翻译键未找到: %s (语言: %s)", fullKey, lang)
-		}
-	}
-
-	return headers
 }
