@@ -181,18 +181,15 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	// 使用随机种子
 	rand.Seed(time.Now().UnixNano())
 
-	for batch := 0; batch < batches; batch++ {
+	for range batches {
 		// 计算本批次要插入的数量
 		remaining := count - totalInserted
-		currentBatchSize := batchSize
-		if remaining < batchSize {
-			currentBatchSize = remaining
-		}
+		currentBatchSize := min(remaining, batchSize)
 
 		// 准备批量数据
 		orders := make([]models.Order, 0, currentBatchSize)
 
-		for i := 0; i < currentBatchSize; i++ {
+		for i := range currentBatchSize {
 			// 随机生成订单时间（在指定时间范围内）
 			randomSeconds := rand.Float64() * timeRange
 			orderTime := startDate.Add(time.Duration(randomSeconds) * time.Second)
@@ -278,10 +275,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 
 				// 分批插入订单
 				for i := 0; i < len(odl); i += 100 {
-					end := i + 100
-					if end > len(odl) {
-						end = len(odl)
-					}
+					end := min(i+100, len(odl))
 					batchData := odl[i:end]
 
 					// 批量插入
@@ -374,6 +368,9 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 						Quantity:    quantity,
 						Subtotal:    subtotal,
 					}
+					// 设置CreatedAt和UpdatedAt（使用订单的创建时间）
+					detail.CreatedAt = order.CreatedAt
+					detail.UpdatedAt = order.CreatedAt
 
 					details = append(details, detail)
 				}
@@ -410,15 +407,21 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 
 				// 分批插入订单详情
 				for i := 0; i < len(dets); i += 100 {
-					end := i + 100
-					if end > len(dets) {
-						end = len(dets)
-					}
+					end := min(i+100, len(dets))
 					batchDetails := dets[i:end]
 
 					// 批量插入
 					for j := range batchDetails {
 						// 准备详情数据map
+						// 安全处理CreatedAt，如果为nil则使用当前时间
+						var createdAtStr string
+						if batchDetails[j].CreatedAt != nil && !batchDetails[j].CreatedAt.IsZero() {
+							createdAtStr = batchDetails[j].CreatedAt.ToDateTimeString()
+						} else {
+							// 如果CreatedAt为nil，使用当前时间
+							createdAtStr = time.Now().UTC().Format("2006-01-02 15:04:05")
+						}
+
 						detailData := map[string]any{
 							"order_id":     batchDetails[j].OrderID,
 							"product_id":   batchDetails[j].ProductID,
@@ -426,8 +429,8 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 							"price":        batchDetails[j].Price,
 							"quantity":     batchDetails[j].Quantity,
 							"subtotal":     batchDetails[j].Subtotal,
-							"created_at":   batchDetails[j].CreatedAt.ToDateTimeString(),
-							"updated_at":   batchDetails[j].CreatedAt.ToDateTimeString(),
+							"created_at":   createdAtStr,
+							"updated_at":   createdAtStr,
 						}
 						if err := facades.Orm().Query().Table(dtn).Create(detailData); err != nil {
 							detailErrChan <- fmt.Errorf("插入订单详情失败: %v", err)
