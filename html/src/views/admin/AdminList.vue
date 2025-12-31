@@ -27,7 +27,8 @@
         <template #extra-buttons>
           <el-button 
             type="success" 
-            :disabled="getButtonState('admin.export').disabled"
+            :disabled="getButtonState('admin.export').disabled || isExporting"
+            :loading="isExporting"
             @click="handleExport"
           >
             {{ $t('common.export') }}
@@ -141,6 +142,7 @@ const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
 const adminFormRef = ref(null)
+const isExporting = ref(false) // 导出中状态，防止重复点击
 
 const {
   dialogVisible,
@@ -571,6 +573,13 @@ const handleUnbindGoogleAuth = async (row) => {
 }
 
 const handleExport = async () => {
+  // 防止重复点击
+  if (isExporting.value) {
+    return
+  }
+
+  isExporting.value = true
+
   try {
     await exportAdmin(searchForm)
     // 不再直接触发下载，导出记录会写入导出管理列表，由用户在导出管理中查看和下载
@@ -580,6 +589,9 @@ const handleExport = async () => {
   } catch (error) {
     logger.error('Export error:', error)
     ErrorHandler.handle(error, { silent: true })
+  } finally {
+    // 无论成功还是失败，都要重置导出状态
+    isExporting.value = false
   }
 }
 

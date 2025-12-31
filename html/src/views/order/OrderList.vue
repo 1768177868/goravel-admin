@@ -27,7 +27,8 @@
         <template #extra-buttons>
           <el-button 
             type="success" 
-            :disabled="getButtonState('order.export').disabled"
+            :disabled="getButtonState('order.export').disabled || isExporting"
+            :loading="isExporting"
             @click="handleExport"
           >
             {{ $t('common.export') }}
@@ -260,6 +261,7 @@ const { getButtonState } = usePermission()
 const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
+const isExporting = ref(false) // 导出中状态，防止重复点击
 
 // 使用 CRUD composable（只用于添加功能）
 const {
@@ -691,20 +693,28 @@ const handleAction = (command, row) => {
   }
 }
 
-// 导出订单（异步）
+// 导出订单（同步）
 const handleExport = async () => {
+  // 防止重复点击
+  if (isExporting.value) {
+    return
+  }
+
+  isExporting.value = true
+  
   try {
-    // 提交导出任务
+    // 提交导出任务（同步执行）
     const response = await exportOrder(searchForm)
     const exportId = response.data?.export_id || response.data?.data?.export_id
     
     if (!exportId) {
       ElMessage.error(t('order.export_failed') || '导出失败')
+      isExporting.value = false
       return
     }
 
-    // 显示提交成功消息
-    ElMessage.success(t('order.export_task_submitted') || response.data?.message || '导出任务已提交，请稍后查看导出记录')
+    // 显示成功消息
+    ElMessage.success(t('order.export_success') || response.data?.message || '导出成功')
     
     // 立即跳转到导出记录页面
     router.push('/exports')
@@ -718,6 +728,9 @@ const handleExport = async () => {
     } else {
       ErrorHandler.handle(error, { silent: true })
     }
+  } finally {
+    // 无论成功还是失败，都要重置导出状态
+    isExporting.value = false
   }
 }
 
