@@ -1,7 +1,10 @@
 package jobs
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -20,6 +23,7 @@ type ExportOrdersArgs struct {
 	AdminID  uint                   `json:"admin_id"`  // 管理员ID
 	Filters  map[string]interface{} `json:"filters"`   // 筛选条件（JSON序列化）
 	Type     string                 `json:"type"`      // 导出类型，如 "orders"
+	Language string                 `json:"language"`  // 语言代码，如 "cn" 或 "en"
 }
 
 // ExportOrders 导出订单异步任务
@@ -32,6 +36,7 @@ func (r *ExportOrders) Signature() string {
 
 func (r *ExportOrders) Handle(args ...any) error {
 	if len(args) < 1 {
+		facades.Log().Errorf("ExportOrders Job 参数不足: args=%v", args)
 		return apperrors.ErrInvalidArgument.WithMessage("missing export arguments")
 	}
 
@@ -40,16 +45,27 @@ func (r *ExportOrders) Handle(args ...any) error {
 	switch v := args[0].(type) {
 	case ExportOrdersArgs:
 		exportArgs = v
+	case string:
+		// JSON 字符串，需要反序列化
+		if err := json.Unmarshal([]byte(v), &exportArgs); err != nil {
+			facades.Log().Errorf("反序列化参数失败: %v, JSON: %s", err, v)
+			return apperrors.ErrInvalidArgument.WithMessage(fmt.Sprintf("failed to unmarshal export arguments: %v", err))
+		}
 	case map[string]any:
+		// 直接使用 map，框架应该已经解包了
 		if exportID, ok := v["export_id"].(float64); ok {
 			exportArgs.ExportID = uint(exportID)
 		} else if exportID, ok := v["export_id"].(uint); ok {
 			exportArgs.ExportID = exportID
+		} else if exportID, ok := v["export_id"].(int); ok {
+			exportArgs.ExportID = uint(exportID)
 		}
 		if adminID, ok := v["admin_id"].(float64); ok {
 			exportArgs.AdminID = uint(adminID)
 		} else if adminID, ok := v["admin_id"].(uint); ok {
 			exportArgs.AdminID = adminID
+		} else if adminID, ok := v["admin_id"].(int); ok {
+			exportArgs.AdminID = uint(adminID)
 		}
 		if filters, ok := v["filters"].(map[string]interface{}); ok {
 			exportArgs.Filters = filters
@@ -58,30 +74,29 @@ func (r *ExportOrders) Handle(args ...any) error {
 			exportArgs.Type = exportType
 		}
 	default:
-		return apperrors.ErrInvalidArgument.WithMessage("invalid export arguments")
+		facades.Log().Errorf("不支持的参数类型: %T, 值: %+v", args[0], args[0])
+		return apperrors.ErrInvalidArgument.WithMessage(fmt.Sprintf("invalid export arguments type: %T", args[0]))
 	}
 
 	if exportArgs.ExportID == 0 {
+		facades.Log().Errorf("export_id 为 0，参数解析失败: %+v", exportArgs)
 		return apperrors.ErrInvalidArgument.WithMessage("export_id is required")
 	}
 
 	// 更新导出状态为处理中
 	var exportRecord models.Export
 	if err := facades.Orm().Query().Where("id", exportArgs.ExportID).First(&exportRecord); err != nil {
-		errorlog.Record(nil, "export", "导出记录不存在", map[string]any{
+		errorlog.Record(context.TODO(), "export", "导出记录不存在", map[string]any{
 			"export_id": exportArgs.ExportID,
 		}, "导出记录不存在: %v", err)
 		return err
 	}
 
-	// 开始处理
-	facades.Log().Infof("开始处理导出任务: export_id=%d, type=%s", exportArgs.ExportID, exportArgs.Type)
-	
 	exportRecord.Status = models.ExportStatusProcessing
 	exportRecord.ErrorMsg = "" // 清空之前的错误信息
 	if err := facades.Orm().Query().Save(&exportRecord); err != nil {
 		facades.Log().Errorf("更新导出状态为处理中失败: export_id=%d, error=%v", exportArgs.ExportID, err)
-		errorlog.Record(nil, "export", "更新导出状态失败", map[string]any{
+		errorlog.Record(context.TODO(), "export", "更新导出状态失败", map[string]any{
 			"export_id": exportArgs.ExportID,
 		}, "更新导出状态失败: %v", err)
 		return err
@@ -103,13 +118,13 @@ func (r *ExportOrders) Handle(args ...any) error {
 		if errorMsg == "" {
 			errorMsg = "未知错误"
 		}
-		
+
 		facades.Log().Errorf("导出任务失败: export_id=%d, error=%s", exportArgs.ExportID, errorMsg)
-		errorlog.Record(nil, "export", "导出失败", map[string]any{
+		errorlog.Record(context.TODO(), "export", "导出失败", map[string]any{
 			"export_id": exportArgs.ExportID,
 			"error":     errorMsg,
 		}, "导出失败: %v", err)
-		
+
 		// 重新查询导出记录并更新
 		var failedRecord models.Export
 		if queryErr := facades.Orm().Query().Where("id", exportArgs.ExportID).First(&failedRecord); queryErr == nil {
@@ -123,7 +138,7 @@ func (r *ExportOrders) Handle(args ...any) error {
 		} else {
 			facades.Log().Errorf("查询导出记录失败: export_id=%d, error=%v", exportArgs.ExportID, queryErr)
 		}
-		
+
 		return err
 	}
 
@@ -176,10 +191,10 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 	// 获取订单数据
 	ordersWithDetails, err := orderService.GetAllOrdersWithDetailsForExport(filters)
 	if err != nil {
-		errorlog.Record(nil, "export", "获取订单数据失败", map[string]any{
+		errorlog.Record(context.TODO(), "export", "获取订单数据失败", map[string]any{
 			"export_id": args.ExportID,
 			"filters":   args.Filters,
-			"error":    err.Error(),
+			"error":     err.Error(),
 		}, "获取订单数据失败: %v", err)
 		return fmt.Errorf("获取订单数据失败: %v", err)
 	}
@@ -197,27 +212,29 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		"export_header_user_id",
 		"export_header_amount",
 		"export_header_status",
-		"export_header_item_index",    // 商品序号
-		"export_header_product_id",    // 商品ID
-		"export_header_product_name",  // 商品名称
-		"export_header_price",         // 单价
-		"export_header_quantity",      // 数量
-		"export_header_subtotal",      // 小计
+		"export_header_item_index",   // 商品序号
+		"export_header_product_id",   // 商品ID
+		"export_header_product_name", // 商品名称
+		"export_header_price",        // 单价
+		"export_header_quantity",     // 数量
+		"export_header_subtotal",     // 小计
 		"export_header_remark",
 		"export_header_created_at",
 	}
-	
-	// 翻译表头（使用默认语言 cn）
-	headers := make([]string, len(headerKeys))
-	for i, key := range headerKeys {
-		translated := facades.Lang(nil).Get("messages." + key)
-		if translated == "messages."+key || translated == "" {
-			// 如果翻译失败，使用原始键
-			headers[i] = key
-		} else {
-			headers[i] = translated
-		}
+
+	// 翻译表头（使用传递的语言）
+	// 获取语言代码，如果没有传递则使用默认语言
+	lang := args.Language
+	if lang == "" {
+		lang = facades.Config().GetString("app.locale", "cn")
 	}
+	// 验证语言是否支持
+	if lang != "cn" && lang != "en" {
+		lang = facades.Config().GetString("app.locale", "cn")
+	}
+
+	// 直接读取语言文件进行翻译
+	headers := r.translateHeaders(headerKeys, lang)
 
 	// 准备数据（展开模式：每个商品一行）
 	var data [][]string
@@ -286,22 +303,19 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 	}
 
 	// 使用 ExportService 导出（跳过自动创建记录，因为我们已经有了导出记录）
-	exportService := services.NewExportService(nil) // 异步任务没有 context
+	// 注意：Job 中没有 http.Context，传入 nil 是安全的，因为 skipAutoCreate=true 且代码已处理 nil 情况
+	exportService := services.NewExportService(nil) //nolint:staticcheck // Job 中没有 http.Context
 	filename := fmt.Sprintf("orders_%d", time.Now().Unix())
-	
-	facades.Log().Infof("开始导出文件: export_id=%d, filename=%s, data_rows=%d", args.ExportID, filename, len(data))
-	
+
 	filePath, err := exportService.ExportToCSV(headers, data, filename, true) // skipAutoCreate=true
 	if err != nil {
-		errorlog.Record(nil, "export", "导出文件失败", map[string]any{
+		errorlog.Record(context.TODO(), "export", "导出文件失败", map[string]any{
 			"export_id": args.ExportID,
 			"filename":  filename,
 			"error":     err.Error(),
 		}, "导出文件失败: %v", err)
 		return fmt.Errorf("导出文件失败: %v", err)
 	}
-	
-	facades.Log().Infof("文件导出成功: export_id=%d, file_path=%s", args.ExportID, filePath)
 
 	// 更新导出记录的文件路径和大小
 	var exportRecord models.Export
@@ -309,8 +323,6 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		facades.Log().Errorf("查询导出记录失败: export_id=%d, error=%v", args.ExportID, err)
 		return fmt.Errorf("查询导出记录失败: %v", err)
 	}
-
-	facades.Log().Infof("开始更新导出记录: export_id=%d, file_path=%s", args.ExportID, filePath)
 
 	exportRecord.Path = filePath
 	exportRecord.Filename = filepath.Base(filePath)
@@ -326,7 +338,6 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 	storage := facades.Storage().Disk(exportRecord.Disk)
 	if fileInfo, err := storage.Size(filePath); err == nil {
 		exportRecord.Size = fileInfo
-		facades.Log().Infof("文件大小: export_id=%d, size=%d", args.ExportID, fileInfo)
 	} else {
 		facades.Log().Warningf("获取文件大小失败: export_id=%d, error=%v", args.ExportID, err)
 		exportRecord.Size = 0
@@ -341,10 +352,6 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		facades.Log().Errorf("保存导出记录失败: export_id=%d, error=%v", args.ExportID, err)
 		return fmt.Errorf("更新导出记录失败: %v", err)
 	}
-
-	// 记录成功日志
-	facades.Log().Infof("导出成功: export_id=%d, file_path=%s, filename=%s, size=%d, extension=%s", 
-		args.ExportID, filePath, exportRecord.Filename, exportRecord.Size, exportRecord.Extension)
 
 	return nil
 }
@@ -363,3 +370,47 @@ func (r *ExportOrders) RetryAfter(err error) time.Duration {
 	return 5 * time.Second
 }
 
+// translateHeaders 翻译表头（直接读取语言文件）
+func (r *ExportOrders) translateHeaders(headerKeys []string, lang string) []string {
+	headers := make([]string, len(headerKeys))
+
+	// 获取语言文件路径（使用框架配置的路径）
+	langPath := facades.Config().GetString("app.lang_path", "lang")
+	langFile := filepath.Join(langPath, fmt.Sprintf("%s.json", lang))
+
+	// 尝试读取语言文件
+	langData, err := os.ReadFile(langFile)
+	if err != nil {
+		// 如果读取失败，使用原始键
+		facades.Log().Warningf("读取语言文件失败: %s, error=%v, 使用原始键", langFile, err)
+		return append([]string(nil), headerKeys...)
+	}
+
+	// 解析 JSON
+	var langMap map[string]interface{}
+	if err := json.Unmarshal(langData, &langMap); err != nil {
+		facades.Log().Warningf("解析语言文件失败: %s, error=%v, 使用原始键", langFile, err)
+		return append([]string(nil), headerKeys...)
+	}
+
+	// 获取 messages 对象
+	messages, ok := langMap["messages"].(map[string]interface{})
+	if !ok {
+		facades.Log().Warningf("语言文件中没有 messages 对象: %s, 使用原始键", langFile)
+		return append([]string(nil), headerKeys...)
+	}
+
+	// 翻译每个键
+	for i, key := range headerKeys {
+		fullKey := "messages." + key
+		if value, ok := messages[key].(string); ok && value != "" {
+			headers[i] = value
+		} else {
+			// 如果翻译失败，使用原始键
+			headers[i] = key
+			facades.Log().Debugf("翻译键未找到: %s (语言: %s)", fullKey, lang)
+		}
+	}
+
+	return headers
+}

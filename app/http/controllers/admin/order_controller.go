@@ -1,11 +1,13 @@
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
@@ -13,6 +15,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
+	"goravel/app/jobs"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -542,24 +545,57 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		filtersMap["end_time"] = filters.EndTime.Format("2006-01-02 15:04:05")
 	}
 
-	// 5. 同步执行导出任务
-	exportOrderService := services.NewExportOrderService(ctx)
-	if err := exportOrderService.ExportOrders(exportRecord.ID, filters); err != nil {
-		// 错误已在服务中处理并更新记录状态
+	// 5. 获取当前语言（从请求头或查询参数，与 middleware 逻辑一致）
+	lang := r.getCurrentLanguage(ctx)
+
+	// 6. 异步执行导出任务（使用 Job）
+	// 将参数序列化为 JSON 字符串传递，避免框架对复杂类型的序列化问题
+	exportArgsStruct := jobs.ExportOrdersArgs{
+		ExportID: exportRecord.ID,
+		AdminID:  adminID,
+		Filters:  filtersMap,
+		Type:     "orders",
+		Language: lang,
+	}
+
+	// 序列化为 JSON 字符串
+	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	if err != nil {
+		facades.Log().Errorf("序列化导出参数失败: export_id=%d, error=%v", exportRecord.ID, err)
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 6. 重新查询导出记录获取最新信息
-	if err := facades.Orm().Query().Where("id", exportRecord.ID).First(&exportRecord); err != nil {
+	// 记录任务提交日志
+	facades.Log().Infof("提交导出任务到队列: export_id=%d, queue_driver=%s, args_json=%s",
+		exportRecord.ID, facades.Config().GetString("queue.default"), string(exportArgsJSON))
+
+	// 使用 queue.Arg 包装 JSON 字符串参数
+	exportArgs := []queue.Arg{
+		{
+			Type:  "string",
+			Value: string(exportArgsJSON),
+		},
+	}
+
+	// 传递 JSON 字符串作为参数
+	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).Dispatch(); err != nil {
+		// 如果任务提交失败，更新导出记录状态
+		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 7. 返回导出记录信息
+	facades.Log().Infof("导出任务已成功提交到队列: export_id=%d", exportRecord.ID)
+
+	// 6. 返回导出记录ID，前端可以跳转到导出记录页面查看状态
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
-		"status":    exportRecord.Status,
-		"file_url":  "",
-		"message":   trans.Get(ctx, "export_success"),
+		"message":   trans.Get(ctx, "export_task_submitted"),
 	})
 }
 
@@ -633,4 +669,63 @@ func (r *OrderController) getExportStatusText(status uint8) string {
 	default:
 		return "未知"
 	}
+}
+
+// getCurrentLanguage 获取当前请求的语言（与 middleware 逻辑一致）
+func (r *OrderController) getCurrentLanguage(ctx http.Context) string {
+	// 优先从请求头 Accept-Language 获取语言
+	acceptLanguage := ctx.Request().Header("Accept-Language", "")
+	lang := r.parseAcceptLanguage(acceptLanguage)
+
+	// 如果请求头没有，尝试从查询参数获取
+	if lang == "" {
+		lang = ctx.Request().Input("lang")
+	}
+
+	// 如果都没有，使用默认语言
+	if lang == "" {
+		lang = facades.Config().GetString("app.locale")
+	}
+
+	// 验证语言是否支持（只支持 cn 和 en）
+	if lang != "cn" && lang != "en" {
+		lang = facades.Config().GetString("app.locale")
+	}
+
+	return lang
+}
+
+// parseAcceptLanguage 解析 Accept-Language 请求头
+// 格式: "zh-CN,zh;q=0.9,en;q=0.8" 或 "en-US,en;q=0.9"
+func (r *OrderController) parseAcceptLanguage(acceptLanguage string) string {
+	if acceptLanguage == "" {
+		return ""
+	}
+
+	// 分割语言列表
+	languages := strings.Split(acceptLanguage, ",")
+	if len(languages) == 0 {
+		return ""
+	}
+
+	// 取第一个语言
+	firstLang := strings.TrimSpace(languages[0])
+
+	// 移除质量值（如果有）
+	if idx := strings.Index(firstLang, ";"); idx != -1 {
+		firstLang = firstLang[:idx]
+	}
+
+	// 转换为小写并提取语言代码
+	firstLang = strings.ToLower(strings.TrimSpace(firstLang))
+
+	// 处理语言代码（如 zh-CN -> zh, en-US -> en）
+	if strings.HasPrefix(firstLang, "zh") {
+		return "cn"
+	}
+	if strings.HasPrefix(firstLang, "en") {
+		return "en"
+	}
+
+	return ""
 }

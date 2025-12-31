@@ -713,8 +713,8 @@ const handleExport = async () => {
       return
     }
 
-    // 显示成功消息
-    ElMessage.success(t('order.export_success') || response.data?.message || '导出成功')
+    // 显示提交成功消息
+    ElMessage.success(t('order.export_task_submitted') || response.data?.message || '导出任务已提交，请稍后查看导出记录')
     
     // 立即跳转到导出记录页面
     router.push('/exports')
