@@ -648,7 +648,7 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 	return response.Success(ctx, http.Json{
 		"id":          exportRecord.ID,
 		"status":      exportRecord.Status,
-		"status_text": r.getExportStatusText(exportRecord.Status),
+		"status_text": r.getExportStatusText(ctx, exportRecord.Status),
 		"file_url":    fileURL,
 		"filename":    exportRecord.Filename,
 		"size":        exportRecord.Size,
@@ -658,16 +658,16 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 	})
 }
 
-func (r *OrderController) getExportStatusText(status uint8) string {
+func (r *OrderController) getExportStatusText(ctx http.Context, status uint8) string {
 	switch status {
 	case models.ExportStatusProcessing:
-		return "处理中"
+		return trans.Get(ctx, "export_task_status_processing")
 	case models.ExportStatusSuccess:
-		return "成功"
+		return trans.Get(ctx, "export_task_status_success")
 	case models.ExportStatusFailed:
-		return "失败"
+		return trans.Get(ctx, "export_task_status_failed")
 	default:
-		return "未知"
+		return trans.Get(ctx, "export_task_status_unknown")
 	}
 }
 
