@@ -9,6 +9,37 @@ import (
 	"github.com/goravel/framework/facades"
 )
 
+// loadLangMessages 加载语言文件的 messages 对象（内部辅助函数）
+// 返回 messages map 和是否成功加载
+func loadLangMessages(lang string) (map[string]any, bool) {
+	// 获取语言文件路径（使用框架配置的路径）
+	langPath := facades.Config().GetString("app.lang_path", "lang")
+	langFile := filepath.Join(langPath, fmt.Sprintf("%s.json", lang))
+
+	// 尝试读取语言文件
+	langData, err := os.ReadFile(langFile)
+	if err != nil {
+		facades.Log().Debugf("读取语言文件失败: %s, error=%v", langFile, err)
+		return nil, false
+	}
+
+	// 解析 JSON
+	var langMap map[string]any
+	if err := json.Unmarshal(langData, &langMap); err != nil {
+		facades.Log().Debugf("解析语言文件失败: %s, error=%v", langFile, err)
+		return nil, false
+	}
+
+	// 获取 messages 对象（使用类型辅助函数）
+	messages, ok := GetMap(langMap, "messages")
+	if !ok {
+		facades.Log().Debugf("语言文件中没有 messages 对象: %s", langFile)
+		return nil, false
+	}
+
+	return messages, true
+}
+
 // TranslateHeaders 翻译表头（直接读取语言文件）
 // 这是一个通用函数，可以被任何需要翻译表头的 job 使用
 //
@@ -26,29 +57,11 @@ import (
 func TranslateHeaders(headerKeys []string, lang string) []string {
 	headers := make([]string, len(headerKeys))
 
-	// 获取语言文件路径（使用框架配置的路径）
-	langPath := facades.Config().GetString("app.lang_path", "lang")
-	langFile := filepath.Join(langPath, fmt.Sprintf("%s.json", lang))
-
-	// 尝试读取语言文件
-	langData, err := os.ReadFile(langFile)
-	if err != nil {
-		// 如果读取失败，使用原始键
-		facades.Log().Warningf("读取语言文件失败: %s, error=%v, 使用原始键", langFile, err)
-		return append([]string(nil), headerKeys...)
-	}
-
-	// 解析 JSON
-	var langMap map[string]any
-	if err := json.Unmarshal(langData, &langMap); err != nil {
-		facades.Log().Warningf("解析语言文件失败: %s, error=%v, 使用原始键", langFile, err)
-		return append([]string(nil), headerKeys...)
-	}
-
-	// 获取 messages 对象（使用类型辅助函数）
-	messages, ok := GetMap(langMap, "messages")
+	// 加载语言文件的 messages 对象
+	messages, ok := loadLangMessages(lang)
 	if !ok {
-		facades.Log().Warningf("语言文件中没有 messages 对象: %s, 使用原始键", langFile)
+		// 如果读取失败，使用原始键
+		facades.Log().Warningf("加载语言文件失败: lang=%s, 使用原始键", lang)
 		return append([]string(nil), headerKeys...)
 	}
 
@@ -82,28 +95,9 @@ func TranslateHeaders(headerKeys []string, lang string) []string {
 //
 //	statusText := utils.TranslateKey("export_order_status_pending", "cn", "pending")
 func TranslateKey(key, lang, defaultValue string) string {
-	// 获取语言文件路径（使用框架配置的路径）
-	langPath := facades.Config().GetString("app.lang_path", "lang")
-	langFile := filepath.Join(langPath, fmt.Sprintf("%s.json", lang))
-
-	// 尝试读取语言文件
-	langData, err := os.ReadFile(langFile)
-	if err != nil {
-		facades.Log().Debugf("读取语言文件失败: %s, error=%v, 使用默认值", langFile, err)
-		return defaultValue
-	}
-
-	// 解析 JSON
-	var langMap map[string]any
-	if err := json.Unmarshal(langData, &langMap); err != nil {
-		facades.Log().Debugf("解析语言文件失败: %s, error=%v, 使用默认值", langFile, err)
-		return defaultValue
-	}
-
-	// 获取 messages 对象（使用类型辅助函数）
-	messages, ok := GetMap(langMap, "messages")
+	// 加载语言文件的 messages 对象
+	messages, ok := loadLangMessages(lang)
 	if !ok {
-		facades.Log().Debugf("语言文件中没有 messages 对象: %s, 使用默认值", langFile)
 		return defaultValue
 	}
 

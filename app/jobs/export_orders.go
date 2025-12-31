@@ -214,15 +214,12 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 	}
 
 	// 翻译表头（使用传递的语言）
-	// 获取语言代码，如果没有传递则使用默认语言
+	// 获取语言代码，如果没有传递则使用默认语言，并规范化
 	lang := args.Language
 	if lang == "" {
 		lang = facades.Config().GetString("app.locale", "cn")
 	}
-	// 验证语言是否支持
-	if lang != "cn" && lang != "en" {
-		lang = facades.Config().GetString("app.locale", "cn")
-	}
+	lang = utils.NormalizeLanguage(lang)
 
 	// 直接读取语言文件进行翻译（使用通用工具函数）
 	headers := utils.TranslateHeaders(headerKeys, lang)
