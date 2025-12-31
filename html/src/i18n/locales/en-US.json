@@ -706,6 +706,7 @@
     "path": "File Path",
     "extension": "Extension",
     "size": "File Size",
+    "error_msg": "Error Message",
     "download_success": "Download successful",
     "download_failed": "Failed to build download URL",
     "monitor_progress": "Monitor Progress",

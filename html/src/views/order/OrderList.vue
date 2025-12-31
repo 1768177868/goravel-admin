@@ -709,49 +709,6 @@ const handleExport = async () => {
     // 立即跳转到导出记录页面
     router.push('/exports')
     
-    // 开始轮询查询导出状态（在后台进行）
-    const pollInterval = 3000 // 每3秒查询一次
-    const maxPollTime = 300000 // 最多轮询5分钟
-    const startTime = Date.now()
-    
-    const pollExportStatus = async () => {
-      try {
-        const statusResponse = await getExportStatus(exportId)
-        const statusData = statusResponse.data?.data || statusResponse.data
-        const status = statusData?.status
-        
-        if (status === 1) {
-          // 导出成功
-          ElMessage.success(t('order.export_success') || '导出成功')
-          // 跳转到导出记录页面
-          router.push('/exports')
-          return
-        } else if (status === 2) {
-          // 导出失败
-          const errorMsg = statusData?.error_msg || t('order.export_failed') || '导出失败'
-          ElMessage.error(errorMsg)
-          return
-        } else if (status === 0) {
-          // 处理中，继续轮询
-          if (Date.now() - startTime < maxPollTime) {
-            setTimeout(pollExportStatus, pollInterval)
-          } else {
-            // 超时，提示用户去导出记录页面查看
-            ElMessage.warning(t('order.export_timeout') || '导出任务处理时间较长，请前往导出记录页面查看进度')
-            router.push('/exports')
-          }
-        }
-      } catch (error) {
-        logger.error('Poll export status error:', error)
-        // 如果查询失败，提示用户去导出记录页面查看
-        ElMessage.warning(t('order.export_check_manually') || '请前往导出记录页面查看导出进度')
-        router.push('/exports')
-      }
-    }
-    
-    // 延迟一下再开始轮询，给服务器一点处理时间
-    setTimeout(pollExportStatus, 1000)
-    
   } catch (error) {
     logger.error('Export order error:', error)
     

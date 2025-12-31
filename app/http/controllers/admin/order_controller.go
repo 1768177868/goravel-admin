@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
@@ -14,7 +13,6 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
-	"goravel/app/jobs"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -544,35 +542,24 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		filtersMap["end_time"] = filters.EndTime.Format("2006-01-02 15:04:05")
 	}
 
-	// 5. 异步执行导出任务
-	// 将参数转换为 map，框架会自动处理
-	exportArgsMap := map[string]any{
-		"export_id": exportRecord.ID,
-		"admin_id":  adminID,
-		"filters":   filtersMap,
-		"type":      "orders",
-	}
-
-	// 使用 queue.Arg 包装参数（参考测试代码的格式）
-	exportArgs := []queue.Arg{
-		{
-			Type:  "map[string]interface{}",
-			Value: exportArgsMap,
-		},
-	}
-
-	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).Dispatch(); err != nil {
-		// 如果任务提交失败，更新导出记录状态
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+	// 5. 同步执行导出任务
+	exportOrderService := services.NewExportOrderService(ctx)
+	if err := exportOrderService.ExportOrders(exportRecord.ID, filters); err != nil {
+		// 错误已在服务中处理并更新记录状态
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 6. 返回导出记录ID，前端可以轮询查询状态
+	// 6. 重新查询导出记录获取最新信息
+	if err := facades.Orm().Query().Where("id", exportRecord.ID).First(&exportRecord); err != nil {
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	// 7. 返回导出记录信息
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
-		"message":   trans.Get(ctx, "export_task_submitted"),
+		"status":    exportRecord.Status,
+		"file_url":  "",
+		"message":   trans.Get(ctx, "export_success"),
 	})
 }
 
