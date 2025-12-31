@@ -89,6 +89,12 @@ const { t } = useI18n()
 const { getButtonState } = usePermission()
 const tableRef = ref(null)
 
+// 初始搜索表单（用于 SearchForm 的 initial-values）
+const initialSearchForm = {
+  ip: '',
+  status: ''
+}
+
 const {
   pagination,
   tableData,
@@ -101,10 +107,7 @@ const {
   initDefaultSort
 } = useListPage({
   fetchApi: getBlacklistList,
-  initialSearchForm: {
-    ip: '',
-    status: ''
-  },
+  initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)

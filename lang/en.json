@@ -227,6 +227,7 @@
     "insufficient_balance": "Insufficient balance, current balance: {balance}",
     "invalid_balance_type": "Invalid balance change type: {type}",
     "email_already_exists": "Email already exists",
+    "phone_already_exists": "Phone number already exists",
     "amount_cannot_be_zero": "Amount cannot be zero",
     "balance_type_required": "Balance change type is required",
     "user_id_required_for_sharding": "user_id cannot be empty, GORM Sharding requires ShardingKey",

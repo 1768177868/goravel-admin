@@ -89,6 +89,28 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUsernameExists.Code)
 	}
 
+	// 检查邮箱是否已存在（如果提供了邮箱）
+	if userCreate.Email != "" {
+		exists, err := facades.Orm().Query().Model(&models.User{}).Where("email", userCreate.Email).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
+		}
+		if exists {
+			return response.Error(ctx, http.StatusBadRequest, "email_already_exists")
+		}
+	}
+
+	// 检查手机号是否已存在（如果提供了手机号）
+	if userCreate.Phone != "" {
+		exists, err := facades.Orm().Query().Model(&models.User{}).Where("phone", userCreate.Phone).Exists()
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
+		}
+		if exists {
+			return response.Error(ctx, http.StatusBadRequest, "phone_already_exists")
+		}
+	}
+
 	// 密码加密
 	hashedPassword, err := facades.Hash().Make(userCreate.Password)
 	if err != nil {
@@ -155,6 +177,14 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 		var existingUser models.User
 		if err := facades.Orm().Query().Where("email", userUpdate.Email).Where("id", "!=", id).First(&existingUser); err == nil {
 			return response.Error(ctx, http.StatusBadRequest, "email_already_exists")
+		}
+	}
+
+	// 检查手机号是否已存在（排除当前用户）
+	if userUpdate.Phone != "" {
+		var existingUser models.User
+		if err := facades.Orm().Query().Where("phone", userUpdate.Phone).Where("id", "!=", id).First(&existingUser); err == nil {
+			return response.Error(ctx, http.StatusBadRequest, "phone_already_exists")
 		}
 	}
 

@@ -156,6 +156,10 @@ const searchFields = computed(() => [
   }
 ])
 
+// 初始搜索表单（用于 SearchForm 的 initial-values）
+const initialSearchForm = {
+  type: ''
+}
 
 const {
   pagination,
@@ -169,9 +173,7 @@ const {
   initDefaultSort
 } = useListPage({
   fetchApi: getDictionaryList,
-  initialSearchForm: {
-    type: ''
-  },
+  initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
