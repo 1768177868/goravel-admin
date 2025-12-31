@@ -1,32 +1,33 @@
 package routes
 
+import (
+	"github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/facades"
+	httpmiddleware "github.com/goravel/framework/http/middleware"
+
+	"goravel/app/http/controllers/api"
+	"goravel/app/http/middleware"
+)
+
 func Api() {
+	authController := api.NewAuthController()
 
-	// facades.Route().Prefix("url").Group(func(route route.Router) {
-	// 	route.Get("get/{id}", func(ctx http.Context) http.Response {
-	// 		return ctx.Response().Json(http.StatusOK, http.Json{
-	// 			"full_url":    ctx.Request().FullUrl(),
-	// 			"info":        ctx.Request().Info(),
-	// 			"info1":       facades.Route().Info("url.get"),
-	// 			"method":      ctx.Request().Method(),
-	// 			"name":        ctx.Request().Name(),
-	// 			"origin_path": ctx.Request().OriginPath(),
-	// 			"path":        ctx.Request().Path(),
-	// 			"url":         ctx.Request().Url(),
-	// 		})
-	// 	}).Name("url.get")
-	// 	route.Post("post/{id}", func(ctx http.Context) http.Response {
-	// 		return ctx.Response().Json(http.StatusOK, http.Json{
-	// 			"full_url":    ctx.Request().FullUrl(),
-	// 			"info":        ctx.Request().Info(),
-	// 			"info1":       facades.Route().Info("url.post"),
-	// 			"method":      ctx.Request().Method(),
-	// 			"name":        ctx.Request().Name(),
-	// 			"origin_path": ctx.Request().OriginPath(),
-	// 			"path":        ctx.Request().Path(),
-	// 			"url":         ctx.Request().Url(),
-	// 		})
-	// 	}).Name("url.post")
-	// })
+	// C端用户路由组：统一前缀
+	facades.Route().Prefix("api/user").Group(func(router route.Router) {
 
+		// 登录注册相关（不需要认证，但需要限流）
+		router.Middleware(httpmiddleware.Throttle("login")).Group(func(router route.Router) {
+			router.Post("register", authController.Register)
+			router.Post("login", authController.Login)
+		})
+
+		// 需要认证的路由
+		router.Middleware(middleware.UserJwt()).Group(func(router route.Router) {
+			// 用户信息
+			router.Get("info", authController.Info)
+			// 登出
+			router.Post("logout", authController.Logout)
+		})
+
+	})
 }

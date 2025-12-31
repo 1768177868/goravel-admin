@@ -225,7 +225,11 @@
     "balance_update_confirm": "Are you sure you want to update the balance?",
     "change_type": "Change Type",
     "manual_balance_adjustment": "Manual Balance Adjustment",
-    "balance_update_success": "Balance updated successfully"
+    "balance_update_success": "Balance updated successfully",
+    "reset_password": "Reset Password",
+    "new_password": "New Password",
+    "reset_password_success": "Password reset successful",
+    "password_min_length": "Password must be at least 6 characters"
   },
   "role": {
     "add_role": "Add Role",
@@ -684,7 +688,11 @@
     "end_time": "End Time",
     "status": "Status",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "login_success": "Login successful",
+    "logout_success": "Logout successful",
+    "password_error": "Password error",
+    "google_code_error": "Google Authenticator code error"
   },
   "export": {
     "filename": "Filename",

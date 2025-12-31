@@ -274,3 +274,37 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 
 	return response.Success(ctx, "balance_update_success", http.Json{})
 }
+
+// ResetPassword 重置用户密码（管理员操作）
+func (r *UserController) ResetPassword(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+
+	// 使用请求验证
+	var resetPasswordRequest adminrequests.ResetPassword
+	errors, err := ctx.Request().ValidateRequest(&resetPasswordRequest)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
+
+	var user models.User
+	if err := facades.Orm().Query().Where("id", id).First(&user); err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrUserNotFound.Code)
+	}
+
+	hashedPassword, err := facades.Hash().Make(resetPasswordRequest.Password)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
+	}
+
+	user.Password = hashedPassword
+	if err := facades.Orm().Query().Save(&user); err != nil {
+		return response.ErrorWithLog(ctx, "password", err, map[string]any{
+			"user_id": user.ID,
+		})
+	}
+
+	return response.Success(ctx, "password_reset_success", http.Json{})
+}

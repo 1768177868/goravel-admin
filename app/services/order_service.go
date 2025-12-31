@@ -127,7 +127,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 	// 重试机制：如果订单号重复，重新生成（最多重试3次）
 	var order *models.Order
 	maxRetries := 3
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		orderNo := s.generateOrderNo()
 
 		// 创建订单主表记录

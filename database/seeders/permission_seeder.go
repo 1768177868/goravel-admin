@@ -53,7 +53,7 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "管理员更新", Slug: "admin.update", Method: "PUT", Path: "/api/admin/admins/*", Description: "更新管理员", Status: 1, Sort: 4, MenuID: adminMenu.ID},
 		{Name: "管理员删除", Slug: "admin.destroy", Method: "DELETE", Path: "/api/admin/admins/*", Description: "删除管理员", Status: 1, Sort: 5, MenuID: adminMenu.ID},
 		{Name: "管理员导出", Slug: "admin.export", Method: "POST", Path: "/api/admin/admins/export", Description: "导出管理员列表", Status: 1, Sort: 6, MenuID: adminMenu.ID},
-		{Name: "重置密码", Slug: "admin.password", Method: "PUT", Path: "/api/admin/admins/*/password", Description: "重置管理员密码", Status: 1, Sort: 7, MenuID: adminMenu.ID},
+		{Name: "管理员重置密码", Slug: "admin.password", Method: "PUT", Path: "/api/admin/admins/*/password", Description: "重置管理员密码", Status: 1, Sort: 7, MenuID: adminMenu.ID},
 		{Name: "踢出用户", Slug: "admin.kick_out", Method: "DELETE", Path: "/api/admin/admins/*/tokens", Description: "踢出指定用户的所有token", Status: 1, Sort: 8, MenuID: adminMenu.ID},
 		{Name: "解绑谷歌验证码", Slug: "admin.unbind_google_auth", Method: "POST", Path: "/api/admin/admins/*/unbind-google-auth", Description: "解绑管理员的谷歌验证码", Status: 1, Sort: 9, MenuID: adminMenu.ID},
 		// 角色管理
@@ -158,11 +158,12 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "用户创建", Slug: "user.store", Method: "POST", Path: "/api/admin/users", Description: "创建用户", Status: 1, Sort: 3, MenuID: userMenu.ID},
 		{Name: "用户更新", Slug: "user.update", Method: "PUT", Path: "/api/admin/users/*", Description: "更新用户", Status: 1, Sort: 4, MenuID: userMenu.ID},
 		{Name: "用户删除", Slug: "user.destroy", Method: "DELETE", Path: "/api/admin/users/*", Description: "删除用户", Status: 1, Sort: 5, MenuID: userMenu.ID},
-		{Name: "更新余额", Slug: "user.update_balance", Method: "POST", Path: "/api/admin/users/*/update-balance", Description: "更新用户余额", Status: 1, Sort: 6, MenuID: userMenu.ID},
+		{Name: "用户重置密码", Slug: "user.password", Method: "PUT", Path: "/api/admin/users/*/password", Description: "重置用户密码", Status: 1, Sort: 6, MenuID: userMenu.ID},
+		{Name: "更新余额", Slug: "user.update_balance", Method: "POST", Path: "/api/admin/users/*/update-balance", Description: "更新用户余额", Status: 1, Sort: 7, MenuID: userMenu.ID},
 		// 用户余额变动记录
-		{Name: "余额记录列表", Slug: "user_balance_log.index", Method: "GET", Path: "/api/admin/user-balance-logs", Description: "查看用户余额变动记录列表", Status: 1, Sort: 7, MenuID: userMenu.ID},
-		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 8, MenuID: userMenu.ID},
-		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 9, MenuID: userMenu.ID},
+		{Name: "余额记录列表", Slug: "user_balance_log.index", Method: "GET", Path: "/api/admin/user-balance-logs", Description: "查看用户余额变动记录列表", Status: 1, Sort: 8, MenuID: userMenu.ID},
+		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 9, MenuID: userMenu.ID},
+		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 10, MenuID: userMenu.ID},
 	}
 
 	for _, perm := range permissions {

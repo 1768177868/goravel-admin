@@ -55,6 +55,10 @@
           </el-tag>
         </template>
 
+        <template #message="{ row }">
+          {{ translateLoginMessage(row.message || row.Message || '') }}
+        </template>
+
         <template #operation="{ row }">
           <TableActionButtons
             :row="row"
@@ -84,7 +88,7 @@
         </el-descriptions-item>
         <el-descriptions-item :label="$t('log.user_agent')">{{ logDetail.user_agent }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.login_time')">{{ logDetail.created_at }}</el-descriptions-item>
-        <el-descriptions-item :label="$t('log.message')" :span="2">{{ logDetail.message }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.message')" :span="2">{{ translateLoginMessage(logDetail.message || '') }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -258,7 +262,8 @@ const tableColumns = computed(() => [
   {
     field: 'message',
     title: t('log.message'),
-    sortable: false
+    sortable: false,
+    slot: 'message'
   },
   {
     field: 'created_at',
@@ -378,6 +383,15 @@ const handleBatchDelete = () => {
     selectedIds.value.clear()
     loadData()
   })
+}
+
+// 翻译登录消息
+const translateLoginMessage = (messageKey) => {
+  if (!messageKey) return '-'
+  
+  // 尝试翻译消息键，如果翻译不存在则返回原值
+  const translation = t(`log.${messageKey}`, null)
+  return translation !== `log.${messageKey}` ? translation : messageKey
 }
 
 const handleClean = async () => {

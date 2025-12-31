@@ -12,7 +12,6 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
 )
@@ -58,7 +57,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	// 验证密码
 	if !facades.Hash().Check(loginRequest.Password, admin.Password) {
 		// 记录登录失败日志
-		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, trans.Get(ctx, "password_error"))
+		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "password_error")
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
@@ -88,7 +87,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		// 验证谷歌验证码
 		if !r.googleAuthenticatorService.Verify(secret, googleCode) {
 			// 记录登录失败日志
-			r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, trans.Get(ctx, "google_code_error"))
+			r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "google_code_error")
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
 	} else {
@@ -129,7 +128,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	token := plainToken
 
 	// 记录登录成功日志
-	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, trans.Get(ctx, "login_success"))
+	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, "login_success")
 
 	// 更新最后登录时间（ORM会自动更新UpdatedAt）
 	facades.Orm().Query().Save(&admin)
@@ -355,7 +354,7 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 			}
 
 			// 记录退出日志
-			r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, trans.Get(ctx, "logout_success"))
+			r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success")
 		}
 	}
 

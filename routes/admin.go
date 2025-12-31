@@ -186,6 +186,7 @@ func Admin() {
 			// 用户管理
 			router.Resource("users", userController)
 			router.Post("users/{id}/update-balance", userController.UpdateBalance)
+			router.Put("users/{id}/password", userController.ResetPassword)
 
 			// 用户余额变动记录
 			router.Get("user-balance-logs", userBalanceLogController.Index)

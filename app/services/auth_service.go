@@ -11,7 +11,6 @@ import (
 
 	"goravel/app/errors"
 	"goravel/app/http/helpers"
-	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
@@ -63,7 +62,7 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	// 验证密码
 	if !facades.Hash().Check(password, admin.Password) {
 		// 记录登录失败日志
-		s.RecordLoginLog(ctx, 0, username, 0, trans.Get(ctx, "password_error"))
+		s.RecordLoginLog(ctx, 0, username, 0, "password_error")
 		return nil, "", errors.ErrPasswordError
 	}
 
@@ -95,7 +94,7 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	facades.Orm().Query().Save(&admin)
 
 	// 记录登录成功日志
-	s.RecordLoginLog(ctx, admin.ID, username, 1, trans.Get(ctx, "login_success"))
+	s.RecordLoginLog(ctx, admin.ID, username, 1, "login_success")
 
 	return &admin, token, nil
 }

@@ -94,6 +94,7 @@ import {
   getUserList,
   deleteUser,
   updateUser,
+  resetPassword,
   updateBalance
 } from '../../api/user'
 import logger from '../../utils/logger'
@@ -266,10 +267,17 @@ const getPrimaryActions = (row) => {
 const getMoreActions = (row) => {
   return [
     {
+      key: 'resetPassword',
+      command: 'resetPassword',
+      label: t('user.reset_password'),
+      permission: 'user.password'
+    },
+    {
       key: 'balanceLogs',
       command: 'balanceLogs',
       label: t('user.balance_logs'),
-      permission: 'user.balance_logs'
+      permission: 'user.balance_logs',
+      divided: true
     },
     {
       key: 'delete',
@@ -288,6 +296,9 @@ const handleAction = async (command, row) => {
       break
     case 'updateBalance':
       handleUpdateBalance(row)
+      break
+    case 'resetPassword':
+      handleResetPassword(row)
       break
     case 'balanceLogs':
       handleBalanceLogs(row)
@@ -389,6 +400,30 @@ const handleUpdateBalance = async (row) => {
   } catch (error) {
     if (error !== 'cancel' && error !== 'close') {
       ErrorHandler.handle(error)
+    }
+  }
+}
+
+const handleResetPassword = async (row) => {
+  try {
+    const { value: password } = await ElMessageBox.prompt(t('user.new_password'), t('user.reset_password'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      inputType: 'password',
+      inputValidator: (value) => {
+        if (!value || value.length < 6) {
+          return t('user.password_min_length')
+        }
+        return true
+      }
+    })
+    const userId = row.id || row.ID
+    await resetPassword(userId, { password })
+    ElMessage.success(t('user.reset_password_success'))
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      logger.error('Reset password error:', error)
+      ErrorHandler.handle(error, { silent: true })
     }
   }
 }

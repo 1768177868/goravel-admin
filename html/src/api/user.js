@@ -6,6 +6,14 @@ const baseUserApi = createCRUDApi('users')
 
 // 扩展 API，添加自定义方法
 const userApi = extendApi(baseUserApi, {
+  // 重置密码
+  resetPassword: (id, data) => {
+    return request({
+      url: `/users/${id}/password`,
+      method: 'put',
+      data
+    })
+  },
   // 更新用户余额
   updateBalance: (id, data) => {
     return request({
@@ -23,6 +31,7 @@ export const {
   create: createUser,
   update: updateUser,
   delete: deleteUser,
+  resetPassword,
   updateBalance
 } = userApi
 
