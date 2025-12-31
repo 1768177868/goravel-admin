@@ -233,15 +233,15 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		order := orderWithDetails.Order
 		details := orderWithDetails.Details
 
-		// 格式化订单状态
+		// 格式化订单状态（使用多语言翻译）
 		statusText := order.Status
 		switch order.Status {
 		case "pending":
-			statusText = "待支付"
+			statusText = utils.TranslateKey("export_order_status_pending", lang, "pending")
 		case "paid":
-			statusText = "已支付"
+			statusText = utils.TranslateKey("export_order_status_paid", lang, "paid")
 		case "cancelled":
-			statusText = "已取消"
+			statusText = utils.TranslateKey("export_order_status_cancelled", lang, "cancelled")
 		}
 
 		// 格式化时间
