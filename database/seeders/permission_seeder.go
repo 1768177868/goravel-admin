@@ -190,20 +190,8 @@ func (s *PermissionSeeder) Run() error {
 				facades.Log().Infof("Created permission: %s (MenuID: %d)", perm.Slug, perm.MenuID)
 			}
 		} else {
-			// 存在则更新 MenuID 和其他字段（保留 slug）
-			existPerm.MenuID = perm.MenuID
-			existPerm.Name = perm.Name
-			existPerm.Slug = perm.Slug // 确保 slug 不被清空
-			existPerm.Method = perm.Method
-			existPerm.Path = perm.Path
-			existPerm.Description = perm.Description
-			existPerm.Status = perm.Status
-			existPerm.Sort = perm.Sort
-			if err := facades.Orm().Query().Save(&existPerm); err != nil {
-				facades.Log().Errorf("Failed to update permission %s: %v", perm.Slug, err)
-			} else {
-				facades.Log().Infof("Updated permission: %s (MenuID: %d)", perm.Slug, perm.MenuID)
-			}
+			// 已存在则跳过，不修改
+			facades.Log().Infof("Permission %s already exists, skipping", perm.Slug)
 		}
 	}
 

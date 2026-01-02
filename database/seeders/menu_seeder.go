@@ -14,7 +14,7 @@ func (s *MenuSeeder) Signature() string {
 }
 
 func (s *MenuSeeder) Run() error {
-	// 辅助函数：根据Slug查找或创建菜单，如果存在则更新（保留用户修改的图标）
+	// 辅助函数：根据Slug查找或创建菜单，如果存在则跳过（只做增量添加）
 	createOrUpdateMenu := func(menuData models.Menu) models.Menu {
 		// 如果 slug 为空，跳过（不应该发生，但作为保护）
 		if menuData.Slug == "" {
@@ -25,27 +25,8 @@ func (s *MenuSeeder) Run() error {
 		var existingMenu models.Menu
 		// 先尝试通过 slug 查找
 		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu); err == nil {
-			// 菜单已存在，更新除图标和排序外的其他字段（保留用户可能修改的图标和排序）
-			existingMenu.ParentID = menuData.ParentID
-			existingMenu.Title = menuData.Title
-			existingMenu.Slug = menuData.Slug // 确保 slug 也被更新
-			// 如果现有菜单的图标为空，才更新图标；否则保留用户修改的图标
-			if existingMenu.Icon == "" {
-				existingMenu.Icon = menuData.Icon
-			}
-			existingMenu.Path = menuData.Path
-			existingMenu.Component = menuData.Component
-			existingMenu.Permission = menuData.Permission
-			existingMenu.Type = menuData.Type
-			existingMenu.Status = menuData.Status
-			// 如果现有菜单的排序为0，则更新为填充数据中的排序值；否则保留用户手动调整的排序值
-			if existingMenu.Sort == 0 {
-				existingMenu.Sort = menuData.Sort
-			}
-			existingMenu.IsHidden = menuData.IsHidden
-			facades.Orm().Query().Save(&existingMenu)
-			// 重新查询确保获取最新数据
-			facades.Orm().Query().Where("id", existingMenu.ID).First(&existingMenu)
+			// 菜单已存在，跳过不修改
+			facades.Log().Infof("Menu %s already exists, skipping", menuData.Slug)
 			return existingMenu
 		}
 
@@ -53,26 +34,8 @@ func (s *MenuSeeder) Run() error {
 		if menuData.Path != "" {
 			var existingByPath models.Menu
 			if err := facades.Orm().Query().Where("path", menuData.Path).Where("title", menuData.Title).First(&existingByPath); err == nil {
-				// 找到旧菜单（可能 slug 为空），更新它
-				existingByPath.ParentID = menuData.ParentID
-				existingByPath.Title = menuData.Title
-				existingByPath.Slug = menuData.Slug // 更新 slug
-				if existingByPath.Icon == "" {
-					existingByPath.Icon = menuData.Icon
-				}
-				existingByPath.Path = menuData.Path
-				existingByPath.Component = menuData.Component
-				existingByPath.Permission = menuData.Permission
-				existingByPath.Type = menuData.Type
-				existingByPath.Status = menuData.Status
-				// 如果现有菜单的排序为0，则更新为填充数据中的排序值；否则保留用户手动调整的排序值
-				if existingByPath.Sort == 0 {
-					existingByPath.Sort = menuData.Sort
-				}
-				existingByPath.IsHidden = menuData.IsHidden
-				facades.Orm().Query().Save(&existingByPath)
-				// 重新查询确保获取最新数据
-				facades.Orm().Query().Where("id", existingByPath.ID).First(&existingByPath)
+				// 找到旧菜单（可能 slug 为空），跳过不修改
+				facades.Log().Infof("Menu with path %s and title %s already exists, skipping", menuData.Path, menuData.Title)
 				return existingByPath
 			}
 		}
@@ -85,6 +48,7 @@ func (s *MenuSeeder) Run() error {
 		// 创建后重新查询获取完整的菜单信息（包括ID）
 		var createdMenu models.Menu
 		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&createdMenu); err == nil {
+			facades.Log().Infof("Created menu: %s", menuData.Slug)
 			return createdMenu
 		}
 		return menuData

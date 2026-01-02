@@ -318,9 +318,19 @@ func (s *CurrencySeeder) Run() error {
 	}
 
 	for _, currency := range currencies {
-		facades.Orm().Query().FirstOrCreate(&currency, models.Currency{
-			Code: currency.Code,
-		})
+		// 检查是否已存在，只创建不存在的（增量添加模式）
+		var existingCurrency models.Currency
+		if err := facades.Orm().Query().Where("code", currency.Code).First(&existingCurrency); err != nil {
+			// 不存在则创建
+			if err := facades.Orm().Query().Create(&currency); err != nil {
+				facades.Log().Errorf("Failed to create currency %s: %v", currency.Code, err)
+			} else {
+				facades.Log().Infof("Created currency: %s", currency.Code)
+			}
+		} else {
+			// 已存在则跳过，不修改
+			facades.Log().Infof("Currency %s already exists, skipping", currency.Code)
+		}
 	}
 
 	return nil
