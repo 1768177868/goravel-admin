@@ -569,8 +569,9 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		},
 	}
 
-	// 传递 JSON 字符串作为参数，使用独立的 exports 队列，避免长时间运行的导出任务影响其他队列任务
-	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).OnQueue("exports").Dispatch(); err != nil {
+	// 传递 JSON 字符串作为参数，使用 long-running 队列，避免长时间运行的导出任务影响其他队列任务
+	// 所有耗时任务（导出、报表生成、批量处理等）都应该使用 long-running 队列
+	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
 		// 如果任务提交失败，立即释放锁，让用户可以立即重试
 		lock.Release()
 		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)

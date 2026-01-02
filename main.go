@@ -67,19 +67,20 @@ func runApplication() {
 		}
 	}()
 
-	// 启动导出队列工作进程（处理导出任务，避免长时间运行的任务影响其他队列）
-	// 导出队列使用较小的并发数（1），因为导出任务通常比较耗时且占用资源
-	exportConcurrent := facades.Config().GetInt("queue.exports.concurrent", 1)
-	exportWorker := facades.Queue().Worker(queue.Args{
-		Connection: "",               // 使用默认连接
-		Queue:      "exports",        // 使用 exports 队列
-		Concurrent: exportConcurrent, // 导出队列并发数（默认1，可通过环境变量 QUEUE_EXPORTS_CONCURRENT 设置）
-		Tries:      tries,            // 最大重试次数上限
+	// 启动长时间任务队列工作进程（处理所有耗时任务：导出、报表生成、批量处理等）
+	// 长时间任务队列使用较小的并发数（1），因为这些任务通常比较耗时且占用资源
+	// 所有耗时任务都应该使用 .OnQueue("long-running") 提交到此队列
+	longRunningConcurrent := facades.Config().GetInt("queue.long_running.concurrent", 1)
+	longRunningWorker := facades.Queue().Worker(queue.Args{
+		Connection: "",                    // 使用默认连接
+		Queue:      "long-running",        // 使用 long-running 队列
+		Concurrent: longRunningConcurrent, // 长时间任务队列并发数（默认1，可通过环境变量 QUEUE_LONG_RUNNING_CONCURRENT 设置）
+		Tries:      tries,                 // 最大重试次数上限
 	})
-	facades.Log().Infof("导出队列工作进程启动 - 队列: exports, 并发数: %d, 最大重试次数: %d", exportConcurrent, tries)
+	facades.Log().Infof("长时间任务队列工作进程启动 - 队列: long-running, 并发数: %d, 最大重试次数: %d", longRunningConcurrent, tries)
 	go func() {
-		if err := exportWorker.Run(); err != nil {
-			facades.Log().Errorf("导出队列工作进程运行错误: %v", err)
+		if err := longRunningWorker.Run(); err != nil {
+			facades.Log().Errorf("长时间任务队列工作进程运行错误: %v", err)
 		}
 	}()
 
