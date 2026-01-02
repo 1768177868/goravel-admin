@@ -81,6 +81,16 @@ func generateDefaultTitle(method, path string) string {
 		return "export.download"
 	}
 
+	// 订单导入
+	if pathStr.Contains("/orders/import") && method == "POST" {
+		return "order.import"
+	}
+
+	// 订单导出
+	if pathStr.Contains("/orders/export") && method == "POST" {
+		return "order.export"
+	}
+
 	// 管理员解绑谷歌验证码
 	if pathStr.Contains("/admins/") && pathStr.EndsWith("/unbind-google-auth") && method == "POST" {
 		return "admin.unbind_google_auth"

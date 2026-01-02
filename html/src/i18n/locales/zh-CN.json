@@ -322,6 +322,7 @@
     "order.update": "更新订单",
     "order.destroy": "删除订单",
     "order.export": "导出订单列表",
+    "order.import": "导入订单",
     "user.index": "查看用户列表",
     "user.show": "查看用户详情",
     "user.store": "创建用户",

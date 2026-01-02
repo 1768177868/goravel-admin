@@ -324,6 +324,7 @@
     "order.update": "Update Order",
     "order.destroy": "Delete Order",
     "order.export": "Export Order List",
+    "order.import": "Import Orders",
     "user.index": "View User List",
     "user.show": "View User Detail",
     "user.store": "Create User",

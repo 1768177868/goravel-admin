@@ -732,10 +732,6 @@ func (r *OrderController) Import(ctx http.Context) http.Response {
 		})
 	}
 
-	// 记录导入日志
-	facades.Log().Infof("订单导入完成: admin_id=%d, filename=%s, total=%d, success=%d, failed=%d",
-		adminID, filename, result.TotalRows, result.SuccessCount, result.FailedCount)
-
 	return response.Success(ctx, http.Json{
 		"total_rows":    result.TotalRows,
 		"success_count": result.SuccessCount,
