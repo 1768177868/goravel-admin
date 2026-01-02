@@ -48,7 +48,13 @@
     "copy_failed": "Copy failed",
     "locale": "en-US",
     "language_zh": "中文",
-    "language_en": "English"
+    "language_en": "English",
+    "export_success": "Export successful",
+    "export_failed": "Export failed",
+    "export_task_submitted": "Export task submitted, please check the export records later",
+    "export_in_progress": "Export task is in progress, please do not submit again",
+    "export_timeout": "Export task is taking longer than expected, please check the export records page for progress",
+    "export_check_manually": "Please check the export records page for export progress"
   },
   "login": {
     "title": "Admin Management System",
@@ -456,12 +462,6 @@
     "update_status": "Update Order Status",
     "update_status_tip": "Please select order status",
     "delete_confirm": "Are you sure to delete this order?",
-    "export_success": "Export successful",
-    "export_failed": "Export failed",
-    "export_task_submitted": "Export task submitted, please check the export records later",
-    "export_in_progress": "Export task is in progress, please do not submit again",
-    "export_timeout": "Export task is taking longer than expected, please check the export records page for progress",
-    "export_check_manually": "Please check the export records page for export progress",
     "create_success": "Create successful",
     "products": "Products",
     "time_range_exceeded": "Query time range cannot exceed {months} months",

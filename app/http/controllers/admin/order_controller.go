@@ -478,38 +478,24 @@ func (r *OrderController) Destroy(ctx http.Context) http.Response {
 // @Router       /api/admin/orders/export [post]
 // @Security     BearerAuth
 func (r *OrderController) Export(ctx http.Context) http.Response {
-	// 1. 防重复点击：使用 Redis 锁
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
 	if err != nil {
 		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	lockKey := fmt.Sprintf("export:orders:lock:%d", adminID)
-	lockValue := fmt.Sprintf("%d_%d", adminID, time.Now().Unix())
-
-	// 检查是否已有导出任务在处理中
-	var cachedValue string
-	if facades.Cache().Get(lockKey, &cachedValue) == nil && cachedValue != "" {
+	// 防重复点击：使用锁保护（锁会在10秒后自动过期，防止短时间内重复请求）
+	guard, err := utils.AcquireLock("export:orders:lock", adminID, 10*time.Second)
+	if err != nil {
 		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
 	}
 
-	// 设置锁，过期时间30秒（防止短时间重复点击）
-	if err := facades.Cache().Put(lockKey, lockValue, 30*time.Second); err != nil {
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	// 确保释放锁
-	defer func() {
-		_ = facades.Cache().Forget(lockKey)
-	}()
-
-	// 2. 构建筛选条件
+	// 构建筛选条件
 	filters, resp := r.buildFilters(ctx)
 	if resp != nil {
 		return resp
 	}
 
-	// 3. 创建导出记录（状态为处理中）
+	// 创建导出记录（状态为处理中）
 	// 获取存储驱动配置
 	disk := utils.GetConfigValue("storage", "file_disk", "")
 	if disk == "" {
@@ -529,7 +515,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 4. 将筛选条件序列化为 JSON
+	// 将筛选条件序列化为 JSON
 	filtersMap := map[string]any{
 		"user_id":    filters.UserID,
 		"order_no":   filters.OrderNo,
@@ -545,10 +531,10 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		filtersMap["end_time"] = filters.EndTime.Format("2006-01-02 15:04:05")
 	}
 
-	// 5. 获取当前语言（从请求头或查询参数，与 middleware 逻辑一致）
+	// 获取当前语言（从请求头或查询参数，与 middleware 逻辑一致）
 	lang := r.getCurrentLanguage(ctx)
 
-	// 6. 异步执行导出任务（使用 Job）
+	// 异步执行导出任务（使用 Job）
 	// 将参数序列化为 JSON 字符串传递，避免框架对复杂类型的序列化问题
 	exportArgsStruct := jobs.ExportOrdersArgs{
 		ExportID: exportRecord.ID,
@@ -582,7 +568,8 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	// 传递 JSON 字符串作为参数
 	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).Dispatch(); err != nil {
-		// 如果任务提交失败，更新导出记录状态
+		// 如果任务提交失败，立即释放锁，让用户可以立即重试
+		guard.Release()
 		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
@@ -592,7 +579,6 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	facades.Log().Infof("导出任务已成功提交到队列: export_id=%d", exportRecord.ID)
 
-	// 6. 返回导出记录ID，前端可以跳转到导出记录页面查看状态
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
 		"message":   trans.Get(ctx, "export_task_submitted"),

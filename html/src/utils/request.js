@@ -244,8 +244,13 @@ request.interceptors.response.use(
 
       // 根据 HTTP 状态码和错误码处理
       if (status === 429) {
-        ElMessage.error(message || t('error.tooManyRequests'))
-        error.__handled = true
+        // 对于导出接口，不在这里显示错误，让业务代码自己处理
+        const isExportEndpoint = url.includes('/export')
+        if (!isExportEndpoint) {
+          ElMessage.error(message || t('error.tooManyRequests'))
+          error.__handled = true
+        }
+        // 导出接口的 429 错误不标记为已处理，让业务代码显示更友好的提示
       } else if (status === 401) {
         if (!isAuthEndpoint) {
           handle401Error(message || t('error.unauthorized'))

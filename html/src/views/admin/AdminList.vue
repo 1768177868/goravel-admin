@@ -583,12 +583,19 @@ const handleExport = async () => {
   try {
     await exportAdmin(searchForm)
     // 不再直接触发下载，导出记录会写入导出管理列表，由用户在导出管理中查看和下载
-    ElMessage.success(t('admin.export_success'))
+    ElMessage.success(t('common.export_task_submitted'))
     // 导出完成后跳转到导出管理列表
     router.push('/exports')
   } catch (error) {
     logger.error('Export error:', error)
-    ErrorHandler.handle(error, { silent: true })
+    // 检查是否是重复提交错误
+    if (error.response?.status === 429) {
+      // 429 错误由业务代码处理，显示友好的提示
+      ElMessage.warning(t('common.export_in_progress'))
+    } else if (!error.__handled) {
+      // 其他错误，如果未处理则显示
+      ErrorHandler.handle(error, { silent: true })
+    }
   } finally {
     // 无论成功还是失败，都要重置导出状态
     isExporting.value = false

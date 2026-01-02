@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"time"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
@@ -13,6 +15,7 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type AdminController struct {
@@ -640,6 +643,18 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth
 func (r *AdminController) Export(ctx http.Context) http.Response {
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	}
+
+	// 防重复点击：使用锁保护（锁会在10秒后自动过期，防止短时间内重复请求）
+	_, err = utils.AcquireLock("export:admins:lock", adminID, 10*time.Second)
+	if err != nil {
+		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+	}
+	// 同步导出：锁会在 Redis 中自动过期（10秒），不需要手动释放
+
 	filters := r.buildFilters(ctx)
 
 	// 导出时获取所有数据，不分页
