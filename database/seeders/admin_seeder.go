@@ -14,13 +14,6 @@ func (s *AdminSeeder) Signature() string {
 }
 
 func (s *AdminSeeder) Run() error {
-	// 检查是否已经初始化过（通过检查超级管理员是否存在）
-	var existingSuperAdmin models.Admin
-	if err := facades.Orm().Query().Where("username", "admin").First(&existingSuperAdmin); err == nil {
-		// 超级管理员已存在，说明已经初始化过，直接跳过
-		return nil
-	}
-
 	// 创建超级管理员
 	hashedPassword, _ := facades.Hash().Make("admin123")
 	superAdmin := models.Admin{
@@ -29,9 +22,7 @@ func (s *AdminSeeder) Run() error {
 		Nickname: "超级管理员",
 		Status:   1,
 	}
-	if err := facades.Orm().Query().Create(&superAdmin); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("username", "admin").FirstOrCreate(&superAdmin, superAdmin)
 
 	// 创建开发者管理员（受保护，不显示在列表中）
 	developerPassword, _ := facades.Hash().Make("developer123")
@@ -41,9 +32,7 @@ func (s *AdminSeeder) Run() error {
 		Nickname: "开发者管理员",
 		Status:   1,
 	}
-	if err := facades.Orm().Query().Create(&developerAdmin); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("username", "developer").FirstOrCreate(&developerAdmin, developerAdmin)
 
 	// 创建部门
 	rootDept := models.Department{
@@ -52,9 +41,7 @@ func (s *AdminSeeder) Run() error {
 		Status: 1,
 		Sort:   0,
 	}
-	if err := facades.Orm().Query().Create(&rootDept); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("code", "ROOT").FirstOrCreate(&rootDept, rootDept)
 
 	itDept := models.Department{
 		ParentID: rootDept.ID,
@@ -63,9 +50,7 @@ func (s *AdminSeeder) Run() error {
 		Status:   1,
 		Sort:     1,
 	}
-	if err := facades.Orm().Query().Create(&itDept); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("code", "IT").FirstOrCreate(&itDept, itDept)
 
 	// 创建角色
 	superRole := models.Role{
@@ -75,9 +60,7 @@ func (s *AdminSeeder) Run() error {
 		Status:      1,
 		Sort:        0,
 	}
-	if err := facades.Orm().Query().Create(&superRole); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("slug", "super-admin").FirstOrCreate(&superRole, superRole)
 
 	adminRole := models.Role{
 		Name:        "管理员",
@@ -86,18 +69,34 @@ func (s *AdminSeeder) Run() error {
 		Status:      1,
 		Sort:        1,
 	}
-	if err := facades.Orm().Query().Create(&adminRole); err != nil {
-		return err
+	facades.Orm().Query().Where("slug", "admin").FirstOrCreate(&adminRole, adminRole)
+
+	// 关联超级管理员和超级角色（增量添加，不覆盖已有角色）
+	var existingRoles []models.Role
+	facades.Orm().Query().Model(&superAdmin).Association("Roles").Find(&existingRoles)
+	hasSuperRole := false
+	for _, r := range existingRoles {
+		if r.Slug == "super-admin" {
+			hasSuperRole = true
+			break
+		}
+	}
+	if !hasSuperRole {
+		facades.Orm().Query().Model(&superAdmin).Association("Roles").Append([]models.Role{superRole})
 	}
 
-	// 关联超级管理员和超级角色
-	if err := facades.Orm().Query().Model(&superAdmin).Association("Roles").Append([]models.Role{superRole}); err != nil {
-		return err
+	// 给开发者管理员分配 super-admin 角色（增量添加）
+	existingRoles = []models.Role{}
+	facades.Orm().Query().Model(&developerAdmin).Association("Roles").Find(&existingRoles)
+	hasSuperRole = false
+	for _, r := range existingRoles {
+		if r.Slug == "super-admin" {
+			hasSuperRole = true
+			break
+		}
 	}
-
-	// 给开发者管理员分配 super-admin 角色
-	if err := facades.Orm().Query().Model(&developerAdmin).Association("Roles").Append([]models.Role{superRole}); err != nil {
-		return err
+	if !hasSuperRole {
+		facades.Orm().Query().Model(&developerAdmin).Association("Roles").Append([]models.Role{superRole})
 	}
 
 	// super-admin 角色不需要分配权限和菜单，因为它在权限中间件中会跳过权限检查
@@ -111,23 +110,47 @@ func (s *AdminSeeder) Run() error {
 		Status:      1,
 		Sort:        2,
 	}
-	if err := facades.Orm().Query().Create(&demoRole); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("slug", "demo").FirstOrCreate(&demoRole, demoRole)
 
-	// 给演示角色分配所有查看权限（index 和 show）
+	// 给演示角色分配所有查看权限（index 和 show）（增量添加）
 	var viewPermissions []models.Permission
-	if err := facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").OrWhere("slug", "dashboard.data").Find(&viewPermissions); err == nil && len(viewPermissions) > 0 {
-		if err := facades.Orm().Query().Model(&demoRole).Association("Permissions").Append(viewPermissions); err != nil {
-			return err
+	facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").OrWhere("slug", "dashboard.data").Find(&viewPermissions)
+	if len(viewPermissions) > 0 {
+		var existingPerms []models.Permission
+		facades.Orm().Query().Model(&demoRole).Association("Permissions").Find(&existingPerms)
+		existingPermMap := make(map[uint]bool)
+		for _, p := range existingPerms {
+			existingPermMap[p.ID] = true
+		}
+		var newPerms []models.Permission
+		for _, p := range viewPermissions {
+			if !existingPermMap[p.ID] {
+				newPerms = append(newPerms, p)
+			}
+		}
+		if len(newPerms) > 0 {
+			facades.Orm().Query().Model(&demoRole).Association("Permissions").Append(newPerms)
 		}
 	}
 
-	// 给演示角色分配所有菜单（用于前端显示）
+	// 给演示角色分配所有菜单（用于前端显示）（增量添加）
 	var allMenus []models.Menu
-	if err := facades.Orm().Query().Where("status", 1).Find(&allMenus); err == nil && len(allMenus) > 0 {
-		if err := facades.Orm().Query().Model(&demoRole).Association("Menus").Append(allMenus); err != nil {
-			return err
+	facades.Orm().Query().Where("status", 1).Find(&allMenus)
+	if len(allMenus) > 0 {
+		var existingMenus []models.Menu
+		facades.Orm().Query().Model(&demoRole).Association("Menus").Find(&existingMenus)
+		existingMenuMap := make(map[uint]bool)
+		for _, m := range existingMenus {
+			existingMenuMap[m.ID] = true
+		}
+		var newMenus []models.Menu
+		for _, m := range allMenus {
+			if !existingMenuMap[m.ID] {
+				newMenus = append(newMenus, m)
+			}
+		}
+		if len(newMenus) > 0 {
+			facades.Orm().Query().Model(&demoRole).Association("Menus").Append(newMenus)
 		}
 	}
 
@@ -139,13 +162,20 @@ func (s *AdminSeeder) Run() error {
 		Nickname: "演示账户",
 		Status:   1,
 	}
-	if err := facades.Orm().Query().Create(&demoAdmin); err != nil {
-		return err
-	}
+	facades.Orm().Query().Where("username", "demo").FirstOrCreate(&demoAdmin, demoAdmin)
 
-	// 给演示账户分配演示角色
-	if err := facades.Orm().Query().Model(&demoAdmin).Association("Roles").Append([]models.Role{demoRole}); err != nil {
-		return err
+	// 给演示账户分配演示角色（增量添加）
+	var existingDemoRoles []models.Role
+	facades.Orm().Query().Model(&demoAdmin).Association("Roles").Find(&existingDemoRoles)
+	hasDemoRole := false
+	for _, r := range existingDemoRoles {
+		if r.Slug == "demo" {
+			hasDemoRole = true
+			break
+		}
+	}
+	if !hasDemoRole {
+		facades.Orm().Query().Model(&demoAdmin).Association("Roles").Append([]models.Role{demoRole})
 	}
 
 	return nil

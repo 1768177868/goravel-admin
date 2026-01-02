@@ -24,19 +24,8 @@ func (s *DictionarySeeder) Run() error {
 	}
 
 	for _, dict := range dictionaries {
-		// 检查是否已存在，只创建不存在的（增量添加模式）
-		var existingDict models.Dictionary
-		if err := facades.Orm().Query().Where("type", dict.Type).Where("value", dict.Value).First(&existingDict); err != nil {
-			// 不存在则创建
-			if err := facades.Orm().Query().Create(&dict); err != nil {
-				facades.Log().Errorf("Failed to create dictionary type=%s value=%s: %v", dict.Type, dict.Value, err)
-			} else {
-				facades.Log().Infof("Created dictionary: type=%s value=%s", dict.Type, dict.Value)
-			}
-		} else {
-			// 已存在则跳过，不修改
-			facades.Log().Infof("Dictionary type=%s value=%s already exists, skipping", dict.Type, dict.Value)
-		}
+		// 使用 FirstOrCreate：如果不存在则创建，存在则跳过
+		facades.Orm().Query().Where("type", dict.Type).Where("value", dict.Value).FirstOrCreate(&dict, dict)
 	}
 
 	return nil

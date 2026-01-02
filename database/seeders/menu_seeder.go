@@ -16,41 +16,11 @@ func (s *MenuSeeder) Signature() string {
 func (s *MenuSeeder) Run() error {
 	// 辅助函数：根据Slug查找或创建菜单，如果存在则跳过（只做增量添加）
 	createOrUpdateMenu := func(menuData models.Menu) models.Menu {
-		// 如果 slug 为空，跳过（不应该发生，但作为保护）
 		if menuData.Slug == "" {
-			facades.Log().Errorf("Menu slug is empty for title: %s", menuData.Title)
 			return menuData
 		}
-
-		var existingMenu models.Menu
-		// 先尝试通过 slug 查找
-		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu); err == nil {
-			// 菜单已存在，跳过不修改
-			facades.Log().Infof("Menu %s already exists, skipping", menuData.Slug)
-			return existingMenu
-		}
-
-		// 如果通过 slug 找不到，尝试通过 path 和 title 查找（兼容旧数据，可能 slug 为空）
-		if menuData.Path != "" {
-			var existingByPath models.Menu
-			if err := facades.Orm().Query().Where("path", menuData.Path).Where("title", menuData.Title).First(&existingByPath); err == nil {
-				// 找到旧菜单（可能 slug 为空），跳过不修改
-				facades.Log().Infof("Menu with path %s and title %s already exists, skipping", menuData.Path, menuData.Title)
-				return existingByPath
-			}
-		}
-
-		// 菜单不存在，创建新菜单
-		if err := facades.Orm().Query().Create(&menuData); err != nil {
-			facades.Log().Errorf("Failed to create menu with slug %s: %v", menuData.Slug, err)
-			return menuData
-		}
-		// 创建后重新查询获取完整的菜单信息（包括ID）
-		var createdMenu models.Menu
-		if err := facades.Orm().Query().Where("slug", menuData.Slug).First(&createdMenu); err == nil {
-			facades.Log().Infof("Created menu: %s", menuData.Slug)
-			return createdMenu
-		}
+		// 使用 FirstOrCreate：如果不存在则创建，存在则返回现有记录
+		facades.Orm().Query().Where("slug", menuData.Slug).FirstOrCreate(&menuData, menuData)
 		return menuData
 	}
 

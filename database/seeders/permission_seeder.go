@@ -18,32 +18,37 @@ func (s *PermissionSeeder) Run() error {
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu, userBalanceLogMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 
-	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
-	facades.Orm().Query().Where("slug", "role").First(&roleMenu)
-	facades.Orm().Query().Where("slug", "permission").First(&permissionMenu)
-	facades.Orm().Query().Where("slug", "menu").First(&menuMenu)
-	facades.Orm().Query().Where("slug", "department").First(&departmentMenu)
-	facades.Orm().Query().Where("slug", "dictionary").First(&dictionaryMenu)
-	facades.Orm().Query().Where("slug", "config").First(&configMenu)
-	facades.Orm().Query().Where("slug", "blacklist").First(&blacklistMenu)
-	facades.Orm().Query().Where("slug", "online-admin").First(&onlineAdminMenu)
-	facades.Orm().Query().Where("slug", "operation-log").First(&operationLogMenu)
-	facades.Orm().Query().Where("slug", "login-log").First(&loginLogMenu)
-	facades.Orm().Query().Where("slug", "system-log").First(&systemLogMenu)
-	facades.Orm().Query().Where("slug", "monitor").First(&monitorMenu)
-	facades.Orm().Query().Where("slug", "profile").First(&profileMenu)
-	facades.Orm().Query().Where("slug", "export").First(&exportMenu)
-	facades.Orm().Query().Where("slug", "attachment").First(&attachmentMenu)
-	facades.Orm().Query().Where("slug", "notification").First(&notificationMenu)
-	facades.Orm().Query().Where("slug", "order").First(&orderMenu)
-	facades.Orm().Query().Where("slug", "user").First(&userMenu)
-	facades.Orm().Query().Where("slug", "user-balance-log").First(&userBalanceLogMenu)
+	// 辅助函数：查找菜单
+	findMenu := func(slug string, menu *models.Menu) {
+		*menu = models.Menu{}
+		facades.Orm().Query().Where("slug", slug).First(menu)
+	}
 
-	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联（或者可以创建 dashboard 菜单）
-	// 如果 dashboard 菜单不存在，使用 profileMenu 作为后备
+	findMenu("admin", &adminMenu)
+	findMenu("role", &roleMenu)
+	findMenu("permission", &permissionMenu)
+	findMenu("menu", &menuMenu)
+	findMenu("department", &departmentMenu)
+	findMenu("dictionary", &dictionaryMenu)
+	findMenu("config", &configMenu)
+	findMenu("blacklist", &blacklistMenu)
+	findMenu("online-admin", &onlineAdminMenu)
+	findMenu("operation-log", &operationLogMenu)
+	findMenu("login-log", &loginLogMenu)
+	findMenu("system-log", &systemLogMenu)
+	findMenu("monitor", &monitorMenu)
+	findMenu("profile", &profileMenu)
+	findMenu("export", &exportMenu)
+	findMenu("attachment", &attachmentMenu)
+	findMenu("notification", &notificationMenu)
+	findMenu("order", &orderMenu)
+	findMenu("user", &userMenu)
+	findMenu("user-balance-log", &userBalanceLogMenu)
+
+	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联
 	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
 	if dashboardMenu.ID == 0 {
-		dashboardMenu = profileMenu // 使用 profile 菜单作为后备
+		dashboardMenu = profileMenu
 	}
 
 	// 创建权限（关联菜单ID）
@@ -177,22 +182,11 @@ func (s *PermissionSeeder) Run() error {
 
 		// 检查菜单ID是否有效
 		if perm.MenuID == 0 {
-			facades.Log().Errorf("Permission %s has MenuID 0, skipping", perm.Slug)
 			continue
 		}
 
-		var existPerm models.Permission
-		if err := facades.Orm().Query().Where("slug", perm.Slug).First(&existPerm); err != nil {
-			// 不存在则创建
-			if err := facades.Orm().Query().Create(&perm); err != nil {
-				facades.Log().Errorf("Failed to create permission %s: %v", perm.Slug, err)
-			} else {
-				facades.Log().Infof("Created permission: %s (MenuID: %d)", perm.Slug, perm.MenuID)
-			}
-		} else {
-			// 已存在则跳过，不修改
-			facades.Log().Infof("Permission %s already exists, skipping", perm.Slug)
-		}
+		// 使用 FirstOrCreate：如果不存在则创建，存在则跳过
+		facades.Orm().Query().Where("slug", perm.Slug).FirstOrCreate(&perm, perm)
 	}
 
 	return nil
