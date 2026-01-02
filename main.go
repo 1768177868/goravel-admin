@@ -53,16 +53,33 @@ func runApplication() {
 	tries := facades.Config().GetInt("queue.tries", 5)
 	concurrent := facades.Config().GetInt("queue.concurrent", 1)
 
+	// 启动默认队列工作进程（处理常规任务）
 	worker := facades.Queue().Worker(queue.Args{
 		Connection: "",         // 使用默认连接
 		Queue:      "",         // 使用默认队列
 		Concurrent: concurrent, // 并发数（从配置读取，支持环境变量 QUEUE_CONCURRENT）
 		Tries:      tries,      // 最大重试次数上限（从配置读取，支持环境变量 QUEUE_TRIES）
 	})
-	facades.Log().Infof("队列工作进程启动 - 并发数: %d, 最大重试次数: %d", concurrent, tries)
+	facades.Log().Infof("默认队列工作进程启动 - 队列: default, 并发数: %d, 最大重试次数: %d", concurrent, tries)
 	go func() {
 		if err := worker.Run(); err != nil {
-			facades.Log().Errorf("Queue run error: %v", err)
+			facades.Log().Errorf("默认队列工作进程运行错误: %v", err)
+		}
+	}()
+
+	// 启动导出队列工作进程（处理导出任务，避免长时间运行的任务影响其他队列）
+	// 导出队列使用较小的并发数（1），因为导出任务通常比较耗时且占用资源
+	exportConcurrent := facades.Config().GetInt("queue.exports.concurrent", 1)
+	exportWorker := facades.Queue().Worker(queue.Args{
+		Connection: "",               // 使用默认连接
+		Queue:      "exports",        // 使用 exports 队列
+		Concurrent: exportConcurrent, // 导出队列并发数（默认1，可通过环境变量 QUEUE_EXPORTS_CONCURRENT 设置）
+		Tries:      tries,            // 最大重试次数上限
+	})
+	facades.Log().Infof("导出队列工作进程启动 - 队列: exports, 并发数: %d, 最大重试次数: %d", exportConcurrent, tries)
+	go func() {
+		if err := exportWorker.Run(); err != nil {
+			facades.Log().Errorf("导出队列工作进程运行错误: %v", err)
 		}
 	}()
 
