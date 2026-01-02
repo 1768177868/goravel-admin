@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -15,7 +16,6 @@ import (
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils"
 )
 
 type AdminController struct {
@@ -648,9 +648,12 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	// 防重复点击：使用锁保护（锁会在10秒后自动过期，防止短时间内重复请求）
-	_, err = utils.AcquireLock("export:admins:lock", adminID, 10*time.Second)
-	if err != nil {
+	// 防重复点击：使用框架自带的原子锁（锁会在10秒后自动过期，防止短时间内重复请求）
+	lockKey := fmt.Sprintf("export:admins:lock:%d", adminID)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
+
+	// 尝试获取锁，如果获取失败则返回错误
+	if !lock.Get() {
 		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
 	}
 	// 同步导出：锁会在 Redis 中自动过期（10秒），不需要手动释放

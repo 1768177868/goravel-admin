@@ -203,7 +203,7 @@ func (s *AdminSeeder) Run() error {
 
 	// 给演示角色分配所有查看权限（index 和 show）
 	var viewPermissions []models.Permission
-	if err := facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").Find(&viewPermissions); err == nil {
+	if err := facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").OrWhere("slug", "dashboard.data").Find(&viewPermissions); err == nil {
 		facades.Orm().Query().Model(&demoRole).Association("Permissions").Replace(viewPermissions)
 	}
 

@@ -14,7 +14,9 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/redis/go-redis/v9"
+
+	"goravel/app/utils"
+
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/load"
@@ -543,11 +545,9 @@ func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 		}
 	}()
 
-	// 获取Redis连接配置
+	// 获取Redis连接配置（用于显示主机信息）
 	redisHost := facades.Config().GetString("database.redis.default.host", "")
 	redisPort := facades.Config().GetInt("database.redis.default.port", 6379)
-	redisPassword := facades.Config().GetString("database.redis.default.password", "")
-	redisDB := facades.Config().GetInt("database.redis.default.database", 0)
 
 	// 检查是否为本地Redis
 	if !isLocalHost(redisHost) {
@@ -561,15 +561,15 @@ func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 		// 本地Redis可能会通过进程监控获取CPU等信息，但这里先不设置
 	}
 
-	// 创建Redis客户端直接连接（用于执行INFO命令）
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", redisHost, redisPort),
-		Password: redisPassword,
-		DB:       redisDB,
-	})
-	defer redisClient.Close()
+	// 使用公共 Redis 客户端（用于执行INFO命令）
+	redisClient, err := utils.GetRedisClient("default")
+	if err != nil {
+		result["status"] = "disconnected"
+		return result
+	}
+	// 注意：使用公共 Redis 客户端池，不需要手动关闭
 
-	// 测试连接
+	// 测试连接（GetRedisClient 已经测试过连接，这里可以省略，但保留用于保险）
 	redisCtx := context.Background()
 	if err := redisClient.Ping(redisCtx).Err(); err != nil {
 		result["status"] = "disconnected"

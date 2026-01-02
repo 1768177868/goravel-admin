@@ -15,7 +15,7 @@ func (s *PermissionSeeder) Signature() string {
 
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
-	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu models.Menu
+	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu, userBalanceLogMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 
 	facades.Orm().Query().Where("slug", "admin").First(&adminMenu)
@@ -37,6 +37,8 @@ func (s *PermissionSeeder) Run() error {
 	facades.Orm().Query().Where("slug", "notification").First(&notificationMenu)
 	facades.Orm().Query().Where("slug", "order").First(&orderMenu)
 	facades.Orm().Query().Where("slug", "user").First(&userMenu)
+	facades.Orm().Query().Where("slug", "user-balance-log").First(&userBalanceLogMenu)
+
 	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联（或者可以创建 dashboard 菜单）
 	// 如果 dashboard 菜单不存在，使用 profileMenu 作为后备
 	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
@@ -161,9 +163,9 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "用户重置密码", Slug: "user.password", Method: "PUT", Path: "/api/admin/users/*/password", Description: "重置用户密码", Status: 1, Sort: 6, MenuID: userMenu.ID},
 		{Name: "更新余额", Slug: "user.update_balance", Method: "POST", Path: "/api/admin/users/*/update-balance", Description: "更新用户余额", Status: 1, Sort: 7, MenuID: userMenu.ID},
 		// 用户余额变动记录
-		{Name: "余额记录列表", Slug: "user_balance_log.index", Method: "GET", Path: "/api/admin/user-balance-logs", Description: "查看用户余额变动记录列表", Status: 1, Sort: 8, MenuID: userMenu.ID},
-		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 9, MenuID: userMenu.ID},
-		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 10, MenuID: userMenu.ID},
+		{Name: "余额记录列表", Slug: "user_balance_log.index", Method: "GET", Path: "/api/admin/user-balance-logs", Description: "查看用户余额变动记录列表", Status: 1, Sort: 8, MenuID: userBalanceLogMenu.ID},
+		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 9, MenuID: userBalanceLogMenu.ID},
+		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 10, MenuID: userBalanceLogMenu.ID},
 	}
 
 	for _, perm := range permissions {

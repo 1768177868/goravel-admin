@@ -9,8 +9,8 @@ import (
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
-	"github.com/redis/go-redis/v9"
 
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
@@ -338,16 +338,16 @@ func (r *QueueStats) getRedisConnectionName(queueConnectionName string) string {
 
 // getRedisQueueStats 获取 Redis 队列统计信息
 func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
-	// 创建 Redis 客户端
-	redisClient, err := r.createRedisClient(redisConnectionName)
+	// 使用公共 Redis 客户端
+	redisClient, err := utils.GetRedisClient(redisConnectionName)
 	if err != nil {
-		errorlog.Record(context.Background(), "queue", "创建 Redis 客户端失败", map[string]any{
+		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
 			"connection": redisConnectionName,
 			"error":      err.Error(),
-		}, "创建 Redis 客户端失败: %v", err)
-		return nil, fmt.Errorf("创建 Redis 客户端失败: %v", err)
+		}, "获取 Redis 客户端失败: %v", err)
+		return nil, fmt.Errorf("获取 Redis 客户端失败: %v", err)
 	}
-	defer redisClient.Close()
+	// 注意：使用公共 Redis 客户端池，不需要手动关闭
 
 	ctx := context.Background()
 	stats := &RedisQueueStatsInfo{}
@@ -424,16 +424,16 @@ func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueName string) (
 
 // getRedisStatsByQueue 按队列分组获取 Redis 队列统计信息
 func (r *QueueStats) getRedisStatsByQueue(redisConnectionName string) (map[string]*RedisQueueStatsInfo, error) {
-	// 创建 Redis 客户端
-	redisClient, err := r.createRedisClient(redisConnectionName)
+	// 使用公共 Redis 客户端
+	redisClient, err := utils.GetRedisClient(redisConnectionName)
 	if err != nil {
-		errorlog.Record(context.Background(), "queue", "创建 Redis 客户端失败", map[string]any{
+		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
 			"connection": redisConnectionName,
 			"error":      err.Error(),
-		}, "创建 Redis 客户端失败: %v", err)
-		return nil, fmt.Errorf("创建 Redis 客户端失败: %v", err)
+		}, "获取 Redis 客户端失败: %v", err)
+		return nil, fmt.Errorf("获取 Redis 客户端失败: %v", err)
 	}
-	defer redisClient.Close()
+	// 注意：使用公共 Redis 客户端池，不需要手动关闭
 
 	ctx := context.Background()
 	result := make(map[string]*RedisQueueStatsInfo)
@@ -491,49 +491,4 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName string) (map[strin
 	}
 
 	return result, nil
-}
-
-// createRedisClient 创建 Redis 客户端
-func (r *QueueStats) createRedisClient(connectionName string) (*redis.Client, error) {
-	// 获取 Redis 配置
-	host := facades.Config().GetString(fmt.Sprintf("database.redis.%s.host", connectionName), "")
-	if host == "" {
-		// 尝试使用 default 连接
-		host = facades.Config().GetString("database.redis.default.host", "127.0.0.1")
-	}
-
-	port := facades.Config().GetInt(fmt.Sprintf("database.redis.%s.port", connectionName), 0)
-	if port == 0 {
-		port = facades.Config().GetInt("database.redis.default.port", 6379)
-	}
-
-	password := facades.Config().GetString(fmt.Sprintf("database.redis.%s.password", connectionName), "")
-	if password == "" {
-		password = facades.Config().GetString("database.redis.default.password", "")
-	}
-
-	db := facades.Config().GetInt(fmt.Sprintf("database.redis.%s.database", connectionName), -1)
-	if db == -1 {
-		db = facades.Config().GetInt("database.redis.default.database", 0)
-	}
-
-	// 创建 Redis 客户端
-	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", host, port),
-		Password: password,
-		DB:       db,
-	})
-
-	// 测试连接
-	ctx := context.Background()
-	_, err := client.Ping(ctx).Result()
-	if err != nil {
-		errorlog.Record(context.Background(), "queue", "Redis 连接失败", map[string]any{
-			"connection": connectionName,
-			"error":      err.Error(),
-		}, "Redis 连接失败: %v", err)
-		return nil, fmt.Errorf("Redis 连接失败: %v", err)
-	}
-
-	return client, nil
 }

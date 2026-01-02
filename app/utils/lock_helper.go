@@ -27,7 +27,7 @@ func TryAcquireLock(lockKey, lockValue string, ttl time.Duration) *LockResult {
 	}
 
 	// 优先使用 Redis SETNX 原子操作
-	redisClient, err := getRedisClient()
+	redisClient, err := GetRedisClient("default")
 	if err != nil {
 		facades.Log().Warningf("获取 Redis 客户端失败，降级到缓存锁: %v", err)
 		// 降级到普通缓存检查（不保证原子性，但至少提供基本保护）
@@ -41,7 +41,7 @@ func TryAcquireLock(lockKey, lockValue string, ttl time.Duration) *LockResult {
 	if err != nil {
 		facades.Log().Errorf("Redis 获取锁失败: key=%s, error=%v", lockKey, err)
 		result.Error = fmt.Errorf("获取锁失败: %v", err)
-		redisClient.Close() // 出错时关闭客户端
+		// 注意：使用公共 Redis 客户端，不需要手动关闭
 		return result
 	}
 
@@ -56,12 +56,9 @@ func TryAcquireLock(lockKey, lockValue string, ttl time.Duration) *LockResult {
 			if err != nil {
 				facades.Log().Errorf("Redis 重试获取锁失败: key=%s, error=%v", lockKey, err)
 				result.Error = fmt.Errorf("获取锁失败: %v", err)
-				redisClient.Close()
+				// 注意：使用公共 Redis 客户端，不需要手动关闭
 				return result
 			}
-		} else {
-			// 锁存在且未过期，关闭客户端
-			redisClient.Close()
 		}
 	}
 
@@ -101,10 +98,11 @@ func ReleaseLock(lockKey, lockValue string, client *redis.Client) error {
 }
 
 // CloseLockClient 关闭锁的 Redis 客户端
+// 注意：由于现在使用公共 Redis 客户端池，通常不需要手动关闭
+// 此函数保留用于兼容性，但不会真正关闭客户端（客户端由连接池管理）
 func CloseLockClient(client *redis.Client) {
-	if client != nil {
-		client.Close()
-	}
+	// 使用公共 Redis 客户端池，不需要手动关闭
+	// 客户端由连接池统一管理
 }
 
 // tryAcquireLockWithCache 使用缓存实现锁（降级方案，不保证原子性）
@@ -150,37 +148,6 @@ func tryAcquireLockWithCache(lockKey, lockValue string, ttl time.Duration) *Lock
 	// 锁设置后无法验证，可能是缓存问题
 	result.Error = fmt.Errorf("设置锁失败")
 	return result
-}
-
-// getRedisClient 获取 Redis 客户端
-func getRedisClient() (*redis.Client, error) {
-	host := facades.Config().GetString("database.redis.default.host", "")
-	if host == "" {
-		host = "127.0.0.1"
-	}
-
-	port := facades.Config().GetInt("database.redis.default.port", 6379)
-	password := facades.Config().GetString("database.redis.default.password", "")
-	db := facades.Config().GetInt("database.redis.default.database", 0)
-
-	addr := fmt.Sprintf("%s:%d", host, port)
-	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       db,
-	})
-
-	// 测试连接（设置超时）
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	_, err := client.Ping(ctx).Result()
-	if err != nil {
-		client.Close() // 连接失败，关闭客户端
-		return nil, fmt.Errorf("Redis 连接失败: %v", err)
-	}
-
-	return client, nil
 }
 
 // LockGuard 锁保护器，自动管理锁的生命周期

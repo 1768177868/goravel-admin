@@ -483,9 +483,12 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	// 防重复点击：使用锁保护（锁会在10秒后自动过期，防止短时间内重复请求）
-	guard, err := utils.AcquireLock("export:orders:lock", adminID, 10*time.Second)
-	if err != nil {
+	// 防重复点击：使用框架自带的原子锁（锁会在10秒后自动过期，防止短时间内重复请求）
+	lockKey := fmt.Sprintf("export:orders:lock:%d", adminID)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
+
+	// 尝试获取锁，如果获取失败则返回错误
+	if !lock.Get() {
 		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
 	}
 
@@ -569,7 +572,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 	// 传递 JSON 字符串作为参数
 	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).Dispatch(); err != nil {
 		// 如果任务提交失败，立即释放锁，让用户可以立即重试
-		guard.Release()
+		lock.Release()
 		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
