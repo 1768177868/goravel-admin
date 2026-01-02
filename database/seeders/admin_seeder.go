@@ -114,7 +114,7 @@ func (s *AdminSeeder) Run() error {
 
 	// 给演示角色分配所有查看权限（index 和 show）（增量添加）
 	var viewPermissions []models.Permission
-	facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").OrWhere("slug", "dashboard.data").Find(&viewPermissions)
+	facades.Orm().Query().Where("slug LIKE ?", "%.index").OrWhere("slug LIKE ?", "%.show").OrWhere("slug", "dashboard.data").OrWhere("slug", "user_balance_log.statistics").OrWhere("slug", "config.group").Find(&viewPermissions)
 	if len(viewPermissions) > 0 {
 		var existingPerms []models.Permission
 		facades.Orm().Query().Model(&demoRole).Association("Permissions").Find(&existingPerms)

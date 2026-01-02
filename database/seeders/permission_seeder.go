@@ -135,7 +135,7 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "修改密码", Slug: "password.update", Method: "PUT", Path: "/api/admin/password", Description: "修改当前登录管理员密码", Status: 1, Sort: 2, MenuID: profileMenu.ID},
 		// 导出管理
 		{Name: "导出列表", Slug: "export.index", Method: "GET", Path: "/api/admin/exports", Description: "查看导出记录列表", Status: 1, Sort: 1, MenuID: exportMenu.ID},
-		{Name: "导出进度", Slug: "export.progress", Method: "GET", Path: "/api/admin/exports/*/progress", Description: "查看导出任务进度", Status: 1, Sort: 2, MenuID: exportMenu.ID},
+		// {Name: "导出进度", Slug: "export.progress", Method: "GET", Path: "/api/admin/exports/*/progress", Description: "查看导出任务进度", Status: 1, Sort: 2, MenuID: exportMenu.ID},
 		{Name: "删除导出", Slug: "export.destroy", Method: "DELETE", Path: "/api/admin/exports/*", Description: "删除导出记录及源文件", Status: 1, Sort: 3, MenuID: exportMenu.ID},
 		{Name: "导出批量删除", Slug: "export.batch_delete", Method: "POST", Path: "/api/admin/exports/batch-delete", Description: "批量删除导出记录", Status: 1, Sort: 4, MenuID: exportMenu.ID},
 		// 附件管理
