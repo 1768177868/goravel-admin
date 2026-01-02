@@ -38,6 +38,23 @@
           placement="bottom-start"
           :width="300"
           trigger="click"
+          :popper-options="{
+            modifiers: [
+              {
+                name: 'computeStyles',
+                options: {
+                  gpuAcceleration: false,
+                },
+              },
+              {
+                name: 'flip',
+                options: {
+                  fallbackPlacements: ['top-start', 'bottom-start'],
+                },
+              },
+            ],
+          }"
+          popper-class="menu-select-popover"
         >
           <template #reference>
             <el-input
@@ -62,6 +79,7 @@
             highlight-current
             :current-node-key="formData.menu_id"
             @node-click="handleMenuSelect"
+            class="menu-select-tree"
           >
             <template #default="{ node, data }">
               <span class="tree-node-label">{{ data.label }}</span>
@@ -277,6 +295,18 @@ const handleDialogClose = () => {
 <style scoped>
 .tree-node-label {
   font-size: 14px;
+}
+</style>
+
+<style>
+.menu-select-popover {
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.menu-select-tree {
+  max-height: 400px;
+  overflow-y: auto;
 }
 </style>
 
