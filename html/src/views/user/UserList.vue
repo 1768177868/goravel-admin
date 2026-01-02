@@ -258,7 +258,7 @@ const getPrimaryActions = (row) => {
     {
       key: 'updateBalance',
       label: t('user.update_balance'),
-      permission: 'user.update',
+      permission: 'user.update_balance',
       type: 'warning'
     }
   ]
@@ -276,7 +276,7 @@ const getMoreActions = (row) => {
       key: 'balanceLogs',
       command: 'balanceLogs',
       label: t('user.balance_logs'),
-      permission: 'user.balance_logs',
+      permission: 'user_balance_log.index',
       divided: true
     },
     {

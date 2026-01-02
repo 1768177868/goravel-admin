@@ -5,14 +5,15 @@
         <div class="card-header">
           <span>{{ $t('menu.login_log') }}</span>
           <div class="header-actions">
-            <el-button 
+            <!-- 清理日志功能已禁用（后端权限被注释） -->
+            <!-- <el-button 
               type="warning" 
               :disabled="getButtonState('login_log.clean').disabled"
               @click="handleClean"
             >
               <el-icon><Delete /></el-icon>
               {{ $t('log.clean') || '清空日志' }}
-            </el-button>
+            </el-button> -->
             <el-button 
               type="danger" 
               :disabled="selectedRows.length === 0"
