@@ -128,6 +128,10 @@ var (
 	ErrExcelNotImplemented     = NewBusinessError("excel_not_implemented", "Excel导出功能暂未实现，请使用CSV格式")
 	ErrBatchDeleteExportFailed = NewBusinessError("batch_delete_export_failed", "批量删除导出记录失败")
 
+	// 导入相关错误
+	ErrInvalidCSVFormat = NewBusinessError("invalid_csv_format", "CSV格式无效")
+	ErrInvalidFileType  = NewBusinessError("invalid_file_type", "文件类型无效")
+
 	// 分表相关错误
 	ErrBaseTableNotRegistered    = NewBusinessError("base_table_not_registered", "未注册的基础表名")
 	ErrCreateShardingTableFailed = NewBusinessError("create_sharding_table_failed", "创建分表失败")

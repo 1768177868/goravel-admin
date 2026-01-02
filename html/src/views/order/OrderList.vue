@@ -26,6 +26,15 @@
       >
         <template #extra-buttons>
           <el-button 
+            type="primary" 
+            :disabled="getButtonState('order.import').disabled || isImporting"
+            :loading="isImporting"
+            @click="handleImport"
+          >
+            <el-icon><Upload /></el-icon>
+            {{ $t('common.import') }}
+          </el-button>
+          <el-button 
             type="success" 
             :disabled="getButtonState('order.export').disabled || isExporting"
             :loading="isExporting"
@@ -124,6 +133,15 @@
         :on-page-change="loadData"
       />
     </el-card>
+
+    <!-- 文件上传输入框（隐藏） -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept=".csv"
+      style="display: none"
+      @change="handleFileChange"
+    />
 
     <!-- 创建订单对话框 -->
     <OrderForm
@@ -234,7 +252,7 @@ import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Upload } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
@@ -248,7 +266,8 @@ import {
   updateOrder,
   deleteOrder,
   exportOrder,
-  getExportStatus
+  getExportStatus,
+  importOrder
 } from '../../api/order'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
@@ -262,6 +281,8 @@ const { t } = useI18n()
 const router = useRouter()
 const tableRef = ref(null)
 const isExporting = ref(false) // 导出中状态，防止重复点击
+const isImporting = ref(false) // 导入中状态，防止重复点击
+const fileInputRef = ref(null) // 文件输入框引用
 
 // 使用 CRUD composable（只用于添加功能）
 const {
@@ -739,6 +760,82 @@ const handleExport = async () => {
 // 创建订单（打开创建对话框）
 const handleAdd = () => {
   dialogVisible.value = true
+}
+
+// 导入订单
+const handleImport = () => {
+  // 触发文件选择
+  if (fileInputRef.value) {
+    fileInputRef.value.click()
+  }
+}
+
+// 处理文件选择
+const handleFileChange = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) {
+    return
+  }
+
+  // 验证文件类型
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    ElMessage.error(t('common.invalid_file_type') || '文件类型错误，请上传CSV文件')
+    // 清空文件选择
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+    return
+  }
+
+  // 防止重复点击
+  if (isImporting.value) {
+    return
+  }
+
+  isImporting.value = true
+
+  try {
+    const response = await importOrder(file)
+    const result = response.data?.data || response.data
+
+    // 显示导入结果
+    if (result.success_count > 0) {
+      ElMessage.success(
+        t('common.import_success') || 
+        `导入成功：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+      )
+      
+      // 如果有失败记录，显示详细信息
+      if (result.failed_count > 0 && result.errors && result.errors.length > 0) {
+        const errorMsg = result.errors.slice(0, 10).join('\n') // 最多显示10条错误
+        if (result.errors.length > 10) {
+          ElMessage.warning(`部分导入失败，前10条错误：\n${errorMsg}\n...`)
+        } else {
+          ElMessage.warning(`部分导入失败：\n${errorMsg}`)
+        }
+      }
+
+      // 刷新列表
+      await loadData()
+    } else {
+      ElMessage.warning(t('common.import_no_data') || '没有成功导入任何数据')
+      if (result.errors && result.errors.length > 0) {
+        const errorMsg = result.errors.slice(0, 10).join('\n')
+        ElMessage.error(`导入失败：\n${errorMsg}`)
+      }
+    }
+  } catch (error) {
+    logger.error('Import order error:', error)
+    if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true })
+    }
+  } finally {
+    isImporting.value = false
+    // 清空文件选择
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+  }
 }
 
 // 表单提交成功回调

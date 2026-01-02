@@ -263,6 +263,9 @@
     "csv_write_failed": "CSV write failed",
     "excel_not_implemented": "Excel export feature is not implemented yet, please use CSV format",
     "batch_delete_export_failed": "Failed to batch delete export records",
+    "invalid_csv_format": "Invalid CSV format",
+    "invalid_file_type": "Invalid file type, please upload CSV file",
+    "import_success": "Import successful",
     "base_table_not_registered": "Base table name not registered: {base_table_name}",
     "create_sharding_table_failed": "Failed to create sharding table {table_name}"
   }

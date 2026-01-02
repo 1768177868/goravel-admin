@@ -13,6 +13,7 @@
     "download": "下载",
     "retry": "重试",
     "export": "导出",
+    "import": "导入",
     "please_select_items": "请选择要删除的项",
     "submit": "提交",
     "save": "保存",
@@ -52,7 +53,10 @@
     "export_task_submitted": "导出任务已提交，请稍后查看导出记录",
     "export_in_progress": "导出任务正在处理中，请勿重复提交",
     "export_timeout": "导出任务处理时间较长，请前往导出记录页面查看进度",
-    "export_check_manually": "请前往导出记录页面查看导出进度"
+    "export_check_manually": "请前往导出记录页面查看导出进度",
+    "import_success": "导入成功",
+    "import_no_data": "没有成功导入任何数据",
+    "invalid_file_type": "文件类型错误，请上传CSV文件"
   },
   "login": {
     "title": "后台管理系统",

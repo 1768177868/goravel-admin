@@ -12,6 +12,7 @@ import (
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
@@ -664,4 +665,82 @@ func (r *OrderController) getExportStatusText(ctx http.Context, status uint8) st
 // getCurrentLanguage 获取当前请求的语言（使用通用工具函数）
 func (r *OrderController) getCurrentLanguage(ctx http.Context) string {
 	return utils.GetCurrentLanguage(ctx)
+}
+
+// Import 导入订单
+// @Summary      导入订单
+// @Description  从CSV文件导入订单数据，支持批量导入
+// @Tags         订单管理
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file formData file true "CSV文件"
+// @Success      200  {object} map[string]any "导入成功，返回导入结果"
+// @Failure      400  {object} map[string]any "参数错误"
+// @Failure      401  {object} map[string]any "未登录"
+// @Failure      403  {object} map[string]any "无权限"
+// @Failure      500  {object} map[string]any "服务器错误"
+// @Router       /api/admin/orders/import [post]
+// @Security     BearerAuth
+func (r *OrderController) Import(ctx http.Context) http.Response {
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	}
+
+	// 获取上传的文件
+	file, err := ctx.Request().File("file")
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, "file_required")
+	}
+
+	// 验证文件类型（只允许CSV）
+	filename := file.GetClientOriginalName()
+	if !strings.HasSuffix(strings.ToLower(filename), ".csv") {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidFileType.Code)
+	}
+
+	// 读取文件内容
+	storage := facades.Storage().Disk("local")
+	savedPath, err := storage.PutFile("", file)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "import", err, map[string]any{
+			"filename": filename,
+		})
+	}
+
+	// 读取文件内容
+	csvContent, err := storage.Get(savedPath)
+	if err != nil {
+		_ = storage.Delete(savedPath)
+		return response.ErrorWithLog(ctx, "import", err, map[string]any{
+			"filename": filename,
+		})
+	}
+
+	// 清理临时文件
+	defer func() {
+		_ = storage.Delete(savedPath)
+	}()
+
+	// 导入订单
+	importService := services.NewImportOrderService(ctx)
+	result, err := importService.ImportOrders(csvContent)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "import", err, map[string]any{
+			"filename": filename,
+			"admin_id": adminID,
+		})
+	}
+
+	// 记录导入日志
+	facades.Log().Infof("订单导入完成: admin_id=%d, filename=%s, total=%d, success=%d, failed=%d",
+		adminID, filename, result.TotalRows, result.SuccessCount, result.FailedCount)
+
+	return response.Success(ctx, http.Json{
+		"total_rows":    result.TotalRows,
+		"success_count": result.SuccessCount,
+		"failed_count":  result.FailedCount,
+		"errors":        result.Errors,
+		"message":       trans.Get(ctx, "import_success"),
+	})
 }

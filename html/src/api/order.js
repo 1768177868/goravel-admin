@@ -61,3 +61,17 @@ export function getExportStatus(exportId) {
   })
 }
 
+// 导入订单
+export function importOrder(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/orders/import',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+

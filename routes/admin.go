@@ -182,6 +182,7 @@ func Admin() {
 			// 订单管理
 			router.Resource("orders", orderController)
 			router.Post("orders/export", orderController.Export)
+			router.Post("orders/import", orderController.Import)
 			router.Get("orders/export/status/:id", orderController.GetExportStatus)
 
 			// 用户管理

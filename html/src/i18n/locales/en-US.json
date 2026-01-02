@@ -13,6 +13,7 @@
     "download": "Download",
     "retry": "Retry",
     "export": "Export",
+    "import": "Import",
     "please_select_items": "Please select items to delete",
     "submit": "Submit",
     "save": "Save",
@@ -54,7 +55,10 @@
     "export_task_submitted": "Export task submitted, please check the export records later",
     "export_in_progress": "Export task is in progress, please do not submit again",
     "export_timeout": "Export task is taking longer than expected, please check the export records page for progress",
-    "export_check_manually": "Please check the export records page for export progress"
+    "export_check_manually": "Please check the export records page for export progress",
+    "import_success": "Import successful",
+    "import_no_data": "No data imported successfully",
+    "invalid_file_type": "Invalid file type, please upload CSV file"
   },
   "login": {
     "title": "Admin Management System",
