@@ -20,7 +20,7 @@
               <template #trigger>
                 <el-button 
                   type="primary"
-                  :disabled="getButtonState('attachment.store').disabled"
+                  :disabled="getButtonState('attachment.upload').disabled"
                 >
                   <el-icon><UploadIcon /></el-icon>
                   {{ $t('attachment.upload') }}
@@ -29,7 +29,7 @@
             </el-upload>
             <el-button 
               type="success"
-              :disabled="getButtonState('attachment.store').disabled"
+              :disabled="getButtonState('attachment.chunk').disabled"
               @click="handleLargeFileUpload"
             >
               <el-icon><UploadIcon /></el-icon>
