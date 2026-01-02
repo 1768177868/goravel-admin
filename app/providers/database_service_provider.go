@@ -12,52 +12,32 @@ import (
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 	"goravel/database"
+	"reflect"
 )
 
 // uintShardingAlgorithm 自定义分片算法函数，支持 uint 类型
 // 根据 user_id 计算分表索引（0 到 UserBalanceLogsShards-1）
 func uintShardingAlgorithm(value any) (suffix string, err error) {
 	numberOfShards := constants.UserBalanceLogsShards
-	var shardIndex int
+	if numberOfShards <= 0 {
+		return "", fmt.Errorf("分片数量必须大于0,当前值：%d", numberOfShards)
+	}
 
-	switch v := value.(type) {
-	case uint:
-		shardIndex = int(v) % numberOfShards
-	case uint8:
-		shardIndex = int(v) % numberOfShards
-	case uint16:
-		shardIndex = int(v) % numberOfShards
-	case uint32:
-		shardIndex = int(v) % numberOfShards
-	case uint64:
-		shardIndex = int(v) % numberOfShards
-	case int:
-		shardIndex = v % numberOfShards
-		if shardIndex < 0 {
-			shardIndex = -shardIndex
-		}
-	case int8:
-		shardIndex = int(v) % numberOfShards
-		if shardIndex < 0 {
-			shardIndex = -shardIndex
-		}
-	case int16:
-		shardIndex = int(v) % numberOfShards
-		if shardIndex < 0 {
-			shardIndex = -shardIndex
-		}
-	case int32:
-		shardIndex = int(v) % numberOfShards
-		if shardIndex < 0 {
-			shardIndex = -shardIndex
-		}
-	case int64:
-		shardIndex = int(v) % numberOfShards
-		if shardIndex < 0 {
-			shardIndex = -shardIndex
-		}
+	val := reflect.ValueOf(value)
+	var num int64
+	switch val.Kind() {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		num = int64(val.Uint())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		num = val.Int()
 	default:
 		return "", fmt.Errorf("不支持的 ShardingKey 类型: %T", value)
+	}
+
+	// 计算分片索引
+	shardIndex := num % int64(numberOfShards)
+	if shardIndex < 0 {
+		shardIndex = -shardIndex
 	}
 
 	return fmt.Sprintf("_%d", shardIndex), nil

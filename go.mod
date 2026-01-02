@@ -32,6 +32,8 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/sync v0.19.0
+	gorm.io/gorm v1.31.1
+	gorm.io/sharding v0.6.2
 )
 
 require (
@@ -256,7 +258,5 @@ require (
 	gorm.io/driver/mysql v1.6.0 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
 	gorm.io/driver/sqlserver v1.6.1 // indirect
-	gorm.io/gorm v1.31.1 // indirect
 	gorm.io/plugin/dbresolver v1.6.2 // indirect
-	gorm.io/sharding v0.6.2 // indirect
 )
