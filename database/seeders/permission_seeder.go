@@ -141,7 +141,8 @@ func (s *PermissionSeeder) Run() error {
 		// 附件管理
 		{Name: "附件列表", Slug: "attachment.index", Method: "GET", Path: "/api/admin/attachments", Description: "查看附件列表", Status: 1, Sort: 1, MenuID: attachmentMenu.ID},
 		{Name: "附件上传", Slug: "attachment.upload", Method: "POST", Path: "/api/admin/attachments/upload", Description: "上传附件", Status: 1, Sort: 2, MenuID: attachmentMenu.ID},
-		{Name: "大文件分片上传", Slug: "attachment.chunk", Method: "POST", Path: "/api/admin/attachments/chunk", Description: "大文件分片上传（包含初始化、上传分片、合并分片、获取进度）", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
+		{Name: "大文件分片上传", Slug: "attachment.chunk", Method: "POST", Path: "/api/admin/attachments/chunk", Description: "大文件分片上传（包含初始化、上传分片、合并分片）", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
+		{Name: "获取上传进度", Slug: "attachment.chunk_progress", Method: "GET", Path: "/api/admin/attachments/chunk", Description: "获取大文件分片上传进度", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		// {Name: "上传进度推送", Slug: "attachment.upload_progress", Method: "GET", Path: "/api/admin/attachments/upload/progress", Description: "文件上传进度实时推送", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		// {Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
