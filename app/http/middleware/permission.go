@@ -75,15 +75,35 @@ func Permission() http.Middleware {
 		// 检查是否有权限，并记录匹配的权限标识
 		hasPermission := false
 		var matchedPermissionSlug string
+		var menuDisabled bool
 		for _, perm := range allPermissions {
 			if perm.Status == 1 {
 				// 检查方法匹配
 				if perm.Method == "" || perm.Method == method {
 					// 检查路径匹配（支持通配符）
 					if perm.Path == "" || perm.Path == path || matchPath(perm.Path, path) {
-						hasPermission = true
-						matchedPermissionSlug = perm.Slug
-						break
+						// 检查关联菜单的状态（如果权限关联了菜单）
+						// 如果权限没有关联菜单（MenuID = 0），则允许访问
+						// 如果权限关联了菜单，需要检查菜单状态是否为启用（status = 1）
+						if perm.MenuID == 0 {
+							// 权限没有关联菜单，允许访问
+							hasPermission = true
+							matchedPermissionSlug = perm.Slug
+							break
+						} else if perm.Menu.ID > 0 {
+							// 权限关联了菜单，检查菜单状态
+							if perm.Menu.Status == 1 {
+								// 菜单状态为启用，允许访问
+								hasPermission = true
+								matchedPermissionSlug = perm.Slug
+								break
+							} else {
+								// 菜单状态为关闭，记录但继续查找其他权限
+								menuDisabled = true
+							}
+						}
+						// 如果菜单没有加载（perm.Menu.ID == 0），为了安全起见，不允许访问
+						// 这种情况应该很少发生，因为我们已经预加载了菜单
 					}
 				}
 			}
@@ -91,10 +111,18 @@ func Permission() http.Middleware {
 
 		// 非超级管理员且无匹配权限时拦截；超级管理员即使无匹配权限也放行
 		if !hasPermission && !isSuperAdmin {
-			_ = ctx.Response().Json(http.StatusForbidden, http.Json{
-				"code":    403,
-				"message": trans.Get(ctx, "no_permission"),
-			}).Abort()
+			// 如果是因为菜单状态为关闭而禁止访问，返回更具体的错误信息
+			if menuDisabled {
+				_ = ctx.Response().Json(http.StatusForbidden, http.Json{
+					"code":    403,
+					"message": trans.Get(ctx, "menu_disabled"),
+				}).Abort()
+			} else {
+				_ = ctx.Response().Json(http.StatusForbidden, http.Json{
+					"code":    403,
+					"message": trans.Get(ctx, "no_permission"),
+				}).Abort()
+			}
 			return
 		}
 

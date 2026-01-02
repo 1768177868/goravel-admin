@@ -320,7 +320,8 @@ func (s *AdminServiceImpl) LoadRelationsWithPermissions(admin *models.Admin) err
 			}
 			if len(permissionIDs) > 0 {
 				var permissions []models.Permission
-				if err := facades.Orm().Query().Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
+				// 预加载菜单关联，用于检查菜单状态
+				if err := facades.Orm().Query().With("Menu").Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
 					permissionMap := make(map[uint]models.Permission)
 					for _, perm := range permissions {
 						permissionMap[perm.ID] = perm

@@ -54,6 +54,7 @@
     "menu_slug_required": "菜单标识不能为空",
     "menu_slug_exists": "菜单标识已存在",
     "menu_has_children": "该菜单下存在子菜单，无法删除",
+    "menu_disabled": "该菜单已关闭，无法访问",
     "department_not_found": "部门不存在",
     "department_name_required": "部门名称不能为空",
     "department_has_children": "该部门下存在子部门，无法删除",

@@ -50,6 +50,7 @@
     "menu_not_found": "Menu not found",
     "menu_title_required": "Menu title cannot be empty",
     "menu_has_children": "This menu has child menus and cannot be deleted",
+    "menu_disabled": "This menu is disabled and cannot be accessed",
     "department_not_found": "Department not found",
     "department_name_required": "Department name cannot be empty",
     "department_has_children": "This department has child departments and cannot be deleted",
