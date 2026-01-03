@@ -188,8 +188,8 @@ func (s *PermissionSeeder) Run() error {
 			continue
 		}
 
-		// 使用 FirstOrCreate：如果不存在则创建，存在则跳过
-		facades.Orm().Query().Where("slug", perm.Slug).FirstOrCreate(&perm, perm)
+		// 使用 FirstOrCreate：如果 slug 或 name 存在则使用已存在的记录，否则创建
+		facades.Orm().Query().Where("slug", perm.Slug).OrWhere("name", perm.Name).FirstOrCreate(&perm, perm)
 	}
 
 	return nil
