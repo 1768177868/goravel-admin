@@ -9,6 +9,7 @@ import (
 
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/constants"
 	"goravel/app/utils/errorlog"
 )
 
@@ -18,6 +19,38 @@ import (
 // 返回: 分表名称，如 "orders_202501"
 func GetShardingTableName(baseTableName string, orderTime time.Time) string {
 	return fmt.Sprintf("%s_%s", baseTableName, orderTime.Format("200601"))
+}
+
+// GetUserBalanceLogsShardingTableName 根据 user_id 获取用户余额变动记录分表名称
+// userID: 用户ID
+// 返回: 分表名称，如 "user_balance_logs_0", "user_balance_logs_1" 等
+// 分表逻辑：user_id % UserBalanceLogsShards
+// 注意：此函数为特定表实现，如需为其他表实现哈希分表，请使用 GetHashShardingTableName
+func GetUserBalanceLogsShardingTableName(userID uint) string {
+	return GetHashShardingTableName("user_balance_logs", userID, constants.UserBalanceLogsShards)
+}
+
+// GetHashShardingTableName 通用的哈希分表名称生成函数
+// baseTableName: 基础表名，如 "user_balance_logs"
+// shardingKey: 分表键值（uint 类型），如 user_id
+// numberOfShards: 分表数量，建议为 2 的幂次（如 4, 8, 16, 32, 64 等）
+// 返回: 分表名称，如 "user_balance_logs_0", "user_balance_logs_1" 等
+// 分表逻辑：shardingKey % numberOfShards
+//
+// 使用示例：
+//
+//	// 为 user_balance_logs 表分表（4个分表）
+//	tableName := GetHashShardingTableName("user_balance_logs", userID, 4)
+//
+//	// 为新的表 example_table 分表（8个分表）
+//	tableName := GetHashShardingTableName("example_table", entityID, 8)
+func GetHashShardingTableName(baseTableName string, shardingKey uint, numberOfShards int) string {
+	if numberOfShards <= 0 {
+		// 如果分表数量无效，返回基础表名（不分表）
+		return baseTableName
+	}
+	shardIndex := int(shardingKey) % numberOfShards
+	return fmt.Sprintf("%s_%d", baseTableName, shardIndex)
 }
 
 // GetShardingTableNames 获取时间范围内的所有分表名称

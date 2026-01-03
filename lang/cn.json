@@ -241,7 +241,7 @@
     "phone_already_exists": "手机号已被使用",
     "amount_cannot_be_zero": "金额不能为0",
     "balance_type_required": "变动类型不能为空",
-    "user_id_required_for_sharding": "user_id 不能为空，GORM Sharding 需要 ShardingKey",
+    "user_id_required_for_sharding": "user_id 不能为空，分表需要 user_id 来路由到正确的分表",
     "get_user_balance_failed": "获取用户余额失败",
     "balance_update_success": "余额更新成功",
     "balance_log_create_success": "余额变动记录创建成功",

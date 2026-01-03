@@ -15,9 +15,10 @@ func (r *M20250130000002CreateUserBalanceLogsTable) Signature() string {
 }
 
 func (r *M20250130000002CreateUserBalanceLogsTable) Up() error {
-	// 用户余额变动记录表使用 GORM Sharding 插件进行分表（按 user_id 哈希分表）
+	// 用户余额变动记录表使用自定义分表逻辑（按 user_id 哈希分表）
 	// 不创建基础表，分表通过 CreateUserBalanceLogsShardingTable 函数创建
 	// 分表格式为 user_balance_logs_0, user_balance_logs_1, user_balance_logs_2, user_balance_logs_3
+	// 分表逻辑：user_id % UserBalanceLogsShards
 	// 表结构定义在 CreateUserBalanceLogsShardingTable 函数中
 	return nil
 }

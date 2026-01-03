@@ -4,7 +4,7 @@ import (
 	"github.com/goravel/framework/database/orm"
 )
 
-// UserBalanceLog 用户余额变动记录（使用 GORM Sharding 分表）
+// UserBalanceLog 用户余额变动记录（使用自定义分表逻辑，按 user_id 哈希分表）
 type UserBalanceLog struct {
 	orm.Model
 	UserID      uint    `gorm:"index;not null;comment:用户ID" json:"user_id"`
@@ -22,6 +22,15 @@ type UserBalanceLog struct {
 }
 
 // TableName 指定表名
+// 注意：此表使用哈希分表，不能直接使用基础表名查询
+// 必须通过 Table() 方法指定分表名称，例如：
+//
+//	tableName := utils.GetUserBalanceLogsShardingTableName(userID)
+//	facades.Orm().Query().Table(tableName).Where(...)
+//
+// 返回空字符串，强制开发者必须使用 Table() 方法指定分表名称
 func (UserBalanceLog) TableName() string {
-	return "user_balance_logs"
+	// 返回空字符串，防止直接使用基础表名查询
+	// 哈希分表必须通过 Table() 方法指定分表名称
+	return ""
 }

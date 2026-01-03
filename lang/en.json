@@ -235,7 +235,7 @@
     "phone_already_exists": "Phone number already exists",
     "amount_cannot_be_zero": "Amount cannot be zero",
     "balance_type_required": "Balance change type is required",
-    "user_id_required_for_sharding": "user_id cannot be empty, GORM Sharding requires ShardingKey",
+    "user_id_required_for_sharding": "user_id cannot be empty, sharding requires user_id to route to the correct shard table",
     "get_user_balance_failed": "Failed to get user balance",
     "balance_update_success": "Balance updated successfully",
     "balance_log_create_success": "Balance log created successfully",

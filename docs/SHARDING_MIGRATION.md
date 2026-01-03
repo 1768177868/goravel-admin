@@ -1,6 +1,8 @@
-# 数据库分表指南
+# 数据库分表迁移指南
 
-项目支持按月分表策略，已实现订单表的按月分表功能。本文档包含分表功能的完整说明，包括如何创建分表、如何使用分表，以及如何修改分表字段。
+> **注意**：本文档主要介绍分表字段修改的详细步骤。如需了解完整的分表功能说明，请参考 [分表指南 (SHARDING_GUIDE.md)](SHARDING_GUIDE.md)。
+
+项目支持两种分表策略：**时间分表**（按月分表）和**哈希分表**（按ID哈希分表）。本文档主要介绍如何修改分表字段。
 
 ## 目录
 
@@ -155,7 +157,11 @@ func CreateOrdersShardingTable(tableName string) error {
 
 ### 2. 创建 Migration 修改已存在的分表
 
-创建一个新的 migration 文件，使用 `utils.GetAllExistingShardingTables()` 获取所有已存在的分表，然后逐个修改：
+创建一个新的 migration 文件，根据分表类型选择合适的方法获取所有已存在的分表：
+
+#### 时间分表（按月分表）
+
+使用 `utils.GetAllExistingShardingTables()` 获取所有已存在的时间分表：
 
 ```go
 package migrations
@@ -175,7 +181,7 @@ func (r *M20251228000001AddPaymentMethodToOrders) Signature() string {
 }
 
 func (r *M20251228000001AddPaymentMethodToOrders) Up() error {
-	// 获取所有已存在的订单主表分表
+	// 获取所有已存在的订单主表分表（时间分表）
 	ordersTables, err := utils.GetAllExistingShardingTables("orders")
 	if err != nil {
 		return fmt.Errorf("获取订单分表列表失败: %v", err)
@@ -331,10 +337,21 @@ facades.Schema().Table(tableName, func(table schema.Blueprint) {
 
 `app/utils/sharding_helper.go` 提供了以下工具函数：
 
-- `GetAllExistingShardingTables(baseTableName string)`: 获取所有已存在的分表名称
-- `GetAllExistingShardingTablesByPattern(pattern string)`: 通过模式匹配获取分表名称
+### 时间分表工具函数
+
+- `GetAllExistingShardingTables(baseTableName string)`: 获取所有已存在的时间分表名称（格式：`{table}_YYYYMM`）
 - `GetShardingTableName(baseTableName string, orderTime time.Time)`: 根据时间获取分表名称
 - `GetShardingTableNames(baseTableName string, startTime, endTime time.Time)`: 获取时间范围内的所有分表名称
+
+### 哈希分表工具函数
+
+- `GetAllExistingShardingTablesByPattern(pattern string)`: 通过表名模式获取所有已存在的分表（适用于哈希分表，如 `"user_balance_logs_%"`）
+- `GetHashShardingTableName(baseTableName string, shardingKey uint, numberOfShards int)`: 通用的哈希分表名称生成函数
+
+### 使用建议
+
+- **时间分表**：使用 `GetAllExistingShardingTables("orders")` 获取所有分表
+- **哈希分表**：使用 `GetAllExistingShardingTablesByPattern("user_balance_logs_%")` 获取所有分表
 
 ## 完整示例
 

@@ -230,7 +230,7 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
-	// 2. 创建余额变动记录（使用 GORM Sharding）
+	// 2. 创建余额变动记录（使用自定义分表逻辑）
 	_, err = s.balanceLogService.CreateLog(userID, logType, amount, newBalance, source, sourceID, description, operatorID, "success", remark)
 	if err != nil {
 		// 如果创建记录失败，尝试回滚余额更新

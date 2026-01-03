@@ -2,12 +2,11 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 
-	"goravel/app/constants"
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
 	"goravel/app/utils"
@@ -15,7 +14,7 @@ import (
 )
 
 type UserBalanceLogService interface {
-	// CreateLog 创建余额变动记录（使用 GORM Sharding，必须提供 user_id）
+	// CreateLog 创建余额变动记录（使用自定义分表逻辑，必须提供 user_id）
 	CreateLog(userID uint, logType string, amount float64, balance float64, source string, sourceID *uint, description string, operatorID *uint, status string, remark string) (*models.UserBalanceLog, error)
 	// GetLogs 查询余额变动记录列表（必须提供 user_id）
 	GetLogs(filters UserBalanceLogFilters, page, pageSize int) ([]models.UserBalanceLog, int64, error)
@@ -53,7 +52,7 @@ func NewUserBalanceLogService() UserBalanceLogService {
 }
 
 // CreateLog 创建余额变动记录
-// 注意：必须提供 user_id，GORM Sharding 插件会自动路由到对应分表
+// 注意：必须提供 user_id，会根据 user_id 自动路由到对应分表
 func (s *UserBalanceLogServiceImpl) CreateLog(
 	userID uint,
 	logType string,
@@ -67,7 +66,7 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 	remark string,
 ) (*models.UserBalanceLog, error) {
 	if userID == 0 {
-		return nil, apperrors.ErrUserIDRequired.WithMessage("user_id 不能为空，GORM Sharding 需要 ShardingKey")
+		return nil, apperrors.ErrUserIDRequired.WithMessage("user_id 不能为空")
 	}
 
 	// 默认状态为 success
@@ -75,10 +74,8 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 		status = "success"
 	}
 
-	// 确保分表存在（根据 user_id 计算分表索引）
-	// 分表索引范围是 0 到 UserBalanceLogsShards-1
-	shardIndex := int(userID) % constants.UserBalanceLogsShards
-	tableName := fmt.Sprintf("user_balance_logs_%d", shardIndex)
+	// 根据 user_id 计算分表名称
+	tableName := utils.GetUserBalanceLogsShardingTableName(userID)
 
 	// 检查分表是否存在，不存在则创建
 	if err := s.shardingService.EnsureShardingTable(tableName, "user_balance_logs"); err != nil {
@@ -103,25 +100,15 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 		Remark:      remark,
 	}
 
-	// 使用原生 GORM DB（已配置 Sharding 插件）来创建记录
-	// GORM Sharding 插件会自动根据 user_id 路由到对应的分表
-	gormDB, err := utils.GetGormDB()
-	if err != nil {
-		errorlog.Record(context.Background(), "user-balance-log", "获取 GORM DB 失败", map[string]any{
-			"user_id": userID,
-			"error":   err.Error(),
-		}, "获取 GORM DB 失败: %v", err)
-		return nil, apperrors.ErrQueryFailed.WithError(err)
-	}
-
-	// 使用原生 GORM DB 创建记录（Sharding 插件会自动路由）
-	err = gormDB.Create(log).Error
+	// 使用 Goravel ORM，通过 Table() 方法指定分表名称
+	err := facades.Orm().Query().Table(tableName).Create(log)
 	if err != nil {
 		errorlog.Record(context.Background(), "user-balance-log", "创建余额变动记录失败", map[string]any{
-			"user_id":  userID,
-			"log_type": logType,
-			"amount":   amount,
-			"error":    err.Error(),
+			"user_id":    userID,
+			"log_type":   logType,
+			"amount":     amount,
+			"table_name": tableName,
+			"error":      err.Error(),
 		}, "创建余额变动记录失败: %v", err)
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
@@ -130,57 +117,59 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 }
 
 // GetLogs 查询余额变动记录列表
-// 注意：必须提供 user_id，否则 GORM Sharding 插件会报错
+// 注意：必须提供 user_id，会根据 user_id 自动路由到对应分表
 func (s *UserBalanceLogServiceImpl) GetLogs(filters UserBalanceLogFilters, page, pageSize int) ([]models.UserBalanceLog, int64, error) {
 	if filters.UserID == 0 {
-		return nil, 0, apperrors.ErrUserIDRequired.WithMessage("user_id 不能为空，GORM Sharding 需要 ShardingKey")
+		return nil, 0, apperrors.ErrUserIDRequired.WithMessage("user_id 不能为空")
 	}
 
-	// 使用原生 GORM DB（已配置 Sharding 插件）来查询
-	// 必须包含 user_id（ShardingKey），插件会自动路由到对应的分表
-	gormDB, err := utils.GetGormDB()
+	// 根据 user_id 计算分表名称
+	tableName := utils.GetUserBalanceLogsShardingTableName(filters.UserID)
+
+	// 构建基础查询（用于 Count 和 Get）
+	buildQuery := func() orm.Query {
+		query := facades.Orm().Query().Table(tableName).
+			Where("user_id", filters.UserID)
+
+		// 添加其他筛选条件
+		if filters.Type != "" {
+			query = query.Where("type", filters.Type)
+		}
+		if filters.Source != "" {
+			query = query.Where("source", filters.Source)
+		}
+		if filters.Status != "" {
+			query = query.Where("status", filters.Status)
+		}
+		if !filters.StartTime.IsZero() {
+			query = query.Where("created_at >= ?", filters.StartTime)
+		}
+		if !filters.EndTime.IsZero() {
+			query = query.Where("created_at <= ?", filters.EndTime)
+		}
+		if filters.OperatorID != nil && *filters.OperatorID > 0 {
+			query = query.Where("operator_id", *filters.OperatorID)
+		}
+
+		return query
+	}
+
+	// 获取总数
+	total, err := buildQuery().Count()
 	if err != nil {
 		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
 	}
 
-	query := gormDB.Model(&models.UserBalanceLog{}).
-		Where("user_id = ?", filters.UserID)
-
-	// 添加其他筛选条件
-	if filters.Type != "" {
-		query = query.Where("type = ?", filters.Type)
-	}
-	if filters.Source != "" {
-		query = query.Where("source = ?", filters.Source)
-	}
-	if filters.Status != "" {
-		query = query.Where("status = ?", filters.Status)
-	}
-	if !filters.StartTime.IsZero() {
-		query = query.Where("created_at >= ?", filters.StartTime)
-	}
-	if !filters.EndTime.IsZero() {
-		query = query.Where("created_at <= ?", filters.EndTime)
-	}
-	if filters.OperatorID != nil && *filters.OperatorID > 0 {
-		query = query.Where("operator_id = ?", *filters.OperatorID)
-	}
-
-	// 获取总数
-	var total int64
-	err = query.Count(&total).Error
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
+	// 使用 Find() 而不是 Get()，因为 Find() 会保持 Table() 设置的表名
 	var logs []models.UserBalanceLog
-	err = query.Order("created_at desc").
+	err = buildQuery().
+		Order("created_at desc").
 		Offset((page - 1) * pageSize).
 		Limit(pageSize).
-		Find(&logs).Error
+		Find(&logs)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
 	}
 
 	return logs, total, nil
@@ -207,15 +196,13 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 		return nil, apperrors.ErrUserIDRequired
 	}
 
-	// 使用原生 GORM DB（已配置 Sharding 插件）来查询
-	gormDB, err := utils.GetGormDB()
-	if err != nil {
-		return nil, apperrors.ErrQueryFailed.WithError(err)
-	}
+	// 根据 user_id 计算分表名称
+	tableName := utils.GetUserBalanceLogsShardingTableName(userID)
 
-	query := gormDB.Model(&models.UserBalanceLog{}).
-		Where("user_id = ?", userID).
-		Where("status = ?", "success")
+	// 使用 Goravel ORM，通过 Table() 方法指定分表名称
+	query := facades.Orm().Query().Table(tableName).
+		Where("user_id", userID).
+		Where("status", "success")
 
 	if !startTime.IsZero() {
 		query = query.Where("created_at >= ?", startTime)
@@ -226,12 +213,25 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 
 	var stats UserBalanceStatistics
 
+	// 构建基础查询条件（用于构建 SQL）
+	baseConditions := []interface{}{userID, "success"}
+	baseWhere := "user_id = ? AND status = ?"
+	if !startTime.IsZero() {
+		baseWhere += " AND created_at >= ?"
+		baseConditions = append(baseConditions, startTime)
+	}
+	if !endTime.IsZero() {
+		baseWhere += " AND created_at <= ?"
+		baseConditions = append(baseConditions, endTime)
+	}
+
 	// 统计收入
 	var incomeResult struct {
 		Total float64
 	}
-	incomeQuery := query.Where("type = ?", "income")
-	if err := incomeQuery.Select("COALESCE(SUM(amount), 0) as total").Scan(&incomeResult).Error; err == nil {
+	incomeSQL := "SELECT COALESCE(SUM(amount), 0) as total FROM " + tableName + " WHERE " + baseWhere + " AND type = ?"
+	incomeArgs := append(baseConditions, "income")
+	if err := facades.Orm().Query().Raw(incomeSQL, incomeArgs...).Scan(&incomeResult); err == nil {
 		stats.TotalIncome = incomeResult.Total
 	}
 
@@ -239,8 +239,9 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	var expenseResult struct {
 		Total float64
 	}
-	expenseQuery := query.Where("type = ?", "expense")
-	if err := expenseQuery.Select("COALESCE(SUM(amount), 0) as total").Scan(&expenseResult).Error; err == nil {
+	expenseSQL := "SELECT COALESCE(SUM(amount), 0) as total FROM " + tableName + " WHERE " + baseWhere + " AND type = ?"
+	expenseArgs := append(baseConditions, "expense")
+	if err := facades.Orm().Query().Raw(expenseSQL, expenseArgs...).Scan(&expenseResult); err == nil {
 		stats.TotalExpense = expenseResult.Total
 	}
 
@@ -248,8 +249,9 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	var refundResult struct {
 		Total float64
 	}
-	refundQuery := query.Where("type = ?", "refund")
-	if err := refundQuery.Select("COALESCE(SUM(amount), 0) as total").Scan(&refundResult).Error; err == nil {
+	refundSQL := "SELECT COALESCE(SUM(amount), 0) as total FROM " + tableName + " WHERE " + baseWhere + " AND type = ?"
+	refundArgs := append(baseConditions, "refund")
+	if err := facades.Orm().Query().Raw(refundSQL, refundArgs...).Scan(&refundResult); err == nil {
 		stats.TotalRefund = refundResult.Total
 	}
 
