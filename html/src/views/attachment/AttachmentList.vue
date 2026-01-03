@@ -772,8 +772,8 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
       chunkUploadProgress.value = Math.round((alreadyUploadedCount / totalChunks) * 100)
     }
 
-    // 并发上传分片（限制并发数为2）
-    const concurrency = 2
+    // 并发上传分片（限制并发数为1）
+    const concurrency = 1
     let uploadedCount = alreadyUploadedCount
     // 记录每个分片的上传进度（0-1），用于计算总进度
     const chunkProgressMap = new Map()
