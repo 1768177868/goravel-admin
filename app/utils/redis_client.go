@@ -123,7 +123,7 @@ func CloseRedisClient(connectionName string) error {
 // CloseAllRedisClients 关闭所有缓存的 Redis 客户端
 func CloseAllRedisClients() error {
 	var errs []error
-	redisClients.Range(func(key, value interface{}) bool {
+	redisClients.Range(func(key, value any) bool {
 		client := value.(*redis.Client)
 		if err := client.Close(); err != nil {
 			errs = append(errs, err)
@@ -137,4 +137,3 @@ func CloseAllRedisClients() error {
 	}
 	return nil
 }
-

@@ -388,7 +388,7 @@ func (s *OrderServiceImpl) getOrderTableColumns() string {
 // 在数据库层面合并多个分表，统一排序和分页，性能更优
 func (s *OrderServiceImpl) queryMultipleTablesWithUnion(tableNames []string, filters OrderFilters, page, pageSize int) ([]models.Order, int64, error) {
 	// 构建 WHERE 条件
-	whereConditions := []interface{}{}
+	whereConditions := []any{}
 	whereClause := "1=1"
 
 	// 时间范围（必填）
@@ -465,10 +465,23 @@ func (s *OrderServiceImpl) queryMultipleTablesWithUnion(tableNames []string, fil
 	columnsStr := s.getOrderTableColumns()
 
 	// 构建 UNION ALL 查询
+	// 过滤掉不存在的分表，避免查询错误
 	var unionQueries []string
 	var allArgs []any
+	var existingTableNames []string
 
 	for _, tableName := range tableNames {
+		// 检查表是否存在，如果不存在则跳过
+		if !facades.Schema().HasTable(tableName) {
+			// 记录日志但不报错，因为某些月份的分表可能还没有创建
+			errorlog.Record(context.Background(), "order", "分表不存在，跳过查询", map[string]any{
+				"table_name": tableName,
+			}, "分表 %s 不存在，跳过查询", tableName)
+			continue
+		}
+
+		// 表存在，添加到查询列表
+		existingTableNames = append(existingTableNames, tableName)
 		// 为每个分表构建 SELECT 查询
 		// 使用反引号包裹表名，防止 SQL 注入
 		// 明确指定列名，确保 UNION ALL 时列数一致
@@ -492,8 +505,9 @@ func (s *OrderServiceImpl) queryMultipleTablesWithUnion(tableNames []string, fil
 	}
 	if err := facades.Orm().Query().Raw(countSQL, allArgs...).Scan(&countResult); err != nil {
 		errorlog.Record(context.Background(), "order", "查询订单总数失败", map[string]any{
-			"table_count": len(tableNames),
-			"error":       err.Error(),
+			"table_count":          len(tableNames),
+			"existing_table_count": len(existingTableNames),
+			"error":                err.Error(),
 		}, "查询订单总数失败: %v", err)
 		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
 	}
@@ -536,7 +550,7 @@ func (s *OrderServiceImpl) queryMultipleTablesWithUnion(tableNames []string, fil
 // 在数据库层面合并多个分表，统一排序，性能更优
 func (s *OrderServiceImpl) queryMultipleTablesWithUnionForExport(tableNames []string, filters OrderFilters) ([]models.Order, error) {
 	// 构建 WHERE 条件（与 queryMultipleTablesWithUnion 相同）
-	whereConditions := []interface{}{}
+	whereConditions := []any{}
 	whereClause := "1=1"
 
 	// 时间范围（必填）
@@ -613,10 +627,21 @@ func (s *OrderServiceImpl) queryMultipleTablesWithUnionForExport(tableNames []st
 	columnsStr := s.getOrderTableColumns()
 
 	// 构建 UNION ALL 查询
+	// 过滤掉不存在的分表，避免查询错误
 	var unionQueries []string
 	var allArgs []any
 
 	for _, tableName := range tableNames {
+		// 检查表是否存在，如果不存在则跳过
+		if !facades.Schema().HasTable(tableName) {
+			// 记录日志但不报错，因为某些月份的分表可能还没有创建
+			errorlog.Record(context.Background(), "order", "分表不存在，跳过查询", map[string]any{
+				"table_name": tableName,
+			}, "分表 %s 不存在，跳过查询", tableName)
+			continue
+		}
+
+		// 表存在，添加到查询列表
 		// 为每个分表构建 SELECT 查询
 		// 使用反引号包裹表名，防止 SQL 注入
 		// 明确指定列名，确保 UNION ALL 时列数一致

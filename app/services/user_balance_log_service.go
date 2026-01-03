@@ -214,7 +214,7 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	var stats UserBalanceStatistics
 
 	// 构建基础查询条件（用于构建 SQL）
-	baseConditions := []interface{}{userID, "success"}
+	baseConditions := []any{userID, "success"}
 	baseWhere := "user_id = ? AND status = ?"
 	if !startTime.IsZero() {
 		baseWhere += " AND created_at >= ?"
