@@ -7,7 +7,7 @@
           <div class="header-actions">
             <el-button 
               type="danger" 
-              :disabled="!selectedRows || selectedRows.length === 0"
+              :disabled="!selectedRows || selectedRows.length === 0 || getButtonState('system_log.batch_delete').disabled"
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>

@@ -7,7 +7,7 @@
           <div class="header-actions">
             <el-button 
               type="danger" 
-              :disabled="selectedRows.length === 0 || getButtonState('operation_log.destroy').disabled"
+              :disabled="selectedRows.length === 0 || getButtonState('operation_log.batch_delete').disabled"
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>

@@ -16,7 +16,7 @@
             </el-button> -->
             <el-button 
               type="danger" 
-              :disabled="selectedRows.length === 0"
+              :disabled="selectedRows.length === 0 || getButtonState('login_log.batch_delete').disabled"
               @click="handleBatchDelete"
             >
               <el-icon><Delete /></el-icon>
