@@ -84,13 +84,14 @@ func (s *ShardingServiceImpl) registerOrderTables() {
 **命令使用示例：**
 
 ```bash
-# 创建当前月份的分表（默认创建当前月份及未来2个月，共3个月）
+# 创建分表（默认创建上个月、当前月份及未来2个月，共4个月）
 go run . artisan order:create-sharding-tables
 
 # 创建指定月份的分表
 go run . artisan order:create-sharding-tables --month=202512
 
-# 创建当前月份及未来6个月的分表
+# 创建上个月、当前月份及未来N个月的分表（--months 参数包括上个月和当前月）
+# 例如：--months=6 会创建上个月、当前月及未来4个月，共6个月
 go run . artisan order:create-sharding-tables --months=6
 ```
 

@@ -32,19 +32,20 @@ func (r *CreateOrderShardingTables) Signature() string {
 // Description The console command description.
 func (r *CreateOrderShardingTables) Description() string {
 
-	// # 创建当前月份的分表（默认创建当前月份及未来2个月，共3个月）
+	// # 创建分表（默认创建上个月、当前月份及未来2个月，共4个月）
 	// go run . artisan order:create-sharding-tables
 
 	// # 创建指定月份的分表
 	// go run . artisan order:create-sharding-tables --month=202512
 
-	// # 创建当前月份及未来6个月的分表
+	// # 创建上个月、当前月份及未来N个月的分表（--months 参数包括上个月和当前月）
+	// # 例如：--months=6 会创建上个月、当前月及未来4个月，共6个月
 	// go run . artisan order:create-sharding-tables --months=6
 
 	// # 帮助
 	// go run . artisan order:create-sharding-tables --help
 
-	return "创建订单分表（按月分表，可指定月份或创建当前月份及未来几个月）"
+	return "创建订单分表（按月分表，可指定月份或创建上个月、当前月份及未来几个月）"
 }
 
 // Extend The console command extend.
@@ -60,8 +61,8 @@ func (r *CreateOrderShardingTables) Extend() command.Extend {
 			&command.IntFlag{
 				Name:    "months",
 				Aliases: []string{"n"},
-				Value:   3,
-				Usage:   "创建未来几个月(默认3个月,包括当前月份)",
+				Value:   4,
+				Usage:   "创建几个月(默认4个月,包括上个月、当前月份及未来2个月)",
 			},
 		},
 	}
@@ -81,11 +82,16 @@ func (r *CreateOrderShardingTables) Handle(ctx console.Context) error {
 		}
 		months = []time.Time{parsedTime}
 	} else {
-		// 创建当前月份及未来几个月（使用 UTC 时区，与分表逻辑保持一致）
+		// 创建上个月、当前月份及未来几个月（使用 UTC 时区，与分表逻辑保持一致）
+		// 默认：上个月(-1)、当前月(0)、未来2个月(1,2)，共4个月
 		now := time.Now().UTC()
-		for i := range monthsFlag {
-			month := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-			month = month.AddDate(0, i, 0)
+		currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+		// 从 -1 开始（上个月），到 monthsFlag-2（未来几个月）
+		// 例如：monthsFlag=4 时，创建：上个月(-1)、当前月(0)、未来1个月(1)、未来2个月(2)
+		startOffset := -1 // 从上个月开始
+		for i := startOffset; i < monthsFlag-1; i++ {
+			month := currentMonth.AddDate(0, i, 0)
 			months = append(months, month)
 		}
 	}
