@@ -278,9 +278,9 @@ const chunkUploadCancelled = ref(false) // 标记是否已取消上传
 const imageUrlMap = ref(new Map()) // 存储图片 URL
 const imageLoadingMap = ref(new Map()) // 存储图片加载状态: 'loading' | 'loaded' | 'error'
 
-// 大文件阈值（100MB），超过此大小使用分片上传
+// 大文件阈值（5MB），超过此大小使用分片上传
 const CHUNK_SIZE = 1 * 1024 * 1024 // 1MB per chunk
-const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024 // 100MB
+const LARGE_FILE_THRESHOLD = 5 * 1024 * 1024 // 5MB
 
 // 数据转换函数
 const transformAttachmentData = (item) => {
