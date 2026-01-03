@@ -144,7 +144,7 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "大文件分片上传", Slug: "attachment.chunk", Method: "POST", Path: "/api/admin/attachments/chunk", Description: "大文件分片上传（包含初始化、上传分片、合并分片）", Status: 1, Sort: 3, MenuID: attachmentMenu.ID},
 		{Name: "获取上传进度", Slug: "attachment.chunk_progress", Method: "GET", Path: "/api/admin/attachments/chunk", Description: "获取大文件分片上传进度", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		// {Name: "上传进度推送", Slug: "attachment.upload_progress", Method: "GET", Path: "/api/admin/attachments/upload/progress", Description: "文件上传进度实时推送", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
-		// {Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
+		{Name: "附件预览", Slug: "attachment.preview", Method: "GET", Path: "/api/admin/attachments/*/preview", Description: "预览附件", Status: 1, Sort: 4, MenuID: attachmentMenu.ID},
 		{Name: "附件下载", Slug: "attachment.download", Method: "GET", Path: "/api/admin/attachments/*/download", Description: "下载附件", Status: 1, Sort: 5, MenuID: attachmentMenu.ID},
 		{Name: "附件更新显示名称", Slug: "attachment.update_display_name", Method: "PUT", Path: "/api/admin/attachments/*/display-name", Description: "更新附件显示名称", Status: 1, Sort: 6, MenuID: attachmentMenu.ID},
 		{Name: "附件删除", Slug: "attachment.destroy", Method: "DELETE", Path: "/api/admin/attachments/*", Description: "删除附件", Status: 1, Sort: 7, MenuID: attachmentMenu.ID},
