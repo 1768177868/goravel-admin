@@ -42,6 +42,29 @@ body {
   height: 100vh;
 }
 
+/* 夜间模式 - 使用滤镜方式 */
+body.dark-mode {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* 左侧菜单栏在夜间模式下保持原样，不受滤镜影响 */
+body.dark-mode .sidebar {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* 图片在夜间模式下需要再次反转以保持正常显示 */
+body.dark-mode img,
+body.dark-mode .el-image img,
+body.dark-mode .el-avatar img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* 视频和其他媒体元素也需要反转 */
+body.dark-mode video,
+body.dark-mode iframe {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 /* 列表页公共样式 */
 .list-page {
   background: white;

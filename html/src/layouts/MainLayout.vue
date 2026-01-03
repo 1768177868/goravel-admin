@@ -123,6 +123,7 @@
             </el-icon>
           </el-button>
           <NotificationBell />
+          <DarkModeSwitch />
           <TimezoneSwitch />
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
@@ -184,6 +185,7 @@ import request from '../utils/request'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import NotificationBell from '../components/NotificationBell.vue'
+import DarkModeSwitch from '../components/DarkModeSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'

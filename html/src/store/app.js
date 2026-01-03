@@ -14,7 +14,8 @@ export const useAppStore = defineStore('app', {
     sidebarCollapsed: Storage.getItem('sidebarCollapsed', 'false') === 'true',
     layoutSize: Storage.getItem('layoutSize', 'default') || 'default', // default, large, small
     isFullscreen: false,
-    timezone: Storage.getItem('timezone', detectBrowserTimezone()) || detectBrowserTimezone()
+    timezone: Storage.getItem('timezone', detectBrowserTimezone()) || detectBrowserTimezone(),
+    darkMode: Storage.getItem('darkMode', 'false') === 'true'
   }),
 
   actions: {
@@ -55,6 +56,26 @@ export const useAppStore = defineStore('app', {
     setTimezone(timezone) {
       this.timezone = timezone || 'UTC'
       Storage.setItem('timezone', this.timezone)
+    },
+
+    toggleDarkMode() {
+      this.darkMode = !this.darkMode
+      Storage.setItem('darkMode', this.darkMode.toString())
+      // 应用或移除 dark-mode 类到 body
+      if (this.darkMode) {
+        document.body.classList.add('dark-mode')
+      } else {
+        document.body.classList.remove('dark-mode')
+      }
+    },
+
+    initDarkMode() {
+      // 初始化时应用夜间模式
+      if (this.darkMode) {
+        document.body.classList.add('dark-mode')
+      } else {
+        document.body.classList.remove('dark-mode')
+      }
     }
   }
 })
