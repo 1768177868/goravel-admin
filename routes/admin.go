@@ -169,13 +169,10 @@ func Admin() {
 			// 附件管理
 			router.Get("attachments", attachmentController.Index)
 			router.Post("attachments/upload", attachmentController.Upload)
-			// 文件上传路由组：使用更长的超时时间（30分钟）
-			router.Middleware(middleware.TimeoutForUpload()).Group(func(router route.Router) {
-				// 统一的分片上传接口（POST，action参数：init/upload/merge）
-				router.Post("attachments/chunk", attachmentController.ChunkUpload)
-				// 获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
-				router.Get("attachments/chunk", attachmentController.ChunkUpload)
-			})
+			// 统一的分片上传接口（POST，action参数：init/upload/merge）
+			router.Post("attachments/chunk", attachmentController.ChunkUpload)
+			// 获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
+			router.Get("attachments/chunk", attachmentController.ChunkUpload)
 			router.Get("attachments/{id}/preview", attachmentController.Preview)
 			router.Get("attachments/{id}/download", attachmentController.Download)
 			router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)

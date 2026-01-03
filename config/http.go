@@ -55,17 +55,8 @@ func init() {
 		"host": config.Env("APP_HOST", "127.0.0.1"),
 		// HTTP Port
 		"port": config.Env("APP_PORT", "3000"),
-		// HTTP Timeout, default is 60 seconds
-		// 注意：这是全局默认超时时间，适用于没有单独设置超时的接口
-		// 可以通过中间件为特定路由设置不同的超时时间：
-		//   - 普通接口：使用默认超时（60秒）或通过 middleware.Timeout(seconds) 自定义
-		//   - 大文件上传接口：使用 middleware.TimeoutForUpload()（30分钟）
-		// 可以通过环境变量 HTTP_REQUEST_TIMEOUT 自定义默认超时时间（单位：秒）
-		// 建议值：
-		//   - 普通接口：30-60 秒
-		//   - 支持大文件上传：1800 秒（30 分钟）或更长
-		// 如果使用反向代理（如 Nginx），建议在 Nginx 层面为特定接口单独配置超时
-		"request_timeout": config.GetInt("HTTP_REQUEST_TIMEOUT", 60),
+		// HTTP Timeout, default is 1800 seconds (30 minutes)
+		"request_timeout": config.GetInt("HTTP_REQUEST_TIMEOUT", 1800),
 		// HTTPS Configuration
 		"tls": map[string]any{
 			// HTTPS Host
