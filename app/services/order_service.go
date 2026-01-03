@@ -53,7 +53,8 @@ type OrderFilters struct {
 }
 
 type OrderServiceImpl struct {
-	shardingService ShardingService
+	shardingService      ShardingService
+	shardingQueryService ShardingQueryService
 }
 
 type OrderProduct struct {
@@ -75,9 +76,35 @@ type OrderWithDetails struct {
 }
 
 func NewOrderService() *OrderServiceImpl {
-	return &OrderServiceImpl{
+	service := &OrderServiceImpl{
 		shardingService: NewShardingService(),
 	}
+
+	// 初始化分表查询服务
+	service.shardingQueryService = NewShardingQueryService(ShardingQueryConfig{
+		BaseTableName: "orders",
+		GetColumns: func() string {
+			return service.getOrderTableColumns()
+		},
+		BuildWhereClause: func(filters any) (string, []any) {
+			return service.buildOrderWhereClause(filters)
+		},
+		GetAllowedOrderFields: func() map[string]bool {
+			return map[string]bool{
+				"id":         true,
+				"order_no":   true,
+				"user_id":    true,
+				"amount":     true,
+				"status":     true,
+				"created_at": true,
+				"updated_at": true,
+			}
+		},
+		DefaultOrderBy: "created_at:desc",
+		ModuleName:     "order",
+	})
+
+	return service
 }
 
 // CreateOrder 创建订单
@@ -360,6 +387,57 @@ func (s *OrderServiceImpl) buildShardingQuery(tableName string, filters OrderFil
 	return query
 }
 
+// buildOrderWhereClause 构建订单查询的 WHERE 条件（用于通用分表查询服务）
+func (s *OrderServiceImpl) buildOrderWhereClause(filters any) (string, []any) {
+	orderFilters, ok := filters.(OrderFilters)
+	if !ok {
+		return "", nil
+	}
+
+	var conditions []string
+	var args []any
+
+	// 时间范围（必填）
+	if !orderFilters.StartTime.IsZero() {
+		conditions = append(conditions, "created_at >= ?")
+		args = append(args, orderFilters.StartTime)
+	}
+	if !orderFilters.EndTime.IsZero() {
+		conditions = append(conditions, "created_at <= ?")
+		args = append(args, orderFilters.EndTime)
+	}
+
+	// 用户ID筛选
+	if orderFilters.UserID > 0 {
+		conditions = append(conditions, "user_id = ?")
+		args = append(args, orderFilters.UserID)
+	}
+
+	// 订单号模糊搜索
+	if orderFilters.OrderNo != "" {
+		conditions = append(conditions, "order_no LIKE ?")
+		args = append(args, "%"+orderFilters.OrderNo+"%")
+	}
+
+	// 订单状态筛选
+	if orderFilters.Status != "" {
+		conditions = append(conditions, "status = ?")
+		args = append(args, orderFilters.Status)
+	}
+
+	// 金额范围筛选
+	if orderFilters.MinAmount > 0 {
+		conditions = append(conditions, "amount >= ?")
+		args = append(args, orderFilters.MinAmount)
+	}
+	if orderFilters.MaxAmount > 0 {
+		conditions = append(conditions, "amount <= ?")
+		args = append(args, orderFilters.MaxAmount)
+	}
+
+	return strings.Join(conditions, " AND "), args
+}
+
 // getOrderTableColumns 获取订单表的所有列名（用于 UNION ALL 查询）
 // 明确指定列名，避免不同分表列数不一致的问题
 // 只查询 Order 模型中存在的字段，忽略可能不存在的扩展字段（如 payment_method）
@@ -386,297 +464,25 @@ func (s *OrderServiceImpl) getOrderTableColumns() string {
 
 // queryMultipleTablesWithUnion 使用 UNION ALL 查询多个分表
 // 在数据库层面合并多个分表，统一排序和分页，性能更优
+// 使用通用分表查询服务
 func (s *OrderServiceImpl) queryMultipleTablesWithUnion(tableNames []string, filters OrderFilters, page, pageSize int) ([]models.Order, int64, error) {
-	// 构建 WHERE 条件
-	whereConditions := []any{}
-	whereClause := "1=1"
-
-	// 时间范围（必填）
-	if !filters.StartTime.IsZero() {
-		whereClause += " AND created_at >= ?"
-		whereConditions = append(whereConditions, filters.StartTime)
-	}
-	if !filters.EndTime.IsZero() {
-		whereClause += " AND created_at <= ?"
-		whereConditions = append(whereConditions, filters.EndTime)
-	}
-
-	// 用户ID筛选
-	if filters.UserID > 0 {
-		whereClause += " AND user_id = ?"
-		whereConditions = append(whereConditions, filters.UserID)
-	}
-
-	// 订单号模糊搜索
-	if filters.OrderNo != "" {
-		whereClause += " AND order_no LIKE ?"
-		whereConditions = append(whereConditions, "%"+filters.OrderNo+"%")
-	}
-
-	// 订单状态筛选
-	if filters.Status != "" {
-		whereClause += " AND status = ?"
-		whereConditions = append(whereConditions, filters.Status)
-	}
-
-	// 金额范围筛选
-	if filters.MinAmount > 0 {
-		whereClause += " AND amount >= ?"
-		whereConditions = append(whereConditions, filters.MinAmount)
-	}
-	if filters.MaxAmount > 0 {
-		whereClause += " AND amount <= ?"
-		whereConditions = append(whereConditions, filters.MaxAmount)
-	}
-
-	// 构建排序
-	orderBy := filters.OrderBy
-	if orderBy == "" {
-		orderBy = "created_at:desc"
-	}
-	orderParts := strings.Split(orderBy, ":")
-	orderField := "created_at"
-	orderDir := "desc"
-	if len(orderParts) == 2 {
-		field := orderParts[0]
-		direction := strings.ToLower(orderParts[1])
-
-		// 验证排序字段是否允许
-		allowedFields := map[string]bool{
-			"id":         true,
-			"order_no":   true,
-			"user_id":    true,
-			"amount":     true,
-			"status":     true,
-			"created_at": true,
-			"updated_at": true,
-		}
-		if allowedFields[field] {
-			orderField = field
-			if direction == "asc" {
-				orderDir = "asc"
-			} else {
-				orderDir = "desc"
-			}
-		}
-	}
-
-	// 获取列名（明确指定，避免不同分表列数不一致）
-	columnsStr := s.getOrderTableColumns()
-
-	// 构建 UNION ALL 查询
-	// 过滤掉不存在的分表，避免查询错误
-	var unionQueries []string
-	var allArgs []any
-	var existingTableNames []string
-
-	for _, tableName := range tableNames {
-		// 检查表是否存在，如果不存在则跳过
-		if !facades.Schema().HasTable(tableName) {
-			// 记录日志但不报错，因为某些月份的分表可能还没有创建
-			errorlog.Record(context.Background(), "order", "分表不存在，跳过查询", map[string]any{
-				"table_name": tableName,
-			}, "分表 %s 不存在，跳过查询", tableName)
-			continue
-		}
-
-		// 表存在，添加到查询列表
-		existingTableNames = append(existingTableNames, tableName)
-		// 为每个分表构建 SELECT 查询
-		// 使用反引号包裹表名，防止 SQL 注入
-		// 明确指定列名，确保 UNION ALL 时列数一致
-		query := fmt.Sprintf("SELECT %s FROM `%s` WHERE %s", columnsStr, tableName, whereClause)
-		unionQueries = append(unionQueries, query)
-		// 每个查询都需要相同的参数
-		allArgs = append(allArgs, whereConditions...)
-	}
-
-	if len(unionQueries) == 0 {
-		return []models.Order{}, 0, nil
-	}
-
-	// 合并所有查询
-	unionSQL := strings.Join(unionQueries, " UNION ALL ")
-
-	// 获取总数（使用子查询）
-	countSQL := fmt.Sprintf("SELECT COUNT(*) as total FROM (%s) as combined", unionSQL)
-	var countResult struct {
-		Total int64
-	}
-	if err := facades.Orm().Query().Raw(countSQL, allArgs...).Scan(&countResult); err != nil {
-		errorlog.Record(context.Background(), "order", "查询订单总数失败", map[string]any{
-			"table_count":          len(tableNames),
-			"existing_table_count": len(existingTableNames),
-			"error":                err.Error(),
-		}, "查询订单总数失败: %v", err)
-		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
-	}
-	total := countResult.Total
-
-	// 如果没有数据，直接返回
-	if total == 0 {
-		return []models.Order{}, 0, nil
-	}
-
-	// 分页查询（在外层应用排序和分页）
-	offset := (page - 1) * pageSize
-	paginatedSQL := fmt.Sprintf(
-		"SELECT %s FROM (%s) as combined ORDER BY `%s` %s LIMIT ? OFFSET ?",
-		columnsStr,
-		unionSQL,
-		orderField,
-		orderDir,
-	)
-
-	// 添加 LIMIT 和 OFFSET 参数
-	paginatedArgs := append(allArgs, pageSize, offset)
-
-	// 执行查询
 	var orders []models.Order
-	if err := facades.Orm().Query().Raw(paginatedSQL, paginatedArgs...).Scan(&orders); err != nil {
-		errorlog.Record(context.Background(), "order", "查询订单列表失败", map[string]any{
-			"table_count": len(tableNames),
-			"page":        page,
-			"page_size":   pageSize,
-			"error":       err.Error(),
-		}, "查询订单列表失败: %v", err)
-		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
+	total, err := s.shardingQueryService.QueryMultipleTables(tableNames, filters, page, pageSize, &orders)
+	if err != nil {
+		return nil, 0, err
 	}
-
 	return orders, total, nil
 }
 
 // queryMultipleTablesWithUnionForExport 使用 UNION ALL 查询多个分表（用于导出，不分页）
 // 在数据库层面合并多个分表，统一排序，性能更优
+// 使用通用分表查询服务
 func (s *OrderServiceImpl) queryMultipleTablesWithUnionForExport(tableNames []string, filters OrderFilters) ([]models.Order, error) {
-	// 构建 WHERE 条件（与 queryMultipleTablesWithUnion 相同）
-	whereConditions := []any{}
-	whereClause := "1=1"
-
-	// 时间范围（必填）
-	if !filters.StartTime.IsZero() {
-		whereClause += " AND created_at >= ?"
-		whereConditions = append(whereConditions, filters.StartTime)
-	}
-	if !filters.EndTime.IsZero() {
-		whereClause += " AND created_at <= ?"
-		whereConditions = append(whereConditions, filters.EndTime)
-	}
-
-	// 用户ID筛选
-	if filters.UserID > 0 {
-		whereClause += " AND user_id = ?"
-		whereConditions = append(whereConditions, filters.UserID)
-	}
-
-	// 订单号模糊搜索
-	if filters.OrderNo != "" {
-		whereClause += " AND order_no LIKE ?"
-		whereConditions = append(whereConditions, "%"+filters.OrderNo+"%")
-	}
-
-	// 订单状态筛选
-	if filters.Status != "" {
-		whereClause += " AND status = ?"
-		whereConditions = append(whereConditions, filters.Status)
-	}
-
-	// 金额范围筛选
-	if filters.MinAmount > 0 {
-		whereClause += " AND amount >= ?"
-		whereConditions = append(whereConditions, filters.MinAmount)
-	}
-	if filters.MaxAmount > 0 {
-		whereClause += " AND amount <= ?"
-		whereConditions = append(whereConditions, filters.MaxAmount)
-	}
-
-	// 构建排序
-	orderBy := filters.OrderBy
-	if orderBy == "" {
-		orderBy = "created_at:desc"
-	}
-	orderParts := strings.Split(orderBy, ":")
-	orderField := "created_at"
-	orderDir := "desc"
-	if len(orderParts) == 2 {
-		field := orderParts[0]
-		direction := strings.ToLower(orderParts[1])
-
-		// 验证排序字段是否允许
-		allowedFields := map[string]bool{
-			"id":         true,
-			"order_no":   true,
-			"user_id":    true,
-			"amount":     true,
-			"status":     true,
-			"created_at": true,
-			"updated_at": true,
-		}
-		if allowedFields[field] {
-			orderField = field
-			if direction == "asc" {
-				orderDir = "asc"
-			} else {
-				orderDir = "desc"
-			}
-		}
-	}
-
-	// 获取列名（明确指定，避免不同分表列数不一致）
-	columnsStr := s.getOrderTableColumns()
-
-	// 构建 UNION ALL 查询
-	// 过滤掉不存在的分表，避免查询错误
-	var unionQueries []string
-	var allArgs []any
-
-	for _, tableName := range tableNames {
-		// 检查表是否存在，如果不存在则跳过
-		if !facades.Schema().HasTable(tableName) {
-			// 记录日志但不报错，因为某些月份的分表可能还没有创建
-			errorlog.Record(context.Background(), "order", "分表不存在，跳过查询", map[string]any{
-				"table_name": tableName,
-			}, "分表 %s 不存在，跳过查询", tableName)
-			continue
-		}
-
-		// 表存在，添加到查询列表
-		// 为每个分表构建 SELECT 查询
-		// 使用反引号包裹表名，防止 SQL 注入
-		// 明确指定列名，确保 UNION ALL 时列数一致
-		query := fmt.Sprintf("SELECT %s FROM `%s` WHERE %s", columnsStr, tableName, whereClause)
-		unionQueries = append(unionQueries, query)
-		// 每个查询都需要相同的参数
-		allArgs = append(allArgs, whereConditions...)
-	}
-
-	if len(unionQueries) == 0 {
-		return []models.Order{}, nil
-	}
-
-	// 合并所有查询
-	unionSQL := strings.Join(unionQueries, " UNION ALL ")
-
-	// 导出查询（不分页，但需要排序）
-	exportSQL := fmt.Sprintf(
-		"SELECT %s FROM (%s) as combined ORDER BY `%s` %s",
-		columnsStr,
-		unionSQL,
-		orderField,
-		orderDir,
-	)
-
-	// 执行查询
 	var orders []models.Order
-	if err := facades.Orm().Query().Raw(exportSQL, allArgs...).Scan(&orders); err != nil {
-		errorlog.Record(context.Background(), "order", "导出订单列表失败", map[string]any{
-			"table_count": len(tableNames),
-			"error":       err.Error(),
-		}, "导出订单列表失败: %v", err)
-		return nil, apperrors.ErrQueryFailed.WithError(err)
+	err := s.shardingQueryService.QueryMultipleTablesForExport(tableNames, filters, &orders)
+	if err != nil {
+		return nil, err
 	}
-
 	return orders, nil
 }
 
