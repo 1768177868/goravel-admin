@@ -706,6 +706,7 @@
     "google_code_error": "Google Authenticator code error"
   },
   "export": {
+    "type": "Export Type",
     "filename": "Filename",
     "disk": "Storage Disk",
     "path": "File Path",

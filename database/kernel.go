@@ -36,6 +36,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250201000003CreateNotificationsTable{},
 		&migrations.M20250301000021CreateExportsTable{},
 		&migrations.M20250130000006AddErrorMsgToExportsTable{}, // 添加 error_msg 字段到 exports 表
+		&migrations.M20250301000024AddTypeToExportsTable{},     // 添加 type 字段到 exports 表
 		&migrations.M20250301000022CreateAttachmentsTable{},
 		&migrations.M20250301000023AddDisplayNameToAttachments{},
 		&migrations.M20250101000024AddGoogleSecretToAdmins{},

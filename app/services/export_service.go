@@ -170,8 +170,19 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 				ext = filePath[dot+1:]
 			}
 
+			// 尝试从 context 中获取导出类型
+			exportType := ""
+			if s.ctx != nil {
+				if typeValue := s.ctx.Value("export_type"); typeValue != nil {
+					if typeStr, ok := typeValue.(string); ok {
+						exportType = typeStr
+					}
+				}
+			}
+
 			exportRecord := models.Export{
 				AdminID:   adminID,
+				Type:      exportType,
 				Disk:      s.disk,
 				Path:      filePath,
 				Filename:  filepath.Base(filePath),

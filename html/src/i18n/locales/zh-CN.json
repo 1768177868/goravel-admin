@@ -706,6 +706,7 @@
     "google_code_error": "谷歌验证码错误"
   },
   "export": {
+    "type": "导出类型",
     "filename": "文件名",
     "disk": "存储驱动",
     "path": "文件路径",

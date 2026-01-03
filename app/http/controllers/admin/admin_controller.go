@@ -728,5 +728,8 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		data = append(data, row)
 	}
 
+	// 在 context 中设置导出类型，供 ExportService 使用
+	ctx.WithValue("export_type", models.ExportTypeAdmins)
+
 	return response.Export(ctx, "export_success", headers, data, "admins")
 }

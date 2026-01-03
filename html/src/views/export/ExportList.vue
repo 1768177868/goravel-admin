@@ -100,11 +100,12 @@ const tableRef = ref(null)
 const selectedRows = ref([])
 const downloadingIds = ref(new Set()) // 正在下载的文件 ID 集合
 
-// 数据转换函数
+  // 数据转换函数
 const transformExportData = (item) => {
   return {
     id: item.id || item.ID,
     Admin: item.Admin || item.admin || null,
+    type: item.Type || item.type || '',
     filename: item.Filename || item.filename || '',
     disk: item.Disk || item.disk || '',
     path: item.Path || item.path || '',
@@ -119,6 +120,7 @@ const transformExportData = (item) => {
 
 // 初始搜索表单
 const initialSearchForm = {
+  type: '',
   filename: '',
   disk: '',
   status: '',
@@ -150,6 +152,7 @@ const {
 const tableColumns = computed(() => [
   { type: 'checkbox', width: 60 },
   { field: 'id', title: t('table.id'), width: 80, sortable: true },
+  { field: 'type', title: t('export.type'), width: 120, formatter: formatType },
   { field: 'filename', title: t('export.filename'), minWidth: 200 },
   { field: 'disk', title: t('export.disk'), width: 120 },
   { field: 'path', title: t('export.path'), minWidth: 260 },
@@ -163,6 +166,17 @@ const tableColumns = computed(() => [
 ])
 
 const searchFields = computed(() => [
+  {
+    prop: 'type',
+    label: t('export.type'),
+    type: 'select',
+    width: '150px',
+    options: [
+      { label: t('menu.order'), value: 'orders' },
+      { label: t('menu.admin'), value: 'admins' }
+    ],
+    clearable: true
+  },
   {
     prop: 'filename',
     label: t('export.filename'),
@@ -203,6 +217,13 @@ const searchFields = computed(() => [
     advanced: true
   }
 ])
+
+const formatType = ({ cellValue }) => {
+  const type = cellValue || ''
+  if (type === 'orders') return t('menu.order')
+  if (type === 'admins') return t('menu.admin')
+  return type || '-'
+}
 
 const formatSize = ({ cellValue }) => {
   const size = Number(cellValue || 0)

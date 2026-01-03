@@ -511,6 +511,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	exportRecord := models.Export{
 		AdminID: adminID,
+		Type:    models.ExportTypeOrders,
 		Status:  models.ExportStatusProcessing,
 		Disk:    disk,
 		Path:    "", // 处理完成后更新

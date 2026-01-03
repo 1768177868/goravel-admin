@@ -8,6 +8,7 @@ type Export struct {
 	orm.Model
 	AdminID   uint   `gorm:"index;comment:管理员ID"`
 	Admin     Admin  `gorm:"foreignKey:AdminID"`
+	Type      string `gorm:"size:50;index;comment:导出类型 orders:订单导出 admins:管理员导出"`
 	Disk      string `gorm:"size:50;comment:存储驱动"`
 	Path      string `gorm:"size:255;comment:文件路径"`
 	Filename  string `gorm:"size:255;comment:文件名"`
@@ -22,6 +23,12 @@ const (
 	ExportStatusProcessing uint8 = 0 // 处理中
 	ExportStatusSuccess    uint8 = 1 // 成功
 	ExportStatusFailed     uint8 = 2 // 失败
+)
+
+// 导出类型常量
+const (
+	ExportTypeOrders string = "orders" // 订单导出
+	ExportTypeAdmins string = "admins" // 管理员导出
 )
 
 

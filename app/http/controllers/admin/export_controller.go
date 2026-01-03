@@ -72,6 +72,7 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 // buildFilters 构建导出记录查询过滤器
 func (r *ExportController) buildFilters(ctx http.Context) services.ExportRecordFilters {
 	adminID := ctx.Request().Query("admin_id", "")
+	exportType := ctx.Request().Query("type", "")
 	filename := ctx.Request().Query("filename", "")
 	disk := ctx.Request().Query("disk", "")
 	status := ctx.Request().Query("status", "")
@@ -81,6 +82,7 @@ func (r *ExportController) buildFilters(ctx http.Context) services.ExportRecordF
 
 	return services.ExportRecordFilters{
 		AdminID:   adminID,
+		Type:      exportType,
 		Filename:  filename,
 		Disk:      disk,
 		Status:    status,

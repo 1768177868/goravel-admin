@@ -28,6 +28,7 @@ type ExportRecordService interface {
 // ExportRecordFilters 导出记录查询过滤器
 type ExportRecordFilters struct {
 	AdminID   string
+	Type      string
 	Filename  string
 	Disk      string
 	Status    string
@@ -74,6 +75,9 @@ func (s *ExportRecordServiceImpl) GetList(filters ExportRecordFilters, page, pag
 	if filters.AdminID != "" {
 		query = query.Where("admin_id", filters.AdminID)
 	}
+	if filters.Type != "" {
+		query = query.Where("type = ?", filters.Type)
+	}
 	if filters.Filename != "" {
 		query = query.Where("filename LIKE ?", "%"+filters.Filename+"%")
 	}
@@ -106,7 +110,7 @@ func (s *ExportRecordServiceImpl) GetList(filters ExportRecordFilters, page, pag
 	// 分页查询
 	var exports []models.Export
 	err = query.With("Admin").
-		Offset((page-1)*pageSize).
+		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Get(&exports)
 	if err != nil {
@@ -152,4 +156,3 @@ func (s *ExportRecordServiceImpl) BatchDelete(ids []uint) error {
 
 	return nil
 }
-
