@@ -278,9 +278,9 @@ const chunkUploadCancelled = ref(false) // 标记是否已取消上传
 const imageUrlMap = ref(new Map()) // 存储图片 URL
 const imageLoadingMap = ref(new Map()) // 存储图片加载状态: 'loading' | 'loaded' | 'error'
 
-// 大文件阈值（5MB），超过此大小使用分片上传
-const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB per chunk
-const LARGE_FILE_THRESHOLD = 5 * 1024 * 1024 // 5MB
+// 大文件阈值（100MB），超过此大小使用分片上传
+const CHUNK_SIZE = 1 * 1024 * 1024 // 1MB per chunk
+const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024 // 100MB
 
 // 数据转换函数
 const transformAttachmentData = (item) => {
@@ -772,8 +772,8 @@ const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChu
       chunkUploadProgress.value = Math.round((alreadyUploadedCount / totalChunks) * 100)
     }
 
-    // 并发上传分片（限制并发数为3）
-    const concurrency = 3
+    // 并发上传分片（限制并发数为2）
+    const concurrency = 2
     let uploadedCount = alreadyUploadedCount
     // 记录每个分片的上传进度（0-1），用于计算总进度
     const chunkProgressMap = new Map()
