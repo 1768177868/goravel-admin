@@ -131,7 +131,7 @@ func (r *ClearChunks) Handle(ctx console.Context) error {
 }
 
 // cleanupEmptyDirs 清理空目录
-func (r *ClearChunks) cleanupEmptyDirs(rootDir string, ctx console.Context) int {
+func (r *ClearChunks) cleanupEmptyDirs(rootDir string, _ console.Context) int {
 	var dirs []string
 
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
