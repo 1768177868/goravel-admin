@@ -108,9 +108,9 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 		// 检查表是否存在，如果不存在则跳过
 		if !facades.Schema().HasTable(tableName) {
 			// 记录日志但不报错，因为某些月份的分表可能还没有创建
-			errorlog.Record(context.Background(), s.config.ModuleName, "分表不存在，跳过查询", map[string]any{
-				"table_name": tableName,
-			}, "分表 %s 不存在，跳过查询", tableName)
+			// errorlog.Record(context.Background(), s.config.ModuleName, "分表不存在，跳过查询", map[string]any{
+			// 	"table_name": tableName,
+			// }, "分表 %s 不存在，跳过查询", tableName)
 			continue
 		}
 
@@ -215,9 +215,9 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 		// 检查表是否存在，如果不存在则跳过
 		if !facades.Schema().HasTable(tableName) {
 			// 记录日志但不报错，因为某些月份的分表可能还没有创建
-			errorlog.Record(context.Background(), s.config.ModuleName, "分表不存在，跳过查询", map[string]any{
-				"table_name": tableName,
-			}, "分表 %s 不存在，跳过查询", tableName)
+			// errorlog.Record(context.Background(), s.config.ModuleName, "分表不存在，跳过查询", map[string]any{
+			// 	"table_name": tableName,
+			// }, "分表 %s 不存在，跳过查询", tableName)
 			continue
 		}
 
