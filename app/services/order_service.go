@@ -525,8 +525,16 @@ func (s *OrderServiceImpl) GetOrdersWithDetails(filters OrderFilters, page, page
 		return nil, 0, err
 	}
 
-	// 批量查询订单详情
+	if len(orders) == 0 {
+		return []OrderWithDetails{}, total, nil
+	}
+
 	result := make([]OrderWithDetails, len(orders))
+
+	// 按分表分组订单ID
+	orderIDsByTable := make(map[string][]uint)
+	orderIndexByID := make(map[uint]int)
+
 	for i, order := range orders {
 		// 将订单转换为 OrderWithDetails
 		result[i] = OrderWithDetails{
@@ -541,11 +549,37 @@ func (s *OrderServiceImpl) GetOrdersWithDetails(filters OrderFilters, page, page
 		utcLoc, _ := time.LoadLocation("UTC")
 		createdAt = createdAt.In(utcLoc)
 
-		// 查询订单详情
+		// 获取详情分表名
 		detailTableName := utils.GetShardingTableName("order_details", createdAt)
+
+		// 按分表分组订单ID
+		if orderIDsByTable[detailTableName] == nil {
+			orderIDsByTable[detailTableName] = []uint{}
+		}
+		orderIDsByTable[detailTableName] = append(orderIDsByTable[detailTableName], order.ID)
+		orderIndexByID[order.ID] = i
+	}
+
+	// 按分表批量查询订单详情
+	for tableName, orderIDs := range orderIDsByTable {
+		if len(orderIDs) == 0 {
+			continue
+		}
+		orderIDsAny := make([]any, len(orderIDs))
+		for i, id := range orderIDs {
+			orderIDsAny[i] = id
+		}
+
 		var details []models.OrderDetail
-		if err := facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Find(&details); err == nil {
-			result[i].Details = details
+		if err := facades.Orm().Query().Table(tableName).
+			WhereIn("order_id", orderIDsAny).
+			Find(&details); err == nil {
+			// 将详情分配到对应的订单
+			for _, detail := range details {
+				if index, ok := orderIndexByID[detail.OrderID]; ok {
+					result[index].Details = append(result[index].Details, detail)
+				}
+			}
 		}
 	}
 
@@ -624,6 +658,7 @@ func (s *OrderServiceImpl) GetAllOrdersForExport(filters OrderFilters) ([]models
 
 // GetAllOrdersWithDetailsForExport 获取所有订单及详情用于导出（限制不超过3个月，不分页）
 // 使用 UNION ALL 优化，在数据库层面合并和排序
+// 优化：使用批量查询避免 N+1 查询问题
 func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters) ([]OrderWithDetails, error) {
 	// 先获取所有订单（使用优化的 UNION ALL 方法）
 	allOrders, err := s.GetAllOrdersForExport(filters)
@@ -631,8 +666,17 @@ func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters
 		return nil, err
 	}
 
-	// 批量查询订单详情
+	if len(allOrders) == 0 {
+		return []OrderWithDetails{}, nil
+	}
+
+	// 初始化结果
 	result := make([]OrderWithDetails, len(allOrders))
+
+	// 按分表分组订单ID，避免 N+1 查询
+	orderIDsByTable := make(map[string][]uint)
+	orderIndexByID := make(map[uint]int)
+
 	for i, order := range allOrders {
 		result[i] = OrderWithDetails{
 			Order:   order,
@@ -646,11 +690,39 @@ func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters
 		utcLoc, _ := time.LoadLocation("UTC")
 		createdAt = createdAt.In(utcLoc)
 
-		// 查询订单详情
+		// 获取详情分表名
 		detailTableName := utils.GetShardingTableName("order_details", createdAt)
+
+		// 按分表分组订单ID
+		if orderIDsByTable[detailTableName] == nil {
+			orderIDsByTable[detailTableName] = []uint{}
+		}
+		orderIDsByTable[detailTableName] = append(orderIDsByTable[detailTableName], order.ID)
+		orderIndexByID[order.ID] = i
+	}
+
+	// 按分表批量查询订单详情（避免 N+1 查询）
+	for tableName, orderIDs := range orderIDsByTable {
+		if len(orderIDs) == 0 {
+			continue
+		}
+
+		// 将 []uint 转换为 []any
+		orderIDsAny := make([]any, len(orderIDs))
+		for i, id := range orderIDs {
+			orderIDsAny[i] = id
+		}
+
 		var details []models.OrderDetail
-		if err := facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Find(&details); err == nil {
-			result[i].Details = details
+		if err := facades.Orm().Query().Table(tableName).
+			WhereIn("order_id", orderIDsAny).
+			Find(&details); err == nil {
+			// 将详情分配到对应的订单
+			for _, detail := range details {
+				if index, ok := orderIndexByID[detail.OrderID]; ok {
+					result[index].Details = append(result[index].Details, detail)
+				}
+			}
 		}
 	}
 
