@@ -42,6 +42,15 @@ func CreateOrdersShardingTable(tableName string) error {
 		table.Unique("order_no") // 唯一索引，防止并发下订单号重复
 		table.Index("user_id")
 		table.Index("created_at")
+
+		// 添加复合索引，优化常用查询场景
+		// 1. 时间范围 + 状态查询（最常用，用于按状态筛选订单）
+		table.Index("created_at", "status")
+		// 2. 时间范围 + 用户ID查询（用于查询特定用户的订单）
+		table.Index("created_at", "user_id")
+		// 3. 时间范围 + 状态 + 用户ID（用于同时按状态和用户筛选）
+		table.Index("created_at", "status", "user_id")
+
 		table.Comment(fmt.Sprintf("订单主表 - %s", tableName))
 	})
 }

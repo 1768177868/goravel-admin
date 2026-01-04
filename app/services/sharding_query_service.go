@@ -86,6 +86,18 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	// 获取列名
 	columnsStr := s.config.GetColumns()
 
+	// 优化：每个分表先排序和限制，然后再合并（避免合并大量数据后再排序）
+	// 计算每个分表需要查询的数量
+	// 为了确保合并后有足够的数据进行分页，每个分表查询更多数据
+	// 公式：limitPerTable = (page * pageSize) + pageSize，确保有足够数据
+	offset := (page - 1) * pageSize
+	limitPerTable := offset + pageSize + pageSize // 额外查询一页数据，确保有足够数据
+
+	// 如果 limitPerTable 太大（超过10000），限制为10000，避免单个查询太慢
+	if limitPerTable > 10000 {
+		limitPerTable = 10000
+	}
+
 	// 构建 UNION ALL 查询
 	// 过滤掉不存在的分表，避免查询错误
 	var unionQueries []string
@@ -104,10 +116,12 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 
 		// 表存在，添加到查询列表
 		existingTableNames = append(existingTableNames, tableName)
-		// 为每个分表构建 SELECT 查询
-		// 使用反引号包裹表名，防止 SQL 注入
-		// 明确指定列名，确保 UNION ALL 时列数一致
-		query := fmt.Sprintf("SELECT %s FROM `%s` WHERE %s", columnsStr, tableName, whereClause)
+		// 优化：每个分表先排序和限制，然后再合并
+		// 使用子查询包装，确保每个分表先排序和限制
+		query := fmt.Sprintf(
+			"(SELECT %s FROM `%s` WHERE %s ORDER BY `%s` %s LIMIT %d)",
+			columnsStr, tableName, whereClause, orderField, orderDir, limitPerTable,
+		)
 		unionQueries = append(unionQueries, query)
 		// 每个查询都需要相同的参数
 		allArgs = append(allArgs, whereConditions...)
@@ -120,28 +134,36 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	// 合并所有查询
 	unionSQL := strings.Join(unionQueries, " UNION ALL ")
 
-	// 获取总数（使用子查询）
-	countSQL := fmt.Sprintf("SELECT COUNT(*) as total FROM (%s) as combined", unionSQL)
-	var countResult struct {
-		Total int64
+	// 优化：分别对每个分表执行 COUNT，然后相加（性能更好，可以利用索引）
+	// 而不是对 UNION ALL 结果进行 COUNT（需要先合并所有数据）
+	var total int64
+	for _, tableName := range existingTableNames {
+		// 每个分表使用相同的 WHERE 条件
+		countSQL := fmt.Sprintf("SELECT COUNT(*) as total FROM `%s` WHERE %s", tableName, whereClause)
+		var countResult struct {
+			Total int64
+		}
+		// 使用对应的参数（每个分表使用相同的参数）
+		args := whereConditions
+		if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&countResult); err != nil {
+			errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
+				"table_name": tableName,
+				"error":      err.Error(),
+			}, "查询分表 %s 总数失败: %v", tableName, err)
+			// 如果某个分表查询失败，继续查询其他分表，但记录错误
+			continue
+		}
+		total += countResult.Total
 	}
-	if err := facades.Orm().Query().Raw(countSQL, allArgs...).Scan(&countResult); err != nil {
-		errorlog.Record(context.Background(), s.config.ModuleName, "查询总数失败", map[string]any{
-			"table_count":         len(tableNames),
-			"existing_table_count": len(existingTableNames),
-			"error":               err.Error(),
-		}, "查询总数失败: %v", err)
-		return 0, apperrors.ErrQueryFailed.WithError(err)
-	}
-	total := countResult.Total
 
 	// 如果没有数据，直接返回
 	if total == 0 {
 		return 0, nil
 	}
 
-	// 分页查询（在外层应用排序和分页）
-	offset := (page - 1) * pageSize
+	// 分页查询（在外层再次排序和分页）
+	// 注意：虽然每个分表已经排序，但合并后需要重新排序以确保全局顺序正确
+	// 但由于每个分表已经限制了数量，合并后的数据量大大减少，排序会快很多
 	paginatedSQL := fmt.Sprintf(
 		"SELECT %s FROM (%s) as combined ORDER BY `%s` %s LIMIT ? OFFSET ?",
 		columnsStr,
@@ -183,6 +205,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 	// 获取列名
 	columnsStr := s.config.GetColumns()
 
+	// 优化：每个分表先排序，然后再合并（对于导出，虽然需要所有数据，但先排序可以减少合并后的排序成本）
 	// 构建 UNION ALL 查询
 	// 过滤掉不存在的分表，避免查询错误
 	var unionQueries []string
@@ -199,10 +222,13 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 		}
 
 		// 表存在，添加到查询列表
-		// 为每个分表构建 SELECT 查询
-		// 使用反引号包裹表名，防止 SQL 注入
-		// 明确指定列名，确保 UNION ALL 时列数一致
-		query := fmt.Sprintf("SELECT %s FROM `%s` WHERE %s", columnsStr, tableName, whereClause)
+		// 优化：每个分表先排序，然后再合并
+		// 使用子查询包装，确保每个分表先排序
+		// 注意：导出需要所有数据，所以不限制数量，但先排序可以优化合并后的排序性能
+		query := fmt.Sprintf(
+			"(SELECT %s FROM `%s` WHERE %s ORDER BY `%s` %s)",
+			columnsStr, tableName, whereClause, orderField, orderDir,
+		)
 		unionQueries = append(unionQueries, query)
 		// 每个查询都需要相同的参数
 		allArgs = append(allArgs, whereConditions...)
@@ -216,6 +242,8 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 	unionSQL := strings.Join(unionQueries, " UNION ALL ")
 
 	// 导出查询（不分页，但需要排序）
+	// 注意：虽然每个分表已经排序，但合并后需要重新排序以确保全局顺序正确
+	// 但由于每个分表已经排序，合并后的排序会更快（归并排序）
 	exportSQL := fmt.Sprintf(
 		"SELECT %s FROM (%s) as combined ORDER BY `%s` %s",
 		columnsStr,
@@ -298,4 +326,3 @@ func (s *ShardingQueryServiceImpl) extractOrderBy(filters any) string {
 
 	return ""
 }
-

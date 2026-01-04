@@ -46,6 +46,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251227063517AddFulltextIndexToOperationLogsRequest{},
 		&migrations.M20250128000001CreateOrdersTable{},
 		&migrations.M20251228004525AddPaymentMethodToOrdersShardingTables{},
+		&migrations.M20250105000001AddCompositeIndexesToOrders{}, // 为订单分表添加复合索引
 		// 货币表（需要在用户表之前创建）
 		&migrations.M20250130000003CreateCurrenciesTable{},
 		&migrations.M20250130000005AddDecimalPlacesToCurrenciesTable{}, // 添加小数位数字段
