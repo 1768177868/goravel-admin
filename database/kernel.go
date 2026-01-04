@@ -29,6 +29,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250101000010CreateOperationLogsTable{},
 		&migrations.M20250101000018AddTitleToOperationLogs{},
 		&migrations.M20250101000011CreateLoginLogsTable{},
+		&migrations.M20250101000019AddRequestToLoginLogsTable{},
 		&migrations.M20250101000012CreateSystemLogsTable{},
 		&migrations.M20250201000016AddTraceIdToSystemLogsTable{},
 		&migrations.M20250101000014CreatePersonalAccessTokensTable{},

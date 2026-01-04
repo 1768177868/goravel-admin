@@ -180,6 +180,7 @@ export interface LoginLog {
   user_agent?: string
   status: number
   message?: string
+  request?: string
   created_at?: string
   Admin?: Admin
 }

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type AuthController struct {
@@ -33,31 +35,75 @@ func NewAuthController() *AuthController {
 	}
 }
 
+// getLoginRequestData 获取登录请求数据（排除敏感信息）
+func (r *AuthController) getLoginRequestData(ctx http.Context) string {
+	inputs := make(map[string]any)
+	allInputs := ctx.Request().All()
+	for key, value := range allInputs {
+		// 使用工具函数检查是否是敏感字段
+		if utils.IsSensitiveField(key) {
+			inputs[key] = "***"
+		} else {
+			inputs[key] = value
+		}
+	}
+	if data, err := json.Marshal(inputs); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
 // Login 管理员登录
 func (r *AuthController) Login(ctx http.Context) http.Response {
 	var loginRequest admin.Login
 	errors, err := ctx.Request().ValidateRequest(&loginRequest)
 	if err != nil {
+		// 记录验证失败日志
+		requestData := r.getLoginRequestData(ctx)
+		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
 		return response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
 	if errors != nil {
+		// 记录验证失败日志
+		requestData := r.getLoginRequestData(ctx)
+		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 先验证用户名和密码（但不生成token）
-	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&admin); err != nil {
+	// 获取请求数据用于日志记录
+	requestData := r.getLoginRequestData(ctx)
+
+	// 先验证用户名是否存在
+	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", loginRequest.Username).Exists()
+	if err != nil {
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
+			"username": loginRequest.Username,
+		})
+	}
+	if !exists {
+		// 记录用户名不存在日志
+		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "username_not_found", requestData)
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
+	// 获取管理员信息
+	var admin models.Admin
+	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&admin); err != nil {
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
+			"username": loginRequest.Username,
+		})
+	}
+
 	if admin.Status == 0 {
+		// 记录账号禁用日志
+		r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "account_disabled", requestData)
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAccountDisabled.Code)
 	}
 
 	// 验证密码
 	if !facades.Hash().Check(loginRequest.Password, admin.Password) {
 		// 记录登录失败日志
-		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "password_error")
+		r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "password_error", requestData)
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
@@ -73,6 +119,8 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	if isBound {
 		googleCode := loginRequest.GoogleCode
 		if googleCode == "" {
+			// 记录谷歌验证码缺失日志
+			r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_required", requestData)
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeRequired.Code)
 		}
 
@@ -87,7 +135,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		// 验证谷歌验证码
 		if !r.googleAuthenticatorService.Verify(secret, googleCode) {
 			// 记录登录失败日志
-			r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "google_code_error")
+			r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_error", requestData)
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
 	} else {
@@ -99,6 +147,8 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 				if messageKey == "" {
 					messageKey = "captcha_invalid"
 				}
+				// 记录验证码错误日志
+				r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, messageKey, requestData)
 				return response.Error(ctx, http.StatusBadRequest, messageKey)
 			}
 		}
@@ -128,7 +178,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	token := plainToken
 
 	// 记录登录成功日志
-	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, "login_success")
+	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, "login_success", requestData)
 
 	// 更新最后登录时间（ORM会自动更新UpdatedAt）
 	facades.Orm().Query().Save(&admin)
@@ -354,7 +404,8 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 			}
 
 			// 记录退出日志
-			r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success")
+			logoutRequestData := r.getLoginRequestData(ctx)
+			r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success", logoutRequestData)
 		}
 	}
 

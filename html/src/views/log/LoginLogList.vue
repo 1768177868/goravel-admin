@@ -90,6 +90,10 @@
         <el-descriptions-item :label="$t('log.user_agent')">{{ logDetail.user_agent }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.login_time')">{{ logDetail.created_at }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.message')" :span="2">{{ translateLoginMessage(logDetail.message || '') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.request')" :span="2">
+          <pre v-if="logDetail.request" style="white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; border-radius: 4px; margin: 0;">{{ formatRequest(logDetail.request) }}</pre>
+          <span v-else>-</span>
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -160,6 +164,7 @@ const transformLoginLogData = (log) => {
     location: log.Location || log.location || '',
     status: log.Status || log.status || 0,
     message: log.Message || log.message || '',
+    request: log.Request || log.request || '',
     created_at: log.CreatedAt || log.created_at || ''
   }
 }
@@ -393,6 +398,21 @@ const translateLoginMessage = (messageKey) => {
   // 尝试翻译消息键，如果翻译不存在则返回原值
   const translation = t(`log.${messageKey}`, null)
   return translation !== `log.${messageKey}` ? translation : messageKey
+}
+
+// 格式化请求数据（如果是 JSON 字符串，则格式化显示）
+const formatRequest = (request) => {
+  if (!request) return '-'
+  
+  try {
+    // 尝试解析为 JSON
+    const parsed = JSON.parse(request)
+    // 格式化 JSON 字符串，缩进 2 个空格
+    return JSON.stringify(parsed, null, 2)
+  } catch (e) {
+    // 如果不是有效的 JSON，直接返回原字符串
+    return request
+  }
 }
 
 const handleClean = async () => {

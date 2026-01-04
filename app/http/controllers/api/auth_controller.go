@@ -86,14 +86,23 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 验证用户名和密码
-	var user models.User
-	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&user); err != nil {
+	// 验证用户名是否存在
+	exists, err := facades.Orm().Query().Model(&models.User{}).Where("username", loginRequest.Username).Exists()
+	if err != nil {
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
+			"username": loginRequest.Username,
+		})
+	}
+	if !exists {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
-	if user.ID == 0 {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
+	// 获取用户信息
+	var user models.User
+	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&user); err != nil {
+		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
+			"username": loginRequest.Username,
+		})
 	}
 
 	if user.Status == 0 {

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -23,7 +24,7 @@ type AuthService interface {
 	// GetAdminInfo 获取管理员完整信息（包括权限和菜单）
 	GetAdminInfo(ctx http.Context) (*models.Admin, []models.Permission, []models.Menu, error)
 	// RecordLoginLog 记录登录日志
-	RecordLoginLog(ctx http.Context, adminID uint, username string, status uint8, message string) error
+	RecordLoginLog(ctx http.Context, adminID uint, username string, status uint8, message string, request string) error
 }
 
 type AuthServiceImpl struct {
@@ -50,6 +51,16 @@ func NewAuthServiceImpl(adminService AdminService, tokenService TokenService) *A
 //   - string: JWT token
 //   - error: 错误信息
 func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*models.Admin, string, error) {
+	// 验证用户名是否存在
+	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Exists()
+	if err != nil {
+		return nil, "", err
+	}
+	if !exists {
+		return nil, "", errors.ErrUsernameOrPasswordErr
+	}
+
+	// 获取管理员信息
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
 		return nil, "", err
@@ -61,8 +72,14 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 
 	// 验证密码
 	if !facades.Hash().Check(password, admin.Password) {
-		// 记录登录失败日志
-		s.RecordLoginLog(ctx, 0, username, 0, "password_error")
+		// 记录登录失败日志（注意：这个方法可能不再使用，但为了兼容性保留）
+		requestData := ""
+		if allInputs := ctx.Request().All(); len(allInputs) > 0 {
+			if data, err := json.Marshal(allInputs); err == nil {
+				requestData = string(data)
+			}
+		}
+		s.RecordLoginLog(ctx, 0, username, 0, "password_error", requestData)
 		return nil, "", errors.ErrPasswordError
 	}
 
@@ -94,7 +111,13 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	facades.Orm().Query().Save(&admin)
 
 	// 记录登录成功日志
-	s.RecordLoginLog(ctx, admin.ID, username, 1, "login_success")
+	requestData := ""
+	if allInputs := ctx.Request().All(); len(allInputs) > 0 {
+		if data, err := json.Marshal(allInputs); err == nil {
+			requestData = string(data)
+		}
+	}
+	s.RecordLoginLog(ctx, admin.ID, username, 1, "login_success", requestData)
 
 	return &admin, token, nil
 }
@@ -288,7 +311,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 }
 
 // RecordLoginLog 记录登录日志
-func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, username string, status uint8, message string) error {
+func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, username string, status uint8, message string, request string) error {
 	ip := ctx.Request().Ip()
 
 	// 先创建登录日志记录（Location 字段先为空，避免阻塞登录流程）
@@ -300,6 +323,7 @@ func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, usernam
 		Location:  "", // 先为空，异步更新
 		Status:    status,
 		Message:   message,
+		Request:   request,
 	}
 
 	if err := facades.Orm().Query().Create(&loginLog); err != nil {
