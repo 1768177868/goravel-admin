@@ -71,6 +71,22 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 
 	now := carbon.Now()
 
+	// 对于 storage 分组，只允许保存驱动选择字段（白名单）
+	if group == "storage" {
+		allowedKeys := map[string]bool{
+			"file_disk":    true,
+			"storage_disk": true, // 向后兼容，保留但不推荐使用
+			"export_disk":  true, // 向后兼容
+		}
+		filteredConfigs := make(map[string]any)
+		for key, value := range configsMap {
+			if allowedKeys[key] {
+				filteredConfigs[key] = value
+			}
+		}
+		configsMap = filteredConfigs
+	}
+
 	// 批量处理配置更新和创建
 	for key, value := range configsMap {
 		// 转换值为字符串，处理布尔值

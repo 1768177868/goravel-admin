@@ -49,13 +49,16 @@ type ExportServiceImpl struct {
 
 func NewExportService(ctx http.Context) ExportService {
 	// 从数据库读取文件存储配置，如果不存在则使用默认值
-	// 优先使用新的 file_disk，向后兼容 export_disk
+	// 优先使用 file_disk，如果没有则使用 storage_disk（向后兼容），再尝试 export_disk，最后使用默认值 local
 	disk := utils.GetConfigValue("storage", "file_disk", "")
 	if disk == "" {
-		// 如果 file_disk 为空，尝试读取 export_disk
+		disk = utils.GetConfigValue("storage", "storage_disk", "")
+	}
+	if disk == "" {
+		// 向后兼容 export_disk
 		disk = utils.GetConfigValue("storage", "export_disk", "")
 	}
-	// 如果两个都为空或不存在，使用默认值 local
+	// 如果都不存在，使用默认值 local
 	if disk == "" {
 		disk = "local"
 	}

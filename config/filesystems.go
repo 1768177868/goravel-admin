@@ -12,10 +12,12 @@ import (
 
 func init() {
 	config := facades.Config()
-	// 注意：文件存储配置已迁移到数据库存储（configs表，group='storage'）
-	// 后台管理系统 -> 系统管理 -> 配置管理 -> 文件存储配置
-	// 如需在代码中使用文件存储配置，请从数据库读取，而不是从环境变量读取
-	// 保留此配置仅用于框架初始化，实际文件存储配置请使用数据库中的配置
+	// 注意：文件存储配置说明
+	// 1. 所有配置（密钥、bucket、region等）都从 .env 读取
+	// 2. 后台管理系统 -> 系统管理 -> 配置管理 -> 文件存储配置 只用于选择驱动（file_disk）
+	// 3. 应用启动后，AppServiceProvider 会从数据库读取 file_disk（如果没有则读取 storage_disk）并更新框架的默认磁盘
+	// 4. 如需在代码中选择使用哪个磁盘，请使用 utils.GetConfigValue("storage", "file_disk", "local")
+	//    如果 file_disk 未配置，会自动回退到 storage_disk，最后使用默认值 "local"
 	config.Add("filesystems", map[string]any{
 		// Default Filesystem Disk
 		//
