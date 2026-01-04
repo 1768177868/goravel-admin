@@ -9,7 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/goravel/cos v1.4.0
 	github.com/goravel/fiber v1.4.0
-	github.com/goravel/framework v1.16.5
+	github.com/goravel/framework v1.16.6
 	github.com/goravel/gin v1.4.0
 	github.com/goravel/minio v1.4.0
 	github.com/goravel/mysql v1.4.0
