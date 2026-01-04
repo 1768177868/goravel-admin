@@ -24,10 +24,15 @@ COPY --from=builder /build/storage/ /www/storage/
 COPY --from=builder /build/resources/ /www/resources/
 COPY --from=builder /build/.env /www/.env
 
-# 健康检查
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+# 复制启动脚本
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 健康检查（增加启动等待时间，因为需要执行迁移）
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
 
 EXPOSE 3000
 
-ENTRYPOINT ["/www/main"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD []

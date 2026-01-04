@@ -4,6 +4,10 @@
 
 - `docker-blue-green.sh` - 蓝绿部署主脚本，执行零停机部署
 - `git-deploy.sh` - 从 Git 拉取代码并自动部署的脚本
+- `rollback.sh` - 快速回滚到上一个版本
+- `rollback-git.sh` - 从 Git 回滚到指定版本并部署
+- `migrate.sh` - 单独执行数据库迁移脚本
+- `seed.sh` - 单独执行数据填充脚本
 
 ## 使用方法
 
@@ -43,11 +47,61 @@ vim scripts/deploy/git-deploy.sh
 ## 部署流程
 
 1. **检测当前版本** - 自动检测运行的是 blue 还是 green
-2. **构建新版本** - 在备用环境构建新镜像
+2. **构建新版本** - 在备用环境构建新镜像（包含启动脚本）
 3. **启动新版本** - 启动新版本容器（不同端口）
-4. **健康检查** - 等待新版本通过健康检查
-5. **切换流量** - 更新 Nginx 配置（如果存在）
-6. **停止旧版本** - 停止旧版本容器
+4. **自动执行迁移** - 容器启动脚本会在应用启动前自动执行数据库迁移
+5. **数据填充（可选）** - 提示是否执行数据填充
+6. **健康检查** - 等待新版本通过健康检查
+7. **切换流量** - 更新 Nginx 配置（如果存在）
+8. **停止旧版本** - 停止旧版本容器
+
+## 数据库迁移和填充
+
+### 自动迁移（容器启动时执行）
+
+**重要：** 迁移在容器启动时自动执行，确保在应用启动前完成：
+- ✅ **启动前执行** - 容器启动脚本会在应用启动前执行迁移，避免字段不存在错误
+- ✅ **自动执行** - 无需手动操作，每次容器启动都会执行
+- ✅ **幂等操作** - Goravel 的 `migrate` 命令是安全的，可以重复执行
+- ✅ **失败退出** - 如果迁移失败，容器会退出，部署脚本会自动检测并回滚
+- ⚙️ **可配置** - 通过环境变量 `SKIP_MIGRATE=true` 可以跳过迁移
+
+### 数据填充
+
+部署脚本会提示是否执行数据填充：
+- ⚠️ **需要确认** - 会提示用户是否执行
+- ⚠️ **可能重复** - 填充可能会重复插入数据，请谨慎使用
+- 💡 **建议** - 通常只在首次部署或需要更新基础数据时执行
+
+### 通过环境变量控制
+
+可以通过环境变量跳过填充提示：
+
+```bash
+# 自动执行填充（不提示）
+export RUN_SEED=true
+./scripts/deploy/docker-blue-green.sh
+
+# 跳过填充（不提示）
+export RUN_SEED=false
+./scripts/deploy/docker-blue-green.sh
+```
+
+### 单独执行迁移或填充
+
+如果需要单独执行迁移或填充：
+
+```bash
+# 执行数据库迁移
+chmod +x scripts/deploy/migrate.sh
+./scripts/deploy/migrate.sh                    # 自动检测容器
+./scripts/deploy/migrate.sh goravel-admin-blue # 指定容器
+
+# 执行数据填充
+chmod +x scripts/deploy/seed.sh
+./scripts/deploy/seed.sh                      # 自动检测容器
+./scripts/deploy/seed.sh goravel-admin-blue    # 指定容器
+```
 
 ## 前置要求
 
@@ -65,6 +119,53 @@ vim scripts/deploy/git-deploy.sh
 - 停止新版本容器
 - 保持旧版本运行
 
+## 回滚操作
+
+### 快速回滚
+
+如果刚部署的版本有问题，可以快速回滚到上一个版本：
+
+```bash
+cd /www/goravel-admin
+chmod +x scripts/deploy/rollback.sh
+./scripts/deploy/rollback.sh
+```
+
+**特点：**
+- 自动检测当前运行的版本（blue/green）
+- 切换到另一个环境
+- 如果旧容器已删除，可以选择从 Git 回滚或重新构建
+- 自动切换 Nginx 流量（如果配置了）
+
+### Git 版本回滚
+
+回滚到特定的 Git 提交、标签或分支：
+
+```bash
+cd /www/goravel-admin
+chmod +x scripts/deploy/rollback-git.sh
+
+# 查看最近提交（不带参数）
+./scripts/deploy/rollback-git.sh
+
+# 回滚到上一个提交
+./scripts/deploy/rollback-git.sh HEAD~1
+
+# 回滚到指定提交
+./scripts/deploy/rollback-git.sh abc1234
+
+# 回滚到指定标签
+./scripts/deploy/rollback-git.sh v1.0.0
+
+# 回滚到远程分支
+./scripts/deploy/rollback-git.sh origin/main
+```
+
+**特点：**
+- 支持提交哈希、标签、分支
+- 自动执行部署流程
+- 需要确认操作
+
 ## 查看日志
 
 ```bash
@@ -74,5 +175,9 @@ docker logs -f goravel-admin-green
 
 # 查看容器状态
 docker ps | grep goravel-admin
+
+# 查看容器健康状态
+docker inspect --format='{{.State.Health.Status}}' goravel-admin-blue
+docker inspect --format='{{.State.Health.Status}}' goravel-admin-green
 ```
 

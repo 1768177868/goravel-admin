@@ -65,9 +65,11 @@ git pull origin main
 ├── Dockerfile                    # Docker 镜像构建文件
 └── scripts/
     └── deploy/
-        ├── docker-blue-green.sh # 蓝绿部署主脚本
-        ├── git-deploy.sh        # Git 拉取并部署脚本
-        └── README.md            # 详细说明文档
+        ├── docker-blue-green.sh  # 蓝绿部署主脚本
+        ├── git-deploy.sh         # Git 拉取并部署脚本
+        ├── rollback.sh           # 快速回滚脚本
+        ├── rollback-git.sh       # Git 版本回滚脚本
+        └── README.md             # 详细说明文档
 ```
 
 ## 🔧 配置说明
@@ -104,11 +106,52 @@ export DEPLOY_DIR="/www/goravel-admin"
 ## 📊 部署流程
 
 1. **检测当前版本** - 自动检测运行的是 `blue` 还是 `green`
-2. **构建新版本** - 在备用环境构建新 Docker 镜像
+2. **构建新版本** - 在备用环境构建新 Docker 镜像（包含启动脚本）
 3. **启动新版本** - 启动新版本容器（使用不同端口）
-4. **健康检查** - 等待新版本通过健康检查
-5. **切换流量** - 更新 Nginx 配置（如果存在）
-6. **停止旧版本** - 停止旧版本容器
+4. **自动执行迁移** - 容器启动脚本会在应用启动前自动执行数据库迁移
+5. **数据填充（可选）** - 提示是否执行数据填充
+6. **健康检查** - 等待新版本通过健康检查
+7. **切换流量** - 更新 Nginx 配置（如果存在）
+8. **停止旧版本** - 停止旧版本容器
+
+## 🗄️ 数据库迁移和填充
+
+### 自动迁移（容器启动时执行）
+
+**重要：** 迁移在容器启动时自动执行，确保在应用启动前完成：
+- ✅ **启动前执行** - 容器启动脚本会在应用启动前执行迁移，避免字段不存在错误
+- ✅ **自动执行** - 无需手动操作，每次容器启动都会执行
+- ✅ **幂等操作** - Goravel 的 `migrate` 命令是安全的，可以重复执行
+- ✅ **失败退出** - 如果迁移失败，容器会退出，部署脚本会自动检测并回滚
+- ⚙️ **可配置** - 通过环境变量 `SKIP_MIGRATE=true` 可以跳过迁移
+
+### 数据填充
+
+- ⚠️ **需要确认** - 部署时会提示是否执行数据填充
+- ⚠️ **可能重复** - 填充可能会重复插入数据，请谨慎使用
+- 💡 **建议** - 通常只在首次部署或需要更新基础数据时执行
+
+### 通过环境变量控制
+
+```bash
+# 自动执行填充（不提示）
+export RUN_SEED=true
+./scripts/deploy/docker-blue-green.sh
+
+# 跳过填充（不提示）
+export RUN_SEED=false
+./scripts/deploy/docker-blue-green.sh
+```
+
+### 单独执行
+
+```bash
+# 执行数据库迁移
+./scripts/deploy/migrate.sh
+
+# 执行数据填充
+./scripts/deploy/seed.sh
+```
 
 ## 🔍 查看状态
 
@@ -126,7 +169,46 @@ docker inspect --format='{{.State.Health.Status}}' goravel-admin-blue
 
 ## 🔄 回滚
 
-如果需要回滚到上一个版本：
+### 快速回滚（推荐）
+
+如果刚部署的版本有问题，快速回滚到上一个版本：
+
+```bash
+cd /www/goravel-admin
+chmod +x scripts/deploy/rollback.sh
+./scripts/deploy/rollback.sh
+```
+
+**特点：**
+- ✅ 自动检测当前版本
+- ✅ 零停机切换
+- ✅ 自动健康检查
+- ✅ 自动切换 Nginx 流量
+
+### Git 版本回滚
+
+回滚到特定的 Git 提交、标签或分支：
+
+```bash
+cd /www/goravel-admin
+chmod +x scripts/deploy/rollback-git.sh
+
+# 查看最近提交
+./scripts/deploy/rollback-git.sh
+
+# 回滚到上一个提交
+./scripts/deploy/rollback-git.sh HEAD~1
+
+# 回滚到指定提交
+./scripts/deploy/rollback-git.sh abc1234
+
+# 回滚到指定标签
+./scripts/deploy/rollback-git.sh v1.0.0
+```
+
+### 手动回滚
+
+如果需要手动控制：
 
 ```bash
 cd /www/goravel-admin

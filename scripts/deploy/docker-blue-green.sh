@@ -58,7 +58,8 @@ if ! command -v docker-compose &> /dev/null; then
 fi
 
 # 2. 构建新版本镜像
-echo -e "${GREEN}[1/6] 构建新版本镜像...${NC}"
+echo -e "${GREEN}[1/7] 构建新版本镜像...${NC}"
+echo "注意: 镜像包含启动脚本，会在应用启动前自动执行数据库迁移"
 $COMPOSE_CMD -f docker-compose.${NEXT_COLOR}.yml build --no-cache
 
 if [ $? -ne 0 ]; then
@@ -67,7 +68,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # 3. 启动新版本容器
-echo -e "${GREEN}[2/6] 启动新版本容器 (端口 $NEXT_PORT)...${NC}"
+echo -e "${GREEN}[2/7] 启动新版本容器 (端口 $NEXT_PORT)...${NC}"
 $COMPOSE_CMD -f docker-compose.${NEXT_COLOR}.yml up -d
 
 if [ $? -ne 0 ]; then
@@ -75,12 +76,70 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 4. 等待容器启动
-echo -e "${GREEN}[3/6] 等待容器启动...${NC}"
-sleep 5
+# 4. 等待容器启动（启动脚本会自动执行迁移）
+echo -e "${GREEN}[3/7] 等待容器启动并执行迁移...${NC}"
+echo "注意: 容器启动脚本会在应用启动前自动执行数据库迁移"
 
-# 5. 健康检查
-echo -e "${GREEN}[4/6] 执行健康检查...${NC}"
+# 等待容器启动并完成迁移
+# 启动脚本会在应用启动前执行迁移，所以我们需要等待应用完全启动
+for i in {1..30}; do
+    # 检查容器是否运行
+    if ! docker ps --format "{{.Names}}" | grep -q "goravel-admin-${NEXT_COLOR}"; then
+        echo "容器未运行，等待中... ($i/30)"
+        sleep 2
+        continue
+    fi
+    
+    # 检查应用是否已启动（迁移完成后应用才会启动）
+    if docker exec goravel-admin-${NEXT_COLOR} /www/main artisan --version > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ 容器已启动，迁移已完成，应用已就绪${NC}"
+        break
+    fi
+    
+    if [ $i -eq 30 ]; then
+        echo -e "${RED}✗ 容器启动超时，可能迁移失败${NC}"
+        echo "查看容器日志:"
+        docker logs --tail 50 goravel-admin-${NEXT_COLOR}
+        $COMPOSE_CMD -f docker-compose.${NEXT_COLOR}.yml down
+        exit 1
+    fi
+    
+    echo "等待容器启动和迁移完成... ($i/30)"
+    sleep 2
+done
+
+# 验证迁移是否成功（可选，作为双重检查）
+echo "验证数据库迁移状态..."
+if docker exec goravel-admin-${NEXT_COLOR} /www/main artisan migrate:status > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ 数据库迁移验证通过${NC}"
+else
+    echo -e "${YELLOW}警告: 无法验证迁移状态，但应用已启动${NC}"
+fi
+
+# 6. 询问是否执行数据填充（可选）
+echo -e "${GREEN}[5/7] 数据填充（可选）...${NC}"
+if [ -z "$RUN_SEED" ]; then
+    read -p "是否执行数据填充？这可能会重复插入数据 (y/N): " seed_confirm
+    if [ "$seed_confirm" = "y" ] || [ "$seed_confirm" = "Y" ]; then
+        RUN_SEED="true"
+    else
+        RUN_SEED="false"
+    fi
+fi
+
+if [ "$RUN_SEED" = "true" ]; then
+    echo "执行数据填充..."
+    if docker exec goravel-admin-${NEXT_COLOR} /www/main artisan db:seed; then
+        echo -e "${GREEN}✓ 数据填充成功${NC}"
+    else
+        echo -e "${YELLOW}警告: 数据填充失败，但继续部署${NC}"
+    fi
+else
+    echo -e "${YELLOW}跳过数据填充${NC}"
+fi
+
+# 7. 健康检查
+echo -e "${GREEN}[6/7] 执行健康检查...${NC}"
 HEALTH_CHECK_FAILED=true
 for i in {1..30}; do
     # 检查容器是否运行
@@ -117,8 +176,8 @@ if [ "$HEALTH_CHECK_FAILED" = "true" ]; then
     exit 1
 fi
 
-# 6. 切换 Nginx 流量（如果有 Nginx）
-echo -e "${GREEN}[5/6] 切换 Nginx 流量...${NC}"
+# 8. 切换 Nginx 流量（如果有 Nginx）
+echo -e "${GREEN}[7/7] 切换 Nginx 流量...${NC}"
 NGINX_CONF="/etc/nginx/sites-available/goravel-admin"
 if [ -f "$NGINX_CONF" ]; then
     # 备份配置
@@ -143,11 +202,11 @@ else
     echo -e "${YELLOW}请手动配置负载均衡指向端口 $NEXT_PORT${NC}"
 fi
 
-# 7. 等待流量切换完成
-echo -e "${GREEN}[6/6] 等待流量切换完成...${NC}"
+# 9. 等待流量切换完成
+echo -e "${GREEN}等待流量切换完成...${NC}"
 sleep 5
 
-# 8. 停止旧版本服务
+# 10. 停止旧版本服务
 echo -e "${GREEN}停止旧版本服务 ($CURRENT_COLOR)...${NC}"
 $COMPOSE_CMD -f docker-compose.${CURRENT_COLOR}.yml down
 

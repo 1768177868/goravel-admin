@@ -26,7 +26,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 60s  # 增加启动等待时间，因为需要执行迁移
     networks:
       - goravel-network
 
