@@ -8,11 +8,11 @@
     >
       <template #title>
         <div>
-          <p style="margin: 0 0 8px 0; font-weight: 500;">配置说明：</p>
+          <p style="margin: 0 0 8px 0; font-weight: 500;">{{ $t('config.storage_config_title') }}</p>
           <ul style="margin: 0; padding-left: 20px;">
-            <li>此处仅用于选择文件存储驱动（local、s3、oss、cos、minio等）</li>
-            <li>云存储的详细配置（密钥、bucket、region等）请在 <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">.env</code> 文件中设置</li>
-            <li>修改驱动后需要重启应用才能生效</li>
+            <li>{{ $t('config.storage_config_desc_1') }}</li>
+            <li>{{ $t('config.storage_config_desc_2') }}</li>
+            <li>{{ $t('config.storage_config_desc_3') }}</li>
           </ul>
         </div>
       </template>
@@ -37,7 +37,7 @@
               <el-option label="minio" value="minio" />
             </el-select>
             <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-              如果未配置，将使用框架默认值（.env 中的 FILESYSTEM_DISK，默认为 local）
+              {{ $t('config.storage_config_default_tip') }}
             </div>
           </el-form-item>
         </el-col>
