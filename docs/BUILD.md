@@ -435,3 +435,165 @@ sudo systemctl reset-failed goravel-admin* 2>/dev/null
 sudo pkill -f 'goravel-admin' || true
 sudo pkill -f '/www/goravel-admin' || true
 ```
+
+---
+
+## 方案三：Docker Compose 蓝绿部署（零停机）⭐ 推荐容器化方案
+
+这是使用 Docker 容器化的零停机部署方案，适合本地没有 Docker 环境，但服务器有 Docker 的场景。
+
+### 工作原理
+
+- 使用两个 Docker Compose 配置：`blue`（端口 3000）和 `green`（端口 3001）
+- 两个容器可以同时运行
+- 部署新版本时：
+  1. 在备用环境（如 `green`）构建并启动新版本
+  2. 健康检查通过后，切换流量到新版本
+  3. 停止旧版本容器
+  4. 实现真正的零停机，且可以快速回滚
+
+### 前置要求
+
+- 服务器已安装 Docker 和 Docker Compose
+- 服务器可以访问 Git 仓库（或手动上传代码）
+- 已配置 `.env` 文件
+
+### 步骤 1：在服务器上初始化
+
+```bash
+# SSH 登录服务器
+ssh user@your-server.com
+
+# 创建部署目录
+sudo mkdir -p /www/goravel-admin
+sudo chown -R $USER:$USER /www/goravel-admin
+cd /www/goravel-admin
+
+# 克隆仓库（首次）
+git clone https://github.com/your-username/goravel-admin.git .
+
+# 或者如果已经克隆过
+git pull origin main
+```
+
+### 步骤 2：配置环境变量
+
+```bash
+# 确保 .env 文件存在
+cd /www/goravel-admin
+cp .env.example .env  # 如果存在
+# 编辑 .env 文件，设置数据库等配置
+vim .env
+```
+
+### 步骤 3：执行部署
+
+#### 方式一：从 Git 拉取并部署（推荐）
+
+```bash
+# 设置环境变量（可选）
+export GIT_REPO_URL="https://github.com/your-username/goravel-admin.git"
+export GIT_BRANCH="main"
+export DEPLOY_DIR="/www/goravel-admin"
+
+# 执行部署脚本
+chmod +x scripts/deploy/git-deploy.sh
+./scripts/deploy/git-deploy.sh
+```
+
+#### 方式二：手动部署（已拉取代码）
+
+```bash
+cd /www/goravel-admin
+git pull origin main  # 拉取最新代码
+
+# 执行部署脚本
+chmod +x scripts/deploy/docker-blue-green.sh
+./scripts/deploy/docker-blue-green.sh
+```
+
+### 部署流程说明
+
+脚本会自动执行以下步骤：
+
+1. **检测当前版本** - 自动检测运行的是 `blue` 还是 `green`
+2. **构建新版本** - 在备用环境构建新 Docker 镜像
+3. **启动新版本** - 启动新版本容器（使用不同端口）
+4. **健康检查** - 等待新版本通过健康检查（最多 30 次，每次 2 秒）
+5. **切换 Nginx 流量** - 如果存在 Nginx 配置，自动更新并重载
+6. **停止旧版本** - 停止旧版本容器
+
+### 查看部署状态
+
+```bash
+# 查看运行中的容器
+docker ps | grep goravel-admin
+
+# 查看容器日志
+docker logs -f goravel-admin-blue
+docker logs -f goravel-admin-green
+
+# 查看容器健康状态
+docker inspect --format='{{.State.Health.Status}}' goravel-admin-blue
+docker inspect --format='{{.State.Health.Status}}' goravel-admin-green
+```
+
+### 回滚方案
+
+如果需要回滚到上一个版本：
+
+```bash
+cd /www/goravel-admin
+
+# 方式一：手动切换
+# 如果当前运行的是 green，切换到 blue
+docker-compose -f docker-compose.blue.yml up -d
+# 然后停止 green
+docker-compose -f docker-compose.green.yml down
+
+# 方式二：使用 Git 回滚代码后重新部署
+git checkout <previous-commit>
+./scripts/deploy/docker-blue-green.sh
+```
+
+### 配置文件说明
+
+- `docker-compose.blue.yml` - 蓝环境配置（端口 3000）
+- `docker-compose.green.yml` - 绿环境配置（端口 3001）
+- `scripts/deploy/docker-blue-green.sh` - 蓝绿部署主脚本
+- `scripts/deploy/git-deploy.sh` - 从 Git 拉取并部署的脚本
+
+### 健康检查
+
+应用已配置 `/health` 端点（在 `routes/web.go` 中），用于部署时的健康检查。
+
+### 故障处理
+
+如果部署过程中健康检查失败，脚本会自动：
+- 停止新版本容器
+- 保持旧版本继续运行
+- 退出并报告错误
+
+### 本地开发流程
+
+1. **本地开发** - 在本地修改代码（无需 Docker）
+2. **提交代码** - `git add . && git commit -m "更新" && git push`
+3. **服务器部署** - SSH 到服务器执行 `./scripts/deploy/git-deploy.sh`
+
+### 优势
+
+- ✅ **零停机部署** - 新版本就绪后再切换流量
+- ✅ **快速回滚** - 可以快速切换回旧版本
+- ✅ **本地无需 Docker** - 本地开发环境简单
+- ✅ **自动化** - 一键部署脚本
+- ✅ **健康检查** - 自动验证新版本是否正常
+
+---
+
+## 部署方案对比
+
+| 方案 | 复杂度 | 零停机 | 适用场景 | 推荐度 |
+|------|--------|--------|----------|--------|
+| 单服务部署 | ⭐ | ❌ | 开发/测试环境 | ⭐⭐ |
+| 蓝绿部署 + Nginx | ⭐⭐⭐ | ✅ | 生产环境（非容器） | ⭐⭐⭐⭐ |
+| Docker Compose 蓝绿 | ⭐⭐ | ✅ | 生产环境（容器化） | ⭐⭐⭐⭐⭐ |

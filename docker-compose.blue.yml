@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  goravel-blue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: goravel-admin:blue
+    container_name: goravel-admin-blue
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_ENV=production
+      - APP_HOST=0.0.0.0
+      - APP_PORT=3000
+    env_file:
+      - .env
+    volumes:
+      # 持久化存储
+      - ./storage:/www/storage
+      # 持久化日志
+      - ./logs:/www/storage/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - goravel-network
+
+networks:
+  goravel-network:
+    driver: bridge
+
