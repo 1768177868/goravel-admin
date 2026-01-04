@@ -48,6 +48,13 @@ export function useTableData(options = {}) {
           page_size: pagination.pageSize,
           ...extraParams
         }
+        // 如果 extraParams 中包含了 page 和 page_size，同步到 pagination 对象
+        if (extraParams.page !== undefined) {
+          pagination.page = Number(extraParams.page) || 1
+        }
+        if (extraParams.page_size !== undefined) {
+          pagination.pageSize = Number(extraParams.page_size) || 10
+        }
       } else {
         // 构建基础参数
         const baseParams = {
@@ -72,7 +79,13 @@ export function useTableData(options = {}) {
           tableData.value = rawList
         }
         
-        pagination.total = res.data.total || 0
+        // 确保 total 是数字类型，并正确更新
+        const total = res.data.total
+        if (total !== undefined && total !== null) {
+          pagination.total = Number(total) || 0
+        } else {
+          pagination.total = 0
+        }
         
         // 如果提供了加载成功回调，调用它
         if (onLoadSuccess && typeof onLoadSuccess === 'function') {
