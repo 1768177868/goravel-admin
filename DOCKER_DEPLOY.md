@@ -74,6 +74,32 @@ git pull origin main
 
 ## 🔧 配置说明
 
+### 端口配置
+
+**重要：** 所有端口配置统一在 `scripts/deploy/deploy-config.sh` 文件中管理。
+
+只需修改一个文件即可更改所有端口：
+
+```bash
+# 编辑配置文件
+vim scripts/deploy/deploy-config.sh
+
+# 修改端口配置：
+export BLUE_PORT="${BLUE_PORT:-3000}"      # 蓝环境端口（默认 3000）
+export GREEN_PORT="${GREEN_PORT:-3001}"    # 绿环境端口（默认 3001）
+export CONTAINER_PORT="${CONTAINER_PORT:-3000}"  # 容器内部端口（默认 3000）
+```
+
+或通过环境变量临时覆盖：
+
+```bash
+export BLUE_PORT=4000
+export GREEN_PORT=4001
+./scripts/deploy/docker-blue-green.sh
+```
+
+详细说明请参考：`scripts/deploy/README-PORT-CONFIG.md`
+
 ### 环境变量
 
 在服务器上创建 `.env` 文件，配置数据库、Redis 等：

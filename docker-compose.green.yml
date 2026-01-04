@@ -8,11 +8,11 @@ services:
     image: goravel-admin:green
     container_name: goravel-admin-green
     ports:
-      - "3001:3000"  # 使用不同端口
+      - "${GREEN_PORT:-3001}:${CONTAINER_PORT:-3000}"  # 使用不同端口
     environment:
       - APP_ENV=production
       - APP_HOST=0.0.0.0
-      - APP_PORT=3000
+      - APP_PORT=${CONTAINER_PORT:-3000}
     env_file:
       - .env
     volumes:
@@ -22,7 +22,7 @@ services:
       - ./logs:/www/storage/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${CONTAINER_PORT:-3000}/health"]
       interval: 10s
       timeout: 3s
       retries: 3

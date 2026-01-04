@@ -7,6 +7,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../../"  # 回到项目根目录
 
+# 加载部署配置
+source "$SCRIPT_DIR/deploy-config.sh"
+
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,8 +35,8 @@ detect_current_version() {
 
 CURRENT_COLOR=$(detect_current_version)
 NEXT_COLOR=$([ "$CURRENT_COLOR" = "blue" ] && echo "green" || echo "blue")
-CURRENT_PORT=$([ "$CURRENT_COLOR" = "blue" ] && echo "3000" || echo "3001")
-NEXT_PORT=$([ "$NEXT_COLOR" = "blue" ] && echo "3000" || echo "3001")
+CURRENT_PORT=$([ "$CURRENT_COLOR" = "blue" ] && echo "$BLUE_PORT" || echo "$GREEN_PORT")
+NEXT_PORT=$([ "$NEXT_COLOR" = "blue" ] && echo "$BLUE_PORT" || echo "$GREEN_PORT")
 
 echo -e "${GREEN}=== Docker Compose 蓝绿部署 ===${NC}"
 echo -e "当前运行: ${YELLOW}$CURRENT_COLOR${NC} (端口: $CURRENT_PORT)"
@@ -56,6 +59,9 @@ COMPOSE_CMD="docker-compose"
 if ! command -v docker-compose &> /dev/null; then
     COMPOSE_CMD="docker compose"
 fi
+
+# 导出端口配置到环境变量（供 docker-compose 使用）
+export BLUE_PORT GREEN_PORT CONTAINER_PORT
 
 # 2. 构建新版本镜像
 echo -e "${GREEN}[1/7] 构建新版本镜像...${NC}"
@@ -186,8 +192,8 @@ if [ -f "$NGINX_CONF" ]; then
     echo "已备份 Nginx 配置到: $BACKUP_FILE"
     
     # 更新 upstream 配置
-    sed -i "s/server 127.0.0.1:3000/server 127.0.0.1:$NEXT_PORT/" "$NGINX_CONF"
-    sed -i "s/server 127.0.0.1:3001/server 127.0.0.1:$NEXT_PORT/" "$NGINX_CONF"
+    sed -i "s/server 127.0.0.1:$BLUE_PORT/server 127.0.0.1:$NEXT_PORT/" "$NGINX_CONF"
+    sed -i "s/server 127.0.0.1:$GREEN_PORT/server 127.0.0.1:$NEXT_PORT/" "$NGINX_CONF"
     
     # 测试并重载 Nginx
     if nginx -t 2>/dev/null; then

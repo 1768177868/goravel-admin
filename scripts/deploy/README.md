@@ -2,12 +2,42 @@
 
 ## 文件说明
 
+- `deploy-config.sh` - **端口配置文件**（统一管理所有端口配置）
 - `docker-blue-green.sh` - 蓝绿部署主脚本，执行零停机部署
 - `git-deploy.sh` - 从 Git 拉取代码并自动部署的脚本
 - `rollback.sh` - 快速回滚到上一个版本
 - `rollback-git.sh` - 从 Git 回滚到指定版本并部署
 - `migrate.sh` - 单独执行数据库迁移脚本
 - `seed.sh` - 单独执行数据填充脚本
+
+## 端口配置
+
+**重要：** 所有端口配置统一在 `deploy-config.sh` 文件中管理。
+
+### 修改端口
+
+只需修改 `scripts/deploy/deploy-config.sh` 文件：
+
+```bash
+# 编辑配置文件
+vim scripts/deploy/deploy-config.sh
+
+# 修改端口配置：
+export BLUE_PORT="${BLUE_PORT:-3000}"      # 蓝环境端口
+export GREEN_PORT="${GREEN_PORT:-3001}"    # 绿环境端口
+export CONTAINER_PORT="${CONTAINER_PORT:-3000}"  # 容器内部端口
+```
+
+### 通过环境变量覆盖
+
+```bash
+# 临时使用其他端口
+export BLUE_PORT=4000
+export GREEN_PORT=4001
+./scripts/deploy/docker-blue-green.sh
+```
+
+详细说明请参考：`scripts/deploy/README-PORT-CONFIG.md`
 
 ## 使用方法
 
