@@ -40,8 +40,8 @@ func CreateOrdersShardingTable(tableName string) error {
 		table.Timestamps()
 		table.SoftDeletes()
 		table.Unique("order_no") // 唯一索引，防止并发下订单号重复
-		table.Index("user_id")
-		table.Index("created_at")
+		// table.Index("user_id")
+		// table.Index("created_at")
 
 		// 添加复合索引，优化常用查询场景
 		// 1. 时间范围 + 状态查询（最常用，用于按状态筛选订单）
