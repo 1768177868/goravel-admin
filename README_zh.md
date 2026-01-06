@@ -300,6 +300,7 @@ upx -9 main
 |------|------|
 | [API.md](./docs/API.md) | 完整 API 接口文档 |
 | [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系统架构设计 |
+| [DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) | 开发指南：CRUD 模块完整开发示例（以留言板模块为例，包含后端接口和前端页面） |
 | [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | 数据库分表指南（创建、使用和修改分表） |
 | [BUILD.md](./docs/BUILD.md) | 编译打包与部署 |
 | [TESTING.md](./docs/TESTING.md) | 测试指南（单元测试 & 集成测试） |
