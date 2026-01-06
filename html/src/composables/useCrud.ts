@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { compact, map } from 'lodash-es'
 import logger from '../utils/logger'
 
 /**
@@ -235,7 +236,7 @@ export function useCrud(options: UseCrudOptions = {}): UseCrudReturn {
         type: 'warning'
       })
 
-      const ids = rows.map((row) => row.id ?? row.ID).filter(Boolean) as (number | string)[]
+      const ids = compact(map(rows, (row) => row.id ?? row.ID)) as (number | string)[]
       if (ids.length === 0) {
         return
       }

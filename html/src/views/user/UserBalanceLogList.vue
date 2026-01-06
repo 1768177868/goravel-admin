@@ -103,6 +103,7 @@ import VxeTable from '../../components/VxeTable.vue'
 import { useListPage } from '../../composables/useListPage'
 import { getUserBalanceLogList, getUserBalanceStatistics } from '../../api/userBalanceLog'
 import ErrorHandler from '../../utils/errorHandler'
+import { forOwn } from 'lodash-es'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -239,7 +240,7 @@ const handleSearch = () => {
 // 重置处理（同时加载列表和统计）
 const handleReset = () => {
   // 重置搜索表单
-  Object.keys(searchForm).forEach(key => {
+  forOwn(searchForm, (value, key) => {
     searchForm[key] = initialSearchValues[key] !== undefined ? initialSearchValues[key] : ''
   })
   pagination.page = 1

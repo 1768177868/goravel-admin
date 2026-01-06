@@ -1,4 +1,5 @@
 import { ref, reactive, computed } from 'vue'
+import { forOwn } from 'lodash-es'
 import { useTableData } from './useTableData'
 import { useTableSort } from './useTableSort'
 import { buildSearchParams } from '../utils/buildSearchParams'
@@ -112,7 +113,7 @@ export function useListPage(options = {}) {
    */
   const clearSearchForm = () => {
     // 重置搜索表单
-    Object.keys(searchForm).forEach(key => {
+    forOwn(searchForm, (value, key) => {
       searchForm[key] = initialSearchForm[key] !== undefined ? initialSearchForm[key] : ''
     })
     // 重置排序

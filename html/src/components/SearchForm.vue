@@ -79,6 +79,7 @@
 import { ref, useSlots, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Search, Refresh, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import { forOwn } from 'lodash-es'
 import SearchFormField from './SearchForm/SearchFormField.vue'
 import { useFormHeight } from './SearchForm/useFormHeight'
 import { useFieldOptions } from './SearchForm/useFieldOptions'
@@ -329,35 +330,24 @@ const handleReset = () => {
   }
   
   // 重置为初始值
+  const resetValue = (value) => {
+    if (Array.isArray(value)) return []
+    if (typeof value === 'number') return 0
+    if (typeof value === 'boolean') return false
+    return ''
+  }
+
   if (Object.keys(props.initialValues).length > 0) {
-    Object.keys(props.model).forEach((key) => {
+    forOwn(props.model, (value, key) => {
       if (props.initialValues.hasOwnProperty(key)) {
         props.model[key] = props.initialValues[key]
       } else {
-        const value = props.model[key]
-        if (Array.isArray(value)) {
-          props.model[key] = []
-        } else if (typeof value === 'number') {
-          props.model[key] = 0
-        } else if (typeof value === 'boolean') {
-          props.model[key] = false
-        } else {
-          props.model[key] = ''
-        }
+        props.model[key] = resetValue(value)
       }
     })
   } else {
-    Object.keys(props.model).forEach((key) => {
-      const value = props.model[key]
-      if (Array.isArray(value)) {
-        props.model[key] = []
-      } else if (typeof value === 'number') {
-        props.model[key] = 0
-      } else if (typeof value === 'boolean') {
-        props.model[key] = false
-      } else {
-        props.model[key] = ''
-      }
+    forOwn(props.model, (value, key) => {
+      props.model[key] = resetValue(value)
     })
   }
   
@@ -372,9 +362,9 @@ const handleReset = () => {
 
 watch(() => props.initialValues, (newVal) => {
   if (newVal && Object.keys(newVal).length > 0) {
-    Object.keys(newVal).forEach((key) => {
+    forOwn(newVal, (value, key) => {
       if (props.model.hasOwnProperty(key)) {
-        props.model[key] = newVal[key]
+        props.model[key] = value
       }
     })
   }

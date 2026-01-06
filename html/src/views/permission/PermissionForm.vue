@@ -169,10 +169,12 @@ const formRules = computed(() => ({
 const getSelectedMenuLabel = () => {
   if (!formData.menu_id) return ''
   const findMenu = (menus, id) => {
+    // 使用 find 简化查找逻辑
+    const found = menus.find(menu => menu.value === id)
+    if (found) return found.label
+    
+    // 递归查找子菜单
     for (const menu of menus) {
-      if (menu.value === id) {
-        return menu.label
-      }
       if (menu.children && menu.children.length > 0) {
         const found = findMenu(menu.children, id)
         if (found) return found

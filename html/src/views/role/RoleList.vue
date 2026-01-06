@@ -173,6 +173,7 @@ import { getMenuTranslation } from '../../utils/menuTranslation'
 import { getRoleList, getRoleDetail, createRole, updateRole, deleteRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
+import { groupBy, map, values, forEach } from 'lodash-es'
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const PlusIcon = markRaw(Plus)
@@ -416,53 +417,52 @@ const getModuleNameFromPath = (path) => {
 const transformPermissionToTree = (permissions) => {
   if (!permissions || !Array.isArray(permissions)) return []
   
-  const moduleGroups = {}
-  permissions.forEach(perm => {
+  // 使用 lodash-es 的 groupBy 按模块分组
+  const groupedPermissions = groupBy(permissions, perm => {
     const path = perm.Path || perm.path || '/'
-    const method = perm.Method || perm.method || ''
-    const name = perm.Name || perm.name || ''
-    const slug = perm.Slug || perm.slug || ''
-    const description = perm.Description || perm.description || ''
-    const id = perm.id || perm.ID
-    const moduleName = getModuleNameFromPath(path)
-    
-    if (!moduleGroups[moduleName]) {
-      moduleGroups[moduleName] = {
-        id: `module_${moduleName}`,
-        name: moduleName,
-        label: moduleName,
-        children: []
+    return getModuleNameFromPath(path)
+  })
+  
+  // 转换为树形结构
+  const tree = map(groupedPermissions, (perms, moduleName) => {
+    const children = map(perms, perm => {
+      const path = perm.Path || perm.path || '/'
+      const method = perm.Method || perm.method || ''
+      const name = perm.Name || perm.name || ''
+      const slug = perm.Slug || perm.slug || ''
+      const description = perm.Description || perm.description || ''
+      const id = perm.id || perm.ID
+      const displayLabel = description || name
+      
+      return {
+        id: id,
+        name: name,
+        slug: slug,
+        method: method,
+        path: path,
+        description: description,
+        label: displayLabel,
+        displayName: name,
+        displayDesc: description || name
       }
-    }
-    
-    let displayLabel = name
-    if (description) {
-      displayLabel = description
-    }
-    
-    moduleGroups[moduleName].children.push({
-      id: id,
-      name: name,
-      slug: slug,
-      method: method,
-      path: path,
-      description: description,
-      label: displayLabel,
-      displayName: name,
-      displayDesc: description || name
     })
-  })
-  
-  const tree = Object.values(moduleGroups).sort((a, b) => {
-    return a.name.localeCompare(b.name)
-  })
-  
-  tree.forEach(group => {
-    group.children.sort((a, b) => {
+    
+    // 对子节点按方法排序
+    children.sort((a, b) => {
       const methodOrder = { 'GET': 1, 'POST': 2, 'PUT': 3, 'PATCH': 4, 'DELETE': 5 }
       return (methodOrder[a.method] || 99) - (methodOrder[b.method] || 99)
     })
+    
+    return {
+      id: `module_${moduleName}`,
+      name: moduleName,
+      label: moduleName,
+      children: children
+    }
   })
+  
+  // 按模块名排序
+  tree.sort((a, b) => a.name.localeCompare(b.name))
   
   return tree
 }
@@ -505,14 +505,9 @@ const transformMenuToTree = (menus) => {
 const attachPermissionsToMenus = (menuTree, permissions) => {
   if (!permissions || !Array.isArray(permissions)) return menuTree
   
-  const permissionMap = new Map()
-  permissions.forEach(perm => {
-    const id = perm.id || perm.ID
-    const menuId = perm.MenuID || perm.menu_id || 0
-    if (!permissionMap.has(menuId)) {
-      permissionMap.set(menuId, [])
-    }
-    permissionMap.get(menuId).push(perm)
+  // 使用 lodash-es 的 groupBy 按菜单ID分组权限
+  const permissionMap = groupBy(permissions, perm => {
+    return perm.MenuID || perm.menu_id || 0
   })
   
   const processNode = (node) => {
@@ -520,7 +515,7 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
     
     if (result.isMenu && result.rawId) {
       const menuId = result.rawId
-      const matchedPermissions = permissionMap.get(menuId) || []
+      const matchedPermissions = permissionMap[menuId] || []
       
       if (matchedPermissions.length > 0) {
         if (!result.children) {

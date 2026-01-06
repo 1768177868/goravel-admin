@@ -130,6 +130,7 @@ import {
 import { getOptions } from '../../api/option'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
+import { uniqBy, compact, map as lodashMap } from 'lodash-es'
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const PlusIcon = markRaw(Plus)
@@ -342,16 +343,10 @@ const loadRoles = async () => {
 // 获取去重后的角色列表
 const getUniqueRoles = (roles) => {
   if (!roles || !Array.isArray(roles)) return []
-  const seen = new Set()
-  const unique = []
-  for (const role of roles) {
+  return uniqBy(roles.filter(role => {
     const roleId = role.id || role.ID
-    if (roleId && !seen.has(roleId)) {
-      seen.add(roleId)
-      unique.push(role)
-    }
-  }
-  return unique
+    return roleId
+  }), role => role.id || role.ID)
 }
 
 const getDepartmentDisplayName = (department) => {
@@ -371,7 +366,7 @@ const handleEdit = async (row) => {
   const adminRoles = row.Roles || row.roles
   
   // 去重角色ID
-  const uniqueRoleIds = adminRoles ? [...new Set(adminRoles.map(r => r.id || r.ID).filter(id => id))] : []
+  const uniqueRoleIds = adminRoles ? [...new Set(compact(lodashMap(adminRoles, r => r.id || r.ID)))] : []
   
   // 设置表单数据（setFormData内部会处理loading）
   if (adminFormRef.value) {

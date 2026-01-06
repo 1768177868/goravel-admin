@@ -1,3 +1,5 @@
+import { forOwn } from 'lodash-es'
+
 /**
  * 构建搜索参数
  * 自动过滤空值，统一处理搜索表单字段
@@ -10,9 +12,7 @@ export function buildSearchParams(searchForm = {}, extraParams = {}) {
   const params = { ...extraParams }
 
   // 遍历搜索表单，只添加有值的字段
-  Object.keys(searchForm).forEach(key => {
-    const value = searchForm[key]
-    
+  forOwn(searchForm, (value, key) => {
     // 跳过空值
     if (value === '' || value === null || value === undefined) {
       return

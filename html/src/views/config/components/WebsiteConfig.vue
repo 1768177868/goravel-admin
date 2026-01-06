@@ -63,6 +63,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { forOwn } from 'lodash-es'
 import { getConfigByGroup, saveConfig } from '../../../api/config'
 
 const { t } = useI18n()
@@ -116,8 +117,8 @@ const handleSubmit = async () => {
       try {
         // 将表单数据转换为配置对象
         const configs = {}
-        Object.keys(formData).forEach(key => {
-          configs[key] = formData[key]
+        forOwn(formData, (value, key) => {
+          configs[key] = value
         })
 
         await saveConfig('website', configs)

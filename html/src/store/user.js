@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { compact, map } from 'lodash-es'
 import { getInfo, logout } from '../api/auth'
 import Storage from '../utils/storage'
 import logger from '../utils/logger'
@@ -103,7 +104,7 @@ export const useUserStore = defineStore('user', {
       if (Array.isArray(permissions) && permissions.length > 0) {
         if (typeof permissions[0] === 'object' && permissions[0] !== null) {
           // 对象数组，提取 slug 字段
-          this.permissions = permissions.map(perm => perm.slug || perm.Slug || perm).filter(Boolean)
+          this.permissions = compact(map(permissions, perm => perm.slug || perm.Slug || perm))
         } else {
           // 字符串数组，直接使用
           this.permissions = permissions

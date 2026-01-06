@@ -80,6 +80,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { forOwn } from 'lodash-es'
 import { getConfigByGroup, saveConfig, testEmail } from '../../../api/config'
 
 const { t } = useI18n()
@@ -153,12 +154,12 @@ const handleSubmit = async () => {
         // 将表单数据转换为配置对象
         // 如果密码为空，则不发送该字段，让后端保持原有值
         const configs = {}
-        Object.keys(formData).forEach(key => {
+        forOwn(formData, (value, key) => {
           // 如果是密码字段且为空，则跳过
-          if (key === 'email_password' && !formData[key]) {
+          if (key === 'email_password' && !value) {
             return
           }
-          configs[key] = formData[key]
+          configs[key] = value
         })
 
         await saveConfig('email', configs)
