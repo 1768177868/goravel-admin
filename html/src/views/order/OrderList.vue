@@ -576,8 +576,9 @@ const getStatusTagType = (status) => {
 // 查看详情
 const handleView = async (row) => {
   try {
-
-    const res = await getOrderDetail(row.id)
+    // 优先使用订单号查询（更高效，可直接定位分表，避免分表中订单ID重复的问题）
+    const orderNo = row.order_no || row.OrderNo
+    const res = await getOrderDetail(row.id, orderNo ? { order_no: orderNo } : {})
     
     if (res.data) {
       orderDetail.value = res.data
@@ -592,8 +593,9 @@ const handleView = async (row) => {
 // 编辑订单（打开编辑对话框）
 const handleEdit = async (row) => {
   try {
-    // 获取订单详情
-    const res = await getOrderDetail(row.id)
+    // 获取订单详情，优先使用订单号查询（更高效，可直接定位分表，避免分表中订单ID重复的问题）
+    const orderNo = row.order_no || row.OrderNo
+    const res = await getOrderDetail(row.id, orderNo ? { order_no: orderNo } : {})
     if (res.data && res.data.order) {
       currentEditOrder.value = res.data.order
       // 填充表单数据
@@ -631,9 +633,12 @@ const handleEditSubmit = async () => {
   
   editSubmitting.value = true
   try {
+    // 优先使用订单号更新（更高效，可直接定位分表，避免分表中订单ID重复的问题）
+    const orderNo = currentEditOrder.value.order_no || currentEditOrder.value.OrderNo
     await updateOrder(currentEditOrder.value.id || currentEditOrder.value.ID, {
       status: editFormData.status,
-      remark: editFormData.remark || ''
+      remark: editFormData.remark || '',
+      order_no: orderNo
     })
     
     ElMessage.success(t('common.update_success'))
@@ -660,7 +665,9 @@ const handleDelete = async (row) => {
       }
     )
     
-    await deleteOrder(row.id)
+    // 优先使用订单号删除（更高效，可直接定位分表，避免分表中订单ID重复的问题）
+    const orderNo = row.order_no || row.OrderNo
+    await deleteOrder(row.id, orderNo ? { order_no: orderNo } : {})
     
     ElMessage.success(t('common.delete_success'))
     loadData()

@@ -35,9 +35,11 @@ type OrderService interface {
 	// UpdateOrderStatus 更新订单状态（已废弃，使用 UpdateOrder）
 	UpdateOrderStatus(orderID uint, orderTime time.Time, status string) error
 	// UpdateOrder 更新订单（状态和备注）
-	UpdateOrder(orderID uint, orderTime time.Time, status string, remark string) error
+	// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
+	UpdateOrder(orderID uint, orderTime time.Time, status string, remark string, orderNo ...string) error
 	// DeleteOrder 删除订单
-	DeleteOrder(orderID uint, orderTime time.Time) error
+	// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
+	DeleteOrder(orderID uint, orderTime time.Time, orderNo ...string) error
 }
 
 // OrderFilters 订单查询筛选条件
@@ -735,9 +737,17 @@ func (s *OrderServiceImpl) UpdateOrderStatus(orderID uint, orderTime time.Time, 
 }
 
 // UpdateOrder 更新订单（状态和备注）
-func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status string, remark string) error {
+// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
+func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status string, remark string, orderNo ...string) error {
 	// 先查找订单获取 created_at
-	order, err := s.findOrderByID(orderID)
+	// 如果提供了订单号，优先使用订单号查找
+	var order *models.Order
+	var err error
+	if len(orderNo) > 0 && orderNo[0] != "" {
+		order, err = s.findOrderByID(orderID, orderNo[0])
+	} else {
+		order, err = s.findOrderByID(orderID)
+	}
 	if err != nil {
 		return err
 	}
@@ -763,9 +773,17 @@ func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status
 }
 
 // DeleteOrder 删除订单（软删除）
-func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time) error {
+// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
+func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderNo ...string) error {
 	// 先查找订单获取 created_at（只查询未删除的订单）
-	order, err := s.findOrderByID(orderID)
+	// 如果提供了订单号，优先使用订单号查找
+	var order *models.Order
+	var err error
+	if len(orderNo) > 0 && orderNo[0] != "" {
+		order, err = s.findOrderByID(orderID, orderNo[0])
+	} else {
+		order, err = s.findOrderByID(orderID)
+	}
 	if err != nil {
 		return err
 	}
