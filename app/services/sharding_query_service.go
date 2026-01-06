@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/goravel/framework/facades"
+	"github.com/samber/lo"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/utils/errorlog"
@@ -100,36 +101,26 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 
 	// 构建 UNION ALL 查询
 	// 过滤掉不存在的分表，避免查询错误
-	var unionQueries []string
-	var allArgs []any
-	var existingTableNames []string
+	existingTableNames := lo.Filter(tableNames, func(tableName string, _ int) bool {
+		return facades.Schema().HasTable(tableName)
+	})
 
-	for _, tableName := range tableNames {
-		// 检查表是否存在，如果不存在则跳过
-		if !facades.Schema().HasTable(tableName) {
-			// 记录日志但不报错，因为某些月份的分表可能还没有创建
-			// errorlog.Record(context.Background(), s.config.ModuleName, "分表不存在，跳过查询", map[string]any{
-			// 	"table_name": tableName,
-			// }, "分表 %s 不存在，跳过查询", tableName)
-			continue
-		}
+	if len(existingTableNames) == 0 {
+		return 0, nil
+	}
 
-		// 表存在，添加到查询列表
-		existingTableNames = append(existingTableNames, tableName)
-		// 优化：每个分表先排序和限制，然后再合并
-		// 使用子查询包装，确保每个分表先排序和限制
-		query := fmt.Sprintf(
+	// 为每个存在的表构建查询
+	unionQueries := lo.Map(existingTableNames, func(tableName string, _ int) string {
+		return fmt.Sprintf(
 			"(SELECT %s FROM `%s` WHERE %s ORDER BY `%s` %s LIMIT %d)",
 			columnsStr, tableName, whereClause, orderField, orderDir, limitPerTable,
 		)
-		unionQueries = append(unionQueries, query)
-		// 每个查询都需要相同的参数
-		allArgs = append(allArgs, whereConditions...)
-	}
+	})
 
-	if len(unionQueries) == 0 {
-		return 0, nil
-	}
+	// 每个查询都需要相同的参数
+	allArgs := lo.Flatten(lo.Map(lo.Range(len(existingTableNames)), func(_ int, _ int) []any {
+		return whereConditions
+	}))
 
 	// 合并所有查询
 	unionSQL := strings.Join(unionQueries, " UNION ALL ")
@@ -208,31 +199,29 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 	// 优化：每个分表先排序，然后再合并（对于导出，虽然需要所有数据，但先排序可以减少合并后的排序成本）
 	// 构建 UNION ALL 查询
 	// 过滤掉不存在的分表，避免查询错误
-	var unionQueries []string
-	var allArgs []any
+	existingTableNames := lo.Filter(tableNames, func(tableName string, _ int) bool {
+		return facades.Schema().HasTable(tableName)
+	})
 
-	for _, tableName := range tableNames {
-		// 检查表是否存在，如果不存在则跳过
-		if !facades.Schema().HasTable(tableName) {
-			// 记录日志但不报错，因为某些月份的分表可能还没有创建
-			// errorlog.Record(context.Background(), s.config.ModuleName, "分表不存在，跳过查询", map[string]any{
-			// 	"table_name": tableName,
-			// }, "分表 %s 不存在，跳过查询", tableName)
-			continue
-		}
+	if len(existingTableNames) == 0 {
+		return nil
+	}
 
-		// 表存在，添加到查询列表
+	// 为每个存在的表构建查询
+	unionQueries := lo.Map(existingTableNames, func(tableName string, _ int) string {
 		// 优化：每个分表先排序，然后再合并
 		// 使用子查询包装，确保每个分表先排序
 		// 注意：导出需要所有数据，所以不限制数量，但先排序可以优化合并后的排序性能
-		query := fmt.Sprintf(
+		return fmt.Sprintf(
 			"(SELECT %s FROM `%s` WHERE %s ORDER BY `%s` %s)",
 			columnsStr, tableName, whereClause, orderField, orderDir,
 		)
-		unionQueries = append(unionQueries, query)
-		// 每个查询都需要相同的参数
-		allArgs = append(allArgs, whereConditions...)
-	}
+	})
+
+	// 每个查询都需要相同的参数
+	allArgs := lo.Flatten(lo.Map(lo.Range(len(existingTableNames)), func(_ int, _ int) []any {
+		return whereConditions
+	}))
 
 	if len(unionQueries) == 0 {
 		return nil

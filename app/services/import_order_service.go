@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
@@ -84,13 +85,16 @@ func (s *ImportOrderService) ImportOrders(csvContent string) (*ImportResult, err
 		Errors:     []string{},
 	}
 
-	// 按订单分组数据（同一订单可能有多行，每行一个商品）
-	orderMap := make(map[string][]ImportOrderRow) // key: order_no 或 order_id
-
-	for rowIndex, row := range dataRows {
+	// 解析并过滤有效的数据行，同时保留索引信息用于分组
+	type RowWithIndex struct {
+		Row   ImportOrderRow
+		Index int
+	}
+	validRows := lo.FilterMap(lo.Range(len(dataRows)), func(rowIndex int, _ int) (RowWithIndex, bool) {
+		row := dataRows[rowIndex]
 		// 跳过空行
 		if len(row) == 0 || (len(row) == 1 && strings.TrimSpace(row[0]) == "") {
-			continue
+			return RowWithIndex{}, false
 		}
 
 		// 解析行数据
@@ -98,9 +102,15 @@ func (s *ImportOrderService) ImportOrders(csvContent string) (*ImportResult, err
 		if orderRow == nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, fmt.Sprintf("第%d行：数据格式错误", rowIndex+2))
-			continue
+			return RowWithIndex{}, false
 		}
 
+		return RowWithIndex{Row: *orderRow, Index: rowIndex}, true
+	})
+
+	// 按订单分组数据（同一订单可能有多行，每行一个商品）
+	orderMap := lo.GroupBy(validRows, func(item RowWithIndex) string {
+		orderRow := item.Row
 		// 确定订单标识（优先使用订单号，其次使用订单ID）
 		orderKey := orderRow.OrderNo
 		if orderKey == "" {
@@ -108,19 +118,21 @@ func (s *ImportOrderService) ImportOrders(csvContent string) (*ImportResult, err
 		}
 		if orderKey == "" {
 			// 如果都没有，使用行号作为临时标识
-			orderKey = fmt.Sprintf("temp_%d", rowIndex)
+			orderKey = fmt.Sprintf("temp_%d", item.Index)
 		}
+		return orderKey
+	})
 
-		// 添加到订单组
-		if _, exists := orderMap[orderKey]; !exists {
-			orderMap[orderKey] = []ImportOrderRow{}
-		}
-		orderMap[orderKey] = append(orderMap[orderKey], *orderRow)
-	}
+	// 将分组结果转换为 []ImportOrderRow
+	orderMapRows := lo.MapValues(orderMap, func(items []RowWithIndex, _ string) []ImportOrderRow {
+		return lo.Map(items, func(item RowWithIndex, _ int) ImportOrderRow {
+			return item.Row
+		})
+	})
 
 	// 导入订单
 	orderService := NewOrderService()
-	for orderKey, rows := range orderMap {
+	for orderKey, rows := range orderMapRows {
 		if err := s.importOrderGroup(orderService, orderKey, rows, result); err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, fmt.Sprintf("订单 %s: %v", orderKey, err))

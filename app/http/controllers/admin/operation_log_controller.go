@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -226,21 +227,11 @@ func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response
 		Order("title ASC").
 		Pluck("title", &dbTitles)
 
-	// 合并数据库标题和配置标题，去重
-	uniqueTitles := make(map[string]bool)
-	var result []string
-
-	// 只使用数据库中存在的标题（权限标识），忽略旧的 operation.xxx 配置
-	for _, title := range dbTitles {
+	// 过滤并去重标题（权限标识），忽略旧的 operation.xxx 配置
+	result := lo.Uniq(lo.Filter(dbTitles, func(title string, _ int) bool {
 		// 排除空标题、未知标题以及旧的 operation.xxx 标题
-		if title == "" || title == "operation.unknown" || strings.HasPrefix(title, "operation.") {
-			continue
-		}
-		if !uniqueTitles[title] {
-			uniqueTitles[title] = true
-			result = append(result, title)
-		}
-	}
+		return title != "" && title != "operation.unknown" && !strings.HasPrefix(title, "operation.")
+	}))
 
 	sort.Strings(result)
 

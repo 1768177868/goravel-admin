@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
@@ -450,20 +451,22 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName string) (map[strin
 	}
 
 	// 提取队列名称（排除 reserved 和 delayed 键）
-	queueMap := make(map[string]bool)
-	for _, key := range keys {
+	queueNames := lo.FilterMap(keys, func(key string, _ int) (string, bool) {
 		// 跳过 reserved 和 delayed 键
 		if strings.HasSuffix(key, ":reserved") || strings.HasSuffix(key, ":delayed") {
-			continue
+			return "", false
 		}
 		// 提取队列名称（去掉 queues: 前缀）
-		if after, ok := strings.CutPrefix(key, "queues:"); ok {
-			queueName := after
-			if queueName != "" {
-				queueMap[queueName] = true
-			}
+		if after, ok := strings.CutPrefix(key, "queues:"); ok && after != "" {
+			return after, true
 		}
-	}
+		return "", false
+	})
+
+	// 去重队列名称
+	queueMap := lo.SliceToMap(lo.Uniq(queueNames), func(queueName string) (string, bool) {
+		return queueName, true
+	})
 
 	// 如果没有找到队列键，尝试从失败任务表中获取队列名称
 	if len(queueMap) == 0 {
@@ -472,11 +475,12 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName string) (map[strin
 			Select("DISTINCT queue").
 			Pluck("queue", &failedQueues)
 		if err == nil {
-			for _, q := range failedQueues {
-				if q != "" {
-					queueMap[q] = true
-				}
-			}
+			validQueues := lo.Filter(failedQueues, func(q string, _ int) bool {
+				return q != ""
+			})
+			queueMap = lo.SliceToMap(validQueues, func(queueName string) (string, bool) {
+				return queueName, true
+			})
 		}
 	}
 

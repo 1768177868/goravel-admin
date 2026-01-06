@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
+	"github.com/samber/lo"
 	"github.com/spf13/cast"
 
 	"goravel/app/models"
@@ -17,31 +18,30 @@ func NewAdminOptionProvider() *AdminOptionProvider {
 
 func (p *AdminOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {
 	var admins []models.Admin
-	
+
 	// 排除开发者ID
 	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 	developerIDs := parseProtectedIDs(developerIDsStr)
-	
+
 	query := facades.Orm().Query().Where("status", 1)
 	if len(developerIDs) > 0 {
 		query = query.Where("id NOT IN ?", developerIDs)
 	}
-	
+
 	if err := query.Order("id asc").Get(&admins); err != nil {
 		return nil, err
 	}
 
-	var options []map[string]any
-	for _, admin := range admins {
+	options := lo.Map(admins, func(admin models.Admin, _ int) map[string]any {
 		label := admin.Username
 		if admin.Nickname != "" {
 			label = admin.Nickname + " (" + admin.Username + ")"
 		}
-		options = append(options, map[string]any{
+		return map[string]any{
 			"label": label,
 			"value": cast.ToString(admin.ID),
-		})
-	}
+		}
+	})
 
 	return map[string]any{
 		"options": options,
@@ -68,4 +68,3 @@ func parseProtectedIDs(idsStr string) []uint {
 
 	return ids
 }
-
