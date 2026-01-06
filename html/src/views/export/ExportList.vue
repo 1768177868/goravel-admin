@@ -396,7 +396,7 @@ const handleDownload = async (row) => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(t('log.delete_confirm'), t('form.tip'), {
+    await ElMessageBox.confirm(t('common.delete_confirm'), t('form.tip'), {
       confirmButtonText: t('common.confirm'),
       cancelButtonText: t('common.cancel'),
       type: 'warning'
@@ -423,7 +423,7 @@ const handleBatchDelete = async () => {
 
   try {
     await ElMessageBox.confirm(
-      t('log.batch_delete_confirm', { count: selectedRows.value.length }), 
+      t('common.batch_delete_confirm', { count: selectedRows.value.length }), 
       t('form.tip'), 
       {
         confirmButtonText: t('common.confirm'),

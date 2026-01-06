@@ -651,7 +651,7 @@ const handleEditSubmit = async () => {
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(
-      t('order.delete_confirm'),
+      t('common.delete_confirm'),
       t('form.tip'),
       {
         confirmButtonText: t('common.confirm'),
