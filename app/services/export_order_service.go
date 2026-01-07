@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -46,7 +47,7 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = errorMsg
 		facades.Orm().Query().Save(&exportRecord)
-		return fmt.Errorf(errorMsg)
+		return errors.New(errorMsg)
 	}
 
 	// 检查是否有数据

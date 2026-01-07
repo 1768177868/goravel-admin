@@ -30,6 +30,7 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.CreateToken{},
 		&commands.QueueStats{},
 		&commands.QueueClear{},
+		&commands.QueuePeek{},
 		commands.NewCreateOrderShardingTables(),
 		&commands.GenerateTestOrders{},
 	}

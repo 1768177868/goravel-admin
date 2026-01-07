@@ -95,7 +95,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 查询当前队列统计
-	stats, err := r.getRedisQueueStats(redisConnectionName, queueName)
+	stats, err := r.getRedisQueueStats(redisConnectionName, connectionName, queueName)
 	if err != nil {
 		ctx.Error(fmt.Sprintf("查询队列统计失败: %v", err))
 		return err
@@ -136,7 +136,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	clearedCount := int64(0)
 
 	// 清理待执行队列
-	pendingKey := fmt.Sprintf("queues:%s", queueName)
+	pendingKey := r.redisQueueKey(connectionName, queueName)
 	pendingLen, _ := redisClient.LLen(ctxRedis, pendingKey).Result()
 	if pendingLen > 0 {
 		if err := redisClient.Del(ctxRedis, pendingKey).Err(); err != nil {
@@ -148,8 +148,8 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 清理正在执行队列
-	reservedKey := fmt.Sprintf("queues:%s:reserved", queueName)
-	reservedLen, _ := redisClient.HLen(ctxRedis, reservedKey).Result()
+	reservedKey := r.redisReservedKey(connectionName, queueName)
+	reservedLen, _ := redisClient.ZCard(ctxRedis, reservedKey).Result()
 	if reservedLen > 0 {
 		if err := redisClient.Del(ctxRedis, reservedKey).Err(); err != nil {
 			ctx.Error(fmt.Sprintf("清理正在执行队列失败: %v", err))
@@ -160,7 +160,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 清理延迟队列
-	delayedKey := fmt.Sprintf("queues:%s:delayed", queueName)
+	delayedKey := r.redisDelayedKey(connectionName, queueName)
 	delayedLen, _ := redisClient.ZCard(ctxRedis, delayedKey).Result()
 	if delayedLen > 0 {
 		if err := redisClient.Del(ctxRedis, delayedKey).Err(); err != nil {
@@ -196,7 +196,7 @@ func (r *QueueClear) getRedisConnectionName(queueConnectionName string) string {
 }
 
 // getRedisQueueStats 获取 Redis 队列统计信息
-func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
+func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
 	redisClient, err := utils.GetRedisClient(redisConnectionName)
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
@@ -210,7 +210,7 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	ctx := context.Background()
 	stats := &RedisQueueStatsInfo{}
 
-	pendingKey := fmt.Sprintf("queues:%s", queueName)
+	pendingKey := r.redisQueueKey(queueConnectionName, queueName)
 	pendingLen, err := redisClient.LLen(ctx, pendingKey).Result()
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "查询待执行队列失败", map[string]any{
@@ -222,8 +222,8 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	}
 	stats.Pending = pendingLen
 
-	reservedKey := fmt.Sprintf("queues:%s:reserved", queueName)
-	reservedLen, err := redisClient.HLen(ctx, reservedKey).Result()
+	reservedKey := r.redisReservedKey(queueConnectionName, queueName)
+	reservedLen, err := redisClient.ZCard(ctx, reservedKey).Result()
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "查询正在执行队列失败", map[string]any{
 			"queue_name": queueName,
@@ -234,7 +234,7 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	}
 	stats.Reserved = reservedLen
 
-	delayedKey := fmt.Sprintf("queues:%s:delayed", queueName)
+	delayedKey := r.redisDelayedKey(queueConnectionName, queueName)
 	delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "查询延迟队列失败", map[string]any{
@@ -264,6 +264,21 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueName string) (
 	stats.Total = stats.Pending + stats.Reserved
 
 	return stats, nil
+}
+
+// redisQueueKey Goravel Redis queue key format:
+// {appName}_queues:{queueConnection}_{queue}
+func (r *QueueClear) redisQueueKey(queueConnectionName, queueName string) string {
+	appName := facades.Config().GetString("app.name", "goravel")
+	return fmt.Sprintf("%s_queues:%s_%s", appName, queueConnectionName, queueName)
+}
+
+func (r *QueueClear) redisReservedKey(queueConnectionName, queueName string) string {
+	return fmt.Sprintf("%s:reserved", r.redisQueueKey(queueConnectionName, queueName))
+}
+
+func (r *QueueClear) redisDelayedKey(queueConnectionName, queueName string) string {
+	return fmt.Sprintf("%s:delayed", r.redisQueueKey(queueConnectionName, queueName))
 }
 
 // hasForceFlag 检查命令行参数中是否包含 --force 标志
