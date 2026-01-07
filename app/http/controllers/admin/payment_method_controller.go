@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"encoding/json"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -102,17 +104,27 @@ func (r *PaymentMethodController) Show(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrPaymentMethodNotFound.Code)
 	}
 
+	// 解析配置 JSON
+	var config map[string]any
+	if paymentMethod.Config != "" {
+		if err := json.Unmarshal([]byte(paymentMethod.Config), &config); err != nil {
+			config = make(map[string]any)
+		}
+	} else {
+		config = make(map[string]any)
+	}
+
 	return response.Success(ctx, http.Json{
 		"id":          paymentMethod.ID,
 		"name":        paymentMethod.Name,
 		"code":        paymentMethod.Code,
 		"type":        paymentMethod.Type,
+		"config":      config,
 		"is_active":   paymentMethod.IsActive,
 		"sort":        paymentMethod.Sort,
 		"description": paymentMethod.Description,
 		"created_at":  paymentMethod.CreatedAt,
 		"updated_at":  paymentMethod.UpdatedAt,
-		// 注意：不返回 config 字段，因为包含敏感信息
 	})
 }
 

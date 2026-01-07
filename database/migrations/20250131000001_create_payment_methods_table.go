@@ -26,7 +26,7 @@ func (r *M20250131000001CreatePaymentMethodsTable) Up() error {
 			table.Timestamps()
 			table.SoftDeletes()
 
-			table.Unique("code")
+			table.Unique("code", "deleted_at")
 			table.Index("type")
 			table.Index("is_active")
 			table.Index("sort")
@@ -42,4 +42,3 @@ func (r *M20250131000001CreatePaymentMethodsTable) Up() error {
 func (r *M20250131000001CreatePaymentMethodsTable) Down() error {
 	return facades.Schema().DropIfExists("payment_methods")
 }
-

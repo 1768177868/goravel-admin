@@ -326,14 +326,25 @@ const loadDetail = async (id) => {
       description: data.description || data.Description || ''
     })
     
-    // 初始化配置字段（虽然后端不返回配置值，但需要初始化字段结构）
+    // 加载配置数据
+    const configData = data.config || data.Config || {}
     formData.config = {}
+    
+    // 初始化配置字段并填充已有值
     const fields = paymentTypeConfigFields[paymentType] || []
     fields.forEach(field => {
-      formData.config[field.key] = ''
+      // 如果后端返回了该字段的值，使用返回的值，否则使用空字符串
+      formData.config[field.key] = configData[field.key] !== undefined && configData[field.key] !== null 
+        ? String(configData[field.key]) 
+        : ''
     })
     
-    configJson.value = ''
+    // 如果有配置数据但字段未定义，使用 JSON 模式
+    if (Object.keys(configData).length > 0 && fields.length === 0) {
+      configJson.value = JSON.stringify(configData, null, 2)
+    } else {
+      configJson.value = ''
+    }
   } catch (error) {
     logger.error('Load payment method detail error:', error)
     ErrorHandler.handle(error, { silent: true })
