@@ -6,7 +6,7 @@
           <span>{{ $t('menu.payment_method') }}</span>
           <el-button 
             type="primary" 
-            :disabled="getButtonState('payment-method.store').disabled"
+            :disabled="getButtonState('payment_method.store').disabled"
             @click="handleAdd"
           >
             <el-icon><PlusIcon /></el-icon>
@@ -36,7 +36,7 @@
         <template #is_active="{ row }">
           <!-- <el-switch
             :model-value="row.is_active || row.IsActive"
-            :disabled="getButtonState('payment-method.update').disabled"
+            :disabled="getButtonState('payment_method.update').disabled"
             @change="(val) => handleStatusChange(row, val)"
           /> -->
           <el-tag :type="row.is_active || row.IsActive ? 'success' : 'danger'">{{ row.is_active || row.IsActive ? t('common.enabled') : t('common.disabled') }}</el-tag>
@@ -249,14 +249,14 @@ const operationActions = computed(() => [
     key: 'edit',
     label: t('common.edit'),
     type: 'primary',
-    permission: 'payment-method.update',
+    permission: 'payment_method.update',
     handler: handleEdit
   },
   {
     key: 'delete',
     label: t('common.delete'),
     type: 'danger',
-    permission: 'payment-method.destroy',
+    permission: 'payment_method.destroy',
     handler: handleDelete
   }
 ])

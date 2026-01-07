@@ -178,11 +178,11 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 9, MenuID: userBalanceLogMenu.ID},
 		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 10, MenuID: userBalanceLogMenu.ID},
 		// 支付方式管理
-		{Name: "支付方式列表", Slug: "payment-method.index", Method: "GET", Path: "/api/admin/payment-methods", Description: "查看支付方式列表", Status: 1, Sort: 1, MenuID: paymentMethodMenu.ID},
-		{Name: "支付方式详情", Slug: "payment-method.show", Method: "GET", Path: "/api/admin/payment-methods/*", Description: "查看支付方式详情", Status: 1, Sort: 2, MenuID: paymentMethodMenu.ID},
-		{Name: "支付方式创建", Slug: "payment-method.store", Method: "POST", Path: "/api/admin/payment-methods", Description: "创建支付方式", Status: 1, Sort: 3, MenuID: paymentMethodMenu.ID},
-		{Name: "支付方式更新", Slug: "payment-method.update", Method: "PUT", Path: "/api/admin/payment-methods/*", Description: "更新支付方式", Status: 1, Sort: 4, MenuID: paymentMethodMenu.ID},
-		{Name: "支付方式删除", Slug: "payment-method.destroy", Method: "DELETE", Path: "/api/admin/payment-methods/*", Description: "删除支付方式", Status: 1, Sort: 5, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式列表", Slug: "payment_method.index", Method: "GET", Path: "/api/admin/payment-methods", Description: "查看支付方式列表", Status: 1, Sort: 1, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式详情", Slug: "payment_method.show", Method: "GET", Path: "/api/admin/payment-methods/*", Description: "查看支付方式详情", Status: 1, Sort: 2, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式创建", Slug: "payment_method.store", Method: "POST", Path: "/api/admin/payment-methods", Description: "创建支付方式", Status: 1, Sort: 3, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式更新", Slug: "payment_method.update", Method: "PUT", Path: "/api/admin/payment-methods/*", Description: "更新支付方式", Status: 1, Sort: 4, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式删除", Slug: "payment_method.destroy", Method: "DELETE", Path: "/api/admin/payment-methods/*", Description: "删除支付方式", Status: 1, Sort: 5, MenuID: paymentMethodMenu.ID},
 		// 支付记录管理
 		{Name: "支付记录列表", Slug: "payment.index", Method: "GET", Path: "/api/admin/payments", Description: "查看支付记录列表", Status: 1, Sort: 1, MenuID: paymentRecordMenu.ID},
 		{Name: "支付记录详情", Slug: "payment.show", Method: "GET", Path: "/api/admin/payments/*", Description: "查看支付记录详情", Status: 1, Sort: 2, MenuID: paymentRecordMenu.ID},
