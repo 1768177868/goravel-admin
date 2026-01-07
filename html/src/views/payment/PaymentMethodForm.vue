@@ -84,9 +84,9 @@
               />
             </el-form-item>
           </template>
-          <div style="margin-top: 8px; color: #909399; font-size: 12px;">
+          <!-- <div style="margin-top: 8px; color: #909399; font-size: 12px;">
             {{ $t('payment_method.config_tip') }}
-          </div>
+          </div> -->
         </div>
         
         <!-- JSON 编辑模式（备用） -->
@@ -98,9 +98,9 @@
             :disabled="loading"
             :placeholder="$t('payment_method.config_placeholder')"
           />
-          <div style="margin-top: 8px; color: #909399; font-size: 12px;">
+          <!-- <div style="margin-top: 8px; color: #909399; font-size: 12px;">
             {{ $t('payment_method.config_tip') }}
-          </div>
+          </div> -->
         </el-form-item>
 
         <el-form-item :label="$t('table.status')" prop="is_active">

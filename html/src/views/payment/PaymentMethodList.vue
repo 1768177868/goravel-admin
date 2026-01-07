@@ -34,11 +34,12 @@
         @sort-change="handleSortChange"
       >
         <template #is_active="{ row }">
-          <el-switch
+          <!-- <el-switch
             :model-value="row.is_active || row.IsActive"
             :disabled="getButtonState('payment-method.update').disabled"
             @change="(val) => handleStatusChange(row, val)"
-          />
+          /> -->
+          <el-tag :type="row.is_active || row.IsActive ? 'success' : 'danger'">{{ row.is_active || row.IsActive ? t('common.enabled') : t('common.disabled') }}</el-tag>
         </template>
 
         <template #operation="{ row }">
@@ -214,7 +215,7 @@ const tableColumns = computed(() => [
     field: 'is_active',
     title: t('table.status'),
     width: 100,
-    slots: { default: 'is_active' }
+    slot: 'is_active',
   },
   {
     field: 'sort',
@@ -271,7 +272,7 @@ const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(
       t('payment_method.delete_confirm'),
-      t('common.warning'),
+      t('form.warning'),
       {
         type: 'warning',
         confirmButtonText: t('common.confirm'),
@@ -294,7 +295,7 @@ const handleStatusChange = async (row, val) => {
     const id = row.id || row.ID
     await updatePaymentMethod(id, {
       name: row.name || row.Name,
-      is_active: val,
+      is_active: val ? 1 : 0,
       sort: row.sort || row.Sort || 0,
       description: row.description || row.Description || ''
     })
