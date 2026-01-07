@@ -258,6 +258,32 @@ function convertMenusToRoutes(menus) {
 // 标记是否已经添加过动态路由
 let dynamicRoutesAdded = false
 
+// 防止路由守卫在接口异常/菜单为空时陷入 next(to.fullPath) 死循环（从而导致 /info 无限请求）
+const navigationRetryState = new Map() // fullPath -> { count: number, lastAt: number }
+const NAVIGATION_RETRY_WINDOW = 3000 // 3 秒窗口
+const MAX_RETRIES_PER_PATH = 1
+
+let lastMenuRefreshAttemptAt = 0
+const MENU_REFRESH_COOLDOWN = 5000 // 5 秒内不重复刷新菜单
+
+function canRetryNavigation(fullPath) {
+  const now = Date.now()
+  const state = navigationRetryState.get(fullPath)
+  if (!state || now - state.lastAt > NAVIGATION_RETRY_WINDOW) {
+    navigationRetryState.set(fullPath, { count: 0, lastAt: now })
+    return true
+  }
+  return state.count < MAX_RETRIES_PER_PATH
+}
+
+function markNavigationRetried(fullPath) {
+  const now = Date.now()
+  const state = navigationRetryState.get(fullPath) || { count: 0, lastAt: now }
+  state.count += 1
+  state.lastAt = now
+  navigationRetryState.set(fullPath, state)
+}
+
 // 初始路由（只包含固定路由）
 const routes = [...staticRoutes]
 
@@ -371,6 +397,20 @@ router.beforeEach((to, from, next) => {
       
       // 如果用户信息已获取过，但菜单为空，需要重新获取菜单（不阻塞导航）
       if (userStore.userInfoFetched && menusEmpty && userStore.adminInfo) {
+        const now = Date.now()
+        // 冷却期内不重复拉取菜单，避免 /info 被频繁请求
+        if (now - lastMenuRefreshAttemptAt < MENU_REFRESH_COOLDOWN) {
+          const resolved = router.resolve(to.path)
+          if (!resolved.name && to.path !== '/dashboard') {
+            next('/dashboard')
+          } else {
+            next()
+          }
+          return
+        }
+
+        lastMenuRefreshAttemptAt = now
+
         // 阻塞导航，等待菜单加载完成（因为当前路由可能依赖动态路由）
         userStore.fetchUserInfo().then(() => {
           // 获取菜单后添加动态路由
@@ -378,12 +418,29 @@ router.beforeEach((to, from, next) => {
             addDynamicRoutes(userStore.menus)
             dynamicRoutesAdded = true
           }
-          // 路由添加后，使用 next() 重试导航
-          next(to.fullPath)
+
+          // 如果菜单仍为空，不再对当前路径做 next(to.fullPath) 递归重试，直接放行或降级
+          if (!userStore.menus || userStore.menus.length === 0) {
+            const resolved = router.resolve(to.path)
+            if (!resolved.name && to.path !== '/dashboard') {
+              next('/dashboard')
+            } else {
+              next()
+            }
+            return
+          }
+
+          // 只有在允许重试时才 next(to.fullPath)，避免死循环
+          if (canRetryNavigation(to.fullPath)) {
+            markNavigationRetried(to.fullPath)
+            next(to.fullPath)
+          } else {
+            next('/dashboard')
+          }
         }).catch((error) => {
           logger.error('Failed to refresh menus:', error)
-          // 如果获取失败，跳转到首页
-          next('/')
+          // 获取失败时不再反复重试，直接回到 dashboard（避免触发更多 /info）
+          next('/dashboard')
         })
         return
       }
@@ -395,14 +452,24 @@ router.beforeEach((to, from, next) => {
           addDynamicRoutes(userStore.menus)
           dynamicRoutesAdded = true
           // 路由添加后，使用 next() 重试导航
-          next(to.fullPath)
+          if (canRetryNavigation(to.fullPath)) {
+            markNavigationRetried(to.fullPath)
+            next(to.fullPath)
+          } else {
+            next('/dashboard')
+          }
           return
         }
         // 检查路由是否存在（只检查路径，不包含查询参数）
         const route = router.resolve(to.path)
         if (!route.name && to.path !== '/') {
-          // 路由不存在，可能是路径不匹配，尝试重试
-          next(to.fullPath)
+          // 路由不存在，可能是路径不匹配；只允许重试一次，避免无限循环
+          if (canRetryNavigation(to.fullPath)) {
+            markNavigationRetried(to.fullPath)
+            next(to.fullPath)
+          } else {
+            next('/dashboard')
+          }
           return
         }
         next()
@@ -418,8 +485,24 @@ router.beforeEach((to, from, next) => {
             addDynamicRoutes(userStore.menus)
             dynamicRoutesAdded = true
           }
-          // 路由添加后，使用 next() 重试导航
-          next(to.fullPath)
+          // 菜单为空时不递归重试，避免 /info 无限请求
+          if (!userStore.menus || userStore.menus.length === 0) {
+            const resolved = router.resolve(to.path)
+            if (!resolved.name && to.path !== '/dashboard') {
+              next('/dashboard')
+            } else {
+              next()
+            }
+            return
+          }
+
+          // 路由添加后，使用 next() 重试导航（仅一次）
+          if (canRetryNavigation(to.fullPath)) {
+            markNavigationRetried(to.fullPath)
+            next(to.fullPath)
+          } else {
+            next('/dashboard')
+          }
         }).catch((error) => {
           // 如果获取用户信息失败（可能是401），拦截器会处理跳转
           // 这里只需要阻止导航
@@ -431,14 +514,24 @@ router.beforeEach((to, from, next) => {
           addDynamicRoutes(userStore.menus)
           dynamicRoutesAdded = true
           // 路由添加后，使用 next() 重试导航
-          next(to.fullPath)
+          if (canRetryNavigation(to.fullPath)) {
+            markNavigationRetried(to.fullPath)
+            next(to.fullPath)
+          } else {
+            next('/dashboard')
+          }
           return
         }
         // 检查路由是否存在（只检查路径，不包含查询参数）
         const route = router.resolve(to.path)
         if (!route.name && to.path !== '/') {
-          // 路由不存在，可能是路径不匹配，尝试重试
-          next(to.fullPath)
+          // 路由不存在，可能是路径不匹配；只允许重试一次，避免无限循环
+          if (canRetryNavigation(to.fullPath)) {
+            markNavigationRetried(to.fullPath)
+            next(to.fullPath)
+          } else {
+            next('/dashboard')
+          }
           return
         }
         // 标记为已获取，避免后续路由切换时重复检查

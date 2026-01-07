@@ -17,6 +17,49 @@ import (
 	"goravel/app/utils/errorlog"
 )
 
+// ApplyOrderFiltersToQuery 只负责通用筛选（不包含时间范围），供列表查询/导出复用，避免重复/不一致。
+func ApplyOrderFiltersToQuery(query orm.Query, filters OrderFilters) orm.Query {
+	// 用户ID筛选
+	if filters.UserID > 0 {
+		query = query.Where("user_id = ?", filters.UserID)
+	}
+
+	// 订单号模糊搜索
+	if filters.OrderNo != "" {
+		query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
+	}
+
+	// 订单状态筛选
+	if filters.Status != "" {
+		query = query.Where("status = ?", filters.Status)
+	}
+
+	// 金额范围筛选
+	if filters.MinAmount > 0 {
+		query = query.Where("amount >= ?", filters.MinAmount)
+	}
+	if filters.MaxAmount > 0 {
+		query = query.Where("amount <= ?", filters.MaxAmount)
+	}
+
+	return query
+}
+
+// BuildOrderQuery 构建订单分表查询（包含时间范围 + 通用筛选），供列表查询/导出复用。
+func BuildOrderQuery(tableName string, filters OrderFilters) orm.Query {
+	query := facades.Orm().Query().Table(tableName)
+
+	// 时间范围（导出/列表都需要）
+	if !filters.StartTime.IsZero() {
+		query = query.Where("created_at >= ?", filters.StartTime)
+	}
+	if !filters.EndTime.IsZero() {
+		query = query.Where("created_at <= ?", filters.EndTime)
+	}
+
+	return ApplyOrderFiltersToQuery(query, filters)
+}
+
 type OrderService interface {
 	// CreateOrder 创建订单（带防重复提交）
 	CreateOrder(userID uint, amount float64, products []OrderProduct, requestID string, remark string) (*models.Order, []models.OrderDetail, error)
@@ -359,34 +402,7 @@ func (s *OrderServiceImpl) GetOrders(filters OrderFilters, page, pageSize int) (
 
 // buildShardingQuery 构建分表查询条件（辅助函数，减少重复代码）
 func (s *OrderServiceImpl) buildShardingQuery(tableName string, filters OrderFilters) orm.Query {
-	query := facades.Orm().Query().Table(tableName).
-		Where("created_at >= ?", filters.StartTime).
-		Where("created_at <= ?", filters.EndTime)
-
-	// 用户ID筛选
-	if filters.UserID > 0 {
-		query = query.Where("user_id", filters.UserID)
-	}
-
-	// 订单号模糊搜索
-	if filters.OrderNo != "" {
-		query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
-	}
-
-	// 订单状态筛选
-	if filters.Status != "" {
-		query = query.Where("status", filters.Status)
-	}
-
-	// 金额范围筛选
-	if filters.MinAmount > 0 {
-		query = query.Where("amount >= ?", filters.MinAmount)
-	}
-	if filters.MaxAmount > 0 {
-		query = query.Where("amount <= ?", filters.MaxAmount)
-	}
-
-	return query
+	return BuildOrderQuery(tableName, filters)
 }
 
 // buildOrderWhereClause 构建订单查询的 WHERE 条件（用于通用分表查询服务）

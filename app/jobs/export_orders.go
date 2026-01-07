@@ -423,29 +423,8 @@ func (r *ExportOrders) writeOrdersToCSV(w *csv.Writer, filters services.OrderFil
 				return errExportRecordMissing
 			}
 
-			query := facades.Orm().Query().Table(tableName).
-				Where("created_at >= ?", filters.StartTime).
-				Where("created_at <= ?", filters.EndTime)
-
-			// 用户ID筛选
-			if filters.UserID > 0 {
-				query = query.Where("user_id = ?", filters.UserID)
-			}
-			// 订单号模糊搜索
-			if filters.OrderNo != "" {
-				query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
-			}
-			// 订单状态筛选
-			if filters.Status != "" {
-				query = query.Where("status = ?", filters.Status)
-			}
-			// 金额范围筛选
-			if filters.MinAmount > 0 {
-				query = query.Where("amount >= ?", filters.MinAmount)
-			}
-			if filters.MaxAmount > 0 {
-				query = query.Where("amount <= ?", filters.MaxAmount)
-			}
+			// 复用通用筛选逻辑（时间范围 + 其它筛选）
+			query := services.BuildOrderQuery(tableName, filters)
 
 			// keyset 分页（避免 offset 扫描）
 			if lastTimeStr != "" {
