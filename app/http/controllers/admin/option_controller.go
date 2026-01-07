@@ -28,6 +28,7 @@ func NewOptionController() *OptionController {
 	providers["method"] = option_providers.NewMethodOptionProvider()
 	providers["yes_no"] = option_providers.NewYesNoOptionProvider()
 	providers["admin"] = option_providers.NewAdminOptionProvider()
+	providers["payment_method"] = option_providers.NewPaymentMethodOptionProvider()
 	// 在此处添加新的选项提供者，例如：
 	// providers["new_type"] = option_providers.NewNewTypeOptionProvider()
 

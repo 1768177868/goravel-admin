@@ -17,6 +17,7 @@ func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu, userBalanceLogMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
+	var paymentMethodMenu, paymentRecordMenu models.Menu
 
 	// 辅助函数：查找菜单
 	findMenu := func(slug string, menu *models.Menu) {
@@ -44,6 +45,8 @@ func (s *PermissionSeeder) Run() error {
 	findMenu("order", &orderMenu)
 	findMenu("user", &userMenu)
 	findMenu("user-balance-log", &userBalanceLogMenu)
+	findMenu("payment-method", &paymentMethodMenu)
+	findMenu("payment-record", &paymentRecordMenu)
 
 	// Dashboard 可能没有单独的菜单，使用 profile 菜单作为关联
 	facades.Orm().Query().Where("slug", "dashboard").First(&dashboardMenu)
@@ -174,6 +177,15 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "余额记录列表", Slug: "user_balance_log.index", Method: "GET", Path: "/api/admin/user-balance-logs", Description: "查看用户余额变动记录列表", Status: 1, Sort: 8, MenuID: userBalanceLogMenu.ID},
 		{Name: "余额记录创建", Slug: "user_balance_log.store", Method: "POST", Path: "/api/admin/user-balance-logs", Description: "创建用户余额变动记录", Status: 1, Sort: 9, MenuID: userBalanceLogMenu.ID},
 		{Name: "余额统计", Slug: "user_balance_log.statistics", Method: "GET", Path: "/api/admin/user-balance-logs/statistics", Description: "查看用户余额统计", Status: 1, Sort: 10, MenuID: userBalanceLogMenu.ID},
+		// 支付方式管理
+		{Name: "支付方式列表", Slug: "payment-method.index", Method: "GET", Path: "/api/admin/payment-methods", Description: "查看支付方式列表", Status: 1, Sort: 1, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式详情", Slug: "payment-method.show", Method: "GET", Path: "/api/admin/payment-methods/*", Description: "查看支付方式详情", Status: 1, Sort: 2, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式创建", Slug: "payment-method.store", Method: "POST", Path: "/api/admin/payment-methods", Description: "创建支付方式", Status: 1, Sort: 3, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式更新", Slug: "payment-method.update", Method: "PUT", Path: "/api/admin/payment-methods/*", Description: "更新支付方式", Status: 1, Sort: 4, MenuID: paymentMethodMenu.ID},
+		{Name: "支付方式删除", Slug: "payment-method.destroy", Method: "DELETE", Path: "/api/admin/payment-methods/*", Description: "删除支付方式", Status: 1, Sort: 5, MenuID: paymentMethodMenu.ID},
+		// 支付记录管理
+		{Name: "支付记录列表", Slug: "payment.index", Method: "GET", Path: "/api/admin/payments", Description: "查看支付记录列表", Status: 1, Sort: 1, MenuID: paymentRecordMenu.ID},
+		{Name: "支付记录详情", Slug: "payment.show", Method: "GET", Path: "/api/admin/payments/*", Description: "查看支付记录详情", Status: 1, Sort: 2, MenuID: paymentRecordMenu.ID},
 	}
 
 	for _, perm := range permissions {

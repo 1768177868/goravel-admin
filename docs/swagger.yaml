@@ -759,13 +759,16 @@ paths:
     delete:
       consumes:
       - application/json
-      description: 删除订单及其详情
+      description: 删除订单及其详情。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
       parameters:
-      - description: 订单ID
+      - description: 订单ID（如果提供了订单号，此参数可选）
         in: path
         name: id
-        required: true
         type: integer
+      - description: 订单号（优先使用，可直接定位分表）
+        in: query
+        name: order_no
+        type: string
       produces:
       - application/json
       responses:
@@ -792,18 +795,21 @@ paths:
     get:
       consumes:
       - application/json
-      description: 根据ID获取订单详细信息，包括订单详情列表
+      description: 根据ID或订单号获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
       parameters:
-      - description: 订单ID
+      - description: 订单ID（如果提供了订单号，此参数可选）
         in: path
         name: id
-        required: true
         type: integer
+      - description: 订单号（优先使用，可直接定位分表）
+        in: query
+        name: order_no
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 返回数据包含 order（订单主表）和 details（订单详情表数组）
           schema:
             additionalProperties: true
             type: object
@@ -830,13 +836,16 @@ paths:
     put:
       consumes:
       - application/json
-      description: 更新订单信息（主要是状态）
+      description: 更新订单信息（主要是状态）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
       parameters:
-      - description: 订单ID
+      - description: 订单ID（如果提供了订单号，此参数可选）
         in: path
         name: id
-        required: true
         type: integer
+      - description: 订单号（优先使用，可直接定位分表）
+        in: query
+        name: order_no
+        type: string
       - description: 订单状态
         in: body
         name: status
@@ -937,6 +946,461 @@ paths:
       summary: 导出订单列表
       tags:
       - 订单管理
+  /api/admin/orders/export/status/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据导出记录ID查询导出任务的状态
+      parameters:
+      - description: 导出记录ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 查询导出状态
+      tags:
+      - 订单管理
+  /api/admin/orders/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 从CSV文件导入订单数据，支持批量导入
+      parameters:
+      - description: CSV文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导入成功，返回导入结果
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 导入订单
+      tags:
+      - 订单管理
+  /api/admin/payment-methods:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取支付方式列表，支持多条件筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 支付方式名称（模糊搜索）
+        in: query
+        name: name
+        type: string
+      - description: 支付方式代码
+        in: query
+        name: code
+        type: string
+      - description: 支付类型
+        in: query
+        name: type
+        type: string
+      - description: 是否启用：1-启用，0-禁用
+        in: query
+        name: is_active
+        type: string
+      - description: 排序（格式：字段:asc/desc，如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取支付方式列表
+      tags:
+      - 支付管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的支付方式
+      parameters:
+      - description: 支付方式名称
+        in: body
+        name: name
+        required: true
+        schema:
+          type: string
+      - description: 支付方式代码
+        in: body
+        name: code
+        required: true
+        schema:
+          type: string
+      - description: 支付类型
+        in: body
+        name: type
+        required: true
+        schema:
+          type: string
+      - description: 支付配置(JSON对象)
+        in: body
+        name: config
+        required: true
+        schema:
+          type: object
+      - description: 是否启用
+        in: body
+        name: is_active
+        schema:
+          type: boolean
+      - description: 排序
+        in: body
+        name: sort
+        schema:
+          type: integer
+      - description: 描述
+        in: body
+        name: description
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建支付方式
+      tags:
+      - 支付管理
+  /api/admin/payment-methods/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除支付方式
+      parameters:
+      - description: 支付方式ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除支付方式
+      tags:
+      - 支付管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取支付方式详细信息
+      parameters:
+      - description: 支付方式ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 支付方式不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取支付方式详情
+      tags:
+      - 支付管理
+    put:
+      consumes:
+      - application/json
+      description: 更新支付方式信息
+      parameters:
+      - description: 支付方式ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 支付方式名称
+        in: body
+        name: name
+        required: true
+        schema:
+          type: string
+      - description: 支付配置(JSON对象)
+        in: body
+        name: config
+        schema:
+          type: object
+      - description: 是否启用
+        in: body
+        name: is_active
+        schema:
+          type: boolean
+      - description: 排序
+        in: body
+        name: sort
+        schema:
+          type: integer
+      - description: 描述
+        in: body
+        name: description
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新支付方式
+      tags:
+      - 支付管理
+  /api/admin/payments:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取支付记录列表，支持多条件筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 支付单号（模糊搜索）
+        in: query
+        name: payment_no
+        type: string
+      - description: 订单号（模糊搜索）
+        in: query
+        name: order_no
+        type: string
+      - description: 支付方式ID
+        in: query
+        name: payment_method_id
+        type: integer
+      - description: 用户ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 支付状态（pending/paid/failed/cancelled）
+        in: query
+        name: status
+        type: string
+      - description: 开始时间（格式：2006-01-02 15:04:05）
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间（格式：2006-01-02 15:04:05）
+        in: query
+        name: end_time
+        type: string
+      - description: 排序（格式：字段:asc/desc，如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取支付记录列表
+      tags:
+      - 支付管理
+  /api/admin/payments/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取支付记录详细信息
+      parameters:
+      - description: 支付记录ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 支付记录不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取支付记录详情
+      tags:
+      - 支付管理
   /swagger:
     get:
       consumes:

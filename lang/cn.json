@@ -82,7 +82,7 @@
     "validation_email": "邮箱",
     "validation_phone": "手机号",
     "validation_name": "姓名",
-    "validation_name_required": "姓名不能为空",
+    "validation_name_required": "名称不能为空",
     "validation_title": "标题",
     "validation_title_max": "标题长度不能超过50位",
     "validation_slug": "标识",
@@ -273,6 +273,7 @@
     "invalid_file_type": "文件类型无效，请上传CSV文件",
     "import_success": "导入成功",
     "base_table_not_registered": "未注册的基础表名: {base_table_name}",
-    "create_sharding_table_failed": "创建分表 {table_name} 失败"
+    "create_sharding_table_failed": "创建分表 {table_name} 失败",
+    "payment_method_code_exists": "支付方式代码已存在"
   }
 }

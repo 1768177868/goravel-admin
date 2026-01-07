@@ -267,6 +267,7 @@
     "invalid_file_type": "Invalid file type, please upload CSV file",
     "import_success": "Import successful",
     "base_table_not_registered": "Base table name not registered: {base_table_name}",
-    "create_sharding_table_failed": "Failed to create sharding table {table_name}"
+    "create_sharding_table_failed": "Failed to create sharding table {table_name}",
+    "payment_method_code_exists": "Payment method code already exists"
   }
 }

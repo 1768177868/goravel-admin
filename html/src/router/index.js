@@ -130,6 +130,8 @@ const componentImportMap = {
   'user/index': () => lazyLoad(() => import('../views/user/UserList.vue')),
   'user-balance-log/index': () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
   'user-balance-logs/index': () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
+  'payment-method/index': () => lazyLoad(() => import('../views/payment/PaymentMethodList.vue')),
+  'payment/index': () => lazyLoad(() => import('../views/payment/PaymentList.vue')),
   'onlineAdmin/index': () => lazyLoad(() => import('../views/onlineAdmin/OnlineAdminList.vue')),
   'log/operation/index': () => lazyLoad(() => import('../views/log/OperationLogList.vue')),
   'log/login/index': () => lazyLoad(() => import('../views/log/LoginLogList.vue')),

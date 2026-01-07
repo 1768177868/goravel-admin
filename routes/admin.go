@@ -34,6 +34,8 @@ func Admin() {
 	orderController := admin.NewOrderController()
 	userController := admin.NewUserController()
 	userBalanceLogController := admin.NewUserBalanceLogController()
+	paymentMethodController := admin.NewPaymentMethodController()
+	paymentController := admin.NewPaymentController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -194,6 +196,13 @@ func Admin() {
 			router.Get("user-balance-logs", userBalanceLogController.Index)
 			router.Post("user-balance-logs", userBalanceLogController.Store)
 			router.Get("user-balance-logs/statistics", userBalanceLogController.Statistics)
+
+			// 支付方式管理
+			router.Resource("payment-methods", paymentMethodController)
+
+			// 支付记录管理
+			router.Get("payments", paymentController.Index)
+			router.Get("payments/{id}", paymentController.Show)
 
 		})
 

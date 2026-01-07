@@ -120,6 +120,17 @@ var (
 	ErrQueryOrderDetailFailed  = NewBusinessError("query_order_detail_failed", "查询订单详情失败")
 	ErrDeleteOrderDetailFailed = NewBusinessError("delete_order_detail_failed", "删除订单详情失败")
 
+	// 支付相关错误
+	ErrPaymentMethodNotFound   = NewBusinessError("payment_method_not_found", "支付方式不存在")
+	ErrPaymentNotFound          = NewBusinessError("payment_not_found", "支付记录不存在")
+	ErrPaymentMethodDisabled   = NewBusinessError("payment_method_disabled", "支付方式已禁用")
+	ErrPaymentMethodCodeExists = NewBusinessError("payment_method_code_exists", "支付方式代码已存在")
+	ErrInvalidPaymentType      = NewBusinessError("invalid_payment_type", "无效的支付类型")
+	ErrPaymentConfigRequired    = NewBusinessError("payment_config_required", "支付配置不能为空")
+	ErrCreatePaymentFailed     = NewBusinessError("create_payment_failed", "创建支付记录失败")
+	ErrPaymentAmountInvalid    = NewBusinessError("payment_amount_invalid", "支付金额无效")
+	ErrPaymentStatusInvalid    = NewBusinessError("payment_status_invalid", "支付状态无效")
+
 	// 导出相关错误
 	ErrExportRecordNotFound    = NewBusinessError("export_record_not_found", "导出记录不存在")
 	ErrWriteCSVHeaderFailed    = NewBusinessError("write_csv_header_failed", "写入CSV表头失败")

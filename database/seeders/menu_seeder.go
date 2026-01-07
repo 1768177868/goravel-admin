@@ -194,6 +194,48 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	// 创建支付管理菜单
+	paymentMenu := createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
+		Title:     "支付管理",
+		Slug:      "payment",
+		Icon:      "CreditCard",
+		Path:      "/payments",
+		Component: "Layout",
+		Type:      1,
+		Status:    1,
+		Sort:      14,
+		IsHidden:  0,
+	})
+
+	// 支付方式管理
+	createOrUpdateMenu(models.Menu{
+		ParentID:  paymentMenu.ID,
+		Title:     "支付方式管理",
+		Slug:      "payment-method",
+		Icon:      "CreditCard",
+		Path:      "/payment-methods",
+		Component: "payment-method/index",
+		Type:      2,
+		Status:    1,
+		Sort:      1,
+		IsHidden:  0,
+	})
+
+	// 支付记录管理
+	createOrUpdateMenu(models.Menu{
+		ParentID:  paymentMenu.ID,
+		Title:     "支付记录管理",
+		Slug:      "payment-record",
+		Icon:      "Document",
+		Path:      "/payments",
+		Component: "payment/index",
+		Type:      2,
+		Status:    1,
+		Sort:      2,
+		IsHidden:  0,
+	})
+
 	userMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
 		Title:     "用户管理",

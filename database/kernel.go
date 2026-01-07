@@ -54,8 +54,12 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250130000001CreateUsersTable{},
 		&migrations.M20250130000004AddCurrencyIdToUsersTable{}, // 添加货币字段（如果用户表已存在）
 		&migrations.M20250130000002CreateUserBalanceLogsTable{},
+		// 支付相关表
+		&migrations.M20250131000001CreatePaymentMethodsTable{},
+		&migrations.M20250131000002CreatePaymentsTable{},
 	}
 }
+
 func (kernel Kernel) Seeders() []seeder.Seeder {
 	return []seeder.Seeder{
 		&seeders.DatabaseSeeder{},
