@@ -145,8 +145,11 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 // CreatePaymentMethod 创建支付方式
 func (s *PaymentServiceImpl) CreatePaymentMethod(name, code, paymentType string, config map[string]any, isActive bool, sort int, description string) (*models.PaymentMethod, error) {
 	// 检查代码是否已存在
-	var existing models.PaymentMethod
-	if err := facades.Orm().Query().Where("code", code).First(&existing); err == nil {
+	exists, err := facades.Orm().Query().Model(&models.PaymentMethod{}).Where("code", code).Exists()
+	if err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+	if exists {
 		return nil, apperrors.ErrPaymentMethodCodeExists
 	}
 
