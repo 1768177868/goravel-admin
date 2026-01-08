@@ -16,6 +16,7 @@ import (
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
@@ -120,7 +121,6 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 		}
 	}
 
-	// 获取总数
 	total, err := query.Count()
 	if err != nil {
 		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
@@ -283,8 +283,11 @@ func (s *PaymentServiceImpl) GetPayments(filters PaymentFilters, page, pageSize 
 		query = query.Where("created_at <= ?", filters.EndTime)
 	}
 
-	// 获取总数
-	total, err := query.Count()
+	// 使用优化的 count 查询（阈值：100000，支付记录可能很多）
+	// total, err := query.Count()
+	countOptimizer := utils.NewCountOptimizer(100000, "payment")
+	whereClause, whereArgs := s.buildPaymentWhereClause(filters)
+	total, _, err := countOptimizer.OptimizedCountWithTable("payments", whereClause, whereArgs...)
 	if err != nil {
 		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
 	}
@@ -629,6 +632,83 @@ func (s *PaymentServiceImpl) handleAlipayNotify(paymentMethod *models.PaymentMet
 	// 实现支付宝支付回调处理逻辑
 	// 这里需要根据 gopay 的支付宝文档实现
 	return nil, fmt.Errorf("支付宝支付回调处理功能待实现")
+}
+
+// buildPaymentMethodWhereClause 构建支付方式查询的 WHERE 条件
+func (s *PaymentServiceImpl) buildPaymentMethodWhereClause(filters PaymentMethodFilters) (string, []any) {
+	var conditions []string
+	var args []any
+
+	if filters.Name != "" {
+		conditions = append(conditions, "name LIKE ?")
+		args = append(args, "%"+filters.Name+"%")
+	}
+	if filters.Code != "" {
+		conditions = append(conditions, "code = ?")
+		args = append(args, filters.Code)
+	}
+	if filters.Type != "" {
+		conditions = append(conditions, "type = ?")
+		args = append(args, filters.Type)
+	}
+	if filters.IsActive != "" {
+		if filters.IsActive == "1" {
+			conditions = append(conditions, "is_active = ?")
+			args = append(args, true)
+		} else if filters.IsActive == "0" {
+			conditions = append(conditions, "is_active = ?")
+			args = append(args, false)
+		}
+	}
+	if filters.Description != "" {
+		conditions = append(conditions, "description LIKE ?")
+		args = append(args, "%"+filters.Description+"%")
+	}
+
+	if len(conditions) == 0 {
+		return "", nil
+	}
+	return strings.Join(conditions, " AND "), args
+}
+
+// buildPaymentWhereClause 构建支付记录查询的 WHERE 条件
+func (s *PaymentServiceImpl) buildPaymentWhereClause(filters PaymentFilters) (string, []any) {
+	var conditions []string
+	var args []any
+
+	if filters.PaymentNo != "" {
+		conditions = append(conditions, "payment_no LIKE ?")
+		args = append(args, filters.PaymentNo+"%")
+	}
+	if filters.OrderNo != "" {
+		conditions = append(conditions, "order_no LIKE ?")
+		args = append(args, filters.OrderNo+"%")
+	}
+	if filters.PaymentMethodID > 0 {
+		conditions = append(conditions, "payment_method_id = ?")
+		args = append(args, filters.PaymentMethodID)
+	}
+	if filters.UserID > 0 {
+		conditions = append(conditions, "user_id = ?")
+		args = append(args, filters.UserID)
+	}
+	if filters.Status != "" {
+		conditions = append(conditions, "status = ?")
+		args = append(args, filters.Status)
+	}
+	if !filters.StartTime.IsZero() {
+		conditions = append(conditions, "created_at >= ?")
+		args = append(args, filters.StartTime)
+	}
+	if !filters.EndTime.IsZero() {
+		conditions = append(conditions, "created_at <= ?")
+		args = append(args, filters.EndTime)
+	}
+
+	if len(conditions) == 0 {
+		return "", nil
+	}
+	return strings.Join(conditions, " AND "), args
 }
 
 // applyOrderBy 应用排序

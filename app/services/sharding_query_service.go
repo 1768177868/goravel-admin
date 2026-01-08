@@ -10,6 +10,7 @@ import (
 	"github.com/samber/lo"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
@@ -31,6 +32,9 @@ type ShardingQueryConfig struct {
 	DefaultOrderBy string
 	// ModuleName 模块名称，用于日志记录，如 "order"
 	ModuleName string
+	// CountThreshold count 查询优化阈值，超过此值使用执行计划估算（默认 10000）
+	// 不同模块可以设置不同的阈值
+	CountThreshold int64
 }
 
 // ShardingQueryService 分表查询服务接口
@@ -128,23 +132,53 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	// 优化：分别对每个分表执行 COUNT，然后相加（性能更好，可以利用索引）
 	// 而不是对 UNION ALL 结果进行 COUNT（需要先合并所有数据）
 	var total int64
-	for _, tableName := range existingTableNames {
-		// 每个分表使用相同的 WHERE 条件
-		countSQL := fmt.Sprintf("SELECT COUNT(*) as total FROM `%s` WHERE %s", tableName, whereClause)
-		var countResult struct {
-			Total int64
+	threshold := s.config.CountThreshold
+
+	// 如果配置了阈值，使用执行计划优化；否则直接使用 count
+	if threshold > 0 {
+		// 使用优化的 count 查询（先估算，超过阈值用估算值，否则用实际 count）
+		countOptimizer := utils.NewCountOptimizer(threshold, s.config.ModuleName)
+		for _, tableName := range existingTableNames {
+			// 使用对应的参数（每个分表使用相同的参数）
+			args := whereConditions
+			tableTotal, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, args...)
+			if err != nil {
+				errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
+					"table_name": tableName,
+					"error":      err.Error(),
+				}, "查询分表 %s 总数失败: %v", tableName, err)
+				// 如果某个分表查询失败，继续查询其他分表，但记录错误
+				continue
+			}
+			total += tableTotal
 		}
-		// 使用对应的参数（每个分表使用相同的参数）
-		args := whereConditions
-		if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&countResult); err != nil {
-			errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
-				"table_name": tableName,
-				"error":      err.Error(),
-			}, "查询分表 %s 总数失败: %v", tableName, err)
-			// 如果某个分表查询失败，继续查询其他分表，但记录错误
-			continue
+	} else {
+		// 没有配置阈值，直接使用传统的 count 统计
+		// 根据数据库类型决定表名引号（MySQL 用反引号，PostgreSQL 不用）
+		dbConnection := facades.Config().GetString("database.default", "sqlite")
+		tableQuote := ""
+		if dbConnection == "mysql" {
+			tableQuote = "`"
 		}
-		total += countResult.Total
+
+		for _, tableName := range existingTableNames {
+			// 每个分表使用相同的 WHERE 条件
+			countSQL := fmt.Sprintf("SELECT COUNT(*) as total FROM %s%s%s WHERE %s", tableQuote, tableName, tableQuote, whereClause)
+			var countResult struct {
+				Total int64
+			}
+			// 使用对应的参数（每个分表使用相同的参数）
+			args := whereConditions
+			if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&countResult); err != nil {
+				errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
+					"table_name": tableName,
+					"error":      err.Error(),
+				}, "查询分表 %s 总数失败: %v", tableName, err)
+				// 如果某个分表查询失败，继续查询其他分表，但记录错误
+				continue
+			}
+			total += countResult.Total
+		}
 	}
 
 	// 如果没有数据，直接返回

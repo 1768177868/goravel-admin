@@ -97,9 +97,13 @@ type OrderFilters struct {
 	OrderBy   string    // 排序字段（格式：字段:asc/desc，如：created_at:desc）
 }
 
+// 订单分页统计优化阈值（超过此值使用执行计划估算）
+const OrderCountThreshold int64 = 100000
+
 type OrderServiceImpl struct {
 	shardingService      ShardingService
 	shardingQueryService ShardingQueryService
+	countThreshold       int64 // count 查询优化阈值
 }
 
 type OrderProduct struct {
@@ -147,6 +151,7 @@ func NewOrderService() *OrderServiceImpl {
 		},
 		DefaultOrderBy: "created_at:desc",
 		ModuleName:     "order",
+		CountThreshold: OrderCountThreshold, // 订单数据量大，超过此值使用估算值，不设置或者0直接使用count
 	})
 
 	return service
@@ -518,8 +523,10 @@ func (s *OrderServiceImpl) querySingleTable(tableName string, filters OrderFilte
 	}
 	query = s.applyOrderBy(query, orderBy)
 
-	// 获取总数
-	total, err := query.Count()
+	// 使用优化的 count 查询（使用公用的阈值配置）
+	countOptimizer := utils.NewCountOptimizer(OrderCountThreshold, "order")
+	whereClause, whereArgs := s.buildOrderWhereClause(filters)
+	total, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, whereArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
