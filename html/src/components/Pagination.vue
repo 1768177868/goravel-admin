@@ -1,7 +1,7 @@
 <template>
   <div :class="['pagination-wrapper', `align-${align}`, { 'pagination-compact': compact }]" :style="wrapperStyle">
     <!-- 总数信息 -->
-    <div v-if="showTotal" class="pagination-total">
+    <div v-if="showTotal && shouldShowTotal" class="pagination-total">
       <span>{{ totalTextComputed }}</span>
     </div>
     
@@ -11,7 +11,7 @@
       v-model:page-size="pageSize"
       :total="total"
       :page-sizes="pageSizes"
-      :layouts="layouts"
+      :layouts="computedLayouts"
       :border="border"
       :background="background"
       :pager-count="pagerCount"
@@ -22,7 +22,7 @@
     />
     
     <!-- 快速跳转 -->
-    <div v-if="showQuickJumper && totalPages > 0" class="pagination-jumper">
+    <div v-if="showQuickJumper && totalPages > 0 && shouldShowQuickJumper" class="pagination-jumper">
       <span>{{ jumpTextComputed }}</span>
       <el-input-number
         v-model="jumpPage"
@@ -152,6 +152,11 @@ const props = defineProps({
   onPageChange: {
     type: Function,
     default: null
+  },
+  // 隐藏总数和快速跳转的阈值（当 total 超过此值时，隐藏总数和快速跳转）
+  hideTotalThreshold: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -182,6 +187,27 @@ const total = computed(() => props.modelValue.total || 0)
 const totalPages = computed(() => {
   if (total.value === 0 || pageSize.value === 0) return 0
   return Math.ceil(total.value / pageSize.value)
+})
+
+// 是否应该显示总数（当 total 超过阈值时隐藏）
+const shouldShowTotal = computed(() => {
+  if (props.hideTotalThreshold <= 0) return true
+  return total.value <= props.hideTotalThreshold
+})
+
+// 是否应该显示快速跳转（当 total 超过阈值时隐藏）
+const shouldShowQuickJumper = computed(() => {
+  if (props.hideTotalThreshold <= 0) return true
+  return total.value <= props.hideTotalThreshold
+})
+
+// 计算布局（当 total 超过阈值时，移除 Total 和 FullJump）
+const computedLayouts = computed(() => {
+  if (props.hideTotalThreshold <= 0 || total.value <= props.hideTotalThreshold) {
+    return props.layouts
+  }
+  // 移除 Total 和 FullJump（FullJump 包含快速跳转功能）
+  return props.layouts.filter(layout => layout !== 'Total' && layout !== 'FullJump')
 })
 
 // 跳转文本（带默认值）
