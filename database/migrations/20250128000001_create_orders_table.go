@@ -51,6 +51,8 @@ func CreateOrdersShardingTable(tableName string) error {
 		// 3. 时间范围 + 状态 + 用户ID（用于同时按状态和用户筛选）
 		table.Index("created_at", "status", "user_id")
 
+		table.Index("created_at", "amount")
+
 		table.Comment(fmt.Sprintf("订单主表 - %s", tableName))
 	})
 }
