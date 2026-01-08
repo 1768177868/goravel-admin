@@ -11,6 +11,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
+	"goravel/app/services"
 )
 
 type DashboardController struct{}
@@ -36,15 +37,20 @@ func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 	// 获取在线管理员数
 	onlineAdminCount := r.getOnlineAdminCount()
 
+	// 获取最近一年的订单总数
+	orderService := services.NewOrderService()
+	orderCountInYear, _ := orderService.GetOrdersCountInYear()
+
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
 		"data": map[string]any{
-			"admin_count":   countData["admins"],
-			"role_count":    countData["roles"],
-			"menu_count":    countData["menus"],
-			"today_visits":  todayVisits,
-			"online_admins": onlineAdminCount,
+			"admin_count":       countData["admins"],
+			"role_count":        countData["roles"],
+			"menu_count":        countData["menus"],
+			"today_visits":      todayVisits,
+			"online_admins":     onlineAdminCount,
+			"order_count_in_year": orderCountInYear,
 		},
 	})
 }

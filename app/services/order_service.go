@@ -83,6 +83,8 @@ type OrderService interface {
 	// DeleteOrder 删除订单
 	// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
 	DeleteOrder(orderID uint, orderTime time.Time, orderNo ...string) error
+	// GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
+	GetOrdersCountInYear() (int64, error)
 }
 
 // OrderFilters 订单查询筛选条件
@@ -922,4 +924,48 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 	}
 
 	return nil, apperrors.ErrOrderNotFound
+}
+
+// GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
+func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
+	// 计算最近一年的时间范围
+	now := time.Now().UTC()
+	startTime := now.AddDate(-1, 0, 0) // 一年前
+	endTime := now
+
+	// 获取需要查询的所有分表
+	tableNames := utils.GetShardingTableNames("orders", startTime, endTime)
+	if len(tableNames) == 0 {
+		return 0, nil
+	}
+
+	// 构建 WHERE 条件（只包含时间范围）
+	whereClause := "created_at >= ? AND created_at <= ?"
+	whereArgs := []any{startTime, endTime}
+
+	// 使用优化的 count 查询（阈值：100000）
+	countOptimizer := utils.NewCountOptimizer(OrderCountThreshold, "order")
+	var total int64
+
+	// 分别对每个分表执行 COUNT，然后相加
+	for _, tableName := range tableNames {
+		// 检查表是否存在
+		if !facades.Schema().HasTable(tableName) {
+			continue
+		}
+
+		// 使用优化的 count 查询
+		tableTotal, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, whereArgs...)
+		if err != nil {
+			errorlog.Record(context.Background(), "order", "查询分表总数失败", map[string]any{
+				"table_name": tableName,
+				"error":      err.Error(),
+			}, "查询分表 %s 总数失败: %v", tableName, err)
+			// 如果某个分表查询失败，继续查询其他分表，但记录错误
+			continue
+		}
+		total += tableTotal
+	}
+
+	return total, nil
 }

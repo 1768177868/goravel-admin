@@ -211,9 +211,9 @@ const RefreshIcon = markRaw(Refresh)
 // 统计数据
 const stats = ref([
   { 
-    title: '管理员总数', 
+    title: '最近一年订单总数', 
     value: 0, 
-    icon: UserFilledIcon, 
+    icon: markRaw(ShoppingCart), 
     color: '#409EFF',
     trend: 0
   },
@@ -275,7 +275,7 @@ const refreshing = ref(false)
 const updateStats = (countData) => {
   if (!countData) return
   
-  stats.value[0].value = countData.admin_count || 0
+  stats.value[0].value = countData.order_count_in_year || 0
   stats.value[1].value = countData.today_visits || 0
   stats.value[2].value = countData.role_count || 0
   stats.value[3].value = countData.menu_count || 0
