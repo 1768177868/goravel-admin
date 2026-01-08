@@ -51,7 +51,10 @@ func CreateOrdersShardingTable(tableName string) error {
 		// 3. 时间范围 + 状态 + 用户ID（用于同时按状态和用户筛选）
 		table.Index("created_at", "status", "user_id")
 
-		table.Index("created_at", "amount")
+		// 优化按amount排序的索引（排序字段在前，查询条件在后）
+		// 适配 "WHERE created_at范围 + ORDER BY amount LIMIT N" 的高效查询
+		// 索引逻辑：先按amount排序，再按created_at，MySQL可快速遍历amount并筛选created_at
+		table.Index("amount", "created_at") // 替换原有的 created_at + amount 索引
 
 		table.Comment(fmt.Sprintf("订单主表 - %s", tableName))
 	})
