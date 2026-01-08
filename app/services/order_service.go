@@ -26,7 +26,7 @@ func ApplyOrderFiltersToQuery(query orm.Query, filters OrderFilters) orm.Query {
 
 	// 订单号模糊搜索
 	if filters.OrderNo != "" {
-		query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
+		query = query.Where("order_no = ?", filters.OrderNo)
 	}
 
 	// 订单状态筛选
@@ -433,8 +433,10 @@ func (s *OrderServiceImpl) buildOrderWhereClause(filters any) (string, []any) {
 
 	// 订单号模糊搜索
 	if orderFilters.OrderNo != "" {
-		conditions = append(conditions, "order_no LIKE ?")
-		args = append(args, "%"+orderFilters.OrderNo+"%")
+		// conditions = append(conditions, "order_no LIKE ?")
+		// args = append(args, "%"+orderFilters.OrderNo+"%")
+		conditions = append(conditions, "order_no = ?")
+		args = append(args, orderFilters.OrderNo)
 	}
 
 	// 订单状态筛选
