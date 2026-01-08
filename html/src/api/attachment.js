@@ -38,8 +38,7 @@ export function chunkUpload(action, data = {}, onProgress) {
   const config = {
     url: '/attachments/chunk',
     method: isGet ? 'get' : 'post',
-    // 大文件上传需要更长的超时时间（30分钟 = 1800000ms）
-    timeout: 1800000,
+    timeout: 60000,
     ...(isGet ? { params: { action, ...data } } : { data: { action, ...data } })
   }
 
