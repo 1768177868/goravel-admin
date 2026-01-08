@@ -94,11 +94,12 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 	// 构建 COUNT SQL
 	var countSQL string
 	if whereClause != "" {
-		if dbConnection == "mysql" {
+		switch dbConnection {
+		case "mysql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM `%s` WHERE %s", tableName, whereClause)
-		} else if dbConnection == "postgres" {
+		case "postgres":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s WHERE %s", tableName, whereClause)
-		} else {
+		default:
 			// 其他数据库不支持估算，直接使用实际 count
 			var result struct {
 				Cnt int64
@@ -109,11 +110,12 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 			return result.Cnt, false, nil
 		}
 	} else {
-		if dbConnection == "mysql" {
+		switch dbConnection {
+		case "mysql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM `%s`", tableName)
-		} else if dbConnection == "postgres" {
+		case "postgres":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s", tableName)
-		} else {
+		default:
 			// 其他数据库不支持估算，直接使用实际 count
 			var result struct {
 				Cnt int64
@@ -182,7 +184,8 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64, error) {
 	dbConnection := facades.Config().GetString("database.default", "sqlite")
 
-	if dbConnection == "mysql" {
+	switch dbConnection {
+	case "mysql":
 		// MySQL EXPLAIN 返回表格格式
 		var explainResult []map[string]any
 		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
@@ -210,7 +213,7 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 		}
 		return 0, fmt.Errorf("cannot extract rows from explain result")
 
-	} else if dbConnection == "postgres" {
+	case "postgres":
 		// PostgreSQL EXPLAIN (FORMAT JSON) 返回 JSON 格式
 		var explainResult []map[string]any
 		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
