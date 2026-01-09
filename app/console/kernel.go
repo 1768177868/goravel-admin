@@ -19,10 +19,13 @@ func (kernel *Kernel) Schedule() []schedule.Event {
 		// 每天凌晨3点执行（北京时间），清理3天前的分片文件
 		// 北京时间 03:00 = UTC 19:00（前一天）
 		facades.Schedule().Command("app:clear-chunks").DailyAt("19:00").OnOneServer(),
+		// 每天凌晨3点30分执行（UTC 19:30 / 北京时间 03:30）, 分析表（更新统计信息）
+		facades.Schedule().Command("db:analyze-stats").DailyAt("19:30").OnOneServer(),
 		// 每月1号凌晨1点执行（UTC时间），创建下个月的订单分表
 		facades.Schedule().Command("order:create-sharding-tables").Monthly().OnOneServer(),
 	}
 }
+
 func (kernel *Kernel) Commands() []console.Command {
 	return []console.Command{
 		&commands.ClearLogs{},
@@ -33,5 +36,7 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.QueuePeek{},
 		commands.NewCreateOrderShardingTables(),
 		&commands.GenerateTestOrders{},
+		&commands.AnalyzeStats{},
+		&commands.OptimizeTables{},
 	}
 }
