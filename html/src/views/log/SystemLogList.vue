@@ -81,6 +81,9 @@
             {{ getLevelLabel(logDetail.level) }}
           </el-tag>
         </el-descriptions-item>
+        <el-descriptions-item :label="$t('log.module')">
+          {{ getModuleLabel(logDetail.module) }}
+        </el-descriptions-item>
         <el-descriptions-item :label="$t('log.trace_id')" :span="2">
           {{ logDetail.trace_id || '-' }}
         </el-descriptions-item>
@@ -169,6 +172,7 @@ const transformSystemLogData = (log) => {
   return {
     id: log.ID || log.id || 0,
     level: log.Level || log.level || '',
+    module: log.Module || log.module || '',
     trace_id: log.TraceID || log.trace_id || '',
     message: log.Message || log.message || '',
     context: context,
@@ -236,6 +240,13 @@ const tableColumns = computed(() => [
     width: 100,
     sortable: false,
     slot: 'level'
+  },
+  {
+    field: 'module',
+    title: t('log.module'),
+    width: 120,
+    sortable: false,
+    formatter: ({ row }) => getModuleLabel(row.module)
   },
   {
     field: 'trace_id',
@@ -339,6 +350,8 @@ const getModuleOptions = (t) => {
     { label: t('menu.operation_log'), value: 'operation-log' },
     { label: t('log.module_recover'), value: 'recover' },
     { label: t('log.module_payment'), value: 'payment' },
+    { label: t('menu.payment_method'), value: 'payment_method' },
+    { label: t('menu.order'), value: 'order' },
     { label: t('log.module_background_task'), value: 'background-task' }
   ]
 }
@@ -364,6 +377,24 @@ const getLevelLabel = (level) => {
     'debug': t('log.level_debug')
   }
   return levelMap[levelLower] || level
+}
+
+// 获取模块的多语言标签
+const getModuleLabel = (module) => {
+  if (!module) return '-'
+  const moduleMap = {
+    'system-log': t('menu.system_log'),
+    'attachment': t('menu.attachment'),
+    'auth': t('log.module_auth'),
+    'monitor': t('menu.monitor'),
+    'operation-log': t('menu.operation_log'),
+    'recover': t('log.module_recover'),
+    'payment': t('log.module_payment'),
+    'payment_method': t('menu.payment_method'),
+    'order': t('menu.order'),
+    'background-task': t('log.module_background_task')
+  }
+  return moduleMap[module] || module
 }
 
 // 格式化上下文为可读字符串（用于tooltip）
