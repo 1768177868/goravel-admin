@@ -87,28 +87,11 @@ func (r *ExportOrders) Handle(args ...any) (retErr error) {
 
 // writeOrdersToCSV 写入订单数据到 CSV
 func (r *ExportOrders) writeOrdersToCSV(w *csv.Writer, filters map[string]any, lang string, shouldStop func() bool) error {
-	// 构建筛选条件
-	orderFilters := services.OrderFilters{}
+	// 构建筛选条件（自动填充，无需手动逐字段赋值）
+	var orderFilters services.OrderFilters
+	utils.FillFiltersFromMap(filters, &orderFilters)
 
-	if v, ok := utils.GetUint(filters, "user_id"); ok {
-		orderFilters.UserID = v
-	}
-	if v, ok := utils.GetString(filters, "order_no"); ok {
-		orderFilters.OrderNo = v
-	}
-	if v, ok := utils.GetString(filters, "status"); ok {
-		orderFilters.Status = v
-	}
-	if v, ok := utils.GetValue[float64](filters, "min_amount"); ok {
-		orderFilters.MinAmount = v
-	}
-	if v, ok := utils.GetValue[float64](filters, "max_amount"); ok {
-		orderFilters.MaxAmount = v
-	}
-	if v, ok := utils.GetString(filters, "order_by"); ok {
-		orderFilters.OrderBy = v
-	}
-
+	// 时间范围需要特殊处理（分表依赖）
 	orderFilters.StartTime, orderFilters.EndTime = GetDefaultTimeRange(filters)
 
 	// 获取分表列表

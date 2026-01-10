@@ -4,12 +4,12 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
 	"goravel/app/models"
+	"goravel/app/services"
 	"goravel/app/utils"
 )
 
@@ -82,27 +82,12 @@ func (r *ExportUsers) Handle(args ...any) (retErr error) {
 
 // writeUsersToCSV 写入用户数据到 CSV（单表，无分表）
 func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lang string, shouldStop func() bool) error {
-	// 解析筛选条件
-	username, _ := utils.GetString(filters, "username")
-	nickname, _ := utils.GetString(filters, "nickname")
-	email, _ := utils.GetString(filters, "email")
-	phone, _ := utils.GetString(filters, "phone")
-	status, hasStatus := utils.GetUint(filters, "status")
+	// 构建筛选条件（自动填充，无需手动逐字段赋值）
+	var userFilters services.UserFilters
+	utils.FillFiltersFromMap(filters, &userFilters)
+
 	orderBy, _ := utils.GetString(filters, "order_by")
 	_, direction := ParseOrderBy(orderBy)
-
-	// 用户表是单表，时间范围仅在明确传递时使用（不设默认值）
-	var startTime, endTime time.Time
-	if startTimeStr, ok := utils.GetString(filters, "start_time"); ok && startTimeStr != "" {
-		if t, err := utils.ParseDateTimeUTC(startTimeStr); err == nil {
-			startTime = t
-		}
-	}
-	if endTimeStr, ok := utils.GetString(filters, "end_time"); ok && endTimeStr != "" {
-		if t, err := utils.ParseDateTimeUTC(endTimeStr); err == nil {
-			endTime = t
-		}
-	}
 
 	const chunkSize = 2000
 	var lastID uint = 0
@@ -112,31 +97,8 @@ func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lan
 			return ErrExportRecordMissing
 		}
 
-		// 每次循环重新构建查询（避免 Clone 问题）
-		query := facades.Orm().Query().Model(&models.User{}).With("Currency")
-
-		// 应用筛选条件
-		if username != "" {
-			query = query.Where("username LIKE ?", "%"+username+"%")
-		}
-		if nickname != "" {
-			query = query.Where("nickname LIKE ?", "%"+nickname+"%")
-		}
-		if email != "" {
-			query = query.Where("email LIKE ?", "%"+email+"%")
-		}
-		if phone != "" {
-			query = query.Where("phone LIKE ?", "%"+phone+"%")
-		}
-		if hasStatus {
-			query = query.Where("status", status)
-		}
-		if !startTime.IsZero() {
-			query = query.Where("created_at >= ?", utils.FormatDateTime(startTime))
-		}
-		if !endTime.IsZero() {
-			query = query.Where("created_at <= ?", utils.FormatDateTime(endTime))
-		}
+		// 使用通用查询构建（复用 UserService 的逻辑）
+		query := services.BuildUserQuery(userFilters).With("Currency")
 
 		// Keyset 分页
 		if lastID > 0 {

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
@@ -36,7 +37,31 @@ type UserFilters struct {
 	Username string
 	Email    string
 	Phone    string
+	Nickname string
 	Status   string
+}
+
+// BuildUserQuery 构建用户查询（通用查询构建，供列表和导出复用）
+func BuildUserQuery(filters UserFilters) orm.Query {
+	query := facades.Orm().Query().Model(&models.User{})
+
+	if filters.Username != "" {
+		query = query.Where("username LIKE ?", "%"+filters.Username+"%")
+	}
+	if filters.Nickname != "" {
+		query = query.Where("nickname LIKE ?", "%"+filters.Nickname+"%")
+	}
+	if filters.Email != "" {
+		query = query.Where("email LIKE ?", "%"+filters.Email+"%")
+	}
+	if filters.Phone != "" {
+		query = query.Where("phone LIKE ?", "%"+filters.Phone+"%")
+	}
+	if filters.Status != "" {
+		query = query.Where("status", filters.Status)
+	}
+
+	return query
 }
 
 type UserServiceImpl struct {
@@ -71,20 +96,7 @@ func (s *UserServiceImpl) GetByID(id uint) (*models.User, error) {
 
 // GetList 获取用户列表
 func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]models.User, int64, error) {
-	query := facades.Orm().Query().Model(&models.User{})
-
-	if filters.Username != "" {
-		query = query.Where("username LIKE ?", "%"+filters.Username+"%")
-	}
-	if filters.Email != "" {
-		query = query.Where("email LIKE ?", "%"+filters.Email+"%")
-	}
-	if filters.Phone != "" {
-		query = query.Where("phone LIKE ?", "%"+filters.Phone+"%")
-	}
-	if filters.Status != "" {
-		query = query.Where("status", filters.Status)
-	}
+	query := BuildUserQuery(filters)
 
 	// 获取总数
 	total, err := query.Count()

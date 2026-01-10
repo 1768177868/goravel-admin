@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"reflect"
 )
 
 // GetValue 从 map[string]any 中安全地获取指定类型的值
@@ -158,4 +159,68 @@ func MustGetValue[T any](m map[string]any, key string) T {
 		panic(fmt.Sprintf("key %s not found or type mismatch in map", key))
 	}
 	return val
+}
+
+// FillFiltersFromMap 从 map[string]any 填充 Filters 结构体
+// 支持 string, uint, float64 类型，使用字段名的 snake_case 作为 map 的 key
+// 示例：
+//
+//	filters := services.OrderFilters{}
+//	utils.FillFiltersFromMap(m, &filters)
+func FillFiltersFromMap(m map[string]any, filtersPtr any) {
+	v := reflect.ValueOf(filtersPtr)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return
+	}
+	v = v.Elem()
+	if v.Kind() != reflect.Struct {
+		return
+	}
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		if !field.CanSet() {
+			continue
+		}
+
+		structField := t.Field(i)
+
+		// 获取 json tag 或使用 snake_case 字段名
+		key := structField.Tag.Get("json")
+		if key == "" || key == "-" {
+			key = toSnakeCase(structField.Name)
+		}
+
+		switch field.Kind() {
+		case reflect.String:
+			if val, ok := GetString(m, key); ok {
+				field.SetString(val)
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if val, ok := GetUint(m, key); ok {
+				field.SetUint(uint64(val))
+			}
+		case reflect.Float64, reflect.Float32:
+			if val, ok := GetFloat64(m, key); ok {
+				field.SetFloat(val)
+			}
+		}
+	}
+}
+
+// toSnakeCase 将 PascalCase/camelCase 转换为 snake_case
+func toSnakeCase(s string) string {
+	var result []byte
+	for i, c := range s {
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 {
+				result = append(result, '_')
+			}
+			result = append(result, byte(c+'a'-'A'))
+		} else {
+			result = append(result, byte(c))
+		}
+	}
+	return string(result)
 }

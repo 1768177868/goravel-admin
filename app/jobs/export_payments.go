@@ -90,29 +90,11 @@ func (r *ExportPayments) Handle(args ...any) (retErr error) {
 
 // writePaymentsToCSV 写入支付数据到 CSV（业务特定逻辑）
 func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters map[string]any, lang string, shouldStop func() bool) error {
-	// 构建筛选条件
-	paymentFilters := services.PaymentFilters{}
+	// 构建筛选条件（自动填充，无需手动逐字段赋值）
+	var paymentFilters services.PaymentFilters
+	utils.FillFiltersFromMap(filters, &paymentFilters)
 
-	if v, ok := utils.GetString(filters, "payment_no"); ok {
-		paymentFilters.PaymentNo = v
-	}
-	if v, ok := utils.GetString(filters, "order_no"); ok {
-		paymentFilters.OrderNo = v
-	}
-	if v, ok := utils.GetUint(filters, "payment_method_id"); ok {
-		paymentFilters.PaymentMethodID = v
-	}
-	if v, ok := utils.GetUint(filters, "user_id"); ok {
-		paymentFilters.UserID = v
-	}
-	if v, ok := utils.GetString(filters, "status"); ok {
-		paymentFilters.Status = v
-	}
-	if v, ok := utils.GetString(filters, "order_by"); ok {
-		paymentFilters.OrderBy = v
-	}
-
-	// 获取时间范围
+	// 时间范围需要特殊处理（分表依赖）
 	paymentFilters.StartTime, paymentFilters.EndTime = GetDefaultTimeRange(filters)
 
 	// 获取分表列表
