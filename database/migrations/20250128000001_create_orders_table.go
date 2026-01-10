@@ -40,21 +40,19 @@ func CreateOrdersShardingTable(tableName string) error {
 		table.Timestamps()
 		table.SoftDeletes()
 		table.Unique("order_no") // 唯一索引，防止并发下订单号重复
-		// table.Index("user_id")
-		// table.Index("created_at")
 
-		// 添加复合索引，优化常用查询场景
-		// 1. 时间范围 + 状态查询（最常用，用于按状态筛选订单）
-		table.Index("created_at", "status")
-		// 2. 时间范围 + 用户ID查询（用于查询特定用户的订单）
-		table.Index("created_at", "user_id")
-		// 3. 时间范围 + 状态 + 用户ID（用于同时按状态和用户筛选）
-		table.Index("created_at", "status", "user_id")
-
-		// 优化按amount排序的索引（排序字段在前，查询条件在后）
-		// 适配 "WHERE created_at范围 + ORDER BY amount LIMIT N" 的高效查询
-		// 索引逻辑：先按amount排序，再按created_at，MySQL可快速遍历amount并筛选created_at
-		table.Index("amount", "created_at") // 替换原有的 created_at + amount 索引
+		// 复合索引优化原则：等值查询字段在前，范围查询字段在后
+		// created_at 是范围查询(>=, <=)，必须放在复合索引最后
+		// 1. 状态筛选 + 时间范围（按状态筛选订单）
+		table.Index("status", "created_at")
+		// 2. 用户ID + 时间范围（查询特定用户的订单）
+		table.Index("user_id", "created_at")
+		// 3. 用户ID + 状态 + 时间范围（同时按用户和状态筛选）
+		table.Index("user_id", "status", "created_at")
+		// 4. 仅时间范围查询（无其他筛选条件时使用）
+		table.Index("created_at")
+		// 5. 按金额排序优化（ORDER BY amount + WHERE created_at 范围）
+		table.Index("amount", "created_at")
 
 		table.Comment(fmt.Sprintf("订单主表 - %s", tableName))
 	})

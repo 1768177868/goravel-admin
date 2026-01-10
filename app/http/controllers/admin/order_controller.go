@@ -121,8 +121,8 @@ func (r *OrderController) parseTimeRange(ctx http.Context, startTimeStr, endTime
 	}
 
 	if endTimeStr == "" {
-		// 默认结束时间为当前时间（UTC）
-		endTime = time.Now().UTC()
+		// 不传结束时间则不限制，返回零值（WHERE 条件中会跳过）
+		endTime = time.Time{}
 	} else {
 		// 使用 ConvertTimeToUTC 处理时区转换（将本地时区转换为 UTC）
 		utcTimeStr := helpers.ConvertTimeToUTC(ctx, endTimeStr)
