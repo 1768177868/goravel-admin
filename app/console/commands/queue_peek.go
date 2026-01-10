@@ -365,5 +365,5 @@ func (r *QueuePeek) formatScoreAsTime(score float64) string {
 		return ""
 	}
 	t := time.Unix(sec, 0).Local()
-	return fmt.Sprintf(" (%s)", t.Format("2006-01-02 15:04:05"))
+	return fmt.Sprintf(" (%s)", t.Format(utils.DateTimeFormat))
 }

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/samber/lo"
 
 	"goravel/app/constants"
 	apperrors "goravel/app/errors"
@@ -81,7 +81,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	if startTimeStr != "" {
 		startTimeUTC := helpers.GetTimeQueryParam(ctx, "start_time")
 		if startTimeUTC != "" {
-			startTime, err1 := time.Parse("2006-01-02 15:04:05", startTimeUTC)
+			startTime, err1 := utils.ParseDateTime(startTimeUTC)
 			if err1 == nil {
 				// 如果结束时间为空，使用当前时间
 				var endTime time.Time
@@ -89,7 +89,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 					endTimeUTC := helpers.GetTimeQueryParam(ctx, "end_time")
 					if endTimeUTC != "" {
 						var err2 error
-						endTime, err2 = time.Parse("2006-01-02 15:04:05", endTimeUTC)
+						endTime, err2 = utils.ParseDateTime(endTimeUTC)
 						if err2 != nil {
 							endTime = time.Now().UTC()
 						}

@@ -360,12 +360,9 @@ func (s *OrderServiceImpl) GetOrderByID(orderID uint, orderTime time.Time) (*mod
 		return nil, nil, err
 	}
 
-	// 使用订单的 created_at 确定分表（将 carbon.DateTime 转换为 time.Time）
-	// 通过格式化字符串再解析的方式转换
+	// 使用订单的 created_at 确定分表
 	timeStr := order.CreatedAt.ToDateTimeString()
-	createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-	utcLoc, _ := time.LoadLocation("UTC")
-	createdAt = createdAt.In(utcLoc)
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 
 	// 查询订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
@@ -385,11 +382,9 @@ func (s *OrderServiceImpl) GetOrderByOrderNo(orderNo string) (*models.Order, []m
 		return nil, nil, err
 	}
 
-	// 使用订单的 created_at 确定详情分表（将 carbon.DateTime 转换为 time.Time）
+	// 使用订单的 created_at 确定详情分表
 	timeStr := order.CreatedAt.ToDateTimeString()
-	createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-	utcLoc, _ := time.LoadLocation("UTC")
-	createdAt = createdAt.In(utcLoc)
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 
 	// 查询订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
@@ -680,11 +675,8 @@ func (s *OrderServiceImpl) GetOrdersWithDetails(filters OrderFilters, page, page
 		}
 
 		// 根据订单的 created_at 确定详情分表
-		// 通过格式化字符串再解析的方式转换
 		timeStr := order.CreatedAt.ToDateTimeString()
-		createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-		utcLoc, _ := time.LoadLocation("UTC")
-		createdAt = createdAt.In(utcLoc)
+		createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 
 		// 获取详情分表名
 		detailTableName := utils.GetShardingTableName("order_details", createdAt)
@@ -821,11 +813,8 @@ func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters
 		}
 
 		// 根据订单的 created_at 确定详情分表
-		// 通过格式化字符串再解析的方式转换
 		timeStr := order.CreatedAt.ToDateTimeString()
-		createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-		utcLoc, _ := time.LoadLocation("UTC")
-		createdAt = createdAt.In(utcLoc)
+		createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 
 		// 获取详情分表名
 		detailTableName := utils.GetShardingTableName("order_details", createdAt)
@@ -887,12 +876,9 @@ func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status
 		return err
 	}
 
-	// 使用订单的 created_at 确定分表（将 carbon.DateTime 转换为 time.Time）
-	// 通过格式化字符串再解析的方式转换
+	// 使用订单的 created_at 确定分表
 	timeStr := order.CreatedAt.ToDateTimeString()
-	createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-	utcLoc, _ := time.LoadLocation("UTC")
-	createdAt = createdAt.In(utcLoc)
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 	tableName := utils.GetShardingTableName("orders", createdAt)
 
 	// 构建更新数据（始终更新备注，即使为空字符串）
@@ -926,9 +912,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 	// 使用订单的 created_at 确定分表（将 carbon.DateTime 转换为 time.Time）
 	// 通过格式化字符串再解析的方式转换
 	timeStr := order.CreatedAt.ToDateTimeString()
-	createdAt, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-	utcLoc, _ := time.LoadLocation("UTC")
-	createdAt = createdAt.In(utcLoc)
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 
 	// 软删除订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)

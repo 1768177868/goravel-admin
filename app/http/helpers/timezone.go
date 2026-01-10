@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"goravel/app/utils"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -147,10 +148,10 @@ func ConvertTimeToUTC(ctx http.Context, timeStr string) string {
 	// 解析时间字符串（假设是本地时区格式）
 	// 尝试多种格式
 	formats := []string{
-		"2006-01-02 15:04:05",
-		"2006-01-02T15:04:05",
-		"2006-01-02 15:04:05.000",
-		"2006-01-02T15:04:05.000Z07:00",
+		utils.DateTimeFormat,
+		utils.DateTimeFormatT,
+		utils.DateTimeFormatMs,
+		utils.DateTimeFormatTZ,
 		time.RFC3339,
 	}
 
@@ -174,7 +175,7 @@ func ConvertTimeToUTC(ctx http.Context, timeStr string) string {
 	}
 
 	// 转换为 UTC 并格式化
-	return t.In(utcLoc).Format("2006-01-02 15:04:05")
+	return t.In(utcLoc).Format(utils.DateTimeFormat)
 }
 
 // GetTimeQueryParam 获取并转换时间查询参数（统一处理时间查询）

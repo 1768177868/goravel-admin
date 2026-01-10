@@ -107,7 +107,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	var err error
 
 	if startDateStr != "" {
-		startDate, err = time.Parse("2006-01-02", startDateStr)
+		startDate, err = utils.ParseDate(startDateStr)
 		if err != nil {
 			return fmt.Errorf("开始日期格式错误，请使用 YYYY-MM-DD 格式: %v", err)
 		}
@@ -118,7 +118,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	}
 
 	if endDateStr != "" {
-		endDate, err = time.Parse("2006-01-02", endDateStr)
+		endDate, err = utils.ParseDate(endDateStr)
 		if err != nil {
 			return fmt.Errorf("结束日期格式错误，请使用 YYYY-MM-DD 格式: %v", err)
 		}
@@ -143,8 +143,8 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	ctx.Info(fmt.Sprintf("订单数量: %s", formatNumber(count)))
 	ctx.Info(fmt.Sprintf("批量大小: %s", formatNumber(batchSize)))
 	ctx.Info(fmt.Sprintf("并发协程: %d", workers))
-	ctx.Info(fmt.Sprintf("开始日期: %s", startDate.Format("2006-01-02")))
-	ctx.Info(fmt.Sprintf("结束日期: %s", endDate.Format("2006-01-02")))
+	ctx.Info(fmt.Sprintf("开始日期: %s", utils.FormatDate(startDate)))
+	ctx.Info(fmt.Sprintf("结束日期: %s", utils.FormatDate(endDate)))
 	ctx.Info(fmt.Sprintf("用户ID范围: %d - %d", minUserID, maxUserID))
 	ctx.Line("")
 
@@ -209,7 +209,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 			status := statuses[rand.Intn(len(statuses))]
 
 			// 将time.Time转换为时间字符串
-			timeStr := orderTime.Format("2006-01-02 15:04:05")
+			timeStr := utils.FormatDateTime(orderTime)
 
 			// 创建订单对象用于后续处理
 			order := models.Order{
@@ -233,9 +233,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 		for _, order := range orders {
 			// 从carbon.DateTime获取time.Time用于分表
 			timeStr := order.CreatedAt.ToDateTimeString()
-			orderTime, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-			utcLoc, _ := time.LoadLocation("UTC")
-			orderTime = orderTime.In(utcLoc)
+			orderTime, _ := utils.ParseDateTimeUTC(timeStr)
 			tableName := utils.GetShardingTableName("orders", orderTime)
 			ordersByTable[tableName] = append(ordersByTable[tableName], order)
 
@@ -341,9 +339,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 				order := &tableOrders[i]
 				// 从carbon.DateTime获取time.Time用于分表
 				timeStr := order.CreatedAt.ToDateTimeString()
-				orderTime, _ := time.Parse("2006-01-02 15:04:05", timeStr)
-				utcLoc, _ := time.LoadLocation("UTC")
-				orderTime = orderTime.In(utcLoc)
+				orderTime, _ := utils.ParseDateTimeUTC(timeStr)
 				detailTableName := utils.GetShardingTableName("order_details", orderTime)
 
 				// 确保订单详情分表存在
@@ -419,7 +415,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 							createdAtStr = batchDetails[j].CreatedAt.ToDateTimeString()
 						} else {
 							// 如果CreatedAt为nil，使用当前时间
-							createdAtStr = time.Now().UTC().Format("2006-01-02 15:04:05")
+							createdAtStr = utils.FormatDateTime(time.Now().UTC())
 						}
 
 						detailData := map[string]any{

@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type UserBalanceLogController struct {
@@ -38,10 +39,10 @@ func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 
 	var startTime, endTime time.Time
 	if startTimeStr != "" {
-		startTime, _ = time.Parse("2006-01-02 15:04:05", startTimeStr)
+		startTime, _ = utils.ParseDateTime(startTimeStr)
 	}
 	if endTimeStr != "" {
-		endTime, _ = time.Parse("2006-01-02 15:04:05", endTimeStr)
+		endTime, _ = utils.ParseDateTime(endTimeStr)
 	}
 
 	var operatorID *uint
@@ -88,10 +89,10 @@ func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 
 	var startTime, endTime time.Time
 	if startTimeStr != "" {
-		startTime, _ = time.Parse("2006-01-02 15:04:05", startTimeStr)
+		startTime, _ = utils.ParseDateTime(startTimeStr)
 	}
 	if endTimeStr != "" {
-		endTime, _ = time.Parse("2006-01-02 15:04:05", endTimeStr)
+		endTime, _ = utils.ParseDateTime(endTimeStr)
 	}
 
 	stats, err := r.balanceLogService.GetUserStatistics(userID, startTime, endTime)

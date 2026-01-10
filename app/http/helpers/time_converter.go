@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/json"
+	"goravel/app/utils"
 	"reflect"
 	"strings"
 	"time"
@@ -117,7 +118,7 @@ func convertTimeString(timeStr string, timezone string) any {
 	}
 
 	// 解析时间字符串为 UTC（数据库存储格式）
-	t, err := time.ParseInLocation("2006-01-02 15:04:05", timeStr, utcLoc)
+	t, err := time.ParseInLocation(utils.DateTimeFormat, timeStr, utcLoc)
 	if err != nil {
 		// 如果标准格式失败，尝试其他格式
 		t, err = time.Parse(time.RFC3339, timeStr)
@@ -129,7 +130,7 @@ func convertTimeString(timeStr string, timezone string) any {
 	}
 
 	// 转换到目标时区并格式化
-	return t.In(targetLoc).Format("2006-01-02 15:04:05")
+	return t.In(targetLoc).Format(utils.DateTimeFormat)
 }
 
 // convertTimesInValue 使用反射方法处理值（作为备用方案）
@@ -167,7 +168,7 @@ func convertTimesInValue(v reflect.Value, timezone string) any {
 	// 处理 time.Time
 	if v.Type() == reflect.TypeOf(time.Time{}) {
 		t := v.Interface().(time.Time)
-		dt := carbon.NewDateTime(carbon.Parse(t.Format("2006-01-02 15:04:05")))
+		dt := carbon.NewDateTime(carbon.Parse(t.Format(utils.DateTimeFormat)))
 		return dt.SetTimezone(timezone).ToDateTimeString()
 	}
 
@@ -180,7 +181,7 @@ func convertTimesInValue(v reflect.Value, timezone string) any {
 		if t == nil {
 			return nil
 		}
-		dt := carbon.NewDateTime(carbon.Parse(t.Format("2006-01-02 15:04:05")))
+		dt := carbon.NewDateTime(carbon.Parse(t.Format(utils.DateTimeFormat)))
 		return dt.SetTimezone(timezone).ToDateTimeString()
 	}
 

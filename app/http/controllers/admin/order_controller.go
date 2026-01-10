@@ -116,7 +116,7 @@ func (r *OrderController) parseTimeRange(ctx http.Context, startTimeStr, endTime
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_start_time")
 		}
 		// 解析 UTC 时间字符串
-		startTime, err = time.Parse("2006-01-02 15:04:05", utcTimeStr)
+		startTime, err = utils.ParseDateTime(utcTimeStr)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_start_time")
 		}
@@ -132,19 +132,13 @@ func (r *OrderController) parseTimeRange(ctx http.Context, startTimeStr, endTime
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_end_time")
 		}
 		// 解析 UTC 时间字符串
-		endTime, err = time.Parse("2006-01-02 15:04:05", utcTimeStr)
+		endTime, err = utils.ParseDateTime(utcTimeStr)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_end_time")
 		}
 	}
 
 	return startTime, endTime, nil
-}
-
-// parseOrderTime 解析订单时间参数（保留以兼容旧接口，但不再使用）
-func (r *OrderController) parseOrderTime(ctx http.Context) (time.Time, http.Response) {
-	// 保留此方法以兼容旧接口，实际不再使用
-	return time.Time{}, nil
 }
 
 // formatOrderStatus 格式化订单状态文本
@@ -169,15 +163,9 @@ func (r *OrderController) formatTime(t any) string {
 
 	switch v := t.(type) {
 	case time.Time:
-		if v.IsZero() {
-			return ""
-		}
-		return v.Format("2006-01-02 15:04:05")
+		return utils.FormatDateTime(v)
 	case *time.Time:
-		if v == nil || v.IsZero() {
-			return ""
-		}
-		return v.Format("2006-01-02 15:04:05")
+		return utils.FormatDateTimePtr(v)
 	case carbon.DateTime:
 		if v.IsZero() {
 			return ""
@@ -429,10 +417,6 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *OrderController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	orderTime, resp := r.parseOrderTime(ctx)
-	if resp != nil {
-		return resp
-	}
 
 	var req struct {
 		Status string `json:"status" binding:"required"`
@@ -445,7 +429,7 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 
 	// 优先使用订单号查询（更高效，可直接定位分表）
 	orderNo := ctx.Request().Query("order_no", "")
-	if err := r.orderService.UpdateOrder(id, orderTime, req.Status, req.Remark, orderNo); err != nil {
+	if err := r.orderService.UpdateOrder(id, time.Time{}, req.Status, req.Remark, orderNo); err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
 			"order_id": id,
 			"order_no": orderNo,
@@ -472,14 +456,10 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *OrderController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	orderTime, resp := r.parseOrderTime(ctx)
-	if resp != nil {
-		return resp
-	}
 
 	// 优先使用订单号查询（更高效，可直接定位分表）
 	orderNo := ctx.Request().Query("order_no", "")
-	if err := r.orderService.DeleteOrder(id, orderTime, orderNo); err != nil {
+	if err := r.orderService.DeleteOrder(id, time.Time{}, orderNo); err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
 			"order_id": id,
 			"order_no": orderNo,
@@ -562,10 +542,10 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		"order_by":   filters.OrderBy,
 	}
 	if !filters.StartTime.IsZero() {
-		filtersMap["start_time"] = filters.StartTime.Format("2006-01-02 15:04:05")
+		filtersMap["start_time"] = utils.FormatDateTime(filters.StartTime)
 	}
 	if !filters.EndTime.IsZero() {
-		filtersMap["end_time"] = filters.EndTime.Format("2006-01-02 15:04:05")
+		filtersMap["end_time"] = utils.FormatDateTime(filters.EndTime)
 	}
 
 	// 获取当前语言（从请求头或查询参数，与 middleware 逻辑一致）

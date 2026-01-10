@@ -211,15 +211,15 @@ func (r *ExportOrders) exportOrders(args ExportOrdersArgs) error {
 		filters.OrderBy = orderBy
 	}
 
-	// 解析时间（使用泛型辅助函数）
+	// 解析时间（使用辅助函数）
 	if startTimeStr, ok := utils.GetString(args.Filters, "start_time"); ok && startTimeStr != "" {
-		if t, err := time.Parse("2006-01-02 15:04:05", startTimeStr); err == nil {
-			filters.StartTime = t.UTC()
+		if t, err := utils.ParseDateTimeUTC(startTimeStr); err == nil {
+			filters.StartTime = t
 		}
 	}
 	if endTimeStr, ok := utils.GetString(args.Filters, "end_time"); ok && endTimeStr != "" {
-		if t, err := time.Parse("2006-01-02 15:04:05", endTimeStr); err == nil {
-			filters.EndTime = t.UTC()
+		if t, err := utils.ParseDateTimeUTC(endTimeStr); err == nil {
+			filters.EndTime = t
 		}
 	}
 

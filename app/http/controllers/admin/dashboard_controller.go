@@ -12,6 +12,7 @@ import (
 
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type DashboardController struct{}
@@ -45,11 +46,11 @@ func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 		"code":    200,
 		"message": "get_success",
 		"data": map[string]any{
-			"admin_count":       countData["admins"],
-			"role_count":        countData["roles"],
-			"menu_count":        countData["menus"],
-			"today_visits":      todayVisits,
-			"online_admins":     onlineAdminCount,
+			"admin_count":         countData["admins"],
+			"role_count":          countData["roles"],
+			"menu_count":          countData["menus"],
+			"today_visits":        todayVisits,
+			"online_admins":       onlineAdminCount,
 			"order_count_in_year": orderCountInYear,
 		},
 	})
@@ -162,9 +163,9 @@ func (r *DashboardController) GetRecentActivities(ctx http.Context) http.Respons
 		// 计算时间差
 		var timeAgo string
 		if log.CreatedAt != nil {
-			// carbon.DateTime 转换为 time.Time（使用 ToDateTimeString 然后解析）
+			// carbon.DateTime 转换为 time.Time
 			timeStr := log.CreatedAt.ToDateTimeString()
-			if t, err := time.Parse("2006-01-02 15:04:05", timeStr); err == nil {
+			if t, err := utils.ParseDateTime(timeStr); err == nil {
 				timeAgo = r.formatTimeAgo(t)
 			} else {
 				timeAgo = "未知"
@@ -367,7 +368,7 @@ func (r *DashboardController) getWeeklyUserActivityData() []map[string]any {
 
 	for i := 6; i >= 0; i-- {
 		date := now.AddDate(0, 0, -i)
-		dateStr := date.Format("2006-01-02")
+		dateStr := utils.FormatDate(date)
 
 		// 计算当天的开始和结束时间
 		startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())

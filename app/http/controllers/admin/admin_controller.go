@@ -706,11 +706,11 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		// 时间格式化
 		createdAt := ""
 		updatedAt := ""
-		if !admin.CreatedAt.IsZero() {
-			createdAt = admin.CreatedAt.Format("2006-01-02 15:04:05")
+		if admin.CreatedAt != nil && !admin.CreatedAt.IsZero() {
+			createdAt = admin.CreatedAt.ToDateTimeString()
 		}
-		if !admin.UpdatedAt.IsZero() {
-			updatedAt = admin.UpdatedAt.Format("2006-01-02 15:04:05")
+		if admin.UpdatedAt != nil && !admin.UpdatedAt.IsZero() {
+			updatedAt = admin.UpdatedAt.ToDateTimeString()
 		}
 
 		row := []string{

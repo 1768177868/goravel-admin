@@ -42,7 +42,7 @@ func ParseULIDTime(ulidStr string) (time.Time, error) {
 
 // ParseULIDTimeString 从 ULID 解析出时间字符串
 // ulidStr: ULID 字符串
-// format: 时间格式，如 "2006-01-02 15:04:05"
+// format: 时间格式，如 DateTimeFormat
 // 返回: 格式化的时间字符串和错误
 func ParseULIDTimeString(ulidStr string, format string) (string, error) {
 	t, err := ParseULIDTime(ulidStr)
@@ -50,7 +50,7 @@ func ParseULIDTimeString(ulidStr string, format string) (string, error) {
 		return "", err
 	}
 	if format == "" {
-		format = "2006-01-02 15:04:05"
+		format = DateTimeFormat
 	}
 	return t.Format(format), nil
 }
@@ -75,4 +75,3 @@ func GetULIDTimestamp(ulidStr string) (int64, error) {
 	}
 	return int64(id.Time()), nil
 }
-

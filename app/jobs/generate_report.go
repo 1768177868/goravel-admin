@@ -1,8 +1,6 @@
 package jobs
 
 import (
-	"time"
-
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/errors"
@@ -24,7 +22,7 @@ func (r *GenerateReport) Signature() string {
 }
 
 // Handle 处理生成报表任务
-// 
+//
 // 参数:
 //   - args[0]: GenerateReportArgs 结构体或 map[string]any
 //   - args[1]: 如果 args[0] 是 string，则 args[1] 是结束日期
@@ -74,10 +72,10 @@ func (r *GenerateReport) Handle(args ...any) error {
 	}
 
 	// 验证日期格式
-	if _, err := time.Parse("2006-01-02", startDate); err != nil {
+	if _, err := utils.ParseDate(startDate); err != nil {
 		return errors.ErrInvalidArgument.WithMessage("invalid start date format, expected YYYY-MM-DD")
 	}
-	if _, err := time.Parse("2006-01-02", endDate); err != nil {
+	if _, err := utils.ParseDate(endDate); err != nil {
 		return errors.ErrInvalidArgument.WithMessage("invalid end date format, expected YYYY-MM-DD")
 	}
 

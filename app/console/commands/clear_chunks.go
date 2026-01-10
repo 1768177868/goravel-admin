@@ -51,7 +51,7 @@ func (r *ClearChunks) Handle(ctx console.Context) error {
 
 	// 计算3天前的时间
 	threeDaysAgo := time.Now().AddDate(0, 0, -3)
-	ctx.Info(fmt.Sprintf("开始清理3天前的分片文件（%s之前创建的文件）...", threeDaysAgo.Format("2006-01-02 15:04:05")))
+	ctx.Info(fmt.Sprintf("开始清理3天前的分片文件（%s之前创建的文件）...", threeDaysAgo.Format(utils.DateTimeFormat)))
 
 	// 获取存储根目录
 	var storageRoot string

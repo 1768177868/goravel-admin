@@ -12,6 +12,7 @@ import (
 
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 // # Admin用户 - 1小时后过期
@@ -132,11 +133,11 @@ func (receiver *CreateToken) Handle(ctx console.Context) error {
 	ctx.Info("Token信息:")
 	ctx.Line("  名称: " + accessToken.Name)
 	if accessToken.ExpiresAt != nil {
-		ctx.Line("  过期时间: " + accessToken.ExpiresAt.Format("2006-01-02 15:04:05"))
+		ctx.Line("  过期时间: " + accessToken.ExpiresAt.Format(utils.DateTimeFormat))
 	} else {
 		ctx.Line("  过期时间: 永久有效")
 	}
-	ctx.Line("  创建时间: " + accessToken.CreatedAt.Format("2006-01-02 15:04:05"))
+	ctx.Line("  创建时间: " + accessToken.CreatedAt.Format(utils.DateTimeFormat))
 	ctx.Line("")
 	ctx.Warning("请妥善保管以下token，它只会显示一次：")
 	ctx.Line("")

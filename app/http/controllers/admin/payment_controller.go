@@ -10,6 +10,7 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type PaymentController struct {
@@ -50,7 +51,7 @@ func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilt
 		if utcTimeStr == "" {
 			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
 		}
-		startTime, err = time.Parse("2006-01-02 15:04:05", utcTimeStr)
+		startTime, err = utils.ParseDateTime(utcTimeStr)
 		if err != nil {
 			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
 		}
@@ -61,7 +62,7 @@ func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilt
 		if utcTimeStr == "" {
 			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
 		}
-		endTime, err = time.Parse("2006-01-02 15:04:05", utcTimeStr)
+		endTime, err = utils.ParseDateTime(utcTimeStr)
 		if err != nil {
 			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
 		}
@@ -207,8 +208,5 @@ func (r *PaymentController) Show(ctx http.Context) http.Response {
 
 // formatPayTime 格式化支付时间为字符串
 func (r *PaymentController) formatPayTime(t *time.Time) string {
-	if t == nil || t.IsZero() {
-		return ""
-	}
-	return t.Format("2006-01-02 15:04:05")
+	return utils.FormatDateTimePtr(t)
 }

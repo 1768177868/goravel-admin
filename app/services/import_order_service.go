@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/samber/lo"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
@@ -26,19 +27,19 @@ func NewImportOrderService(ctx http.Context) *ImportOrderService {
 
 // ImportOrderRow 导入订单行数据
 type ImportOrderRow struct {
-	OrderID      string  // 订单ID（可选，如果为空则自动生成订单号）
-	OrderNo      string  // 订单号（可选）
-	UserID       string  // 用户ID
-	Amount       string  // 订单金额
-	Status       string  // 订单状态
-	ItemIndex    string  // 商品序号（如：1/2）
-	ProductID    string  // 商品ID
-	ProductName  string  // 商品名称
-	Price        string  // 单价
-	Quantity     string  // 数量
-	Subtotal     string  // 小计
-	Remark       string  // 备注
-	CreatedAt    string  // 创建时间（可选）
+	OrderID     string // 订单ID（可选，如果为空则自动生成订单号）
+	OrderNo     string // 订单号（可选）
+	UserID      string // 用户ID
+	Amount      string // 订单金额
+	Status      string // 订单状态
+	ItemIndex   string // 商品序号（如：1/2）
+	ProductID   string // 商品ID
+	ProductName string // 商品名称
+	Price       string // 单价
+	Quantity    string // 数量
+	Subtotal    string // 小计
+	Remark      string // 备注
+	CreatedAt   string // 创建时间（可选）
 }
 
 // ImportResult 导入结果
@@ -82,7 +83,7 @@ func (s *ImportOrderService) ImportOrders(csvContent string) (*ImportResult, err
 	dataRows := records[1:]
 	result := &ImportResult{
 		TotalRows: len(dataRows),
-		Errors:     []string{},
+		Errors:    []string{},
 	}
 
 	// 解析并过滤有效的数据行，同时保留索引信息用于分组
@@ -150,19 +151,19 @@ func (s *ImportOrderService) getColumnIndices(headerMap map[string]int) map[stri
 
 	// 定义可能的表头名称（中英文）
 	headerMappings := map[string][]string{
-		"order_id":      {"id", "订单id", "order id", "订单编号"},
-		"order_no":       {"order_no", "订单号", "order no", "订单编号", "order number"},
-		"user_id":        {"user_id", "用户id", "user id", "用户编号"},
-		"amount":         {"amount", "金额", "订单金额", "total amount"},
-		"status":         {"status", "状态", "订单状态", "order status"},
-		"item_index":     {"item_index", "商品序号", "item index", "序号"},
-		"product_id":     {"product_id", "商品id", "product id", "商品编号"},
-		"product_name":   {"product_name", "商品名称", "product name", "商品名"},
-		"price":          {"price", "单价", "商品单价", "unit price"},
-		"quantity":       {"quantity", "数量", "商品数量", "qty"},
-		"subtotal":       {"subtotal", "小计", "商品小计", "item total"},
-		"remark":         {"remark", "备注", "订单备注", "note"},
-		"created_at":     {"created_at", "创建时间", "created at", "创建日期"},
+		"order_id":     {"id", "订单id", "order id", "订单编号"},
+		"order_no":     {"order_no", "订单号", "order no", "订单编号", "order number"},
+		"user_id":      {"user_id", "用户id", "user id", "用户编号"},
+		"amount":       {"amount", "金额", "订单金额", "total amount"},
+		"status":       {"status", "状态", "订单状态", "order status"},
+		"item_index":   {"item_index", "商品序号", "item index", "序号"},
+		"product_id":   {"product_id", "商品id", "product id", "商品编号"},
+		"product_name": {"product_name", "商品名称", "product name", "商品名"},
+		"price":        {"price", "单价", "商品单价", "unit price"},
+		"quantity":     {"quantity", "数量", "商品数量", "qty"},
+		"subtotal":     {"subtotal", "小计", "商品小计", "item total"},
+		"remark":       {"remark", "备注", "订单备注", "note"},
+		"created_at":   {"created_at", "创建时间", "created at", "创建日期"},
 	}
 
 	// 查找每个字段的列索引
@@ -315,9 +316,9 @@ func (s *ImportOrderService) importOrderGroup(orderService OrderService, orderKe
 		// 解析创建时间（如果提供）
 		orderTime := time.Time{}
 		if firstRow.CreatedAt != "" {
-			if t, err := time.Parse("2006-01-02 15:04:05", firstRow.CreatedAt); err == nil {
+			if t, err := utils.ParseDateTime(firstRow.CreatedAt); err == nil {
 				orderTime = t
-			} else if t, err := time.Parse("2006-01-02", firstRow.CreatedAt); err == nil {
+			} else if t, err := utils.ParseDate(firstRow.CreatedAt); err == nil {
 				orderTime = t
 			}
 		}
@@ -339,11 +340,11 @@ func (s *ImportOrderService) normalizeStatus(status string) string {
 
 	// 中文状态映射
 	statusMap := map[string]string{
-		"待支付": "pending",
-		"已支付": "paid",
-		"已取消": "cancelled",
-		"pending":  "pending",
-		"paid":     "paid",
+		"待支付":       "pending",
+		"已支付":       "paid",
+		"已取消":       "cancelled",
+		"pending":   "pending",
+		"paid":      "paid",
 		"cancelled": "cancelled",
 	}
 
@@ -354,4 +355,3 @@ func (s *ImportOrderService) normalizeStatus(status string) string {
 	// 默认返回pending
 	return "pending"
 }
-
