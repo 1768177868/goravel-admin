@@ -333,10 +333,10 @@ func (s *OrderServiceImpl) findOrderByID(orderID uint, orderNo ...string) (*mode
 	startTime := now.AddDate(0, -6, 0)
 	tableNames := utils.GetShardingTableNames("orders", startTime, now)
 
-	// 从最新的分表开始查询
+	// 从最新的分表开始查询（Model 自动应用软删除过滤）
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		var order models.Order
-		if err := facades.Orm().Query().Table(tableNames[i]).Where("id", orderID).First(&order); err == nil {
+		if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("id", orderID).First(&order); err == nil {
 			return &order, nil
 		}
 	}
@@ -859,7 +859,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 		return apperrors.ErrDeleteOrderDetailFailed.WithError(err)
 	}
 
-	// 软删除订单主表（Goravel 的 Delete 方法会自动使用软删除，如果模型有 SoftDeletes）
+	// 软删除订单主表
 	tableName := utils.GetShardingTableName("orders", createdAt)
 	_, err = facades.Orm().Query().Table(tableName).Where("id", orderID).Delete(&models.Order{})
 	return err
@@ -913,10 +913,10 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 		startTime := now.AddDate(0, -6, 0)
 		tableNames := utils.GetShardingTableNames("orders", startTime, now)
 
-		// 从最新的分表开始查询
+		// 从最新的分表开始查询（
 		for i := len(tableNames) - 1; i >= 0; i-- {
 			var order models.Order
-			if err := facades.Orm().Query().Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
+			if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
 				return &order, nil
 			}
 		}
@@ -934,7 +934,7 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 
 		for i := len(tableNames) - 1; i >= 0; i-- {
 			var order models.Order
-			if err := facades.Orm().Query().Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
+			if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
 				return &order, nil
 			}
 		}
@@ -944,9 +944,9 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 	// 使用解析的年月确定分表
 	tableName := utils.GetShardingTableName("orders", parsedTime)
 
-	// 直接查询对应的分表
+	// 直接查询对应的分表（Model 自动应用软删除过滤）
 	var order models.Order
-	if err := facades.Orm().Query().Table(tableName).Where("order_no", orderNo).First(&order); err == nil {
+	if err := facades.Orm().Query().Model(&models.Order{}).Table(tableName).Where("order_no", orderNo).First(&order); err == nil {
 		return &order, nil
 	}
 
