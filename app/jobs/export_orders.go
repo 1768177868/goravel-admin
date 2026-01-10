@@ -94,6 +94,9 @@ func (r *ExportOrders) writeOrdersToCSV(w *csv.Writer, filters map[string]any, l
 	// 时间范围需要特殊处理（分表依赖）
 	orderFilters.StartTime, orderFilters.EndTime = GetDefaultTimeRange(filters)
 
+	// 获取时区（用于时间格式化）
+	timezone, _ := utils.GetString(filters, "_timezone")
+
 	// 获取分表列表
 	tableNames := utils.GetShardingTableNames("orders", orderFilters.StartTime, orderFilters.EndTime)
 	if len(tableNames) == 0 {
@@ -110,7 +113,7 @@ func (r *ExportOrders) writeOrdersToCSV(w *csv.Writer, filters map[string]any, l
 	const chunkSize = 2000
 
 	for _, tableName := range tableNames {
-		if err := r.exportTable(w, tableName, orderFilters, lang, direction, chunkSize, shouldStop); err != nil {
+		if err := r.exportTable(w, tableName, orderFilters, lang, timezone, direction, chunkSize, shouldStop); err != nil {
 			return err
 		}
 	}
@@ -119,7 +122,7 @@ func (r *ExportOrders) writeOrdersToCSV(w *csv.Writer, filters map[string]any, l
 }
 
 // exportTable 导出单个分表
-func (r *ExportOrders) exportTable(w *csv.Writer, tableName string, filters services.OrderFilters, lang, direction string, chunkSize int, shouldStop func() bool) error {
+func (r *ExportOrders) exportTable(w *csv.Writer, tableName string, filters services.OrderFilters, lang, timezone, direction string, chunkSize int, shouldStop func() bool) error {
 	suffix := strings.TrimPrefix(tableName, "orders_")
 	detailTableName := "order_details_" + suffix
 
@@ -176,7 +179,7 @@ func (r *ExportOrders) exportTable(w *csv.Writer, tableName string, filters serv
 
 		// 写入 CSV
 		for _, order := range orders {
-			if err := r.writeOrderRows(w, order, detailMap[order.ID], lang); err != nil {
+			if err := r.writeOrderRows(w, order, detailMap[order.ID], lang, timezone); err != nil {
 				return err
 			}
 		}
@@ -203,13 +206,10 @@ func (r *ExportOrders) exportTable(w *csv.Writer, tableName string, filters serv
 }
 
 // writeOrderRows 写入订单行（包含详情）
-func (r *ExportOrders) writeOrderRows(w *csv.Writer, order models.Order, details []models.OrderDetail, lang string) error {
+func (r *ExportOrders) writeOrderRows(w *csv.Writer, order models.Order, details []models.OrderDetail, lang, timezone string) error {
 	statusText := r.translateStatus(order.Status, lang)
 
-	timeStr := ""
-	if order.CreatedAt != nil && !order.CreatedAt.IsZero() {
-		timeStr = order.CreatedAt.ToDateTimeString()
-	}
+	timeStr := FormatCarbonWithTimezone(order.CreatedAt, timezone)
 
 	if len(details) == 0 {
 		row := []string{

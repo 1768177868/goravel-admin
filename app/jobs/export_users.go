@@ -89,6 +89,9 @@ func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lan
 	orderBy, _ := utils.GetString(filters, "order_by")
 	_, direction := ParseOrderBy(orderBy)
 
+	// 获取时区（用于时间格式化）
+	timezone, _ := utils.GetString(filters, "_timezone")
+
 	const chunkSize = 2000
 	var lastID uint = 0
 
@@ -126,7 +129,7 @@ func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lan
 
 		// 写入 CSV
 		for _, user := range users {
-			row := r.formatUserRow(user, lang)
+			row := r.formatUserRow(user, lang, timezone)
 			if err := w.Write(row); err != nil {
 				return fmt.Errorf("写入CSV失败: %v", err)
 			}
@@ -144,7 +147,7 @@ func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lan
 }
 
 // formatUserRow 格式化用户行数据
-func (r *ExportUsers) formatUserRow(user models.User, lang string) []string {
+func (r *ExportUsers) formatUserRow(user models.User, lang, timezone string) []string {
 	// 状态翻译
 	statusKey := "export_user_status_disabled"
 	if user.Status == 1 {
@@ -161,14 +164,11 @@ func (r *ExportUsers) formatUserRow(user models.User, lang string) []string {
 	// 最后登录时间
 	lastLoginAt := ""
 	if user.LastLoginAt != nil {
-		lastLoginAt = user.LastLoginAt.Format("2006-01-02 15:04:05")
+		lastLoginAt = FormatTimeWithTimezone(*user.LastLoginAt, timezone)
 	}
 
 	// 创建时间
-	createdAt := ""
-	if user.CreatedAt != nil && !user.CreatedAt.IsZero() {
-		createdAt = user.CreatedAt.ToDateTimeString()
-	}
+	createdAt := FormatCarbonWithTimezone(user.CreatedAt, timezone)
 
 	return []string{
 		cast.ToString(user.ID),

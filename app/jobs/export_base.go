@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/goravel/framework/facades"
+	supportcarbon "github.com/goravel/framework/support/carbon"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
@@ -29,6 +30,30 @@ type ExportArgs struct {
 	Filters  map[string]any `json:"filters"`
 	Type     string         `json:"type"`
 	Language string         `json:"language"`
+	Timezone string         `json:"timezone"` // 用户时区，用于时间格式化
+}
+
+// FormatTimeWithTimezone 使用指定时区格式化时间
+func FormatTimeWithTimezone(t time.Time, timezone string) string {
+	if t.IsZero() {
+		return ""
+	}
+	if timezone == "" {
+		timezone = "UTC"
+	}
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return t.Format("2006-01-02 15:04:05")
+	}
+	return t.In(loc).Format("2006-01-02 15:04:05")
+}
+
+// FormatCarbonWithTimezone 使用指定时区格式化 Carbon 时间
+func FormatCarbonWithTimezone(t *supportcarbon.DateTime, timezone string) string {
+	if t == nil || t.IsZero() {
+		return ""
+	}
+	return FormatTimeWithTimezone(t.StdTime(), timezone)
 }
 
 // ExportConfig 导出配置
@@ -156,6 +181,14 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 		lang = facades.Config().GetString("app.locale", "cn")
 	}
 	lang = utils.NormalizeLanguage(lang)
+
+	// 将时区放入 filters 供 WriteData 使用
+	if args.Timezone != "" {
+		if args.Filters == nil {
+			args.Filters = make(map[string]any)
+		}
+		args.Filters["_timezone"] = args.Timezone
+	}
 
 	// 翻译表头
 	headers := utils.TranslateHeaders(e.config.HeaderKeys, lang)

@@ -287,6 +287,7 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 	}
 
 	lang := utils.GetCurrentLanguage(ctx)
+	timezone := helpers.GetCurrentTimezone(ctx)
 
 	exportArgsStruct := jobs.ExportUsersArgs{
 		ExportID: exportRecord.ID,
@@ -294,6 +295,7 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 		Filters:  filtersMap,
 		Type:     "users",
 		Language: lang,
+		Timezone: timezone,
 	}
 
 	exportArgsJSON, err := json.Marshal(exportArgsStruct)

@@ -97,6 +97,9 @@ func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters map[string]an
 	// 时间范围需要特殊处理（分表依赖）
 	paymentFilters.StartTime, paymentFilters.EndTime = GetDefaultTimeRange(filters)
 
+	// 获取时区（用于时间格式化）
+	timezone, _ := utils.GetString(filters, "_timezone")
+
 	// 获取分表列表
 	tableNames := r.getTableNames(paymentFilters)
 	if len(tableNames) == 0 {
@@ -117,7 +120,7 @@ func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters map[string]an
 	const chunkSize = 2000
 
 	for _, tableName := range tableNames {
-		if err := r.exportTable(w, tableName, paymentFilters, paymentMethodMap, lang, direction, chunkSize, shouldStop); err != nil {
+		if err := r.exportTable(w, tableName, paymentFilters, paymentMethodMap, lang, timezone, direction, chunkSize, shouldStop); err != nil {
 			return err
 		}
 	}
@@ -138,7 +141,7 @@ func (r *ExportPayments) getTableNames(filters services.PaymentFilters) []string
 }
 
 // exportTable 导出单个分表
-func (r *ExportPayments) exportTable(w *csv.Writer, tableName string, filters services.PaymentFilters, paymentMethodMap map[uint]models.PaymentMethod, lang, direction string, chunkSize int, shouldStop func() bool) error {
+func (r *ExportPayments) exportTable(w *csv.Writer, tableName string, filters services.PaymentFilters, paymentMethodMap map[uint]models.PaymentMethod, lang, timezone, direction string, chunkSize int, shouldStop func() bool) error {
 	lastTimeStr := ""
 	var lastID uint = 0
 	field := "created_at"
@@ -186,7 +189,7 @@ func (r *ExportPayments) exportTable(w *csv.Writer, tableName string, filters se
 
 		// 写入 CSV
 		for _, payment := range payments {
-			row := r.formatPaymentRow(payment, paymentMethodMap, lang)
+			row := r.formatPaymentRow(payment, paymentMethodMap, lang, timezone)
 			if err := w.Write(row); err != nil {
 				return fmt.Errorf("写入CSV失败: %v", err)
 			}
@@ -215,7 +218,7 @@ func (r *ExportPayments) exportTable(w *csv.Writer, tableName string, filters se
 }
 
 // formatPaymentRow 格式化单行数据
-func (r *ExportPayments) formatPaymentRow(payment models.Payment, paymentMethodMap map[uint]models.PaymentMethod, lang string) []string {
+func (r *ExportPayments) formatPaymentRow(payment models.Payment, paymentMethodMap map[uint]models.PaymentMethod, lang, timezone string) []string {
 	paymentMethodName := ""
 	if pm, ok := paymentMethodMap[payment.PaymentMethodID]; ok {
 		paymentMethodName = pm.Name
@@ -223,13 +226,10 @@ func (r *ExportPayments) formatPaymentRow(payment models.Payment, paymentMethodM
 
 	payTime := ""
 	if payment.PayTime != nil {
-		payTime = payment.PayTime.Format("2006-01-02 15:04:05")
+		payTime = FormatTimeWithTimezone(*payment.PayTime, timezone)
 	}
 
-	createdAt := ""
-	if payment.CreatedAt != nil && !payment.CreatedAt.IsZero() {
-		createdAt = payment.CreatedAt.ToDateTimeString()
-	}
+	createdAt := FormatCarbonWithTimezone(payment.CreatedAt, timezone)
 
 	statusKey := fmt.Sprintf("export_payment_status_%s", payment.Status)
 

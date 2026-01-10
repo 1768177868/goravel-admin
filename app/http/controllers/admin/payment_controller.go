@@ -312,6 +312,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 	}
 
 	lang := r.getCurrentLanguage(ctx)
+	timezone := helpers.GetCurrentTimezone(ctx)
 
 	exportArgsStruct := jobs.ExportPaymentsArgs{
 		ExportID: exportRecord.ID,
@@ -319,6 +320,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 		Filters:  filtersMap,
 		Type:     "payments",
 		Language: lang,
+		Timezone: timezone,
 	}
 
 	exportArgsJSON, err := json.Marshal(exportArgsStruct)

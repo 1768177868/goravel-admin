@@ -548,6 +548,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	// 获取当前语言（从请求头或查询参数，与 middleware 逻辑一致）
 	lang := r.getCurrentLanguage(ctx)
+	timezone := helpers.GetCurrentTimezone(ctx)
 
 	// 异步执行导出任务（使用 Job）
 	// 将参数序列化为 JSON 字符串传递，避免框架对复杂类型的序列化问题
@@ -557,6 +558,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		Filters:  filtersMap,
 		Type:     "orders",
 		Language: lang,
+		Timezone: timezone,
 	}
 
 	// 序列化为 JSON 字符串
