@@ -679,6 +679,7 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		"export_header_updated_at",
 	}
 
+	timezone := helpers.GetCurrentTimezone(ctx)
 	var data [][]string
 	for _, admin := range admins {
 		statusText := trans.Get(ctx, "export_status_disabled")
@@ -704,14 +705,8 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		}
 
 		// 时间格式化
-		createdAt := ""
-		updatedAt := ""
-		if admin.CreatedAt != nil && !admin.CreatedAt.IsZero() {
-			createdAt = admin.CreatedAt.ToDateTimeString()
-		}
-		if admin.UpdatedAt != nil && !admin.UpdatedAt.IsZero() {
-			updatedAt = admin.UpdatedAt.ToDateTimeString()
-		}
+		createdAt := helpers.FormatCarbonWithTimezone(admin.CreatedAt, timezone)
+		updatedAt := helpers.FormatCarbonWithTimezone(admin.UpdatedAt, timezone)
 
 		row := []string{
 			cast.ToString(admin.ID),

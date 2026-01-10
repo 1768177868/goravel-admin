@@ -188,3 +188,26 @@ func GetTimeQueryParam(ctx http.Context, paramName string) string {
 	}
 	return ConvertTimeToUTC(ctx, timeStr)
 }
+
+// FormatTimeWithTimezone 使用指定时区格式化 time.Time
+func FormatTimeWithTimezone(t time.Time, timezone string) string {
+	if t.IsZero() {
+		return ""
+	}
+	if timezone == "" {
+		timezone = "UTC"
+	}
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return t.Format("2006-01-02 15:04:05")
+	}
+	return t.In(loc).Format("2006-01-02 15:04:05")
+}
+
+// FormatCarbonWithTimezone 使用指定时区格式化 Carbon 时间
+func FormatCarbonWithTimezone(t *carbon.DateTime, timezone string) string {
+	if t == nil || t.IsZero() {
+		return ""
+	}
+	return FormatTimeWithTimezone(t.StdTime(), timezone)
+}
