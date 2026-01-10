@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -57,7 +58,22 @@ func BuildOrderQuery(tableName string, filters OrderFilters) orm.Query {
 		query = query.Where("created_at <= ?", filters.EndTime)
 	}
 
+	// 商品名称搜索（通过子查询在 order_details 表中查找）
+	if filters.ProductName != "" {
+		// 获取对应的 order_details 分表名
+		detailTableName := GetOrderDetailsTableFromOrdersTable(tableName)
+		query = query.Where("id IN (SELECT order_id FROM "+detailTableName+" WHERE product_name = ?)", filters.ProductName)
+	}
+
 	return ApplyOrderFiltersToQuery(query, filters)
+}
+
+// GetOrderDetailsTableFromOrdersTable 从订单分表名获取对应的订单详情分表名
+// ordersTableName: 订单分表名，如 "orders_202501"
+// 返回: 订单详情分表名，如 "order_details_202501"
+func GetOrderDetailsTableFromOrdersTable(ordersTableName string) string {
+	// 将 orders_YYYYMM 转换为 order_details_YYYYMM
+	return strings.Replace(ordersTableName, "orders_", "order_details_", 1)
 }
 
 type OrderService interface {
@@ -89,14 +105,15 @@ type OrderService interface {
 
 // OrderFilters 订单查询筛选条件
 type OrderFilters struct {
-	UserID    uint      // 用户ID（0表示不筛选）
-	OrderNo   string    // 订单号（模糊搜索）
-	Status    string    // 订单状态
-	MinAmount float64   // 最小金额（0表示不筛选）
-	MaxAmount float64   // 最大金额（0表示不筛选）
-	StartTime time.Time // 开始时间
-	EndTime   time.Time // 结束时间
-	OrderBy   string    // 排序字段（格式：字段:asc/desc，如：created_at:desc）
+	UserID      uint      // 用户ID（0表示不筛选）
+	OrderNo     string    // 订单号（模糊搜索）
+	ProductName string    // 商品名称（模糊搜索）
+	Status      string    // 订单状态
+	MinAmount   float64   // 最小金额（0表示不筛选）
+	MaxAmount   float64   // 最大金额（0表示不筛选）
+	StartTime   time.Time // 开始时间
+	EndTime     time.Time // 结束时间
+	OrderBy     string    // 排序字段（格式：字段:asc/desc，如：created_at:desc）
 }
 
 // 订单分页统计优化阈值（超过此值使用执行计划估算）
@@ -403,6 +420,11 @@ func (s *OrderServiceImpl) GetOrders(filters OrderFilters, page, pageSize int) (
 		return s.querySingleTable(tableNames[0], filters, page, pageSize)
 	}
 
+	// 如果有商品名搜索，使用单表逐个查询方式（因为需要关联不同的 order_details 分表）
+	if filters.ProductName != "" {
+		return s.queryMultipleTablesSequentially(tableNames, filters, page, pageSize)
+	}
+
 	// 多个分表：使用 UNION ALL 在数据库层面合并
 	return s.queryMultipleTablesWithUnion(tableNames, filters, page, pageSize)
 }
@@ -511,6 +533,92 @@ func (s *OrderServiceImpl) queryMultipleTablesWithUnionForExport(tableNames []st
 		return nil, err
 	}
 	return orders, nil
+}
+
+// queryMultipleTablesSequentially 逐个查询多个分表（用于商品名搜索等需要关联其他分表的场景）
+func (s *OrderServiceImpl) queryMultipleTablesSequentially(tableNames []string, filters OrderFilters, page, pageSize int) ([]models.Order, int64, error) {
+	var allOrders []models.Order
+	var total int64
+
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "created_at:desc"
+	}
+
+	// 逐个查询每个分表
+	for _, tableName := range tableNames {
+		// 检查表是否存在
+		if !facades.Schema().HasTable(tableName) {
+			continue
+		}
+
+		// 构建查询
+		query := s.buildShardingQuery(tableName, filters)
+
+		// 获取该分表的总数
+		countQuery := s.buildShardingQuery(tableName, filters)
+		tableTotal, err := countQuery.Count()
+		if err != nil {
+			continue
+		}
+		total += tableTotal
+
+		// 查询数据（查询足够多的数据用于后续合并排序）
+		query = s.applyOrderBy(query, orderBy)
+		var orders []models.Order
+		if err := query.Limit(page * pageSize).Find(&orders); err != nil {
+			continue
+		}
+		allOrders = append(allOrders, orders...)
+	}
+
+	// 对合并后的数据进行排序
+	s.sortOrders(allOrders, orderBy)
+
+	// 应用分页
+	offset := (page - 1) * pageSize
+	if offset >= len(allOrders) {
+		return []models.Order{}, total, nil
+	}
+	end := offset + pageSize
+	if end > len(allOrders) {
+		end = len(allOrders)
+	}
+
+	return allOrders[offset:end], total, nil
+}
+
+// sortOrders 对订单列表进行排序
+func (s *OrderServiceImpl) sortOrders(orders []models.Order, orderBy string) {
+	parts := strings.Split(orderBy, ":")
+	field := "created_at"
+	desc := true
+	if len(parts) == 2 {
+		field = parts[0]
+		desc = strings.ToLower(parts[1]) == "desc"
+	}
+
+	// 使用 sort.Slice 进行排序
+	sort.Slice(orders, func(i, j int) bool {
+		var less bool
+		switch field {
+		case "id":
+			less = orders[i].ID < orders[j].ID
+		case "amount":
+			less = orders[i].Amount < orders[j].Amount
+		case "created_at":
+			less = orders[i].CreatedAt.ToDateTimeString() < orders[j].CreatedAt.ToDateTimeString()
+		case "updated_at":
+			less = orders[i].UpdatedAt.ToDateTimeString() < orders[j].UpdatedAt.ToDateTimeString()
+		default:
+			less = orders[i].CreatedAt.ToDateTimeString() < orders[j].CreatedAt.ToDateTimeString()
+		}
+		if desc {
+			return !less
+		}
+		return less
+	})
 }
 
 // querySingleTable 查询单个分表

@@ -74,6 +74,7 @@ func CreateOrderDetailsShardingTable(tableName string) error {
 		table.SoftDeletes()
 		table.Index("order_id")
 		table.Index("product_id")
+		table.Index("product_name")
 		table.Index("created_at")
 		table.Comment(fmt.Sprintf("订单详情表 - %s", tableName))
 	})

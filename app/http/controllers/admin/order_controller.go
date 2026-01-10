@@ -46,6 +46,7 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 	// 优先从请求体读取，如果没有则从查询参数读取（兼容 GET 和 POST）
 	userID := cast.ToUint(ctx.Request().Input("user_id", ctx.Request().Query("user_id", "0")))
 	orderNo := ctx.Request().Input("order_no", ctx.Request().Query("order_no", ""))
+	productName := ctx.Request().Input("product_name", ctx.Request().Query("product_name", ""))
 	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
 	minAmount := cast.ToFloat64(ctx.Request().Input("min_amount", ctx.Request().Query("min_amount", "0")))
 	maxAmount := cast.ToFloat64(ctx.Request().Input("max_amount", ctx.Request().Query("max_amount", "0")))
@@ -88,14 +89,15 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 	}
 
 	return services.OrderFilters{
-		UserID:    userID,
-		OrderNo:   orderNo,
-		Status:    status,
-		MinAmount: minAmount,
-		MaxAmount: maxAmount,
-		StartTime: startTime,
-		EndTime:   endTime,
-		OrderBy:   orderBy,
+		UserID:      userID,
+		OrderNo:     orderNo,
+		ProductName: productName,
+		Status:      status,
+		MinAmount:   minAmount,
+		MaxAmount:   maxAmount,
+		StartTime:   startTime,
+		EndTime:     endTime,
+		OrderBy:     orderBy,
 	}, nil
 }
 
