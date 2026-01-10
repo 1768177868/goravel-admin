@@ -70,7 +70,7 @@ func runApplication() {
 	// 启动长时间任务队列工作进程（处理所有耗时任务：导出、报表生成、批量处理等）
 	// 长时间任务队列使用较小的并发数（1），因为这些任务通常比较耗时且占用资源
 	// 所有耗时任务都应该使用 .OnQueue("long-running") 提交到此队列
-	longRunningConcurrent := facades.Config().GetInt("queue.long_running.concurrent", 1)
+	longRunningConcurrent := facades.Config().GetInt("queue.long_running_concurrent", 1)
 	longRunningWorker := facades.Queue().Worker(queue.Args{
 		Connection: "",                    // 使用默认连接
 		Queue:      "long-running",        // 使用 long-running 队列

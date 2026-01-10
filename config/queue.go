@@ -72,6 +72,7 @@ func init() {
 		// 队列工作进程的并发数（同时处理的任务数量）
 		// 可以通过环境变量 QUEUE_CONCURRENT 设置，默认值为 1
 		// 建议值：根据服务器性能和任务特性调整（1-10 或更多）
-		"concurrent": config.Env("QUEUE_CONCURRENT", 3), // 并发数（同时处理的任务数量）
+		"concurrent":              config.Env("QUEUE_CONCURRENT", 3),              // 并发数（同时处理的任务数量）
+		"long_running_concurrent": config.Env("QUEUE_LONG_RUNNING_CONCURRENT", 1), // 长时间任务队列的并发数
 	})
 }

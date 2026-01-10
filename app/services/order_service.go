@@ -966,23 +966,20 @@ func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
 		return 0, nil
 	}
 
-	// 构建 WHERE 条件（只包含时间范围）
-	whereClause := "created_at >= ? AND created_at <= ?"
-	whereArgs := []any{startTime, endTime}
-
-	// 使用优化的 count 查询（阈值：100000）
-	countOptimizer := utils.NewCountOptimizer(OrderCountThreshold, "order")
 	var total int64
 
-	// 分别对每个分表执行 COUNT，然后相加
+	// 分别对每个分表执行精确 COUNT，然后相加（仪表盘统计需要精准数据）
 	for _, tableName := range tableNames {
 		// 检查表是否存在
 		if !facades.Schema().HasTable(tableName) {
 			continue
 		}
 
-		// 使用优化的 count 查询
-		tableTotal, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, whereArgs...)
+		// 使用精确 COUNT 查询
+		tableTotal, err := facades.Orm().Query().Table(tableName).
+			Where("created_at >= ?", startTime).
+			Where("created_at <= ?", endTime).
+			Count()
 		if err != nil {
 			errorlog.Record(context.Background(), "order", "查询分表总数失败", map[string]any{
 				"table_name": tableName,
