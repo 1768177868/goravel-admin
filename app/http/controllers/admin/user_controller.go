@@ -1,7 +1,12 @@
 package admin
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
@@ -9,8 +14,10 @@ import (
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
+	"goravel/app/jobs"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type UserController struct {
@@ -230,4 +237,94 @@ func (r *UserController) ResetPassword(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "password_reset_success", http.Json{})
+}
+
+// Export 导出用户列表
+func (r *UserController) Export(ctx http.Context) http.Response {
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	}
+
+	// 防重复点击
+	lockKey := fmt.Sprintf("export:users:lock:%d", adminID)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
+
+	if !lock.Get() {
+		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+	}
+
+	// 获取存储驱动配置
+	disk := utils.GetConfigValue("storage", "file_disk", "")
+	if disk == "" {
+		disk = utils.GetConfigValue("storage", "export_disk", "")
+	}
+	if disk == "" {
+		disk = "local"
+	}
+
+	exportRecord := models.Export{
+		AdminID: adminID,
+		Type:    models.ExportTypeUsers,
+		Status:  models.ExportStatusProcessing,
+		Disk:    disk,
+		Path:    "",
+	}
+	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	// 构建筛选条件（POST 请求，从 body 获取参数）
+	filtersMap := map[string]any{
+		"username": ctx.Request().Input("username", ""),
+		"nickname": ctx.Request().Input("nickname", ""),
+		"email":    ctx.Request().Input("email", ""),
+		"phone":    ctx.Request().Input("phone", ""),
+		"order_by": ctx.Request().Input("order_by", "id:desc"),
+	}
+	if statusStr := ctx.Request().Input("status", ""); statusStr != "" {
+		filtersMap["status"] = cast.ToUint(statusStr)
+	}
+
+	lang := utils.GetCurrentLanguage(ctx)
+
+	exportArgsStruct := jobs.ExportUsersArgs{
+		ExportID: exportRecord.ID,
+		AdminID:  adminID,
+		Filters:  filtersMap,
+		Type:     "users",
+		Language: lang,
+	}
+
+	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	if err != nil {
+		facades.Log().Errorf("序列化导出参数失败: export_id=%d, error=%v", exportRecord.ID, err)
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	facades.Log().Infof("提交用户导出任务到队列: export_id=%d", exportRecord.ID)
+
+	exportArgs := []queue.Arg{
+		{
+			Type:  "string",
+			Value: string(exportArgsJSON),
+		},
+	}
+
+	if err := facades.Queue().Job(&jobs.ExportUsers{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
+		lock.Release()
+		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	return response.Success(ctx, http.Json{
+		"export_id": exportRecord.ID,
+		"message":   "export_task_submitted",
+	})
 }

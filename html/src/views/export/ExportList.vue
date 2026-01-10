@@ -174,7 +174,8 @@ const searchFields = computed(() => [
     options: [
       { label: t('menu.order'), value: 'orders' },
       { label: t('menu.payment'), value: 'payments' },
-      { label: t('menu.admin'), value: 'admins' }
+      { label: t('menu.admin'), value: 'admins' },
+      { label: t('menu.user'), value: 'users' }
     ],
     clearable: true
   },
@@ -225,6 +226,7 @@ const formatType = ({ cellValue }) => {
   if (type === 'orders') return t('menu.order')
   if (type === 'payments') return t('menu.payment')
   if (type === 'admins') return t('menu.admin')
+  if (type === 'users') return t('menu.user')
   return type || '-'
 }
 

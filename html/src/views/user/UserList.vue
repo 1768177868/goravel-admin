@@ -23,7 +23,19 @@
         i18n-prefix="user"
         @search="handleSearch"
         @reset="handleReset"
-      />
+      >
+        <template #extra-buttons>
+          <el-button 
+            type="success" 
+            :disabled="getButtonState('user.export').disabled || isExporting"
+            :loading="isExporting"
+            @click="handleExport"
+          >
+            <el-icon><Download /></el-icon>
+            {{ $t('common.export') }}
+          </el-button>
+        </template>
+      </SearchForm>
 
       <VxeTable
         ref="tableRef"
@@ -80,7 +92,7 @@ import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Download } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
@@ -95,12 +107,16 @@ import {
   deleteUser,
   updateUser,
   resetPassword,
-  updateBalance
+  updateBalance,
+  exportUsers
 } from '../../api/user'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
 
 const PlusIcon = markRaw(Plus)
+
+// 导出相关状态
+const isExporting = ref(false)
 
 const { getButtonState } = usePermission()
 const { t } = useI18n()
@@ -462,6 +478,39 @@ const formatBalance = (amount, currency) => {
   const decimalPlaces = currency?.decimal_places ?? 2
   const formatted = Number(amount).toFixed(decimalPlaces)
   return `${symbol}${formatted}`
+}
+
+// 导出用户
+const handleExport = async () => {
+  if (isExporting.value) return
+
+  isExporting.value = true
+  try {
+    const params = {
+      ...searchForm,
+      order_by: 'id:desc'
+    }
+    const response = await exportUsers(params)
+    const exportId = response.data?.data?.export_id || response.data?.export_id
+
+    if (!exportId) {
+      ElMessage.error(t('export.failed'))
+      isExporting.value = false
+      return
+    }
+
+    ElMessage.success(t('export.task_submitted'))
+    router.push('/exports')
+  } catch (error) {
+    logger.error('Export users error:', error)
+    if (error.response?.status === 429) {
+      ElMessage.warning(t('common.export_in_progress'))
+    } else if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true })
+    }
+  } finally {
+    isExporting.value = false
+  }
 }
 
 onMounted(() => {

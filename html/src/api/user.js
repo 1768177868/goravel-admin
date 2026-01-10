@@ -21,6 +21,14 @@ const userApi = extendApi(baseUserApi, {
       method: 'post',
       data
     })
+  },
+  // 导出用户
+  export: (params) => {
+    return request({
+      url: '/users/export',
+      method: 'post',
+      data: params
+    })
   }
 })
 
@@ -34,4 +42,7 @@ export const {
   resetPassword,
   updateBalance
 } = userApi
+
+// 单独导出 export 方法（避免与关键字冲突）
+export const exportUsers = userApi.export
 
