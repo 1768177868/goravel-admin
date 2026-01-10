@@ -316,7 +316,6 @@ const editFormRules = computed(() => ({
 const initialSearchForm = {
   user_id: '',
   order_no: '',
-  product_name: '',
   status: '',
   min_amount: null,
   max_amount: null,
@@ -493,13 +492,6 @@ const searchFields = computed(() => [
   {
     prop: 'order_no',
     label: t('order.order_no'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'product_name',
-    label: t('order.product_name'),
     type: 'input',
     width: '200px',
     advanced: false
