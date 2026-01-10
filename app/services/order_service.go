@@ -98,15 +98,14 @@ type OrderService interface {
 
 // OrderFilters 订单查询筛选条件
 type OrderFilters struct {
-	UserID      uint      // 用户ID（0表示不筛选）
-	OrderNo     string    // 订单号（模糊搜索）
-	ProductName string    // 商品名称（模糊搜索）
-	Status      string    // 订单状态
-	MinAmount   float64   // 最小金额（0表示不筛选）
-	MaxAmount   float64   // 最大金额（0表示不筛选）
-	StartTime   time.Time // 开始时间
-	EndTime     time.Time // 结束时间
-	OrderBy     string    // 排序字段（格式：字段:asc/desc，如：created_at:desc）
+	UserID    uint      // 用户ID（0表示不筛选）
+	OrderNo   string    // 订单号（模糊搜索）
+	Status    string    // 订单状态
+	MinAmount float64   // 最小金额（0表示不筛选）
+	MaxAmount float64   // 最大金额（0表示不筛选）
+	StartTime time.Time // 开始时间
+	EndTime   time.Time // 结束时间
+	OrderBy   string    // 排序字段（格式：字段:asc/desc，如：created_at:desc）
 }
 
 // 订单分页统计优化阈值（超过此值使用执行计划估算）
@@ -408,11 +407,6 @@ func (s *OrderServiceImpl) GetOrders(filters OrderFilters, page, pageSize int) (
 		return s.querySingleTable(tableNames[0], filters, page, pageSize)
 	}
 
-	// 如果有商品名搜索，使用单表逐个查询方式（因为需要关联不同的 order_details 分表）
-	if filters.ProductName != "" {
-		return s.queryMultipleTablesSequentially(tableNames, filters, page, pageSize)
-	}
-
 	// 多个分表：使用 UNION ALL 在数据库层面合并
 	return s.queryMultipleTablesWithUnion(tableNames, filters, page, pageSize)
 }
@@ -523,113 +517,6 @@ func (s *OrderServiceImpl) queryMultipleTablesWithUnionForExport(tableNames []st
 	return orders, nil
 }
 
-// queryMultipleTablesSequentially 逐个查询多个分表（用于商品名搜索等需要关联其他分表的场景）
-// 优化：先从 order_details 查询匹配的 order_id，再用 WHERE IN 查询 orders，避免低效的子查询
-func (s *OrderServiceImpl) queryMultipleTablesSequentially(tableNames []string, filters OrderFilters, page, pageSize int) ([]models.Order, int64, error) {
-	var allOrders []models.Order
-	var total int64
-
-	// 应用排序
-	orderBy := filters.OrderBy
-	if orderBy == "" {
-		orderBy = "created_at:desc"
-	}
-
-	// 逐个查询每个分表
-	for _, tableName := range tableNames {
-		// 检查表是否存在
-		if !facades.Schema().HasTable(tableName) {
-			continue
-		}
-
-		// 如果有商品名搜索，先从 order_details 表查询匹配的 order_id
-		var orderIDs []uint
-		if filters.ProductName != "" {
-			detailTableName := GetOrderDetailsTableFromOrdersTable(tableName)
-			if facades.Schema().HasTable(detailTableName) {
-				// 直接查询 order_details 获取匹配的 order_id（利用 product_name 索引）
-				var details []struct {
-					OrderID uint `gorm:"column:order_id"`
-				}
-				detailQuery := facades.Orm().Query().Table(detailTableName).
-					Select("DISTINCT order_id").
-					Where("product_name = ?", filters.ProductName)
-				// 添加时间范围过滤（order_details 也有 created_at）
-				if !filters.StartTime.IsZero() {
-					detailQuery = detailQuery.Where("created_at >= ?", filters.StartTime)
-				}
-				if !filters.EndTime.IsZero() {
-					detailQuery = detailQuery.Where("created_at <= ?", filters.EndTime)
-				}
-				if err := detailQuery.Find(&details); err != nil {
-					continue
-				}
-				if len(details) == 0 {
-					// 该分表没有匹配的订单
-					continue
-				}
-				for _, d := range details {
-					orderIDs = append(orderIDs, d.OrderID)
-				}
-			}
-		}
-
-		// 构建 orders 查询
-		query := s.buildShardingQuery(tableName, filters)
-
-		// 如果有商品名搜索，使用预先查询的 order_id 列表
-		if filters.ProductName != "" && len(orderIDs) > 0 {
-			// 转换为 []any
-			orderIDsAny := make([]any, len(orderIDs))
-			for i, id := range orderIDs {
-				orderIDsAny[i] = id
-			}
-			query = query.WhereIn("id", orderIDsAny)
-		} else if filters.ProductName != "" {
-			// 有商品名搜索但没有匹配的 order_id，跳过该分表
-			continue
-		}
-
-		// 获取该分表的总数
-		countQuery := s.buildShardingQuery(tableName, filters)
-		if filters.ProductName != "" && len(orderIDs) > 0 {
-			orderIDsAny := make([]any, len(orderIDs))
-			for i, id := range orderIDs {
-				orderIDsAny[i] = id
-			}
-			countQuery = countQuery.WhereIn("id", orderIDsAny)
-		}
-		tableTotal, err := countQuery.Count()
-		if err != nil {
-			continue
-		}
-		total += tableTotal
-
-		// 查询数据（查询足够多的数据用于后续合并排序）
-		query = s.applyOrderBy(query, orderBy)
-		var orders []models.Order
-		if err := query.Limit(page * pageSize).Find(&orders); err != nil {
-			continue
-		}
-		allOrders = append(allOrders, orders...)
-	}
-
-	// 对合并后的数据进行排序
-	s.sortOrders(allOrders, orderBy)
-
-	// 应用分页
-	offset := (page - 1) * pageSize
-	if offset >= len(allOrders) {
-		return []models.Order{}, total, nil
-	}
-	end := offset + pageSize
-	if end > len(allOrders) {
-		end = len(allOrders)
-	}
-
-	return allOrders[offset:end], total, nil
-}
-
 // sortOrders 对订单列表进行排序
 func (s *OrderServiceImpl) sortOrders(orders []models.Order, orderBy string) {
 	parts := strings.Split(orderBy, ":")
@@ -670,64 +557,14 @@ func (s *OrderServiceImpl) querySingleTable(tableName string, filters OrderFilte
 		orderBy = "created_at:desc"
 	}
 
-	// 如果有商品名搜索，先从 order_details 表查询匹配的 order_id
-	var orderIDs []uint
-	if filters.ProductName != "" {
-		detailTableName := GetOrderDetailsTableFromOrdersTable(tableName)
-		if facades.Schema().HasTable(detailTableName) {
-			// 直接查询 order_details 获取匹配的 order_id（利用 product_name 索引）
-			var details []struct {
-				OrderID uint `gorm:"column:order_id"`
-			}
-			detailQuery := facades.Orm().Query().Table(detailTableName).
-				Select("DISTINCT order_id").
-				Where("product_name = ?", filters.ProductName)
-			// 添加时间范围过滤
-			if !filters.StartTime.IsZero() {
-				detailQuery = detailQuery.Where("created_at >= ?", filters.StartTime)
-			}
-			if !filters.EndTime.IsZero() {
-				detailQuery = detailQuery.Where("created_at <= ?", filters.EndTime)
-			}
-			if err := detailQuery.Find(&details); err != nil {
-				return nil, 0, err
-			}
-			if len(details) == 0 {
-				// 没有匹配的订单
-				return []models.Order{}, 0, nil
-			}
-			for _, d := range details {
-				orderIDs = append(orderIDs, d.OrderID)
-			}
-		}
-	}
-
 	// 构建基础查询条件
 	query := s.buildShardingQuery(tableName, filters)
-
-	// 如果有商品名搜索，使用预先查询的 order_id 列表
-	if filters.ProductName != "" && len(orderIDs) > 0 {
-		orderIDsAny := make([]any, len(orderIDs))
-		for i, id := range orderIDs {
-			orderIDsAny[i] = id
-		}
-		query = query.WhereIn("id", orderIDsAny)
-	} else if filters.ProductName != "" {
-		// 有商品名搜索但没有匹配的 order_id
-		return []models.Order{}, 0, nil
-	}
 
 	query = s.applyOrderBy(query, orderBy)
 
 	// 获取总数
 	countQuery := s.buildShardingQuery(tableName, filters)
-	if filters.ProductName != "" && len(orderIDs) > 0 {
-		orderIDsAny := make([]any, len(orderIDs))
-		for i, id := range orderIDs {
-			orderIDsAny[i] = id
-		}
-		countQuery = countQuery.WhereIn("id", orderIDsAny)
-	}
+
 	total, err := countQuery.Count()
 	if err != nil {
 		return nil, 0, err
@@ -735,13 +572,7 @@ func (s *OrderServiceImpl) querySingleTable(tableName string, filters OrderFilte
 
 	// 构建分页查询（重新构建确保使用分表）
 	findQuery := s.buildShardingQuery(tableName, filters)
-	if filters.ProductName != "" && len(orderIDs) > 0 {
-		orderIDsAny := make([]any, len(orderIDs))
-		for i, id := range orderIDs {
-			orderIDsAny[i] = id
-		}
-		findQuery = findQuery.WhereIn("id", orderIDsAny)
-	}
+
 	findQuery = s.applyOrderBy(findQuery, orderBy)
 
 	// 执行分页查询
