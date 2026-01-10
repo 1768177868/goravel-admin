@@ -75,6 +75,21 @@ func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilt
 		}
 	}
 
+	// 与列表保持一致：未传 start_time 时默认最近 7 天；未传 end_time 时默认当前时间
+	// 这样导出数据集与列表查询数据集一致，并避免扫到未建表的历史月份
+	if startTime.IsZero() {
+		startTime = time.Now().UTC().AddDate(0, 0, -7)
+	}
+	if endTime.IsZero() {
+		endTime = time.Now().UTC()
+	}
+
+	// 校验时间范围不超过 3 个月（与列表/导出一致）
+	if valid, err := utils.ValidateTimeRange(startTime, endTime); !valid {
+		// ValidateTimeRange 返回的是可翻译错误键，这里直接返回 key 交给前端处理
+		return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+
 	return services.PaymentFilters{
 		PaymentNo:       paymentNo,
 		OrderNo:         orderNo,
@@ -384,16 +399,9 @@ func (r *PaymentController) GetExportStatus(ctx http.Context) http.Response {
 	return response.Success(ctx, result)
 }
 
-// getCurrentLanguage 获取当前语言
+// getCurrentLanguage 获取当前语言（使用通用工具函数）
 func (r *PaymentController) getCurrentLanguage(ctx http.Context) string {
-	lang := ctx.Request().Header("Accept-Language", "")
-	if lang == "" {
-		lang = ctx.Request().Query("lang", "")
-	}
-	if lang == "" {
-		lang = facades.Config().GetString("app.locale", "cn")
-	}
-	return utils.NormalizeLanguage(lang)
+	return utils.GetCurrentLanguage(ctx)
 }
 
 // getExportStatusText 获取导出状态文本

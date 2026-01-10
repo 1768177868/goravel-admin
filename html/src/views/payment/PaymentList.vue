@@ -382,7 +382,7 @@ const handleExport = async () => {
   isExporting.value = true
   try {
     const params = {
-      ...searchForm.value,
+      ...searchForm,
       order_by: 'created_at:desc'
     }
     const response = await exportPayments(params)

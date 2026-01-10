@@ -36,20 +36,51 @@ type ExportPayments struct {
 // errPaymentExportRecordMissing 导出记录被删除时的哨兵错误
 var errPaymentExportRecordMissing = errors.New("payment export record missing (deleted)")
 
+func (r *ExportPayments) markExportFailed(exportID uint, errorMsg string) {
+	if exportID == 0 {
+		return
+	}
+	var failedRecord models.Export
+	if queryErr := facades.Orm().Query().Where("id", exportID).First(&failedRecord); queryErr == nil {
+		failedRecord.Status = models.ExportStatusFailed
+		failedRecord.ErrorMsg = errorMsg
+		if saveErr := facades.Orm().Query().Save(&failedRecord); saveErr != nil {
+			facades.Log().Errorf("更新导出记录失败状态失败: export_id=%d, error=%v", exportID, saveErr)
+		}
+	}
+}
+
+func (r *ExportPayments) isTableNotExistsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	// MySQL: Error 1146 (42S02): Table 'xxx' doesn't exist
+	// 不同驱动/封装可能会改变格式，这里做宽松匹配，避免误判导致任务失败
+	if strings.Contains(msg, "1146") || strings.Contains(msg, "42s02") {
+		return true
+	}
+	return strings.Contains(msg, "table") && (strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "does not exist"))
+}
+
 func (r *ExportPayments) Signature() string {
 	return "export_payments"
 }
 
-func (r *ExportPayments) Handle(args ...any) error {
-	// 防御性：任何 panic 都不应该把 worker 进程打崩
+func (r *ExportPayments) Handle(args ...any) (retErr error) {
+	var exportID uint
+	// 防御性：任何 panic 都不应该把 worker 进程打崩；同时需要把导出记录标记为失败，避免一直“处理中”
 	defer func() {
 		if rec := recover(); rec != nil {
+			errorMsg := fmt.Sprintf("panic: %v", rec)
 			facades.Log().Errorf("ExportPayments Job panic: export_id=%v, panic=%v", func() any {
 				if len(args) > 0 {
 					return args[0]
 				}
 				return nil
 			}(), rec)
+			r.markExportFailed(exportID, errorMsg)
+			retErr = fmt.Errorf("%s", errorMsg)
 		}
 	}()
 
@@ -94,6 +125,7 @@ func (r *ExportPayments) Handle(args ...any) error {
 		facades.Log().Errorf("export_id 为 0，参数解析失败: %+v", exportArgs)
 		return apperrors.ErrInvalidArgument.WithMessage("export_id is required")
 	}
+	exportID = exportArgs.ExportID
 
 	// 检查导出记录是否存在
 	exists, err := facades.Orm().Query().Model(&models.Export{}).Where("id", exportArgs.ExportID).Exists()
@@ -150,14 +182,7 @@ func (r *ExportPayments) Handle(args ...any) error {
 			"error":     errorMsg,
 		}, "导出失败: %v", jobErr)
 
-		var failedRecord models.Export
-		if queryErr := facades.Orm().Query().Where("id", exportArgs.ExportID).First(&failedRecord); queryErr == nil {
-			failedRecord.Status = models.ExportStatusFailed
-			failedRecord.ErrorMsg = errorMsg
-			if saveErr := facades.Orm().Query().Save(&failedRecord); saveErr != nil {
-				facades.Log().Errorf("更新导出记录失败状态失败: export_id=%d, error=%v", exportArgs.ExportID, saveErr)
-			}
-		}
+		r.markExportFailed(exportArgs.ExportID, errorMsg)
 
 		return jobErr
 	}
@@ -199,6 +224,15 @@ func (r *ExportPayments) exportPayments(args ExportPaymentsArgs) error {
 		if t, err := utils.ParseDateTimeUTC(endTimeStr); err == nil {
 			filters.EndTime = t
 		}
+	}
+
+	// 时间范围兜底：与 Controller.buildFilters 保持一致
+	// 未传 start_time 时默认最近 7 天；未传 end_time 时默认当前时间
+	if filters.StartTime.IsZero() {
+		filters.StartTime = time.Now().UTC().AddDate(0, 0, -7)
+	}
+	if filters.EndTime.IsZero() {
+		filters.EndTime = time.Now().UTC()
 	}
 
 	// 准备表头
@@ -350,7 +384,17 @@ func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters services.Paym
 	}
 
 	// 获取分表列表
-	tableNames := utils.GetShardingTableNames("payments", filters.StartTime, filters.EndTime)
+	// 如果精确指定了 payment_no，则可以从 payment_no 中解析日期直接定位分表，避免按月扫描
+	var tableNames []string
+	if filters.PaymentNo != "" && len(filters.PaymentNo) >= 11 {
+		dateStr := filters.PaymentNo[3:11] // PAY + YYYYMMDD
+		if t, err := time.Parse("20060102", dateStr); err == nil {
+			tableNames = []string{utils.GetShardingTableName("payments", t)}
+		}
+	}
+	if len(tableNames) == 0 {
+		tableNames = utils.GetShardingTableNames("payments", filters.StartTime, filters.EndTime)
+	}
 	if len(tableNames) == 0 {
 		return nil
 	}
@@ -385,6 +429,13 @@ func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters services.Paym
 				} else {
 					query = query.Where(fmt.Sprintf("(%s > ? OR (%s = ? AND id > ?))", field, field), lastTimeStr, lastTimeStr, lastID)
 				}
+			} else if lastID > 0 {
+				// created_at 为空/不可用时，退化为仅使用 id 做 keyset
+				if direction == "desc" {
+					query = query.Where("id < ?", lastID)
+				} else {
+					query = query.Where("id > ?", lastID)
+				}
 			}
 
 			if direction == "desc" {
@@ -395,6 +446,11 @@ func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters services.Paym
 
 			var payments []models.Payment
 			if err := query.Limit(chunkSize).Get(&payments); err != nil {
+				// 分表不存在时（如历史月份未建表），跳过该表，避免任务失败/卡死
+				if r.isTableNotExistsError(err) {
+					facades.Log().Warningf("支付记录分表不存在，跳过: table=%s, error=%v", tableName, err)
+					break
+				}
 				return fmt.Errorf("查询支付记录失败: %v", err)
 			}
 
@@ -440,12 +496,16 @@ func (r *ExportPayments) writePaymentsToCSV(w *csv.Writer, filters services.Paym
 
 			// 更新游标
 			lastPayment := payments[len(payments)-1]
+			prevID := lastID
 			if lastPayment.CreatedAt != nil && !lastPayment.CreatedAt.IsZero() {
 				lastTimeStr = lastPayment.CreatedAt.ToDateTimeString()
 			} else {
 				lastTimeStr = ""
 			}
 			lastID = lastPayment.ID
+			if lastID == prevID {
+				return fmt.Errorf("导出游标未推进，可能导致死循环: table=%s, last_id=%d", tableName, lastID)
+			}
 
 			if len(payments) < chunkSize {
 				break

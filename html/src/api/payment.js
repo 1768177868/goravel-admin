@@ -22,7 +22,7 @@ export function exportPayments(params) {
   return request({
     url: '/payments/export',
     method: 'post',
-    params
+    data: params
   })
 }
 
