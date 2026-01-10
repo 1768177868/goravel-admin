@@ -127,6 +127,7 @@ import VxeTable from '../../components/VxeTable.vue'
 import { getPaymentList, getPaymentDetail } from '../../api/payment'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
+import { getSevenDaysAgo } from '../../utils/dateUtils'
 
 // 权限控制
 const { getButtonState } = usePermission()
@@ -155,7 +156,7 @@ const {
     payment_method_id: '',
     user_id: '',
     status: '',
-    start_time: '',
+    start_time: getSevenDaysAgo(),
     end_time: ''
   },
   fieldMapping: {},
@@ -163,14 +164,14 @@ const {
   tableRef: computed(() => tableRef.value?.tableRef)
 })
 
-// 初始搜索表单
+// 初始搜索表单（开始时间默认为一周前）
 const initialSearchForm = {
   payment_no: '',
   order_no: '',
   payment_method_id: '',
   user_id: '',
   status: '',
-  start_time: '',
+  start_time: getSevenDaysAgo(),
   end_time: ''
 }
 
@@ -337,12 +338,13 @@ const formatDateTime = (dateTime) => {
   return dateTime
 }
 
-// 查看详情
+// 查看详情（使用支付单号查询，因为分表后ID可能重复）
 const handleView = async (row) => {
   detailDialogVisible.value = true
   detailLoading.value = true
   try {
-    const response = await getPaymentDetail(row.id || row.ID)
+    const paymentNo = row.payment_no || row.PaymentNo
+    const response = await getPaymentDetail(paymentNo)
     paymentDetail.value = response.data?.data || response.data || {}
   } catch (error) {
     logger.error('Load payment detail error:', error)

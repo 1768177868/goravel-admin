@@ -159,20 +159,23 @@ func (r *PaymentController) Index(ctx http.Context) http.Response {
 
 // Show 支付记录详情
 // @Summary      获取支付记录详情
-// @Description  根据ID获取支付记录详细信息
+// @Description  根据支付单号获取支付记录详细信息（分表后ID可能重复，使用支付单号查询）
 // @Tags         支付管理
 // @Accept       json
 // @Produce      json
-// @Param        id         path     int     true  "支付记录ID"
+// @Param        payment_no path     string  true  "支付单号"
 // @Success      200        {object} map[string]any
 // @Failure      400        {object} map[string]any "参数错误"
 // @Failure      404        {object} map[string]any "支付记录不存在"
 // @Failure      500        {object} map[string]any "服务器错误"
-// @Router       /api/admin/payments/{id} [get]
+// @Router       /api/admin/payments/{payment_no} [get]
 // @Security     BearerAuth
 func (r *PaymentController) Show(ctx http.Context) http.Response {
-	id := helpers.GetUintRoute(ctx, "id")
-	payment, err := r.paymentService.GetPaymentByID(id)
+	paymentNo := ctx.Request().Route("id") // 路由参数名保持兼容
+	if paymentNo == "" {
+		return response.Error(ctx, http.StatusBadRequest, "payment_no_required")
+	}
+	payment, err := r.paymentService.GetPaymentByPaymentNo(paymentNo)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrPaymentNotFound.Code)
 	}

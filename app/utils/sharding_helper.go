@@ -61,6 +61,11 @@ func GetHashShardingTableName(baseTableName string, shardingKey uint, numberOfSh
 func GetShardingTableNames(baseTableName string, startTime, endTime time.Time) []string {
 	var tableNames []string
 
+	// 如果结束时间是零值，使用当前时间
+	if endTime.IsZero() {
+		endTime = time.Now().UTC()
+	}
+
 	// 确保开始时间不晚于结束时间
 	if startTime.After(endTime) {
 		return tableNames
@@ -99,8 +104,8 @@ func (e *TimeRangeError) Error() string {
 // maxMonths: 最大允许的月数，如果为0则使用默认值 DefaultMaxTimeRangeMonths
 // 返回: 是否有效，错误信息（错误信息包含翻译键和参数）
 func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, error) {
-	// 检查开始时间是否晚于结束时间
-	if startTime.After(endTime) {
+	// 检查开始时间是否晚于结束时间（忽略零值时间）
+	if !startTime.IsZero() && !endTime.IsZero() && startTime.After(endTime) {
 		return false, &TimeRangeError{
 			Key:    "start_time_after_end_time",
 			Params: nil,
@@ -113,14 +118,16 @@ func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, er
 		maxMonthsValue = maxMonths[0]
 	}
 
-	// 检查时间范围是否超过指定月数
-	maxTimeLater := startTime.AddDate(0, maxMonthsValue, 0)
-	if endTime.After(maxTimeLater) {
-		return false, &TimeRangeError{
-			Key: "time_range_exceeded",
-			Params: map[string]any{
-				"months": maxMonthsValue,
-			},
+	// 检查时间范围是否超过指定月数（忽略零值结束时间）
+	if !endTime.IsZero() {
+		maxTimeLater := startTime.AddDate(0, maxMonthsValue, 0)
+		if endTime.After(maxTimeLater) {
+			return false, &TimeRangeError{
+				Key: "time_range_exceeded",
+				Params: map[string]any{
+					"months": maxMonthsValue,
+				},
+			}
 		}
 	}
 

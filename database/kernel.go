@@ -54,9 +54,11 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250130000001CreateUsersTable{},
 		&migrations.M20250130000004AddCurrencyIdToUsersTable{}, // 添加货币字段（如果用户表已存在）
 		&migrations.M20250130000002CreateUserBalanceLogsTable{},
+		&migrations.M20250131000003AddTransactionHashToUserBalanceLogsShardingTables{}, // 用户余额变动记录分表新增字段
 		// 支付相关表
 		&migrations.M20250131000001CreatePaymentMethodsTable{},
 		&migrations.M20250131000002CreatePaymentsTable{},
+		&migrations.M20250110000001CreatePaymentsShardingTable{}, // 支付记录分表
 	}
 }
 

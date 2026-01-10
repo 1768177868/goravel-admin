@@ -18,6 +18,7 @@ import (
 	"goravel/app/models"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
+	"goravel/database/migrations"
 )
 
 type PaymentService interface {
@@ -42,8 +43,8 @@ type PaymentService interface {
 	GetPayments(filters PaymentFilters, page, pageSize int) ([]models.Payment, int64, error)
 	// CreatePayment 创建支付记录
 	CreatePayment(orderNo string, paymentMethodID uint, userID uint, amount float64, remark string) (*models.Payment, error)
-	// UpdatePaymentStatus 更新支付状态
-	UpdatePaymentStatus(paymentID uint, status string, thirdPartyNo string, payTime *time.Time, failReason string, notifyData map[string]any) error
+	// UpdatePaymentStatus 更新支付状态（paymentNo 可选，提供则更快定位分表）
+	UpdatePaymentStatus(paymentID uint, status string, thirdPartyNo string, payTime *time.Time, failReason string, notifyData map[string]any, paymentNo ...string) error
 
 	// CreatePaymentOrder 创建支付订单（调用第三方支付）
 	CreatePaymentOrder(payment *models.Payment, clientIP string) (map[string]any, error)
@@ -75,10 +76,46 @@ type PaymentFilters struct {
 	OrderBy         string
 }
 
-type PaymentServiceImpl struct{}
+// PaymentCountThreshold 支付记录分页统计优化阈值（超过此值使用执行计划估算）
+const PaymentCountThreshold int64 = 100000
+
+type PaymentServiceImpl struct {
+	shardingService      ShardingService
+	shardingQueryService ShardingQueryService
+}
 
 func NewPaymentService() PaymentService {
-	return &PaymentServiceImpl{}
+	service := &PaymentServiceImpl{
+		shardingService: NewShardingService(),
+	}
+
+	// 初始化分表查询服务
+	service.shardingQueryService = NewShardingQueryService(ShardingQueryConfig{
+		BaseTableName: "payments",
+		GetColumns: func() string {
+			return service.getPaymentTableColumns()
+		},
+		BuildWhereClause: func(filters any) (string, []any) {
+			return service.buildPaymentShardingWhereClause(filters)
+		},
+		GetAllowedOrderFields: func() map[string]bool {
+			return map[string]bool{
+				"id":         true,
+				"payment_no": true,
+				"order_no":   true,
+				"user_id":    true,
+				"amount":     true,
+				"status":     true,
+				"created_at": true,
+				"updated_at": true,
+			}
+		},
+		DefaultOrderBy: "created_at:desc",
+		ModuleName:     "payment",
+		CountThreshold: PaymentCountThreshold,
+	})
+
+	return service
 }
 
 // GetPaymentMethodByID 根据ID获取支付方式
@@ -224,84 +261,66 @@ func (s *PaymentServiceImpl) DeletePaymentMethod(id uint) error {
 	return nil
 }
 
-// GetPaymentByID 根据ID获取支付记录
+// GetPaymentByID 根据ID获取支付记录（支持分表）
 func (s *PaymentServiceImpl) GetPaymentByID(id uint) (*models.Payment, error) {
-	var payment models.Payment
-	if err := facades.Orm().Query().Where("id", id).First(&payment); err != nil {
-		return nil, apperrors.ErrPaymentNotFound.WithError(err)
-	}
-	// 手动加载支付方式
-	if payment.PaymentMethodID > 0 {
-		paymentMethod, err := s.GetPaymentMethodByID(payment.PaymentMethodID)
-		if err == nil {
-			payment.PaymentMethod = *paymentMethod
-		}
-	}
-	return &payment, nil
-}
-
-// GetPaymentByPaymentNo 根据支付单号获取支付记录
-func (s *PaymentServiceImpl) GetPaymentByPaymentNo(paymentNo string) (*models.Payment, error) {
-	var payment models.Payment
-	if err := facades.Orm().Query().Where("payment_no", paymentNo).First(&payment); err != nil {
-		return nil, apperrors.ErrPaymentNotFound.WithError(err)
-	}
-	// 手动加载支付方式
-	if payment.PaymentMethodID > 0 {
-		paymentMethod, err := s.GetPaymentMethodByID(payment.PaymentMethodID)
-		if err == nil {
-			payment.PaymentMethod = *paymentMethod
-		}
-	}
-	return &payment, nil
-}
-
-// GetPayments 获取支付记录列表
-func (s *PaymentServiceImpl) GetPayments(filters PaymentFilters, page, pageSize int) ([]models.Payment, int64, error) {
-	query := facades.Orm().Query().Model(&models.Payment{})
-
-	// 应用筛选条件
-	if filters.PaymentNo != "" {
-		query = query.Where("payment_no LIKE ?", "%"+filters.PaymentNo+"%")
-	}
-	if filters.OrderNo != "" {
-		query = query.Where("order_no LIKE ?", "%"+filters.OrderNo+"%")
-	}
-	if filters.PaymentMethodID > 0 {
-		query = query.Where("payment_method_id", filters.PaymentMethodID)
-	}
-	if filters.UserID > 0 {
-		query = query.Where("user_id", filters.UserID)
-	}
-	if filters.Status != "" {
-		query = query.Where("status", filters.Status)
-	}
-	if !filters.StartTime.IsZero() {
-		query = query.Where("created_at >= ?", filters.StartTime)
-	}
-	if !filters.EndTime.IsZero() {
-		query = query.Where("created_at <= ?", filters.EndTime)
-	}
-
-	// 使用优化的 count 查询（阈值：100000，支付记录可能很多）
-	// total, err := query.Count()
-	countOptimizer := utils.NewCountOptimizer(100000, "payment")
-	whereClause, whereArgs := s.buildPaymentWhereClause(filters)
-	total, _, err := countOptimizer.OptimizedCountWithTable("payments", whereClause, whereArgs...)
+	// 使用分表查找
+	payment, err := s.findPaymentByID(id)
 	if err != nil {
-		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
+		return nil, err
+	}
+	// 手动加载支付方式
+	if payment.PaymentMethodID > 0 {
+		paymentMethod, err := s.GetPaymentMethodByID(payment.PaymentMethodID)
+		if err == nil {
+			payment.PaymentMethod = *paymentMethod
+		}
+	}
+	return payment, nil
+}
+
+// GetPaymentByPaymentNo 根据支付单号获取支付记录（支持分表，直接定位更高效）
+func (s *PaymentServiceImpl) GetPaymentByPaymentNo(paymentNo string) (*models.Payment, error) {
+	// 使用分表查找（通过支付单号直接定位分表）
+	payment, err := s.findPaymentByPaymentNo(paymentNo)
+	if err != nil {
+		return nil, err
+	}
+	// 手动加载支付方式
+	if payment.PaymentMethodID > 0 {
+		paymentMethod, err := s.GetPaymentMethodByID(payment.PaymentMethodID)
+		if err == nil {
+			payment.PaymentMethod = *paymentMethod
+		}
+	}
+	return payment, nil
+}
+
+// GetPayments 获取支付记录列表（支持分表，限制不超过3个月）
+func (s *PaymentServiceImpl) GetPayments(filters PaymentFilters, page, pageSize int) ([]models.Payment, int64, error) {
+	// 验证时间范围不超过3个月
+	valid, err := utils.ValidateTimeRange(filters.StartTime, filters.EndTime)
+	if !valid {
+		return nil, 0, err
 	}
 
-	// 应用排序
-	if filters.OrderBy != "" {
-		query = s.applyOrderBy(query, filters.OrderBy)
-	} else {
-		query = query.Order("created_at desc")
+	// 获取需要查询的所有分表
+	tableNames := utils.GetShardingTableNames("payments", filters.StartTime, filters.EndTime)
+	if len(tableNames) == 0 {
+		return []models.Payment{}, 0, nil
 	}
 
-	// 分页查询
 	var payments []models.Payment
-	if err := query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&payments); err != nil {
+	var total int64
+
+	// 如果只有一个分表，直接查询
+	if len(tableNames) == 1 {
+		payments, total, err = s.querySinglePaymentTable(tableNames[0], filters, page, pageSize)
+	} else {
+		// 多个分表：使用 UNION ALL 在数据库层面合并
+		payments, total, err = s.queryMultiplePaymentTablesWithUnion(tableNames, filters, page, pageSize)
+	}
+
+	if err != nil {
 		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
 	}
 
@@ -343,7 +362,7 @@ func (s *PaymentServiceImpl) GetPayments(filters PaymentFilters, page, pageSize 
 	return payments, total, nil
 }
 
-// CreatePayment 创建支付记录
+// CreatePayment 创建支付记录（写入分表）
 func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint, userID uint, amount float64, remark string) (*models.Payment, error) {
 	// 验证金额
 	if amount <= 0 {
@@ -359,8 +378,17 @@ func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint,
 		return nil, apperrors.ErrPaymentMethodDisabled
 	}
 
-	// 生成支付单号
-	paymentNo := fmt.Sprintf("PAY%s%s", time.Now().Format("20060102"), ulid.Make().String())
+	// 当前时间用于分表
+	now := time.Now()
+
+	// 确保分表存在
+	tableName, err := s.ensurePaymentShardingTableExists(now)
+	if err != nil {
+		return nil, apperrors.ErrCreatePaymentFailed.WithError(err)
+	}
+
+	// 生成支付单号（包含日期，便于后续定位分表）
+	paymentNo := fmt.Sprintf("PAY%s%s", now.Format("20060102"), ulid.Make().String())
 
 	payment := &models.Payment{
 		PaymentNo:       paymentNo,
@@ -372,8 +400,10 @@ func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint,
 		Remark:          remark,
 	}
 
-	if err := facades.Orm().Query().Create(payment); err != nil {
+	// 写入分表
+	if err := facades.Orm().Query().Table(tableName).Create(payment); err != nil {
 		errorlog.Record(context.Background(), "payment", "创建支付记录失败", map[string]any{
+			"table_name":        tableName,
 			"order_no":          orderNo,
 			"payment_method_id": paymentMethodID,
 			"user_id":           userID,
@@ -386,8 +416,26 @@ func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint,
 	return payment, nil
 }
 
-// UpdatePaymentStatus 更新支付状态
-func (s *PaymentServiceImpl) UpdatePaymentStatus(paymentID uint, status string, thirdPartyNo string, payTime *time.Time, failReason string, notifyData map[string]any) error {
+// UpdatePaymentStatus 更新支付状态（支持分表）
+// paymentNo 可选，如果提供则可以更快定位分表
+func (s *PaymentServiceImpl) UpdatePaymentStatus(paymentID uint, status string, thirdPartyNo string, payTime *time.Time, failReason string, notifyData map[string]any, paymentNo ...string) error {
+	// 先查找支付记录以确定分表
+	var payment *models.Payment
+	var err error
+	if len(paymentNo) > 0 && paymentNo[0] != "" {
+		payment, err = s.findPaymentByPaymentNo(paymentNo[0])
+	} else {
+		payment, err = s.findPaymentByID(paymentID)
+	}
+	if err != nil {
+		return apperrors.ErrPaymentNotFound.WithError(err)
+	}
+
+	// 确定分表名
+	timeStr := payment.CreatedAt.ToDateTimeString()
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
+	tableName := utils.GetShardingTableName("payments", createdAt)
+
 	updateData := map[string]any{
 		"status": status,
 	}
@@ -408,7 +456,7 @@ func (s *PaymentServiceImpl) UpdatePaymentStatus(paymentID uint, status string, 
 		}
 	}
 
-	if _, err := facades.Orm().Query().Where("id", paymentID).Update(&models.Payment{}, updateData); err != nil {
+	if _, err := facades.Orm().Query().Table(tableName).Where("id", payment.ID).Update(&models.Payment{}, updateData); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
@@ -745,4 +793,251 @@ func (s *PaymentServiceImpl) applyOrderBy(query orm.Query, orderBy string) orm.Q
 	} else {
 		return query.Order(field + " desc")
 	}
+}
+
+// getPaymentTableColumns 获取支付记录表的所有列名（用于 UNION ALL 查询）
+func (s *PaymentServiceImpl) getPaymentTableColumns() string {
+	columns := []string{
+		"id",
+		"payment_no",
+		"order_no",
+		"payment_method_id",
+		"user_id",
+		"amount",
+		"status",
+		"third_party_no",
+		"pay_time",
+		"fail_reason",
+		"notify_data",
+		"remark",
+		"created_at",
+		"updated_at",
+		"deleted_at",
+	}
+	return strings.Join(columns, ", ")
+}
+
+// buildPaymentShardingWhereClause 构建支付记录分表查询的 WHERE 条件（用于通用分表查询服务）
+func (s *PaymentServiceImpl) buildPaymentShardingWhereClause(filters any) (string, []any) {
+	paymentFilters, ok := filters.(PaymentFilters)
+	if !ok {
+		return "", nil
+	}
+
+	var conditions []string
+	var args []any
+
+	// 时间范围（必填）
+	if !paymentFilters.StartTime.IsZero() {
+		conditions = append(conditions, "created_at >= ?")
+		args = append(args, paymentFilters.StartTime)
+	}
+	if !paymentFilters.EndTime.IsZero() {
+		conditions = append(conditions, "created_at <= ?")
+		args = append(args, paymentFilters.EndTime)
+	}
+
+	// 支付单号筛选
+	if paymentFilters.PaymentNo != "" {
+		conditions = append(conditions, "payment_no = ?")
+		args = append(args, paymentFilters.PaymentNo)
+	}
+
+	// 订单号筛选
+	if paymentFilters.OrderNo != "" {
+		conditions = append(conditions, "order_no = ?")
+		args = append(args, paymentFilters.OrderNo)
+	}
+
+	// 支付方式ID筛选
+	if paymentFilters.PaymentMethodID > 0 {
+		conditions = append(conditions, "payment_method_id = ?")
+		args = append(args, paymentFilters.PaymentMethodID)
+	}
+
+	// 用户ID筛选
+	if paymentFilters.UserID > 0 {
+		conditions = append(conditions, "user_id = ?")
+		args = append(args, paymentFilters.UserID)
+	}
+
+	// 状态筛选
+	if paymentFilters.Status != "" {
+		conditions = append(conditions, "status = ?")
+		args = append(args, paymentFilters.Status)
+	}
+
+	return strings.Join(conditions, " AND "), args
+}
+
+// findPaymentByPaymentNo 通过支付单号查找支付记录（直接定位分表）
+// 支付单号格式：PAY + YYYYMMDD + ULID，可以从中提取日期
+func (s *PaymentServiceImpl) findPaymentByPaymentNo(paymentNo string) (*models.Payment, error) {
+	// 从支付单号中提取日期（PAY后8位是日期：YYYYMMDD）
+	if len(paymentNo) >= 11 {
+		dateStr := paymentNo[3:11] // 提取日期部分
+		if orderTime, err := time.Parse("20060102", dateStr); err == nil {
+			// 成功解析日期，直接查询对应分表
+			tableName := utils.GetShardingTableName("payments", orderTime)
+			if facades.Schema().HasTable(tableName) {
+				var payment models.Payment
+				if err := facades.Orm().Query().Table(tableName).Where("payment_no", paymentNo).First(&payment); err == nil {
+					return &payment, nil
+				}
+			}
+		}
+	}
+
+	// 如果无法从支付单号解析日期，或者在对应分表中找不到，遍历最近6个月的分表
+	now := time.Now().UTC()
+	startTime := now.AddDate(0, -6, 0)
+	tableNames := utils.GetShardingTableNames("payments", startTime, now)
+
+	// 从最新的分表开始查询
+	for i := len(tableNames) - 1; i >= 0; i-- {
+		if !facades.Schema().HasTable(tableNames[i]) {
+			continue
+		}
+		var payment models.Payment
+		if err := facades.Orm().Query().Table(tableNames[i]).Where("payment_no", paymentNo).First(&payment); err == nil {
+			return &payment, nil
+		}
+	}
+
+	return nil, apperrors.ErrPaymentNotFound
+}
+
+// findPaymentByID 通过支付记录ID查找支付记录
+func (s *PaymentServiceImpl) findPaymentByID(paymentID uint, paymentNo ...string) (*models.Payment, error) {
+	// 如果提供了支付单号，优先使用支付单号直接定位分表（更高效）
+	if len(paymentNo) > 0 && paymentNo[0] != "" {
+		payment, err := s.findPaymentByPaymentNo(paymentNo[0])
+		if err == nil {
+			if paymentID > 0 && payment.ID != paymentID {
+				// 支付单号找到了但ID不匹配，继续用ID查找
+			} else {
+				return payment, nil
+			}
+		}
+	}
+
+	// 如果没有支付单号或通过支付单号查找失败，使用ID遍历分表
+	if paymentID == 0 {
+		return nil, apperrors.ErrPaymentNotFound
+	}
+
+	// 查询最近6个月的分表（足够覆盖大部分场景）
+	now := time.Now().UTC()
+	startTime := now.AddDate(0, -6, 0)
+	tableNames := utils.GetShardingTableNames("payments", startTime, now)
+
+	// 从最新的分表开始查询
+	for i := len(tableNames) - 1; i >= 0; i-- {
+		if !facades.Schema().HasTable(tableNames[i]) {
+			continue
+		}
+		var payment models.Payment
+		if err := facades.Orm().Query().Table(tableNames[i]).Where("id", paymentID).First(&payment); err == nil {
+			return &payment, nil
+		}
+	}
+
+	return nil, apperrors.ErrPaymentNotFound
+}
+
+// querySinglePaymentTable 查询单个分表
+func (s *PaymentServiceImpl) querySinglePaymentTable(tableName string, filters PaymentFilters, page, pageSize int) ([]models.Payment, int64, error) {
+	// 应用排序
+	orderBy := filters.OrderBy
+	if orderBy == "" {
+		orderBy = "created_at:desc"
+	}
+
+	// 构建基础查询条件
+	query := s.buildPaymentShardingQuery(tableName, filters)
+	query = s.applyOrderBy(query, orderBy)
+
+	// 获取总数
+	countQuery := s.buildPaymentShardingQuery(tableName, filters)
+	total, err := countQuery.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 执行分页查询
+	var payments []models.Payment
+	if err := query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&payments); err != nil {
+		return nil, 0, err
+	}
+
+	return payments, total, nil
+}
+
+// buildPaymentShardingQuery 构建分表查询条件
+func (s *PaymentServiceImpl) buildPaymentShardingQuery(tableName string, filters PaymentFilters) orm.Query {
+	query := facades.Orm().Query().Table(tableName)
+
+	// 时间范围
+	if !filters.StartTime.IsZero() {
+		query = query.Where("created_at >= ?", filters.StartTime)
+	}
+	if !filters.EndTime.IsZero() {
+		query = query.Where("created_at <= ?", filters.EndTime)
+	}
+
+	// 支付单号筛选
+	if filters.PaymentNo != "" {
+		query = query.Where("payment_no = ?", filters.PaymentNo)
+	}
+
+	// 订单号筛选
+	if filters.OrderNo != "" {
+		query = query.Where("order_no = ?", filters.OrderNo)
+	}
+
+	// 支付方式ID筛选
+	if filters.PaymentMethodID > 0 {
+		query = query.Where("payment_method_id = ?", filters.PaymentMethodID)
+	}
+
+	// 用户ID筛选
+	if filters.UserID > 0 {
+		query = query.Where("user_id = ?", filters.UserID)
+	}
+
+	// 状态筛选
+	if filters.Status != "" {
+		query = query.Where("status = ?", filters.Status)
+	}
+
+	return query
+}
+
+// queryMultiplePaymentTablesWithUnion 使用 UNION ALL 查询多个分表
+func (s *PaymentServiceImpl) queryMultiplePaymentTablesWithUnion(tableNames []string, filters PaymentFilters, page, pageSize int) ([]models.Payment, int64, error) {
+	var payments []models.Payment
+	total, err := s.shardingQueryService.QueryMultipleTables(tableNames, filters, page, pageSize, &payments)
+	if err != nil {
+		return nil, 0, err
+	}
+	return payments, total, nil
+}
+
+// ensurePaymentShardingTableExists 确保支付记录分表存在
+func (s *PaymentServiceImpl) ensurePaymentShardingTableExists(paymentTime time.Time) (string, error) {
+	tableName := utils.GetShardingTableName("payments", paymentTime)
+
+	// 检查分表是否存在
+	if !facades.Schema().HasTable(tableName) {
+		// 使用迁移函数创建分表
+		if err := migrations.CreatePaymentsShardingTable(tableName); err != nil {
+			errorlog.Record(context.Background(), "payment", "创建支付记录分表失败", map[string]any{
+				"table_name": tableName,
+				"error":      err.Error(),
+			}, "创建支付记录分表失败: %v", err)
+			return "", fmt.Errorf("创建支付记录分表失败: %v", err)
+		}
+	}
+
+	return tableName, nil
 }

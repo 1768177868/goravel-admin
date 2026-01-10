@@ -23,6 +23,8 @@ func (kernel *Kernel) Schedule() []schedule.Event {
 		facades.Schedule().Command("db:analyze-stats").DailyAt("19:30").OnOneServer(),
 		// 每月1号凌晨1点执行（UTC时间），创建下个月的订单分表
 		facades.Schedule().Command("order:create-sharding-tables").Monthly().OnOneServer(),
+		// 每月1号凌晨1点30分执行（UTC时间），创建下个月的支付记录分表
+		facades.Schedule().Command("payment:create-sharding-tables").Monthly().OnOneServer(),
 	}
 }
 
@@ -35,7 +37,9 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.QueueClear{},
 		&commands.QueuePeek{},
 		commands.NewCreateOrderShardingTables(),
+		commands.NewCreatePaymentShardingTables(),
 		&commands.GenerateTestOrders{},
+		&commands.GenerateTestPayments{},
 		&commands.AnalyzeStats{},
 		&commands.OptimizeTables{},
 	}
