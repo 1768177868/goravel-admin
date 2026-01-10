@@ -12,7 +12,6 @@ import (
 	"github.com/go-pay/gopay/wechat/v3"
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"github.com/oklog/ulid/v2"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
@@ -183,9 +182,10 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 		query = query.Where("type", filters.Type)
 	}
 	if filters.IsActive != "" {
-		if filters.IsActive == "1" {
+		switch filters.IsActive {
+		case "1":
 			query = query.Where("is_active", true)
-		} else if filters.IsActive == "0" {
+		case "0":
 			query = query.Where("is_active", false)
 		}
 	}
@@ -420,7 +420,7 @@ func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint,
 	}
 
 	// 生成支付单号（包含日期，便于后续定位分表）
-	paymentNo := fmt.Sprintf("PAY%s%s", now.Format("20060102"), ulid.Make().String())
+	paymentNo := utils.GenerateShardingNo(utils.PaymentNoConfig)
 
 	payment := &models.Payment{
 		PaymentNo:       paymentNo,
@@ -732,10 +732,11 @@ func (s *PaymentServiceImpl) buildPaymentMethodWhereClause(filters PaymentMethod
 		args = append(args, filters.Type)
 	}
 	if filters.IsActive != "" {
-		if filters.IsActive == "1" {
+		switch filters.IsActive {
+		case "1":
 			conditions = append(conditions, "is_active = ?")
 			args = append(args, true)
-		} else if filters.IsActive == "0" {
+		case "0":
 			conditions = append(conditions, "is_active = ?")
 			args = append(args, false)
 		}
@@ -905,17 +906,14 @@ func (s *PaymentServiceImpl) buildPaymentShardingWhereClause(filters any) (strin
 // findPaymentByPaymentNo 通过支付单号查找支付记录（直接定位分表）
 // 支付单号格式：PAY + YYYYMMDD + ULID，可以从中提取日期
 func (s *PaymentServiceImpl) findPaymentByPaymentNo(paymentNo string) (*models.Payment, error) {
-	// 从支付单号中提取日期（PAY后8位是日期：YYYYMMDD）
-	if len(paymentNo) >= 11 {
-		dateStr := paymentNo[3:11] // 提取日期部分
-		if orderTime, err := time.Parse("20060102", dateStr); err == nil {
-			// 成功解析日期，直接查询对应分表
-			tableName := utils.GetShardingTableName("payments", orderTime)
-			if facades.Schema().HasTable(tableName) {
-				var payment models.Payment
-				if err := facades.Orm().Query().Table(tableName).Where("payment_no", paymentNo).First(&payment); err == nil {
-					return &payment, nil
-				}
+	// 从支付单号中解析日期
+	if parsedTime, ok := utils.ParseShardingNoDate(paymentNo, utils.PaymentNoConfig); ok {
+		// 成功解析日期，直接查询对应分表
+		tableName := utils.GetShardingTableName("payments", parsedTime)
+		if facades.Schema().HasTable(tableName) {
+			var payment models.Payment
+			if err := facades.Orm().Query().Model(&models.Payment{}).Table(tableName).Where("payment_no", paymentNo).First(&payment); err == nil {
+				return &payment, nil
 			}
 		}
 	}
@@ -925,13 +923,13 @@ func (s *PaymentServiceImpl) findPaymentByPaymentNo(paymentNo string) (*models.P
 	startTime := now.AddDate(0, -6, 0)
 	tableNames := utils.GetShardingTableNames("payments", startTime, now)
 
-	// 从最新的分表开始查询
+	// 从最新的分表开始查询（Model 自动应用软删除过滤）
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		if !facades.Schema().HasTable(tableNames[i]) {
 			continue
 		}
 		var payment models.Payment
-		if err := facades.Orm().Query().Table(tableNames[i]).Where("payment_no", paymentNo).First(&payment); err == nil {
+		if err := facades.Orm().Query().Model(&models.Payment{}).Table(tableNames[i]).Where("payment_no", paymentNo).First(&payment); err == nil {
 			return &payment, nil
 		}
 	}
@@ -963,13 +961,13 @@ func (s *PaymentServiceImpl) findPaymentByID(paymentID uint, paymentNo ...string
 	startTime := now.AddDate(0, -6, 0)
 	tableNames := utils.GetShardingTableNames("payments", startTime, now)
 
-	// 从最新的分表开始查询
+	// 从最新的分表开始查询（Model 自动应用软删除过滤）
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		if !facades.Schema().HasTable(tableNames[i]) {
 			continue
 		}
 		var payment models.Payment
-		if err := facades.Orm().Query().Table(tableNames[i]).Where("id", paymentID).First(&payment); err == nil {
+		if err := facades.Orm().Query().Model(&models.Payment{}).Table(tableNames[i]).Where("id", paymentID).First(&payment); err == nil {
 			return &payment, nil
 		}
 	}

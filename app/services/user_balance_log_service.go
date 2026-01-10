@@ -75,7 +75,7 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 	}
 
 	// 根据 user_id 计算分表名称
-	tableName := utils.GetUserBalanceLogsShardingTableName(userID)
+	tableName := utils.GetHashShardingTableNameByConfig(utils.UserBalanceLogsShardingConfig, userID)
 
 	// 检查分表是否存在，不存在则创建
 	if err := s.shardingService.EnsureShardingTable(tableName, "user_balance_logs"); err != nil {
@@ -124,7 +124,7 @@ func (s *UserBalanceLogServiceImpl) GetLogs(filters UserBalanceLogFilters, page,
 	}
 
 	// 根据 user_id 计算分表名称
-	tableName := utils.GetUserBalanceLogsShardingTableName(filters.UserID)
+	tableName := utils.GetHashShardingTableNameByConfig(utils.UserBalanceLogsShardingConfig, filters.UserID)
 
 	// 构建基础查询（用于 Count 和 Get）
 	buildQuery := func() orm.Query {
@@ -197,7 +197,7 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	}
 
 	// 根据 user_id 计算分表名称
-	tableName := utils.GetUserBalanceLogsShardingTableName(userID)
+	tableName := utils.GetHashShardingTableNameByConfig(utils.UserBalanceLogsShardingConfig, userID)
 
 	// 使用 Goravel ORM，通过 Table() 方法指定分表名称
 	query := facades.Orm().Query().Table(tableName).

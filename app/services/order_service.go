@@ -84,8 +84,6 @@ type OrderService interface {
 	GetAllOrdersForExport(filters OrderFilters) ([]models.Order, error)
 	// GetAllOrdersWithDetailsForExport 获取所有订单及详情用于导出（限制不超过3个月，不分页）
 	GetAllOrdersWithDetailsForExport(filters OrderFilters) ([]OrderWithDetails, error)
-	// UpdateOrderStatus 更新订单状态（已废弃，使用 UpdateOrder）
-	UpdateOrderStatus(orderID uint, orderTime time.Time, status string) error
 	// UpdateOrder 更新订单（状态和备注）
 	// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
 	UpdateOrder(orderID uint, orderTime time.Time, status string, remark string, orderNo ...string) error
@@ -790,11 +788,6 @@ func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters
 	return result, nil
 }
 
-// UpdateOrderStatus 更新订单状态（已废弃，保留以兼容旧接口）
-func (s *OrderServiceImpl) UpdateOrderStatus(orderID uint, orderTime time.Time, status string) error {
-	return s.UpdateOrder(orderID, orderTime, status, "")
-}
-
 // UpdateOrder 更新订单（状态和备注）
 // 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
 func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status string, remark string, orderNo ...string) error {
@@ -869,38 +862,14 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 // 例如：ORD20250101ARZ3S0K5M2X9P4Q6R8T1V3W5Y7Z9
 // 其中 202501 表示 2025年01月，用于快速定位分表
 func (s *OrderServiceImpl) generateOrderNo() string {
-	now := time.Now().UTC()
-	yearMonth := now.Format("200601") // 格式：202501
-	ulidStr := ulid.Make().String()
-	return fmt.Sprintf("ORD%s%s", yearMonth, ulidStr)
+	return utils.GenerateShardingNo(utils.OrderNoConfig)
 }
 
 // parseOrderNoYearMonth 从订单号解析年月信息
 // 订单号格式：ORD + YYYYMM + ULID
 // 返回：年月字符串（如 "202501"）和是否成功解析
 func parseOrderNoYearMonth(orderNo string) (string, bool) {
-	// 订单号必须以 ORD 开头，且长度至少为 10（ORD + 6位年月 + 至少1位ULID）
-	if len(orderNo) < 10 || !strings.HasPrefix(orderNo, "ORD") {
-		return "", false
-	}
-
-	// 提取年月部分：ORD 后面6位（YYYYMM）
-	if len(orderNo) < 9 {
-		return "", false
-	}
-	yearMonth := orderNo[3:9] // ORD(3) + YYYYMM(6)
-
-	// 验证年月格式（简单验证：6位数字）
-	if len(yearMonth) != 6 {
-		return "", false
-	}
-	for _, c := range yearMonth {
-		if c < '0' || c > '9' {
-			return "", false
-		}
-	}
-
-	return yearMonth, true
+	return utils.ParseShardingNoYearMonth(orderNo, utils.OrderNoConfig)
 }
 
 // findOrderByOrderNo 通过订单号查找订单（直接定位分表）

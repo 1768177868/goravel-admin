@@ -30,6 +30,21 @@ func GetUserBalanceLogsShardingTableName(userID uint) string {
 	return GetHashShardingTableName("user_balance_logs", userID, constants.UserBalanceLogsShards)
 }
 
+// HashShardingConfig 哈希分表配置
+type HashShardingConfig struct {
+	BaseTableName  string // 基础表名，如 "user_balance_logs"
+	NumberOfShards int    // 分表数量，建议为 2 的幂次（如 4, 8, 16, 32, 64 等）
+}
+
+// 预定义的哈希分表配置
+var (
+	// UserBalanceLogsShardingConfig 用户余额变动记录分表配置
+	UserBalanceLogsShardingConfig = HashShardingConfig{
+		BaseTableName:  "user_balance_logs",
+		NumberOfShards: constants.UserBalanceLogsShards,
+	}
+)
+
 // GetHashShardingTableName 通用的哈希分表名称生成函数
 // baseTableName: 基础表名，如 "user_balance_logs"
 // shardingKey: 分表键值（uint 类型），如 user_id
@@ -51,6 +66,29 @@ func GetHashShardingTableName(baseTableName string, shardingKey uint, numberOfSh
 	}
 	shardIndex := int(shardingKey) % numberOfShards
 	return fmt.Sprintf("%s_%d", baseTableName, shardIndex)
+}
+
+// GetHashShardingTableNameByConfig 通过配置获取哈希分表名称
+func GetHashShardingTableNameByConfig(config HashShardingConfig, shardingKey uint) string {
+	return GetHashShardingTableName(config.BaseTableName, shardingKey, config.NumberOfShards)
+}
+
+// GetAllHashShardingTableNames 获取所有哈希分表名称列表
+// 用于批量操作所有分表（如迁移、统计等）
+func GetAllHashShardingTableNames(config HashShardingConfig) []string {
+	tableNames := make([]string, config.NumberOfShards)
+	for i := 0; i < config.NumberOfShards; i++ {
+		tableNames[i] = fmt.Sprintf("%s_%d", config.BaseTableName, i)
+	}
+	return tableNames
+}
+
+// GetHashShardIndex 获取分表索引
+func GetHashShardIndex(shardingKey uint, numberOfShards int) int {
+	if numberOfShards <= 0 {
+		return 0
+	}
+	return int(shardingKey) % numberOfShards
 }
 
 // GetShardingTableNames 获取时间范围内的所有分表名称
