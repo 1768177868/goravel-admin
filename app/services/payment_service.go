@@ -989,9 +989,10 @@ func (s *PaymentServiceImpl) querySinglePaymentTable(tableName string, filters P
 	query := s.buildPaymentShardingQuery(tableName, filters)
 	query = s.applyOrderBy(query, orderBy)
 
-	// 获取总数
-	countQuery := s.buildPaymentShardingQuery(tableName, filters)
-	total, err := countQuery.Count()
+	// 获取总数（使用 CountOptimizer 优化，超过阈值使用 EXPLAIN 估算）
+	whereClause, whereArgs := s.buildPaymentShardingWhereClause(filters)
+	countOptimizer := utils.NewCountOptimizer(PaymentCountThreshold, "payment")
+	total, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, whereArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
