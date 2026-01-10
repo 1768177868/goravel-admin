@@ -803,7 +803,10 @@
     "export_completed": "Export completed",
     "export_failed": "Export failed",
     "monitoring_started": "Started monitoring export progress",
-    "monitor_failed": "Failed to start monitoring"
+    "monitor_failed": "Failed to start monitoring",
+    "task_submitted": "Export task submitted, please wait",
+    "success": "Export successful",
+    "failed": "Export failed"
   },
   "attachment": {
     "upload": "Upload File",

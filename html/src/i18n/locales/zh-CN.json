@@ -803,7 +803,10 @@
     "export_completed": "导出完成",
     "export_failed": "导出失败",
     "monitoring_started": "开始监控导出进度",
-    "monitor_failed": "启动监控失败"
+    "monitor_failed": "启动监控失败",
+    "task_submitted": "导出任务已提交，请稍候",
+    "success": "导出成功",
+    "failed": "导出失败"
   },
   "attachment": {
     "upload": "上传文件",

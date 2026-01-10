@@ -15,7 +15,19 @@
         i18n-prefix="payment"
         @search="handleSearch"
         @reset="handleReset"
-      />
+      >
+        <template #extra-buttons>
+          <el-button 
+            type="success" 
+            :disabled="getButtonState('payment.export').disabled || isExporting"
+            :loading="isExporting"
+            @click="handleExport"
+          >
+            <el-icon><Download /></el-icon>
+            {{ $t('common.export') }}
+          </el-button>
+        </template>
+      </SearchForm>
 
       <VxeTable
         ref="tableRef"
@@ -119,12 +131,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import { usePermission } from '../../composables/usePermission'
 import { useListPage } from '../../composables/useListPage'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
-import { getPaymentList, getPaymentDetail } from '../../api/payment'
+import { getPaymentList, getPaymentDetail, exportPayments } from '../../api/payment'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
 import { getSevenDaysAgo } from '../../utils/dateUtils'
@@ -133,10 +148,14 @@ import { getSevenDaysAgo } from '../../utils/dateUtils'
 const { getButtonState } = usePermission()
 
 const { t } = useI18n()
+const router = useRouter()
 const tableRef = ref(null)
 const detailDialogVisible = ref(false)
 const detailLoading = ref(false)
 const paymentDetail = ref(null)
+
+// 导出相关状态
+const isExporting = ref(false)
 
 const {
   pagination,
@@ -233,7 +252,7 @@ const tableColumns = computed(() => [
   {
     field: 'payment_no',
     title: t('payment.payment_no'),
-    minWidth: 180,
+    minWidth: 300,
     sortable: true
   },
   {
@@ -351,6 +370,46 @@ const handleView = async (row) => {
     ErrorHandler.handle(error)
   } finally {
     detailLoading.value = false
+  }
+}
+
+// 导出支付记录
+const handleExport = async () => {
+  if (isExporting.value) {
+    return
+  }
+
+  isExporting.value = true
+  try {
+    const params = {
+      ...searchForm.value,
+      order_by: 'created_at:desc'
+    }
+    const response = await exportPayments(params)
+    const exportId = response.data?.data?.export_id || response.data?.export_id
+    
+    if (!exportId) {
+      ElMessage.error(t('export.failed'))
+      isExporting.value = false
+      return
+    }
+
+    // 显示提交成功消息
+    ElMessage.success(t('export.task_submitted'))
+    
+    // 立即跳转到导出记录页面
+    router.push('/exports')
+  } catch (error) {
+    logger.error('Export payments error:', error)
+    
+    // 检查是否是重复提交错误
+    if (error.response?.status === 429) {
+      ElMessage.warning(t('common.export_in_progress'))
+    } else if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true })
+    }
+  } finally {
+    isExporting.value = false
   }
 }
 

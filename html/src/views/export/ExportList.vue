@@ -37,7 +37,7 @@
       >
         <template #status="{ row }">
           <div>
-            <el-tag :type="getStatusTagType(row.status || row.Status)">
+            <el-tag :type="getStatusTagType(row)">
               {{ formatStatus({ row }) }}
             </el-tag>
             <div v-if="(row.status || row.Status) === 2 && (row.error_msg || row.ErrorMsg)" style="margin-top: 4px; color: #f56c6c; font-size: 12px; word-break: break-all;">
@@ -111,7 +111,7 @@ const transformExportData = (item) => {
     path: item.Path || item.path || '',
     extension: item.Extension || item.extension || '',
     size: item.Size || item.size || 0,
-    status: item.Status || item.status || 0,
+    status: item.Status !== undefined ? item.Status : (item.status !== undefined ? item.status : 0),
     error_msg: item.ErrorMsg || item.error_msg || '',
     created_at: item.CreatedAt || item.created_at || '',
     file_url: item.FileURL || item.file_url || ''
@@ -173,6 +173,7 @@ const searchFields = computed(() => [
     width: '150px',
     options: [
       { label: t('menu.order'), value: 'orders' },
+      { label: t('menu.payment'), value: 'payments' },
       { label: t('menu.admin'), value: 'admins' }
     ],
     clearable: true
@@ -195,8 +196,9 @@ const searchFields = computed(() => [
     type: 'select',
     width: '150px',
     options: [
+      { label: t('log.processing'), value: '0' },
       { label: t('log.success'), value: '1' },
-      { label: t('log.failed'), value: '0' }
+      { label: t('log.failed'), value: '2' }
     ],
     clearable: true
   },
@@ -221,6 +223,7 @@ const searchFields = computed(() => [
 const formatType = ({ cellValue }) => {
   const type = cellValue || ''
   if (type === 'orders') return t('menu.order')
+  if (type === 'payments') return t('menu.payment')
   if (type === 'admins') return t('menu.admin')
   return type || '-'
 }
@@ -256,11 +259,14 @@ const formatErrorMsg = ({ row }) => {
 }
 
 const formatStatus = ({ row }) => {
-  const status = row.status || row.Status || 0
-  return status === 1 ? t('log.success') : status === 0 ? t('log.processing') || '处理中' : t('log.failed')
+  const status = Number(row.status !== undefined ? row.status : (row.Status !== undefined ? row.Status : 0))
+  if (status === 1) return t('log.success')
+  if (status === 0) return t('log.processing') || '处理中'
+  return t('log.failed')
 }
 
-const getStatusTagType = (status) => {
+const getStatusTagType = (row) => {
+  const status = Number(row.status !== undefined ? row.status : (row.Status !== undefined ? row.Status : 0))
   if (status === 1) return 'success'
   if (status === 0) return 'warning'
   return 'danger'

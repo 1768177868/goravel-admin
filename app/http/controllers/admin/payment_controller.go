@@ -1,14 +1,21 @@
 package admin
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/queue"
+	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
+	"goravel/app/http/trans"
+	"goravel/app/jobs"
+	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
 )
@@ -212,4 +219,193 @@ func (r *PaymentController) Show(ctx http.Context) http.Response {
 // formatPayTime 格式化支付时间为字符串
 func (r *PaymentController) formatPayTime(t *time.Time) string {
 	return utils.FormatDateTimePtr(t)
+}
+
+// Export 导出支付记录
+// @Summary      导出支付记录
+// @Description  异步导出支付记录为CSV文件
+// @Tags         支付管理
+// @Accept       json
+// @Produce      json
+// @Param        payment_no        query    string  false "支付单号"
+// @Param        order_no          query    string  false "订单号"
+// @Param        payment_method_id query    int     false "支付方式ID"
+// @Param        user_id           query    int     false "用户ID"
+// @Param        status            query    string  false "支付状态"
+// @Param        start_time        query    string  false "开始时间"
+// @Param        end_time          query    string  false "结束时间"
+// @Success      200        {object} map[string]any
+// @Failure      400        {object} map[string]any "参数错误"
+// @Failure      429        {object} map[string]any "导出任务正在进行中"
+// @Failure      500        {object} map[string]any "服务器错误"
+// @Router       /api/admin/payments/export [post]
+// @Security     BearerAuth
+func (r *PaymentController) Export(ctx http.Context) http.Response {
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	}
+
+	// 防重复点击
+	lockKey := fmt.Sprintf("export:payments:lock:%d", adminID)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
+
+	if !lock.Get() {
+		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+	}
+
+	// 构建筛选条件
+	filters, resp := r.buildFilters(ctx)
+	if resp != nil {
+		return resp
+	}
+
+	// 获取存储驱动配置
+	disk := utils.GetConfigValue("storage", "file_disk", "")
+	if disk == "" {
+		disk = utils.GetConfigValue("storage", "export_disk", "")
+	}
+	if disk == "" {
+		disk = "local"
+	}
+
+	exportRecord := models.Export{
+		AdminID: adminID,
+		Type:    models.ExportTypePayments,
+		Status:  models.ExportStatusProcessing,
+		Disk:    disk,
+		Path:    "",
+	}
+	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	// 序列化筛选条件
+	filtersMap := map[string]any{
+		"payment_no":        filters.PaymentNo,
+		"order_no":          filters.OrderNo,
+		"payment_method_id": filters.PaymentMethodID,
+		"user_id":           filters.UserID,
+		"status":            filters.Status,
+		"order_by":          filters.OrderBy,
+	}
+	if !filters.StartTime.IsZero() {
+		filtersMap["start_time"] = utils.FormatDateTime(filters.StartTime)
+	}
+	if !filters.EndTime.IsZero() {
+		filtersMap["end_time"] = utils.FormatDateTime(filters.EndTime)
+	}
+
+	lang := r.getCurrentLanguage(ctx)
+
+	exportArgsStruct := jobs.ExportPaymentsArgs{
+		ExportID: exportRecord.ID,
+		AdminID:  adminID,
+		Filters:  filtersMap,
+		Type:     "payments",
+		Language: lang,
+	}
+
+	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	if err != nil {
+		facades.Log().Errorf("序列化导出参数失败: export_id=%d, error=%v", exportRecord.ID, err)
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	facades.Log().Infof("提交支付记录导出任务到队列: export_id=%d", exportRecord.ID)
+
+	exportArgs := []queue.Arg{
+		{
+			Type:  "string",
+			Value: string(exportArgsJSON),
+		},
+	}
+
+	if err := facades.Queue().Job(&jobs.ExportPayments{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
+		lock.Release()
+		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	facades.Log().Infof("支付记录导出任务已成功提交到队列: export_id=%d", exportRecord.ID)
+
+	return response.Success(ctx, http.Json{
+		"export_id": exportRecord.ID,
+		"message":   trans.Get(ctx, "export_task_submitted"),
+	})
+}
+
+// GetExportStatus 查询导出状态
+// @Summary      查询支付记录导出状态
+// @Description  根据导出记录ID查询导出任务的状态
+// @Tags         支付管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "导出记录ID"
+// @Success      200  {object}  map[string]any
+// @Failure      400  {object}  map[string]any  "参数错误"
+// @Failure      404  {object}  map[string]any  "导出记录不存在"
+// @Failure      500  {object}  map[string]any  "服务器错误"
+// @Router       /api/admin/payments/export/status/{id} [get]
+// @Security     BearerAuth
+func (r *PaymentController) GetExportStatus(ctx http.Context) http.Response {
+	exportID := helpers.GetUintRoute(ctx, "id")
+	if exportID == 0 {
+		return response.Error(ctx, http.StatusBadRequest, "export_id_required")
+	}
+
+	var exportRecord models.Export
+	if err := facades.Orm().Query().Where("id", exportID).First(&exportRecord); err != nil {
+		return response.Error(ctx, http.StatusNotFound, "export_not_found")
+	}
+
+	result := http.Json{
+		"id":          exportRecord.ID,
+		"status":      exportRecord.Status,
+		"status_text": r.getExportStatusText(ctx, exportRecord.Status),
+		"path":        exportRecord.Path,
+		"filename":    exportRecord.Filename,
+		"size":        exportRecord.Size,
+		"error_msg":   exportRecord.ErrorMsg,
+		"created_at":  exportRecord.CreatedAt,
+		"updated_at":  exportRecord.UpdatedAt,
+	}
+
+	if exportRecord.Status == models.ExportStatusSuccess && exportRecord.Path != "" {
+		result["download_url"] = fmt.Sprintf("/api/admin/exports/%d/download", exportRecord.ID)
+	}
+
+	return response.Success(ctx, result)
+}
+
+// getCurrentLanguage 获取当前语言
+func (r *PaymentController) getCurrentLanguage(ctx http.Context) string {
+	lang := ctx.Request().Header("Accept-Language", "")
+	if lang == "" {
+		lang = ctx.Request().Query("lang", "")
+	}
+	if lang == "" {
+		lang = facades.Config().GetString("app.locale", "cn")
+	}
+	return utils.NormalizeLanguage(lang)
+}
+
+// getExportStatusText 获取导出状态文本
+func (r *PaymentController) getExportStatusText(ctx http.Context, status uint8) string {
+	switch status {
+	case models.ExportStatusProcessing:
+		return trans.Get(ctx, "export_task_status_processing")
+	case models.ExportStatusSuccess:
+		return trans.Get(ctx, "export_task_status_success")
+	case models.ExportStatusFailed:
+		return trans.Get(ctx, "export_task_status_failed")
+	default:
+		return trans.Get(ctx, "export_task_status_unknown")
+	}
 }

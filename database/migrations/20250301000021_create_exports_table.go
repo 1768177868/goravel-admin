@@ -22,7 +22,7 @@ func (r *M20250301000021CreateExportsTable) Up() error {
 			table.String("filename", 255).Nullable().Comment("文件名")
 			table.String("extension", 20).Nullable().Comment("文件后缀")
 			table.BigInteger("size").Nullable().Comment("文件大小(字节)")
-			table.UnsignedTinyInteger("status").Default(1).Comment("状态 1:成功 0:失败")
+			table.UnsignedTinyInteger("status").Default(1).Comment("状态 0:处理中 1:成功 2:失败")
 			table.Timestamps()
 
 			table.Index("admin_id")
@@ -35,5 +35,3 @@ func (r *M20250301000021CreateExportsTable) Up() error {
 func (r *M20250301000021CreateExportsTable) Down() error {
 	return facades.Schema().DropIfExists("exports")
 }
-
-

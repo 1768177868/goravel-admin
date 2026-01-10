@@ -203,6 +203,8 @@ func Admin() {
 			// 支付记录管理
 			router.Get("payments", paymentController.Index)
 			router.Get("payments/{id}", paymentController.Show)
+			router.Post("payments/export", paymentController.Export)
+			router.Get("payments/export/status/{id}", paymentController.GetExportStatus)
 
 		})
 

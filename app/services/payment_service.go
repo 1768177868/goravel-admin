@@ -79,6 +79,38 @@ type PaymentFilters struct {
 // PaymentCountThreshold 支付记录分页统计优化阈值（超过此值使用执行计划估算）
 const PaymentCountThreshold int64 = 100000
 
+// BuildPaymentQuery 构建支付记录分表查询（包含时间范围 + 通用筛选），供列表查询/导出复用
+func BuildPaymentQuery(tableName string, filters PaymentFilters) orm.Query {
+	query := facades.Orm().Query().Table(tableName).Where("deleted_at IS NULL")
+
+	// 时间范围
+	if !filters.StartTime.IsZero() {
+		query = query.Where("created_at >= ?", utils.FormatDateTime(filters.StartTime))
+	}
+	if !filters.EndTime.IsZero() {
+		query = query.Where("created_at <= ?", utils.FormatDateTime(filters.EndTime))
+	}
+
+	// 精确匹配条件
+	if filters.PaymentNo != "" {
+		query = query.Where("payment_no = ?", filters.PaymentNo)
+	}
+	if filters.OrderNo != "" {
+		query = query.Where("order_no = ?", filters.OrderNo)
+	}
+	if filters.PaymentMethodID > 0 {
+		query = query.Where("payment_method_id", filters.PaymentMethodID)
+	}
+	if filters.UserID > 0 {
+		query = query.Where("user_id", filters.UserID)
+	}
+	if filters.Status != "" {
+		query = query.Where("status", filters.Status)
+	}
+
+	return query
+}
+
 type PaymentServiceImpl struct {
 	shardingService      ShardingService
 	shardingQueryService ShardingQueryService
