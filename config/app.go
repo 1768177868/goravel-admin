@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/goravel/cos"
-	"github.com/goravel/fiber"
+	// "github.com/goravel/fiber"
 	"github.com/goravel/framework/auth"
 	"github.com/goravel/framework/cache"
 	"github.com/goravel/framework/console"
@@ -19,8 +19,9 @@ import (
 	"github.com/goravel/postgres"
 	"github.com/goravel/redis"
 	"github.com/goravel/s3"
-	"github.com/goravel/sqlite"
-	"github.com/goravel/sqlserver"
+
+	// "github.com/goravel/sqlite"
+	// "github.com/goravel/sqlserver"
 
 	"goravel/app/providers"
 	"goravel/lang"
@@ -123,14 +124,14 @@ func init() {
 			&providers.DatabaseServiceProvider{},
 			&postgres.ServiceProvider{},
 			&mysql.ServiceProvider{},
-			&sqlserver.ServiceProvider{},
-			&sqlite.ServiceProvider{},
+			// &sqlserver.ServiceProvider{},
+			// &sqlite.ServiceProvider{},
 			&s3.ServiceProvider{},
 			&cos.ServiceProvider{},
 			&oss.ServiceProvider{},
 			&minio.ServiceProvider{},
 			&gin.ServiceProvider{},
-			&fiber.ServiceProvider{},
+			// &fiber.ServiceProvider{},
 		},
 	})
 }

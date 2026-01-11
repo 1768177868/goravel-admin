@@ -1,18 +1,20 @@
-package services
+﻿package services
 
 import (
-	"testing"
+"os"
+"testing"
 
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/file"
+"github.com/goravel/framework/facades"
+
+_ "goravel/tests"
 )
 
 func TestMain(m *testing.M) {
-	if err := facades.Artisan().Call("migrate"); err != nil {
-		panic(err)
-	}
+if err := facades.Artisan().Call("migrate"); err != nil {
+panic(err)
+}
 
-	m.Run()
+exit := m.Run()
 
-	_ = file.Remove("goravel")
+os.Exit(exit)
 }

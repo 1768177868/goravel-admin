@@ -5,8 +5,8 @@ import (
 	"github.com/goravel/framework/facades"
 	mysqlfacades "github.com/goravel/mysql/facades"
 	postgresfacades "github.com/goravel/postgres/facades"
-	sqlitefacades "github.com/goravel/sqlite/facades"
-	sqlserverfacades "github.com/goravel/sqlserver/facades"
+	// sqlitefacades "github.com/goravel/sqlite/facades"
+	// sqlserverfacades "github.com/goravel/sqlserver/facades"
 )
 
 func init() {
@@ -43,27 +43,27 @@ func init() {
 					return mysqlfacades.Mysql("mysql")
 				},
 			},
-			"sqlserver": map[string]any{
-				"host":     config.Env("DB_HOST", "127.0.0.1"),
-				"port":     config.Env("DB_PORT", 3306),
-				"database": config.Env("DB_DATABASE", "forge"),
-				"username": config.Env("DB_USERNAME", ""),
-				"password": config.Env("DB_PASSWORD", ""),
-				"charset":  "utf8mb4",
-				"prefix":   "",
-				"singular": false,
-				"via": func() (driver.Driver, error) {
-					return sqlserverfacades.Sqlserver("sqlserver")
-				},
-			},
-			"sqlite": map[string]any{
-				"database": config.Env("DB_DATABASE", "forge"),
-				"prefix":   "",
-				"singular": false,
-				"via": func() (driver.Driver, error) {
-					return sqlitefacades.Sqlite("sqlite")
-				},
-			},
+			// "sqlserver": map[string]any{
+			// 	"host":     config.Env("DB_HOST", "127.0.0.1"),
+			// 	"port":     config.Env("DB_PORT", 3306),
+			// 	"database": config.Env("DB_DATABASE", "forge"),
+			// 	"username": config.Env("DB_USERNAME", ""),
+			// 	"password": config.Env("DB_PASSWORD", ""),
+			// 	"charset":  "utf8mb4",
+			// 	"prefix":   "",
+			// 	"singular": false,
+			// 	"via": func() (driver.Driver, error) {
+			// 		return sqlserverfacades.Sqlserver("sqlserver")
+			// 	},
+			// },
+			// "sqlite": map[string]any{
+			// 	"database": config.Env("DB_DATABASE", "forge"),
+			// 	"prefix":   "",
+			// 	"singular": false,
+			// 	"via": func() (driver.Driver, error) {
+			// 		return sqlitefacades.Sqlite("sqlite")
+			// 	},
+			// },
 		},
 		// Set pool configuration
 		"pool": map[string]any{

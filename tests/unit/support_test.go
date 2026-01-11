@@ -1,4 +1,7 @@
-package feature
+//go:build linux
+// +build linux
+
+package unit
 
 import (
 	"fmt"

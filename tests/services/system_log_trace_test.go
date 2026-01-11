@@ -1,4 +1,4 @@
-package feature
+package services
 
 import (
 	"context"
@@ -63,4 +63,3 @@ func TestSystemLogServiceRecord(t *testing.T) {
 		_, _ = facades.Orm().Query().Where("trace_id", traceID).Delete(&models.SystemLog{})
 	})
 }
-

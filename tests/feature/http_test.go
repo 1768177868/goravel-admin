@@ -33,7 +33,6 @@ func (s *HttpTestSuite) SetupTest() {
 func (s *HttpTestSuite) TearDownTest() {
 }
 
-
 func (s *HttpTestSuite) TestBindQuery() {
 	resp, err := s.Http(s.T()).Get("/bind-query?name=Goravel")
 
@@ -193,4 +192,3 @@ func (s *HttpTestSuite) TestUrl() {
 	s.Require().NoError(err)
 	s.Equal(`{"full_url":"http://example.com/url/post/1?a=1\u0026b=2","info":{"handler":"goravel/routes.Api.func11.2","method":"POST","name":"url.post","path":"/url/post/{id}"},"info1":{"handler":"goravel/routes.Api.func11.2","method":"POST","name":"url.post","path":"/url/post/{id}"},"method":"POST","name":"url.post","origin_path":"/url/post/{id}","path":"/url/post/1","url":"/url/post/1?a=1\u0026b=2"}`, content)
 }
-

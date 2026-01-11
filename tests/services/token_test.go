@@ -1,4 +1,4 @@
-package feature
+package services
 
 import (
 	"testing"
@@ -151,7 +151,7 @@ func (s *TokenServiceFeatureTestSuite) TestFindToken_EmptyToken() {
 
 	s.Error(err)
 	s.Nil(token)
-	
+
 	// 验证返回的是业务错误
 	businessErr, ok := apperrors.GetBusinessError(err)
 	s.True(ok, "应该返回业务错误")
@@ -192,7 +192,7 @@ func (s *TokenServiceFeatureTestSuite) TestFindToken_ExpiredToken() {
 
 	s.Error(err)
 	s.Nil(token)
-	
+
 	// 验证返回的是业务错误
 	businessErr, ok := apperrors.GetBusinessError(err)
 	s.True(ok, "应该返回业务错误")
@@ -332,7 +332,7 @@ func (s *TokenServiceFeatureTestSuite) TestUpdateLastUsedAt_Success() {
 		"",
 	)
 	s.Require().NoError(err)
-	
+
 	initialLastUsedAt := accessToken.LastUsedAt
 	s.Require().NotNil(initialLastUsedAt)
 
@@ -356,9 +356,8 @@ func (s *TokenServiceFeatureTestSuite) TestUpdateLastUsedAt_Success() {
 func (s *TokenServiceFeatureTestSuite) TestUpdateLastUsedAt_NotFound() {
 	// 尝试更新不存在的 token
 	err := s.service.UpdateLastUsedAt("non-existent-token")
-	
+
 	// 注意：UpdateLastUsedAt 可能不会返回错误，只是不更新任何记录
 	// 这取决于 ORM 的实现
 	s.NoError(err) // 或者根据实际实现调整断言
 }
-

@@ -30,25 +30,26 @@ func TestInstallAndUninstallDBDrivers(t *testing.T) {
 	assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/mysql"))
 	assert.True(t, file.Contain(path.Config("database.go"), `"mysql": map[string]any{`))
 
-	assert.NoError(t, facades.Artisan().Call("package:uninstall github.com/goravel/sqlserver@v1.4.x"))
-	assert.False(t, file.Contain(path.Config("app.go"), "&sqlserver.ServiceProvider{},"))
-	assert.False(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlserver"))
-	assert.False(t, file.Contain(path.Config("database.go"), `"sqlserver": map[string]any{`))
+	// sqlserver and sqlite tests commented out - drivers removed
+	// assert.NoError(t, facades.Artisan().Call("package:uninstall github.com/goravel/sqlserver@v1.4.x"))
+	// assert.False(t, file.Contain(path.Config("app.go"), "&sqlserver.ServiceProvider{},"))
+	// assert.False(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlserver"))
+	// assert.False(t, file.Contain(path.Config("database.go"), `"sqlserver": map[string]any{`))
 
-	assert.NoError(t, facades.Artisan().Call("package:install github.com/goravel/sqlserver@v1.4.x"))
-	assert.True(t, file.Contain(path.Config("app.go"), "&sqlserver.ServiceProvider{},"))
-	assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlserver"))
-	assert.True(t, file.Contain(path.Config("database.go"), `"sqlserver": map[string]any{`))
+	// assert.NoError(t, facades.Artisan().Call("package:install github.com/goravel/sqlserver@v1.4.x"))
+	// assert.True(t, file.Contain(path.Config("app.go"), "&sqlserver.ServiceProvider{},"))
+	// assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlserver"))
+	// assert.True(t, file.Contain(path.Config("database.go"), `"sqlserver": map[string]any{`))
 
-	assert.NoError(t, facades.Artisan().Call("package:uninstall github.com/goravel/sqlite@v1.4.x"))
-	assert.False(t, file.Contain(path.Config("app.go"), "&sqlite.ServiceProvider{},"))
-	assert.False(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlite"))
-	assert.False(t, file.Contain(path.Config("database.go"), `"sqlite": map[string]any{`))
+	// assert.NoError(t, facades.Artisan().Call("package:uninstall github.com/goravel/sqlite@v1.4.x"))
+	// assert.False(t, file.Contain(path.Config("app.go"), "&sqlite.ServiceProvider{},"))
+	// assert.False(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlite"))
+	// assert.False(t, file.Contain(path.Config("database.go"), `"sqlite": map[string]any{`))
 
-	assert.NoError(t, facades.Artisan().Call("package:install github.com/goravel/sqlite@v1.4.x"))
-	assert.True(t, file.Contain(path.Config("app.go"), "&sqlite.ServiceProvider{},"))
-	assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlite"))
-	assert.True(t, file.Contain(path.Config("database.go"), `"sqlite": map[string]any{`))
+	// assert.NoError(t, facades.Artisan().Call("package:install github.com/goravel/sqlite@v1.4.x"))
+	// assert.True(t, file.Contain(path.Config("app.go"), "&sqlite.ServiceProvider{},"))
+	// assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/sqlite"))
+	// assert.True(t, file.Contain(path.Config("database.go"), `"sqlite": map[string]any{`))
 }
 
 func TestInstallAndUninstallFilesystemDrivers(t *testing.T) {
@@ -143,16 +144,17 @@ func TestInstallAndUninstallHttpDrivers(t *testing.T) {
 	assert.True(t, file.Contain(path.Config("http.go"), `github.com/goravel/framework/contracts/route`))
 	assert.True(t, file.Contain(path.Config("http.go"), `ginfacades "github.com/goravel/gin/facades"`))
 
-	assert.NoError(t, facades.Artisan().Call("package:uninstall github.com/goravel/fiber@v1.4.x"))
-	assert.False(t, file.Contain(path.Config("app.go"), "&fiber.ServiceProvider{},"))
-	assert.False(t, file.Contain(path.Config("app.go"), "github.com/goravel/fiber"))
-	assert.False(t, file.Contain(path.Config("http.go"), `"fiber": map[string]any{`))
-	assert.False(t, file.Contain(path.Config("http.go"), `fiberfacades "github.com/goravel/fiber/facades"`))
+	// fiber tests commented out - driver removed
+	// assert.NoError(t, facades.Artisan().Call("package:uninstall github.com/goravel/fiber@v1.4.x"))
+	// assert.False(t, file.Contain(path.Config("app.go"), "&fiber.ServiceProvider{},"))
+	// assert.False(t, file.Contain(path.Config("app.go"), "github.com/goravel/fiber"))
+	// assert.False(t, file.Contain(path.Config("http.go"), `"fiber": map[string]any{`))
+	// assert.False(t, file.Contain(path.Config("http.go"), `fiberfacades "github.com/goravel/fiber/facades"`))
 
-	assert.NoError(t, facades.Artisan().Call("package:install github.com/goravel/fiber@v1.4.x"))
-	assert.True(t, file.Contain(path.Config("app.go"), "&fiber.ServiceProvider{},"))
-	assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/fiber"))
-	assert.True(t, file.Contain(path.Config("http.go"), `"fiber": map[string]any{`))
-	assert.True(t, file.Contain(path.Config("http.go"), `github.com/goravel/framework/contracts/route`))
-	assert.True(t, file.Contain(path.Config("http.go"), `fiberfacades "github.com/goravel/fiber/facades"`))
+	// assert.NoError(t, facades.Artisan().Call("package:install github.com/goravel/fiber@v1.4.x"))
+	// assert.True(t, file.Contain(path.Config("app.go"), "&fiber.ServiceProvider{},"))
+	// assert.True(t, file.Contain(path.Config("app.go"), "github.com/goravel/fiber"))
+	// assert.True(t, file.Contain(path.Config("http.go"), `"fiber": map[string]any{`))
+	// assert.True(t, file.Contain(path.Config("http.go"), `github.com/goravel/framework/contracts/route`))
+	// assert.True(t, file.Contain(path.Config("http.go"), `fiberfacades "github.com/goravel/fiber/facades"`))
 }

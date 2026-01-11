@@ -1,4 +1,4 @@
-package feature
+package services
 
 import (
 	"testing"
@@ -93,7 +93,7 @@ func (s *NotificationServiceTestSuite) TestCreate_NoAdminsFound() {
 
 	s.Error(err)
 	s.Nil(notification)
-	
+
 	// 验证返回的是业务错误
 	businessErr, ok := apperrors.GetBusinessError(err)
 	s.True(ok, "应该返回业务错误")
@@ -161,7 +161,7 @@ func (s *NotificationServiceTestSuite) TestList_WithReadStatusFilter() {
 	// 查询未读通知
 	unread, total, err := s.service.List(admin.ID, 1, 10, "", "false")
 	s.NoError(err)
-	
+
 	// 验证未读通知不包含已读的通知
 	found := false
 	for _, notif := range unread {
@@ -176,7 +176,7 @@ func (s *NotificationServiceTestSuite) TestList_WithReadStatusFilter() {
 	read, total, err := s.service.List(admin.ID, 1, 10, "", "true")
 	s.NoError(err)
 	s.GreaterOrEqual(int(total), 1)
-	
+
 	// 验证已读通知包含该通知
 	found = false
 	for _, notif := range read {
@@ -252,7 +252,7 @@ func (s *NotificationServiceTestSuite) TestMarkRead_NotFound() {
 	// 尝试标记不存在的通知为已读
 	err = s.service.MarkRead(admin.ID, 99999)
 	s.Error(err)
-	
+
 	// 验证返回的是业务错误
 	businessErr, ok := apperrors.GetBusinessError(err)
 	s.True(ok, "应该返回业务错误")
@@ -268,7 +268,7 @@ func (s *NotificationServiceTestSuite) TestMarkRead_AlreadyRead() {
 	// 创建并标记为已读
 	notification, err := s.service.Create("测试通知", "内容", "test", nil, &admin.ID)
 	s.Require().NoError(err)
-	
+
 	err = s.service.MarkRead(admin.ID, notification.ID)
 	s.Require().NoError(err)
 
@@ -324,7 +324,7 @@ func (s *NotificationServiceTestSuite) TestUnreadCount_Basic() {
 	notifications, _, err := s.service.List(admin.ID, 1, 1, "", "false")
 	s.Require().NoError(err)
 	s.Require().NotEmpty(notifications)
-	
+
 	err = s.service.MarkRead(admin.ID, notifications[0].ID)
 	s.Require().NoError(err)
 
@@ -375,4 +375,3 @@ func (s *NotificationServiceTestSuite) TestListRecent_LimitValidation() {
 	s.NoError(err)
 	s.LessOrEqual(len(recent), 5)
 }
-

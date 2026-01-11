@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -8,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/services"
 	"goravel/bootstrap"
 )
 
@@ -61,6 +63,12 @@ func runApplication() {
 		Tries:      tries,      // 最大重试次数上限（从配置读取，支持环境变量 QUEUE_TRIES）
 	})
 	facades.Log().Infof("默认队列工作进程启动 - 队列: default, 并发数: %d, 最大重试次数: %d", concurrent, tries)
+	systemLogService := services.NewSystemLogService()
+	_ = systemLogService.Record(context.Background(), "info", "queue", "默认队列工作进程启动", map[string]any{
+		"queue":      "default",
+		"concurrent": concurrent,
+		"tries":      tries,
+	})
 	go func() {
 		if err := worker.Run(); err != nil {
 			facades.Log().Errorf("默认队列工作进程运行错误: %v", err)
@@ -78,6 +86,11 @@ func runApplication() {
 		Tries:      tries,                 // 最大重试次数上限
 	})
 	facades.Log().Infof("长时间任务队列工作进程启动 - 队列: long-running, 并发数: %d, 最大重试次数: %d", longRunningConcurrent, tries)
+	_ = systemLogService.Record(context.Background(), "info", "queue", "长时间任务队列工作进程启动", map[string]any{
+		"queue":      "long-running",
+		"concurrent": longRunningConcurrent,
+		"tries":      tries,
+	})
 	go func() {
 		if err := longRunningWorker.Run(); err != nil {
 			facades.Log().Errorf("长时间任务队列工作进程运行错误: %v", err)

@@ -1,4 +1,4 @@
-package feature
+package module
 
 import (
 	"encoding/json"
