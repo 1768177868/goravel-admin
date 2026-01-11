@@ -168,23 +168,19 @@ const getIconComponent = (iconName) => {
   return normalized ? iconComponents[normalized] : null
 }
 
-// 扁平化菜单选项（递归处理树形结构）
+// 树形菜单选项（保持树形结构，用于 el-tree-select）
 const menuOptions = computed(() => {
-  const flatten = (menus, parentId = 0) => {
-    const result = []
-    menus.forEach(menu => {
-      if (menu.parent_id === parentId) {
-        result.push(menu)
-        // 递归处理子菜单
-        if (menu.children && menu.children.length > 0) {
-          const children = flatten(menu.children, menu.id)
-          result.push(...children)
-        }
+  const buildTree = (menus) => {
+    return menus.map(menu => {
+      const node = {
+        value: menu.id,
+        label: menu.name,
+        children: menu.children && menu.children.length > 0 ? buildTree(menu.children) : undefined
       }
+      return node
     })
-    return result
   }
-  return flatten(tableData.value)
+  return buildTree(tableData.value)
 })
 
 // 转换后端数据格式为前端格式

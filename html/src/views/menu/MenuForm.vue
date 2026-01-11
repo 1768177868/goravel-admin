@@ -13,15 +13,17 @@
         label-width="100px"
       >
       <el-form-item :label="$t('menu_management.parent_menu')">
-        <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('menu_management.parent_menu')" clearable :disabled="loading">
-          <el-option :label="$t('menu_management.top_menu')" :value="0" />
-          <el-option
-            v-for="menu in menuOptions"
-            :key="menu.id"
-            :label="menu.name"
-            :value="menu.id"
-          />
-        </el-select>
+        <el-tree-select
+          v-model="formData.parent_id"
+          :data="treeSelectData"
+          :placeholder="$t('form.select_parent') + $t('menu_management.parent_menu')"
+          :props="{ label: 'label', value: 'value', children: 'children' }"
+          clearable
+          check-strictly
+          :render-after-expand="false"
+          :disabled="loading"
+          style="width: 100%"
+        />
       </el-form-item>
       <el-form-item :label="$t('menu_management.name')" prop="name">
         <el-input v-model="formData.name" :disabled="loading" />
@@ -179,6 +181,14 @@ const dialogVisible = computed({
 })
 
 const dialogTitle = computed(() => formData.id ? t('menu_management.edit_menu') : t('menu_management.add_menu'))
+
+// 树形选择数据，包含顶级菜单选项
+const treeSelectData = computed(() => {
+  return [
+    { value: 0, label: t('menu_management.top_menu') },
+    ...props.menuOptions
+  ]
+})
 
 const formData = reactive({
   id: null,
