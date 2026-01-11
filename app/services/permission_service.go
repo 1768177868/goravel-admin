@@ -104,19 +104,10 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 	}
 	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var permissions []models.Permission
-	err = query.With("Menu").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&permissions)
-	if err != nil {
+	var total int64
+	if err := query.With("Menu").Paginate(page, pageSize, &permissions, &total); err != nil {
 		return nil, 0, err
 	}
 

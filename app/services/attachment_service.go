@@ -580,19 +580,10 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 	}
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var attachments []models.Attachment
-	err = query.With("Admin").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&attachments)
-	if err != nil {
+	var total int64
+	if err := query.With("Admin").Paginate(page, pageSize, &attachments, &total); err != nil {
 		return nil, 0, err
 	}
 

@@ -98,19 +98,10 @@ func (s *UserServiceImpl) GetByID(id uint) (*models.User, error) {
 func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]models.User, int64, error) {
 	query := BuildUserQuery(filters)
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var users []models.User
-	err = query.Order("created_at desc").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&users)
-	if err != nil {
+	var total int64
+	if err := query.Order("created_at desc").Paginate(page, pageSize, &users, &total); err != nil {
 		return nil, 0, err
 	}
 

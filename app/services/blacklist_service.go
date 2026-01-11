@@ -65,16 +65,10 @@ func (s *BlacklistServiceImpl) GetList(filters BlacklistFilters, page, pageSize 
 	}
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var blacklists []models.Blacklist
-	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&blacklists)
-	if err != nil {
+	var total int64
+	if err := query.Paginate(page, pageSize, &blacklists, &total); err != nil {
 		return nil, 0, err
 	}
 

@@ -67,16 +67,10 @@ func (s *DictionaryServiceImpl) GetList(filters DictionaryFilters, page, pageSiz
 	}
 	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var dictionaries []models.Dictionary
-	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&dictionaries)
-	if err != nil {
+	var total int64
+	if err := query.Paginate(page, pageSize, &dictionaries, &total); err != nil {
 		return nil, 0, err
 	}
 

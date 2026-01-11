@@ -81,19 +81,10 @@ func (s *LoginLogServiceImpl) GetList(filters LoginLogFilters, page, pageSize in
 	}
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var logs []models.LoginLog
-	err = query.With("Admin").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&logs)
-	if err != nil {
+	var total int64
+	if err := query.With("Admin").Paginate(page, pageSize, &logs, &total); err != nil {
 		return nil, 0, err
 	}
 

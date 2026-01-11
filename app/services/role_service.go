@@ -84,16 +84,10 @@ func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]mo
 	}
 	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var roles []models.Role
-	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&roles)
-	if err != nil {
+	var total int64
+	if err := query.Paginate(page, pageSize, &roles, &total); err != nil {
 		return nil, 0, err
 	}
 

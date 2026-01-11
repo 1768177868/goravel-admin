@@ -70,16 +70,10 @@ func (s *DepartmentServiceImpl) GetList(filters DepartmentFilters, page, pageSiz
 	}
 	query = helpers.ApplySort(query, orderBy, "sort:asc,id:asc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var departments []models.Department
-	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&departments)
-	if err != nil {
+	var total int64
+	if err := query.Paginate(page, pageSize, &departments, &total); err != nil {
 		return nil, 0, err
 	}
 

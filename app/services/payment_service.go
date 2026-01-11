@@ -190,11 +190,6 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 		}
 	}
 
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
-	}
-
 	// 应用排序
 	if filters.OrderBy != "" {
 		query = s.applyOrderBy(query, filters.OrderBy)
@@ -204,7 +199,8 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 
 	// 分页查询
 	var paymentMethods []models.PaymentMethod
-	if err := query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&paymentMethods); err != nil {
+	var total int64
+	if err := query.Paginate(page, pageSize, &paymentMethods, &total); err != nil {
 		return nil, 0, apperrors.ErrQueryFailed.WithError(err)
 	}
 

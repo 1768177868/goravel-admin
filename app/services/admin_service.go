@@ -3,10 +3,10 @@ package services
 import (
 	"slices"
 
-	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
+	"github.com/samber/lo"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -150,19 +150,10 @@ func (s *AdminServiceImpl) GetList(filters AdminFilters, page, pageSize int) ([]
 	}
 	query = helpers.ApplySort(query, orderBy, "created_at:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var admins []models.Admin
-	err = query.With("Department").With("Roles").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&admins)
-	if err != nil {
+	var total int64
+	if err := query.With("Department").With("Roles").Paginate(page, pageSize, &admins, &total); err != nil {
 		return nil, 0, err
 	}
 

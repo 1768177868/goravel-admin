@@ -128,20 +128,10 @@ func (s *NotificationServiceImpl) List(adminID uint, page int, pageSize int, not
 		pageSize = 20
 	}
 
-	// 使用公共方法构建查询条件
-	countQuery := s.buildNotificationQuery(adminID, notifType, isRead)
-	total, err := countQuery.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 构建列表查询（添加关联预加载）
-	listQuery := s.buildNotificationQuery(adminID, notifType, isRead).With("Sender").With("Receiver")
-
-	if err := listQuery.Order("created_at desc").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&notifications); err != nil {
+	// 分页查询
+	var total int64
+	query := s.buildNotificationQuery(adminID, notifType, isRead).With("Sender").With("Receiver").Order("created_at desc")
+	if err := query.Paginate(page, pageSize, &notifications, &total); err != nil {
 		return nil, 0, err
 	}
 

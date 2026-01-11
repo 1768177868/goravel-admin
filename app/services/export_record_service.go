@@ -101,19 +101,10 @@ func (s *ExportRecordServiceImpl) GetList(filters ExportRecordFilters, page, pag
 	}
 	query = helpers.ApplySort(query, orderBy, "id:desc")
 
-	// 获取总数
-	total, err := query.Count()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	var exports []models.Export
-	err = query.With("Admin").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Get(&exports)
-	if err != nil {
+	var total int64
+	if err := query.With("Admin").Paginate(page, pageSize, &exports, &total); err != nil {
 		return nil, 0, err
 	}
 
