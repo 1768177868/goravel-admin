@@ -925,6 +925,7 @@ func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, er
 }
 
 // GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
+// 使用 EXPLAIN 获取预估行数，性能更好（牺牲精确度换速度）
 func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
 	// 计算最近一年的时间范围
 	now := time.Now().UTC()
@@ -939,27 +940,30 @@ func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
 
 	var total int64
 
-	// 分别对每个分表执行精确 COUNT，然后相加（仪表盘统计需要精准数据）
+	// 使用 EXPLAIN 获取预估行数（比 COUNT 快很多）
 	for _, tableName := range tableNames {
 		// 检查表是否存在
 		if !facades.Schema().HasTable(tableName) {
 			continue
 		}
 
-		// 使用精确 COUNT 查询
-		tableTotal, err := facades.Orm().Query().Table(tableName).
-			Where("created_at >= ?", startTime).
-			Where("created_at <= ?", endTime).
-			Count()
+		// 使用 EXPLAIN 获取预估行数
+		var explainResult []struct {
+			Rows int64 `gorm:"column:rows"`
+		}
+		sql := fmt.Sprintf("EXPLAIN SELECT * FROM `%s` WHERE created_at >= ? AND created_at <= ?", tableName)
+		err := facades.Orm().Query().Raw(sql, startTime, endTime).Scan(&explainResult)
 		if err != nil {
-			errorlog.Record(context.Background(), "order", "查询分表总数失败", map[string]any{
+			errorlog.Record(context.Background(), "order", "查询分表预估行数失败", map[string]any{
 				"table_name": tableName,
 				"error":      err.Error(),
-			}, "查询分表 %s 总数失败: %v", tableName, err)
-			// 如果某个分表查询失败，继续查询其他分表，但记录错误
+			}, "查询分表 %s 预估行数失败: %v", tableName, err)
 			continue
 		}
-		total += tableTotal
+
+		if len(explainResult) > 0 {
+			total += explainResult[0].Rows
+		}
 	}
 
 	return total, nil
