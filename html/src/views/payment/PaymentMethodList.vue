@@ -71,7 +71,7 @@
 <script setup>
 import { ref, computed, markRaw, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
@@ -269,24 +269,7 @@ const handleEdit = (row) => {
 
 // 删除
 const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(
-      t('payment_method.delete_confirm'),
-      t('form.warning'),
-      {
-        type: 'warning',
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel')
-      }
-    )
-    await handleDeleteCrud(row.id || row.ID)
-    ElMessage.success(t('common.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ErrorHandler.handle(error)
-    }
-  }
+  await handleDeleteCrud(row, loadData)
 }
 
 // 状态变更
