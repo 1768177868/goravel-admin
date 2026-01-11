@@ -3,7 +3,6 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
@@ -16,11 +15,13 @@ import (
 
 type MenuController struct {
 	treeService services.TreeService
+	menuService services.MenuService
 }
 
 func NewMenuController() *MenuController {
 	return &MenuController{
 		treeService: services.NewTreeServiceImpl(),
+		menuService: services.NewMenuService(),
 	}
 }
 
@@ -102,41 +103,30 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuSlugExists.Code)
 	}
 
-	now := carbon.Now()
-	menuData := map[string]any{
-		"parent_id":  menuCreate.ParentID,
-		"title":      menuCreate.Title,
-		"slug":       menuCreate.Slug,
-		"icon":       menuCreate.Icon,
-		"path":       menuCreate.Path,
-		"component":  menuCreate.Component,
-		"permission": menuCreate.Permission,
-		"type":       menuCreate.Type,
-		"status":     menuCreate.Status,
-		"sort":       menuCreate.Sort,
-		"is_hidden":  menuCreate.IsHidden,
-		"link_type":  menuCreate.LinkType,
-		"open_type":  menuCreate.OpenType,
-		"created_at": now,
-		"updated_at": now,
-	}
-
-	if err := facades.Orm().Query().Table("menus").Create(menuData); err != nil {
+	menu, err := r.menuService.Create(
+		menuCreate.ParentID,
+		menuCreate.Title,
+		menuCreate.Slug,
+		menuCreate.Icon,
+		menuCreate.Path,
+		menuCreate.Component,
+		menuCreate.Permission,
+		menuCreate.Type,
+		menuCreate.Status,
+		menuCreate.Sort,
+		menuCreate.IsHidden,
+		menuCreate.LinkType,
+		menuCreate.OpenType,
+	)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"title": menuCreate.Title,
 			"slug":  menuCreate.Slug,
 		})
 	}
 
-	var menu models.Menu
-	if err := facades.Orm().Query().Where("slug", menuCreate.Slug).FirstOrFail(&menu); err != nil {
-		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
-			"slug": menuCreate.Slug,
-		})
-	}
-
 	return response.Success(ctx, http.Json{
-		"menu": menu,
+		"menu": *menu,
 	})
 }
 
@@ -208,7 +198,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		menu.OpenType = menuUpdate.OpenType
 	}
 
-	if err := facades.Orm().Query().Save(menu); err != nil {
+	if err := r.menuService.Update(menu); err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"menu_id": menu.ID,
 		})
@@ -234,7 +224,7 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuHasChildren.Code)
 	}
 
-	if _, err := facades.Orm().Query().Delete(menu); err != nil {
+	if err := r.menuService.Delete(menu); err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"menu_id": menu.ID,
 		})

@@ -15,6 +15,12 @@ type DictionaryService interface {
 	GetList(filters DictionaryFilters, page, pageSize int) ([]models.Dictionary, int64, error)
 	// GetByType 根据类型获取字典列表
 	GetByType(dictType string) ([]models.Dictionary, error)
+	// Create 创建字典
+	Create(dictType, label, value, description, remark string, status uint8, sort int) (*models.Dictionary, error)
+	// Update 更新字典
+	Update(dictionary *models.Dictionary) error
+	// Delete 删除字典
+	Delete(dictionary *models.Dictionary) error
 }
 
 // DictionaryFilters 字典查询过滤器
@@ -88,4 +94,40 @@ func (s *DictionaryServiceImpl) GetByType(dictType string) ([]models.Dictionary,
 		return nil, err
 	}
 	return dictionaries, nil
+}
+
+// Create 创建字典
+func (s *DictionaryServiceImpl) Create(dictType, label, value, description, remark string, status uint8, sort int) (*models.Dictionary, error) {
+	dictionary := &models.Dictionary{}
+	createData := map[string]any{
+		"type":        dictType,
+		"label":       label,
+		"value":       value,
+		"description": description,
+		"remark":      remark,
+		"status":      status,
+		"sort":        sort,
+	}
+
+	if err := facades.Orm().Query().Model(dictionary).Create(createData); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	return dictionary, nil
+}
+
+// Update 更新字典
+func (s *DictionaryServiceImpl) Update(dictionary *models.Dictionary) error {
+	if err := facades.Orm().Query().Save(dictionary); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// Delete 删除字典
+func (s *DictionaryServiceImpl) Delete(dictionary *models.Dictionary) error {
+	if _, err := facades.Orm().Query().Delete(dictionary); err != nil {
+		return apperrors.ErrDeleteFailed.WithError(err)
+	}
+	return nil
 }

@@ -15,6 +15,12 @@ type DepartmentService interface {
 	GetList(filters DepartmentFilters, page, pageSize int) ([]models.Department, int64, error)
 	// HasAdmins 检查部门是否有管理员
 	HasAdmins(departmentID uint) (bool, error)
+	// Create 创建部门
+	Create(parentID uint, name, code, leader, phone, email, remark string, status uint8, sort int) (*models.Department, error)
+	// Update 更新部门
+	Update(department *models.Department) error
+	// Delete 删除部门
+	Delete(department *models.Department) error
 }
 
 // DepartmentFilters 部门查询过滤器
@@ -87,4 +93,42 @@ func (s *DepartmentServiceImpl) HasAdmins(departmentID uint) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// Create 创建部门
+func (s *DepartmentServiceImpl) Create(parentID uint, name, code, leader, phone, email, remark string, status uint8, sort int) (*models.Department, error) {
+	department := &models.Department{}
+	createData := map[string]any{
+		"parent_id": parentID,
+		"name":      name,
+		"code":      code,
+		"leader":    leader,
+		"phone":     phone,
+		"email":     email,
+		"remark":    remark,
+		"status":    status,
+		"sort":      sort,
+	}
+
+	if err := facades.Orm().Query().Model(department).Create(createData); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	return department, nil
+}
+
+// Update 更新部门
+func (s *DepartmentServiceImpl) Update(department *models.Department) error {
+	if err := facades.Orm().Query().Save(department); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// Delete 删除部门
+func (s *DepartmentServiceImpl) Delete(department *models.Department) error {
+	if _, err := facades.Orm().Query().Delete(department); err != nil {
+		return apperrors.ErrDeleteFailed.WithError(err)
+	}
+	return nil
 }

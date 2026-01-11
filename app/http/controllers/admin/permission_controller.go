@@ -3,7 +3,6 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -119,36 +118,25 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameOrSlugExists.Code)
 	}
 
-	now := carbon.Now()
-	permissionData := map[string]any{
-		"name":        name,
-		"slug":        slug,
-		"method":      method,
-		"path":        path,
-		"description": description,
-		"status":      status,
-		"sort":        sort,
-		"menu_id":     menuID,
-		"created_at":  now,
-		"updated_at":  now,
-	}
-
-	if err := facades.Orm().Query().Table("permissions").Create(permissionData); err != nil {
+	permission, err := r.permissionService.Create(
+		name,
+		slug,
+		method,
+		path,
+		description,
+		status,
+		sort,
+		menuID,
+	)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"name": name,
 			"slug": slug,
 		})
 	}
 
-	var permission models.Permission
-	if err := facades.Orm().Query().Where("slug", slug).FirstOrFail(&permission); err != nil {
-		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
-			"slug": slug,
-		})
-	}
-
 	return response.Success(ctx, http.Json{
-		"permission": permission,
+		"permission": *permission,
 	})
 }
 
@@ -207,7 +195,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 		permission.MenuID = cast.ToUint(menuIDStr)
 	}
 
-	if err := facades.Orm().Query().Save(permission); err != nil {
+	if err := r.permissionService.Update(permission); err != nil {
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
 		})
@@ -226,7 +214,7 @@ func (r *PermissionController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(permission); err != nil {
+	if err := r.permissionService.Delete(permission); err != nil {
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
 		})

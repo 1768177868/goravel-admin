@@ -2,8 +2,6 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -112,29 +110,18 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	now := carbon.Now()
-	departmentData := map[string]any{
-		"parent_id":  departmentCreate.ParentID,
-		"name":       departmentCreate.Name,
-		"code":       departmentCreate.Code,
-		"leader":     departmentCreate.Leader,
-		"phone":      departmentCreate.Phone,
-		"email":      departmentCreate.Email,
-		"status":     departmentCreate.Status,
-		"sort":       departmentCreate.Sort,
-		"remark":     departmentCreate.Remark,
-		"created_at": now,
-		"updated_at": now,
-	}
-
-	if err := facades.Orm().Query().Table("departments").Create(departmentData); err != nil {
-		return response.ErrorWithLog(ctx, "department", err, map[string]any{
-			"name": departmentCreate.Name,
-		})
-	}
-
-	var department models.Department
-	if err := facades.Orm().Query().Where("name", departmentCreate.Name).FirstOrFail(&department); err != nil {
+	department, err := r.departmentService.Create(
+		departmentCreate.ParentID,
+		departmentCreate.Name,
+		departmentCreate.Code,
+		departmentCreate.Leader,
+		departmentCreate.Phone,
+		departmentCreate.Email,
+		departmentCreate.Remark,
+		departmentCreate.Status,
+		departmentCreate.Sort,
+	)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"name": departmentCreate.Name,
 		})
@@ -194,7 +181,7 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 		department.Remark = departmentUpdate.Remark
 	}
 
-	if err := facades.Orm().Query().Save(department); err != nil {
+	if err := r.departmentService.Update(department); err != nil {
 		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"department_id": department.ID,
 		})
@@ -231,7 +218,7 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDepartmentHasAdmins.Code)
 	}
 
-	if _, err := facades.Orm().Query().Delete(department); err != nil {
+	if err := r.departmentService.Delete(department); err != nil {
 		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"department_id": department.ID,
 		})

@@ -2,8 +2,6 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -95,31 +93,19 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	now := carbon.Now()
-	dictionaryData := map[string]any{
-		"type":        dictionaryCreate.Type,
-		"label":       dictionaryCreate.Label,
-		"value":       dictionaryCreate.Value,
-		"description": dictionaryCreate.Description,
-		"status":      dictionaryCreate.Status,
-		"sort":        dictionaryCreate.Sort,
-		"remark":      dictionaryCreate.Remark,
-		"created_at":  now,
-		"updated_at":  now,
-	}
-
-	if err := facades.Orm().Query().Table("dictionaries").Create(dictionaryData); err != nil {
+	dictionary, err := r.dictionaryService.Create(
+		dictionaryCreate.Type,
+		dictionaryCreate.Label,
+		dictionaryCreate.Value,
+		dictionaryCreate.Description,
+		dictionaryCreate.Remark,
+		dictionaryCreate.Status,
+		dictionaryCreate.Sort,
+	)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"type":  dictionaryCreate.Type,
 			"label": dictionaryCreate.Label,
-		})
-	}
-
-	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("type", dictionaryCreate.Type).Where("value", dictionaryCreate.Value).FirstOrFail(&dictionary); err != nil {
-		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
-			"type":  dictionaryCreate.Type,
-			"value": dictionaryCreate.Value,
 		})
 	}
 
@@ -170,7 +156,7 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 		dictionary.Remark = dictionaryUpdate.Remark
 	}
 
-	if err := facades.Orm().Query().Save(dictionary); err != nil {
+	if err := r.dictionaryService.Update(dictionary); err != nil {
 		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"dictionary_id": dictionary.ID,
 		})
@@ -189,7 +175,7 @@ func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(dictionary); err != nil {
+	if err := r.dictionaryService.Delete(dictionary); err != nil {
 		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"dictionary_id": dictionary.ID,
 		})

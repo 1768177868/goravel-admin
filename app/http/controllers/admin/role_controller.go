@@ -3,7 +3,6 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 
@@ -116,27 +115,16 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleSlugExists.Code)
 	}
 
-	now := carbon.Now()
-	roleData := map[string]any{
-		"name":        roleCreate.Name,
-		"slug":        roleCreate.Slug,
-		"description": roleCreate.Description,
-		"status":      roleCreate.Status,
-		"sort":        roleCreate.Sort,
-		"created_at":  now,
-		"updated_at":  now,
-	}
-
-	if err := facades.Orm().Query().Table("roles").Create(roleData); err != nil {
+	role, err := r.roleService.Create(
+		roleCreate.Name,
+		roleCreate.Slug,
+		roleCreate.Description,
+		roleCreate.Status,
+		roleCreate.Sort,
+	)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"name": roleCreate.Name,
-			"slug": roleCreate.Slug,
-		})
-	}
-
-	var role models.Role
-	if err := facades.Orm().Query().Where("slug", roleCreate.Slug).FirstOrFail(&role); err != nil {
-		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"slug": roleCreate.Slug,
 		})
 	}
@@ -144,7 +132,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	// 处理权限关联
 	permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
 	if len(permissionIDs) > 0 {
-		if err := r.roleService.SyncPermissions(&role, permissionIDs); err != nil {
+		if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
 			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":        role.ID,
 				"permission_ids": permissionIDs,
@@ -155,7 +143,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	// 处理菜单关联
 	menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
 	if len(menuIDs) > 0 {
-		if err := r.roleService.SyncMenus(&role, menuIDs); err != nil {
+		if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
 			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":  role.ID,
 				"menu_ids": menuIDs,
@@ -164,7 +152,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, http.Json{
-		"role": role,
+		"role": *role,
 	})
 }
 

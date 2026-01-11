@@ -24,6 +24,12 @@ type RoleService interface {
 	SyncMenus(role *models.Role, menuIDs []uint) error
 	// ParseIDsFromRequest 从请求中解析ID数组
 	ParseIDsFromRequest(ctx http.Context, key string) []uint
+	// Create 创建角色
+	Create(name, slug, description string, status uint8, sort int) (*models.Role, error)
+	// Update 更新角色
+	Update(role *models.Role) error
+	// Delete 删除角色
+	Delete(role *models.Role) error
 }
 
 // RoleFilters 角色查询过滤器
@@ -142,4 +148,38 @@ func (s *RoleServiceImpl) ParseIDsFromRequest(ctx http.Context, key string) []ui
 		}
 	}
 	return ids
+}
+
+// Create 创建角色
+func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, sort int) (*models.Role, error) {
+	role := &models.Role{}
+	createData := map[string]any{
+		"name":        name,
+		"slug":        slug,
+		"description": description,
+		"status":      status,
+		"sort":        sort,
+	}
+
+	if err := facades.Orm().Query().Model(role).Create(createData); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	return role, nil
+}
+
+// Update 更新角色
+func (s *RoleServiceImpl) Update(role *models.Role) error {
+	if err := facades.Orm().Query().Save(role); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// Delete 删除角色
+func (s *RoleServiceImpl) Delete(role *models.Role) error {
+	if _, err := facades.Orm().Query().Delete(role); err != nil {
+		return apperrors.ErrDeleteFailed.WithError(err)
+	}
+	return nil
 }

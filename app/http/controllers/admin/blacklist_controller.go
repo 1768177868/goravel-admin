@@ -2,8 +2,6 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -106,23 +104,12 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidIPFormat.Code)
 	}
 
-	now := carbon.Now()
-	blacklistData := map[string]any{
-		"ip":         blacklistCreate.IP,
-		"remark":     blacklistCreate.Remark,
-		"status":     blacklistCreate.Status,
-		"created_at": now,
-		"updated_at": now,
-	}
-
-	if err := facades.Orm().Query().Table("blacklists").Create(blacklistData); err != nil {
-		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
-			"ip": blacklistCreate.IP,
-		})
-	}
-
-	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("ip", blacklistCreate.IP).FirstOrFail(&blacklist); err != nil {
+	blacklist, err := r.blacklistService.Create(
+		blacklistCreate.IP,
+		blacklistCreate.Remark,
+		blacklistCreate.Status,
+	)
+	if err != nil {
 		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"ip": blacklistCreate.IP,
 		})
@@ -173,7 +160,7 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 		blacklist.Status = blacklistUpdate.Status
 	}
 
-	if err := facades.Orm().Query().Save(blacklist); err != nil {
+	if err := r.blacklistService.Update(blacklist); err != nil {
 		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"blacklist_id": blacklist.ID,
 		})
@@ -192,7 +179,7 @@ func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(blacklist); err != nil {
+	if err := r.blacklistService.Delete(blacklist); err != nil {
 		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"blacklist_id": blacklist.ID,
 		})

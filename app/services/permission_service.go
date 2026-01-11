@@ -14,6 +14,12 @@ type PermissionService interface {
 	GetByID(id uint, withMenu bool) (*models.Permission, error)
 	// GetList 获取权限列表
 	GetList(filters PermissionFilters, page, pageSize int) ([]models.Permission, int64, error)
+	// Create 创建权限
+	Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error)
+	// Update 更新权限
+	Update(permission *models.Permission) error
+	// Delete 删除权限
+	Delete(permission *models.Permission) error
 }
 
 // PermissionFilters 权限查询过滤器
@@ -112,4 +118,41 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 	}
 
 	return permissions, total, nil
+}
+
+// Create 创建权限
+func (s *PermissionServiceImpl) Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error) {
+	permission := &models.Permission{}
+	createData := map[string]any{
+		"name":        name,
+		"slug":        slug,
+		"method":      method,
+		"path":        path,
+		"description": description,
+		"status":      status,
+		"sort":        sort,
+		"menu_id":     menuID,
+	}
+
+	if err := facades.Orm().Query().Model(permission).Create(createData); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	return permission, nil
+}
+
+// Update 更新权限
+func (s *PermissionServiceImpl) Update(permission *models.Permission) error {
+	if err := facades.Orm().Query().Save(permission); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// Delete 删除权限
+func (s *PermissionServiceImpl) Delete(permission *models.Permission) error {
+	if _, err := facades.Orm().Query().Delete(permission); err != nil {
+		return apperrors.ErrDeleteFailed.WithError(err)
+	}
+	return nil
 }
