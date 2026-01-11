@@ -18,6 +18,8 @@ import (
 	"goravel/app/utils/errorlog"
 )
 
+const OrderCountThreshold int64 = 100000
+
 // ApplyOrderFiltersToQuery 只负责通用筛选（不包含时间范围），供列表查询/导出复用，避免重复/不一致。
 func ApplyOrderFiltersToQuery(query orm.Query, filters OrderFilters) orm.Query {
 	// 用户ID筛选
@@ -107,7 +109,7 @@ type OrderFilters struct {
 }
 
 // 订单分页统计优化阈值（超过此值使用执行计划估算）
-const OrderCountThreshold int64 = 100000
+const Order int64 = 100000
 
 type OrderServiceImpl struct {
 	shardingService      ShardingService
