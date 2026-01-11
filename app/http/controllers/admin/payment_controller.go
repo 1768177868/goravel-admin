@@ -378,7 +378,7 @@ func (r *PaymentController) GetExportStatus(ctx http.Context) http.Response {
 	}
 
 	var exportRecord models.Export
-	if err := facades.Orm().Query().Where("id", exportID).First(&exportRecord); err != nil {
+	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "export_not_found")
 	}
 

@@ -116,7 +116,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 	}
 
 	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("type", dictionaryCreate.Type).Where("value", dictionaryCreate.Value).First(&dictionary); err != nil {
+	if err := facades.Orm().Query().Where("type", dictionaryCreate.Type).Where("value", dictionaryCreate.Value).FirstOrFail(&dictionary); err != nil {
 		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"type":  dictionaryCreate.Type,
 			"value": dictionaryCreate.Value,

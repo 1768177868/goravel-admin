@@ -129,7 +129,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	}
 
 	var menu models.Menu
-	if err := facades.Orm().Query().Where("slug", menuCreate.Slug).First(&menu); err != nil {
+	if err := facades.Orm().Query().Where("slug", menuCreate.Slug).FirstOrFail(&menu); err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"slug": menuCreate.Slug,
 		})

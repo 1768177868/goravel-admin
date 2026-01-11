@@ -122,7 +122,7 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 	}
 
 	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("ip", blacklistCreate.IP).First(&blacklist); err != nil {
+	if err := facades.Orm().Query().Where("ip", blacklistCreate.IP).FirstOrFail(&blacklist); err != nil {
 		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"ip": blacklistCreate.IP,
 		})

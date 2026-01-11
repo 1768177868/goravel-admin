@@ -99,7 +99,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// 获取用户信息
 	var user models.User
-	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&user); err != nil {
+	if err := facades.Orm().Query().Where("username", loginRequest.Username).FirstOrFail(&user); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"username": loginRequest.Username,
 		})
@@ -152,7 +152,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 	}
 
 	// 重新查询用户以确保获取最新数据（包括关联的货币信息）
-	if err := facades.Orm().Query().With("Currency").Where("id", user.ID).First(&user); err != nil {
+	if err := facades.Orm().Query().With("Currency").Where("id", user.ID).FirstOrFail(&user); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "user_not_found")
 	}
 

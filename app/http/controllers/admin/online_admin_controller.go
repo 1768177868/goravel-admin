@@ -153,7 +153,7 @@ func (r *OnlineAdminController) KickOut(ctx http.Context) http.Response {
 
 	// 查询token是否存在
 	var token models.PersonalAccessToken
-	if err := facades.Orm().Query().Where("id", tokenID).First(&token); err != nil {
+	if err := facades.Orm().Query().Where("id", tokenID).FirstOrFail(&token); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrTokenNotFound.Code)
 	}
 

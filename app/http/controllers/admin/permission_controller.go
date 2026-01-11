@@ -141,7 +141,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	}
 
 	var permission models.Permission
-	if err := facades.Orm().Query().Where("slug", slug).First(&permission); err != nil {
+	if err := facades.Orm().Query().Where("slug", slug).FirstOrFail(&permission); err != nil {
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"slug": slug,
 		})

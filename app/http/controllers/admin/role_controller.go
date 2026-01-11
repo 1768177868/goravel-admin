@@ -135,7 +135,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	var role models.Role
-	if err := facades.Orm().Query().Where("slug", roleCreate.Slug).First(&role); err != nil {
+	if err := facades.Orm().Query().Where("slug", roleCreate.Slug).FirstOrFail(&role); err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"slug": roleCreate.Slug,
 		})

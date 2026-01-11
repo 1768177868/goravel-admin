@@ -301,7 +301,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 	}
 
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", adminCreate.Username).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("username", adminCreate.Username).FirstOrFail(&admin); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"username": adminCreate.Username,
 		})
@@ -546,7 +546,7 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 
 	// 检查目标管理员是否存在
 	var targetAdmin models.Admin
-	if err := facades.Orm().Query().Where("id", targetAdminID).First(&targetAdmin); err != nil {
+	if err := facades.Orm().Query().Where("id", targetAdminID).FirstOrFail(&targetAdmin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 

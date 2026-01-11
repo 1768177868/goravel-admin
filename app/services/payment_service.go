@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dromara/carbon/v2"
 	"github.com/go-pay/gopay"
 	"github.com/go-pay/gopay/alipay"
 	"github.com/go-pay/gopay/wechat/v3"
@@ -224,17 +225,23 @@ func (s *PaymentServiceImpl) CreatePaymentMethod(name, code, paymentType string,
 		return nil, apperrors.ErrPaymentConfigRequired.WithError(err)
 	}
 
-	paymentMethod := &models.PaymentMethod{
-		Name:        name,
-		Code:        code,
-		Type:        paymentType,
-		Config:      string(configJSON),
-		IsActive:    isActive,
-		Sort:        sort,
-		Description: description,
+	// 使用 map 创建，确保 IsActive 为 false 时也能正确保存
+	// GORM 在处理结构体时会忽略零值字段，使用 map 可以确保所有字段都被保存
+	now := carbon.Now()
+	paymentMethod := &models.PaymentMethod{}
+	createData := map[string]any{
+		"name":        name,
+		"code":        code,
+		"type":        paymentType,
+		"config":      string(configJSON),
+		"is_active":   isActive,
+		"sort":        sort,
+		"description": description,
+		"created_at":  now,
+		"updated_at":  now,
 	}
 
-	if err := facades.Orm().Query().Create(paymentMethod); err != nil {
+	if err := facades.Orm().Query().Model(paymentMethod).Create(createData); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 

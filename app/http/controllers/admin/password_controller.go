@@ -33,7 +33,7 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("id", admin.ID).FirstOrFail(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
@@ -82,7 +82,7 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 	}
 
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("id", id).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 

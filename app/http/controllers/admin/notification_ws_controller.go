@@ -53,7 +53,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	}
 
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("id", accessToken.TokenableID).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("id", accessToken.TokenableID).FirstOrFail(&admin); err != nil {
 		_ = ctx.Response().Json(http.StatusUnauthorized, apphttp.Json{
 			"code":    http.StatusUnauthorized,
 			"message": "user_not_found",

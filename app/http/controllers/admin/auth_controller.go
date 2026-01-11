@@ -88,7 +88,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// 获取管理员信息
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", loginRequest.Username).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("username", loginRequest.Username).FirstOrFail(&admin); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"username": loginRequest.Username,
 		})
@@ -281,7 +281,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	}
 
 	// 重新查询admin以确保获取最新数据
-	if err := facades.Orm().Query().Where("id", admin.ID).First(&admin); err != nil {
+	if err := facades.Orm().Query().Where("id", admin.ID).FirstOrFail(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
@@ -311,7 +311,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 
 	// 重新加载关联数据（确保部门和角色被正确加载）
 	var adminWithRelations models.Admin
-	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
+	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).FirstOrFail(&adminWithRelations); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -566,7 +566,7 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 
 	// 查询用户是否存在
 	var targetAdmin models.Admin
-	if err := facades.Orm().Query().Where("id", userID).First(&targetAdmin); err != nil {
+	if err := facades.Orm().Query().Where("id", userID).FirstOrFail(&targetAdmin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrUserNotFound.Code)
 	}
 

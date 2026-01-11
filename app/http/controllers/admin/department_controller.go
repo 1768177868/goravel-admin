@@ -134,7 +134,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 	}
 
 	var department models.Department
-	if err := facades.Orm().Query().Where("name", departmentCreate.Name).First(&department); err != nil {
+	if err := facades.Orm().Query().Where("name", departmentCreate.Name).FirstOrFail(&department); err != nil {
 		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"name": departmentCreate.Name,
 		})
