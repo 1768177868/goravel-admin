@@ -34,7 +34,7 @@ func NewBlacklistService() BlacklistService {
 // GetByID 根据ID获取黑名单
 func (s *BlacklistServiceImpl) GetByID(id uint) (*models.Blacklist, error) {
 	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("id", id).First(&blacklist); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&blacklist); err != nil {
 		return nil, apperrors.ErrBlacklistNotFound.WithError(err)
 	}
 	return &blacklist, nil

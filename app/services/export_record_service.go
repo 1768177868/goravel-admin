@@ -47,7 +47,7 @@ func NewExportRecordService() ExportRecordService {
 // GetByID 根据ID获取导出记录
 func (s *ExportRecordServiceImpl) GetByID(id uint) (*models.Export, error) {
 	var export models.Export
-	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&export); err != nil {
 		return nil, apperrors.ErrExportRecordNotFound.WithError(err)
 	}
 	return &export, nil
@@ -123,7 +123,7 @@ func (s *ExportRecordServiceImpl) GetList(filters ExportRecordFilters, page, pag
 // Delete 删除导出记录
 func (s *ExportRecordServiceImpl) Delete(id uint) error {
 	var export models.Export
-	if err := facades.Orm().Query().Where("id", id).First(&export); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&export); err != nil {
 		return fmt.Errorf("导出记录不存在: %v", err)
 	}
 

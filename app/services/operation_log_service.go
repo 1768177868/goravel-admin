@@ -48,7 +48,7 @@ func (s *OperationLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.Oper
 		query = query.With("Admin")
 	}
 
-	if err := query.First(&log); err != nil {
+	if err := query.FirstOrFail(&log); err != nil {
 		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 
@@ -121,7 +121,7 @@ func (s *OperationLogServiceImpl) GetList(filters OperationLogFilters, page, pag
 	// 分页查询
 	var logs []models.OperationLog
 	err = query.With("Admin").
-		Offset((page-1)*pageSize).
+		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&logs)
 	if err != nil {
@@ -130,4 +130,3 @@ func (s *OperationLogServiceImpl) GetList(filters OperationLogFilters, page, pag
 
 	return logs, total, nil
 }
-

@@ -77,7 +77,7 @@ func NewUserService() UserService {
 // GetByID 根据ID获取用户
 func (s *UserServiceImpl) GetByID(id uint) (*models.User, error) {
 	var user models.User
-	if err := facades.Orm().Query().Where("id", id).First(&user); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&user); err != nil {
 		return nil, apperrors.ErrUserNotFound.WithError(err)
 	}
 

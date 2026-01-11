@@ -27,7 +27,7 @@ func NewExportOrderService(ctx http.Context) *ExportOrderService {
 func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) error {
 	// 更新导出状态为处理中
 	var exportRecord models.Export
-	if err := facades.Orm().Query().Where("id", exportID).First(&exportRecord); err != nil {
+	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
 		return fmt.Errorf("查询导出记录失败: %v", err)
 	}
 
@@ -172,7 +172,7 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 	facades.Log().Infof("文件导出成功: export_id=%d, file_path=%s", exportID, filePath)
 
 	// 更新导出记录的文件路径和大小
-	if err := facades.Orm().Query().Where("id", exportID).First(&exportRecord); err != nil {
+	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
 		facades.Log().Errorf("查询导出记录失败: export_id=%d, error=%v", exportID, err)
 		return fmt.Errorf("查询导出记录失败: %v", err)
 	}
@@ -214,4 +214,3 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 
 	return nil
 }
-

@@ -82,7 +82,7 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 
 	tokenHash := s.hashToken(token)
 	var accessToken models.PersonalAccessToken
-	if err := facades.Orm().Query().Where("token", tokenHash).First(&accessToken); err != nil {
+	if err := facades.Orm().Query().Where("token", tokenHash).FirstOrFail(&accessToken); err != nil {
 		// 记录调试信息
 		// facades.Log().Debugf("TokenService: FindToken failed, hash: %s, error: %v", tokenHash[:min(20, len(tokenHash))], err)
 		return nil, err

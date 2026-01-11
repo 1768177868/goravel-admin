@@ -45,7 +45,7 @@ func NewSystemLogService() SystemLogService {
 // GetByID 根据ID获取系统日志
 func (s *SystemLogServiceImpl) GetByID(id uint) (*models.SystemLog, error) {
 	var log models.SystemLog
-	if err := facades.Orm().Query().Where("id", id).First(&log); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&log); err != nil {
 		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 	return &log, nil
@@ -145,11 +145,11 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 	}
 
 	log := models.SystemLog{
-		Level:     level,
-		Module:    module,
-		TraceID:   traceID,
-		Message:   message,
-		Context:   contextJSON,
+		Level:   level,
+		Module:  module,
+		TraceID: traceID,
+		Message: message,
+		Context: contextJSON,
 	}
 
 	if err := facades.Orm().Query().Create(&log); err != nil {

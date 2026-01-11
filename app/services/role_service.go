@@ -52,7 +52,7 @@ func (s *RoleServiceImpl) GetByID(id uint, withRelations bool) (*models.Role, er
 		query = query.With("Permissions").With("Menus")
 	}
 
-	if err := query.First(&role); err != nil {
+	if err := query.FirstOrFail(&role); err != nil {
 		return nil, apperrors.ErrRoleNotFound.WithError(err)
 	}
 

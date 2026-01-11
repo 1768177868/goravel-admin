@@ -49,7 +49,7 @@ func (s *PermissionServiceImpl) GetByID(id uint, withMenu bool) (*models.Permiss
 		query = query.With("Menu")
 	}
 
-	if err := query.First(&permission); err != nil {
+	if err := query.FirstOrFail(&permission); err != nil {
 		return nil, apperrors.ErrPermissionNotFound.WithError(err)
 	}
 

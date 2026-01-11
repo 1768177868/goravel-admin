@@ -43,7 +43,7 @@ func (s *LoginLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.LoginLog
 		query = query.With("Admin")
 	}
 
-	if err := query.First(&log); err != nil {
+	if err := query.FirstOrFail(&log); err != nil {
 		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 
@@ -90,7 +90,7 @@ func (s *LoginLogServiceImpl) GetList(filters LoginLogFilters, page, pageSize in
 	// 分页查询
 	var logs []models.LoginLog
 	err = query.With("Admin").
-		Offset((page-1)*pageSize).
+		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&logs)
 	if err != nil {
@@ -99,4 +99,3 @@ func (s *LoginLogServiceImpl) GetList(filters LoginLogFilters, page, pageSize in
 
 	return logs, total, nil
 }
-

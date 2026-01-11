@@ -36,7 +36,7 @@ func NewDictionaryService() DictionaryService {
 // GetByID 根据ID获取字典
 func (s *DictionaryServiceImpl) GetByID(id uint) (*models.Dictionary, error) {
 	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("id", id).First(&dictionary); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&dictionary); err != nil {
 		return nil, apperrors.ErrDictionaryNotFound.WithError(err)
 	}
 	return &dictionary, nil

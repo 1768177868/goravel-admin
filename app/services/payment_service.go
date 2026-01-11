@@ -152,7 +152,7 @@ func NewPaymentService() PaymentService {
 // GetPaymentMethodByID 根据ID获取支付方式
 func (s *PaymentServiceImpl) GetPaymentMethodByID(id uint) (*models.PaymentMethod, error) {
 	var paymentMethod models.PaymentMethod
-	if err := facades.Orm().Query().Where("id", id).First(&paymentMethod); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&paymentMethod); err != nil {
 		return nil, apperrors.ErrPaymentMethodNotFound.WithError(err)
 	}
 	return &paymentMethod, nil
@@ -161,7 +161,7 @@ func (s *PaymentServiceImpl) GetPaymentMethodByID(id uint) (*models.PaymentMetho
 // GetPaymentMethodByCode 根据代码获取支付方式
 func (s *PaymentServiceImpl) GetPaymentMethodByCode(code string) (*models.PaymentMethod, error) {
 	var paymentMethod models.PaymentMethod
-	if err := facades.Orm().Query().Where("code", code).Where("is_active", true).First(&paymentMethod); err != nil {
+	if err := facades.Orm().Query().Where("code", code).Where("is_active", true).FirstOrFail(&paymentMethod); err != nil {
 		return nil, apperrors.ErrPaymentMethodNotFound.WithError(err)
 	}
 	return &paymentMethod, nil

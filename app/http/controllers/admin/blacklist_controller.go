@@ -29,7 +29,7 @@ func NewBlacklistController() *BlacklistController {
 func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*models.Blacklist, http.Response) {
 	blacklist, err := r.blacklistService.GetByID(id)
 	if err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrBlacklistNotFound.Code)
+		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 	return blacklist, nil
 }
