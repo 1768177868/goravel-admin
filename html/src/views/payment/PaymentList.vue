@@ -70,6 +70,7 @@
         v-model="pagination"
         :auto-load="true"
         :on-page-change="loadData"
+        :hide-total-threshold="100000"
       />
     </el-card>
 
