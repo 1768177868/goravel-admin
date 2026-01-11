@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout-container" :class="`layout-${appStore.layoutSize}`">
     <el-aside
-      :width="appStore.sidebarCollapsed ? '64px' : '200px'"
+      :width="appStore.sidebarCollapsed ? '64px' : '240px'"
       class="sidebar"
       :class="{ 'is-collapse': appStore.sidebarCollapsed }"
     >
@@ -424,7 +424,7 @@ const handleCommand = async (command) => {
 }
 
 .sidebar-menu:not(.el-menu--collapse) {
-  width: 200px;
+  width: 240px;
 }
 
 /* 菜单项文字溢出处理 */
