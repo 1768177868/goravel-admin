@@ -30,8 +30,10 @@ type PaymentService interface {
 	GetPaymentMethods(filters PaymentMethodFilters, page, pageSize int) ([]models.PaymentMethod, int64, error)
 	// CreatePaymentMethod 创建支付方式
 	CreatePaymentMethod(name, code, paymentType string, config map[string]any, isActive bool, sort int, description string) (*models.PaymentMethod, error)
-	// UpdatePaymentMethod 更新支付方式
+	// UpdatePaymentMethod 更新支付方式（保留兼容）
 	UpdatePaymentMethod(id uint, name string, config map[string]any, isActive bool, sort int, description string) error
+	// Update 更新支付方式（新模式）
+	UpdatePaymentMethodModel(paymentMethod *models.PaymentMethod) error
 	// DeletePaymentMethod 删除支付方式
 	DeletePaymentMethod(id uint) error
 
@@ -279,6 +281,14 @@ func (s *PaymentServiceImpl) UpdatePaymentMethod(id uint, name string, config ma
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
+	return nil
+}
+
+// UpdatePaymentMethodModel 更新支付方式（新模式）
+func (s *PaymentServiceImpl) UpdatePaymentMethodModel(paymentMethod *models.PaymentMethod) error {
+	if err := facades.Orm().Query().Save(paymentMethod); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
 	return nil
 }
 

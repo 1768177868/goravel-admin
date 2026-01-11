@@ -364,21 +364,21 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	if adminUpdate.Nickname != "" {
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["nickname"]; exists {
 		admin.Nickname = adminUpdate.Nickname
 	}
-	if adminUpdate.Email != "" {
+	if _, exists := allInputs["email"]; exists {
 		admin.Email = adminUpdate.Email
 	}
-	if adminUpdate.Phone != "" {
+	if _, exists := allInputs["phone"]; exists {
 		admin.Phone = adminUpdate.Phone
 	}
-	if adminUpdate.DepartmentID > 0 {
+	if _, exists := allInputs["department_id"]; exists {
 		admin.DepartmentID = adminUpdate.DepartmentID
 	}
-	// 如果请求中提供了 status 字段，则更新状态
-	// 使用 All() 方法检查 status 字段是否存在（包括值为 0 的情况）
-	allInputs := ctx.Request().All()
 	if _, exists := allInputs["status"]; exists {
 		// 请求中提供了 status 字段，使用验证后的值
 		// 检查是否是超级管理员或受保护的管理员
@@ -398,7 +398,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		admin.Password = hashedPassword
 	}
 
-	if err := facades.Orm().Query().Save(admin); err != nil {
+	if err := r.adminService.Update(admin); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": admin.ID,
 		})

@@ -208,6 +208,15 @@ func (r *PaymentMethodController) Store(ctx http.Context) http.Response {
 func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
+	// 获取支付方式
+	paymentMethod, err := r.paymentService.GetPaymentMethodByID(id)
+	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
+		}
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrPaymentMethodNotFound.Code)
+	}
+
 	var req adminrequests.PaymentMethodUpdate
 	errors, err := ctx.Request().ValidateRequest(&req)
 	if err != nil {
@@ -217,24 +226,38 @@ func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	err = r.paymentService.UpdatePaymentMethod(
-		id,
-		req.Name,
-		req.Config,
-		req.IsActive,
-		req.Sort,
-		req.Description,
-	)
-	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+	// 使用 All() 方法检查字段是否存在
+	allInputs := ctx.Request().All()
+
+	if _, exists := allInputs["name"]; exists {
+		paymentMethod.Name = req.Name
+	}
+	if _, exists := allInputs["config"]; exists && req.Config != nil {
+		configBytes, err := json.Marshal(req.Config)
+		if err != nil {
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPaymentConfigRequired.Code)
 		}
+		paymentMethod.Config = string(configBytes)
+	}
+	if _, exists := allInputs["is_active"]; exists {
+		paymentMethod.IsActive = req.IsActive
+	}
+	if _, exists := allInputs["sort"]; exists {
+		paymentMethod.Sort = req.Sort
+	}
+	if _, exists := allInputs["description"]; exists {
+		paymentMethod.Description = req.Description
+	}
+
+	if err := r.paymentService.UpdatePaymentMethodModel(paymentMethod); err != nil {
 		return response.ErrorWithLog(ctx, "payment_method", err, map[string]any{
 			"id": id,
 		})
 	}
 
-	return response.Success(ctx)
+	return response.Success(ctx, http.Json{
+		"payment_method": *paymentMethod,
+	})
 }
 
 // Destroy 删除支付方式

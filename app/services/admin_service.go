@@ -33,6 +33,8 @@ type AdminService interface {
 	GetProtectedAdminIDs() map[uint]bool
 	// GetDepartmentAndChildrenIDs 获取部门及其子部门ID
 	GetDepartmentAndChildrenIDs(departmentID uint) []uint
+	// Update 更新管理员
+	Update(admin *models.Admin) error
 }
 
 // AdminFilters 管理员查询过滤器
@@ -178,6 +180,14 @@ func (s *AdminServiceImpl) GetAllAdminsForExport(filters AdminFilters) ([]models
 	}
 
 	return admins, nil
+}
+
+// Update 更新管理员
+func (s *AdminServiceImpl) Update(admin *models.Admin) error {
+	if err := facades.Orm().Query().Save(admin); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
 }
 
 // GetProtectedAdminIDs 获取所有受保护的管理员ID

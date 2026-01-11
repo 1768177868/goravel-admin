@@ -255,7 +255,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		role.Sort = roleUpdate.Sort
 	}
 
-	if err := facades.Orm().Query().Save(role); err != nil {
+	if err := r.roleService.Update(role); err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
 		})
