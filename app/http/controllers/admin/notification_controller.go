@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -27,8 +28,8 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 	notifType := ctx.Request().Query("type", "")
 	isRead := ctx.Request().Query("is_read", "")
 	notifications, total, err := r.service.List(admin.ID, page, pageSize, notifType, isRead)
@@ -75,7 +76,7 @@ func (r *NotificationController) Recent(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	limit := cast.ToInt(ctx.Request().Query("limit", "5"))
+	limit := helpers.GetIntQuery(ctx, "limit", 5)
 	notifications, err := r.service.ListRecent(admin.ID, limit)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
@@ -95,7 +96,7 @@ func (r *NotificationController) MarkRead(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsRequired.Code)
 	}

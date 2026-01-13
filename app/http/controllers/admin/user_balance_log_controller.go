@@ -30,8 +30,8 @@ func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "user_id_required_for_sharding")
 	}
 
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	// 解析时间
 	startTimeStr := ctx.Request().Query("start_time", "")

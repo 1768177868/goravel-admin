@@ -2,7 +2,6 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -87,7 +86,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 
 // Show 部门详情
 func (r *DepartmentController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	department, resp := r.findDepartmentByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -134,7 +133,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 
 // Update 更新部门
 func (r *DepartmentController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	department, resp := r.findDepartmentByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -194,7 +193,7 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除部门
 func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	department, resp := r.findDepartmentByID(ctx, id)
 	if resp != nil {
 		return resp

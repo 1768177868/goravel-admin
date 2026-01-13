@@ -3,9 +3,9 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -69,7 +69,7 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 
 // ResetPassword 重置密码（管理员操作）
 func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 
 	// 使用请求验证
 	var resetPasswordRequest adminrequests.ResetPassword

@@ -18,8 +18,6 @@ import (
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
-
-	"github.com/spf13/cast"
 )
 
 type OperationLogController struct {
@@ -122,8 +120,8 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	logs, total, err := r.operationLogService.GetList(filters, page, pageSize)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -71,7 +72,7 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 
 // Show 菜单详情
 func (r *MenuController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	menu, resp := r.findMenuByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -131,7 +132,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 }
 
 func (r *MenuController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	menu, resp := r.findMenuByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -210,7 +211,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 }
 
 func (r *MenuController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	menu, resp := r.findMenuByID(ctx, id)
 	if resp != nil {
 		return resp

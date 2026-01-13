@@ -2,7 +2,6 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -50,8 +49,8 @@ func (r *DictionaryController) buildFilters(ctx http.Context) services.Dictionar
 
 // Index 字典列表
 func (r *DictionaryController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := r.buildFilters(ctx)
 
@@ -70,7 +69,7 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 
 // Show 字典详情
 func (r *DictionaryController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	dictionary, resp := r.findDictionaryByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -115,7 +114,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 }
 
 func (r *DictionaryController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	dictionary, resp := r.findDictionaryByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -169,7 +168,7 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除字典
 func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	dictionary, resp := r.findDictionaryByID(ctx, id)
 	if resp != nil {
 		return resp

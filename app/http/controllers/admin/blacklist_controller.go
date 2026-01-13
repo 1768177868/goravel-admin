@@ -2,7 +2,6 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -51,8 +50,8 @@ func (r *BlacklistController) buildFilters(ctx http.Context) services.BlacklistF
 
 // Index 黑名单列表
 func (r *BlacklistController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := r.buildFilters(ctx)
 
@@ -71,7 +70,7 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 
 // Show 黑名单详情
 func (r *BlacklistController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	blacklist, resp := r.findBlacklistByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -122,7 +121,7 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 
 // Update 更新黑名单
 func (r *BlacklistController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	blacklist, resp := r.findBlacklistByID(ctx, id)
 	if resp != nil {
 		return resp
@@ -173,7 +172,7 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除黑名单
 func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	blacklist, resp := r.findBlacklistByID(ctx, id)
 	if resp != nil {
 		return resp

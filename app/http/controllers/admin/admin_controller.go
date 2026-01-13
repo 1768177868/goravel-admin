@@ -146,8 +146,8 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 // @Router       /api/admin/admins [get]
 // @Security     BearerAuth
 func (r *AdminController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := r.buildFilters(ctx)
 
@@ -205,7 +205,7 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 // @Router       /api/admin/admins/{id} [get]
 // @Security     BearerAuth
 func (r *AdminController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	admin, resp := r.findAdminByID(ctx, id, true, true) // 预加载 Department 和 Roles 关联
 	if resp != nil {
 		return resp
@@ -344,7 +344,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 // @Router       /api/admin/admins/{id} [put]
 // @Security     BearerAuth
 func (r *AdminController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	// 加载管理员的当前角色，用于后续比较角色是否改变
 	admin, resp := r.findAdminByID(ctx, id, false, true) // 预加载 Roles 关联
 	if resp != nil {
@@ -486,7 +486,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 // @Router       /api/admin/admins/{id} [delete]
 // @Security     BearerAuth
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 
 	allProtectedIDs := r.getAllProtectedAdminIDs()
 	if allProtectedIDs[id] {
@@ -539,7 +539,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
 	// 获取要解绑的管理员ID
-	targetAdminID := cast.ToUint(ctx.Request().Route("id"))
+	targetAdminID := helpers.GetUintRoute(ctx, "id")
 	if targetAdminID == 0 {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}

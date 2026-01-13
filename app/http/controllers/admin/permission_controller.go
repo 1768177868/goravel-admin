@@ -61,8 +61,8 @@ func (r *PermissionController) buildFilters(ctx http.Context) services.Permissio
 
 // Index 权限列表
 func (r *PermissionController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := r.buildFilters(ctx)
 
@@ -81,7 +81,7 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 
 // Show 权限详情
 func (r *PermissionController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	permission, resp := r.findPermissionByID(ctx, id, true) // 预加载 Menu 关联
 	if resp != nil {
 		return resp
@@ -141,7 +141,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 }
 
 func (r *PermissionController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	permission, resp := r.findPermissionByID(ctx, id, false)
 	if resp != nil {
 		return resp
@@ -208,7 +208,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除权限
 func (r *PermissionController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	permission, resp := r.findPermissionByID(ctx, id, false) // 不需要预加载关联
 	if resp != nil {
 		return resp

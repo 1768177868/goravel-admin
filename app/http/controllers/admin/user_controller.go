@@ -32,8 +32,8 @@ func NewUserController() *UserController {
 
 // Index 用户列表
 func (r *UserController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := services.UserFilters{
 		Username: ctx.Request().Query("username", ""),
@@ -60,7 +60,7 @@ func (r *UserController) Index(ctx http.Context) http.Response {
 
 // Show 用户详情
 func (r *UserController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	user, err := r.userService.GetByID(id)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -111,7 +111,7 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 
 // Update 更新用户
 func (r *UserController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 
 	// 使用请求验证
 	var userUpdate adminrequests.UserUpdate
@@ -161,7 +161,7 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除用户
 func (r *UserController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	if err := r.userService.Delete(id); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
@@ -175,7 +175,7 @@ func (r *UserController) Destroy(ctx http.Context) http.Response {
 // UpdateBalance 更新用户余额
 func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 	// 从路由参数获取 user_id
-	userID := cast.ToUint(ctx.Request().Route("id"))
+	userID := helpers.GetUintRoute(ctx, "id")
 	amount := cast.ToFloat64(ctx.Request().Input("amount", "0"))
 	logType := ctx.Request().Input("type", "")
 	source := ctx.Request().Input("source", "manual")
@@ -214,7 +214,7 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 
 // ResetPassword 重置用户密码（管理员操作）
 func (r *UserController) ResetPassword(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 
 	// 使用请求验证
 	var resetPasswordRequest adminrequests.ResetPassword

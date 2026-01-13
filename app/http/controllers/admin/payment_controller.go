@@ -185,12 +185,12 @@ func (r *PaymentController) Index(ctx http.Context) http.Response {
 // @Tags         支付管理
 // @Accept       json
 // @Produce      json
-// @Param        payment_no path     string  true  "支付单号"
+// @Param        id         path     string  true  "支付单号"
 // @Success      200        {object} map[string]any
 // @Failure      400        {object} map[string]any "参数错误"
 // @Failure      404        {object} map[string]any "支付记录不存在"
 // @Failure      500        {object} map[string]any "服务器错误"
-// @Router       /api/admin/payments/{payment_no} [get]
+// @Router       /api/admin/payments/{id} [get]
 // @Security     BearerAuth
 func (r *PaymentController) Show(ctx http.Context) http.Response {
 	paymentNo := ctx.Request().Route("id") // 路由参数名保持兼容

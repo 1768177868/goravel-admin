@@ -269,12 +269,11 @@ func (r *OrderController) Index(ctx http.Context) http.Response {
 
 // Show 订单详情
 // @Summary      获取订单详情
-// @Description  根据ID或订单号获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
+// @Description  根据订单号获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）
 // @Tags         订单管理
 // @Accept       json
 // @Produce      json
-// @Param        id         path     int     false "订单ID（如果提供了订单号，此参数可选）"
-// @Param        order_no   query    string  false "订单号（优先使用，可直接定位分表）"
+// @Param        id         path     string  true "订单号"
 // @Success      200        {object} map[string]any "返回数据包含 order（订单主表）和 details（订单详情表数组）"
 // @Failure      400        {object} map[string]any "参数错误"
 // @Failure      404        {object} map[string]any "订单不存在"
@@ -282,24 +281,13 @@ func (r *OrderController) Index(ctx http.Context) http.Response {
 // @Router       /api/admin/orders/{id} [get]
 // @Security     BearerAuth
 func (r *OrderController) Show(ctx http.Context) http.Response {
-	// 优先使用订单号查询（更高效，可直接定位分表）
-	orderNo := ctx.Request().Query("order_no", "")
-	if orderNo != "" {
-		order, details, err := r.orderService.GetOrderByOrderNo(orderNo)
-		if err != nil {
-			return response.Error(ctx, http.StatusNotFound, "order_not_found")
-		}
-		return r.buildOrderDetailResponse(ctx, order, details)
+	// 使用订单号查询（可直接定位分表）
+	orderNo := ctx.Request().Route("id")
+	if orderNo == "" {
+		return response.Error(ctx, http.StatusBadRequest, "order_no_required")
 	}
 
-	// 如果没有订单号，使用订单ID查询
-	id := helpers.GetUintRoute(ctx, "id")
-	if id == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "order_id_or_order_no_required")
-	}
-
-	// GetOrderByID 会自动根据订单ID查找对应的分表，不再需要 orderTime 参数
-	order, details, err := r.orderService.GetOrderByID(id, time.Time{})
+	order, details, err := r.orderService.GetOrderByOrderNo(orderNo)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, "order_not_found")
 	}
@@ -401,12 +389,11 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 
 // Update 更新订单
 // @Summary      更新订单
-// @Description  更新订单信息（主要是状态）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
+// @Description  更新订单信息（主要是状态）。使用订单号查询（可直接定位分表）
 // @Tags         订单管理
 // @Accept       json
 // @Produce      json
-// @Param        id         path     int     false "订单ID（如果提供了订单号，此参数可选）"
-// @Param        order_no   query    string  false "订单号（优先使用，可直接定位分表）"
+// @Param        id         path     string  true "订单号"
 // @Param        status     body     string  true  "订单状态"
 // @Success      200        {object} map[string]any
 // @Failure      400        {object} map[string]any "参数错误"
@@ -414,7 +401,11 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 // @Router       /api/admin/orders/{id} [put]
 // @Security     BearerAuth
 func (r *OrderController) Update(ctx http.Context) http.Response {
-	id := helpers.GetUintRoute(ctx, "id")
+	// 使用订单号查询（可直接定位分表）
+	orderNo := ctx.Request().Route("id")
+	if orderNo == "" {
+		return response.Error(ctx, http.StatusBadRequest, "order_no_required")
+	}
 
 	var req struct {
 		Status string `json:"status" binding:"required"`
@@ -425,11 +416,8 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_params")
 	}
 
-	// 优先使用订单号查询（更高效，可直接定位分表）
-	orderNo := ctx.Request().Query("order_no", "")
-	if err := r.orderService.UpdateOrder(id, time.Time{}, req.Status, req.Remark, orderNo); err != nil {
+	if err := r.orderService.UpdateOrderByOrderNo(orderNo, req.Status, req.Remark); err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
-			"order_id": id,
 			"order_no": orderNo,
 			"status":   req.Status,
 			"remark":   req.Remark,
@@ -441,25 +429,25 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除订单
 // @Summary      删除订单
-// @Description  删除订单及其详情。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
+// @Description  删除订单及其详情。使用订单号查询（可直接定位分表）
 // @Tags         订单管理
 // @Accept       json
 // @Produce      json
-// @Param        id         path     int     false "订单ID（如果提供了订单号，此参数可选）"
-// @Param        order_no   query    string  false "订单号（优先使用，可直接定位分表）"
+// @Param        id         path     string  true "订单号"
 // @Success      200        {object} map[string]any
 // @Failure      400        {object} map[string]any "参数错误"
 // @Failure      500        {object} map[string]any "服务器错误"
 // @Router       /api/admin/orders/{id} [delete]
 // @Security     BearerAuth
 func (r *OrderController) Destroy(ctx http.Context) http.Response {
-	id := helpers.GetUintRoute(ctx, "id")
+	// 使用订单号查询（可直接定位分表）
+	orderNo := ctx.Request().Route("id")
+	if orderNo == "" {
+		return response.Error(ctx, http.StatusBadRequest, "order_no_required")
+	}
 
-	// 优先使用订单号查询（更高效，可直接定位分表）
-	orderNo := ctx.Request().Query("order_no", "")
-	if err := r.orderService.DeleteOrder(id, time.Time{}, orderNo); err != nil {
+	if err := r.orderService.DeleteOrderByOrderNo(orderNo); err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
-			"order_id": id,
 			"order_no": orderNo,
 		})
 	}

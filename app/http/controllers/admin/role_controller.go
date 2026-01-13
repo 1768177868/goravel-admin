@@ -4,7 +4,6 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
-	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -54,8 +53,8 @@ func (r *RoleController) buildFilters(ctx http.Context) services.RoleFilters {
 
 // Index 角色列表
 func (r *RoleController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := r.buildFilters(ctx)
 
@@ -74,7 +73,7 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 
 // Show 角色详情
 func (r *RoleController) Show(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	role, resp := r.findRoleByID(ctx, id, true) // 预加载关联
 	if resp != nil {
 		return resp
@@ -188,7 +187,7 @@ func (r *RoleController) isProtectedRole(roleSlug string) bool {
 
 // Update 更新角色
 func (r *RoleController) Update(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	role, resp := r.findRoleByID(ctx, id, false)
 	if resp != nil {
 		return resp
@@ -291,7 +290,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除角色
 func (r *RoleController) Destroy(ctx http.Context) http.Response {
-	id := cast.ToUint(ctx.Request().Route("id"))
+	id := helpers.GetUintRoute(ctx, "id")
 	role, resp := r.findRoleByID(ctx, id, false)
 	if resp != nil {
 		return resp

@@ -89,9 +89,13 @@ type OrderService interface {
 	// UpdateOrder 更新订单（状态和备注）
 	// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
 	UpdateOrder(orderID uint, orderTime time.Time, status string, remark string, orderNo ...string) error
+	// UpdateOrderByOrderNo 根据订单号更新订单（状态和备注）
+	UpdateOrderByOrderNo(orderNo string, status string, remark string) error
 	// DeleteOrder 删除订单
 	// 如果提供了订单号，优先使用订单号查找订单（更高效，可直接定位分表）
 	DeleteOrder(orderID uint, orderTime time.Time, orderNo ...string) error
+	// DeleteOrderByOrderNo 根据订单号删除订单
+	DeleteOrderByOrderNo(orderNo string) error
 	// GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
 	GetOrdersCountInYear() (int64, error)
 }
@@ -857,6 +861,59 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 	// 软删除订单主表
 	tableName := utils.GetShardingTableName("orders", createdAt)
 	_, err = facades.Orm().Query().Table(tableName).Where("id", orderID).Delete(&models.Order{})
+	return err
+}
+
+// UpdateOrderByOrderNo 根据订单号更新订单（状态和备注）
+func (s *OrderServiceImpl) UpdateOrderByOrderNo(orderNo string, status string, remark string) error {
+	// 通过订单号查找订单
+	order, err := s.findOrderByOrderNo(orderNo)
+	if err != nil {
+		return err
+	}
+
+	// 使用订单的 created_at 确定分表
+	timeStr := order.CreatedAt.ToDateTimeString()
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
+	tableName := utils.GetShardingTableName("orders", createdAt)
+
+	// 构建更新数据（始终更新备注，即使为空字符串）
+	updateData := map[string]any{
+		"status": status,
+		"remark": remark,
+	}
+
+	// 更新订单
+	_, err = facades.Orm().Query().Table(tableName).Where("order_no", orderNo).Update(updateData)
+	return err
+}
+
+// DeleteOrderByOrderNo 根据订单号删除订单（软删除）
+func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
+	// 通过订单号查找订单
+	order, err := s.findOrderByOrderNo(orderNo)
+	if err != nil {
+		return err
+	}
+
+	// 使用订单的 created_at 确定分表
+	timeStr := order.CreatedAt.ToDateTimeString()
+	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
+
+	// 软删除订单详情
+	detailTableName := utils.GetShardingTableName("order_details", createdAt)
+	_, err = facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Delete(&models.OrderDetail{})
+	if err != nil {
+		errorlog.Record(context.Background(), "order", "删除订单详情失败", map[string]any{
+			"order_no": orderNo,
+			"error":    err.Error(),
+		}, "删除订单详情失败: %v", err)
+		return apperrors.ErrDeleteOrderDetailFailed.WithError(err)
+	}
+
+	// 软删除订单主表
+	tableName := utils.GetShardingTableName("orders", createdAt)
+	_, err = facades.Orm().Query().Table(tableName).Where("order_no", orderNo).Delete(&models.Order{})
 	return err
 }
 

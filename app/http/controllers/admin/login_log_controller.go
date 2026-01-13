@@ -6,13 +6,12 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/constants"
+	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
-	"github.com/spf13/cast"
 )
 
 type LoginLogController struct {
@@ -60,8 +59,8 @@ func (r *LoginLogController) buildFilters(ctx http.Context) services.LoginLogFil
 func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	filters := r.buildFilters(ctx)
 
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	logs, total, err := r.loginLogService.GetList(filters, page, pageSize)
 	if err != nil {
