@@ -1,5 +1,5 @@
 <template>
-  <el-button
+  <!-- <el-button
     type="text"
     class="dark-mode-switch"
     @click="toggleDarkMode"
@@ -9,7 +9,7 @@
       <Sunny v-if="isDarkMode" />
       <Moon v-else />
     </el-icon>
-  </el-button>
+  </el-button> -->
 </template>
 
 <script setup>

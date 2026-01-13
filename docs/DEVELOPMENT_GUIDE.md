@@ -1367,4 +1367,3 @@ curl -X POST "http://localhost:3000/api/admin/guestbooks/1/reply" \
 
 
 按照这个文档的步骤，你可以快速开发其他类似的 CRUD 模块。
-
