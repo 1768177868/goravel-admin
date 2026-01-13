@@ -13,9 +13,6 @@
         :default-active="activeMenu"
         class="sidebar-menu"
         :collapse="appStore.sidebarCollapsed"
-        background-color="#1f2937"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
         @select="handleMenuSelect"
       >
         <el-menu-item index="/dashboard">
@@ -123,7 +120,7 @@
             </el-icon>
           </el-button>
           <NotificationBell />
-          <DarkModeSwitch />
+          <!-- <DarkModeSwitch /> -->
           <TimezoneSwitch />
           <LanguageSwitch />
           <el-dropdown @command="handleCommand" class="user-dropdown">
@@ -370,14 +367,16 @@ const handleCommand = async (command) => {
 }
 
 .sidebar {
-  background-color: var(--sidebar-bg);
+  /* background-color: var(--sidebar-bg); */
+  background-color:#fff;
   overflow-y: auto;
   transition: width 0.3s;
+  border-right: 1px solid #00000014;
 }
 
 /* 自定义滚动条样式 - 更细更美观 */
 .sidebar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .sidebar::-webkit-scrollbar-track {
@@ -410,13 +409,15 @@ const handleCommand = async (command) => {
   align-items: center;
   justify-content: center;
   color: white;
-  border-bottom: 1px solid #434a55;
+  /* border-bottom: 1px solid #434a55; */
 }
 
 .logo h3 {
   margin: 0;
   font-size: 18px;
   white-space: nowrap;
+  color:#383853;
+  opacity: 1;
 }
 
 .sidebar-menu {
