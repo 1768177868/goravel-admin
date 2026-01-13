@@ -112,38 +112,23 @@ const staticRoutes = [
 ]
 
 /**
- * 组件导入映射表
- * 将所有可能的组件路径都明确列出，以便 Vite 可以静态分析
+ * 使用 import.meta.glob 动态导入所有 views 目录下的 Vue 组件
+ * 这样菜单的 component 字段可以直接设置路径，无需在此维护映射表
+ * 
+ * 支持的 component 格式：
+ * - 'admin/AdminList' -> ../views/admin/AdminList.vue
+ * - 'log/OperationLogList' -> ../views/log/OperationLogList.vue
+ * - 'views/admin/AdminList.vue' -> ../views/admin/AdminList.vue (完整路径)
  */
-const componentImportMap = {
-  'admin/index': () => lazyLoad(() => import('../views/admin/AdminList.vue')),
-  'role/index': () => lazyLoad(() => import('../views/role/RoleList.vue')),
-  'permission/index': () => lazyLoad(() => import('../views/permission/PermissionList.vue')),
-  'menu/index': () => lazyLoad(() => import('../views/menu/MenuList.vue')),
-  'department/index': () => lazyLoad(() => import('../views/department/DepartmentList.vue')),
-  'dictionary/index': () => lazyLoad(() => import('../views/dictionary/DictionaryList.vue')),
-  'config/index': () => lazyLoad(() => import('../views/config/ConfigList.vue')),
-  'export/index': () => lazyLoad(() => import('../views/export/ExportList.vue')),
-  'attachment/index': () => lazyLoad(() => import('../views/attachment/AttachmentList.vue')),
-  'blacklist/index': () => lazyLoad(() => import('../views/blacklist/BlacklistList.vue')),
-  'order/index': () => lazyLoad(() => import('../views/order/OrderList.vue')),
-  'user/index': () => lazyLoad(() => import('../views/user/UserList.vue')),
-  'user-balance-log/index': () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
-  'user-balance-logs/index': () => lazyLoad(() => import('../views/user/UserBalanceLogList.vue')),
-  'payment-method/index': () => lazyLoad(() => import('../views/payment/PaymentMethodList.vue')),
-  'payment/index': () => lazyLoad(() => import('../views/payment/PaymentList.vue')),
-  'onlineAdmin/index': () => lazyLoad(() => import('../views/onlineAdmin/OnlineAdminList.vue')),
-  'log/operation/index': () => lazyLoad(() => import('../views/log/OperationLogList.vue')),
-  'log/login/index': () => lazyLoad(() => import('../views/log/LoginLogList.vue')),
-  'log/system/index': () => lazyLoad(() => import('../views/log/SystemLogList.vue')),
-  'notification/index': () => lazyLoad(() => import('../views/notification/NotificationList.vue')),
-  'monitor/index': () => lazyLoad(() => import('../views/monitor/Monitor.vue')),
-  'profile/index': () => lazyLoad(() => import('../views/profile/Profile.vue'))
-}
+const viewModules = import.meta.glob('../views/**/*.vue')
 
 /**
  * 获取组件的导入函数
- * @param {string} component - 菜单的 component 字段，如 "admin/index", "log/operation/index"
+ * @param {string} component - 菜单的 component 字段
+ *   支持格式：
+ *   - 'admin/AdminList' -> ../views/admin/AdminList.vue
+ *   - 'log/OperationLogList' -> ../views/log/OperationLogList.vue
+ *   - 'views/admin/AdminList.vue' -> ../views/admin/AdminList.vue
  * @returns {Function|null} 组件导入函数，如果不存在则返回 null
  */
 function getComponentImport(component) {
@@ -151,15 +136,28 @@ function getComponentImport(component) {
     return null
   }
 
-  // 如果映射表中存在，直接返回
-  if (componentImportMap[component]) {
-    return componentImportMap[component]
+  // 标准化路径：将 component 转换为 import.meta.glob 的键格式
+  let modulePath = component
+  
+  // 移除开头的 views/ 或 ../views/（如果有）
+  modulePath = modulePath.replace(/^(\.\.\/)?views\//, '')
+  
+  // 移除结尾的 .vue（如果有）
+  modulePath = modulePath.replace(/\.vue$/, '')
+  
+  // 构建完整的模块路径
+  const fullPath = `../views/${modulePath}.vue`
+  
+  // 查找模块
+  const moduleImport = viewModules[fullPath]
+  
+  if (moduleImport) {
+    return () => lazyLoad(moduleImport)
   }
 
-  // 如果映射表中不存在，返回 null（可能是外部链接或其他特殊类型）
-  // 注意：为了支持 Vite 静态分析，我们不使用动态路径拼接
-  // 如果需要添加新的组件，请在 componentImportMap 中添加对应的映射
-  logger.warn(`Component import not found for: ${component}, please add it to componentImportMap`)
+  // 如果找不到，记录警告
+  logger.warn(`Component not found: ${component} (resolved to: ${fullPath})`)
+  logger.debug('Available modules:', Object.keys(viewModules))
   return null
 }
 

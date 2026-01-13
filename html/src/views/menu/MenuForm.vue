@@ -60,6 +60,17 @@
         />
       </el-form-item>
       <el-form-item 
+        :label="$t('menu_management.component')" 
+        v-if="formData.link_type === 1"
+      >
+        <el-input 
+          v-model="formData.component" 
+          :placeholder="$t('menu_management.component_placeholder')"
+          :disabled="loading"
+        />
+        <div class="form-item-tip">{{ $t('menu_management.component_tip') }}</div>
+      </el-form-item>
+      <el-form-item 
         :label="$t('menu_management.open_type')" 
         prop="open_type"
         v-if="formData.link_type === 2"
@@ -196,6 +207,7 @@ const formData = reactive({
   name: '',
   slug: '',
   path: '',
+  component: '',
   icon: '',
   status: 1,
   sort: 0,
@@ -325,6 +337,7 @@ const loadDetail = async (id) => {
         name: menu.Title || menu.name || '',
         slug: menu.Slug || menu.slug || '',
         path: menu.Path || menu.path || '',
+        component: menu.Component || menu.component || '',
         icon: menu.Icon || menu.icon || '',
         status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
         sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
@@ -348,6 +361,7 @@ const resetForm = () => {
     name: '',
     slug: '',
     path: '',
+    component: '',
     icon: '',
     status: 1,
     sort: 0,
@@ -370,6 +384,7 @@ const handleSubmit = async () => {
           title: formData.name,
           slug: formData.slug,
           path: formData.path,
+          component: formData.link_type === 1 ? formData.component : '',
           icon: formData.icon,
           status: formData.status,
           sort: formData.sort,

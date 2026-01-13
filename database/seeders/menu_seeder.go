@@ -14,13 +14,25 @@ func (s *MenuSeeder) Signature() string {
 }
 
 func (s *MenuSeeder) Run() error {
-	// 辅助函数：根据Slug查找或创建菜单，如果存在则跳过（只做增量添加）
+	// 根据Slug查找或创建菜单，如果存在则只更新 Component 字段，不存在则创建
 	createOrUpdateMenu := func(menuData models.Menu) models.Menu {
 		if menuData.Slug == "" {
 			return menuData
 		}
-		// 使用 FirstOrCreate：如果不存在则创建，存在则返回现有记录
-		facades.Orm().Query().Where("slug", menuData.Slug).FirstOrCreate(&menuData, menuData)
+
+		var existingMenu models.Menu
+		exists, _ := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuData.Slug).Exists()
+		if exists {
+			facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu)
+			if menuData.Component != "" && menuData.Component != existingMenu.Component {
+				facades.Orm().Query().Model(&existingMenu).Update("component", menuData.Component)
+				existingMenu.Component = menuData.Component
+			}
+			return existingMenu
+		}
+
+		// 菜单不存在，创建新菜单
+		facades.Orm().Query().Create(&menuData)
 		return menuData
 	}
 
@@ -44,7 +56,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "admin",
 		Icon:      "User",
 		Path:      "/admins",
-		Component: "admin/index",
+		Component: "admin/AdminList",
 		Type:      2,
 		Status:    1,
 		Sort:      1,
@@ -57,7 +69,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "role",
 		Icon:      "UserFilled",
 		Path:      "/roles",
-		Component: "role/index",
+		Component: "role/RoleList",
 		Type:      2,
 		Status:    1,
 		Sort:      2,
@@ -70,7 +82,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "permission",
 		Icon:      "Lock",
 		Path:      "/permissions",
-		Component: "permission/index",
+		Component: "permission/PermissionList",
 		Type:      2,
 		Status:    1,
 		Sort:      3,
@@ -83,7 +95,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "menu",
 		Icon:      "Menu",
 		Path:      "/menus",
-		Component: "menu/index",
+		Component: "menu/MenuList",
 		Type:      2,
 		Status:    1,
 		Sort:      4,
@@ -96,7 +108,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "department",
 		Icon:      "OfficeBuilding",
 		Path:      "/departments",
-		Component: "department/index",
+		Component: "department/DepartmentList",
 		Type:      2,
 		Status:    1,
 		Sort:      5,
@@ -109,7 +121,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "online-admin",
 		Icon:      "User",
 		Path:      "/online-admins",
-		Component: "onlineAdmin/index",
+		Component: "onlineAdmin/OnlineAdminList",
 		Type:      2,
 		Status:    1,
 		Sort:      6,
@@ -122,7 +134,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "dictionary",
 		Icon:      "Document",
 		Path:      "/dictionaries",
-		Component: "dictionary/index",
+		Component: "dictionary/DictionaryList",
 		Type:      2,
 		Status:    1,
 		Sort:      7,
@@ -135,7 +147,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "config",
 		Icon:      "Setting",
 		Path:      "/configs",
-		Component: "config/index",
+		Component: "config/ConfigList",
 		Type:      2,
 		Status:    1,
 		Sort:      8,
@@ -148,7 +160,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "export",
 		Icon:      "Document",
 		Path:      "/exports",
-		Component: "export/index",
+		Component: "export/ExportList",
 		Type:      2,
 		Status:    1,
 		Sort:      9,
@@ -161,7 +173,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "attachment",
 		Icon:      "Folder",
 		Path:      "/attachments",
-		Component: "attachment/index",
+		Component: "attachment/AttachmentList",
 		Type:      2,
 		Status:    1,
 		Sort:      10,
@@ -174,7 +186,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "blacklist",
 		Icon:      "Warning",
 		Path:      "/blacklists",
-		Component: "blacklist/index",
+		Component: "blacklist/BlacklistList",
 		Type:      2,
 		Status:    1,
 		Sort:      11,
@@ -187,7 +199,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "order",
 		Icon:      "ShoppingCart",
 		Path:      "/orders",
-		Component: "order/index",
+		Component: "order/OrderList",
 		Type:      2,
 		Status:    1,
 		Sort:      12,
@@ -215,7 +227,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "payment-method",
 		Icon:      "CreditCard",
 		Path:      "/payment-methods",
-		Component: "payment-method/index",
+		Component: "payment/PaymentMethodList",
 		Type:      2,
 		Status:    1,
 		Sort:      1,
@@ -229,7 +241,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "payment-record",
 		Icon:      "Document",
 		Path:      "/payments",
-		Component: "payment/index",
+		Component: "payment/PaymentList",
 		Type:      2,
 		Status:    1,
 		Sort:      2,
@@ -242,7 +254,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "user",
 		Icon:      "User",
 		Path:      "/users",
-		Component: "user/index",
+		Component: "user/UserList",
 		Type:      2,
 		Status:    1,
 		Sort:      13,
@@ -256,7 +268,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "user-balance-log",
 		Icon:      "Document",
 		Path:      "/user-balance-logs",
-		Component: "user-balance-logs/index",
+		Component: "user/UserBalanceLogList",
 		Type:      2,
 		Status:    1,
 		Sort:      1,
@@ -284,7 +296,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "operation-log",
 		Icon:      "Document",
 		Path:      "/operation-logs",
-		Component: "log/operation/index",
+		Component: "log/OperationLogList",
 		Type:      2,
 		Status:    1,
 		Sort:      1,
@@ -297,7 +309,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "login-log",
 		Icon:      "Document",
 		Path:      "/login-logs",
-		Component: "log/login/index",
+		Component: "log/LoginLogList",
 		Type:      2,
 		Status:    1,
 		Sort:      2,
@@ -310,7 +322,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "system-log",
 		Icon:      "Document",
 		Path:      "/system-logs",
-		Component: "log/system/index",
+		Component: "log/SystemLogList",
 		Type:      2,
 		Status:    1,
 		Sort:      3,
@@ -324,7 +336,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "monitor",
 		Icon:      "Monitor",
 		Path:      "/monitor",
-		Component: "monitor/index",
+		Component: "monitor/Monitor",
 		Type:      2,
 		Status:    1,
 		Sort:      3,
@@ -338,7 +350,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "profile",
 		Icon:      "User",
 		Path:      "/profile",
-		Component: "profile/index",
+		Component: "profile/Profile",
 		Type:      2,
 		Status:    1,
 		Sort:      4,
@@ -352,7 +364,7 @@ func (s *MenuSeeder) Run() error {
 		Slug:      "notification",
 		Icon:      "Bell",
 		Path:      "/notifications",
-		Component: "notification/index",
+		Component: "notification/NotificationList",
 		Type:      2,
 		Status:    1,
 		Sort:      5,
