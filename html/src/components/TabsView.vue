@@ -314,7 +314,7 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__nav-wrap) {
   margin-bottom: 0;
-  padding: 0 12px;
+  /* padding: 0 12px; */
 }
 
 .tabs-container :deep(.el-tabs__nav) {
@@ -459,6 +459,9 @@ onMounted(() => {
   bottom: 0;
   z-index: 9998;
   background: transparent;
+}
+.el-tabs__nav-scroll{
+  margin-left: 10px;
 }
 </style>
 
