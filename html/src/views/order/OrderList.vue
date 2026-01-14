@@ -24,6 +24,9 @@
         @search="handleSearch"
         @reset="handleReset"
       >
+        <template #user_id="{ model, field }">
+          <el-input v-model="model[field.prop]" :placeholder="t('order.user_id')" />
+        </template>
         <template #extra-buttons>
           <el-button 
             type="primary" 

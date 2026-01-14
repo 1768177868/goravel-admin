@@ -92,19 +92,11 @@
       :disabled="field.disabled"
       v-bind="field.props || {}"
     />
-    
-    <!-- 自定义插槽 -->
-    <slot
-      v-else-if="field.type === 'slot'"
-      :name="field.slotName || field.prop"
-      :field="field"
-      :model="model"
-    />
   </el-form-item>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TreeSelectField from './TreeSelectField.vue'
 import { useFieldOptions } from './useFieldOptions'
