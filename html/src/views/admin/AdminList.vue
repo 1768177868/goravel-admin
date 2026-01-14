@@ -290,6 +290,7 @@ const searchFields = computed(() => [
     width: '150px',
     filterable: true,
     apiUrl: '/options?type=role', 
+    //  apiUrl: '/options?type=dictionary&dictionary_type=status', 
     advanced: false
   },
   {

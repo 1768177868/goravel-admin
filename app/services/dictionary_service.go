@@ -18,7 +18,7 @@ type DictionaryService interface {
 	// GetAllTypes 获取所有字典类型
 	GetAllTypes() ([]string, error)
 	// Create 创建字典
-	Create(dictType, label, value, description, remark string, status uint8, sort int) (*models.Dictionary, error)
+	Create(dictType, label, value, translationKey, description, remark string, status uint8, sort int) (*models.Dictionary, error)
 	// Update 更新字典
 	Update(dictionary *models.Dictionary) error
 	// Delete 删除字典
@@ -108,16 +108,17 @@ func (s *DictionaryServiceImpl) GetAllTypes() ([]string, error) {
 }
 
 // Create 创建字典
-func (s *DictionaryServiceImpl) Create(dictType, label, value, description, remark string, status uint8, sort int) (*models.Dictionary, error) {
+func (s *DictionaryServiceImpl) Create(dictType, label, value, translationKey, description, remark string, status uint8, sort int) (*models.Dictionary, error) {
 	dictionary := &models.Dictionary{}
 	createData := map[string]any{
-		"type":        dictType,
-		"label":       label,
-		"value":       value,
-		"description": description,
-		"remark":      remark,
-		"status":      status,
-		"sort":        sort,
+		"type":            dictType,
+		"label":           label,
+		"value":           value,
+		"translation_key": translationKey,
+		"description":     description,
+		"remark":          remark,
+		"status":          status,
+		"sort":            sort,
 	}
 
 	if err := facades.Orm().Query().Model(dictionary).Create(createData); err != nil {

@@ -5,12 +5,14 @@ import (
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/response"
+	"goravel/app/http/trans"
 	"goravel/app/services"
 	"goravel/app/services/option_providers"
 )
 
 type OptionController struct {
-	providers map[string]services.OptionProvider
+	providers         map[string]services.OptionProvider
+	dictionaryService services.DictionaryService
 }
 
 func NewOptionController() *OptionController {
@@ -33,7 +35,8 @@ func NewOptionController() *OptionController {
 	// providers["new_type"] = option_providers.NewNewTypeOptionProvider()
 
 	return &OptionController{
-		providers: providers,
+		providers:         providers,
+		dictionaryService: services.NewDictionaryService(),
 	}
 }
 
@@ -44,6 +47,38 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 
 	if optionType == "" {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrOptionTypeRequired.Code)
+	}
+
+	// 如果 type 是 "dictionary"，则需要进一步检查 dictionary_type 参数
+	if optionType == "dictionary" {
+		dictType := ctx.Request().Query("dictionary_type", "")
+		if dictType == "" {
+			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrOptionTypeRequired.Code)
+		}
+		
+		dictionaries, err := r.dictionaryService.GetByType(dictType)
+		if err != nil {
+			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
+		}
+
+		// 转换为选项格式，并处理多语言
+		var options []map[string]any
+		for _, dict := range dictionaries {
+			label := dict.Label
+			if dict.TranslationKey != "" {
+				// 如果有 translation_key，尝试翻译
+				translated := trans.Get(ctx, dict.TranslationKey)
+				if translated != dict.TranslationKey {
+					label = translated
+				}
+			}
+
+			options = append(options, map[string]any{
+				"label": label,
+				"value": dict.Value,
+			})
+		}
+		return response.Success(ctx, options)
 	}
 
 	provider, exists := r.providers[optionType]

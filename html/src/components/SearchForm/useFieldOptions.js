@@ -19,10 +19,23 @@ export function useFieldOptions() {
       if (field.apiUrl.startsWith('/options')) {
         const url = new URL(field.apiUrl, window.location.origin)
         const type = url.searchParams.get('type')
-        const res = await getOptions(type)
-        if (res.data && res.data.options) {
-          fieldOptionsCache.value[cacheKey] = res.data.options
-          return res.data.options
+        const params = {}
+        for (const [key, value] of url.searchParams) {
+          if (key !== 'type') {
+            params[key] = value
+          }
+        }
+        const res = await getOptions(type, params)
+        if (res.data) {
+          // 适配后端返回结构：有的返回 { data: { options: [] } }，有的直接返回 { data: [] }
+          let options = []
+          if (res.data.options) {
+            options = res.data.options
+          } else if (Array.isArray(res.data)) {
+            options = res.data
+          }
+          fieldOptionsCache.value[cacheKey] = options
+          return options
         }
       } else {
         const token = Storage.getItem('token', '') || ''

@@ -96,6 +96,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		dictionaryCreate.Type,
 		dictionaryCreate.Label,
 		dictionaryCreate.Value,
+		dictionaryCreate.TranslationKey,
 		dictionaryCreate.Description,
 		dictionaryCreate.Remark,
 		dictionaryCreate.Status,
@@ -141,6 +142,9 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 	}
 	if _, exists := allInputs["value"]; exists {
 		dictionary.Value = dictionaryUpdate.Value
+	}
+	if _, exists := allInputs["translation_key"]; exists {
+		dictionary.TranslationKey = dictionaryUpdate.TranslationKey
 	}
 	if _, exists := allInputs["description"]; exists {
 		dictionary.Description = dictionaryUpdate.Description

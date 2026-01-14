@@ -59,6 +59,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250131000001CreatePaymentMethodsTable{},
 		&migrations.M20250131000002CreatePaymentsTable{},
 		&migrations.M20250110000001CreatePaymentsShardingTable{}, // 支付记录分表
+		&migrations.M20250301000025AddTranslationKeyToDictionaries{},
 	}
 }
 

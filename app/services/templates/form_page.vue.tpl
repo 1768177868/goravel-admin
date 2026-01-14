@@ -23,8 +23,12 @@
           :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
 <<else if eq .FormType "select">>
         <el-select v-model="form.<<.Name>>" :placeholder="$t('common.select')">
-          <el-option label="Option 1" :value="1" />
-          <el-option label="Option 2" :value="2" />
+          <el-option
+            v-for="item in <<.Name>>Options"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </el-select>
 <<else if eq .FormType "switch">>
         <el-switch v-model="form.<<.Name>>" />
@@ -79,6 +83,7 @@ import {
   create<<.ModelName>>,
   update<<.ModelName>>
 } from '../../api/<<.ModuleName>>'
+import { getOptions } from '../../api/option'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -97,6 +102,12 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+
+<<range .FormFields>>
+<<if eq .FormType "select">>
+const <<.Name>>Options = ref([])
+<<end>>
+<<end>>
 
 const visible = ref(props.modelValue)
 watch(() => props.modelValue, (val) => {
@@ -156,6 +167,33 @@ const handleImageSuccess = (response) => {
 const handleFileSuccess = (response) => {
   form.value.file = response.data.url
 }
+
+const loadOptions = async () => {
+<<range .FormFields>>
+<<if eq .FormType "select">>
+  try {
+    <<if eq .Dictionary "">>
+    // 未配置字典，请自行实现选项加载逻辑
+    // const res = await getOptions('<<.Name>>')
+    // <<.Name>>Options.value = res.data
+    <<else>>
+    const res = await getOptions('dictionary', { dictionary_type: '<<.Dictionary>>' })
+    if (res.data) {
+      <<.Name>>Options.value = res.data
+    }
+    <<end>>
+  } catch (error) {
+    console.error('Failed to load <<.Name>> options:', error)
+  }
+<<end>>
+<<end>>
+}
+
+watch(visible, (val) => {
+  if (val) {
+    loadOptions()
+  }
+})
 </script>
 
 <style scoped>
