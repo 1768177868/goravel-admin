@@ -118,6 +118,7 @@ const searchFields = computed(() => [
     label: t('article.name'),
     type: 'input',
 
+
     width: '200px',
     advanced: false
   },
@@ -126,7 +127,13 @@ const searchFields = computed(() => [
     prop: 'status',
     label: t('article.status'),
     type: 'select',
-    apiUrl: '/options?type=menu_type',
+    apiUrl: '/options?type=status',
+
+    
+    // 如果配置了字典，使用新的参数格式
+    apiUrl: '/options?type=dictionary&dictionary_type=status',
+    
+
     width: '200px',
     advanced: false
   },

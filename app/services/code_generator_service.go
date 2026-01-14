@@ -474,6 +474,7 @@ type TemplateFieldConfig struct {
 	FormType        string
 	SearchType      string
 	SearchUIType    string
+	Dictionary      string
 	ApiUrl          string
 	Sortable        bool
 	Searchable      bool
@@ -508,6 +509,7 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			FormType:     getFormType(field.DBType),
 			SearchType:   getSearchType(field.SearchType),
 			SearchUIType: getSearchUIType(field.SearchUIType, field.DBType),
+			Dictionary:   field.Dictionary,
 			ApiUrl:       getApiUrl(field.Dictionary, field.ApiUrl),
 			Sortable:     getSortable(field.DBType),
 			Searchable:   field.Searchable,

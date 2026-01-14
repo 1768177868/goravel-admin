@@ -44,6 +44,7 @@ import {
   createArticle,
   updateArticle
 } from '../../api/article'
+import { getOptions } from '../../api/option'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -62,6 +63,12 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+
+
+
+
+
+
 
 const visible = ref(props.modelValue)
 watch(() => props.modelValue, (val) => {
@@ -127,6 +134,20 @@ const handleImageSuccess = (response) => {
 const handleFileSuccess = (response) => {
   form.value.file = response.data.url
 }
+
+const loadOptions = async () => {
+
+
+
+
+
+}
+
+watch(visible, (val) => {
+  if (val) {
+    loadOptions()
+  }
+})
 </script>
 
 <style scoped>
