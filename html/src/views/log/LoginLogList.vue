@@ -103,7 +103,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { Delete, View } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
@@ -355,6 +355,7 @@ const operationActions = computed(() => [
     label: t('common.view'),
     type: 'primary',
     permission: 'login_log.show',
+    icon: View,
     handler: handleView
   },
   {
@@ -362,6 +363,7 @@ const operationActions = computed(() => [
     label: t('common.delete'),
     type: 'danger',
     permission: 'login_log.destroy',
+    icon: Delete,
     handler: handleDelete
   }
 ])

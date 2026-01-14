@@ -55,8 +55,12 @@
         link
         :disabled="isActionDisabled(action, row)"
         @click="handleAction(action, row)"
+        :title="action.title || (action.iconOnly ? action.label : '')"
       >
-        {{ action.label }}
+        <el-icon v-if="action.icon" :class="{ 'el-icon--left': !!action.label && !action.iconOnly }">
+          <component :is="action.icon" />
+        </el-icon>
+        <template v-if="!action.iconOnly">{{ action.label }}</template>
       </el-button>
     </template>
     
@@ -83,6 +87,7 @@
               :command="action.command || action.key"
               :disabled="isActionDisabled(action, row)"
               :divided="action.divided"
+              :icon="action.icon"
             >
               {{ action.label }}
             </el-dropdown-item>
