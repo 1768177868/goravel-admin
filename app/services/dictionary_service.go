@@ -15,6 +15,8 @@ type DictionaryService interface {
 	GetList(filters DictionaryFilters, page, pageSize int) ([]models.Dictionary, int64, error)
 	// GetByType 根据类型获取字典列表
 	GetByType(dictType string) ([]models.Dictionary, error)
+	// GetAllTypes 获取所有字典类型
+	GetAllTypes() ([]string, error)
 	// Create 创建字典
 	Create(dictType, label, value, description, remark string, status uint8, sort int) (*models.Dictionary, error)
 	// Update 更新字典
@@ -94,6 +96,15 @@ func (s *DictionaryServiceImpl) GetByType(dictType string) ([]models.Dictionary,
 		return nil, err
 	}
 	return dictionaries, nil
+}
+
+// GetAllTypes 获取所有字典类型
+func (s *DictionaryServiceImpl) GetAllTypes() ([]string, error) {
+	var types []string
+	if err := facades.Orm().Query().Model(&models.Dictionary{}).Distinct("type").Pluck("type", &types); err != nil {
+		return []string{}, nil
+	}
+	return types, nil
 }
 
 // Create 创建字典

@@ -25,6 +25,14 @@ export function getDictionaryByType(type) {
   })
 }
 
+// 获取所有字典类型
+export function getDictionaryTypes() {
+  return request({
+    url: '/dictionaries/types',
+    method: 'get'
+  })
+}
+
 // 创建字典
 export function createDictionary(data) {
   return request({

@@ -176,6 +176,7 @@
     "export_task_status_unknown": "未知",
     "generate_success": "生成成功",
     "generate_failed": "生成失败",
+    "files_exist": "检测到文件已存在",
     "parse_success": "解析成功",
     "ulid_required": "ULID 不能为空",
     "invalid_ulid": "无效的 ULID",

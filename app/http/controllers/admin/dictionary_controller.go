@@ -198,3 +198,14 @@ func (r *DictionaryController) GetByType(ctx http.Context) http.Response {
 		"dictionaries": dictionaries,
 	})
 }
+
+func (r *DictionaryController) GetAllTypes(ctx http.Context) http.Response {
+	types, err := r.dictionaryService.GetAllTypes()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
+	}
+
+	return response.Success(ctx, http.Json{
+		"types": types,
+	})
+}

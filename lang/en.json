@@ -173,6 +173,7 @@
     "export_task_status_unknown": "Unknown",
     "generate_success": "Generate successful",
     "generate_failed": "Generate failed",
+    "files_exist": "Files already exist",
     "parse_success": "Parse successful",
     "ulid_required": "ULID cannot be empty",
     "invalid_ulid": "Invalid ULID",

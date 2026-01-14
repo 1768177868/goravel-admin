@@ -48,6 +48,7 @@
     "copy_success": "复制成功",
     "copy_failed": "复制失败",
     "select": "请选择",
+    "warning": "警告",
     "locale": "zh-CN",
     "language_zh": "中文",
     "language_en": "English",
@@ -1219,7 +1220,7 @@
     "generate_confirm": "确定要生成代码吗？",
     "save_success": "代码保存成功，共保存 {count} 个文件",
     "generate_failed": "代码生成失败",
-    "files_exist_confirm": "检测到 {count} 个文件已存在，是否覆盖？",
+    "files_exist_confirm": "检测到以下 {count} 个文件已存在，是否覆盖？<br/><br/>{files}",
     "overwrite": "覆盖",
     "preview_failed": "预览失败",
     "load_field_types_failed": "加载字段类型失败",
@@ -1232,7 +1233,26 @@
     "file_migration": "Migration",
     "file_api": "API",
     "file_list_page": "列表页面",
-    "file_form_page": "表单页面"
+    "file_form_page": "表单页面",
+    "search_ui_type": "搜索表单类型",
+    "search_ui_types": {
+      "input": "输入框",
+      "select": "下拉框",
+      "date": "日期",
+      "datetime": "日期时间",
+      "daterange": "日期范围",
+      "datetimerange": "日期时间范围"
+    },
+    "field_config": "字段配置",
+    "option_type": "选项来源",
+    "option_type_dictionary": "字典",
+    "option_type_api": "自定义API",
+    "dictionary_key": "字典类型",
+    "dictionary_key_placeholder": "请输入字典类型，如：status",
+    "api_url": "API地址",
+    "api_url_placeholder": "请输入API地址，如：/options?type=role",
+    "field_config_saved": "字段配置已保存",
+    "generated_files": "生成文件"
   }
 }
 

@@ -371,5 +371,35 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	// 创建代码生成器菜单（仅在开发环境显示）
+	env := facades.Config().Get("app.env", "production")
+	if env == "local" || env == "development" {
+		devMenu := createOrUpdateMenu(models.Menu{
+			ParentID:  0,
+			Title:     "开发工具",
+			Slug:      "dev",
+			Icon:      "Tools",
+			Path:      "/dev",
+			Component: "Layout",
+			Type:      1,
+			Status:    1,
+			Sort:      99,
+			IsHidden:  0,
+		})
+
+		createOrUpdateMenu(models.Menu{
+			ParentID:  devMenu.ID,
+			Title:     "代码生成器",
+			Slug:      "code-generator",
+			Icon:      "MagicStick",
+			Path:      "/code-generator",
+			Component: "dev/CodeGenerator",
+			Type:      2,
+			Status:    1,
+			Sort:      1,
+			IsHidden:  0,
+		})
+	}
+
 	return nil
 }

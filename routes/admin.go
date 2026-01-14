@@ -36,6 +36,7 @@ func Admin() {
 	userBalanceLogController := admin.NewUserBalanceLogController()
 	paymentMethodController := admin.NewPaymentMethodController()
 	paymentController := admin.NewPaymentController()
+	codeGeneratorController := admin.NewCodeGeneratorController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -69,6 +70,9 @@ func Admin() {
 
 			// 统一的下拉选项接口（不需要权限验证）
 			router.Get("options", optionController.Index)
+
+			router.Get("dictionaries/types", dictionaryController.GetAllTypes)
+
 		})
 
 		// 需要认证、多语言、权限验证和操作日志的路由
@@ -206,6 +210,14 @@ func Admin() {
 			router.Get("payments/{id}", paymentController.Show)
 			router.Post("payments/export", paymentController.Export)
 			router.Get("payments/export/status/{id}", paymentController.GetExportStatus)
+
+			// 代码生成器（仅在开发环境可用）
+			router.Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {
+				router.Get("code-generator/field-types", codeGeneratorController.GetFieldTypes)
+				router.Post("code-generator/preview", codeGeneratorController.Preview)
+				router.Post("code-generator/generate", codeGeneratorController.Generate)
+				router.Post("code-generator/save", codeGeneratorController.Save)
+			})
 
 		})
 
