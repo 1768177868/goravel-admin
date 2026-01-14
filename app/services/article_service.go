@@ -5,14 +5,15 @@ import (
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 )
 
 type ArticleService interface {
 	GetByID(id uint) (*models.Article, error)
 	GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error)
-	Create(req *ArticleCreate) (*models.Article, error)
-	Update(id uint, req *ArticleUpdate) (*models.Article, error)
+	Create(req *admin.ArticleCreate) (*models.Article, error)
+	Update(id uint, req *admin.ArticleUpdate) (*models.Article, error)
 	Delete(id uint) error
 }
 
@@ -69,7 +70,7 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 	return list, total, nil
 }
 
-func (s *ArticleServiceImpl) Create(req *ArticleCreate) (*models.Article, error) {
+func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {
 	item := &models.Article{
 
 		Name: req.Name,
@@ -85,7 +86,7 @@ func (s *ArticleServiceImpl) Create(req *ArticleCreate) (*models.Article, error)
 	return item, nil
 }
 
-func (s *ArticleServiceImpl) Update(id uint, req *ArticleUpdate) (*models.Article, error) {
+func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.Article, error) {
 	item, err := s.GetByID(id)
 	if err != nil {
 		return nil, err

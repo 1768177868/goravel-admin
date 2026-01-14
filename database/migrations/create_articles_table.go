@@ -1,8 +1,8 @@
 package migrations
 
 import (
-	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/contracts/database/schema"
+	"github.com/goravel/framework/facades"
 )
 
 type CreateArticleTable struct {
@@ -13,7 +13,7 @@ func (m *CreateArticleTable) Signature() string {
 }
 
 func (m *CreateArticleTable) Up() {
-	facades.Schema().Create("articles", func(table schema.Table) {
+	facades.Schema().Create("articles", func(table schema.Blueprint) {
 		table.ID()
 
 		table.String("name").Comment("名称")

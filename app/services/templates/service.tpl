@@ -5,14 +5,15 @@ import (
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 )
 
 type <<.ServiceName>> interface {
 	GetByID(id uint) (*models.<<.ModelName>>, error)
 	GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error)
-	Create(req *<<.RequestCreateName>>) (*models.<<.ModelName>>, error)
-	Update(id uint, req *<<.RequestUpdateName>>) (*models.<<.ModelName>>, error)
+	Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error)
+	Update(id uint, req *admin.<<.RequestUpdateName>>) (*models.<<.ModelName>>, error)
 	Delete(id uint) error
 }
 
@@ -77,7 +78,7 @@ func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, page
 	return list, total, nil
 }
 
-func (s *<<.ServiceName>>Impl) Create(req *<<.RequestCreateName>>) (*models.<<.ModelName>>, error) {
+func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error) {
 	item := &models.<<.ModelName>>{
 <<range .FormFields>>
 		<<.FieldName>>: req.<<.FieldName>>,
@@ -91,7 +92,7 @@ func (s *<<.ServiceName>>Impl) Create(req *<<.RequestCreateName>>) (*models.<<.M
 	return item, nil
 }
 
-func (s *<<.ServiceName>>Impl) Update(id uint, req *<<.RequestUpdateName>>) (*models.<<.ModelName>>, error) {
+func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>) (*models.<<.ModelName>>, error) {
 	item, err := s.GetByID(id)
 	if err != nil {
 		return nil, err

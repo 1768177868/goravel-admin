@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -62,9 +63,11 @@ func OperationLog() http.Middleware {
 
 		// 只记录新增、修改、删除操作（POST、PUT、PATCH、DELETE），排除 GET 请求
 		// 同时排除登录和info接口，以及分片上传的进度查询（GET请求）
+		// 排除代码生成器相关操作
 		// 对于分片上传，只记录 merge 操作（最终完成上传），排除 init 和 upload 操作
 		if (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE") &&
-			path != "/api/admin/login" && path != "/api/admin/info" {
+			path != "/api/admin/login" && path != "/api/admin/info" &&
+			!strings.HasPrefix(path, "/api/admin/code-generator/") {
 
 			// 排除分片上传的中间操作（init 和 upload），只记录 merge（最终完成上传）
 			if path == "/api/admin/attachments/chunk" {

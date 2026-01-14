@@ -1,8 +1,8 @@
 package migrations
 
 import (
-	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/contracts/database/schema"
+	"github.com/goravel/framework/facades"
 )
 
 type Create<<.ModelName>>Table struct {
@@ -13,7 +13,7 @@ func (m *Create<<.ModelName>>Table) Signature() string {
 }
 
 func (m *Create<<.ModelName>>Table) Up() {
-	facades.Schema().Create("<<.TableName>>", func(table schema.Table) {
+	facades.Schema().Create("<<.TableName>>", func(table schema.Blueprint) {
 		table.ID()
 <<range .Fields>>
 		table.<<.MigrationMethod>>("<<.Name>>")<<if .Comment>>.Comment("<<.Comment>>")<<end>>
