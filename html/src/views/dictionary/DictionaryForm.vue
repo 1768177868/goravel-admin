@@ -21,6 +21,9 @@
       <el-form-item :label="$t('dictionary.value')" prop="value">
         <el-input v-model="formData.value" :disabled="loading" />
       </el-form-item>
+      <el-form-item :label="$t('dictionary.translation_key')" prop="translation_key">
+        <el-input v-model="formData.translation_key" :disabled="loading" />
+      </el-form-item>
       <el-form-item :label="$t('table.status')" prop="status">
         <el-radio-group v-model="formData.status" :disabled="loading">
           <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
@@ -79,6 +82,7 @@ const formData = reactive({
   type: '',
   label: '',
   value: '',
+  translation_key: '',
   status: 1,
   sort: 0
 })
@@ -122,6 +126,7 @@ const loadDetail = async (id) => {
         type: dict.Type || dict.type || '',
         label: dict.Label || dict.label || '',
         value: dict.Value || dict.value || '',
+        translation_key: dict.TranslationKey || dict.translation_key || '',
         status: dict.Status !== undefined ? dict.Status : (dict.status !== undefined ? dict.status : 1),
         sort: dict.Sort !== undefined ? dict.Sort : (dict.sort !== undefined ? dict.sort : 0)
       })
@@ -140,6 +145,7 @@ const resetForm = () => {
     type: '',
     label: '',
     value: '',
+    translation_key: '',
     status: 1,
     sort: 0
   })

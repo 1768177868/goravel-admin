@@ -118,6 +118,12 @@ const tableColumns = computed(() => [
     formatter: ({ row }) => row.Value || row.value || '-'
   },
   {
+    field: 'translation_key',
+    title: t('dictionary.translation_key'),
+    sortable: false,
+    formatter: ({ row }) => row.TranslationKey || row.translation_key || '-'
+  },
+  {
     field: 'sort',
     title: t('common.sort'),
     width: 80,

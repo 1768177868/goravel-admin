@@ -451,6 +451,7 @@
     "type": "类型",
     "label": "标签",
     "value": "值",
+    "translation_key": "多语言Key",
     "type_required": "请输入类型",
     "label_required": "请输入标签",
     "value_required": "请输入值",

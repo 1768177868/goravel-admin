@@ -452,6 +452,7 @@
     "type": "Type",
     "label": "Label",
     "value": "Value",
+    "translation_key": "Translation Key",
     "type_required": "Please enter type",
     "label_required": "Please enter label",
     "value_required": "Please enter value",
