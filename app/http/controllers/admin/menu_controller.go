@@ -65,6 +65,12 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 		}
 	}
 
+	// 检查是否需要隐藏开发工具菜单
+	enableDevTool := facades.Config().GetBool("app.enable_dev_tool")
+	if !enableDevTool {
+		menus = r.filterDevMenu(menus)
+	}
+
 	return response.Success(ctx, http.Json{
 		"menus": menus,
 	})
@@ -268,6 +274,22 @@ func (r *MenuController) filterMonitorMenu(menus []models.Menu) []models.Menu {
 			// 递归过滤子菜单
 			if len(menu.Children) > 0 {
 				menu.Children = r.filterMonitorMenu(menu.Children)
+			}
+			filteredMenus = append(filteredMenus, menu)
+		}
+	}
+	return filteredMenus
+}
+
+// filterDevMenu 递归过滤掉开发工具菜单
+func (r *MenuController) filterDevMenu(menus []models.Menu) []models.Menu {
+	var filteredMenus []models.Menu
+	for _, menu := range menus {
+		// 如果当前菜单不是开发工具菜单，则保留
+		if menu.Slug != "dev" {
+			// 递归过滤子菜单
+			if len(menu.Children) > 0 {
+				menu.Children = r.filterDevMenu(menu.Children)
 			}
 			filteredMenus = append(filteredMenus, menu)
 		}

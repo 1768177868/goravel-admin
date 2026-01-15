@@ -1186,6 +1186,7 @@
     "table_name": "数据表名",
     "table_name_placeholder": "请输入数据表名，如：products",
     "table_name_required": "请输入数据表名",
+    "options": "功能选项",
     "fields_config": "字段配置",
     "add_field": "添加字段",
     "field_name": "字段名",

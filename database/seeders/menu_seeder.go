@@ -371,9 +371,9 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	// 创建代码生成器菜单（仅在开发环境显示）
-	env := facades.Config().Get("app.env", "production")
-	if env == "local" || env == "development" {
+	// 创建代码生成器菜单（仅在配置开启时显示）
+	enableDevTool := facades.Config().GetBool("app.enable_dev_tool")
+	if enableDevTool {
 		devMenu := createOrUpdateMenu(models.Menu{
 			ParentID:  0,
 			Title:     "开发工具",

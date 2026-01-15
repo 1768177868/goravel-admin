@@ -59,6 +59,8 @@ func init() {
 		"env": config.Env("APP_ENV", "production"),
 		// Application Debug Mode
 		"debug": config.Env("APP_DEBUG", false),
+		// Enable Development Tool
+		"enable_dev_tool": config.Env("APP_ENABLE_DEV_TOOL", false),
 		// Application Timezone
 		//
 		// Here you may specify the default timezone for your application.

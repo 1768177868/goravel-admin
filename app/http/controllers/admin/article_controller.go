@@ -22,21 +22,18 @@ func NewArticleController() *ArticleController {
 
 // Index Article列表
 func (c *ArticleController) Index(ctx http.Context) http.Response {
-	page := helpers.GetIntQuery(ctx, "page",1)
+	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
-
 
 	name := ctx.Request().Query("name", "")
 
 	status := ctx.Request().Query("status", "")
-
 
 	filters := services.ArticleFilters{
 
 		Name: name,
 
 		Status: status,
-
 	}
 
 	list, total, err := c.ArticleService.GetList(filters, page, pageSize)
@@ -73,6 +70,7 @@ func (c *ArticleController) Show(ctx http.Context) http.Response {
 
 // Store 创建Article
 func (c *ArticleController) Store(ctx http.Context) http.Response {
+
 	var req adminrequests.ArticleCreate
 	errors, err := ctx.Request().ValidateRequest(&req)
 	if err != nil {
@@ -93,36 +91,19 @@ func (c *ArticleController) Store(ctx http.Context) http.Response {
 	return response.Success(ctx, http.Json{
 		"article": item,
 	})
+
 }
 
 // Update 更新Article
 func (c *ArticleController) Update(ctx http.Context) http.Response {
-	id := helpers.GetUintRoute(ctx, "id")
 
-	var req adminrequests.ArticleUpdate
-	errors, err := ctx.Request().ValidateRequest(&req)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
-	}
+	return response.Error(ctx, http.StatusForbidden, "update_not_allowed")
 
-	item, err := c.ArticleService.Update(id, &req)
-	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
-	}
-
-	return response.Success(ctx, http.Json{
-		"article": item,
-	})
 }
 
 // Destroy 删除Article
 func (c *ArticleController) Destroy(ctx http.Context) http.Response {
+
 	id := helpers.GetUintRoute(ctx, "id")
 	if err := c.ArticleService.Delete(id); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -132,4 +113,5 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})
+
 }

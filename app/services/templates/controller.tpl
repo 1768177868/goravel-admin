@@ -69,6 +69,7 @@ func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 
 // Store 创建<<.ModelName>>
 func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
+<<if .HasCreate>>
 	var req adminrequests.<<.RequestCreateName>>
 	errors, err := ctx.Request().ValidateRequest(&req)
 	if err != nil {
@@ -89,10 +90,14 @@ func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
 	return response.Success(ctx, http.Json{
 		"<<.ModuleName>>": item,
 	})
+<<else>>
+	return response.Error(ctx, http.StatusForbidden, "create_not_allowed")
+<<end>>
 }
 
 // Update 更新<<.ModelName>>
 func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
+<<if .HasEdit>>
 	id := helpers.GetUintRoute(ctx, "id")
 
 	var req adminrequests.<<.RequestUpdateName>>
@@ -115,10 +120,14 @@ func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
 	return response.Success(ctx, http.Json{
 		"<<.ModuleName>>": item,
 	})
+<<else>>
+	return response.Error(ctx, http.StatusForbidden, "update_not_allowed")
+<<end>>
 }
 
 // Destroy 删除<<.ModelName>>
 func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
+<<if .HasDelete>>
 	id := helpers.GetUintRoute(ctx, "id")
 	if err := c.<<.ServiceName>>.Delete(id); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -128,4 +137,7 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})
+<<else>>
+	return response.Error(ctx, http.StatusForbidden, "delete_not_allowed")
+<<end>>
 }

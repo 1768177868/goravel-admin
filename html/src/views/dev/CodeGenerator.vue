@@ -28,6 +28,12 @@
 
       <el-divider>{{ $t('code_generator.fields_config') }}</el-divider>
 
+      <el-form-item :label="$t('code_generator.options')">
+        <el-checkbox v-model="form.has_create">{{ $t('common.add') }}</el-checkbox>
+        <el-checkbox v-model="form.has_edit">{{ $t('common.edit') }}</el-checkbox>
+        <el-checkbox v-model="form.has_delete">{{ $t('common.delete') }}</el-checkbox>
+      </el-form-item>
+
       <el-form-item :label="$t('code_generator.generated_files')">
         <el-checkbox-group v-model="form.files">
           <el-checkbox v-for="fileType in fileTypes" :key="fileType.value" :label="fileType.value">
@@ -272,6 +278,9 @@ const fieldConfigForm = reactive({
 const form = reactive({
   module_name: '',
   table_name: '',
+  has_create: true,
+  has_edit: true,
+  has_delete: true,
   files: ['model', 'controller', 'service', 'request_create', 'request_update', 'migration', 'api', 'list_page', 'form_page'],
   fields: [
     {
@@ -448,7 +457,12 @@ const handlePreview = async (fileType) => {
       module_name: form.module_name,
       table_name: form.table_name,
       fields: form.fields,
-      file_type: fileType
+      file_type: fileType,
+      options: {
+        has_create: form.has_create,
+        has_edit: form.has_edit,
+        has_delete: form.has_delete
+      }
     })
     previewCode[fileType] = response.data.code || ''
   } catch (error) {
@@ -485,7 +499,12 @@ const handleGenerate = async () => {
       table_name: form.table_name,
       fields: form.fields,
       files: form.files,
-      force: false
+      force: false,
+      options: {
+        has_create: form.has_create,
+        has_edit: form.has_edit,
+        has_delete: form.has_delete
+      }
     })
 
     const savedFiles = response.data.saved_files || []
@@ -514,7 +533,12 @@ const handleGenerate = async () => {
             table_name: form.table_name,
             fields: form.fields,
             files: form.files,
-            force: true
+            force: true,
+            options: {
+              has_create: form.has_create,
+              has_edit: form.has_edit,
+              has_delete: form.has_delete
+            }
           })
 
           const savedFiles = response.data.saved_files || []

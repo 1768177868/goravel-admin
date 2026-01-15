@@ -12,9 +12,15 @@ import (
 type <<.ServiceName>> interface {
 	GetByID(id uint) (*models.<<.ModelName>>, error)
 	GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error)
+<<if .HasCreate>>
 	Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error)
+<<end>>
+<<if .HasEdit>>
 	Update(id uint, req *admin.<<.RequestUpdateName>>) (*models.<<.ModelName>>, error)
+<<end>>
+<<if .HasDelete>>
 	Delete(id uint) error
+<<end>>
 }
 
 type <<.ModelName>>Filters struct {
@@ -78,6 +84,7 @@ func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, page
 	return list, total, nil
 }
 
+<<if .HasCreate>>
 func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error) {
 	item := &models.<<.ModelName>>{
 <<range .FormFields>>
@@ -91,7 +98,9 @@ func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*model
 
 	return item, nil
 }
+<<end>>
 
+<<if .HasEdit>>
 func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>) (*models.<<.ModelName>>, error) {
 	item, err := s.GetByID(id)
 	if err != nil {
@@ -110,8 +119,11 @@ func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>
 
 	return item, nil
 }
+<<end>>
 
+<<if .HasDelete>>
 func (s *<<.ServiceName>>Impl) Delete(id uint) error {
 	_, err := facades.Orm().Query().Where("id", id).Delete(&models.<<.ModelName>>{})
 	return err
 }
+<<end>>

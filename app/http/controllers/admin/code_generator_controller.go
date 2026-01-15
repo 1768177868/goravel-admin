@@ -18,6 +18,7 @@ type GenerateRequest struct {
 	TableName  string                 `json:"table_name"`
 	Fields     []services.FieldConfig `json:"fields"`
 	Files      []string               `json:"files"`
+	Options    map[string]bool        `json:"options"`
 }
 
 type PreviewRequest struct {
@@ -25,6 +26,7 @@ type PreviewRequest struct {
 	TableName  string                 `json:"table_name"`
 	Fields     []services.FieldConfig `json:"fields"`
 	FileType   string                 `json:"file_type"`
+	Options    map[string]bool        `json:"options"`
 }
 
 type SaveRequest struct {
@@ -33,6 +35,7 @@ type SaveRequest struct {
 	Fields     []services.FieldConfig `json:"fields"`
 	Force      bool                   `json:"force"`
 	Files      []string               `json:"files"`
+	Options    map[string]bool        `json:"options"`
 }
 
 func NewCodeGeneratorController() *CodeGeneratorController {
@@ -55,7 +58,7 @@ func (c *CodeGeneratorController) Generate(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "table_name_required")
 	}
 
-	files, err := c.codeGeneratorService.Generate(req.ModuleName, req.TableName, req.Fields, req.Files)
+	files, err := c.codeGeneratorService.Generate(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
@@ -85,7 +88,7 @@ func (c *CodeGeneratorController) Preview(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "file_type_required")
 	}
 
-	code, err := c.codeGeneratorService.Preview(req.ModuleName, req.TableName, req.Fields, req.FileType)
+	code, err := c.codeGeneratorService.Preview(req.ModuleName, req.TableName, req.Fields, req.FileType, req.Options)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
@@ -116,9 +119,9 @@ func (c *CodeGeneratorController) Save(ctx http.Context) http.Response {
 	var err error
 
 	if req.Force {
-		savedFiles, err = c.codeGeneratorService.ForceSave(req.ModuleName, req.TableName, req.Fields, req.Files)
+		savedFiles, err = c.codeGeneratorService.ForceSave(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
 	} else {
-		savedFiles, err = c.codeGeneratorService.Save(req.ModuleName, req.TableName, req.Fields, req.Files)
+		savedFiles, err = c.codeGeneratorService.Save(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
 	}
 
 	if err != nil {

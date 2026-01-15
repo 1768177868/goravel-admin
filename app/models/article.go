@@ -10,7 +10,6 @@ type Article struct {
 	Name string `gorm:"name" json:"name" comment:"名称""`
 
 	Status string `gorm:"status" json:"status" comment:"状态""`
-
 }
 
 func (Article) TableName() string {
@@ -26,7 +25,6 @@ func (r *Article) Serialize() map[string]any {
 		"name": r.Name,
 
 		"status": r.Status,
-
 	}
 }
 

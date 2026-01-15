@@ -12,17 +12,16 @@ import (
 type ArticleService interface {
 	GetByID(id uint) (*models.Article, error)
 	GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error)
+
 	Create(req *admin.ArticleCreate) (*models.Article, error)
-	Update(id uint, req *admin.ArticleUpdate) (*models.Article, error)
+
 	Delete(id uint) error
 }
 
 type ArticleFilters struct {
-
 	Name string
 
 	Status string
-
 }
 
 type ArticleServiceImpl struct{}
@@ -35,17 +34,16 @@ func BuildArticleQuery(filters ArticleFilters) orm.Query {
 	query := facades.Orm().Query().Model(&models.Article{})
 
 	if filters.Name != "" {
-		
+
 		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
-		
+
 	}
 
 	if filters.Status != "" {
-		
-		query = query.Where("status = ?", filters.Status)
-		
-	}
 
+		query = query.Where("status = ?", filters.Status)
+
+	}
 
 	return query
 }
@@ -76,34 +74,10 @@ func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, 
 		Name: req.Name,
 
 		Status: req.Status,
-
 	}
 
 	if err := facades.Orm().Query().Create(item); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
-	}
-
-	return item, nil
-}
-
-func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.Article, error) {
-	item, err := s.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-
-	if req.Name != nil {
-		item.Name = *req.Name
-	}
-
-	if req.Status != nil {
-		item.Status = *req.Status
-	}
-
-
-	if err := facades.Orm().Query().Save(item); err != nil {
-		return nil, apperrors.ErrUpdateFailed.WithError(err)
 	}
 
 	return item, nil

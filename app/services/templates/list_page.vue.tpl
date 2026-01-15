@@ -4,10 +4,12 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu.<<$.ModuleName>>') }}</span>
+          <<if .HasCreate>>
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
             {{ $t('common.add') }}
           </el-button>
+          <<end>>
         </div>
       </template>
 
@@ -29,12 +31,16 @@
         @sort-change="handleSortChange"
       >
         <template #operation="{ row }">
+          <<if .HasEdit>>
           <el-button type="primary" size="small" @click="handleEdit(row)">
             {{ $t('common.edit') }}
           </el-button>
+          <<end>>
+          <<if .HasDelete>>
           <el-button type="danger" size="small" @click="handleDelete(row)">
             {{ $t('common.delete') }}
           </el-button>
+          <<end>>
         </template>
       </VxeTable>
 

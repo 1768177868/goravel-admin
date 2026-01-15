@@ -270,6 +270,10 @@ function convertMenusToRoutes(menus) {
       if (componentImport) {
         route.component = componentImport
       } else {
+        // Layout 组件视为目录，不需要生成路由
+        if (component === 'Layout') {
+          return
+        }
         // 如果无法获取组件导入函数，跳过（可能是目录类型或其他特殊类型）
         logger.warn(`Skipping route ${path} due to missing component import for: ${component}`)
         return

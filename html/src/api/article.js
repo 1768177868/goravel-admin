@@ -15,6 +15,7 @@ export function getArticleDetail(id) {
   })
 }
 
+
 export function createArticle(data) {
   return request({
     url: '/articles',
@@ -23,13 +24,9 @@ export function createArticle(data) {
   })
 }
 
-export function updateArticle(id, data) {
-  return request({
-    url: `/articles/${id}`,
-    method: 'put',
-    data
-  })
-}
+
+
+
 
 export function deleteArticle(id) {
   return request({
@@ -37,3 +34,4 @@ export function deleteArticle(id) {
     method: 'delete'
   })
 }
+

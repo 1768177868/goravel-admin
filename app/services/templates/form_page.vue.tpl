@@ -80,8 +80,8 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import {
-  create<<.ModelName>>,
-  update<<.ModelName>>
+  <<if .HasCreate>>create<<.ModelName>>,<<end>>
+  <<if .HasEdit>>update<<.ModelName>><<end>>
 } from '../../api/<<.ModuleName>>'
 import { getOptions } from '../../api/option'
 import ErrorHandler from '../../utils/errorHandler'
@@ -139,11 +139,19 @@ const handleSubmit = async () => {
     submitting.value = true
 
     if (props.editId) {
+      <<if .HasEdit>>
       await update<<.ModelName>>(props.editId, form.value)
       ElMessage.success(t('common.update_success'))
+      <<else>>
+      ElMessage.error(t('common.operation_failed'))
+      <<end>>
     } else {
+      <<if .HasCreate>>
       await create<<.ModelName>>(form.value)
       ElMessage.success(t('common.create_success'))
+      <<else>>
+      ElMessage.error(t('common.operation_failed'))
+      <<end>>
     }
 
     emit('success')

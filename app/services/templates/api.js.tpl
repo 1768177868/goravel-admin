@@ -15,6 +15,7 @@ export function get<<.ModelName>>Detail(id) {
   })
 }
 
+<<if .HasCreate>>
 export function create<<.ModelName>>(data) {
   return request({
     url: '/<<.ModuleName>>s',
@@ -22,7 +23,9 @@ export function create<<.ModelName>>(data) {
     data
   })
 }
+<<end>>
 
+<<if .HasEdit>>
 export function update<<.ModelName>>(id, data) {
   return request({
     url: `/<<.ModuleName>>s/${id}`,
@@ -30,10 +33,13 @@ export function update<<.ModelName>>(id, data) {
     data
   })
 }
+<<end>>
 
+<<if .HasDelete>>
 export function delete<<.ModelName>>(id) {
   return request({
     url: `/<<.ModuleName>>s/${id}`,
     method: 'delete'
   })
 }
+<<end>>

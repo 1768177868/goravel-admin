@@ -979,6 +979,7 @@
     "path": "Path",
     "icon": "Icon",
     "parent": "Parent",
+    "type": "Type",
     "admin": "Admin",
     "ip": "IP Address",
     "user_agent": "User Agent",
@@ -1184,6 +1185,7 @@
     "table_name": "Table Name",
     "table_name_placeholder": "Please enter table name, e.g.: products",
     "table_name_required": "Please enter table name",
+    "options": "Options",
     "fields_config": "Fields Configuration",
     "add_field": "Add Field",
     "field_name": "Field Name",
@@ -1233,7 +1235,26 @@
     "file_migration": "Migration",
     "file_api": "API",
     "file_list_page": "List Page",
-    "file_form_page": "Form Page"
+    "file_form_page": "Form Page",
+    "search_ui_type": "Search UI Type",
+    "search_ui_types": {
+      "input": "Input",
+      "select": "Select",
+      "date": "Date",
+      "datetime": "Date Time",
+      "daterange": "Date Range",
+      "datetimerange": "Date Time Range"
+    },
+    "field_config": "Field Config",
+    "option_type": "Option Type",
+    "option_type_dictionary": "Dictionary",
+    "option_type_api": "Custom API",
+    "dictionary_key": "Dictionary Key",
+    "dictionary_key_placeholder": "Please enter dictionary key, e.g.: status",
+    "api_url": "API URL",
+    "api_url_placeholder": "Please enter API URL, e.g.: /options?type=role",
+    "field_config_saved": "Field config saved",
+    "generated_files": "Generated Files"
   }
 }
 

@@ -55,11 +55,11 @@ func (e *FilesExistError) Error() string {
 }
 
 type CodeGeneratorService interface {
-	Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]GeneratedFile, error)
-	Preview(moduleName, tableName string, fields []FieldConfig, fileType string) (string, error)
-	Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]string, error)
-	ForceSave(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]string, error)
+	Preview(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) (string, error)
+	Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error)
+	ForceSave(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error)
 	GetFieldTypes() []FieldType
+	Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error)
 }
 
 type CodeGeneratorServiceImpl struct{}
@@ -71,12 +71,12 @@ func NewCodeGeneratorService() CodeGeneratorService {
 	return &CodeGeneratorServiceImpl{}
 }
 
-func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
 	generators := []struct {
 		fileType string
-		generate func(string, string, []FieldConfig) (GeneratedFile, error)
+		generate func(string, string, []FieldConfig, map[string]bool) (GeneratedFile, error)
 	}{
 		{"model", s.generateModel},
 		{"controller", s.generateController},
@@ -103,7 +103,7 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 			continue
 		}
 
-		file, err := gen.generate(moduleName, tableName, fields)
+		file, err := gen.generate(moduleName, tableName, fields, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate %s: %w", gen.fileType, err)
 		}
@@ -121,7 +121,7 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 	return files, nil
 }
 
-func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields []FieldConfig, fileType string) (string, error) {
+func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) (string, error) {
 	templateName, err := s.getTemplateName(fileType)
 	if err != nil {
 		return "", err
@@ -137,7 +137,7 @@ func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields 
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	data := s.buildTemplateData(moduleName, tableName, fields, fileType)
+	data := s.buildTemplateData(moduleName, tableName, fields, fileType, options)
 	var builder strings.Builder
 	if err := tmpl.Execute(&builder, data); err != nil {
 		return "", fmt.Errorf("failed to execute template: %w", err)
@@ -154,8 +154,8 @@ func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields 
 	return content, nil
 }
 
-func (s *CodeGeneratorServiceImpl) Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]string, error) {
-	files, err := s.Generate(moduleName, tableName, fields, selectedFiles)
+func (s *CodeGeneratorServiceImpl) Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error) {
+	files, err := s.Generate(moduleName, tableName, fields, selectedFiles, options)
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +190,8 @@ func (s *CodeGeneratorServiceImpl) Save(moduleName, tableName string, fields []F
 	return savedFiles, nil
 }
 
-func (s *CodeGeneratorServiceImpl) ForceSave(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]string, error) {
-	files, err := s.Generate(moduleName, tableName, fields, selectedFiles)
+func (s *CodeGeneratorServiceImpl) ForceSave(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error) {
+	files, err := s.Generate(moduleName, tableName, fields, selectedFiles, options)
 	if err != nil {
 		return nil, err
 	}
@@ -306,8 +306,25 @@ func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string) (string, err
 	}
 }
 
-func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName string, fields []FieldConfig, fileType string) interface{} {
+func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) interface{} {
 	templateFields := s.convertFieldsToTemplateFields(fields)
+
+	// Default options
+	hasCreate := true
+	hasEdit := true
+	hasDelete := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
+		if val, ok := options["has_delete"]; ok {
+			hasDelete = val
+		}
+	}
 
 	switch fileType {
 	case "model":
@@ -339,6 +356,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			SearchableFields  []TemplateFieldConfig
 			RequestCreateName string
 			RequestUpdateName string
+			HasCreate         bool
+			HasEdit           bool
+			HasDelete         bool
 		}{
 			ControllerName:    toPascalCase(moduleName) + "Controller",
 			ServiceName:       toPascalCase(moduleName) + "Service",
@@ -347,6 +367,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			SearchableFields:  searchableFields,
 			RequestCreateName: toPascalCase(moduleName) + "Create",
 			RequestUpdateName: toPascalCase(moduleName) + "Update",
+			HasCreate:         hasCreate,
+			HasEdit:           hasEdit,
+			HasDelete:         hasDelete,
 		}
 	case "service":
 		var searchableFields []TemplateFieldConfig
@@ -363,6 +386,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			RequestCreateName string
 			RequestUpdateName string
 			FormFields        []TemplateFieldConfig
+			HasCreate         bool
+			HasEdit           bool
+			HasDelete         bool
 		}{
 			ServiceName:       toPascalCase(moduleName) + "Service",
 			ModelName:         toPascalCase(moduleName),
@@ -371,6 +397,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			RequestCreateName: toPascalCase(moduleName) + "Create",
 			RequestUpdateName: toPascalCase(moduleName) + "Update",
 			FormFields:        templateFields,
+			HasCreate:         hasCreate,
+			HasEdit:           hasEdit,
+			HasDelete:         hasDelete,
 		}
 	case "request_create":
 		return struct {
@@ -415,11 +444,17 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ModuleName  string
 			ModuleNameK string
 			FormFields  []TemplateFieldConfig
+			HasCreate   bool
+			HasEdit     bool
+			HasDelete   bool
 		}{
 			ModelName:   toPascalCase(moduleName),
 			ModuleName:  moduleName,
 			ModuleNameK: toKebabCase(moduleName),
 			FormFields:  templateFields,
+			HasCreate:   hasCreate,
+			HasEdit:     hasEdit,
+			HasDelete:   hasDelete,
 		}
 	case "list_page":
 		var searchableFields []TemplateFieldConfig
@@ -439,6 +474,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			SearchableFields []TemplateFieldConfig
 			ListFields       []TemplateFieldConfig
 			FormFields       []TemplateFieldConfig
+			HasCreate        bool
+			HasEdit          bool
+			HasDelete        bool
 		}{
 			ModelName:        toPascalCase(moduleName),
 			ModuleName:       moduleName,
@@ -446,6 +484,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			SearchableFields: searchableFields,
 			ListFields:       listFields,
 			FormFields:       templateFields,
+			HasCreate:        hasCreate,
+			HasEdit:          hasEdit,
+			HasDelete:        hasDelete,
 		}
 	case "form_page":
 		return struct {
@@ -453,11 +494,15 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ModuleName  string
 			ModuleNameK string
 			FormFields  []TemplateFieldConfig
+			HasCreate   bool
+			HasEdit     bool
 		}{
 			ModelName:   toPascalCase(moduleName),
 			ModuleName:  moduleName,
 			ModuleNameK: toKebabCase(moduleName),
 			FormFields:  templateFields,
+			HasCreate:   hasCreate,
+			HasEdit:     hasEdit,
 		}
 	default:
 		return struct {
@@ -537,7 +582,7 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 	return templateFields
 }
 
-func (s *CodeGeneratorServiceImpl) generateModel(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateModel(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/model.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read model template: %w", err)
@@ -565,10 +610,27 @@ func (s *CodeGeneratorServiceImpl) generateModel(moduleName, tableName string, f
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/controller.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read controller template: %w", err)
+	}
+
+	// Default options
+	hasCreate := true
+	hasEdit := true
+	hasDelete := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
+		if val, ok := options["has_delete"]; ok {
+			hasDelete = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
@@ -580,6 +642,9 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		SearchableFields  []TemplateFieldConfig
 		RequestCreateName string
 		RequestUpdateName string
+		HasCreate         bool
+		HasEdit           bool
+		HasDelete         bool
 	}{
 		ControllerName:    toPascalCase(moduleName) + "Controller",
 		ServiceName:       toPascalCase(moduleName) + "Service",
@@ -588,6 +653,9 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		SearchableFields:  templateFields,
 		RequestCreateName: toPascalCase(moduleName) + "Create",
 		RequestUpdateName: toPascalCase(moduleName) + "Update",
+		HasCreate:         hasCreate,
+		HasEdit:           hasEdit,
+		HasDelete:         hasDelete,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -601,10 +669,27 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/service.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read service template: %w", err)
+	}
+
+	// Default options
+	hasCreate := true
+	hasEdit := true
+	hasDelete := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
+		if val, ok := options["has_delete"]; ok {
+			hasDelete = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
@@ -616,6 +701,9 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		RequestCreateName string
 		RequestUpdateName string
 		FormFields        []TemplateFieldConfig
+		HasCreate         bool
+		HasEdit           bool
+		HasDelete         bool
 	}{
 		ServiceName:       toPascalCase(moduleName) + "Service",
 		ModelName:         toPascalCase(moduleName),
@@ -624,6 +712,9 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		RequestCreateName: toPascalCase(moduleName) + "Create",
 		RequestUpdateName: toPascalCase(moduleName) + "Update",
 		FormFields:        templateFields,
+		HasCreate:         hasCreate,
+		HasEdit:           hasEdit,
+		HasDelete:         hasDelete,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -637,7 +728,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateRequestCreate(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateRequestCreate(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/request_create.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read request_create template: %w", err)
@@ -667,7 +758,7 @@ func (s *CodeGeneratorServiceImpl) generateRequestCreate(moduleName, tableName s
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateRequestUpdate(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateRequestUpdate(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/request_update.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read request_update template: %w", err)
@@ -697,7 +788,7 @@ func (s *CodeGeneratorServiceImpl) generateRequestUpdate(moduleName, tableName s
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateMigration(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateMigration(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/migration.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read migration template: %w", err)
@@ -729,10 +820,27 @@ func (s *CodeGeneratorServiceImpl) generateMigration(moduleName, tableName strin
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/api.js.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read api template: %w", err)
+	}
+
+	// Default options
+	hasCreate := true
+	hasEdit := true
+	hasDelete := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
+		if val, ok := options["has_delete"]; ok {
+			hasDelete = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
@@ -741,11 +849,17 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 		ModuleName  string
 		ModuleNameK string
 		FormFields  []TemplateFieldConfig
+		HasCreate   bool
+		HasEdit     bool
+		HasDelete   bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
 		ModuleNameK: toKebabCase(moduleName),
 		FormFields:  templateFields,
+		HasCreate:   hasCreate,
+		HasEdit:     hasEdit,
+		HasDelete:   hasDelete,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -759,10 +873,27 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/list_page.vue.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read list_page template: %w", err)
+	}
+
+	// Default options
+	hasCreate := true
+	hasEdit := true
+	hasDelete := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
+		if val, ok := options["has_delete"]; ok {
+			hasDelete = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
@@ -773,6 +904,9 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		SearchableFields []TemplateFieldConfig
 		ListFields       []TemplateFieldConfig
 		FormFields       []TemplateFieldConfig
+		HasCreate        bool
+		HasEdit          bool
+		HasDelete        bool
 	}{
 		ModelName:        toPascalCase(moduleName),
 		ModuleName:       moduleName,
@@ -780,6 +914,9 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		SearchableFields: templateFields,
 		ListFields:       templateFields,
 		FormFields:       templateFields,
+		HasCreate:        hasCreate,
+		HasEdit:          hasEdit,
+		HasDelete:        hasDelete,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -793,10 +930,23 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableName string, fields []FieldConfig) (GeneratedFile, error) {
+func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/form_page.vue.tpl")
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read form_page template: %w", err)
+	}
+
+	// Default options
+	hasCreate := true
+	hasEdit := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
@@ -805,11 +955,15 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		ModuleName  string
 		ModuleNameK string
 		FormFields  []TemplateFieldConfig
+		HasCreate   bool
+		HasEdit     bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
 		ModuleNameK: toKebabCase(moduleName),
 		FormFields:  templateFields,
+		HasCreate:   hasCreate,
+		HasEdit:     hasEdit,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
