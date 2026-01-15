@@ -37,6 +37,7 @@ func Admin() {
 	paymentMethodController := admin.NewPaymentMethodController()
 	paymentController := admin.NewPaymentController()
 	codeGeneratorController := admin.NewCodeGeneratorController()
+	articleController := admin.NewArticleController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -210,6 +211,8 @@ func Admin() {
 			router.Get("payments/{id}", paymentController.Show)
 			router.Post("payments/export", paymentController.Export)
 			router.Get("payments/export/status/{id}", paymentController.GetExportStatus)
+
+			router.Resource("articles", articleController)
 
 			// 代码生成器（仅在开发环境可用）
 			router.Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {

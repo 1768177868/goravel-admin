@@ -4,10 +4,12 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu.article') }}</span>
+          
           <el-button type="primary" @click="handleAdd">
             <el-icon><Plus /></el-icon>
             {{ $t('common.add') }}
           </el-button>
+          
         </div>
       </template>
 
@@ -29,12 +31,16 @@
         @sort-change="handleSortChange"
       >
         <template #operation="{ row }">
+          
           <el-button type="primary" size="small" @click="handleEdit(row)">
             {{ $t('common.edit') }}
           </el-button>
+          
+          
           <el-button type="danger" size="small" @click="handleDelete(row)">
             {{ $t('common.delete') }}
           </el-button>
+          
         </template>
       </VxeTable>
 
@@ -89,9 +95,7 @@ const {
 const initialSearchForm = {
 
   name: '',
-
   status: '',
-
 }
 
 const {
@@ -122,7 +126,6 @@ const searchFields = computed(() => [
     width: '200px',
     advanced: false
   },
-
   {
     prop: 'status',
     label: t('article.status'),
@@ -130,14 +133,12 @@ const searchFields = computed(() => [
     apiUrl: '/options?type=status',
 
     
-    // 如果配置了字典，使用新的参数格式
     apiUrl: '/options?type=dictionary&dictionary_type=status',
     
 
     width: '200px',
     advanced: false
   },
-
 ])
 
 const tableColumns = computed(() => [
@@ -156,7 +157,6 @@ const tableColumns = computed(() => [
     sortable: true
   },
 
-
   {
     field: 'status',
 
@@ -164,7 +164,6 @@ const tableColumns = computed(() => [
 
     sortable: true
   },
-
 
   {
     field: 'created_at',

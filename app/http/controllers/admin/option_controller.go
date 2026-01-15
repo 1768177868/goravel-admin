@@ -65,10 +65,11 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 		var options []map[string]any
 		for _, dict := range dictionaries {
 			label := dict.Label
+			// 如果有 translation_key，优先使用翻译键
 			if dict.TranslationKey != "" {
-				// 如果有 translation_key，尝试翻译
 				translated := trans.Get(ctx, dict.TranslationKey)
-				if translated != dict.TranslationKey {
+				// 只有当翻译结果不同于 key 本身（表示找到了翻译）且不为空时才使用
+				if translated != "" && translated != dict.TranslationKey {
 					label = translated
 				}
 			}

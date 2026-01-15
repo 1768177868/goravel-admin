@@ -312,6 +312,8 @@
     "payment_status_invalid": "支付状态无效",
     "payment_method_code_exists": "支付方式代码已存在",
     "trace_test_warning": "追踪测试警告",
-    "trace_test_error": "追踪测试错误"
+    "trace_test_error": "追踪测试错误",
+    "enabled": "启用",
+    "disabled": "禁用"
   }
 }

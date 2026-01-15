@@ -7,9 +7,8 @@ import (
 type Article struct {
 	orm.Model
 
-	Name string `gorm:"name" json:"name" comment:"名称""`
-
-	Status string `gorm:"status" json:"status" comment:"状态""`
+	Name   string `gorm:"name" json:"name" comment:"名称"`
+	Status string `gorm:"status" json:"status" comment:"状态"`
 }
 
 func (Article) TableName() string {

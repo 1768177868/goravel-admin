@@ -95,7 +95,7 @@ const {
 const initialSearchForm = {
 <<range .SearchableFields>>
   <<.Name>>: '',
-<<end>>
+<<- end>>
 }
 
 const {
@@ -132,7 +132,7 @@ const searchFields = computed(() => [
     width: '200px',
     advanced: false
   },
-<<end>>
+<<- end>>
 ])
 
 const tableColumns = computed(() => [
@@ -159,7 +159,7 @@ const tableColumns = computed(() => [
     sortable: false
   },
 <<end>>
-<<end>>
+<<- end>>
   {
     field: 'created_at',
     title: t('table.created_at'),

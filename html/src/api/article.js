@@ -26,6 +26,14 @@ export function createArticle(data) {
 
 
 
+export function updateArticle(id, data) {
+  return request({
+    url: `/articles/${id}`,
+    method: 'put',
+    data
+  })
+}
+
 
 
 export function deleteArticle(id) {

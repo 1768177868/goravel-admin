@@ -17,13 +17,11 @@
         <el-input v-model="form.name" :placeholder="$t('article.name')" />
 
       </el-form-item>
-
       <el-form-item :label="$t('article.status')" prop="status">
 
         <el-input v-model="form.status" :placeholder="$t('article.status')" />
 
       </el-form-item>
-
     </el-form>
 
     <template #footer>
@@ -68,8 +66,6 @@ const submitting = ref(false)
 
 
 
-
-
 const visible = ref(props.modelValue)
 watch(() => props.modelValue, (val) => {
   visible.value = val
@@ -81,9 +77,7 @@ watch(visible, (val) => {
 const form = ref({
 
   name: null,
-
   status: null,
-
 })
 
 const rules = {
@@ -91,11 +85,9 @@ const rules = {
   name: [
     { required: true, message: t('article.name_required'), trigger: 'blur' }
   ],
-
   status: [
     { required: false, message: t('article.status_required'), trigger: 'blur' }
   ],
-
 }
 
 const handleSubmit = async () => {
@@ -106,11 +98,15 @@ const handleSubmit = async () => {
     submitting.value = true
 
     if (props.editId) {
+      
       await updateArticle(props.editId, form.value)
       ElMessage.success(t('common.update_success'))
+      
     } else {
+      
       await createArticle(form.value)
       ElMessage.success(t('common.create_success'))
+      
     }
 
     emit('success')
@@ -136,8 +132,6 @@ const handleFileSuccess = (response) => {
 }
 
 const loadOptions = async () => {
-
-
 
 
 

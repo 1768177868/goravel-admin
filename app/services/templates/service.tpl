@@ -26,7 +26,7 @@ type <<.ServiceName>> interface {
 type <<.ModelName>>Filters struct {
 <<range .SearchableFields>>
 	<<.PascalName>> string
-<<end>>
+<<- end>>
 }
 
 type <<.ServiceName>>Impl struct{}
@@ -59,7 +59,7 @@ func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 		query = query.Where("<<.Name>> LIKE ?", "%"+filters.<<.PascalName>>+"%")
 		<<end>>
 	}
-<<end>>
+<<- end>>
 
 	return query
 }
@@ -89,7 +89,7 @@ func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*model
 	item := &models.<<.ModelName>>{
 <<range .FormFields>>
 		<<.FieldName>>: req.<<.FieldName>>,
-<<end>>
+<<- end>>
 	}
 
 	if err := facades.Orm().Query().Create(item); err != nil {
@@ -111,7 +111,7 @@ func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>
 	if req.<<.FieldName>> != nil {
 		item.<<.FieldName>> = *req.<<.FieldName>>
 	}
-<<end>>
+<<- end>>
 
 	if err := facades.Orm().Query().Save(item); err != nil {
 		return nil, apperrors.ErrUpdateFailed.WithError(err)

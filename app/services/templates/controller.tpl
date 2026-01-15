@@ -27,12 +27,12 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 
 <<range .SearchableFields>>
 	<<.Name>> := ctx.Request().Query("<<.Name>>", "")
-<<end>>
+<<- end>>
 
 	filters := services.<<.ModelName>>Filters{
 <<range .SearchableFields>>
 		<<.PascalName>>: <<.Name>>,
-<<end>>
+<<- end>>
 	}
 
 	list, total, err := c.<<.ServiceName>>.GetList(filters, page, pageSize)
@@ -82,7 +82,7 @@ func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
 	item, err := c.<<.ServiceName>>.Create(&req)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
 		}
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}

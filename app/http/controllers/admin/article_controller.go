@@ -26,13 +26,11 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	name := ctx.Request().Query("name", "")
-
 	status := ctx.Request().Query("status", "")
 
 	filters := services.ArticleFilters{
 
-		Name: name,
-
+		Name:   name,
 		Status: status,
 	}
 
@@ -83,7 +81,7 @@ func (c *ArticleController) Store(ctx http.Context) http.Response {
 	item, err := c.ArticleService.Create(&req)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
 		}
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -97,7 +95,28 @@ func (c *ArticleController) Store(ctx http.Context) http.Response {
 // Update 更新Article
 func (c *ArticleController) Update(ctx http.Context) http.Response {
 
-	return response.Error(ctx, http.StatusForbidden, "update_not_allowed")
+	id := helpers.GetUintRoute(ctx, "id")
+
+	var req adminrequests.ArticleUpdate
+	errors, err := ctx.Request().ValidateRequest(&req)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if errors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	}
+
+	item, err := c.ArticleService.Update(id, &req)
+	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
+		}
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.Success(ctx, http.Json{
+		"article": item,
+	})
 
 }
 

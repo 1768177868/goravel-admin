@@ -309,6 +309,8 @@
     "payment_status_invalid": "Invalid payment status",
     "payment_method_code_exists": "Payment method code already exists",
     "trace_test_warning": "Trace test warning",
-    "trace_test_error": "Trace test error"
+    "trace_test_error": "Trace test error",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
   }
 }

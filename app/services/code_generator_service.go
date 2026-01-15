@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type FieldConfig struct {
@@ -799,14 +800,17 @@ func (s *CodeGeneratorServiceImpl) generateMigration(moduleName, tableName strin
 		templateFields[i].MigrationMethod = getMigrationMethod(templateFields[i].DBType)
 	}
 
+	timestamp := time.Now().Format("20060102150405")
 	data := struct {
 		ModelName string
 		TableName string
 		Fields    []TemplateFieldConfig
+		Timestamp string
 	}{
 		ModelName: toPascalCase(moduleName),
 		TableName: tableName,
 		Fields:    templateFields,
+		Timestamp: timestamp,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -815,7 +819,7 @@ func (s *CodeGeneratorServiceImpl) generateMigration(moduleName, tableName strin
 	}
 
 	return GeneratedFile{
-		Path:    fmt.Sprintf("database/migrations/create_%s_table.go", tableName),
+		Path:    fmt.Sprintf("database/migrations/%s_create_%s_table.go", timestamp, toSnakeCase(tableName)),
 		Content: content,
 	}, nil
 }

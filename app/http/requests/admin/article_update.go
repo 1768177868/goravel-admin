@@ -7,8 +7,7 @@ import (
 )
 
 type ArticleUpdate struct {
-	Name *string `form:"name" json:"name"`
-
+	Name   *string `form:"name" json:"name"`
 	Status *string `form:"status" json:"status"`
 }
 
@@ -19,8 +18,7 @@ func (r *ArticleUpdate) Authorize(ctx http.Context) error {
 func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 
-		"name": "required",
-
+		"name":   "required",
 		"status": "",
 	}
 	return rules
@@ -29,8 +27,7 @@ func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 func (r *ArticleUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 
-		"name.required": trans.Get(ctx, "validation_name_required"),
-
+		"name.required":   trans.Get(ctx, "validation_name_required"),
 		"status.required": trans.Get(ctx, "validation_status_required"),
 	}
 }
@@ -38,8 +35,7 @@ func (r *ArticleUpdate) Messages(ctx http.Context) map[string]string {
 func (r *ArticleUpdate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
 
-		"name": trans.Get(ctx, "validation_name"),
-
+		"name":   trans.Get(ctx, "validation_name"),
 		"status": trans.Get(ctx, "validation_status"),
 	}
 }

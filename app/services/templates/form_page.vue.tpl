@@ -62,7 +62,7 @@
         </el-upload>
 <<end>>
       </el-form-item>
-<<end>>
+<<- end>>
     </el-form>
 
     <template #footer>
@@ -107,7 +107,7 @@ const submitting = ref(false)
 <<if eq .FormType "select">>
 const <<.Name>>Options = ref([])
 <<end>>
-<<end>>
+<<- end>>
 
 const visible = ref(props.modelValue)
 watch(() => props.modelValue, (val) => {
@@ -120,7 +120,7 @@ watch(visible, (val) => {
 const form = ref({
 <<range .FormFields>>
   <<.Name>>: null,
-<<end>>
+<<- end>>
 })
 
 const rules = {
@@ -128,7 +128,7 @@ const rules = {
   <<.Name>>: [
     { required: <<.Required>>, message: t('<<$.ModuleName>>.<<.Name>>_required'), trigger: 'blur' }
   ],
-<<end>>
+<<- end>>
 }
 
 const handleSubmit = async () => {
@@ -194,7 +194,7 @@ const loadOptions = async () => {
     console.error('Failed to load <<.Name>> options:', error)
   }
 <<end>>
-<<end>>
+<<- end>>
 }
 
 watch(visible, (val) => {
