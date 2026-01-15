@@ -3,6 +3,7 @@ package services
 import (
 	"embed"
 	"fmt"
+	"go/format"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,6 +107,14 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate %s: %w", gen.fileType, err)
 		}
+
+		if strings.HasSuffix(file.Path, ".go") {
+			formatted, err := format.Source([]byte(file.Content))
+			if err == nil {
+				file.Content = string(formatted)
+			}
+		}
+
 		files = append(files, file)
 	}
 
@@ -134,7 +143,15 @@ func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields 
 		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return builder.String(), nil
+	content := builder.String()
+	if strings.Contains(templateName, ".go") || fileType == "model" || fileType == "controller" || fileType == "service" || fileType == "request_create" || fileType == "request_update" || fileType == "migration" {
+		formatted, err := format.Source([]byte(content))
+		if err == nil {
+			return string(formatted), nil
+		}
+	}
+
+	return content, nil
 }
 
 func (s *CodeGeneratorServiceImpl) Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string) ([]string, error) {

@@ -120,7 +120,6 @@ const searchFields = computed(() => [
     <<if eq .Dictionary "">>
     // 如果没有配置字典，可能是模块选项（如role, department等），apiUrl已由.ApiUrl提供
     <<else>>
-    // 如果配置了字典，使用新的参数格式
     apiUrl: '/options?type=dictionary&dictionary_type=<<.Dictionary>>',
     <<end>>
 <<end>>
