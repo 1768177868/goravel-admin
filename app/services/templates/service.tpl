@@ -123,7 +123,9 @@ func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>
 
 <<if .HasDelete>>
 func (s *<<.ServiceName>>Impl) Delete(id uint) error {
-	_, err := facades.Orm().Query().Where("id", id).Delete(&models.<<.ModelName>>{})
-	return err
+	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.<<.ModelName>>{}); err != nil {
+		return err
+	}
+	return nil
 }
 <<end>>

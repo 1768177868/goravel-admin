@@ -40,7 +40,8 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import {
   createArticle,
-  updateArticle
+  updateArticle,
+  getArticleDetail
 } from '../../api/article'
 import { getOptions } from '../../api/option'
 import ErrorHandler from '../../utils/errorHandler'
@@ -137,9 +138,35 @@ const loadOptions = async () => {
 
 }
 
+const loadData = async () => {
+  if (!props.editId) return
+  
+  try {
+    const res = await getArticleDetail(props.editId)
+    if (res.data && res.data.article) {
+      const data = res.data.article
+      form.value = {
+        name: data.name,
+        status: data.status,
+      }
+    }
+  } catch (error) {
+    ErrorHandler.handle(error)
+  }
+}
+
 watch(visible, (val) => {
   if (val) {
     loadOptions()
+    if (props.editId) {
+      loadData()
+    } else {
+      formRef.value?.resetFields()
+      form.value = {
+        name: null,
+        status: null,
+      }
+    }
   }
 })
 </script>

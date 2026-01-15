@@ -6,6 +6,7 @@ import (
 
 type Article struct {
 	orm.Model
+	orm.SoftDeletes
 
 	Name   string `gorm:"name" json:"name" comment:"名称"`
 	Status string `gorm:"status" json:"status" comment:"状态"`

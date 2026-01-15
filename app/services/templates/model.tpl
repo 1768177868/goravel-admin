@@ -6,6 +6,7 @@ import (
 
 type <<.ModelName>> struct {
 	orm.Model
+	orm.SoftDeletes
 <<range .Fields>>
 	<<.FieldName>> <<.GoType>> `gorm:"<<.Name>>" json:"<<.JsonName>>"<<if .Comment>> comment:"<<.Comment>>"<<end>><<if .Relation>> json:"<<.Relation.Table>>_<<.Relation.DisplayField>>" gorm:"<<.Relation.Table>>;foreignKey:<<.Relation.ForeignKey>>"<<end>>`
 <<- end>>

@@ -103,6 +103,9 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 }
 
 func (s *ArticleServiceImpl) Delete(id uint) error {
-	_, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{})
-	return err
+	// 使用 Soft Delete
+	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
+		return err
+	}
+	return nil
 }

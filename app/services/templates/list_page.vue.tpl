@@ -49,14 +49,14 @@
         :auto-load="true"
         :on-page-change="loadData"
       />
-    </el-card>
 
-    <<.ModelName>>Form
-      ref="formRef"
-      v-model="dialogVisible"
-      :edit-id="editId"
-      @success="handleFormSuccess"
-    />
+      <<.ModelName>>Form
+        ref="formRef"
+        v-model="dialogVisible"
+        :edit-id="editId"
+        @success="handleFormSuccess"
+      />
+    </el-card>
   </div>
 </template>
 
@@ -181,22 +181,7 @@ const handleEdit = (row) => {
 }
 
 const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(
-      t('common.delete_confirm'),
-      t('common.confirm'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
-    await handleDeleteCrud(row, loadData)
-  } catch (error) {
-    if (error !== 'cancel' && error !== 'close') {
-      ErrorHandler.handle(error)
-    }
-  }
+  await handleDeleteCrud(row, loadData)
 }
 
 const handleFormSuccess = () => {

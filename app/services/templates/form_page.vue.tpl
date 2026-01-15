@@ -81,7 +81,8 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import {
   <<if .HasCreate>>create<<.ModelName>>,<<end>>
-  <<if .HasEdit>>update<<.ModelName>><<end>>
+  <<if .HasEdit>>update<<.ModelName>>,<<end>>
+  get<<.ModelName>>Detail
 } from '../../api/<<.ModuleName>>'
 import { getOptions } from '../../api/option'
 import ErrorHandler from '../../utils/errorHandler'
@@ -197,9 +198,37 @@ const loadOptions = async () => {
 <<- end>>
 }
 
+const loadData = async () => {
+  if (!props.editId) return
+  
+  try {
+    const res = await get<<.ModelName>>Detail(props.editId)
+    if (res.data && res.data.<<.ModuleName>>) {
+      const data = res.data.<<.ModuleName>>
+      form.value = {
+<<range .FormFields>>
+        <<.Name>>: data.<<.Name>>,
+<<- end>>
+      }
+    }
+  } catch (error) {
+    ErrorHandler.handle(error)
+  }
+}
+
 watch(visible, (val) => {
   if (val) {
     loadOptions()
+    if (props.editId) {
+      loadData()
+    } else {
+      formRef.value?.resetFields()
+      form.value = {
+<<range .FormFields>>
+        <<.Name>>: null,
+<<- end>>
+      }
+    }
   }
 })
 </script>
