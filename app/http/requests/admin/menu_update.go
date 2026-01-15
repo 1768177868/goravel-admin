@@ -50,6 +50,8 @@ func (r *MenuUpdate) Rules(ctx http.Context) map[string]string {
 	} else {
 		// 内部页面：只需要长度验证
 		rules["path"] = "max_len:1000"
+		// 内部页面不验证 open_type
+		delete(rules, "open_type")
 	}
 
 	return rules
@@ -58,15 +60,15 @@ func (r *MenuUpdate) Rules(ctx http.Context) map[string]string {
 func (r *MenuUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 		"title.max_len":      trans.Get(ctx, "validation_title_max"),
-		"slug.max_len":      trans.Get(ctx, "validation_slug_max"),
-		"icon.max_len":      trans.Get(ctx, "validation_icon_max"),
-		"path.max_len":      trans.Get(ctx, "validation_path_max"),
-		"path.full_url":     trans.Get(ctx, "validation_path_url_invalid"),
-		"component.max_len": trans.Get(ctx, "validation_component_max"),
+		"slug.max_len":       trans.Get(ctx, "validation_slug_max"),
+		"icon.max_len":       trans.Get(ctx, "validation_icon_max"),
+		"path.max_len":       trans.Get(ctx, "validation_path_max"),
+		"path.full_url":      trans.Get(ctx, "validation_path_url_invalid"),
+		"component.max_len":  trans.Get(ctx, "validation_component_max"),
 		"permission.max_len": trans.Get(ctx, "validation_permission_max"),
-		"type.in":           trans.Get(ctx, "validation_menu_type_in"),
-		"status.in":         trans.Get(ctx, "validation_status_in"),
-		"is_hidden.in":      trans.Get(ctx, "validation_status_in"),
+		"type.in":            trans.Get(ctx, "validation_menu_type_in"),
+		"status.in":          trans.Get(ctx, "validation_status_in"),
+		"is_hidden.in":       trans.Get(ctx, "validation_status_in"),
 	}
 }
 
@@ -103,4 +105,3 @@ func (r *MenuUpdate) PrepareForValidation(ctx http.Context, data validation.Data
 	}
 	return nil
 }
-

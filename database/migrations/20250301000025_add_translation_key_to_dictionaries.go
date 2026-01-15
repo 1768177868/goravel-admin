@@ -16,7 +16,19 @@ func (r *M20250301000025AddTranslationKeyToDictionaries) Up() error {
 	if !facades.Schema().HasTable("dictionaries") {
 		return nil
 	}
-	
+
+	// 检查列是否已存在
+	columns, err := facades.Schema().GetColumns("dictionaries")
+	if err != nil {
+		return err
+	}
+
+	for _, column := range columns {
+		if column.Name == "translation_key" {
+			return nil
+		}
+	}
+
 	return facades.Schema().Table("dictionaries", func(table schema.Blueprint) {
 		table.String("translation_key").Nullable().Comment("多语言Key")
 	})

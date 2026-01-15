@@ -165,8 +165,13 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		}
 		menu.Slug = menuUpdate.Slug
 	}
-	if _, exists := allInputs["parent_id"]; exists {
-		menu.ParentID = menuUpdate.ParentID
+	// 处理 parent_id，需要根据是否存在来更新，如果存在但为空或0，则设为0
+	if val, exists := allInputs["parent_id"]; exists {
+		if val == nil {
+			menu.ParentID = 0
+		} else {
+			menu.ParentID = menuUpdate.ParentID
+		}
 	}
 	if _, exists := allInputs["icon"]; exists {
 		menu.Icon = menuUpdate.Icon

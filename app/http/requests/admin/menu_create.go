@@ -50,6 +50,8 @@ func (r *MenuCreate) Rules(ctx http.Context) map[string]string {
 	} else {
 		// 内部页面：只需要必填和长度验证
 		rules["path"] = "required|max_len:1000"
+		// 内部页面不验证 open_type
+		delete(rules, "open_type")
 	}
 
 	return rules
