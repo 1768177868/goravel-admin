@@ -40,6 +40,13 @@
         <el-table-column prop="name" :label="$t('menu_management.name')" min-width="200" />
         <el-table-column prop="slug" :label="$t('menu_management.slug')" min-width="150" />
         <el-table-column prop="path" :label="$t('menu_management.path')" min-width="200" />
+        <el-table-column prop="type" :label="$t('table.type')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 1 ? 'info' : (row.type === 2 ? 'primary' : 'warning')">
+              {{ row.type === 1 ? $t('menu.type_directory') : (row.type === 2 ? $t('menu.type_menu') : $t('menu.type_button')) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="link_type" :label="$t('menu_management.link_type')" width="120">
           <template #default="{ row }">
             <el-tag :type="row.link_type === 1 ? 'primary' : 'success'">
@@ -200,6 +207,7 @@ const transformMenuData = (menu) => {
     slug: menu.Slug || menu.slug || '',
     path: menu.Path || menu.path || '',
     icon: menu.Icon || menu.icon || '',
+    type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
     status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
     sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
     is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),

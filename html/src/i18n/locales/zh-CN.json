@@ -980,6 +980,7 @@
     "path": "路径",
     "icon": "图标",
     "parent": "父级",
+    "type": "类型",
     "admin": "管理员",
     "ip": "IP地址",
     "user_agent": "用户代理",

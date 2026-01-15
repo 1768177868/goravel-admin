@@ -25,6 +25,13 @@
           style="width: 100%"
         />
       </el-form-item>
+      <el-form-item :label="$t('table.type')" prop="type">
+        <el-radio-group v-model="formData.type" :disabled="loading">
+          <el-radio :label="1">{{ $t('menu.type_directory') }}</el-radio>
+          <el-radio :label="2">{{ $t('menu.type_menu') }}</el-radio>
+          <el-radio :label="3">{{ $t('menu.type_button') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
       <el-form-item :label="$t('menu_management.name')" prop="name">
         <el-input v-model="formData.name" :disabled="loading" />
       </el-form-item>
@@ -204,6 +211,7 @@ const treeSelectData = computed(() => {
 const formData = reactive({
   id: null,
   parent_id: 0,
+  type: 2, // 默认为菜单
   name: '',
   slug: '',
   path: '',
@@ -334,6 +342,7 @@ const loadDetail = async (id) => {
       Object.assign(formData, {
         id: menu.id,
         parent_id: menu.ParentID !== undefined ? menu.ParentID : (menu.parent_id || 0),
+        type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 2),
         name: menu.Title || menu.name || '',
         slug: menu.Slug || menu.slug || '',
         path: menu.Path || menu.path || '',
@@ -358,6 +367,7 @@ const resetForm = () => {
   Object.assign(formData, {
     id: null,
     parent_id: 0,
+    type: 2,
     name: '',
     slug: '',
     path: '',
@@ -381,6 +391,7 @@ const handleSubmit = async () => {
       try {
         // 转换前端字段名为后端期望的字段名
         const data = {
+          type: formData.type,
           title: formData.name,
           slug: formData.slug,
           path: formData.path,

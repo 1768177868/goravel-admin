@@ -145,18 +145,31 @@ function getComponentImport(component) {
   // 移除结尾的 .vue（如果有）
   modulePath = modulePath.replace(/\.vue$/, '')
   
-  // 构建完整的模块路径
-  const fullPath = `../views/${modulePath}.vue`
-  
+  // 构建可能的路径列表（支持 article/ArticleList 和 views/article/ArticleList 等多种格式）
+  const possiblePaths = [
+    `../views/${modulePath}.vue`,
+    `../views/${modulePath}/index.vue`, // 支持 index.vue
+    `../views/${modulePath.replace(/^\//, '')}.vue`, // 确保没有双斜杠
+  ]
+
   // 查找模块
-  const moduleImport = viewModules[fullPath]
+  let moduleImport = null
+  let fullPath = ''
+
+  for (const path of possiblePaths) {
+    if (viewModules[path]) {
+      moduleImport = viewModules[path]
+      fullPath = path
+      break
+    }
+  }
   
   if (moduleImport) {
     return () => lazyLoad(moduleImport)
   }
 
   // 如果找不到，记录警告
-  logger.warn(`Component not found: ${component} (resolved to: ${fullPath})`)
+  logger.warn(`Component not found: ${component} (tried: ${possiblePaths.join(', ')})`)
   logger.debug('Available modules:', Object.keys(viewModules))
   return null
 }
@@ -180,13 +193,19 @@ function convertMenusToRoutes(menus) {
     const status = menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1)
     const linkType = menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1)
     
-    // 只处理菜单类型（type === 2）且启用的菜单
-    if (type !== 2 || status !== 1) {
+    // 如果有组件路径，即使类型不是菜单（可能是误操作或历史数据），也尝试生成路由
+    // 但必须是启用的，且不是按钮类型（type === 3）
+    const component = menu.Component || menu.component || ''
+    if (status !== 1 || type === 3) {
+      return
+    }
+    
+    // 如果是目录类型（type === 1）且没有组件路径，跳过（仅作为父级菜单）
+    if (type === 1 && !component) {
       return
     }
 
     const path = menu.Path || menu.path || ''
-    const component = menu.Component || menu.component || ''
     
     // 如果没有路径，跳过
     if (!path || path === '/') {
@@ -205,15 +224,25 @@ function convertMenusToRoutes(menus) {
     
     // 生成路由名称（从路径转换，如 "admins" -> "Admins", "user-balance-logs" -> "UserBalanceLogs"）
     const routeName = routePath
-      .split('-')
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .split('/')  // 先按 / 分割，处理多级路径
+      .filter(Boolean) // 移除空字符串
+      .map(part => {
+         // 处理带连字符的部分
+         return part.split('-')
+           .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+           .join('')
+      })
       .join('')
 
     // 生成 titleKey
     // 翻译文件中的键通常是 menu.xxx_management 格式
     // 但有些菜单的 slug 可能已经包含了 _management，所以需要智能处理
     const slug = menu.Slug || menu.slug || routePath
-    let titleKey = `menu.${slug}`
+    
+    // 如果 slug 是以 / 开头的路径（如 /articles），去掉开头的 /
+    const cleanSlug = slug.startsWith('/') ? slug.slice(1) : slug
+    
+    let titleKey = `menu.${cleanSlug}`
     
     // 如果 slug 不包含 _management，尝试添加后缀
     // 但先检查原始键是否存在，如果存在就不添加后缀
@@ -227,7 +256,7 @@ function convertMenusToRoutes(menus) {
       meta: {
         titleKey: titleKey,
         menuId: menu.id || menu.ID,
-        menuSlug: slug // 保存 slug，供 BreadcrumbView 使用
+        menuSlug: cleanSlug // 保存 slug，供 BreadcrumbView 使用
       }
     }
 

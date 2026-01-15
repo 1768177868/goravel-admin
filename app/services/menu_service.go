@@ -36,24 +36,23 @@ func (s *MenuServiceImpl) GetByID(id uint) (*models.Menu, error) {
 
 // Create 创建菜单
 func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType uint8) (*models.Menu, error) {
-	menu := &models.Menu{}
-	createData := map[string]any{
-		"parent_id":  parentID,
-		"title":      title,
-		"slug":       slug,
-		"icon":       icon,
-		"path":       path,
-		"component":  component,
-		"permission": permission,
-		"type":       menuType,
-		"status":     status,
-		"sort":       sort,
-		"is_hidden":  isHidden,
-		"link_type":  linkType,
-		"open_type":  openType,
+	menu := &models.Menu{
+		ParentID:   parentID,
+		Title:      title,
+		Slug:       slug,
+		Icon:       icon,
+		Path:       path,
+		Component:  component,
+		Permission: permission,
+		Type:       menuType,
+		Status:     status,
+		Sort:       sort,
+		IsHidden:   isHidden,
+		LinkType:   linkType,
+		OpenType:   openType,
 	}
 
-	if err := facades.Orm().Query().Model(menu).Create(createData); err != nil {
+	if err := facades.Orm().Query().Create(menu); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
