@@ -7,8 +7,9 @@ import (
 )
 
 type ArticleUpdate struct {
-	Name   *string `form:"name" json:"name"`
-	Status *string `form:"status" json:"status"`
+	Name    *string `form:"name" json:"name"`
+	Status  *string `form:"status" json:"status"`
+	AdminId *string `form:"admin_id" json:"admin_id"`
 }
 
 func (r *ArticleUpdate) Authorize(ctx http.Context) error {
@@ -18,8 +19,9 @@ func (r *ArticleUpdate) Authorize(ctx http.Context) error {
 func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 
-		"name":   "required",
-		"status": "",
+		"name":     "required",
+		"status":   "",
+		"admin_id": "",
 	}
 	return rules
 }
@@ -27,15 +29,17 @@ func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 func (r *ArticleUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 
-		"name.required":   trans.Get(ctx, "validation_name_required"),
-		"status.required": trans.Get(ctx, "validation_status_required"),
+		"name.required":     trans.Get(ctx, "validation_name_required"),
+		"status.required":   trans.Get(ctx, "validation_status_required"),
+		"admin_id.required": trans.Get(ctx, "validation_admin_id_required"),
 	}
 }
 
 func (r *ArticleUpdate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
 
-		"name":   trans.Get(ctx, "validation_name"),
-		"status": trans.Get(ctx, "validation_status"),
+		"name":     trans.Get(ctx, "validation_name"),
+		"status":   trans.Get(ctx, "validation_status"),
+		"admin_id": trans.Get(ctx, "validation_admin_id"),
 	}
 }

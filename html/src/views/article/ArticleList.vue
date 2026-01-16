@@ -49,6 +49,7 @@
         :auto-load="true"
         :on-page-change="loadData"
       />
+
       <ArticleForm
         ref="formRef"
         v-model="dialogVisible"
@@ -95,6 +96,7 @@ const initialSearchForm = {
 
   name: '',
   status: '',
+  admin_id: '',
 }
 
 const {
@@ -138,6 +140,19 @@ const searchFields = computed(() => [
     width: '200px',
     advanced: false
   },
+  {
+    prop: 'admin_id',
+    label: t('article.admin_id'),
+    type: 'select',
+
+
+    
+    // 如果没有配置字典，可能是模块选项（如role, department等），apiUrl已由.ApiUrl提供
+    
+
+    width: '200px',
+    advanced: false
+  },
 ])
 
 const tableColumns = computed(() => [
@@ -150,18 +165,26 @@ const tableColumns = computed(() => [
 
   {
     field: 'name',
-
     title: t('article.name'),
-
     sortable: true
   },
 
   {
     field: 'status',
-
     title: t('article.status'),
-
     sortable: true
+  },
+
+  {
+    field: 'admin_id',
+    title: t('article.admin_id'),
+    sortable: true
+  },
+
+  {
+    field: 'author.name',
+    title: t('article.admin_id'),
+    sortable: false
   },
 
   {

@@ -50,7 +50,7 @@
         :on-page-change="loadData"
       />
 
-      <<.ModelName>>Form
+      <<print "<">><<.ModelName>>Form
         ref="formRef"
         v-model="dialogVisible"
         :edit-id="editId"
@@ -145,17 +145,13 @@ const tableColumns = computed(() => [
 <<range .ListFields>>
   {
     field: '<<.Name>>',
-<<if .Relation>>
-    title: t('<<$.Relation.Table>>.<<$.Relation.DisplayField>>'),
-<<else>>
     title: t('<<$.ModuleName>>.<<.Name>>'),
-<<end>>
     sortable: <<.Sortable>>
   },
 <<if .Relation>>
   {
-    field: '<<.Relation.Table>>_<<.Relation.DisplayField>>',
-    title: t('<<$.Relation.Table>>.<<$.Relation.DisplayField>>'),
+    field: '<<.Relation.JsonName>>.<<.Relation.DisplayField>>',
+    title: t('<<$.ModuleName>>.<<.Name>>'),
     sortable: false
   },
 <<end>>

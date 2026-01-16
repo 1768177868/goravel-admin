@@ -22,6 +22,11 @@
         <el-input v-model="form.status" :placeholder="$t('article.status')" />
 
       </el-form-item>
+      <el-form-item :label="$t('article.admin_id')" prop="admin_id">
+
+        <el-input v-model="form.admin_id" :placeholder="$t('article.admin_id')" />
+
+      </el-form-item>
     </el-form>
 
     <template #footer>
@@ -67,6 +72,7 @@ const submitting = ref(false)
 
 
 
+
 const visible = ref(props.modelValue)
 watch(() => props.modelValue, (val) => {
   visible.value = val
@@ -79,6 +85,7 @@ const form = ref({
 
   name: null,
   status: null,
+  admin_id: null,
 })
 
 const rules = {
@@ -88,6 +95,9 @@ const rules = {
   ],
   status: [
     { required: false, message: t('article.status_required'), trigger: 'blur' }
+  ],
+  admin_id: [
+    { required: false, message: t('article.admin_id_required'), trigger: 'blur' }
   ],
 }
 
@@ -136,6 +146,7 @@ const loadOptions = async () => {
 
 
 
+
 }
 
 const loadData = async () => {
@@ -146,8 +157,10 @@ const loadData = async () => {
     if (res.data && res.data.article) {
       const data = res.data.article
       form.value = {
+
         name: data.name,
         status: data.status,
+        admin_id: data.admin_id,
       }
     }
   } catch (error) {
@@ -163,8 +176,10 @@ watch(visible, (val) => {
     } else {
       formRef.value?.resetFields()
       form.value = {
+
         name: null,
         status: null,
+        admin_id: null,
       }
     }
   }

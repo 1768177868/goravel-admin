@@ -75,6 +75,12 @@ func (s *<<.ServiceName>>Impl) GetByID(id uint) (*models.<<.ModelName>>, error) 
 func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error) {
 	query := Build<<.ModelName>>Query(filters)
 
+<<range .FormFields>>
+<<if .Relation>>
+	query = query.With("<<.Relation.Name>>")
+<<end>>
+<<- end>>
+
 	var list []models.<<.ModelName>>
 	var total int64
 	if err := query.Order("id desc").Paginate(page, pageSize, &list, &total); err != nil {

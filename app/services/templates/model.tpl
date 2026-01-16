@@ -8,7 +8,10 @@ type <<.ModelName>> struct {
 	orm.Model
 	orm.SoftDeletes
 <<range .Fields>>
-	<<.FieldName>> <<.GoType>> `gorm:"<<.Name>>" json:"<<.JsonName>>"<<if .Comment>> comment:"<<.Comment>>"<<end>><<if .Relation>> json:"<<.Relation.Table>>_<<.Relation.DisplayField>>" gorm:"<<.Relation.Table>>;foreignKey:<<.Relation.ForeignKey>>"<<end>>`
+	<<.FieldName>> <<.GoType>> `gorm:"<<.Name>>" json:"<<.JsonName>>"<<if .Comment>> comment:"<<.Comment>>"<<end>>`
+<<if and .Relation (or (eq .Relation.RelationType "belongsTo") (eq .Relation.RelationType "hasOne"))>>
+	<<.Relation.Name>> *<<.Relation.ModelName>> `gorm:"foreignKey:<<.FieldName>>" json:"<<.Relation.JsonName>>"`
+<<end>>
 <<- end>>
 }
 

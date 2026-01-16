@@ -1215,6 +1215,8 @@
     "foreign_key_placeholder": "请输入外键字段，如：category_id",
     "display_field": "显示字段",
     "display_field_placeholder": "请输入显示字段，如：name",
+    "relation_alias": "别名（可选）",
+    "relation_alias_placeholder": "请输入别名，如：Author（默认为表名或字段名）",
     "relation_required": "请填写完整的关联表信息",
     "relation_saved": "关联表配置已保存",
     "code_preview": "代码预览",
@@ -1254,6 +1256,8 @@
     "dictionary_key_placeholder": "请输入字典类型，如：status",
     "api_url": "API地址",
     "api_url_placeholder": "请输入API地址，如：/options?type=role",
+    "precision": "总位数",
+    "scale": "小数位数",
     "field_config_saved": "字段配置已保存",
     "generated_files": "生成文件"
   }

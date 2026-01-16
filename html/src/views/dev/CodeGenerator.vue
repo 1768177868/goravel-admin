@@ -112,7 +112,7 @@
         <el-table-column :label="$t('code_generator.field_config')" width="100">
           <template #default="{ row }">
             <el-button 
-              v-if="row.search_ui_type === 'select'"
+              v-if="row.search_ui_type === 'select' || row.type === 'decimal'"
               size="small" 
               @click="handleEditFieldConfig(row)"
             >
@@ -185,6 +185,9 @@
         <el-form-item :label="$t('code_generator.display_field')">
           <el-input v-model="relationForm.display_field" :placeholder="$t('code_generator.display_field_placeholder')" />
         </el-form-item>
+        <el-form-item :label="$t('code_generator.relation_alias')">
+          <el-input v-model="relationForm.alias" :placeholder="$t('code_generator.relation_alias_placeholder')" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="relationDialogVisible = false">{{ $t('common.cancel') }}</el-button>
@@ -197,37 +200,47 @@
       width="500px"
     >
       <el-form :model="fieldConfigForm" label-width="120px">
-        <el-form-item :label="$t('code_generator.option_type')">
-          <el-radio-group v-model="fieldConfigForm.option_type">
-            <el-radio label="dictionary">{{ $t('code_generator.option_type_dictionary') }}</el-radio>
-            <el-radio label="api">{{ $t('code_generator.option_type_api') }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item 
-          v-if="fieldConfigForm.option_type === 'dictionary'"
-          :label="$t('code_generator.dictionary_key')"
-        >
-          <el-select 
-            v-model="fieldConfigForm.dictionary" 
-            :placeholder="$t('code_generator.dictionary_key_placeholder')"
-            filterable
-            allow-create
-            default-first-option
+        <template v-if="currentField && currentField.type === 'decimal'">
+          <el-form-item :label="$t('code_generator.precision')">
+            <el-input-number v-model="fieldConfigForm.precision" :min="1" :max="65" />
+          </el-form-item>
+          <el-form-item :label="$t('code_generator.scale')">
+            <el-input-number v-model="fieldConfigForm.scale" :min="0" :max="30" />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-form-item :label="$t('code_generator.option_type')">
+            <el-radio-group v-model="fieldConfigForm.option_type">
+              <el-radio label="dictionary">{{ $t('code_generator.option_type_dictionary') }}</el-radio>
+              <el-radio label="api">{{ $t('code_generator.option_type_api') }}</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item 
+            v-if="fieldConfigForm.option_type === 'dictionary'"
+            :label="$t('code_generator.dictionary_key')"
           >
-            <el-option
-              v-for="item in dictionaryTypes"
-              :key="item"
-              :label="item"
-              :value="item"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item 
-          v-if="fieldConfigForm.option_type === 'api'"
-          :label="$t('code_generator.api_url')"
-        >
-          <el-input v-model="fieldConfigForm.api_url" :placeholder="$t('code_generator.api_url_placeholder')" />
-        </el-form-item>
+            <el-select 
+              v-model="fieldConfigForm.dictionary" 
+              :placeholder="$t('code_generator.dictionary_key_placeholder')"
+              filterable
+              allow-create
+              default-first-option
+            >
+              <el-option
+                v-for="item in dictionaryTypes"
+                :key="item"
+                :label="item"
+                :value="item"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item 
+            v-if="fieldConfigForm.option_type === 'api'"
+            :label="$t('code_generator.api_url')"
+          >
+            <el-input v-model="fieldConfigForm.api_url" :placeholder="$t('code_generator.api_url_placeholder')" />
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="fieldConfigDialogVisible = false">{{ $t('common.cancel') }}</el-button>
@@ -267,12 +280,15 @@ const relationForm = reactive({
   table: '',
   relation_type: 'belongsTo',
   foreign_key: '',
-  display_field: ''
+  display_field: '',
+  alias: ''
 })
 const fieldConfigForm = reactive({
   option_type: 'dictionary',
   dictionary: '',
-  api_url: ''
+  api_url: '',
+  precision: 8,
+  scale: 2
 })
 
 const form = reactive({
@@ -281,7 +297,7 @@ const form = reactive({
   has_create: true,
   has_edit: true,
   has_delete: true,
-  files: ['model', 'controller', 'service', 'request_create', 'request_update', 'migration', 'api', 'list_page', 'form_page'],
+  files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page', 'form_page'],
   fields: [
     {
       name: 'name',
@@ -294,7 +310,6 @@ const form = reactive({
       show_in_form: true,
       show_in_detail: true,
       is_primary_key: false,
-      default_value: '',
       comment: '名称',
       search_type: 'like',
       search_ui_type: 'input',
@@ -313,7 +328,6 @@ const form = reactive({
       show_in_form: true,
       show_in_detail: true,
       is_primary_key: false,
-      default_value: '1',
       comment: '状态',
       search_type: '=',
       search_ui_type: 'select',
@@ -339,7 +353,6 @@ const fileTypes = [
   { value: 'service', label: t('code_generator.file_service') },
   { value: 'request_create', label: t('code_generator.file_request_create') },
   { value: 'request_update', label: t('code_generator.file_request_update') },
-  { value: 'migration', label: t('code_generator.file_migration') },
   { value: 'api', label: t('code_generator.file_api') },
   { value: 'list_page', label: t('code_generator.file_list_page') },
   { value: 'form_page', label: t('code_generator.file_form_page') }
@@ -376,7 +389,6 @@ const handleAddField = () => {
     show_in_form: true,
     show_in_detail: true,
     is_primary_key: false,
-    default_value: '',
     comment: '',
     search_type: 'like',
     search_ui_type: 'input',
@@ -397,11 +409,13 @@ const handleEditRelation = (row) => {
     relationForm.relation_type = row.relation.relation_type
     relationForm.foreign_key = row.relation.foreign_key
     relationForm.display_field = row.relation.display_field
+    relationForm.alias = row.relation.alias || ''
   } else {
     relationForm.table = ''
     relationForm.relation_type = 'belongsTo'
     relationForm.foreign_key = ''
     relationForm.display_field = ''
+    relationForm.alias = ''
   }
   relationDialogVisible.value = true
 }
@@ -415,7 +429,8 @@ const handleSaveRelation = () => {
     table: relationForm.table,
     relation_type: relationForm.relation_type,
     foreign_key: relationForm.foreign_key,
-    display_field: relationForm.display_field
+    display_field: relationForm.display_field,
+    alias: relationForm.alias
   }
   relationDialogVisible.value = false
   ElMessage.success(t('code_generator.relation_saved'))
@@ -423,7 +438,10 @@ const handleSaveRelation = () => {
 
 const handleEditFieldConfig = (row) => {
   currentField.value = row
-  if (row.api_url) {
+  if (row.type === 'decimal') {
+    fieldConfigForm.precision = row.precision || 8
+    fieldConfigForm.scale = row.scale || 2
+  } else if (row.api_url) {
     fieldConfigForm.option_type = 'api'
     fieldConfigForm.api_url = row.api_url
     fieldConfigForm.dictionary = ''
@@ -438,7 +456,10 @@ const handleEditFieldConfig = (row) => {
 
 const handleSaveFieldConfig = () => {
   if (currentField.value) {
-    if (fieldConfigForm.option_type === 'dictionary') {
+    if (currentField.value.type === 'decimal') {
+      currentField.value.precision = fieldConfigForm.precision
+      currentField.value.scale = fieldConfigForm.scale
+    } else if (fieldConfigForm.option_type === 'dictionary') {
       currentField.value.dictionary = fieldConfigForm.dictionary
       currentField.value.api_url = ''
     } else {

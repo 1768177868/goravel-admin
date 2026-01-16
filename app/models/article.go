@@ -8,8 +8,13 @@ type Article struct {
 	orm.Model
 	orm.SoftDeletes
 
-	Name   string `gorm:"name" json:"name" comment:"名称"`
+	Name string `gorm:"name" json:"name" comment:"名称"`
+
 	Status string `gorm:"status" json:"status" comment:"状态"`
+
+	AdminId string `gorm:"admin_id" json:"admin_id"`
+
+	Author *Admin `gorm:"foreignKey:AdminId" json:"author"`
 }
 
 func (Article) TableName() string {
@@ -25,6 +30,8 @@ func (r *Article) Serialize() map[string]any {
 		"name": r.Name,
 
 		"status": r.Status,
+
+		"admin_id": r.AdminId,
 	}
 }
 
@@ -36,6 +43,10 @@ func (r *Article) Deserialize(data map[string]any) {
 
 	if val, ok := data["status"]; ok {
 		r.Status = val.(string)
+	}
+
+	if val, ok := data["admin_id"]; ok {
+		r.AdminId = val.(string)
 	}
 
 }

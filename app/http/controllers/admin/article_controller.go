@@ -27,11 +27,13 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
+	admin_id := ctx.Request().Query("admin_id", "")
 
 	filters := services.ArticleFilters{
 
-		Name:   name,
-		Status: status,
+		Name:    name,
+		Status:  status,
+		AdminId: admin_id,
 	}
 
 	list, total, err := c.ArticleService.GetList(filters, page, pageSize)

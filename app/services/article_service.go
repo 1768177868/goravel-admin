@@ -21,8 +21,9 @@ type ArticleService interface {
 }
 
 type ArticleFilters struct {
-	Name   string
-	Status string
+	Name    string
+	Status  string
+	AdminId string
 }
 
 type ArticleServiceImpl struct{}
@@ -44,6 +45,11 @@ func BuildArticleQuery(filters ArticleFilters) orm.Query {
 		query = query.Where("status = ?", filters.Status)
 
 	}
+	if filters.AdminId != "" {
+
+		query = query.Where("admin_id = ?", filters.AdminId)
+
+	}
 
 	return query
 }
@@ -59,6 +65,8 @@ func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error) {
 	query := BuildArticleQuery(filters)
 
+	query = query.With("Author")
+
 	var list []models.Article
 	var total int64
 	if err := query.Order("id desc").Paginate(page, pageSize, &list, &total); err != nil {
@@ -71,8 +79,9 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {
 	item := &models.Article{
 
-		Name:   req.Name,
-		Status: req.Status,
+		Name:    req.Name,
+		Status:  req.Status,
+		AdminId: req.AdminId,
 	}
 
 	if err := facades.Orm().Query().Create(item); err != nil {
@@ -94,6 +103,9 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 	if req.Status != nil {
 		item.Status = *req.Status
 	}
+	if req.AdminId != nil {
+		item.AdminId = *req.AdminId
+	}
 
 	if err := facades.Orm().Query().Save(item); err != nil {
 		return nil, apperrors.ErrUpdateFailed.WithError(err)
@@ -103,7 +115,6 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 }
 
 func (s *ArticleServiceImpl) Delete(id uint) error {
-	// 使用 Soft Delete
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
 		return err
 	}

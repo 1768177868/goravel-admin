@@ -25,6 +25,8 @@ type FieldConfig struct {
 	Dictionary   string          `json:"dictionary"`
 	ApiUrl       string          `json:"api_url"`
 	Relation     *RelationConfig `json:"relation"`
+	Precision    int             `json:"precision"` // 精度 (总位数)
+	Scale        int             `json:"scale"`     // 标度 (小数位数)
 }
 
 type RelationConfig struct {
@@ -32,6 +34,7 @@ type RelationConfig struct {
 	ForeignKey   string `json:"foreign_key"`   // 外键字段
 	DisplayField string `json:"display_field"` // 显示字段
 	RelationType string `json:"relation_type"` // 关联类型：hasOne, belongsTo, hasMany
+	Alias        string `json:"alias"`         // 别名
 }
 
 type FieldType struct {
@@ -236,6 +239,27 @@ func (s *CodeGeneratorServiceImpl) GetFieldTypes() []FieldType {
 			GoType:     "int",
 			DBType:     "integer",
 			Validators: []string{"integer"},
+		},
+		{
+			Label:      "大整数",
+			Value:      "bigInteger",
+			GoType:     "int64",
+			DBType:     "bigInteger",
+			Validators: []string{"integer"},
+		},
+		{
+			Label:      "无符号大整数",
+			Value:      "unsignedBigInteger",
+			GoType:     "uint64",
+			DBType:     "unsignedBigInteger",
+			Validators: []string{"integer", "min:0"},
+		},
+		{
+			Label:      "无符号小整数",
+			Value:      "unsignedTinyInteger",
+			GoType:     "uint8",
+			DBType:     "unsignedTinyInteger",
+			Validators: []string{"integer", "min:0", "max:255"},
 		},
 		{
 			Label:      "小数",
@@ -541,7 +565,16 @@ type TemplateFieldConfig struct {
 	ApiUrl          string
 	Sortable        bool
 	Searchable      bool
-	Relation        *RelationConfig
+	Relation        *TemplateRelationConfig
+	Precision       int
+	Scale           int
+}
+
+type TemplateRelationConfig struct {
+	*RelationConfig
+	Name      string // PascalCase 关联名 (如: Admin)
+	JsonName  string // camelCase 关联名 (如: admin)
+	ModelName string // 关联表对应的模型名称 (如: Admin)
 }
 
 func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldConfig) []TemplateFieldConfig {
@@ -556,6 +589,48 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 		fieldType, exists := fieldTypeMap[field.DBType]
 		if !exists {
 			fieldType = fieldTypes[0]
+		}
+
+		var relation *TemplateRelationConfig
+		if field.Relation != nil {
+			var relationName string
+
+			// 1. 如果有别名，直接使用别名
+			if field.Relation.Alias != "" {
+				relationName = toPascalCase(field.Relation.Alias)
+			} else {
+				// 2. 否则优先尝试从字段名推导 (如 AdminID -> Admin)
+				relationName = toPascalCase(field.Name)
+				if strings.HasSuffix(relationName, "ID") {
+					relationName = strings.TrimSuffix(relationName, "ID")
+				} else if strings.HasSuffix(relationName, "Id") {
+					relationName = strings.TrimSuffix(relationName, "Id")
+				} else {
+					// 3. 最后使用表名
+					relationName = toPascalCase(field.Relation.Table)
+					// 如果是 belongsTo 或 hasOne，尝试转为单数
+					if (field.Relation.RelationType == "belongsTo" || field.Relation.RelationType == "hasOne") && strings.HasSuffix(relationName, "s") {
+						relationName = relationName[:len(relationName)-1]
+					}
+				}
+			}
+
+			// 计算模型名称 (始终基于表名)
+			modelName := toPascalCase(field.Relation.Table)
+			// 如果是 belongsTo 或 hasOne，尝试转为单数
+			if (field.Relation.RelationType == "belongsTo" || field.Relation.RelationType == "hasOne") && strings.HasSuffix(modelName, "s") {
+				modelName = modelName[:len(modelName)-1]
+			}
+
+			// 计算 JSON 名称 (首字母小写)
+			jsonName := strings.ToLower(relationName[:1]) + relationName[1:]
+
+			relation = &TemplateRelationConfig{
+				RelationConfig: field.Relation,
+				Name:           relationName,
+				JsonName:       jsonName,
+				ModelName:      modelName,
+			}
 		}
 
 		templateFields[i] = TemplateFieldConfig{
@@ -576,7 +651,9 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			ApiUrl:       getApiUrl(field.Dictionary, field.ApiUrl),
 			Sortable:     getSortable(field.DBType),
 			Searchable:   field.Searchable,
-			Relation:     field.Relation,
+			Relation:     relation,
+			Precision:    field.Precision,
+			Scale:        field.Scale,
 		}
 	}
 
@@ -1028,6 +1105,12 @@ func getMigrationMethod(dbType string) string {
 		return "Text"
 	case "integer":
 		return "Integer"
+	case "bigInteger":
+		return "BigInteger"
+	case "unsignedBigInteger":
+		return "UnsignedBigInteger"
+	case "unsignedTinyInteger":
+		return "UnsignedTinyInteger"
 	case "decimal":
 		return "Decimal"
 	case "boolean":
