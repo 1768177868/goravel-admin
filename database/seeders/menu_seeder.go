@@ -24,10 +24,43 @@ func (s *MenuSeeder) Run() error {
 		exists, _ := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuData.Slug).Exists()
 		if exists {
 			facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu)
+
+			hasUpdates := false
+
+			// 检查并更新 Component
 			if menuData.Component != "" && menuData.Component != existingMenu.Component {
-				facades.Orm().Query().Model(&existingMenu).Update("component", menuData.Component)
 				existingMenu.Component = menuData.Component
+				hasUpdates = true
 			}
+
+			// 检查并更新 Path
+			if menuData.Path != "" && menuData.Path != existingMenu.Path {
+				existingMenu.Path = menuData.Path
+				hasUpdates = true
+			}
+
+			// 检查并更新 ParentID
+			// if menuData.ParentID != existingMenu.ParentID {
+			// 	existingMenu.ParentID = menuData.ParentID
+			// 	hasUpdates = true
+			// }
+
+			// 检查并更新 Type
+			// if menuData.Type != existingMenu.Type {
+			// 	existingMenu.Type = menuData.Type
+			// 	hasUpdates = true
+			// }
+
+			// 检查并更新 IsHidden
+			// if menuData.IsHidden != existingMenu.IsHidden {
+			// 	existingMenu.IsHidden = menuData.IsHidden
+			// 	hasUpdates = true
+			// }
+
+			if hasUpdates {
+				facades.Orm().Query().Save(&existingMenu)
+			}
+
 			return existingMenu
 		}
 

@@ -109,7 +109,7 @@ export default defineComponent({
           window.open(menu.path, '_blank')
         }
       } 
-      // 内部页面路由
+      // 内部页面路由 - 强制使用 router.push
       else {
         router.push(menu.path)
       }
