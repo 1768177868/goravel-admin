@@ -28,6 +28,14 @@
               </template>
             </el-upload>
             <el-button 
+              type="warning"
+              :disabled="getButtonState('attachment.upload').disabled"
+              @click="handleCropUpload"
+            >
+              <el-icon><CropIcon /></el-icon>
+              {{ $t('attachment.crop_upload') }}
+            </el-button>
+            <el-button 
               type="success"
               :disabled="getButtonState('attachment.chunk').disabled"
               @click="handleLargeFileUpload"
@@ -222,6 +230,53 @@
         </div>
       </div>
     </el-dialog>
+    <!-- 图片裁剪对话框 -->
+    <el-dialog
+      v-model="cropDialogVisible"
+      :title="$t('attachment.crop_upload')"
+      width="800px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div class="crop-container" style="height: 500px;">
+        <vue-cropper
+          ref="cropperRef"
+          :img="cropOption.img"
+          :output-size="cropOption.size"
+          :output-type="cropOption.outputType"
+          :info="true"
+          :full="cropOption.full"
+          :can-move="cropOption.canMove"
+          :can-move-box="cropOption.canMoveBox"
+          :fixed-box="cropOption.fixedBox"
+          :original="cropOption.original"
+          :auto-crop="cropOption.autoCrop"
+          :auto-crop-width="cropOption.autoCropWidth"
+          :auto-crop-height="cropOption.autoCropHeight"
+          :center-box="cropOption.centerBox"
+          :high="cropOption.high"
+          :mode="cropOption.mode"
+        />
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-upload
+            action=""
+            :auto-upload="false"
+            :show-file-list="false"
+            accept="image/*"
+            :on-change="onCropFileChange"
+            style="display: inline-block; margin-right: 10px;"
+          >
+            <el-button>{{ $t('attachment.select_image') }}</el-button>
+          </el-upload>
+          <el-button @click="cropDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+          <el-button type="primary" :loading="cropUploading" @click="handleCropConfirm">
+            {{ $t('common.confirm') }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -229,11 +284,12 @@
 import { ref, reactive, computed, onMounted, onActivated, markRaw, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Delete, Loading, Picture } from '@element-plus/icons-vue'
+import { Upload, Delete, Loading, Picture, Crop } from '@element-plus/icons-vue'
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const UploadIcon = markRaw(Upload)
 const DeleteIcon = markRaw(Delete)
+const CropIcon = markRaw(Crop)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
@@ -253,6 +309,8 @@ import {
 } from '../../api/attachment'
 import i18n from '../../i18n'
 import Storage from '../../utils/storage'
+import 'vue-cropper/dist/index.css'
+import { VueCropper } from 'vue-cropper'
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
@@ -274,6 +332,30 @@ const chunkUploadStatus = ref('')
 const chunkUploadChunkID = ref('')
 const chunkUploadChunks = ref([])
 const chunkUploadCancelled = ref(false) // 标记是否已取消上传
+// 裁剪上传相关
+const cropDialogVisible = ref(false)
+const cropperRef = ref(null)
+const cropUploading = ref(false)
+const cropFileName = ref('')
+const cropOption = reactive({
+  img: '',
+  size: 1,
+  full: false,
+  outputType: 'png',
+  canMove: true,
+  fixedBox: false,
+  original: false,
+  canMoveBox: true,
+  autoCrop: true,
+  // 只有自动截图开启 宽度高度才生效
+  autoCropWidth: 200,
+  autoCropHeight: 200,
+  centerBox: false,
+  high: true,
+  max: 99999,
+  mode: 'contain'
+})
+
 // 图片URL缓存（key: attachment_id, value: blob_url 或 直接URL）
 const imageUrlMap = ref(new Map()) // 存储图片 URL
 const imageLoadingMap = ref(new Map()) // 存储图片加载状态: 'loading' | 'loaded' | 'error'
@@ -915,6 +997,90 @@ const handleRetryChunkUpload = () => {
     // 如果没有 chunk_id，重新开始上传
     handleChunkUpload(chunkUploadFile.value)
   }
+}
+
+// 裁剪上传相关方法
+const handleCropUpload = () => {
+  cropDialogVisible.value = true
+  cropOption.img = ''
+  cropFileName.value = ''
+}
+
+const onCropFileChange = (file) => {
+  const isImage = file.raw.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error(t('attachment.only_image_allowed'))
+    return
+  }
+  
+  // 检查文件大小（限制10MB）
+  const maxSize = 10 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error(t('attachment.file_too_large'))
+    return
+  }
+
+  cropFileName.value = file.name
+  // 读取图片
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    cropOption.img = e.target.result
+  }
+  reader.readAsDataURL(file.raw)
+}
+
+const handleCropConfirm = () => {
+  if (!cropOption.img) {
+    ElMessage.warning(t('attachment.please_select_image'))
+    return
+  }
+
+  cropUploading.value = true
+  cropperRef.value.getCropBlob((blob) => {
+    if (!blob) {
+      cropUploading.value = false
+      return
+    }
+
+    // 创建 File 对象
+    const file = new File([blob], cropFileName.value || 'cropped-image.png', {
+      type: blob.type
+    })
+
+    // 使用现有的上传逻辑
+    // 手动构造 element-plus upload 组件所需的 file 对象结构
+    const uploadFileObj = {
+      raw: file,
+      name: file.name,
+      size: file.size,
+      uid: Date.now()
+    }
+
+    // 调用上传接口
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 获取上传 URL 和 Headers
+    const action = uploadAction.value
+    const headers = uploadHeaders.value
+    
+    // 使用 axios 上传
+    axios.post(action, formData, {
+      headers: {
+        ...headers,
+        'Content-Type': 'multipart/form-data'
+      }
+    }).then(() => {
+      ElMessage.success(t('attachment.upload_success'))
+      cropDialogVisible.value = false
+      loadData()
+    }).catch((error) => {
+      console.error('Crop upload error:', error)
+      ElMessage.error(t('attachment.upload_failed'))
+    }).finally(() => {
+      cropUploading.value = false
+    })
+  })
 }
 
 const handleUpdateDisplayName = async (row) => {
