@@ -45,7 +45,9 @@
         @sort-change="handleSortChange"
       >
         <template #content="{ row }">
-          <div v-html="row.content" class="rich-text-content"></div>
+          <div class="text-truncate" :title="stripHtml(row.content)">
+            {{ stripHtml(row.content) }}
+          </div>
         </template>
 
         <template #type="{ row }">
@@ -89,6 +91,13 @@
         </template>
 
         <template #operation="{ row }">
+          <el-button
+            type="primary"
+            link
+            @click="handleView(row)"
+          >
+            {{ $t('common.view') }}
+          </el-button>
           <el-button
             v-if="!row.is_read"
             type="primary"
@@ -174,7 +183,7 @@
           <WangEditor
             v-model="formData.content"
             :placeholder="$t('notification.content_placeholder')"
-            :height="300"
+            :height="400"
           />
         </el-form-item>
       </el-form>
@@ -188,6 +197,28 @@
           @click="handleSubmit"
         >
           {{ $t('common.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 查看通知详情对话框 -->
+    <el-dialog
+      v-model="viewDialogVisible"
+      :title="$t('notification.detail')"
+      width="800px"
+    >
+      <div v-if="currentNotification">
+        <h3 class="text-lg font-bold mb-4" style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem;">{{ currentNotification.title }}</h3>
+        <div class="flex items-center text-gray-500 mb-4 text-sm" style="display: flex; align-items: center; color: #6b7280; margin-bottom: 1rem; font-size: 0.875rem;">
+          <el-tag size="small" class="mr-4" style="margin-right: 1rem;">{{ typeLabel(currentNotification.type) }}</el-tag>
+          <span class="mr-4" style="margin-right: 1rem;">{{ formatDate(currentNotification.created_at) }}</span>
+          <span>{{ $t('notification.table.sender') }}: {{ currentNotification.sender?.nickname || currentNotification.sender?.username || $t('notification.system') }}</span>
+        </div>
+        <div class="rich-text-content-view" v-html="currentNotification.content"></div>
+      </div>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">
+          {{ $t('common.close') }}
         </el-button>
       </template>
     </el-dialog>
@@ -210,6 +241,7 @@ import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
 import { fetchNotifications, createNotification } from '../../api/notification'
 import { getOptions } from '../../api/option'
+import { getApiBaseURL } from '../../utils/env'
 
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
@@ -217,6 +249,44 @@ const userStore = useUserStore()
 
 // 权限检查
 const canCreate = computed(() => userStore.shouldShowButton('notification.store'))
+
+const viewDialogVisible = ref(false)
+const currentNotification = ref(null)
+
+const handleView = (row) => {
+  // 深拷贝 row，避免直接修改原始数据
+  const notification = { ...row }
+  
+  // 处理内容中的图片路径
+  if (notification.content) {
+    const baseURL = getApiBaseURL()
+    if (baseURL) {
+      // 替换所有以 /api/admin/public/images/ 开头的相对路径
+      // 注意：这里需要根据实际的后端存储路径和 API 配置来调整正则
+      // 目前后端保存的是 /api/admin/public/images/...
+      // 而 baseURL 通常是 http://localhost:3000
+      
+      // 移除末尾斜杠（如果有）
+      const cleanBaseURL = baseURL.replace(/\/+$/, '')
+      
+      // 匹配 src="/api/..." 或 src='/api/...'
+      // 使用正则替换：src=["'](/api/[^"']+)["']
+      // 替换为：src="baseURL/api/..."
+      notification.content = notification.content.replace(
+        /src=["'](\/api\/[^"']+)["']/g,
+        `src="${cleanBaseURL}$1"`
+      )
+    }
+  }
+
+  currentNotification.value = notification
+  viewDialogVisible.value = true
+  
+  // 如果未读，标记为已读
+  if (!row.is_read) {
+    handleMarkRead(row)
+  }
+}
 
 const tableRef = ref(null)
 const formRef = ref(null)
@@ -546,6 +616,14 @@ onMounted(() => {
   loadData()
   loadAdminOptions()
 })
+
+const stripHtml = (html) => {
+  if (!html) return ''
+  // 创建一个临时 DOM 元素来提取文本
+  const temp = document.createElement('div')
+  temp.innerHTML = html
+  return temp.textContent || temp.innerText || ''
+}
 </script>
 
 <style scoped>
@@ -569,17 +647,29 @@ onMounted(() => {
   gap: 10px;
 }
 
-.rich-text-content {
-  max-height: 100px;
-  overflow-y: auto;
-  white-space: normal;
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  color: #606266;
 }
 
-.rich-text-content :deep(p) {
+.rich-text-content-view {
+  min-height: 100px;
+  max-height: 60vh;
+  overflow-y: auto;
+  white-space: normal;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.rich-text-content-view :deep(p) {
   margin: 0 0 10px;
 }
 
-.rich-text-content :deep(img) {
+.rich-text-content-view :deep(img) {
   max-width: 100%;
   height: auto;
 }

@@ -140,13 +140,37 @@ func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 
 	fileURL := attachmentService.GetFileURL(attachment)
 
+	// 生成预览URL（如果 GetFileURL 返回的是相对路径，且需要通过 preview 接口访问）
+	// 注意：GetFileURL 通常返回的是 storage/public 的直接访问地址（如果是 public 驱动），或者是 api/admin/attachments/{id}/preview
+	// 这里我们显式返回一个可直接访问的预览地址，优先使用 GetFileURL 的结果
+	// 如果 GetFileURL 返回的是相对路径（如 /storage/xxx），前端会自动拼接域名
+
+	// 为了确保富文本编辑器能直接显示，我们再返回一个 absolute_url 字段
+	// 如果 fileURL 已经是完整的 http 地址（例如 OSS），则直接使用
+	// 如果是相对地址，则拼接当前服务的域名（在前端做，后端这里只返回 path）
+
+	// 但用户的需求是返回一个“可预览的完整地址”。
+	// 附件管理列表能显示是因为前端拼接了域名。
+	// 这里我们直接返回 file_url，它通常已经是正确的路径（相对或绝对）。
+	// 我们添加一个 preview_url 字段，明确指向 preview 接口（如果是本地存储且未公开 storage）
+	// 注意：这里需要确保返回的是完整的 URL，包含 api/admin 前缀
+	previewURL := fmt.Sprintf("/api/admin/public/images/%d", attachment.ID)
+	// 如果使用的是云存储，GetFileURL 返回的通常是 HTTP 链接，直接用那个更好
+	if attachment.Disk != "local" && attachment.Disk != "public" {
+		previewURL = fileURL
+	}
+
+	// 统一返回 file_url 为 previewURL，与附件列表保持一致
+	fileURL = previewURL
+
 	return response.Success(ctx, "upload_success", http.Json{
-		"id":        attachment.ID,
-		"filename":  attachment.Filename,
-		"size":      attachment.Size,
-		"mime_type": attachment.MimeType,
-		"file_type": attachment.FileType,
-		"file_url":  fileURL,
+		"id":          attachment.ID,
+		"filename":    attachment.Filename,
+		"size":        attachment.Size,
+		"mime_type":   attachment.MimeType,
+		"file_type":   attachment.FileType,
+		"file_url":    fileURL,
+		"preview_url": previewURL, // 新增字段
 	})
 }
 

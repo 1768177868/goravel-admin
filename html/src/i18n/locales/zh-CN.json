@@ -9,6 +9,7 @@
     "delete": "删除",
     "delete_selected": "删除选中",
     "view": "查看",
+    "close": "关闭",
     "preview": "预览",
     "download": "下载",
     "retry": "重试",
@@ -90,6 +91,7 @@
   },
   "notification": {
     "center": "通知中心",
+    "detail": "通知详情",
     "mark_all": "全部标记已读",
     "mark_read": "标记已读",
     "unread": "未读",

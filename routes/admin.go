@@ -46,6 +46,9 @@ func Admin() {
 		router.Middleware(middleware.Lang()).Group(func(router route.Router) {
 			router.Middleware(httpmiddleware.Throttle("login")).Post("login", adminAuthController.Login)
 			router.Get("login/captcha", adminAuthController.Captcha)
+
+			// 公开的图片访问接口
+			router.Get("public/images/{id}", attachmentController.Preview)
 		})
 
 		// 基础功能（需要认证和多语言，但不需要权限验证和操作日志）
@@ -74,6 +77,12 @@ func Admin() {
 
 			router.Get("dictionaries/types", dictionaryController.GetAllTypes)
 
+			// 附件预览（公开接口，以便富文本编辑器等可以直接访问图片）
+			// 注意：如果需要严格的权限控制，应使用带签名的URL或Query Token
+			// router.Get("attachments/{id}/preview", attachmentController.Preview)
+			// 新增一个专门的公开图片访问接口（其实复用 preview 即可，这里为了明确意图，可以考虑别名，或者就用这个）
+			// 如果您希望有一个完全独立的接口，可以叫 public/images/{id} 之类，但逻辑是一样的
+			// 目前 attachmentController.Preview 已经是处理图片流的了
 		})
 
 		// 需要认证、多语言、权限验证和操作日志的路由
@@ -180,7 +189,7 @@ func Admin() {
 			router.Post("attachments/chunk", attachmentController.ChunkUpload)
 			// 获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
 			router.Get("attachments/chunk", attachmentController.ChunkUpload)
-			router.Get("attachments/{id}/preview", attachmentController.Preview)
+			// router.Get("attachments/{id}/preview", attachmentController.Preview)
 			router.Get("attachments/{id}/download", attachmentController.Download)
 			router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)
 			router.Delete("attachments/{id}", attachmentController.Destroy)

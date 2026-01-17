@@ -502,7 +502,9 @@ func (s *AttachmentServiceImpl) GetFileURL(attachment *models.Attachment) string
 	}
 
 	// 默认返回下载接口URL
-	return fmt.Sprintf("/api/admin/attachments/%d/preview", attachment.ID)
+	// 注意：为了统一，这里也返回 preview 接口（如果需要下载则用 download）
+	// 前端附件列表使用的 file_url 是这里生成的
+	return fmt.Sprintf("/api/admin/public/images/%d", attachment.ID)
 }
 
 // GetFileType 根据MIME类型判断文件类型
