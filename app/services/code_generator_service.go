@@ -274,7 +274,76 @@ func (s *CodeGeneratorServiceImpl) GetTables() ([]string, error) {
 	if err := db.Raw("SHOW TABLES").Scan(&tables).Error; err != nil {
 		return nil, err
 	}
-	return tables, nil
+
+	// 过滤掉系统默认表
+	ignoreTables := map[string]bool{
+		"users":                  true,
+		"roles":                  true,
+		"permissions":            true,
+		"menus":                  true,
+		"role_users":             true,
+		"role_permissions":       true,
+		"admin_role":             true,
+		"role_menu":              true,
+		"role_permission":        true,
+		"migrations":             true,
+		"personal_access_tokens": true,
+		"settings":               true,
+		"dict_types":             true,
+		"dict_data":              true,
+		"admins":                 true,
+		"failed_jobs":            true,
+		"jobs":                   true,
+		"attachments":            true,
+		"blacklists":             true,
+		"configs":                true,
+		"currencies":             true,
+		"departments":            true,
+		"dictionaries":           true,
+		"exports":                true,
+		"login_logs":             true,
+		"notifications":          true,
+		"operation_logs":         true,
+		"system_logs":            true,
+		"payment_methods":        true,
+		"payments":               true,
+	}
+
+	var filteredTables []string
+	for _, table := range tables {
+		if ignoreTables[table] {
+			continue
+		}
+		// 过滤分表逻辑：
+		// 1. 过滤掉包含年份月份后缀的表 (例如 _202512, _202601)
+		// 2. 过滤掉 Hash 分表 (例如 _1, _2, _100)
+		isShardedTable := false
+
+		// 查找最后一个下划线
+		lastUnderscoreIndex := strings.LastIndex(table, "_")
+		if lastUnderscoreIndex != -1 && lastUnderscoreIndex < len(table)-1 {
+			suffix := table[lastUnderscoreIndex+1:]
+
+			// 检查后缀是否纯数字
+			isNumeric := true
+			for _, ch := range suffix {
+				if ch < '0' || ch > '9' {
+					isNumeric = false
+					break
+				}
+			}
+
+			if isNumeric {
+				isShardedTable = true
+			}
+		}
+
+		if !isShardedTable {
+			filteredTables = append(filteredTables, table)
+		}
+	}
+
+	return filteredTables, nil
 }
 
 func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldConfig, error) {
