@@ -50,7 +50,7 @@
           <span class="notification-time">{{ formatTime(item.created_at) }}</span>
         </div>
         <div class="notification-item__title">{{ item.title }}</div>
-        <div class="notification-item__content">{{ item.content }}</div>
+        <div class="notification-item__content" v-html="item.content"></div>
         <div class="notification-item__actions">
           <el-tag v-if="!item.is_read" size="small" type="danger" effect="plain">
             {{ $t('notification.unread') }}
@@ -223,6 +223,21 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #606266;
   line-height: 1.4;
+  /* 富文本样式处理 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-item__content :deep(p) {
+  margin: 0;
+  display: inline;
+}
+
+.notification-item__content :deep(img) {
+  display: none; /* 列表预览不显示图片 */
 }
 
 .notification-item__actions {

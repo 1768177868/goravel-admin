@@ -214,6 +214,18 @@ const tableColumns = computed(() => [
   },
 
   {
+    field: 'admin_id',
+    title: t('article.admin_id'),
+    sortable: false
+  },
+
+  {
+    field: 'admin.username',
+    title: t('article.admin_id'),
+    sortable: false
+  },
+
+  {
     field: 'created_at',
     title: t('table.created_at'),
     width: 180,

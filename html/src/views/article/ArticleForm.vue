@@ -164,7 +164,7 @@ const loadOptions = async () => {
     })
     if (res.data && res.data.list) {
       admin_idOptions.value = res.data.list.map(item => ({
-        label: item.name,
+        label: item.username,
         value: item.id // 假设关联表主键是 id
       }))
     }

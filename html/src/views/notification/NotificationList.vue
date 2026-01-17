@@ -44,6 +44,10 @@
         :height="600"
         @sort-change="handleSortChange"
       >
+        <template #content="{ row }">
+          <div v-html="row.content" class="rich-text-content"></div>
+        </template>
+
         <template #type="{ row }">
           <el-tag size="small">
             {{ typeLabel(row.type) }}
@@ -107,7 +111,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="$t('notification.create')"
-      width="600px"
+      width="800px"
       @close="handleDialogClose"
     >
       <el-form
@@ -167,11 +171,10 @@
           :label="$t('notification.table.content')"
           prop="content"
         >
-          <el-input
+          <WangEditor
             v-model="formData.content"
-            type="textarea"
             :placeholder="$t('notification.content_placeholder')"
-            :rows="6"
+            :height="300"
           />
         </el-form-item>
       </el-form>
@@ -197,6 +200,7 @@ import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import WangEditor from '../../components/WangEditor.vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
@@ -298,7 +302,8 @@ const tableColumns = computed(() => [
   {
     field: 'content',
     title: t('notification.table.content'),
-    minWidth: 260
+    minWidth: 260,
+    slot: 'content'
   },
   {
     field: 'type',
@@ -501,7 +506,7 @@ const handleSubmit = async () => {
       const data = {
         type: formData.type,
         title: formData.title.trim(),
-        content: formData.content.trim()
+        content: formData.content
       }
       
       // 如果是私信，必须添加接收者ID
@@ -562,5 +567,20 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 10px;
+}
+
+.rich-text-content {
+  max-height: 100px;
+  overflow-y: auto;
+  white-space: normal;
+}
+
+.rich-text-content :deep(p) {
+  margin: 0 0 10px;
+}
+
+.rich-text-content :deep(img) {
+  max-width: 100%;
+  height: auto;
 }
 </style>
