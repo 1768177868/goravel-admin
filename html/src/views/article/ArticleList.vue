@@ -125,6 +125,7 @@ const searchFields = computed(() => [
     prop: 'title',
     label: t('article.title'),
     type: 'input',
+    clearable: true,
 
 
     width: '200px',
@@ -134,6 +135,7 @@ const searchFields = computed(() => [
     prop: 'content',
     label: t('article.content'),
     type: 'input',
+    clearable: true,
 
 
     width: '200px',
@@ -143,6 +145,7 @@ const searchFields = computed(() => [
     prop: 'status',
     label: t('article.status'),
     type: 'select',
+    clearable: true,
     apiUrl: '/options?type=status',
 
     
@@ -156,6 +159,7 @@ const searchFields = computed(() => [
     prop: 'admin_id',
     label: t('article.admin_id'),
     type: 'input',
+    clearable: true,
 
 
     width: '200px',
@@ -165,6 +169,7 @@ const searchFields = computed(() => [
     prop: 'created_at',
     label: t('article.created_at'),
     type: 'datetime',
+    clearable: true,
 
 
     width: '200px',
@@ -174,6 +179,7 @@ const searchFields = computed(() => [
     prop: 'updated_at',
     label: t('article.updated_at'),
     type: 'datetime',
+    clearable: true,
 
 
     width: '200px',

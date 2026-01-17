@@ -23,7 +23,7 @@
           :rows="4"
           :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
 <<else if eq .FormType "select">>
-        <el-select v-model="form.<<.Name>>" :placeholder="$t('common.select')">
+        <el-select v-model="form.<<.Name>>" :placeholder="$t('common.select')" clearable>
           <el-option
             v-for="item in <<.Name>>Options"
             :key="item.value"

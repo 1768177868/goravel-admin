@@ -121,6 +121,7 @@ const searchFields = computed(() => [
     prop: '<<.Name>>',
     label: t('<<$.ModuleName>>.<<.Name>>'),
     type: '<<.SearchUIType>>',
+    clearable: true,
 <<if .ApiUrl>>    apiUrl: '<<.ApiUrl>>',<<end>>
 <<if eq .SearchUIType "select">>
     <<if .Dictionary>>
