@@ -60,9 +60,20 @@ onMounted(() => {
 
 // 监听 props 变化 (外部修改 v-model)
 watch(() => props.modelValue, (newVal) => {
-    if (newVal !== valueHtml.value) {
-        valueHtml.value = newVal
+    // 1. 基本检查：如果新值与当前绑定值相等，直接跳过
+    if (newVal === valueHtml.value) return
+
+    // 2. 深度检查：如果编辑器实例存在，检查编辑器实际内容是否与新值一致
+    // 这步至关重要，因为 valueHtml.value 可能因为 v-model 的更新机制略有滞后
+    // 而 editor.getHtml() 是编辑器当前的真实状态
+    const editor = editorRef.value
+    if (editor) {
+        const currentHtml = editor.getHtml()
+        if (newVal === currentHtml) return
     }
+
+    // 只有确实不一致时才更新，避免 Slate 内部状态混乱导致 "Cannot find a descendant" 错误
+    valueHtml.value = newVal
 })
 
 const uploadAction = computed(() => {
