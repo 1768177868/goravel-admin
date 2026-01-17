@@ -189,7 +189,8 @@ func Admin() {
 			router.Post("attachments/chunk", attachmentController.ChunkUpload)
 			// 获取上传进度（GET，action=progress）- 适合断点续传检查、一次性查询
 			router.Get("attachments/chunk", attachmentController.ChunkUpload)
-			// router.Get("attachments/{id}/preview", attachmentController.Preview)
+			// 恢复预览路由，以便兼容需要鉴权的预览请求
+			router.Get("attachments/{id}/preview", attachmentController.Preview)
 			router.Get("attachments/{id}/download", attachmentController.Download)
 			router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)
 			router.Delete("attachments/{id}", attachmentController.Destroy)
