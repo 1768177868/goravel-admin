@@ -29,6 +29,9 @@ type FieldConfig struct {
 	Dictionary   string          `json:"dictionary"`
 	ApiUrl       string          `json:"api_url"`
 	Relation     *RelationConfig `json:"relation"`
+	ShowInList   bool            `json:"show_in_list"`
+	ShowInForm   bool            `json:"show_in_form"`
+	ShowInDetail bool            `json:"show_in_detail"`
 	Precision    int             `json:"precision"` // 精度 (总位数)
 	Scale        int             `json:"scale"`     // 标度 (小数位数)
 	FormType     string          `json:"form_type"`
@@ -375,6 +378,9 @@ func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldCon
 			Required:     !nullable,
 			Searchable:   true,
 			Sortable:     false,
+			ShowInList:   true,
+			ShowInForm:   true,
+			ShowInDetail: true,
 			SearchType:   searchType,
 			SearchUIType: getSearchUIType("", jsonDBType),
 			Dictionary:   "",
@@ -762,6 +768,8 @@ type TemplateFieldConfig struct {
 	ApiUrl          string
 	Sortable        bool
 	Searchable      bool
+	ShowInList      bool
+	ShowInForm      bool
 	Relation        *TemplateRelationConfig
 	Precision       int
 	Scale           int
@@ -848,6 +856,8 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			ApiUrl:       getApiUrl(field.Dictionary, field.ApiUrl),
 			Sortable:     field.Sortable,
 			Searchable:   field.Searchable,
+			ShowInList:   field.ShowInList,
+			ShowInForm:   field.ShowInForm,
 			Relation:     relation,
 			Precision:    field.Precision,
 			Scale:        field.Scale,

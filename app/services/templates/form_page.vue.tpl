@@ -12,6 +12,7 @@
       label-width="120px"
     >
 <<range .FormFields>>
+<<- if .ShowInForm>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
       <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
 <<if eq .FormType "input">>
@@ -49,6 +50,7 @@
         <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
 <<end>>
       </el-form-item>
+<<- end>>
 <<- end>>
 <<- end>>
     </el-form>

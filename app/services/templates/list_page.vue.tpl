@@ -147,6 +147,7 @@ const tableColumns = computed(() => [
     sortable: true
   },
 <<range .ListFields>>
+<<- if .ShowInList>>
   {
     field: '<<.Name>>',
     title: t('<<$.ModuleName>>.<<.Name>>'),
@@ -159,6 +160,7 @@ const tableColumns = computed(() => [
     sortable: false
   },
 <<end>>
+<<- end>>
 <<- end>>
   {
     field: 'created_at',

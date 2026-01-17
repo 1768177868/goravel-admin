@@ -214,30 +214,6 @@ const tableColumns = computed(() => [
   },
 
   {
-    field: 'admin_id',
-    title: t('article.admin_id'),
-    sortable: false
-  },
-
-  {
-    field: 'admin.name',
-    title: t('article.admin_id'),
-    sortable: false
-  },
-
-  {
-    field: 'created_at',
-    title: t('article.created_at'),
-    sortable: false
-  },
-
-  {
-    field: 'updated_at',
-    title: t('article.updated_at'),
-    sortable: false
-  },
-
-  {
     field: 'created_at',
     title: t('table.created_at'),
     width: 180,

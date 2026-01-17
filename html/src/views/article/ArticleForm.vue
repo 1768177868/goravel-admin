@@ -31,18 +31,6 @@
         <el-switch v-model="form.status" />
 
       </el-form-item>
-      <el-form-item :label="$t('article.admin_id')" prop="admin_id">
-
-        <el-select v-model="form.admin_id" :placeholder="$t('common.select')" clearable>
-          <el-option
-            v-for="item in admin_idOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-
-      </el-form-item>
     </el-form>
 
     <template #footer>
