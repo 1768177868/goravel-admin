@@ -21,9 +21,12 @@ type ArticleService interface {
 }
 
 type ArticleFilters struct {
-	Name    string
-	Status  string
-	AdminId string
+	Title     string
+	Content   string
+	Status    string
+	AdminId   string
+	CreatedAt string
+	UpdatedAt string
 }
 
 type ArticleServiceImpl struct{}
@@ -35,9 +38,14 @@ func NewArticleService() ArticleService {
 func BuildArticleQuery(filters ArticleFilters) orm.Query {
 	query := facades.Orm().Query().Model(&models.Article{})
 
-	if filters.Name != "" {
+	if filters.Title != "" {
 
-		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
+		query = query.Where("title LIKE ?", "%"+filters.Title+"%")
+
+	}
+	if filters.Content != "" {
+
+		query = query.Where("content LIKE ?", "%"+filters.Content+"%")
 
 	}
 	if filters.Status != "" {
@@ -48,6 +56,16 @@ func BuildArticleQuery(filters ArticleFilters) orm.Query {
 	if filters.AdminId != "" {
 
 		query = query.Where("admin_id = ?", filters.AdminId)
+
+	}
+	if filters.CreatedAt != "" {
+
+		query = query.Where("created_at = ?", filters.CreatedAt)
+
+	}
+	if filters.UpdatedAt != "" {
+
+		query = query.Where("updated_at = ?", filters.UpdatedAt)
 
 	}
 
@@ -65,7 +83,7 @@ func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error) {
 	query := BuildArticleQuery(filters)
 
-	query = query.With("Author")
+	query = query.With("Admin")
 
 	var list []models.Article
 	var total int64
@@ -79,7 +97,8 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {
 	item := &models.Article{
 
-		Name:    req.Name,
+		Title:   req.Title,
+		Content: req.Content,
 		Status:  req.Status,
 		AdminId: req.AdminId,
 	}
@@ -97,8 +116,11 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 		return nil, err
 	}
 
-	if req.Name != nil {
-		item.Name = *req.Name
+	if req.Title != nil {
+		item.Title = *req.Title
+	}
+	if req.Content != nil {
+		item.Content = *req.Content
 	}
 	if req.Status != nil {
 		item.Status = *req.Status

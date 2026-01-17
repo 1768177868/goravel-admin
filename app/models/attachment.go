@@ -7,7 +7,7 @@ import "github.com/goravel/framework/database/orm"
 type Attachment struct {
 	orm.Model
 	AdminID     uint   `gorm:"index;comment:管理员ID"`
-	Admin       Admin  `gorm:"foreignKey:AdminID"`
+	Admin       *Admin  `gorm:"foreignKey:AdminID"`
 	Disk        string `gorm:"size:50;comment:存储驱动"`
 	Path        string `gorm:"size:500;comment:文件路径"`
 	Filename    string `gorm:"size:255;comment:原始文件名"`

@@ -14,6 +14,23 @@
       <el-form :model="form" :rules="rules" ref="formRef" label-width="120px">
         <el-row :gutter="20">
           <el-col :span="12">
+            <el-form-item :label="$t('code_generator.select_table')">
+              <el-select 
+                v-model="selectedTable" 
+                filterable 
+                clearable 
+                @change="handleTableChange" 
+                :placeholder="$t('code_generator.select_table_placeholder')" 
+                style="width: 100%"
+              >
+                <el-option v-for="table in tables" :key="table" :label="table" :value="table" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item :label="$t('code_generator.module_name')" prop="module_name">
               <el-input v-model="form.module_name" :placeholder="$t('code_generator.module_name_placeholder')" />
             </el-form-item>
@@ -27,12 +44,6 @@
       </el-form>
 
       <el-divider>{{ $t('code_generator.fields_config') }}</el-divider>
-
-      <el-form-item :label="$t('code_generator.options')">
-        <el-checkbox v-model="form.has_create">{{ $t('common.add') }}</el-checkbox>
-        <el-checkbox v-model="form.has_edit">{{ $t('common.edit') }}</el-checkbox>
-        <el-checkbox v-model="form.has_delete">{{ $t('common.delete') }}</el-checkbox>
-      </el-form-item>
 
       <el-form-item :label="$t('code_generator.generated_files')">
         <el-checkbox-group v-model="form.files">
@@ -71,9 +82,16 @@
             <el-input v-model="row.label" :placeholder="$t('code_generator.field_label_placeholder')" />
           </template>
         </el-table-column>
-        <el-table-column prop="comment" :label="$t('code_generator.field_comment')" width="150">
+        <el-table-column prop="form_type" :label="$t('code_generator.form_type')" width="150">
           <template #default="{ row }">
-            <el-input v-model="row.comment" :placeholder="$t('code_generator.field_comment_placeholder')" />
+            <el-select v-model="row.form_type" :placeholder="$t('common.select')">
+              <el-option
+                v-for="type in formTypes"
+                :key="type.value"
+                :label="type.label"
+                :value="type.value"
+              />
+            </el-select>
           </template>
         </el-table-column>
         <el-table-column prop="search_type" :label="$t('code_generator.search_type')" width="120">
@@ -112,7 +130,7 @@
         <el-table-column :label="$t('code_generator.field_config')" width="100">
           <template #default="{ row }">
             <el-button 
-              v-if="row.search_ui_type === 'select' || row.type === 'decimal'"
+              v-if="row.form_type === 'select' || row.form_type === 'radio' || row.form_type === 'checkbox' || row.type === 'decimal' || row.search_ui_type === 'select'"
               size="small" 
               @click="handleEditFieldConfig(row)"
             >
@@ -185,9 +203,6 @@
         <el-form-item :label="$t('code_generator.display_field')">
           <el-input v-model="relationForm.display_field" :placeholder="$t('code_generator.display_field_placeholder')" />
         </el-form-item>
-        <el-form-item :label="$t('code_generator.relation_alias')">
-          <el-input v-model="relationForm.alias" :placeholder="$t('code_generator.relation_alias_placeholder')" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="relationDialogVisible = false">{{ $t('common.cancel') }}</el-button>
@@ -247,6 +262,8 @@
         <el-button type="primary" @click="handleSaveFieldConfig">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
+
+
   </div>
 </template>
 
@@ -255,7 +272,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, Delete, Setting } from '@element-plus/icons-vue'
-import { getFieldTypes, previewCode as previewCodeApi, generateCode, saveCode } from '../../api/codeGenerator'
+import { getFieldTypes, getTables, getTableColumns, previewCode as previewCodeApi, generateCode, saveCode } from '../../api/codeGenerator'
 import { getDictionaryTypes } from '../../api/dictionary'
 import { isDev } from '../../utils/env'
 import logger from '../../utils/logger'
@@ -272,6 +289,9 @@ const previewing = ref('')
 const activeTab = ref('model')
 const fieldTypes = ref([])
 const dictionaryTypes = ref([])
+const tables = ref([])
+const selectedTable = ref('')
+
 const previewCode = reactive({})
 const relationDialogVisible = ref(false)
 const fieldConfigDialogVisible = ref(false)
@@ -280,8 +300,7 @@ const relationForm = reactive({
   table: '',
   relation_type: 'belongsTo',
   foreign_key: '',
-  display_field: '',
-  alias: ''
+  display_field: ''
 })
 const fieldConfigForm = reactive({
   option_type: 'dictionary',
@@ -294,9 +313,6 @@ const fieldConfigForm = reactive({
 const form = reactive({
   module_name: '',
   table_name: '',
-  has_create: true,
-  has_edit: true,
-  has_delete: true,
   files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page', 'form_page'],
   fields: [
     {
@@ -305,7 +321,7 @@ const form = reactive({
       label: '名称',
       required: true,
       searchable: true,
-      sortable: true,
+      sortable: false,
       show_in_list: true,
       show_in_form: true,
       show_in_detail: true,
@@ -313,6 +329,7 @@ const form = reactive({
       comment: '名称',
       search_type: 'like',
       search_ui_type: 'input',
+      form_type: 'input',
       relation: null,
       dictionary: '',
       api_url: ''
@@ -323,7 +340,7 @@ const form = reactive({
       label: '状态',
       required: false,
       searchable: true,
-      sortable: true,
+      sortable: false,
       show_in_list: true,
       show_in_form: true,
       show_in_detail: true,
@@ -331,6 +348,7 @@ const form = reactive({
       comment: '状态',
       search_type: '=',
       search_ui_type: 'select',
+      form_type: 'select',
       relation: null,
       dictionary: 'status',
       api_url: ''
@@ -358,6 +376,20 @@ const fileTypes = [
   { value: 'form_page', label: t('code_generator.file_form_page') }
 ]
 
+const formTypes = [
+  { value: 'input', label: t('code_generator.form_types.input') },
+  { value: 'textarea', label: t('code_generator.form_types.textarea') },
+  { value: 'select', label: t('code_generator.form_types.select') },
+  { value: 'radio', label: t('code_generator.form_types.radio') },
+  { value: 'checkbox', label: t('code_generator.form_types.checkbox') },
+  { value: 'date-picker', label: t('code_generator.form_types.date_picker') },
+  { value: 'datetime-picker', label: t('code_generator.form_types.datetime_picker') },
+  { value: 'image-upload', label: t('code_generator.form_types.image_upload') },
+  { value: 'file-upload', label: t('code_generator.form_types.file_upload') },
+  { value: 'editor', label: t('code_generator.form_types.editor') },
+  { value: 'switch', label: t('code_generator.form_types.switch') },
+]
+
 const loadFieldTypes = async () => {
   try {
     const response = await getFieldTypes()
@@ -377,6 +409,51 @@ const loadDictionaryTypes = async () => {
   }
 }
 
+const loadTables = async () => {
+  try {
+    const response = await getTables()
+    tables.value = response.data.tables || []
+  } catch (error) {
+    logger.error('Failed to load tables:', error)
+  }
+}
+
+const handleTableChange = async (val) => {
+  if (!val) return
+  form.table_name = val
+  let moduleName = val
+  if (moduleName.endsWith('s')) {
+    moduleName = moduleName.slice(0, -1)
+  }
+  form.module_name = moduleName
+
+  try {
+    const response = await getTableColumns(val)
+    form.fields = (response.data.fields || []).map(field => {
+      // 自动匹配字段类型
+      const fieldType = fieldTypes.value.find(ft => ft.value === field.db_type)
+      if (fieldType) {
+        field.type = fieldType.value
+      } else {
+        // 如果没有完全匹配的，尝试部分匹配
+        if (field.db_type.includes('int')) field.type = 'integer'
+        else if (field.db_type.includes('char') || field.db_type.includes('text')) field.type = 'string'
+        else if (field.db_type.includes('date') || field.db_type.includes('time')) field.type = 'datetime'
+        else if (field.db_type.includes('decimal') || field.db_type.includes('float') || field.db_type.includes('double')) field.type = 'decimal'
+        else if (field.db_type.includes('bool')) field.type = 'boolean'
+        else if (field.db_type.includes('json')) field.type = 'json'
+        else field.type = 'string' // 默认 string
+      }
+      return field
+    })
+    ElMessage.success(t('code_generator.fields_loaded'))
+  } catch (error) {
+    logger.error('Failed to load columns:', error)
+    ElMessage.error(t('code_generator.load_columns_failed'))
+  }
+}
+
+
 const handleAddField = () => {
   form.fields.push({
     name: '',
@@ -389,9 +466,9 @@ const handleAddField = () => {
     show_in_form: true,
     show_in_detail: true,
     is_primary_key: false,
-    comment: '',
     search_type: 'like',
     search_ui_type: 'input',
+    form_type: 'input',
     relation: null,
     dictionary: '',
     api_url: ''
@@ -409,13 +486,11 @@ const handleEditRelation = (row) => {
     relationForm.relation_type = row.relation.relation_type
     relationForm.foreign_key = row.relation.foreign_key
     relationForm.display_field = row.relation.display_field
-    relationForm.alias = row.relation.alias || ''
   } else {
     relationForm.table = ''
     relationForm.relation_type = 'belongsTo'
     relationForm.foreign_key = ''
     relationForm.display_field = ''
-    relationForm.alias = ''
   }
   relationDialogVisible.value = true
 }
@@ -430,7 +505,7 @@ const handleSaveRelation = () => {
     relation_type: relationForm.relation_type,
     foreign_key: relationForm.foreign_key,
     display_field: relationForm.display_field,
-    alias: relationForm.alias
+    alias: '' // 默认置空，不再需要手动输入
   }
   relationDialogVisible.value = false
   ElMessage.success(t('code_generator.relation_saved'))
@@ -480,9 +555,9 @@ const handlePreview = async (fileType) => {
       fields: form.fields,
       file_type: fileType,
       options: {
-        has_create: form.has_create,
-        has_edit: form.has_edit,
-        has_delete: form.has_delete
+        has_create: true,
+        has_edit: true,
+        has_delete: true
       }
     })
     previewCode[fileType] = response.data.code || ''
@@ -522,9 +597,9 @@ const handleGenerate = async () => {
       files: form.files,
       force: false,
       options: {
-        has_create: form.has_create,
-        has_edit: form.has_edit,
-        has_delete: form.has_delete
+        has_create: true,
+        has_edit: true,
+        has_delete: true
       }
     })
 
@@ -556,9 +631,9 @@ const handleGenerate = async () => {
             files: form.files,
             force: true,
             options: {
-              has_create: form.has_create,
-              has_edit: form.has_edit,
-              has_delete: form.has_delete
+              has_create: true,
+              has_edit: true,
+              has_delete: true
             }
           })
 
@@ -582,6 +657,7 @@ const handleGenerate = async () => {
 
 onMounted(() => {
   loadFieldTypes()
+  loadTables()
 })
 </script>
 

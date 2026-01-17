@@ -94,7 +94,9 @@ func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, page
 func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error) {
 	item := &models.<<.ModelName>>{
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 		<<.FieldName>>: req.<<.FieldName>>,
+<<- end>>
 <<- end>>
 	}
 
@@ -114,9 +116,11 @@ func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>
 	}
 
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 	if req.<<.FieldName>> != nil {
 		item.<<.FieldName>> = *req.<<.FieldName>>
 	}
+<<- end>>
 <<- end>>
 
 	if err := facades.Orm().Query().Save(item); err != nil {

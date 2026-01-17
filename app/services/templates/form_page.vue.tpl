@@ -12,6 +12,7 @@
       label-width="120px"
     >
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
       <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
 <<if eq .FormType "input">>
         <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
@@ -43,25 +44,12 @@
           type="datetime"
           :placeholder="$t('common.select_datetime')" style="width: 100%" />
 <<else if eq .FormType "image-upload">>
-        <el-upload
-          class="image-uploader"
-          action="/api/admin/attachments/upload"
-          :show-file-list="false"
-          :on-success="handleImageSuccess"
-        >
-          <img v-if="form.<<.Name>>" :src="form.<<.Name>>" class="image-preview" />
-          <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
-        </el-upload>
+        <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
 <<else if eq .FormType "file-upload">>
-        <el-upload
-          action="/api/admin/attachments/upload"
-          :show-file-list="true"
-          :on-success="handleFileSuccess"
-        >
-          <el-button type="primary">{{ $t('common.upload') }}</el-button>
-        </el-upload>
+        <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
 <<end>>
       </el-form-item>
+<<- end>>
 <<- end>>
     </el-form>
 
@@ -78,13 +66,13 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import {
   <<if .HasCreate>>create<<.ModelName>>,<<end>>
   <<if .HasEdit>>update<<.ModelName>>,<<end>>
   get<<.ModelName>>Detail
 } from '../../api/<<.ModuleName>>'
 import { getOptions } from '../../api/option'
+import request from '../../utils/request'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -120,15 +108,19 @@ watch(visible, (val) => {
 
 const form = ref({
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
   <<.Name>>: null,
+<<- end>>
 <<- end>>
 })
 
 const rules = {
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
   <<.Name>>: [
     { required: <<.Required>>, message: t('<<$.ModuleName>>.<<.Name>>_required'), trigger: 'blur' }
   ],
+<<- end>>
 <<- end>>
 }
 
@@ -169,27 +161,46 @@ const handleClose = () => {
   formRef.value?.resetFields()
 }
 
-const handleImageSuccess = (response) => {
-  form.value.image = response.data.url
-}
-
-const handleFileSuccess = (response) => {
-  form.value.file = response.data.url
-}
-
 const loadOptions = async () => {
 <<range .FormFields>>
 <<if eq .FormType "select">>
   try {
-    <<if eq .Dictionary "">>
-    // 未配置字典，请自行实现选项加载逻辑
-    // const res = await getOptions('<<.Name>>')
-    // <<.Name>>Options.value = res.data
-    <<else>>
+    <<if .ApiUrl>>
+    const res = await request({
+      url: '<<.ApiUrl>>',
+      method: 'get'
+    })
+    if (res.data) {
+       // 适配不同的返回格式，假设返回 list 或 直接是数组
+       const list = res.data.list || res.data || []
+       <<.Name>>Options.value = list.map(item => ({
+         label: item.label || item.name || item.title,
+         value: item.value || item.id
+       }))
+    }
+    <<else if .Dictionary>>
     const res = await getOptions('dictionary', { dictionary_type: '<<.Dictionary>>' })
     if (res.data) {
       <<.Name>>Options.value = res.data
     }
+    <<else if .Relation>>
+    // 加载关联数据: <<.Relation.Table>>
+    // 假设存在列表接口 /<<.Relation.Table>> (kebab-case)
+    const res = await request({
+      url: '/<<.Relation.Table>>'.replace(/_/g, '-'), 
+      method: 'get',
+      params: { page: 1, page_size: 100 }
+    })
+    if (res.data && res.data.list) {
+      <<.Name>>Options.value = res.data.list.map(item => ({
+        label: item.<<.Relation.DisplayField>>,
+        value: item.id // 假设关联表主键是 id
+      }))
+    }
+    <<else>>
+    // 未配置数据源，请自行实现
+    // const res = await getOptions('<<.Name>>')
+    // <<.Name>>Options.value = res.data
     <<end>>
   } catch (error) {
     console.error('Failed to load <<.Name>> options:', error)
@@ -207,7 +218,9 @@ const loadData = async () => {
       const data = res.data.<<.ModuleName>>
       form.value = {
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
         <<.Name>>: data.<<.Name>>,
+<<- end>>
 <<- end>>
       }
     }
@@ -225,7 +238,9 @@ watch(visible, (val) => {
       formRef.value?.resetFields()
       form.value = {
 <<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
         <<.Name>>: null,
+<<- end>>
 <<- end>>
       }
     }
@@ -234,31 +249,5 @@ watch(visible, (val) => {
 </script>
 
 <style scoped>
-.image-uploader {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  width: 178px;
-  height: 178px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.image-uploader:hover {
-  border-color: #409EFF;
-}
-
-.image-preview {
-  width: 178px;
-  height: 178px;
-  object-fit: cover;
-}
-
-.image-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-}
 </style>

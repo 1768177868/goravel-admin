@@ -6,47 +6,20 @@ import (
 
 type Article struct {
 	orm.Model
+
+	Title string `gorm:"title" json:"title" comment:"标题"`
+
+	Content string `gorm:"content" json:"content" comment:"文章内容"`
+
+	Status uint8 `gorm:"status" json:"status" comment:"0:未发布 1:发布"`
+
+	AdminId int `gorm:"admin_id" json:"admin_id" comment:"管理id"`
+
+	Admin *Admin `gorm:"foreignKey:AdminId" json:"admin"`
+
 	orm.SoftDeletes
-
-	Name string `gorm:"name" json:"name" comment:"名称"`
-
-	Status string `gorm:"status" json:"status" comment:"状态"`
-
-	AdminId string `gorm:"admin_id" json:"admin_id"`
-
-	Author *Admin `gorm:"foreignKey:AdminId" json:"author"`
 }
 
 func (Article) TableName() string {
 	return "articles"
-}
-
-func (r *Article) Serialize() map[string]any {
-	return map[string]any{
-		"id":         r.ID,
-		"created_at": r.CreatedAt,
-		"updated_at": r.UpdatedAt,
-
-		"name": r.Name,
-
-		"status": r.Status,
-
-		"admin_id": r.AdminId,
-	}
-}
-
-func (r *Article) Deserialize(data map[string]any) {
-
-	if val, ok := data["name"]; ok {
-		r.Name = val.(string)
-	}
-
-	if val, ok := data["status"]; ok {
-		r.Status = val.(string)
-	}
-
-	if val, ok := data["admin_id"]; ok {
-		r.AdminId = val.(string)
-	}
-
 }

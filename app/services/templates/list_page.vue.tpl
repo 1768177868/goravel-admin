@@ -123,10 +123,13 @@ const searchFields = computed(() => [
     type: '<<.SearchUIType>>',
 <<if .ApiUrl>>    apiUrl: '<<.ApiUrl>>',<<end>>
 <<if eq .SearchUIType "select">>
-    <<if eq .Dictionary "">>
-    // 如果没有配置字典，可能是模块选项（如role, department等），apiUrl已由.ApiUrl提供
-    <<else>>
+    <<if .Dictionary>>
     apiUrl: '/options?type=dictionary&dictionary_type=<<.Dictionary>>',
+    <<else if .Relation>>
+    apiUrl: '/<<.Relation.Table>>'.replace(/_/g, '-') + '?page=1&page_size=100',
+    labelField: '<<.Relation.DisplayField>>',
+    valueField: 'id',
+    resultField: 'list', // 假设列表接口返回结构 { list: [] }
     <<end>>
 <<end>>
     width: '200px',

@@ -6,9 +6,13 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/goravel/framework/facades"
+	"gorm.io/gorm"
 )
 
 type FieldConfig struct {
@@ -27,6 +31,7 @@ type FieldConfig struct {
 	Relation     *RelationConfig `json:"relation"`
 	Precision    int             `json:"precision"` // 精度 (总位数)
 	Scale        int             `json:"scale"`     // 标度 (小数位数)
+	FormType     string          `json:"form_type"`
 }
 
 type RelationConfig struct {
@@ -63,6 +68,8 @@ type CodeGeneratorService interface {
 	Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error)
 	ForceSave(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error)
 	GetFieldTypes() []FieldType
+	GetTables() ([]string, error)
+	GetTableColumns(tableName string) ([]FieldConfig, error)
 	Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error)
 }
 
@@ -215,6 +222,196 @@ func (s *CodeGeneratorServiceImpl) ForceSave(moduleName, tableName string, field
 	}
 
 	return savedFiles, nil
+}
+
+func (s *CodeGeneratorServiceImpl) getGormDB() (*gorm.DB, error) {
+	orm := facades.Orm()
+	if orm == nil {
+		return nil, fmt.Errorf("ORM facade is nil")
+	}
+
+	// Try to get Query()
+	query := orm.Query()
+	if query == nil {
+		return nil, fmt.Errorf("Query() returned nil")
+	}
+
+	// Use reflection to call Instance() on Query object
+	// Because Query interface in Goravel framework might not expose Instance() method directly
+	// but the implementation (gorm.Query) does have it.
+	queryValue := reflect.ValueOf(query)
+	instanceMethod := queryValue.MethodByName("Instance")
+	if !instanceMethod.IsValid() {
+		// Try to see if it's wrapped
+		if queryValue.Kind() == reflect.Interface {
+			queryValue = queryValue.Elem()
+			instanceMethod = queryValue.MethodByName("Instance")
+		}
+	}
+
+	if instanceMethod.IsValid() {
+		results := instanceMethod.Call(nil)
+		if len(results) > 0 {
+			if db, ok := results[0].Interface().(*gorm.DB); ok {
+				return db, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("failed to get *gorm.DB from ORM")
+}
+
+func (s *CodeGeneratorServiceImpl) GetTables() ([]string, error) {
+	db, err := s.getGormDB()
+	if err != nil {
+		return nil, err
+	}
+
+	var tables []string
+	if err := db.Raw("SHOW TABLES").Scan(&tables).Error; err != nil {
+		return nil, err
+	}
+	return tables, nil
+}
+
+func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldConfig, error) {
+	db, err := s.getGormDB()
+	if err != nil {
+		return nil, err
+	}
+
+	columnTypes, err := db.Migrator().ColumnTypes(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	var fields []FieldConfig
+	for _, ct := range columnTypes {
+		name := ct.Name()
+		if name == "deleted_at" || name == "id" {
+			continue
+		}
+		dbType := ct.DatabaseTypeName()
+
+		// Skip internal fields if needed, but we usually want them
+		// Mapping logic
+		goType := "string"
+		jsonDBType := "string"
+
+		lowerDBType := strings.ToLower(dbType)
+		if strings.Contains(lowerDBType, "int") {
+			if strings.Contains(lowerDBType, "bigint") {
+				goType = "int64"
+				jsonDBType = "bigInteger"
+			} else if strings.Contains(lowerDBType, "tinyint") {
+				goType = "int"
+				jsonDBType = "unsignedTinyInteger"
+			} else {
+				goType = "int"
+				jsonDBType = "integer"
+			}
+		} else if strings.Contains(lowerDBType, "char") {
+			goType = "string"
+			jsonDBType = "string"
+		} else if strings.Contains(lowerDBType, "text") {
+			goType = "string"
+			jsonDBType = "text"
+		} else if strings.Contains(lowerDBType, "datetime") || strings.Contains(lowerDBType, "timestamp") {
+			goType = "time.Time"
+			jsonDBType = "datetime"
+		} else if strings.Contains(lowerDBType, "date") {
+			goType = "time.Time"
+			jsonDBType = "date"
+		} else if strings.Contains(lowerDBType, "decimal") || strings.Contains(lowerDBType, "double") || strings.Contains(lowerDBType, "float") {
+			goType = "float64"
+			jsonDBType = "decimal"
+		} else if strings.Contains(lowerDBType, "bool") {
+			goType = "bool"
+			jsonDBType = "boolean"
+		} else if strings.Contains(lowerDBType, "json") {
+			goType = "string"
+			jsonDBType = "json"
+		}
+
+		// Refine based on column name
+		if name == "id" || name == "created_at" || name == "updated_at" {
+			jsonDBType = "datetime"
+			if name == "id" {
+				jsonDBType = "bigInteger"
+				goType = "int64"
+			} else {
+				goType = "time.Time"
+			}
+		}
+
+		// Skip internal fields if needed, but we usually want them
+		if name == "deleted_at" || name == "id" {
+			continue
+		}
+
+		// SearchType default
+		searchType := "="
+		if goType == "string" {
+			searchType = "like"
+		}
+
+		// Label defaults to name
+		label := name
+		comment, _ := ct.Comment()
+		if comment != "" {
+			label = comment
+		}
+
+		nullable, _ := ct.Nullable()
+
+		// Precision/Scale
+		precision, scale, _ := ct.DecimalSize()
+
+		fields = append(fields, FieldConfig{
+			Name:         name,
+			Label:        label,
+			GoType:       goType,
+			DBType:       jsonDBType, // 这里是后端推断的类型，前端会根据这个去匹配 fieldTypes
+			Required:     !nullable,
+			Searchable:   true,
+			Sortable:     false,
+			SearchType:   searchType,
+			SearchUIType: getSearchUIType("", jsonDBType),
+			Dictionary:   "",
+			ApiUrl:       "",
+			Precision:    int(precision),
+			Scale:        int(scale),
+		})
+
+		// 智能推断 FormType 和 Relation
+		field := &fields[len(fields)-1]
+
+		// 1. 推断 FormType
+		if field.Name == "id" || field.Name == "created_at" || field.Name == "updated_at" || field.Name == "deleted_at" {
+			// 系统字段，通常不需要在表单中显示，或者只读
+			field.FormType = "input"
+		} else if strings.HasSuffix(field.Name, "_id") {
+			field.FormType = "select"
+			// 推断关联
+			refTable := strings.TrimSuffix(field.Name, "_id") + "s" // 简单复数化
+			field.Relation = &RelationConfig{
+				Table:        refTable,
+				ForeignKey:   field.Name,
+				DisplayField: "name", // 默认猜测 name
+				RelationType: "belongsTo",
+				Alias:        "", // 默认使用表名转 PascalCase
+			}
+		} else if strings.Contains(field.Name, "image") || strings.Contains(field.Name, "avatar") || strings.Contains(field.Name, "photo") || strings.Contains(field.Name, "pic") {
+			field.FormType = "image-upload"
+		} else if strings.Contains(field.Name, "file") {
+			field.FormType = "file-upload"
+		} else if (strings.Contains(field.Name, "content") || strings.Contains(field.Name, "description") || strings.Contains(field.Name, "detail")) && field.DBType == "text" {
+			field.FormType = "editor"
+		} else {
+			field.FormType = getFormType(field.DBType)
+		}
+	}
+	return fields, nil
 }
 
 func (s *CodeGeneratorServiceImpl) GetFieldTypes() []FieldType {
@@ -643,13 +840,13 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			Validators:   field.Validators,
 			Required:     field.Required,
 			PascalName:   toPascalCase(field.Name),
-			Comment:      field.Label,
-			FormType:     getFormType(field.DBType),
+			Comment:      field.Label, // Use Label as Comment
+			FormType:     field.FormType,
 			SearchType:   getSearchType(field.SearchType),
 			SearchUIType: getSearchUIType(field.SearchUIType, field.DBType),
 			Dictionary:   field.Dictionary,
 			ApiUrl:       getApiUrl(field.Dictionary, field.ApiUrl),
-			Sortable:     getSortable(field.DBType),
+			Sortable:     field.Sortable,
 			Searchable:   field.Searchable,
 			Relation:     relation,
 			Precision:    field.Precision,
@@ -1184,15 +1381,4 @@ func getApiUrl(dictionary string, apiUrl string) string {
 		return "/options?type=" + dictionary
 	}
 	return ""
-}
-
-func getSortable(dbType string) bool {
-	switch dbType {
-	case "string", "integer", "decimal", "date", "datetime", "timestamp":
-		return true
-	case "text", "boolean", "json":
-		return false
-	default:
-		return true
-	}
 }

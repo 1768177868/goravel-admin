@@ -217,6 +217,8 @@ func Admin() {
 			// 代码生成器（仅在开发环境可用）
 			router.Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {
 				router.Get("code-generator/field-types", codeGeneratorController.GetFieldTypes)
+				router.Get("code-generator/tables", codeGeneratorController.GetTables)
+				router.Get("code-generator/table-columns", codeGeneratorController.GetTableColumns)
 				router.Post("code-generator/preview", codeGeneratorController.Preview)
 				router.Post("code-generator/generate", codeGeneratorController.Generate)
 				router.Post("code-generator/save", codeGeneratorController.Save)

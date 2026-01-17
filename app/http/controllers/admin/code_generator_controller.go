@@ -151,3 +151,30 @@ func (c *CodeGeneratorController) GetFieldTypes(ctx http.Context) http.Response 
 		"field_types": fieldTypes,
 	})
 }
+
+// GetTables 获取数据库表列表
+func (c *CodeGeneratorController) GetTables(ctx http.Context) http.Response {
+	tables, err := c.codeGeneratorService.GetTables()
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+	return response.Success(ctx, http.Json{
+		"tables": tables,
+	})
+}
+
+// GetTableColumns 获取表字段
+func (c *CodeGeneratorController) GetTableColumns(ctx http.Context) http.Response {
+	tableName := ctx.Request().Query("table_name")
+	if tableName == "" {
+		return response.Error(ctx, http.StatusBadRequest, "table_name_required")
+	}
+
+	fields, err := c.codeGeneratorService.GetTableColumns(tableName)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+	return response.Success(ctx, http.Json{
+		"fields": fields,
+	})
+}

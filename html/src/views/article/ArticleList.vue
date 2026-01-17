@@ -94,9 +94,12 @@ const {
 
 const initialSearchForm = {
 
-  name: '',
+  title: '',
+  content: '',
   status: '',
   admin_id: '',
+  created_at: '',
+  updated_at: '',
 }
 
 const {
@@ -119,8 +122,17 @@ const {
 const searchFields = computed(() => [
 
   {
-    prop: 'name',
-    label: t('article.name'),
+    prop: 'title',
+    label: t('article.title'),
+    type: 'input',
+
+
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'content',
+    label: t('article.content'),
     type: 'input',
 
 
@@ -143,12 +155,26 @@ const searchFields = computed(() => [
   {
     prop: 'admin_id',
     label: t('article.admin_id'),
-    type: 'select',
+    type: 'input',
 
 
-    
-    // 如果没有配置字典，可能是模块选项（如role, department等），apiUrl已由.ApiUrl提供
-    
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'created_at',
+    label: t('article.created_at'),
+    type: 'datetime',
+
+
+    width: '200px',
+    advanced: false
+  },
+  {
+    prop: 'updated_at',
+    label: t('article.updated_at'),
+    type: 'datetime',
+
 
     width: '200px',
     advanced: false
@@ -164,26 +190,44 @@ const tableColumns = computed(() => [
   },
 
   {
-    field: 'name',
-    title: t('article.name'),
-    sortable: true
+    field: 'title',
+    title: t('article.title'),
+    sortable: false
+  },
+
+  {
+    field: 'content',
+    title: t('article.content'),
+    sortable: false
   },
 
   {
     field: 'status',
     title: t('article.status'),
-    sortable: true
+    sortable: false
   },
 
   {
     field: 'admin_id',
     title: t('article.admin_id'),
-    sortable: true
+    sortable: false
   },
 
   {
-    field: 'author.name',
+    field: 'admin.name',
     title: t('article.admin_id'),
+    sortable: false
+  },
+
+  {
+    field: 'created_at',
+    title: t('article.created_at'),
+    sortable: false
+  },
+
+  {
+    field: 'updated_at',
+    title: t('article.updated_at'),
     sortable: false
   },
 

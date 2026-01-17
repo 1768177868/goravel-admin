@@ -1259,7 +1259,29 @@
     "precision": "总位数",
     "scale": "小数位数",
     "field_config_saved": "字段配置已保存",
-    "generated_files": "生成文件"
+    "generated_files": "生成文件",
+    "select_table": "选择表",
+    "select_table_placeholder": "请选择数据库表",
+    "import_json": "导入配置",
+    "import_json_placeholder": "请输入 JSON 配置",
+    "fields_loaded": "字段加载成功",
+    "load_columns_failed": "加载字段失败",
+    "import_success": "导入成功",
+    "import_failed": "导入失败",
+    "form_type": "表单组件",
+    "form_types": {
+      "input": "输入框",
+      "textarea": "多行文本",
+      "select": "下拉框",
+      "radio": "单选框",
+      "checkbox": "复选框",
+      "date_picker": "日期选择",
+      "datetime_picker": "日期时间",
+      "image_upload": "图片上传",
+      "file_upload": "文件上传",
+      "editor": "富文本编辑器",
+      "switch": "开关"
+    }
   }
 }
 

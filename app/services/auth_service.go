@@ -307,18 +307,6 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		}
 	}
 
-	// 检查是否需要隐藏开发工具菜单
-	enableDevTool := facades.Config().GetBool("app.enable_dev_tool")
-	if !enableDevTool {
-		var filteredMenus []models.Menu
-		for _, menu := range menus {
-			if menu.Slug != "dev" {
-				filteredMenus = append(filteredMenus, menu)
-			}
-		}
-		menus = filteredMenus
-	}
-
 	return &admin, permissions, menus, nil
 }
 

@@ -12,19 +12,35 @@
       label-width="120px"
     >
 
-      <el-form-item :label="$t('article.name')" prop="name">
+      <el-form-item :label="$t('article.title')" prop="title">
 
-        <el-input v-model="form.name" :placeholder="$t('article.name')" />
+        <el-input v-model="form.title" :placeholder="$t('article.title')" />
+
+      </el-form-item>
+      <el-form-item :label="$t('article.content')" prop="content">
+
+        <el-input
+          v-model="form.content"
+          type="textarea"
+          :rows="4"
+          :placeholder="$t('article.content')" />
 
       </el-form-item>
       <el-form-item :label="$t('article.status')" prop="status">
 
-        <el-input v-model="form.status" :placeholder="$t('article.status')" />
+        <el-switch v-model="form.status" />
 
       </el-form-item>
       <el-form-item :label="$t('article.admin_id')" prop="admin_id">
 
-        <el-input v-model="form.admin_id" :placeholder="$t('article.admin_id')" />
+        <el-select v-model="form.admin_id" :placeholder="$t('common.select')">
+          <el-option
+            v-for="item in admin_idOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
 
       </el-form-item>
     </el-form>
@@ -42,13 +58,13 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import {
   createArticle,
   updateArticle,
   getArticleDetail
 } from '../../api/article'
 import { getOptions } from '../../api/option'
+import request from '../../utils/request'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -73,6 +89,11 @@ const submitting = ref(false)
 
 
 
+const admin_idOptions = ref([])
+
+
+
+
 const visible = ref(props.modelValue)
 watch(() => props.modelValue, (val) => {
   visible.value = val
@@ -83,21 +104,25 @@ watch(visible, (val) => {
 
 const form = ref({
 
-  name: null,
+  title: null,
+  content: null,
   status: null,
   admin_id: null,
 })
 
 const rules = {
 
-  name: [
-    { required: true, message: t('article.name_required'), trigger: 'blur' }
+  title: [
+    { required: true, message: t('article.title_required'), trigger: 'blur' }
+  ],
+  content: [
+    { required: false, message: t('article.content_required'), trigger: 'blur' }
   ],
   status: [
-    { required: false, message: t('article.status_required'), trigger: 'blur' }
+    { required: true, message: t('article.status_required'), trigger: 'blur' }
   ],
   admin_id: [
-    { required: false, message: t('article.admin_id_required'), trigger: 'blur' }
+    { required: true, message: t('article.admin_id_required'), trigger: 'blur' }
   ],
 }
 
@@ -134,16 +159,31 @@ const handleClose = () => {
   formRef.value?.resetFields()
 }
 
-const handleImageSuccess = (response) => {
-  form.value.image = response.data.url
-}
-
-const handleFileSuccess = (response) => {
-  form.value.file = response.data.url
-}
-
 const loadOptions = async () => {
 
+
+
+
+
+  try {
+    
+    // 加载关联数据: admins
+    // 假设存在列表接口 /admins (kebab-case)
+    const res = await request({
+      url: '/admins'.replace(/_/g, '-'), 
+      method: 'get',
+      params: { page: 1, page_size: 100 }
+    })
+    if (res.data && res.data.list) {
+      admin_idOptions.value = res.data.list.map(item => ({
+        label: item.name,
+        value: item.id // 假设关联表主键是 id
+      }))
+    }
+    
+  } catch (error) {
+    console.error('Failed to load admin_id options:', error)
+  }
 
 
 
@@ -158,7 +198,8 @@ const loadData = async () => {
       const data = res.data.article
       form.value = {
 
-        name: data.name,
+        title: data.title,
+        content: data.content,
         status: data.status,
         admin_id: data.admin_id,
       }
@@ -177,7 +218,8 @@ watch(visible, (val) => {
       formRef.value?.resetFields()
       form.value = {
 
-        name: null,
+        title: null,
+        content: null,
         status: null,
         admin_id: null,
       }
@@ -187,31 +229,5 @@ watch(visible, (val) => {
 </script>
 
 <style scoped>
-.image-uploader {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  width: 178px;
-  height: 178px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.image-uploader:hover {
-  border-color: #409EFF;
-}
-
-.image-preview {
-  width: 178px;
-  height: 178px;
-  object-fit: cover;
-}
-
-.image-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-}
 </style>

@@ -7,6 +7,21 @@ export function getFieldTypes() {
   })
 }
 
+export function getTables() {
+  return request({
+    url: '/code-generator/tables',
+    method: 'get'
+  })
+}
+
+export function getTableColumns(tableName) {
+  return request({
+    url: '/code-generator/table-columns',
+    method: 'get',
+    params: { table_name: tableName }
+  })
+}
+
 export function previewCode(data) {
   return request({
     url: '/code-generator/preview',
