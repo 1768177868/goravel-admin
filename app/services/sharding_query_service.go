@@ -155,9 +155,10 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	} else {
 		// 没有配置阈值，直接使用传统的 count 统计
 		// 根据数据库类型决定表名引号（MySQL 用反引号，PostgreSQL 不用）
-		dbConnection := facades.Config().GetString("database.default", "sqlite")
+		driver := strings.ToLower(facades.Orm().Query().Driver())
+
 		tableQuote := ""
-		if dbConnection == "mysql" {
+		if driver == "mysql" {
 			tableQuote = "`"
 		}
 

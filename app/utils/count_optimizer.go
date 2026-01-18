@@ -89,15 +89,15 @@ func (co *CountOptimizer) extractRowsFromPostgreSQLExplainText(result []map[stri
 // args: WHERE 条件的参数
 // 返回：总数、是否使用估算值、错误
 func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string, args ...any) (int64, bool, error) {
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
+	driver := strings.ToLower(facades.Orm().Query().Driver())
 
 	// 构建 COUNT SQL
 	var countSQL string
 	if whereClause != "" {
-		switch dbConnection {
+		switch driver {
 		case "mysql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM `%s` WHERE %s", tableName, whereClause)
-		case "postgres":
+		case "postgresql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s WHERE %s", tableName, whereClause)
 		default:
 			// 其他数据库不支持估算，直接使用实际 count
@@ -110,10 +110,10 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 			return result.Cnt, false, nil
 		}
 	} else {
-		switch dbConnection {
+		switch driver {
 		case "mysql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM `%s`", tableName)
-		case "postgres":
+		case "postgresql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s", tableName)
 		default:
 			// 其他数据库不支持估算，直接使用实际 count
@@ -129,13 +129,13 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 
 	// 构建 EXPLAIN SQL
 	var explainSQL string
-	if dbConnection == "mysql" {
+	if driver == "mysql" {
 		if whereClause != "" {
 			explainSQL = fmt.Sprintf("EXPLAIN SELECT COUNT(*) FROM `%s` WHERE %s", tableName, whereClause)
 		} else {
 			explainSQL = fmt.Sprintf("EXPLAIN SELECT COUNT(*) FROM `%s`", tableName)
 		}
-	} else if dbConnection == "postgres" {
+	} else if driver == "postgresql" {
 		if whereClause != "" {
 			explainSQL = fmt.Sprintf("EXPLAIN (FORMAT JSON) SELECT COUNT(*) FROM %s WHERE %s", tableName, whereClause)
 		} else {
@@ -182,9 +182,8 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 
 // executeExplain 执行 EXPLAIN 查询并提取估算行数
 func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64, error) {
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
-
-	switch dbConnection {
+	driver := strings.ToLower(facades.Orm().Query().Driver())
+	switch driver {
 	case "mysql":
 		// MySQL EXPLAIN 返回表格格式
 		var explainResult []map[string]any
@@ -213,7 +212,7 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 		}
 		return 0, fmt.Errorf("cannot extract rows from explain result")
 
-	case "postgres":
+	case "postgresql":
 		// PostgreSQL EXPLAIN (FORMAT JSON) 返回 JSON 格式
 		var explainResult []map[string]any
 		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
@@ -248,5 +247,5 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 		return 0, fmt.Errorf("cannot extract rows from explain result")
 	}
 
-	return 0, fmt.Errorf("unsupported database: %s", dbConnection)
+	return 0, fmt.Errorf("unsupported database driver: %v", driver)
 }

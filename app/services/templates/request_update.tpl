@@ -22,7 +22,7 @@ func (r *<<.RequestUpdateName>>) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-		"<<.JsonName>>": "<<if .Required>>required<<end>><<if and .Required .Validators>>|<<end>><<range $i, $v := .Validators>><<if $i>>|<<end>><<$v>><<end>>",
+		"<<.JsonName>>": "<<range $i, $v := .Validators>><<if $i>>|<<end>><<$v>><<end>>",
 <<- end>>
 <<- end>>
 	}

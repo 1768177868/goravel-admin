@@ -18,8 +18,9 @@ func ApplyFulltextSearch(query orm.Query, column, keyword string) orm.Query {
 	}
 
 	// 获取数据库类型
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
-	isPostgreSQL := dbConnection == "postgres"
+	driver := strings.ToLower(facades.Orm().Query().Driver())
+
+	isPostgreSQL := driver == "postgresql"
 
 	// 判断是否应该使用全文索引
 	// 对于短词（少于3个字符）或包含特殊字符的搜索，使用 LIKE/ILIKE
@@ -78,6 +79,8 @@ func ShouldUseFulltextIndex(keyword string) bool {
 
 // IsPostgreSQL 判断当前数据库是否为 PostgreSQL
 func IsPostgreSQL() bool {
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
-	return dbConnection == "postgres"
+	if facades.Orm() == nil {
+		return false
+	}
+	return strings.ToLower(facades.Orm().Query().Driver()) == "postgresql"
 }

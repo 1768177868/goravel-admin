@@ -56,7 +56,7 @@ func (r *OptimizeTables) Extend() command.Extend {
 }
 
 func (r *OptimizeTables) Handle(ctx console.Context) error {
-	dbConnection := strings.ToLower(facades.Config().GetString("database.default", "sqlite"))
+	driver := strings.ToLower(facades.Orm().Query().Driver())
 	full := ctx.OptionBool("full")
 
 	var tables []string
@@ -86,17 +86,17 @@ func (r *OptimizeTables) Handle(ctx console.Context) error {
 
 	execOptimize := func(table string) error {
 		var sql string
-		switch dbConnection {
+		switch driver {
 		case "mysql":
 			sql = fmt.Sprintf("OPTIMIZE TABLE `%s`", table)
-		case "postgres":
+		case "postgresql":
 			if full {
 				sql = fmt.Sprintf("VACUUM (FULL, ANALYZE) %s", table)
 			} else {
 				sql = fmt.Sprintf("VACUUM (ANALYZE) %s", table)
 			}
 		default:
-			return fmt.Errorf("unsupported database: %s", dbConnection)
+			return fmt.Errorf("unsupported database driver: %v", driver)
 		}
 
 		if _, err := facades.Orm().Query().Exec(sql); err != nil {

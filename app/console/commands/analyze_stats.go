@@ -78,7 +78,8 @@ func (r *AnalyzeStats) Extend() command.Extend {
 }
 
 func (r *AnalyzeStats) Handle(ctx console.Context) error {
-	dbConnection := strings.ToLower(facades.Config().GetString("database.default", "sqlite"))
+
+	driver := strings.ToLower(facades.Orm().Query().Driver())
 
 	monthsFlag := ctx.OptionInt("months")
 	if monthsFlag <= 0 {
@@ -110,13 +111,13 @@ func (r *AnalyzeStats) Handle(ctx console.Context) error {
 
 	execAnalyze := func(table string) error {
 		var sql string
-		switch dbConnection {
+		switch driver {
 		case "mysql":
 			sql = fmt.Sprintf("ANALYZE TABLE `%s`", table)
-		case "postgres":
+		case "postgresql":
 			sql = fmt.Sprintf("ANALYZE %s", table)
 		default:
-			return fmt.Errorf("unsupported database: %s", dbConnection)
+			return fmt.Errorf("unsupported database driver: %v", driver)
 		}
 
 		_, err := facades.Orm().Query().Exec(sql)

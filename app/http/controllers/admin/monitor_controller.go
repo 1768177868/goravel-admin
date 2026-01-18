@@ -1,4 +1,4 @@
-﻿package admin
+package admin
 
 import (
 	"context"
@@ -294,9 +294,9 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	}()
 
 	// 获取数据库连接配置
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
-	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
-	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", dbConnection), 3306)
+	driver := strings.ToLower(facades.Orm().Query().Driver())
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", driver), "127.0.0.1")
+	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", driver), 3306)
 
 	// 检查是否为本地数据库
 	if !isLocalHost(dbHost) {
@@ -310,13 +310,13 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	}
 
 	// 尝试连接数据库获取信息
-	orm := facades.Orm()
-	if orm == nil {
+	ormInstance := facades.Orm()
+	if ormInstance == nil {
 		return result
 	}
 
 	// 检查连接类型是否为MySQL
-	if dbConnection != "mysql" {
+	if driver != "mysql" {
 		result["status"] = "not_mysql"
 		return result
 	}
@@ -326,7 +326,7 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	var uptime, threads, queries, connections int64
 
 	// 获取MySQL版本
-	query := orm.Query()
+	query := ormInstance.Query()
 	if query != nil {
 		if err := query.Raw("SELECT VERSION() as version").Scan(&version); err == nil {
 			result["version"] = version
@@ -433,9 +433,9 @@ func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
 	}()
 
 	// 获取数据库连接配置
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
-	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
-	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", dbConnection), 5432)
+	driver := strings.ToLower(facades.Orm().Query().Driver())
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", driver), "127.0.0.1")
+	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", driver), 5432)
 
 	// 检查是否为本地数据库
 	if !isLocalHost(dbHost) {
@@ -447,19 +447,19 @@ func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
 	}
 
 	// 尝试连接数据库获取信息
-	orm := facades.Orm()
-	if orm == nil {
+	ormInstance := facades.Orm()
+	if ormInstance == nil {
 		return result
 	}
 
 	// 检查连接类型是否为PostgreSQL
-	if dbConnection != "postgres" {
+	if driver != "postgresql" {
 		result["status"] = "not_postgres"
 		return result
 	}
 
 	// 执行PostgreSQL查询
-	query := orm.Query()
+	query := ormInstance.Query()
 	if query != nil {
 		// 获取PostgreSQL版本
 		var version string
@@ -736,12 +736,17 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	}()
 
 	// 获取数据库和Redis连接配置
-	dbConnection := facades.Config().GetString("database.default", "sqlite")
-	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", dbConnection), "127.0.0.1")
+	driver := strings.ToLower(facades.Orm().Query().Driver())
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", driver), "127.0.0.1")
 	redisHost := facades.Config().GetString("database.redis.default.host", "")
 
+	// 获取当前数据库驱动
+	if facades.Orm() != nil {
+		driver = facades.Orm().Query().Driver()
+	}
+
 	// PostgreSQL处理：检查是否为PostgreSQL数据库
-	if dbConnection == "postgres" {
+	if driver == "postgresql" {
 		// 无论本地还是远程，都先通过数据库连接获取统计信息
 		postgresDBInfo := getPostgreSQLInfoFromDB(ctx)
 
@@ -784,7 +789,7 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	}
 
 	// MySQL处理：检查是否为本地数据库
-	if dbConnection == "mysql" {
+	if driver == "mysql" {
 		// 无论本地还是远程，都先通过数据库连接获取统计信息（连接数、线程数等）
 		mysqlDBInfo := getMySQLInfoFromDB(ctx)
 
