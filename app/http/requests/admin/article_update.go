@@ -20,10 +20,10 @@ func (r *ArticleUpdate) Authorize(ctx http.Context) error {
 func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 
-		"title":    "required",
+		"title":    "",
 		"content":  "",
-		"status":   "required",
-		"admin_id": "required",
+		"status":   "",
+		"admin_id": "",
 	}
 	return rules
 }

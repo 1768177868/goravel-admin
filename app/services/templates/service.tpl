@@ -35,7 +35,7 @@ func New<<.ServiceName>>() <<.ServiceName>> {
 	return &<<.ServiceName>>Impl{}
 }
 
-func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
+func (s *<<.ServiceName>>Impl) Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 	query := facades.Orm().Query().Model(&models.<<.ModelName>>{})
 <<range .SearchableFields>>
 	if filters.<<.PascalName>> != "" {
@@ -66,14 +66,20 @@ func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 
 func (s *<<.ServiceName>>Impl) GetByID(id uint) (*models.<<.ModelName>>, error) {
 	var item models.<<.ModelName>>
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&item); err != nil {
+	query := facades.Orm().Query().Where("id", id)
+<<range .FormFields>>
+<<if .Relation>>
+	query = query.With("<<.Relation.Name>>")
+<<end>>
+<<- end>>
+	if err := query.FirstOrFail(&item); err != nil {
 		return nil, apperrors.NewBusinessError("<<.ModuleName>>_not_found", "<<.ModelName>> not found").WithError(err)
 	}
 	return &item, nil
 }
 
 func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error) {
-	query := Build<<.ModelName>>Query(filters)
+	query := s.Build<<.ModelName>>Query(filters)
 
 <<range .FormFields>>
 <<if .Relation>>
@@ -95,7 +101,11 @@ func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*model
 	item := &models.<<.ModelName>>{
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
+	<<if and .Relation (eq .Relation.RelationType "belongsTo")>>
+		<<.FieldName>>: uint(req.<<.FieldName>>),
+	<<else>>
 		<<.FieldName>>: req.<<.FieldName>>,
+	<<end>>
 <<- end>>
 <<- end>>
 	}
@@ -118,7 +128,11 @@ func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 	if req.<<.FieldName>> != nil {
+	<<if and .Relation (eq .Relation.RelationType "belongsTo")>>
+		item.<<.FieldName>> = uint(*req.<<.FieldName>>)
+	<<else>>
 		item.<<.FieldName>> = *req.<<.FieldName>>
+	<<end>>
 	}
 <<- end>>
 <<- end>>

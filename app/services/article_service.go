@@ -35,7 +35,7 @@ func NewArticleService() ArticleService {
 	return &ArticleServiceImpl{}
 }
 
-func BuildArticleQuery(filters ArticleFilters) orm.Query {
+func (s *ArticleServiceImpl) BuildArticleQuery(filters ArticleFilters) orm.Query {
 	query := facades.Orm().Query().Model(&models.Article{})
 
 	if filters.Title != "" {
@@ -74,14 +74,18 @@ func BuildArticleQuery(filters ArticleFilters) orm.Query {
 
 func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 	var item models.Article
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&item); err != nil {
+	query := facades.Orm().Query().Where("id", id)
+
+	query = query.With("Admin")
+
+	if err := query.FirstOrFail(&item); err != nil {
 		return nil, apperrors.NewBusinessError("article_not_found", "Article not found").WithError(err)
 	}
 	return &item, nil
 }
 
 func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error) {
-	query := BuildArticleQuery(filters)
+	query := s.BuildArticleQuery(filters)
 
 	query = query.With("Admin")
 
@@ -97,10 +101,13 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {
 	item := &models.Article{
 
-		Title:   req.Title,
+		Title: req.Title,
+
 		Content: req.Content,
-		Status:  req.Status,
-		AdminId: req.AdminId,
+
+		Status: req.Status,
+
+		AdminId: uint(req.AdminId),
 	}
 
 	if err := facades.Orm().Query().Create(item); err != nil {
@@ -117,16 +124,24 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 	}
 
 	if req.Title != nil {
+
 		item.Title = *req.Title
+
 	}
 	if req.Content != nil {
+
 		item.Content = *req.Content
+
 	}
 	if req.Status != nil {
+
 		item.Status = *req.Status
+
 	}
 	if req.AdminId != nil {
-		item.AdminId = *req.AdminId
+
+		item.AdminId = uint(*req.AdminId)
+
 	}
 
 	if err := facades.Orm().Query().Save(item); err != nil {

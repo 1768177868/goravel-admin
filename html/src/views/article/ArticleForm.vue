@@ -19,6 +19,12 @@
       </el-form-item>
       <el-form-item :label="$t('article.content')" prop="content">
 
+        <el-input
+          v-model="form.content"
+          type="textarea"
+          :rows="4"
+          :placeholder="$t('article.content')" />
+
       </el-form-item>
       <el-form-item :label="$t('article.status')" prop="status">
 
