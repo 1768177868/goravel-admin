@@ -1457,7 +1457,7 @@ func getApiUrl(dictionary string, apiUrl string) string {
 		return apiUrl
 	}
 	if dictionary != "" {
-		return "/options?type=" + dictionary
+		return "/options?type=dictionary&dictionary_type=" + dictionary
 	}
 	return ""
 }
