@@ -129,53 +129,12 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item
-          :label="$t('notification.table.type')"
-          prop="type"
-        >
-          <el-radio-group v-model="formData.type">
-            <el-radio value="announcement">
-              {{ $t('notification.types.announcement') }}
-            </el-radio>
-            <el-radio value="notice">
-              {{ $t('notification.types.notice') }}
-            </el-radio>
-            <el-radio value="message">
-              {{ $t('notification.types.message') }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item
-          v-if="formData.type === 'message'"
-          :label="$t('notification.receiver')"
-          prop="receiver_id"
-        >
-          <el-select
-            v-model="formData.receiver_id"
-            :placeholder="$t('notification.select_receiver')"
-            filterable
-            style="width: 100%"
-            clearable
-          >
-            <el-option
-              v-for="admin in adminOptions"
-              :key="admin.value"
-              :label="admin.label"
-              :value="admin.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item
-          :label="$t('notification.table.title')"
-          prop="title"
-        >
-          <el-input
-            v-model="formData.title"
-            :placeholder="$t('notification.title_placeholder')"
-            maxlength="150"
-            show-word-limit
-          />
-        </el-form-item>
+        <FormField
+          v-for="f in createFormFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
         <el-form-item
           :label="$t('notification.table.content')"
           prop="content"
@@ -232,6 +191,7 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import WangEditor from '../../components/WangEditor.vue'
+import FormField from '../../components/Form/FormField.vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
@@ -240,7 +200,6 @@ import { buildSearchParams } from '../../utils/buildSearchParams'
 import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
 import { fetchNotifications, createNotification } from '../../api/notification'
-import { getOptions } from '../../api/option'
 import { getApiBaseURL } from '../../utils/env'
 
 const { t } = useI18n()
@@ -292,7 +251,6 @@ const tableRef = ref(null)
 const formRef = ref(null)
 const dialogVisible = ref(false)
 const submitting = ref(false)
-const adminOptions = ref([])
 
 const formData = reactive({
   type: 'announcement',
@@ -325,6 +283,39 @@ const formRules = {
     { required: true, message: t('notification.content_required'), trigger: 'blur' }
   ]
 }
+
+const createFormFields = computed(() => {
+  void formData.type // 依赖，使 type 切换时 receiver_id 的 visible 能更新
+  return [
+  {
+    prop: 'type',
+    label: t('notification.table.type'),
+    type: 'radio',
+    options: [
+      { label: t('notification.types.announcement'), value: 'announcement' },
+      { label: t('notification.types.notice'), value: 'notice' },
+      { label: t('notification.types.message'), value: 'message' }
+    ]
+  },
+  {
+    prop: 'receiver_id',
+    label: t('notification.receiver'),
+    type: 'select',
+    apiUrl: '/options?type=admin',
+    placeholder: t('notification.select_receiver'),
+    filterable: true,
+    clearable: true,
+    visible: () => formData.type === 'message'
+  },
+  {
+    prop: 'title',
+    label: t('notification.table.title'),
+    type: 'input',
+    placeholder: t('notification.title_placeholder'),
+    props: { maxlength: 150, showWordLimit: true }
+  }
+  ]
+})
 
 // 字段名映射：前端字段名 -> 数据库字段名（只包含不同的字段）
 const fieldMapping = {} // 所有字段名都相同，无需映射
@@ -517,17 +508,6 @@ const typeLabel = (type) => {
   return t('notification.types.announcement')
 }
 
-const loadAdminOptions = async () => {
-  try {
-    const res = await getOptions('admin')
-    if (res.data && res.data.options) {
-      adminOptions.value = res.data.options
-    }
-  } catch (error) {
-    console.error('Load admin options error:', error)
-  }
-}
-
 // 监听类型变化，如果不是私信则清空接收者
 watch(() => formData.type, (newType) => {
   if (newType !== 'message') {
@@ -614,7 +594,6 @@ const handleSubmit = async () => {
 
 onMounted(() => {
   loadData()
-  loadAdminOptions()
 })
 
 const stripHtml = (html) => {

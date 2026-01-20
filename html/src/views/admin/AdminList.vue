@@ -96,8 +96,6 @@
       ref="adminFormRef"
       v-model="dialogVisible"
       :edit-id="editId"
-      :department-tree="departmentTree"
-      :roles="roles"
       @success="handleFormSuccess"
     />
   </div>
@@ -108,7 +106,7 @@ import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowDown } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
@@ -127,14 +125,11 @@ import {
   kickOutUser,
   unbindAdminGoogleAuth
 } from '../../api/admin'
-import { getOptions } from '../../api/option'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
 import { uniqBy, compact, map as lodashMap } from 'lodash-es'
 
-// 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const PlusIcon = markRaw(Plus)
-const ArrowDownIcon = markRaw(ArrowDown)
 
 // 权限控制
 const { getButtonState } = usePermission()
@@ -305,38 +300,7 @@ const searchFields = computed(() => [
   }
 ])
 
-const departmentTree = ref([])
-const roles = ref([])
 const protectedAdminIds = ref([1, 2])
-
-const loadDepartments = async () => {
-  try {
-    const res = await getOptions('department')
-    if (res.data && res.data.options) {
-      departmentTree.value = res.data.options
-    }
-  } catch (error) {
-    logger.error('Load departments error:', error)
-    ErrorHandler.handle(error, { silent: true })
-  }
-}
-
-const loadRoles = async () => {
-  try {
-    const res = await getOptions('role')
-    if (res.data && res.data.options) {
-      roles.value = res.data.options.map(option => ({
-        id: parseInt(option.value),
-        ID: parseInt(option.value),
-        name: option.label,
-        Name: option.label
-      }))
-    }
-  } catch (error) {
-    logger.error('Load roles error:', error)
-    ErrorHandler.handle(error, { silent: true })
-  }
-}
 
 // handleSearch, handleReset, handlePageChange 已由 useListPage 提供
 // handleAdd, handleDelete 已由 useCrud 提供
@@ -601,11 +565,7 @@ const handleExport = async () => {
 onMounted(async () => {
   try {
     initDefaultSort()
-    await Promise.all([
-      loadData(),
-      loadDepartments(),
-      loadRoles()
-    ])
+    await loadData()
   } catch (error) {
     logger.error('AdminList onMounted error:', error)
     ErrorHandler.handle(error)

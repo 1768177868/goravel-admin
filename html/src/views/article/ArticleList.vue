@@ -145,10 +145,7 @@ const searchFields = computed(() => [
     type: 'select',
     clearable: true,
 
-        apiUrl: '/options?type=dictionary&dictionary_type=status',
-    
-    
-    
+    apiUrl: '/options?type=dictionary&dictionary_type=status',
 
     width: '200px',
     advanced: false

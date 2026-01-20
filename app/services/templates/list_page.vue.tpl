@@ -123,15 +123,7 @@ const searchFields = computed(() => [
     type: '<<.SearchUIType>>',
     clearable: true,
 <<if eq .SearchUIType "select">>
-    <<if .ApiUrl>>    apiUrl: '<<.ApiUrl>>',<<end>>
-    <<if .Dictionary>>
-    
-    <<else if .Relation>>
-    apiUrl: '/<<.Relation.Table>>'.replace(/_/g, '-') + '?page=1&page_size=100',
-    labelField: '<<.Relation.DisplayField>>',
-    valueField: 'id',
-    resultField: 'list', // 假设列表接口返回结构 { list: [] }
-    <<end>>
+    <<if .ApiUrl>>apiUrl: '<<.ApiUrl>>',<<end>>
 <<end>>
     width: '200px',
     advanced: false

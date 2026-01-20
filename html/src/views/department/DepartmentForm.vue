@@ -12,33 +12,13 @@
         :rules="formRules"
         label-width="100px"
       >
-      <el-form-item :label="$t('department.parent_department')">
-        <el-select v-model="formData.parent_id" :placeholder="$t('form.select_parent') + $t('department.parent_department')" clearable :disabled="loading">
-          <el-option :label="$t('department.top_department')" :value="0" />
-          <el-option
-            v-for="dept in departmentOptions"
-            :key="dept.id"
-            :label="dept.name"
-            :value="dept.id"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item :label="$t('department.name')" prop="name">
-        <el-input v-model="formData.name" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('common.description')">
-        <el-input v-model="formData.description" type="textarea" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status" :disabled="loading">
-          <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-          <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
-      </el-form-item>
-    </el-form>
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
+      </el-form>
     </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
@@ -51,6 +31,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import FormField from '../../components/Form/FormField.vue'
 import {
   getDepartmentDetail,
   createDepartment,
@@ -58,18 +39,9 @@ import {
 } from '../../api/department'
 
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  },
-  editId: {
-    type: [Number, String],
-    default: null
-  },
-  departmentOptions: {
-    type: Array,
-    default: () => []
-  }
+  modelValue: { type: Boolean, default: false },
+  editId: { type: [Number, String], default: null },
+  departmentOptions: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['update:modelValue', 'success'])
@@ -81,7 +53,7 @@ const loading = ref(false)
 
 const dialogVisible = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+  set: (v) => emit('update:modelValue', v)
 })
 
 const dialogTitle = computed(() => formData.id ? t('department.edit_department') : t('department.add_department'))
@@ -99,24 +71,43 @@ const formRules = computed(() => ({
   name: [{ required: true, message: t('department.name_required'), trigger: 'blur' }]
 }))
 
-// 监听 editId 变化，加载详情
+const formFields = computed(() => [
+  {
+    prop: 'parent_id',
+    label: t('department.parent_department'),
+    type: 'select',
+    options: [
+      { label: t('department.top_department'), value: 0 },
+      ...(props.departmentOptions || []).map(d => ({ label: d.name, value: d.id }))
+    ],
+    placeholder: t('form.select_parent') + t('department.parent_department'),
+    clearable: false,
+    disabled: loading.value
+  },
+  { prop: 'name', label: t('department.name'), type: 'input', disabled: loading.value },
+  { prop: 'description', label: t('common.description'), type: 'textarea', disabled: loading.value },
+  {
+    prop: 'status',
+    label: t('table.status'),
+    type: 'radio',
+    options: [
+      { label: t('common.enabled'), value: 1 },
+      { label: t('common.disabled'), value: 0 }
+    ],
+    disabled: loading.value
+  },
+  { prop: 'sort', label: t('common.sort'), type: 'number', min: 0, disabled: loading.value }
+])
+
 watch(() => props.editId, async (newId) => {
-  if (newId && dialogVisible.value) {
-    await loadDetail(newId)
-  } else if (!newId && dialogVisible.value) {
-    // 新增模式，重置表单
-    resetForm()
-  }
+  if (newId && dialogVisible.value) await loadDetail(newId)
+  else if (!newId && dialogVisible.value) resetForm()
 }, { immediate: true })
 
-// 监听 dialogVisible 变化
 watch(dialogVisible, (visible) => {
   if (visible) {
-    if (props.editId) {
-      loadDetail(props.editId)
-    } else {
-      resetForm()
-    }
+    if (props.editId) loadDetail(props.editId)
+    else resetForm()
   }
 })
 
@@ -124,20 +115,19 @@ const loadDetail = async (id) => {
   loading.value = true
   try {
     const res = await getDepartmentDetail(id)
-    if (res.data && res.data.department) {
+    if (res.data?.department) {
       const dept = res.data.department
-      // 后端返回的是 PascalCase 字段，需要正确映射
       Object.assign(formData, {
         id: dept.id,
         parent_id: dept.ParentID !== undefined ? dept.ParentID : (dept.parent_id || 0),
         name: dept.Name || dept.name || '',
         description: dept.Remark || dept.remark || dept.description || '',
-        status: dept.Status !== undefined ? dept.Status : (dept.status !== undefined ? dept.status : 1),
-        sort: dept.Sort !== undefined ? dept.Sort : (dept.sort !== undefined ? dept.sort : 0)
+        status: dept.Status !== undefined ? dept.Status : (dept.status ?? 1),
+        sort: dept.Sort !== undefined ? dept.Sort : (dept.sort ?? 0)
       })
     }
-  } catch (error) {
-    console.error('Load department detail error:', error)
+  } catch (e) {
+    console.error('Load department detail error:', e)
   } finally {
     loading.value = false
   }
@@ -145,57 +135,40 @@ const loadDetail = async (id) => {
 
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, {
-    id: null,
-    parent_id: 0,
-    name: '',
-    description: '',
-    status: 1,
-    sort: 0
-  })
+  Object.assign(formData, { id: null, parent_id: 0, name: '', description: '', status: 1, sort: 0 })
   formRef.value?.resetFields()
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
-  
   await formRef.value.validate(async (valid) => {
-    if (valid) {
-      submitting.value = true
-      try {
-        // 转换前端字段名为后端期望的字段名
-        const data = {
-          name: formData.name,
-          remark: formData.description, // description 映射到 remark
-          status: formData.status,
-          sort: formData.sort,
-          parent_id: formData.parent_id === 0 ? null : formData.parent_id
-        }
-        
-        if (formData.id) {
-          await updateDepartment(formData.id, data)
-          ElMessage.success(t('department.update_success'))
-        } else {
-          await createDepartment(data)
-          ElMessage.success(t('department.create_success'))
-        }
-        dialogVisible.value = false
-        emit('success')
-      } catch (error) {
-        console.error('Submit error:', error)
-      } finally {
-        submitting.value = false
+    if (!valid) return
+    submitting.value = true
+    try {
+      const data = {
+        name: formData.name,
+        remark: formData.description,
+        status: formData.status,
+        sort: formData.sort,
+        parent_id: formData.parent_id === 0 ? null : formData.parent_id
       }
+      if (formData.id) {
+        await updateDepartment(formData.id, data)
+        ElMessage.success(t('department.update_success'))
+      } else {
+        await createDepartment(data)
+        ElMessage.success(t('department.create_success'))
+      }
+      dialogVisible.value = false
+      emit('success')
+    } catch (e) {
+      console.error('Submit error:', e)
+    } finally {
+      submitting.value = false
     }
   })
 }
 
-const handleCancel = () => {
-  dialogVisible.value = false
-}
-
-const handleDialogClose = () => {
-  formRef.value?.resetFields()
-}
+const handleCancel = () => { dialogVisible.value = false }
+const handleDialogClose = () => { formRef.value?.resetFields() }
 </script>
-

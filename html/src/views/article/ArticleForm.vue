@@ -11,38 +11,13 @@
       :rules="rules"
       label-width="120px"
     >
-
-      <el-form-item :label="$t('article.title')" prop="title">
-
-        <el-input v-model="form.title" :placeholder="$t('article.title')" />
-
-      </el-form-item>
-      <el-form-item :label="$t('article.content')" prop="content">
-
-        <el-input
-          v-model="form.content"
-          type="textarea"
-          :rows="4"
-          :placeholder="$t('article.content')" />
-
-      </el-form-item>
-      <el-form-item :label="$t('article.status')" prop="status">
-
-        <el-input v-model="form.status" :placeholder="$t('article.status')" />
-
-      </el-form-item>
-      <el-form-item :label="$t('article.admin_id')" prop="admin_id">
-
-        <el-select v-model="form.admin_id" :placeholder="$t('common.select')" clearable>
-          <el-option
-            v-for="item in admin_idOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-
-      </el-form-item>
+      <FormField
+        v-for="f in formFields"
+        :key="f.prop"
+        :field="f"
+        :model="form"
+        i18n-prefix="article"
+      />
     </el-form>
 
     <template #footer>
@@ -55,16 +30,15 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import FormField from '../../components/Form/FormField.vue'
 import {
   createArticle,
   updateArticle,
   getArticleDetail
 } from '../../api/article'
-import { getOptions } from '../../api/option'
-import request from '../../utils/request'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -84,12 +58,27 @@ const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
 
-
-
-
-
-
-const admin_idOptions = ref([])
+// 表单项配置：下拉/单选/多选支持 apiUrl，与搜索一致；也可用 options、optionsFn
+const formFields = computed(() => [
+  { prop: 'title', label: t('article.title'), type: 'input' },
+  { prop: 'content', label: t('article.content'), type: 'textarea', rows: 4 },
+  {
+    prop: 'status',
+    label: t('article.status'),
+    type: 'select',
+    apiUrl: '/options?type=dictionary&dictionary_type=status'
+    // 也可: apiUrl: '/options?type=status'
+  },
+  {
+    prop: 'admin_id',
+    label: t('article.admin_id'),
+    type: 'select',
+    apiUrl: '/admins',
+    apiParams: { page: 1, page_size: 100 },
+    optionLabelKey: 'username',
+    optionValueKey: 'id'
+  }
+])
 
 
 
@@ -159,36 +148,6 @@ const handleClose = () => {
   formRef.value?.resetFields()
 }
 
-const loadOptions = async () => {
-
-
-
-
-
-  try {
-    
-    // 加载关联数据: admins
-    // 假设存在列表接口 /admins (kebab-case)
-    const res = await request({
-      url: '/admins'.replace(/_/g, '-'), 
-      method: 'get',
-      params: { page: 1, page_size: 100 }
-    })
-    if (res.data && res.data.list) {
-      admin_idOptions.value = res.data.list.map(item => ({
-        label: item.username,
-        value: item.id // 假设关联表主键是 id
-      }))
-    }
-    
-  } catch (error) {
-    console.error('Failed to load admin_id options:', error)
-  }
-
-
-
-}
-
 const loadData = async () => {
   if (!props.editId) return
   
@@ -211,7 +170,6 @@ const loadData = async () => {
 
 watch(visible, (val) => {
   if (val) {
-    loadOptions()
     if (props.editId) {
       loadData()
     } else {
