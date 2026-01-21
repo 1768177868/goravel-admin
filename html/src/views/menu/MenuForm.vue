@@ -12,146 +12,89 @@
         :rules="formRules"
         label-width="100px"
       >
-      <el-form-item :label="$t('menu_management.parent_menu')">
-        <el-tree-select
-          v-model="formData.parent_id"
-          :data="treeSelectData"
-          :placeholder="$t('form.select_parent') + $t('menu_management.parent_menu')"
-          :props="{ label: 'label', value: 'value', children: 'children' }"
-          clearable
-          check-strictly
-          :render-after-expand="false"
-          :disabled="loading"
-          style="width: 100%"
-        />
-      </el-form-item>
-      <el-form-item :label="$t('table.type')" prop="type">
-        <el-radio-group v-model="formData.type" :disabled="loading">
-          <el-radio :label="1">{{ $t('menu.type_directory') }}</el-radio>
-          <el-radio :label="2">{{ $t('menu.type_menu') }}</el-radio>
-          <el-radio :label="3">{{ $t('menu.type_button') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('menu_management.name')" prop="name">
-        <el-input v-model="formData.name" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('menu_management.slug')" prop="slug">
-        <el-input v-model="formData.slug" :placeholder="$t('menu_management.slug_placeholder')" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('menu_management.link_type')" prop="link_type">
-        <el-radio-group v-model="formData.link_type" :disabled="loading">
-          <el-radio :label="1">{{ $t('menu_management.link_type_internal') }}</el-radio>
-          <el-radio :label="2">{{ $t('menu_management.link_type_external') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item 
-        :label="$t('menu_management.path')" 
-        prop="path"
-        v-if="formData.link_type === 1"
-      >
-        <el-input 
-          v-model="formData.path" 
-          :placeholder="$t('menu_management.path_placeholder_internal')"
-          :disabled="loading"
-        />
-      </el-form-item>
-      <el-form-item 
-        :label="$t('menu_management.path')" 
-        prop="path"
-        v-else
-      >
-        <el-input 
-          v-model="formData.path" 
-          :placeholder="$t('menu_management.path_placeholder_external')"
-          :disabled="loading"
-        />
-      </el-form-item>
-      <el-form-item 
-        :label="$t('menu_management.component')" 
-        v-if="formData.link_type === 1"
-      >
-        <el-input 
-          v-model="formData.component" 
-          :placeholder="$t('menu_management.component_placeholder')"
-          :disabled="loading"
-        />
-        <div class="form-item-tip">{{ $t('menu_management.component_tip') }}</div>
-      </el-form-item>
-      <el-form-item 
-        :label="$t('menu_management.open_type')" 
-        prop="open_type"
-        v-if="formData.link_type === 2"
-      >
-        <el-radio-group v-model="formData.open_type" :disabled="loading">
-          <el-radio :label="1">{{ $t('menu_management.open_type_iframe') }}</el-radio>
-          <el-radio :label="2">{{ $t('menu_management.open_type_new_window') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('menu_management.icon')">
-        <div class="icon-picker">
-          <el-input
-            v-model="formData.icon"
-            :placeholder="$t('menu_management.icon_placeholder')"
-            clearable
-            :disabled="loading"
-            @clear="clearIcon"
-          >
-            <template #prefix>
-              <el-icon v-if="getIconComponent(formData.icon)" class="selected-icon">
-                <component :is="getIconComponent(formData.icon)" />
-              </el-icon>
-            </template>
-          </el-input>
-          <el-popover
-            placement="bottom"
-            trigger="click"
-            width="420"
-            v-model:visible="iconPickerVisible"
-            popper-class="icon-picker-popover"
-          >
-            <div class="icon-picker-content">
+        <!-- 配置式渲染表单字段 -->
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        >
+          <!-- 父菜单树形选择插槽 -->
+          <template v-if="f.prop === 'parent_id'">
+            <el-tree-select
+              v-model="formData.parent_id"
+              :data="treeSelectData"
+              :placeholder="$t('form.select_parent') + $t('menu_management.parent_menu')"
+              :props="{ label: 'label', value: 'value', children: 'children' }"
+              clearable
+              check-strictly
+              :render-after-expand="false"
+              :disabled="loading"
+              style="width: 100%"
+            />
+          </template>
+
+          <!-- 图标选择器插槽 -->
+          <template v-if="f.prop === 'icon'">
+            <div class="icon-picker">
               <el-input
-                v-model="iconSearch"
-                :placeholder="$t('menu_management.icon_search')"
-                size="small"
+                v-model="formData.icon"
+                :placeholder="$t('menu_management.icon_placeholder')"
                 clearable
-              />
-              <div class="icon-grid">
-                <el-tooltip
-                  v-for="icon in filteredIcons"
-                  :key="icon"
-                  :content="icon"
-                  placement="top"
-                >
-                  <el-button circle @click="selectIcon(icon)">
-                    <el-icon><component :is="iconComponents[icon]" /></el-icon>
-                  </el-button>
-                </el-tooltip>
-              </div>
+                :disabled="loading"
+                @clear="clearIcon"
+              >
+                <template #prefix>
+                  <el-icon v-if="getIconComponent(formData.icon)" class="selected-icon">
+                    <component :is="getIconComponent(formData.icon)" />
+                  </el-icon>
+                </template>
+              </el-input>
+              <el-popover
+                placement="bottom"
+                trigger="click"
+                width="420"
+                v-model:visible="iconPickerVisible"
+                popper-class="icon-picker-popover"
+              >
+                <div class="icon-picker-content">
+                  <el-input
+                    v-model="iconSearch"
+                    :placeholder="$t('menu_management.icon_search')"
+                    size="small"
+                    clearable
+                  />
+                  <div class="icon-grid">
+                    <el-tooltip
+                      v-for="icon in filteredIcons"
+                      :key="icon"
+                      :content="icon"
+                      placement="top"
+                    >
+                      <el-button circle @click="selectIcon(icon)">
+                        <el-icon><component :is="iconComponents[icon]" /></el-icon>
+                      </el-button>
+                    </el-tooltip>
+                  </div>
+                </div>
+                <template #reference>
+                  <el-button link type="primary">{{ $t('menu_management.select_icon') }}</el-button>
+                </template>
+              </el-popover>
             </div>
-            <template #reference>
-              <el-button link type="primary">{{ $t('menu_management.select_icon') }}</el-button>
-            </template>
-          </el-popover>
-        </div>
-      </el-form-item>
-      <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status" :disabled="loading">
-          <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-          <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('menu_management.is_hidden')">
-        <el-radio-group v-model="formData.is_hidden" :disabled="loading">
-          <el-radio :label="0">{{ $t('menu_management.is_hidden_show') }}</el-radio>
-          <el-radio :label="1">{{ $t('menu_management.is_hidden_hide') }}</el-radio>
-        </el-radio-group>
-        <!-- <div class="form-item-tip">{{ $t('menu_management.is_hidden_tip') }}</div> -->
-      </el-form-item>
-      <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
-      </el-form-item>
-    </el-form>
+          </template>
+
+          <!-- 组件路径字段的提示文字插槽 -->
+          <template v-if="f.prop === 'component'">
+            <el-input 
+              v-model="formData.component" 
+              :placeholder="$t('menu_management.component_placeholder')"
+              :disabled="loading"
+            />
+            <div class="form-item-tip">{{ $t('menu_management.component_tip') }}</div>
+          </template>
+        </FormField>
+      </el-form>
     </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
@@ -165,6 +108,9 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+// 引入配置式表单组件
+import FormField from '../../components/Form/FormField.vue'
+
 import {
   getMenuDetail,
   createMenu,
@@ -193,11 +139,13 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
+// 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
+// 对话框标题
 const dialogTitle = computed(() => formData.id ? t('menu_management.edit_menu') : t('menu_management.add_menu'))
 
 // 树形选择数据，包含顶级菜单选项
@@ -208,6 +156,7 @@ const treeSelectData = computed(() => {
   ]
 })
 
+// 表单数据
 const formData = reactive({
   id: null,
   parent_id: 0,
@@ -224,6 +173,7 @@ const formData = reactive({
   open_type: 1 // 1: iframe嵌套, 2: 新窗口打开
 })
 
+// 图标选择相关逻辑
 const iconComponents = ElementPlusIconsVue
 const iconPickerVisible = ref(false)
 const iconSearch = ref('')
@@ -289,6 +239,7 @@ const validateUrl = (rule, value, callback) => {
   }
 }
 
+// 表单验证规则
 const formRules = computed(() => ({
   name: [{ required: true, message: t('menu_management.name_required'), trigger: 'blur' }],
   slug: [{ required: true, message: t('menu_management.slug_required'), trigger: 'blur' }],
@@ -297,6 +248,121 @@ const formRules = computed(() => ({
     { validator: validateUrl, trigger: ['blur', 'change'] }
   ]
 }))
+
+// 配置式表单字段（
+const formFields = computed(() => {
+  const fields = [
+    {
+      prop: 'parent_id',
+      label: t('menu_management.parent_menu'),
+      type: 'custom', // 自定义树形选择
+      disabled: loading.value,
+      noValidate: true
+    },
+    {
+      prop: 'type',
+      label: t('table.type'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('menu.type_directory'), value: 1 },
+        { label: t('menu.type_menu'), value: 2 },
+        { label: t('menu.type_button'), value: 3 }
+      ]
+    },
+    {
+      prop: 'name',
+      label: t('menu_management.name'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'slug',
+      label: t('menu_management.slug'),
+      type: 'input',
+      disabled: loading.value,
+      placeholder: t('menu_management.slug_placeholder')
+    },
+    {
+      prop: 'link_type',
+      label: t('menu_management.link_type'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('menu_management.link_type_internal'), value: 1 },
+        { label: t('menu_management.link_type_external'), value: 2 }
+      ]
+    },
+    {
+      prop: 'path',
+      label: t('menu_management.path'),
+      type: 'input',
+      disabled: loading.value,
+      // 修复：使用函数替代 computed
+      placeholder: () => formData.link_type === 1 
+        ? t('menu_management.path_placeholder_internal') 
+        : t('menu_management.path_placeholder_external')
+    },
+    {
+      prop: 'component',
+      label: t('menu_management.component'),
+      type: 'custom', // 自定义带提示文字的输入框
+      disabled: loading.value,
+      noValidate: true,
+      // 仅内部链接时显示
+      visible: () => formData.link_type === 1
+    },
+    {
+      prop: 'open_type',
+      label: t('menu_management.open_type'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('menu_management.open_type_iframe'), value: 1 },
+        { label: t('menu_management.open_type_new_window'), value: 2 }
+      ],
+      // 仅外部链接时显示
+      visible: () => formData.link_type === 2
+    },
+    {
+      prop: 'icon',
+      label: t('menu_management.icon'),
+      type: 'custom', // 自定义图标选择器
+      disabled: loading.value,
+      noValidate: true
+    },
+    {
+      prop: 'status',
+      label: t('table.status'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('common.enabled'), value: 1 },
+        { label: t('common.disabled'), value: 0 }
+      ]
+    },
+    {
+      prop: 'is_hidden',
+      label: t('menu_management.is_hidden'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('menu_management.is_hidden_show'), value: 0 },
+        { label: t('menu_management.is_hidden_hide'), value: 1 }
+      ],
+      noValidate: true
+    },
+    {
+      prop: 'sort',
+      label: t('common.sort'),
+      type: 'number', // 兼容 input-number
+      disabled: loading.value,
+      min: 0,
+      noValidate: true
+    }
+  ]
+  return fields
+})
 
 // 监听 link_type 变化，重新验证 path
 watch(() => formData.link_type, () => {
@@ -311,11 +377,9 @@ watch(dialogVisible, (visible) => {
     if (props.editId) {
       loadDetail(props.editId)
     } else {
-      // 新增模式，重置表单
       resetForm()
     }
   } else {
-    // 对话框关闭时，重置表单
     resetForm()
   }
 })
@@ -326,12 +390,12 @@ watch(() => props.editId, async (newId) => {
     if (newId) {
       await loadDetail(newId)
     } else {
-      // 新增模式，重置表单
       resetForm()
     }
   }
 })
 
+// 加载菜单详情
 const loadDetail = async (id) => {
   loading.value = true
   try {
@@ -362,6 +426,7 @@ const loadDetail = async (id) => {
   }
 }
 
+// 重置表单（
 const resetForm = () => {
   loading.value = false
   Object.assign(formData, {
@@ -382,6 +447,7 @@ const resetForm = () => {
   formRef.value?.resetFields()
 }
 
+// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
   
@@ -423,11 +489,13 @@ const handleSubmit = async () => {
   })
 }
 
+// 取消按钮
 const handleCancel = () => {
   dialogVisible.value = false
   resetForm()
 }
 
+// 对话框关闭时重置表单
 const handleDialogClose = () => {
   resetForm()
 }
@@ -471,4 +539,3 @@ const handleDialogClose = () => {
   line-height: 1.4;
 }
 </style>
-

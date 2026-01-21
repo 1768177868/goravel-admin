@@ -217,8 +217,24 @@ function getFieldLabel(f) {
   return f?.prop || ''
 }
 
+// function getPlaceholder(f) {
+//   if (f?.placeholder) return f.placeholder
+//   const label = getFieldLabel(f)
+//   const selectLike = ['select', 'radio', 'checkbox', 'checkbox-group', 'cascader', 'tree-select']
+//   if (selectLike.includes(f?.type)) return (t('form.please_select') || '请选择') + label
+//   return (t('form.please_enter') || '请输入') + label
+// }
+
 function getPlaceholder(f) {
+  // 1. 如果是函数，执行并获取返回值
+  if (typeof f?.placeholder === 'function') {
+    return f.placeholder()
+  }
+  
+  // 2. 原有逻辑：字符串类型直接使用
   if (f?.placeholder) return f.placeholder
+  
+  // 3. 自动生成 placeholder 的逻辑
   const label = getFieldLabel(f)
   const selectLike = ['select', 'radio', 'checkbox', 'checkbox-group', 'cascader', 'tree-select']
   if (selectLike.includes(f?.type)) return (t('form.please_select') || '请选择') + label
