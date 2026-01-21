@@ -12,91 +12,71 @@
         :rules="formRules"
         label-width="100px"
       >
-      <el-form-item :label="$t('permission.name')" prop="name">
-        <el-input v-model="formData.name" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('permission.slug')" prop="slug">
-        <el-input v-model="formData.slug" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('permission.method')" prop="method">
-        <el-select v-model="formData.method" :placeholder="$t('form.select_method')" :disabled="loading">
-          <el-option label="GET" value="GET" />
-          <el-option label="POST" value="POST" />
-          <el-option label="PUT" value="PUT" />
-          <el-option label="DELETE" value="DELETE" />
-        </el-select>
-      </el-form-item>
-      <el-form-item :label="$t('permission.path')" prop="path">
-        <el-input v-model="formData.path" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('common.description')">
-        <el-input v-model="formData.description" type="textarea" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('menu.title')" prop="menu_id">
-        <el-popover
-          v-model:visible="menuSelectVisible"
-          placement="bottom-start"
-          :width="300"
-          trigger="click"
-          :popper-options="{
-            modifiers: [
-              {
-                name: 'computeStyles',
-                options: {
-                  gpuAcceleration: false,
-                },
-              },
-              {
-                name: 'flip',
-                options: {
-                  fallbackPlacements: ['top-start', 'bottom-start'],
-                },
-              },
-            ],
-          }"
-          popper-class="menu-select-popover"
+        <!-- 配置式渲染表单字段 -->
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
         >
-          <template #reference>
-            <el-input
-              :model-value="getSelectedMenuLabel()"
-              :placeholder="$t('form.please_select') + $t('menu.title')"
-              readonly
-              clearable
-              :disabled="loading"
-              @clear="formData.menu_id = null"
-              style="cursor: pointer"
+          <!-- 菜单选择的自定义插槽 -->
+          <template v-if="f.prop === 'menu_id'">
+            <el-popover
+              v-model:visible="menuSelectVisible"
+              placement="bottom-start"
+              :width="300"
+              trigger="click"
+              :popper-options="{
+                modifiers: [
+                  {
+                    name: 'computeStyles',
+                    options: {
+                      gpuAcceleration: false,
+                    },
+                  },
+                  {
+                    name: 'flip',
+                    options: {
+                      fallbackPlacements: ['top-start', 'bottom-start'],
+                    },
+                  },
+                ],
+              }"
+              popper-class="menu-select-popover"
             >
-              <template #suffix>
-                <el-icon class="el-input__icon"><ArrowDown /></el-icon>
+              <template #reference>
+                <el-input
+                  :model-value="getSelectedMenuLabel()"
+                  :placeholder="$t('form.please_select') + $t('menu.title')"
+                  readonly
+                  clearable
+                  :disabled="loading"
+                  @clear="formData.menu_id = null"
+                  style="cursor: pointer"
+                >
+                  <template #suffix>
+                    <el-icon class="el-input__icon"><ArrowDown /></el-icon>
+                  </template>
+                </el-input>
               </template>
-            </el-input>
+              <el-tree
+                :data="menuTreeData"
+                :props="{ label: 'label', children: 'children' }"
+                :default-expand-all="false"
+                node-key="value"
+                highlight-current
+                :current-node-key="formData.menu_id"
+                @node-click="handleMenuSelect"
+                class="menu-select-tree"
+              >
+                <template #default="{ node, data }">
+                  <span class="tree-node-label">{{ data.label }}</span>
+                </template>
+              </el-tree>
+            </el-popover>
           </template>
-          <el-tree
-            :data="menuTreeData"
-            :props="{ label: 'label', children: 'children' }"
-            :default-expand-all="false"
-            node-key="value"
-            highlight-current
-            :current-node-key="formData.menu_id"
-            @node-click="handleMenuSelect"
-            class="menu-select-tree"
-          >
-            <template #default="{ node, data }">
-              <span class="tree-node-label">{{ data.label }}</span>
-            </template>
-          </el-tree>
-        </el-popover>
-      </el-form-item>
-      <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status" :disabled="loading">
-          <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-          <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
-      </el-form-item>
-    </el-form>
+        </FormField>
+      </el-form>
     </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
@@ -110,6 +90,9 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
+// 引入配置式表单组件
+import FormField from '../../components/Form/FormField.vue'
+
 import {
   getPermissionDetail,
   createPermission,
@@ -139,13 +122,16 @@ const submitting = ref(false)
 const loading = ref(false)
 const menuSelectVisible = ref(false)
 
+// 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
+// 对话框标题
 const dialogTitle = computed(() => formData.id ? t('permission.edit_permission') : t('permission.add_permission'))
 
+// 表单数据
 const formData = reactive({
   id: null,
   name: '',
@@ -158,6 +144,7 @@ const formData = reactive({
   sort: 0
 })
 
+// 表单验证规则
 const formRules = computed(() => ({
   name: [{ required: true, message: t('permission.name_required'), trigger: 'blur' }],
   slug: [{ required: true, message: t('permission.slug_required'), trigger: 'blur' }],
@@ -165,15 +152,85 @@ const formRules = computed(() => ({
   path: [{ required: true, message: t('permission.path_required'), trigger: 'blur' }]
 }))
 
+// 配置式表单字段
+const formFields = computed(() => {
+  const fields = [
+    {
+      prop: 'name',
+      label: t('permission.name'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'slug',
+      label: t('permission.slug'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'method',
+      label: t('permission.method'),
+      type: 'select',
+      placeholder: t('form.select_method'),
+      disabled: loading.value,
+      // 配置select的固定选项
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' }
+      ]
+    },
+    {
+      prop: 'path',
+      label: t('permission.path'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'description',
+      label: t('common.description'),
+      type: 'textarea',
+      disabled: loading.value,
+      // 非必选字段，无需验证
+      noValidate: true
+    },
+    {
+      prop: 'menu_id',
+      label: t('menu.title'),
+      type: 'custom', // 自定义类型（通过插槽渲染）
+      disabled: loading.value,
+      noValidate: false // 需要验证（保留prop在formRules中）
+    },
+    {
+      prop: 'status',
+      label: t('table.status'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('common.enabled'), value: 1 },
+        { label: t('common.disabled'), value: 0 }
+      ]
+    },
+    {
+      prop: 'sort',
+      label: t('common.sort'),
+      type: 'input-number',
+      disabled: loading.value,
+      min: 0, // 最小值限制
+      noValidate: true // 非必选字段
+    }
+  ]
+  return fields
+})
+
 // 获取选中的菜单标签
 const getSelectedMenuLabel = () => {
   if (!formData.menu_id) return ''
   const findMenu = (menus, id) => {
-    // 使用 find 简化查找逻辑
     const found = menus.find(menu => menu.value === id)
     if (found) return found.label
     
-    // 递归查找子菜单
     for (const menu of menus) {
       if (menu.children && menu.children.length > 0) {
         const found = findMenu(menu.children, id)
@@ -191,17 +248,16 @@ const handleMenuSelect = (data) => {
   menuSelectVisible.value = false
 }
 
-// 监听 editId 变化，加载详情
+// 监听editId变化，加载详情（
 watch(() => props.editId, async (newId) => {
   if (newId && dialogVisible.value) {
     await loadDetail(newId)
   } else if (!newId && dialogVisible.value) {
-    // 新增模式，重置表单
     resetForm()
   }
 }, { immediate: true })
 
-// 监听 dialogVisible 变化
+// 监听对话框显隐
 watch(dialogVisible, (visible) => {
   if (visible) {
     if (props.editId) {
@@ -212,6 +268,7 @@ watch(dialogVisible, (visible) => {
   }
 })
 
+// 加载权限详情
 const loadDetail = async (id) => {
   loading.value = true
   try {
@@ -241,6 +298,7 @@ const loadDetail = async (id) => {
   }
 }
 
+// 重置表单
 const resetForm = () => {
   loading.value = false
   formData.id = null
@@ -255,6 +313,7 @@ const resetForm = () => {
   formRef.value?.resetFields()
 }
 
+// 提交表单（保留原有逻辑）
 const handleSubmit = async () => {
   if (!formRef.value) return
   
@@ -285,10 +344,12 @@ const handleSubmit = async () => {
   })
 }
 
+// 取消按钮
 const handleCancel = () => {
   dialogVisible.value = false
 }
 
+// 对话框关闭时重置表单
 const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
@@ -311,4 +372,3 @@ const handleDialogClose = () => {
   overflow-y: auto;
 }
 </style>
-

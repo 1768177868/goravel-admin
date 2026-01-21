@@ -104,9 +104,9 @@
       v-bind="field.props || {}"
     />
 
-    <!-- 数字 -->
+    <!-- 数字输入框：新增支持 input-number 类型（与 number 等价） -->
     <el-input-number
-      v-else-if="field.type === 'number'"
+      v-else-if="field.type === 'number' || field.type === 'input-number'"
       v-model="model[field.prop]"
       :placeholder="getPlaceholder(field)"
       :disabled="field.disabled"
