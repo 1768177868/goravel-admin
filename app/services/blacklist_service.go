@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/dromara/carbon/v2"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
@@ -85,9 +86,11 @@ func (s *BlacklistServiceImpl) GetList(filters BlacklistFilters, page, pageSize 
 func (s *BlacklistServiceImpl) Create(ip, remark string, status uint8) (*models.Blacklist, error) {
 	blacklist := &models.Blacklist{}
 	createData := map[string]any{
-		"ip":     ip,
-		"remark": remark,
-		"status": status,
+		"ip":         ip,
+		"remark":     remark,
+		"status":     status,
+		"created_at": carbon.Now(),
+		"updated_at": carbon.Now(),
 	}
 
 	if err := facades.Orm().Query().Model(blacklist).Create(createData); err != nil {

@@ -12,34 +12,21 @@
         :rules="formRules"
         label-width="120px"
       >
-      <el-form-item :label="$t('blacklist.ip')" prop="ip">
-        <el-input
-          v-model="formData.ip"
-          type="textarea"
-          :rows="4"
-          :placeholder="$t('blacklist.ip_placeholder')"
-          :disabled="loading"
-        />
-        <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-          {{ $t('blacklist.ip_tip') }}
-        </div>
-      </el-form-item>
-      <el-form-item :label="$t('blacklist.remark')" prop="remark">
-        <el-input
-          v-model="formData.remark"
-          type="textarea"
-          :rows="3"
-          :placeholder="$t('blacklist.remark_placeholder')"
-          :disabled="loading"
-        />
-      </el-form-item>
-      <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status" :disabled="loading">
-          <el-radio :label="1">{{ $t('blacklist.enabled') }}</el-radio>
-          <el-radio :label="0">{{ $t('blacklist.disabled') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-    </el-form>
+        <!-- 配置式渲染表单字段，替代硬编码的el-form-item -->
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        >
+          <!-- IP字段的额外提示文字插槽 -->
+          <template v-if="f.prop === 'ip'">
+            <div style="margin-top: 8px; color: #909399; font-size: 12px;">
+              {{ $t('blacklist.ip_tip') }}
+            </div>
+          </template>
+        </FormField>
+      </el-form>
     </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
@@ -52,6 +39,9 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+// 引入配置式表单组件
+import FormField from '../../components/Form/FormField.vue'
+
 import {
   getBlacklistDetail,
   createBlacklist,
@@ -76,13 +66,16 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
+// 对话框显隐状态（双向绑定）
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
+// 对话框标题（新增/编辑区分）
 const dialogTitle = computed(() => formData.id ? t('blacklist.edit_blacklist') : t('blacklist.add_blacklist'))
 
+// 表单数据
 const formData = reactive({
   id: null,
   ip: '',
@@ -90,6 +83,7 @@ const formData = reactive({
   status: 1
 })
 
+// 表单验证规则（保留原有IP验证逻辑）
 const formRules = computed(() => ({
   ip: [
     { required: true, message: t('blacklist.ip_required'), trigger: 'blur' },
@@ -117,17 +111,50 @@ const formRules = computed(() => ({
   ]
 }))
 
-// 监听 editId 变化，加载详情
+// 配置式表单字段（核心改造点：和admin页面统一风格）
+const formFields = computed(() => {
+  const fields = [
+    {
+      prop: 'ip',
+      label: t('blacklist.ip'),
+      type: 'textarea', // 对应原IP的textarea输入框
+      rows: 4, // 行数和原代码一致
+      placeholder: t('blacklist.ip_placeholder'),
+      disabled: loading.value // 加载中禁用
+    },
+    {
+      prop: 'remark',
+      label: t('blacklist.remark'),
+      type: 'textarea', // 备注的textarea
+      rows: 3,
+      placeholder: t('blacklist.remark_placeholder'),
+      disabled: loading.value
+    },
+    {
+      prop: 'status',
+      label: t('table.status'),
+      type: 'radio', // 单选按钮类型
+      disabled: loading.value,
+      // 配置radio的选项（和原代码一致）
+      options: [
+        { label: t('blacklist.enabled'), value: 1 },
+        { label: t('blacklist.disabled'), value: 0 }
+      ]
+    }
+  ]
+  return fields
+})
+
+// 监听editId变化，加载详情
 watch(() => props.editId, async (newId) => {
   if (newId && dialogVisible.value) {
     await loadDetail(newId)
   } else if (!newId && dialogVisible.value) {
-    // 新增模式，重置表单
     resetForm()
   }
 }, { immediate: true })
 
-// 监听 dialogVisible 变化
+// 监听对话框显隐，重置/加载表单
 watch(dialogVisible, (visible) => {
   if (visible) {
     if (props.editId) {
@@ -138,6 +165,7 @@ watch(dialogVisible, (visible) => {
   }
 })
 
+// 加载黑名单详情
 const loadDetail = async (id) => {
   loading.value = true
   try {
@@ -158,6 +186,7 @@ const loadDetail = async (id) => {
   }
 }
 
+// 重置表单
 const resetForm = () => {
   loading.value = false
   Object.assign(formData, {
@@ -169,6 +198,7 @@ const resetForm = () => {
   formRef.value?.resetFields()
 }
 
+// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
   
@@ -199,12 +229,13 @@ const handleSubmit = async () => {
   })
 }
 
+// 取消按钮
 const handleCancel = () => {
   dialogVisible.value = false
 }
 
+// 对话框关闭时重置表单
 const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 </script>
-
