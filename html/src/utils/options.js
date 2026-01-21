@@ -11,6 +11,14 @@ export const getShowHideOptions = (t) => {
   ]
 }
 
+
+export const getEnableDisableOptions = (t) => {
+  return [
+    { label: t('common.enabled'), value: 1 },
+    { label: t('common.disabled'), value: 0 }
+  ]
+}
+
 /**
  * @param {Function} t - vue-i18n 翻译函数
  * @returns {Array}
@@ -27,5 +35,14 @@ export const getMenuLinkTypeOptions = (t) => {
   return [
     { label: t('menu_management.link_type_internal'), value: 1 },
     { label: t('menu_management.link_type_external'), value: 2 }
+  ]
+}
+
+export const getMethodOptions = (t) => {
+  return [
+    { label: 'GET', value: 'GET' },
+    { label: 'POST', value: 'POST' },
+    { label: 'PUT', value: 'PUT' },
+    { label: 'DELETE', value: 'DELETE' }
   ]
 }

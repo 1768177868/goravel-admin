@@ -1,31 +1,12 @@
 <template>
-  <el-dialog
-    v-model="dialogVisible"
-    :title="dialogTitle"
-    width="600px"
-    @close="handleDialogClose"
-  >
+  <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="handleDialogClose">
     <div v-loading="loading">
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="100px"
-      >
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
         <!-- 配置式渲染表单字段 -->
-        <FormField
-          v-for="f in formFields"
-          :key="f.prop"
-          :field="f"
-          :model="formData"
-        >
+        <FormField v-for="f in formFields" :key="f.prop" :field="f" :model="formData">
           <!-- 菜单选择的自定义插槽 -->
           <template v-if="f.prop === 'menu_id'">
-            <el-popover
-              v-model:visible="menuSelectVisible"
-              placement="bottom-start"
-              :width="300"
-              trigger="click"
+            <el-popover v-model:visible="menuSelectVisible" placement="bottom-start" :width="300" trigger="click"
               :popper-options="{
                 modifiers: [
                   {
@@ -41,34 +22,21 @@
                     },
                   },
                 ],
-              }"
-              popper-class="menu-select-popover"
-            >
+              }" popper-class="menu-select-popover">
               <template #reference>
-                <el-input
-                  :model-value="getSelectedMenuLabel()"
-                  :placeholder="$t('form.please_select') + $t('menu.title')"
-                  readonly
-                  clearable
-                  :disabled="loading"
-                  @clear="formData.menu_id = null"
-                  style="cursor: pointer"
-                >
+                <el-input :model-value="getSelectedMenuLabel()"
+                  :placeholder="$t('form.please_select') + $t('menu.title')" readonly clearable :disabled="loading"
+                  @clear="formData.menu_id = null" style="cursor: pointer">
                   <template #suffix>
-                    <el-icon class="el-input__icon"><ArrowDown /></el-icon>
+                    <el-icon class="el-input__icon">
+                      <ArrowDown />
+                    </el-icon>
                   </template>
                 </el-input>
               </template>
-              <el-tree
-                :data="menuTreeData"
-                :props="{ label: 'label', children: 'children' }"
-                :default-expand-all="false"
-                node-key="value"
-                highlight-current
-                :current-node-key="formData.menu_id"
-                @node-click="handleMenuSelect"
-                class="menu-select-tree"
-              >
+              <el-tree :data="menuTreeData" :props="{ label: 'label', children: 'children' }"
+                :default-expand-all="false" node-key="value" highlight-current :current-node-key="formData.menu_id"
+                @node-click="handleMenuSelect" class="menu-select-tree">
                 <template #default="{ node, data }">
                   <span class="tree-node-label">{{ data.label }}</span>
                 </template>
@@ -92,6 +60,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 // 引入配置式表单组件
 import FormField from '../../components/Form/FormField.vue'
+import { getEnableDisableOptions, getMethodOptions } from '@/utils/options'
 
 import {
   getPermissionDetail,
@@ -174,12 +143,7 @@ const formFields = computed(() => {
       placeholder: t('form.select_method'),
       disabled: loading.value,
       // 配置select的固定选项
-      options: [
-        { label: 'GET', value: 'GET' },
-        { label: 'POST', value: 'POST' },
-        { label: 'PUT', value: 'PUT' },
-        { label: 'DELETE', value: 'DELETE' }
-      ]
+      options: getMethodOptions(t),
     },
     {
       prop: 'path',
@@ -207,10 +171,7 @@ const formFields = computed(() => {
       label: t('table.status'),
       type: 'radio',
       disabled: loading.value,
-      options: [
-        { label: t('common.enabled'), value: 1 },
-        { label: t('common.disabled'), value: 0 }
-      ]
+      options: getEnableDisableOptions(t),
     },
     {
       prop: 'sort',
@@ -230,7 +191,7 @@ const getSelectedMenuLabel = () => {
   const findMenu = (menus, id) => {
     const found = menus.find(menu => menu.value === id)
     if (found) return found.label
-    
+
     for (const menu of menus) {
       if (menu.children && menu.children.length > 0) {
         const found = findMenu(menu.children, id)
@@ -273,10 +234,10 @@ const loadDetail = async (id) => {
   loading.value = true
   try {
     const res = await getPermissionDetail(id)
-    
+
     if (res.data && res.data.permission) {
       const permission = res.data.permission
-      
+
       const mappedData = {
         id: permission.id || permission.ID,
         name: permission.Name || permission.name || '',
@@ -288,7 +249,7 @@ const loadDetail = async (id) => {
         status: permission.Status !== undefined ? permission.Status : (permission.status !== undefined ? permission.status : 1),
         sort: permission.Sort !== undefined ? permission.Sort : (permission.sort !== undefined ? permission.sort : 0)
       }
-      
+
       Object.assign(formData, mappedData)
     }
   } catch (error) {
@@ -316,7 +277,7 @@ const resetForm = () => {
 // 提交表单（保留原有逻辑）
 const handleSubmit = async () => {
   if (!formRef.value) return
-  
+
   await formRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true

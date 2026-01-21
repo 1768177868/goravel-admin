@@ -34,6 +34,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 // 引入配置式表单组件
 import FormField from '../../components/Form/FormField.vue'
+import { getEnableDisableOptions } from '@/utils/options'
 
 import {
   getDictionaryDetail,
@@ -120,10 +121,7 @@ const formFields = computed(() => {
       type: 'radio',
       disabled: loading.value,
       // 配置radio选项
-      options: [
-        { label: t('common.enabled'), value: 1 },
-        { label: t('common.disabled'), value: 0 }
-      ]
+      options: getEnableDisableOptions(t),
     },
     {
       prop: 'sort',

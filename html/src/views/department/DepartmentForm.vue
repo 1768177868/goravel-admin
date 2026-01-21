@@ -32,6 +32,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
+import { getEnableDisableOptions } from '@/utils/options'
 import {
   getDepartmentDetail,
   createDepartment,
@@ -90,10 +91,7 @@ const formFields = computed(() => [
     prop: 'status',
     label: t('table.status'),
     type: 'radio',
-    options: [
-      { label: t('common.enabled'), value: 1 },
-      { label: t('common.disabled'), value: 0 }
-    ],
+    options: getEnableDisableOptions(t),
     disabled: loading.value
   },
   { prop: 'sort', label: t('common.sort'), type: 'number', min: 0, disabled: loading.value }
