@@ -89,6 +89,13 @@ const formRules = computed(() => ({
 const formFields = computed(() => {
   const fields = [
     { prop: 'username', label: t('table.username'), type: 'input', disabled: !!formData.id || loading.value },
+    {
+      prop: 'password',
+      label: t('common.password'),
+      type: 'password',
+      disabled: loading.value,
+      visible: () => !formData.id   // 只在新增时显示
+    },
     { prop: 'nickname', label: t('table.nickname'), type: 'input', disabled: loading.value },
     { prop: 'email', label: t('table.email'), type: 'input', disabled: loading.value },
     { prop: 'phone', label: t('table.phone'), type: 'input', disabled: loading.value },
@@ -99,7 +106,8 @@ const formFields = computed(() => {
       apiUrl: '/options?type=department',
       treeProps: { label: 'name', children: 'children' },
       clearable: true,
-      disabled: isDefaultAdmin.value || loading.value
+      disabled: isDefaultAdmin.value || loading.value,
+      // visible: () => formData.status === 0   // 启用时不显示
     },
     {
       prop: 'role_ids',
@@ -121,9 +129,7 @@ const formFields = computed(() => {
       disabled: isDefaultAdmin.value || loading.value
     }
   ]
-  if (!formData.id) {
-    fields.splice(1, 0, { prop: 'password', label: t('common.password'), type: 'password', disabled: loading.value })
-  }
+
   return fields
 })
 
