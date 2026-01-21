@@ -314,6 +314,9 @@
     "trace_test_warning": "追踪测试警告",
     "trace_test_error": "追踪测试错误",
     "enabled": "启用",
-    "disabled": "禁用"
+    "disabled": "禁用",
+    "directory": "目录",
+    "menu": "菜单",
+    "button": "按钮"
   }
 }

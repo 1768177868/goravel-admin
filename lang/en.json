@@ -311,6 +311,9 @@
     "trace_test_warning": "Trace test warning",
     "trace_test_error": "Trace test error",
     "enabled": "Enabled",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "directory": "Directory",
+    "menu": "Menu",
+    "button": "Button"
   }
 }

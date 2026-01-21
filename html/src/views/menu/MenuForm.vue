@@ -61,7 +61,7 @@ import { ElMessage } from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 // 引入配置式表单组件
 import FormField from '../../components/Form/FormField.vue'
-
+import { normalizeFormData } from '../../utils/normalizeFormData'
 import {
   getMenuDetail,
   createMenu,
@@ -111,13 +111,13 @@ const treeSelectData = computed(() => {
 const formData = reactive({
   id: null,
   parent_id: 0,
-  type: 2, // 默认为菜单
+  type: "2", // 默认为菜单
   name: '',
   slug: '',
   path: '',
   component: '',
   icon: '',
-  status: 1,
+  status: "1",
   sort: 0,
   is_hidden: 0, // 0: 显示, 1: 隐藏
   link_type: 1, // 1: 内部页面, 2: 外部链接
@@ -215,11 +215,12 @@ const formFields = computed(() => {
       label: t('table.type'),
       type: 'radio',
       disabled: loading.value,
-      options: [
-        { label: t('menu.type_directory'), value: 1 },
-        { label: t('menu.type_menu'), value: 2 },
-        { label: t('menu.type_button'), value: 3 }
-      ]
+      apiUrl: '/options/?type=dictionary&dictionary_type=menu_type',
+      // options: [
+      //   { label: t('menu.type_directory'), value: 1 },
+      //   { label: t('menu.type_menu'), value: 2 },
+      //   { label: t('menu.type_button'), value: 3 }
+      // ]
     },
     {
       prop: 'name',
@@ -290,11 +291,12 @@ const formFields = computed(() => {
       prop: 'status',
       label: t('table.status'),
       type: 'radio',
+      apiUrl: '/options?type=dictionary&dictionary_type=status',
       disabled: loading.value,
-      options: [
-        { label: t('common.enabled'), value: 1 },
-        { label: t('common.disabled'), value: 0 }
-      ]
+      // options: [
+      //   { label: t('common.enabled'), value: 1 },
+      //   { label: t('common.disabled'), value: 0 }
+      // ]
     },
     {
       prop: 'is_hidden',
@@ -358,21 +360,26 @@ const loadDetail = async (id) => {
     if (res.data && res.data.menu) {
       const menu = res.data.menu
       // 后端返回的是 PascalCase 字段，需要正确映射
-      Object.assign(formData, {
+      const normalized = normalizeFormData({
         id: menu.id,
-        parent_id: menu.ParentID !== undefined ? menu.ParentID : (menu.parent_id || 0),
-        type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 2),
-        name: menu.Title || menu.name || '',
-        slug: menu.Slug || menu.slug || '',
-        path: menu.Path || menu.path || '',
-        component: menu.Component || menu.component || '',
-        icon: menu.Icon || menu.icon || '',
-        status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
-        sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
-        is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),
-        link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
-        open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1)
+        parent_id: menu.ParentID ?? menu.parent_id ?? 0,
+        type: menu.Type ?? menu.type ?? 2,
+        name: menu.Title ?? menu.name ?? '',
+        slug: menu.Slug ?? menu.slug ?? '',
+        path: menu.Path ?? menu.path ?? '',
+        component: menu.Component ?? menu.component ?? '',
+        icon: menu.Icon ?? menu.icon ?? '',
+        status: menu.Status ?? menu.status ?? 1,
+        sort: menu.Sort ?? menu.sort ?? 0,
+        is_hidden: menu.IsHidden ?? menu.is_hidden ?? 0,
+        link_type: menu.LinkType ?? menu.link_type ?? 1,
+        open_type: menu.OpenType ?? menu.open_type ?? 1
+      }, {
+        status: 'string',
+        type: 'string',
       })
+
+      Object.assign(formData, normalized)
     }
   } catch (error) {
     console.error('Load menu detail error:', error)
@@ -381,19 +388,19 @@ const loadDetail = async (id) => {
   }
 }
 
-// 重置表单（
+// 重置表单
 const resetForm = () => {
   loading.value = false
   Object.assign(formData, {
     id: null,
     parent_id: 0,
-    type: 2,
+    type: "2",
     name: '',
     slug: '',
     path: '',
     component: '',
     icon: '',
-    status: 1,
+    status: "1",
     sort: 0,
     is_hidden: 0,
     link_type: 1,

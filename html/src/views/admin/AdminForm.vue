@@ -75,7 +75,7 @@ const formData = reactive({
   phone: '',
   department_id: null,
   role_ids: [],
-  status: 1,
+  status: "1",
   is_super_admin: false
 })
 

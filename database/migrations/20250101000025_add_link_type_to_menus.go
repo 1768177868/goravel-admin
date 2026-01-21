@@ -42,4 +42,3 @@ func (r *M20250101000025AddLinkTypeToMenus) Down() error {
 
 	return nil
 }
-
