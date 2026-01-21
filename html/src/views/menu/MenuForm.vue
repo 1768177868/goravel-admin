@@ -62,6 +62,8 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 // 引入配置式表单组件
 import FormField from '../../components/Form/FormField.vue'
 import { normalizeFormData } from '../../utils/normalizeFormData'
+import { getShowHideOptions, getOpenTypeOptions, getMenuLinkTypeOptions } from '@/utils/options'
+
 import {
   getMenuDetail,
   createMenu,
@@ -240,10 +242,7 @@ const formFields = computed(() => {
       label: t('menu_management.link_type'),
       type: 'radio',
       disabled: loading.value,
-      options: [
-        { label: t('menu_management.link_type_internal'), value: 1 },
-        { label: t('menu_management.link_type_external'), value: 2 }
-      ]
+      options: getMenuLinkTypeOptions(t),
     },
     {
       prop: 'path',
@@ -269,10 +268,7 @@ const formFields = computed(() => {
       label: t('menu_management.open_type'),
       type: 'radio',
       disabled: loading.value,
-      options: [
-        { label: t('menu_management.open_type_iframe'), value: 1 },
-        { label: t('menu_management.open_type_new_window'), value: 2 }
-      ],
+      options: getOpenTypeOptions(t),
       // 仅外部链接时显示
       visible: () => formData.link_type === 2
     },
@@ -303,10 +299,7 @@ const formFields = computed(() => {
       label: t('menu_management.is_hidden'),
       type: 'radio',
       disabled: loading.value,
-      options: [
-        { label: t('menu_management.is_hidden_show'), value: 0 },
-        { label: t('menu_management.is_hidden_hide'), value: 1 }
-      ],
+      options:getShowHideOptions(t),
       noValidate: true
     },
     {
