@@ -122,10 +122,11 @@ const formFields = computed(() => {
       prop: 'status',
       label: t('table.status'),
       type: 'radio',
-      options: [
-        { label: t('common.enabled'), value: 1 },
-        { label: t('common.disabled'), value: 0 }
-      ],
+      apiUrl: '/options?type=dictionary&dictionary_type=status',
+      // options: [
+      //   { label: t('common.enabled'), value: 1 },
+      //   { label: t('common.disabled'), value: 0 }
+      // ],
       disabled: isDefaultAdmin.value || loading.value
     }
   ]
@@ -164,7 +165,7 @@ const resetForm = () => {
     phone: '',
     department_id: null,
     role_ids: [],
-    status: 1,
+    status: '1', // 默认启用（注意是 string）
     is_super_admin: false
   })
   formRef.value?.resetFields()
@@ -178,6 +179,7 @@ const setFormData = async (data) => {
     const normalized = normalizeFormData(data, {
       role_ids: 'string-array',      // 多选角色
       department_id: 'string',       // 单选部门（tree-select）
+      status: 'string',             // 单选状态
     })
 
     Object.assign(formData, normalized)
