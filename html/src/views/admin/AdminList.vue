@@ -61,7 +61,7 @@
             <el-tag
               v-for="role in getUniqueRoles(row.Roles || row.roles)"
               :key="role.id || role.ID"
-              style="margin-right: 5px;"
+              style="margin-right: 5px;margin-bottom:2px"
             >
               {{ role.Name || role.name }}
             </el-tag>
