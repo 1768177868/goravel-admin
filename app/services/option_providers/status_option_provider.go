@@ -22,4 +22,3 @@ func (p *StatusOptionProvider) GetOptions(ctx http.Context) (map[string]any, err
 		"options": options,
 	}, nil
 }
-

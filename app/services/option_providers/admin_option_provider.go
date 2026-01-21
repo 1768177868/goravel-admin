@@ -39,7 +39,8 @@ func (p *AdminOptionProvider) GetOptions(ctx http.Context) (map[string]any, erro
 		}
 		return map[string]any{
 			"label": label,
-			"value": cast.ToString(admin.ID),
+			"value": admin.ID,
+			// "value": cast.ToString(admin.ID),
 		}
 	})
 

@@ -1,10 +1,9 @@
 package option_providers
 
 import (
-	"github.com/samber/lo"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/spf13/cast"
+	"github.com/samber/lo"
 
 	"goravel/app/models"
 )
@@ -24,7 +23,8 @@ func (p *RoleOptionProvider) GetOptions(ctx http.Context) (map[string]any, error
 	options := lo.Map(roles, func(role models.Role, _ int) map[string]any {
 		return map[string]any{
 			"label": role.Name,
-			"value": cast.ToString(role.ID),
+			// "value": cast.ToString(role.ID),
+			"value": role.ID,
 		}
 	})
 
@@ -32,4 +32,3 @@ func (p *RoleOptionProvider) GetOptions(ctx http.Context) (map[string]any, error
 		"options": options,
 	}, nil
 }
-

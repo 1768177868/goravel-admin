@@ -177,8 +177,8 @@ const setFormData = async (data) => {
     await new Promise(resolve => setTimeout(resolve, 50))
 
     const normalized = normalizeFormData(data, {
-      role_ids: 'string-array',      // 多选角色
-      department_id: 'string',       // 单选部门（tree-select）
+      // role_ids: 'string-array',      // 多选角色
+      // department_id: 'string',       // 单选部门（tree-select）
       status: 'string',             // 单选状态
     })
 

@@ -14,12 +14,11 @@ func NewYesNoOptionProvider() *YesNoOptionProvider {
 
 func (p *YesNoOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {
 	options := []map[string]any{
-		{"label": trans.Get(ctx, "common.yes"), "value": "1"},
-		{"label": trans.Get(ctx, "common.no"), "value": "0"},
+		{"label": trans.Get(ctx, "common.yes"), "value": 1},
+		{"label": trans.Get(ctx, "common.no"), "value": 0},
 	}
 
 	return map[string]any{
 		"options": options,
 	}, nil
 }
-
