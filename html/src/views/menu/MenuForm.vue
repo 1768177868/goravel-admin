@@ -34,56 +34,7 @@
             />
           </template>
 
-          <!-- 图标选择器插槽 -->
-          <template v-if="f.prop === 'icon'">
-            <div class="icon-picker">
-              <el-input
-                v-model="formData.icon"
-                :placeholder="$t('menu_management.icon_placeholder')"
-                clearable
-                :disabled="loading"
-                @clear="clearIcon"
-              >
-                <template #prefix>
-                  <el-icon v-if="getIconComponent(formData.icon)" class="selected-icon">
-                    <component :is="getIconComponent(formData.icon)" />
-                  </el-icon>
-                </template>
-              </el-input>
-              <el-popover
-                placement="bottom"
-                trigger="click"
-                width="420"
-                v-model:visible="iconPickerVisible"
-                popper-class="icon-picker-popover"
-              >
-                <div class="icon-picker-content">
-                  <el-input
-                    v-model="iconSearch"
-                    :placeholder="$t('menu_management.icon_search')"
-                    size="small"
-                    clearable
-                  />
-                  <div class="icon-grid">
-                    <el-tooltip
-                      v-for="icon in filteredIcons"
-                      :key="icon"
-                      :content="icon"
-                      placement="top"
-                    >
-                      <el-button circle @click="selectIcon(icon)">
-                        <el-icon><component :is="iconComponents[icon]" /></el-icon>
-                      </el-button>
-                    </el-tooltip>
-                  </div>
-                </div>
-                <template #reference>
-                  <el-button link type="primary">{{ $t('menu_management.select_icon') }}</el-button>
-                </template>
-              </el-popover>
-            </div>
-          </template>
-
+         
           <!-- 组件路径字段的提示文字插槽 -->
           <template v-if="f.prop === 'component'">
             <el-input 
@@ -327,9 +278,13 @@ const formFields = computed(() => {
     {
       prop: 'icon',
       label: t('menu_management.icon'),
-      type: 'custom', // 自定义图标选择器
+      type: 'icon', // 原生支持的 icon 类型
       disabled: loading.value,
-      noValidate: true
+      noValidate: true,
+      // 可选自定义配置
+      placeholder: t('menu_management.icon_placeholder'),
+      iconSearchPlaceholder: t('menu_management.icon_search'),
+      selectText: t('menu_management.select_icon')
     },
     {
       prop: 'status',

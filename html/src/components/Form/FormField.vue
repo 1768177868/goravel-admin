@@ -166,6 +166,55 @@
       v-bind="field.props || {}"
     />
 
+     <!-- 新增：图标选择器 -->
+     <div v-else-if="field.type === 'icon'" class="icon-picker">
+      <el-input
+        v-model="model[field.prop]"
+        :placeholder="getPlaceholder(field)"
+        :clearable="field.clearable !== false"
+        :disabled="field.disabled"
+        @clear="clearIcon(model, field.prop)"
+        v-bind="field.props || {}"
+      >
+        <template #prefix>
+          <el-icon v-if="getIconComponent(model[field.prop])" class="selected-icon">
+            <component :is="getIconComponent(model[field.prop])" />
+          </el-icon>
+        </template>
+      </el-input>
+      <el-popover
+        placement="bottom"
+        trigger="click"
+        width="420"
+        v-model:visible="iconPickerVisible"
+        popper-class="icon-picker-popover"
+      >
+        <div class="icon-picker-content">
+          <el-input
+            v-model="iconSearch"
+            :placeholder="field.iconSearchPlaceholder || '搜索图标'"
+            size="small"
+            clearable
+          />
+          <div class="icon-grid">
+            <el-tooltip
+              v-for="icon in filteredIcons"
+              :key="icon"
+              :content="icon"
+              placement="top"
+            >
+              <el-button circle @click="selectIcon(icon, model, field.prop)">
+                <el-icon><component :is="iconComponents[icon]" /></el-icon>
+              </el-button>
+            </el-tooltip>
+          </div>
+        </div>
+        <template #reference>
+          <el-button link type="primary">{{ field.selectText || '选择图标' }}</el-button>
+        </template>
+      </el-popover>
+    </div>
+
     <!-- 默认插槽：自定义表单项（如富文本、上传、图标选择等） -->
     <slot v-else />
   </el-form-item>
@@ -186,6 +235,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
 import { useFieldOptions } from '../SearchForm/useFieldOptions'
+import { useIconPicker } from '../SearchForm/useIconPicker'
 
 const props = defineProps({
   field: {
@@ -204,6 +254,18 @@ const props = defineProps({
 
 const { t } = useI18n()
 const { loadFieldOptions, getFieldOptions } = useFieldOptions()
+
+// 复用图标选择器逻辑
+const {
+  iconComponents,
+  iconPickerVisible,
+  iconSearch,
+  normalizeIconName,
+  getIconComponent,
+  filteredIcons,
+  selectIcon,
+  clearIcon
+} = useIconPicker()
 
 function getFieldLabel(f) {
   if (f?.label) {
@@ -279,3 +341,43 @@ function ensureOptionsLoaded() {
 onMounted(ensureOptionsLoaded)
 watch(() => [props.field?.apiUrl, props.field?.type], ensureOptionsLoaded)
 </script>
+
+<style scoped>
+  /* 图标选择器样式 */
+  .icon-picker {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .icon-picker-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  
+  .icon-grid .el-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+  
+  .selected-icon {
+    margin-right: 6px;
+  }
+  
+  .form-item-tip {
+    font-size: 12px;
+    color: #909399;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  </style>
