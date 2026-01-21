@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/dromara/carbon/v2"
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 
@@ -141,8 +142,10 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 		"currency_id":   user.CurrencyID,
 		"status":        user.Status,
 		"last_login_at": user.LastLoginAt,
+		"created_at":    carbon.Now(),
+		"updated_at":    carbon.Now(),
 	}
-	if err := facades.Orm().Query().Table("users").Create(userData); err != nil {
+	if err := facades.Orm().Query().Model(&models.User{}).Create(userData); err != nil {
 		return err
 	}
 	// 将创建后的 ID 赋值回 user 对象（GORM 会将生成的 ID 填充到 map 中）

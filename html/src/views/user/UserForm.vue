@@ -12,27 +12,13 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item :label="$t('table.username')" prop="username">
-          <el-input v-model="formData.username" :disabled="!!formData.id || loading" />
-        </el-form-item>
-        <el-form-item :label="$t('common.password')" prop="password" v-if="!formData.id">
-          <el-input v-model="formData.password" type="password" :disabled="loading" />
-        </el-form-item>
-        <el-form-item :label="$t('table.nickname')" prop="nickname">
-          <el-input v-model="formData.nickname" :disabled="loading" />
-        </el-form-item>
-        <el-form-item :label="$t('table.email')" prop="email">
-          <el-input v-model="formData.email" :disabled="loading" />
-        </el-form-item>
-        <el-form-item :label="$t('table.phone')" prop="phone">
-          <el-input v-model="formData.phone" :disabled="loading" />
-        </el-form-item>
-        <el-form-item :label="$t('table.status')" prop="status">
-          <el-radio-group v-model="formData.status" :disabled="loading">
-            <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-            <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
+        <!-- 配置式渲染表单字段 -->
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
       </el-form>
     </div>
     <template #footer>
@@ -46,6 +32,9 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+// 引入配置式表单组件
+import FormField from '../../components/Form/FormField.vue'
+
 import { createUser, updateUser, getUserDetail } from '../../api/user'
 import ErrorHandler from '../../utils/errorHandler'
 
@@ -67,15 +56,18 @@ const formRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 
+// 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
 
+// 对话框标题
 const dialogTitle = computed(() => {
   return props.editId ? t('user.edit_user') : t('user.add_user')
 })
 
+// 表单数据
 const formData = reactive({
   id: null,
   username: '',
@@ -86,7 +78,7 @@ const formData = reactive({
   status: 0 // 默认禁用状态
 })
 
-// 动态验证规则：根据是否为编辑模式调整
+// 动态验证规则
 const formRules = computed(() => {
   const rules = {
     email: [
@@ -117,6 +109,58 @@ const formRules = computed(() => {
   return rules
 })
 
+// 配置式表单字段
+const formFields = computed(() => {
+  const fields = [
+    {
+      prop: 'username',
+      label: t('table.username'),
+      type: 'input',
+      // 编辑时禁用，加载中也禁用
+      disabled: !!formData.id || loading.value
+    },
+    {
+      prop: 'password',
+      label: t('common.password'),
+      type: 'password',
+      disabled: loading.value,
+      // 仅新增时显示（和原代码 v-if="!formData.id" 逻辑一致）
+      visible: () => !formData.id
+    },
+    {
+      prop: 'nickname',
+      label: t('table.nickname'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'email',
+      label: t('table.email'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'phone',
+      label: t('table.phone'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'status',
+      label: t('table.status'),
+      type: 'radio',
+      disabled: loading.value,
+      // 配置radio选项（和原代码 el-radio-group 逻辑一致）
+      options: [
+        { label: t('common.enabled'), value: 1 },
+        { label: t('common.disabled'), value: 0 }
+      ]
+    }
+  ]
+  return fields
+})
+
+// 监听editId变化
 watch(() => props.editId, async (newId) => {
   if (newId && dialogVisible.value) {
     await loadData()
@@ -125,6 +169,7 @@ watch(() => props.editId, async (newId) => {
   }
 })
 
+// 监听对话框显隐
 watch(dialogVisible, (val) => {
   if (val && props.editId) {
     loadData()
@@ -133,6 +178,7 @@ watch(dialogVisible, (val) => {
   }
 })
 
+// 加载用户详情
 const loadData = async () => {
   if (!props.editId) {
     resetForm()
@@ -163,6 +209,7 @@ const loadData = async () => {
   }
 }
 
+// 重置表单
 const resetForm = () => {
   Object.assign(formData, {
     id: null,
@@ -176,14 +223,17 @@ const resetForm = () => {
   formRef.value?.resetFields()
 }
 
+// 对话框关闭时重置表单
 const handleDialogClose = () => {
   resetForm()
 }
 
+// 取消按钮
 const handleCancel = () => {
   dialogVisible.value = false
 }
 
+// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
 
@@ -228,4 +278,3 @@ const handleSubmit = async () => {
   })
 }
 </script>
-
