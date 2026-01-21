@@ -12,28 +12,14 @@
         :rules="formRules"
         label-width="100px"
       >
-      <el-form-item :label="$t('dictionary.type')" prop="type">
-        <el-input v-model="formData.type" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('dictionary.label')" prop="label">
-        <el-input v-model="formData.label" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('dictionary.value')" prop="value">
-        <el-input v-model="formData.value" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('dictionary.translation_key')" prop="translation_key">
-        <el-input v-model="formData.translation_key" :disabled="loading" />
-      </el-form-item>
-      <el-form-item :label="$t('table.status')" prop="status">
-        <el-radio-group v-model="formData.status" :disabled="loading">
-          <el-radio :label="1">{{ $t('common.enabled') }}</el-radio>
-          <el-radio :label="0">{{ $t('common.disabled') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('common.sort')">
-        <el-input-number v-model="formData.sort" :min="0" :disabled="loading" />
-      </el-form-item>
-    </el-form>
+        <!-- 配置式渲染表单字段 -->
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
+      </el-form>
     </div>
     <template #footer>
       <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
@@ -46,6 +32,9 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+// 引入配置式表单组件
+import FormField from '../../components/Form/FormField.vue'
+
 import {
   getDictionaryDetail,
   createDictionary,
@@ -70,13 +59,16 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
+// 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
+// 对话框标题
 const dialogTitle = computed(() => formData.id ? t('dictionary.edit_dictionary') : t('dictionary.add_dictionary'))
 
+// 表单数据
 const formData = reactive({
   id: null,
   type: '',
@@ -87,11 +79,63 @@ const formData = reactive({
   sort: 0
 })
 
+// 表单验证规则
 const formRules = computed(() => ({
   type: [{ required: true, message: t('dictionary.type_required'), trigger: 'blur' }],
   label: [{ required: true, message: t('dictionary.label_required'), trigger: 'blur' }],
   value: [{ required: true, message: t('dictionary.value_required'), trigger: 'blur' }]
 }))
+
+// 配置式表单字段
+const formFields = computed(() => {
+  const fields = [
+    {
+      prop: 'type',
+      label: t('dictionary.type'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'label',
+      label: t('dictionary.label'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'value',
+      label: t('dictionary.value'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'translation_key',
+      label: t('dictionary.translation_key'),
+      type: 'input',
+      disabled: loading.value,
+      noValidate: true // 无验证规则，无需校验
+    },
+    {
+      prop: 'status',
+      label: t('table.status'),
+      type: 'radio',
+      disabled: loading.value,
+      // 配置radio选项
+      options: [
+        { label: t('common.enabled'), value: 1 },
+        { label: t('common.disabled'), value: 0 }
+      ]
+    },
+    {
+      prop: 'sort',
+      label: t('common.sort'),
+      type: 'number', // 兼容 input-number，FormField 已支持两种类型
+      disabled: loading.value,
+      min: 0, // 最小值限制，透传给 el-input-number
+      noValidate: true // 原代码无prop，无需校验
+    }
+  ]
+  return fields
+})
 
 // 监听 editId 变化，加载详情
 watch(() => props.editId, async (newId) => {
@@ -114,6 +158,7 @@ watch(dialogVisible, (visible) => {
   }
 })
 
+// 加载字典详情
 const loadDetail = async (id) => {
   loading.value = true
   try {
@@ -138,6 +183,7 @@ const loadDetail = async (id) => {
   }
 }
 
+// 重置表单
 const resetForm = () => {
   loading.value = false
   Object.assign(formData, {
@@ -152,6 +198,7 @@ const resetForm = () => {
   formRef.value?.resetFields()
 }
 
+// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
   
@@ -177,12 +224,13 @@ const handleSubmit = async () => {
   })
 }
 
+// 取消按钮
 const handleCancel = () => {
   dialogVisible.value = false
 }
 
+// 对话框关闭时重置表单（
 const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 </script>
-

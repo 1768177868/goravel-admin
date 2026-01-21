@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/dromara/carbon/v2"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
@@ -119,6 +120,8 @@ func (s *DictionaryServiceImpl) Create(dictType, label, value, translationKey, d
 		"remark":          remark,
 		"status":          status,
 		"sort":            sort,
+		"created_at":      carbon.Now(),
+		"updated_at":      carbon.Now(),
 	}
 
 	if err := facades.Orm().Query().Model(dictionary).Create(createData); err != nil {
