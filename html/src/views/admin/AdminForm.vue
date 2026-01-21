@@ -32,6 +32,8 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
+import { normalizeFormData } from '../../utils/normalizeFormData'
+
 import {
   createAdmin,
   updateAdmin
@@ -167,12 +169,13 @@ const setFormData = async (data) => {
   try {
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    Object.assign(formData, {
-      ...data,
-      role_ids: Array.isArray(data.role_ids)
-        ? data.role_ids.map(String)
-        : []
+    const normalized = normalizeFormData(data, {
+      role_ids: 'string-array',      // 多选角色
+      department_id: 'string',       // 单选部门（tree-select）
     })
+
+    Object.assign(formData, normalized)
+
   } finally {
     loading.value = false
   }
