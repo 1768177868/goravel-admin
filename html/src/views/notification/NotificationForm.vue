@@ -1,42 +1,25 @@
 <template>
-  <el-dialog
-    v-model="dialogVisible"
-    :title="$t('notification.create')"
-    width="800px"
-    @close="handleDialogClose"
-  >
-    <el-form
-      ref="formRef"
-      :model="formData"
-      :rules="formRules"
-      label-width="100px"
-    >
-      <FormField
-        v-for="f in formFields"
+  <el-dialog v-model="dialogVisible" :title="$t('notification.create')" width="800px" @close="handleDialogClose">
+    <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
+      <FormField v-for="f in basicFormFields" :key="f.prop" :field="f" :model="formData" />
+
+      <el-form-item :label="$t('notification.table.content')" prop="content">
+        <WangEditor v-model="formData.content" :placeholder="$t('notification.content_placeholder')" :height="400" />
+      </el-form-item>
+
+      <!-- <FormField
+        v-for="f in titleFormField"
         :key="f.prop"
         :field="f"
         :model="formData"
-      />
-      <el-form-item
-        :label="$t('notification.table.content')"
-        prop="content"
-      >
-        <WangEditor
-          v-model="formData.content"
-          :placeholder="$t('notification.content_placeholder')"
-          :height="400"
-        />
-      </el-form-item>
+      /> -->
+
     </el-form>
     <template #footer>
       <el-button @click="handleCancel">
         {{ $t('common.cancel') }}
       </el-button>
-      <el-button
-        type="primary"
-        :loading="submitting"
-        @click="handleSubmit"
-      >
+      <el-button type="primary" :loading="submitting" @click="handleSubmit">
         {{ $t('common.confirm') }}
       </el-button>
     </template>
@@ -103,7 +86,7 @@ const formRules = computed(() => ({
   ]
 }))
 
-const formFields = computed(() => {
+const basicFormFields = computed(() => {
   void formData.type // 依赖，使 type 切换时 receiver_id 的 visible 能更新
   return [
     {
@@ -136,6 +119,16 @@ const formFields = computed(() => {
   ]
 })
 
+// const titleFormField = computed(() => [
+//   {
+//     prop: 'title',
+//     label: t('notification.table.title'),
+//     type: 'input',
+//     placeholder: t('notification.title_placeholder'),
+//     props: { maxlength: 150, showWordLimit: true }
+//   }
+// ])
+
 // 监听类型变化，如果不是私信则清空接收者
 watch(() => formData.type, (newType) => {
   if (newType !== 'message') {
@@ -167,12 +160,12 @@ const handleSubmit = async () => {
   if (!formRef.value) {
     return
   }
-  
+
   await formRef.value.validate(async (valid) => {
     if (!valid) {
       return false
     }
-    
+
     submitting.value = true
     try {
       const data = {
@@ -180,7 +173,7 @@ const handleSubmit = async () => {
         title: formData.title.trim(),
         content: formData.content
       }
-      
+
       // 如果是私信，必须添加接收者ID
       if (formData.type === 'message') {
         if (!formData.receiver_id) {
@@ -191,12 +184,12 @@ const handleSubmit = async () => {
         data.receiver_id = formData.receiver_id
       }
       // 公告和通知不传receiver_id，后端会发送给所有人
-      
+
       await createNotification(data)
       ElMessage.success(t('notification.create_success'))
       dialogVisible.value = false
       emit('success')
-      
+
       // 刷新未读数量
       await notificationStore.fetchUnread()
     } catch (error) {
