@@ -117,48 +117,10 @@
     </el-card>
 
     <!-- 创建通知对话框 -->
-    <el-dialog
+    <NotificationForm
       v-model="dialogVisible"
-      :title="$t('notification.create')"
-      width="800px"
-      @close="handleDialogClose"
-    >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="100px"
-      >
-        <FormField
-          v-for="f in createFormFields"
-          :key="f.prop"
-          :field="f"
-          :model="formData"
-        />
-        <el-form-item
-          :label="$t('notification.table.content')"
-          prop="content"
-        >
-          <WangEditor
-            v-model="formData.content"
-            :placeholder="$t('notification.content_placeholder')"
-            :height="400"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">
-          {{ $t('common.cancel') }}
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="submitting"
-          @click="handleSubmit"
-        >
-          {{ $t('common.confirm') }}
-        </el-button>
-      </template>
-    </el-dialog>
+      @success="handleFormSuccess"
+    />
 
     <!-- 查看通知详情对话框 -->
     <el-dialog
@@ -185,21 +147,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import dayjs from 'dayjs'
-import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import WangEditor from '../../components/WangEditor.vue'
-import FormField from '../../components/Form/FormField.vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import NotificationForm from './NotificationForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { buildSearchParams } from '../../utils/buildSearchParams'
 import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
-import { fetchNotifications, createNotification } from '../../api/notification'
+import { fetchNotifications } from '../../api/notification'
 import { getApiBaseURL } from '../../utils/env'
 
 const { t } = useI18n()
@@ -248,77 +208,7 @@ const handleView = (row) => {
 }
 
 const tableRef = ref(null)
-const formRef = ref(null)
 const dialogVisible = ref(false)
-const submitting = ref(false)
-
-const formData = reactive({
-  type: 'announcement',
-  receiver_id: '',
-  title: '',
-  content: ''
-})
-
-const formRules = {
-  type: [
-    { required: true, message: t('notification.type_required'), trigger: 'change' }
-  ],
-  receiver_id: [
-    {
-      validator: (rule, value, callback) => {
-        if (formData.type === 'message' && !value) {
-          callback(new Error(t('notification.receiver_required')))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'change'
-    }
-  ],
-  title: [
-    { required: true, message: t('notification.title_required'), trigger: 'blur' },
-    { max: 150, message: t('notification.title_max_length'), trigger: 'blur' }
-  ],
-  content: [
-    { required: true, message: t('notification.content_required'), trigger: 'blur' }
-  ]
-}
-
-const createFormFields = computed(() => {
-  void formData.type // 依赖，使 type 切换时 receiver_id 的 visible 能更新
-  return [
-  {
-    prop: 'type',
-    label: t('notification.table.type'),
-    type: 'radio',
-    options: [
-      { label: t('notification.types.announcement'), value: 'announcement' },
-      { label: t('notification.types.notice'), value: 'notice' },
-      { label: t('notification.types.message'), value: 'message' }
-    ]
-  },
-  {
-    prop: 'receiver_id',
-    label: t('notification.receiver'),
-    type: 'select',
-    apiUrl: '/options?type=admin',
-    placeholder: t('notification.select_receiver'),
-    filterable: true,
-    clearable: true,
-    visible: () => formData.type === 'message'
-  },
-  {
-    prop: 'title',
-    label: t('notification.table.title'),
-    type: 'input',
-    placeholder: t('notification.title_placeholder'),
-    props: { maxlength: 150, showWordLimit: true }
-  }
-  ]
-})
-
-// 字段名映射：前端字段名 -> 数据库字段名（只包含不同的字段）
-const fieldMapping = {} // 所有字段名都相同，无需映射
 
 // 初始搜索表单数据
 const initialSearchForm = {
@@ -508,88 +398,14 @@ const typeLabel = (type) => {
   return t('notification.types.announcement')
 }
 
-// 监听类型变化，如果不是私信则清空接收者
-watch(() => formData.type, (newType) => {
-  if (newType !== 'message') {
-    formData.receiver_id = ''
-    // 清除接收者字段的验证
-    if (formRef.value) {
-      formRef.value.clearValidate('receiver_id')
-    }
-  }
-})
-
 const handleAdd = () => {
   dialogVisible.value = true
-  // 重置表单
-  formData.type = 'announcement'
-  formData.receiver_id = ''
-  formData.title = ''
-  formData.content = ''
-
-  // 清除验证（延迟执行，确保表单已渲染）
-  setTimeout(() => {
-    if (formRef.value) {
-      formRef.value.clearValidate()
-    }
-  }, 100)
 }
 
-const handleDialogClose = () => {
-  if (formRef.value) {
-    formRef.value.resetFields()
-  }
-}
-
-const handleSubmit = async () => {
-  if (!formRef.value) {
-    return
-  }
-  
-  await formRef.value.validate(async (valid) => {
-    if (!valid) {
-      return false
-    }
-    
-    submitting.value = true
-    try {
-      const data = {
-        type: formData.type,
-        title: formData.title.trim(),
-        content: formData.content
-      }
-      
-      // 如果是私信，必须添加接收者ID
-      if (formData.type === 'message') {
-        if (!formData.receiver_id) {
-          ElMessage.error(t('notification.receiver_required'))
-          submitting.value = false
-          return
-        }
-        data.receiver_id = formData.receiver_id
-      }
-      // 公告和通知不传receiver_id，后端会发送给所有人
-      
-      await createNotification(data)
-      ElMessage.success(t('notification.create_success'))
-      dialogVisible.value = false
-      
-      // 重置到第一页并重新加载列表
-      pagination.page = 1
-      await loadData()
-      
-      // 刷新未读数量
-      await notificationStore.fetchUnread()
-    } catch (error) {
-      console.error('Create notification error:', error)
-      if (!error.__handled) {
-        const errorMessage = error.response?.data?.message || error.message || t('error.default')
-        ElMessage.error(errorMessage)
-      }
-    } finally {
-      submitting.value = false
-    }
-  })
+const handleFormSuccess = async () => {
+  // 重置到第一页并重新加载列表
+  pagination.page = 1
+  await loadData()
 }
 
 onMounted(() => {
