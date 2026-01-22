@@ -12,121 +12,110 @@
         :rules="formRules"
         label-width="120px"
       >
-        <el-form-item :label="$t('order.user_id')" prop="user_id">
-          <el-input-number
-            v-model="formData.user_id"
-            :min="1"
-            :disabled="loading"
-       
-          />
-        </el-form-item>
-
-        <el-form-item :label="$t('order.products')" prop="products">
-          <div style="width: 100%">
-            <el-button
-              type="primary"
-              size="small"
-              :disabled="loading"
-              @click="handleAddProduct"
-            >
-              <el-icon><Plus /></el-icon>
-              {{ $t('order.add_product') }}
-            </el-button>
-            
-            <el-table
-              :key="tableKey"
-              :data="formData.products"
-              border
-              style="width: 100%; margin-top: 10px"
-              :max-height="400"
-            >
-              <el-table-column :label="$t('order.product_id')" width="130" align="center">
-                <template #default="{ row, $index }">
-                  <el-input-number
-                    v-model="row.product_id"
-                    :min="1"
-                    :disabled="loading"
-                    :controls="false"
-                    style="width: 100%"
-                    @change="calculateAmount"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('order.product_name')" min-width="200">
-                <template #default="{ row, $index }">
-                  <el-input
-                    v-model="row.product_name"
-                    :disabled="loading"
-                    :placeholder="$t('order.product_name_placeholder')"
-                    clearable
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('order.price')" width="140" align="center">
-                <template #default="{ row, $index }">
-                  <el-input-number
-                    v-model="row.price"
-                    :min="0"
-                    :precision="2"
-                    :disabled="loading"
-                    :controls="false"
-                    style="width: 100%"
-                    @change="calculateAmount"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('order.quantity')" width="120" align="center">
-                <template #default="{ row, $index }">
-                  <el-input-number
-                    v-model="row.quantity"
-                    :min="1"
-                    :disabled="loading"
-                    :controls="false"
-                    style="width: 100%"
-                    @change="calculateAmount"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('order.subtotal')" width="140" align="right">
-                <template #default="{ row }">
-                  <span style="font-weight: bold; color: #409eff;">
-                    {{ formatAmount((row.price || 0) * (row.quantity || 0)) }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('table.operation')" width="100" align="center" fixed="right">
-                <template #default="{ $index }">
-                  <el-button
-                    type="danger"
-                    size="small"
-                    :disabled="loading"
-                    @click="handleRemoveProduct($index)"
-                  >
-                    {{ $t('common.delete') }}
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-form-item>
-
-        <el-form-item :label="$t('order.amount')">
-          <el-input
-            :model-value="formatAmount(totalAmount)"
-            disabled
-            style="width: 100%"
-          />
-        </el-form-item>
-
-        <el-form-item :label="$t('order.remark')">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            :rows="3"
-            :disabled="loading"
-            :placeholder="$t('order.remark_placeholder')"
-          />
-        </el-form-item>
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        >
+          <!-- 商品表格自定义插槽 -->
+          <template v-if="f.prop === 'products'">
+            <div style="width: 100%">
+              <el-button
+                type="primary"
+                size="small"
+                :disabled="loading"
+                @click="handleAddProduct"
+              >
+                <el-icon><Plus /></el-icon>
+                {{ $t('order.add_product') }}
+              </el-button>
+              
+              <el-table
+                :key="tableKey"
+                :data="formData.products"
+                border
+                style="width: 100%; margin-top: 10px"
+                :max-height="400"
+              >
+                <el-table-column :label="$t('order.product_id')" width="130" align="center">
+                  <template #default="{ row, $index }">
+                    <el-input-number
+                      v-model="row.product_id"
+                      :min="1"
+                      :disabled="loading"
+                      :controls="false"
+                      style="width: 100%"
+                      @change="calculateAmount"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('order.product_name')" min-width="200">
+                  <template #default="{ row, $index }">
+                    <el-input
+                      v-model="row.product_name"
+                      :disabled="loading"
+                      :placeholder="$t('order.product_name_placeholder')"
+                      clearable
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('order.price')" width="140" align="center">
+                  <template #default="{ row, $index }">
+                    <el-input-number
+                      v-model="row.price"
+                      :min="0"
+                      :precision="2"
+                      :disabled="loading"
+                      :controls="false"
+                      style="width: 100%"
+                      @change="calculateAmount"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('order.quantity')" width="120" align="center">
+                  <template #default="{ row, $index }">
+                    <el-input-number
+                      v-model="row.quantity"
+                      :min="1"
+                      :disabled="loading"
+                      :controls="false"
+                      style="width: 100%"
+                      @change="calculateAmount"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('order.subtotal')" width="140" align="right">
+                  <template #default="{ row }">
+                    <span style="font-weight: bold; color: #409eff;">
+                      {{ formatAmount((row.price || 0) * (row.quantity || 0)) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column :label="$t('table.operation')" width="100" align="center" fixed="right">
+                  <template #default="{ $index }">
+                    <el-button
+                      type="danger"
+                      size="small"
+                      :disabled="loading"
+                      @click="handleRemoveProduct($index)"
+                    >
+                      {{ $t('common.delete') }}
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </template>
+          <!-- 总金额自定义插槽 -->
+          <template v-else-if="f.prop === 'amount'">
+            <el-input
+              :model-value="formatAmount(totalAmount)"
+              disabled
+              style="width: 100%"
+            />
+          </template>
+        </FormField>
       </el-form>
     </div>
     <template #footer>
@@ -143,6 +132,7 @@ import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import FormField from '../../components/Form/FormField.vue'
 import { createOrder } from '../../api/order'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
@@ -251,6 +241,37 @@ const formRules = computed(() => ({
     }
   ]
 }))
+
+const formFields = computed(() => [
+  {
+    prop: 'user_id',
+    label: t('order.user_id'),
+    type: 'number',
+    min: 1,
+    disabled: loading.value,
+    props: { style: { width: '220px' } }
+  },
+  {
+    prop: 'products',
+    label: t('order.products'),
+    type: 'custom', // 使用自定义类型，走默认插槽
+    disabled: loading.value
+  },
+  {
+    prop: 'amount',
+    label: t('order.amount'),
+    type: 'custom', // 使用自定义类型，走默认插槽显示只读的总金额
+    disabled: true
+  },
+  {
+    prop: 'remark',
+    label: t('order.remark'),
+    type: 'textarea',
+    rows: 3,
+    disabled: loading.value,
+    placeholder: t('order.remark_placeholder')
+  }
+])
 
 // 监听 dialogVisible 变化
 watch(dialogVisible, async (visible) => {
