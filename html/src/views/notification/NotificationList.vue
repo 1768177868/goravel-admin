@@ -45,8 +45,8 @@
         @sort-change="handleSortChange"
       >
         <template #content="{ row }">
-          <div class="text-truncate" :title="stripHtml(row.content)">
-            {{ stripHtml(row.content) }}
+          <div class="text-truncate" :title="extractTextFromMarkdown(row.content)">
+            {{ extractTextFromMarkdown(row.content) }}
           </div>
         </template>
 
@@ -135,7 +135,7 @@
           <span class="mr-4" style="margin-right: 1rem;">{{ formatDate(currentNotification.created_at) }}</span>
           <span>{{ $t('notification.table.sender') }}: {{ currentNotification.sender?.nickname || currentNotification.sender?.username || $t('notification.system') }}</span>
         </div>
-        <div class="rich-text-content-view" v-html="currentNotification.content"></div>
+        <div class="rich-text-content-view markdown-content" v-html="renderMarkdown(currentNotification.content)"></div>
       </div>
       <template #footer>
         <el-button @click="viewDialogVisible = false">
@@ -161,6 +161,7 @@ import { useNotificationStore } from '../../store/notification'
 import { useUserStore } from '../../store/user'
 import { fetchNotifications } from '../../api/notification'
 import { getApiBaseURL } from '../../utils/env'
+import { renderContent, extractTextFromMarkdown } from '../../utils/markdown'
 
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
@@ -175,28 +176,6 @@ const currentNotification = ref(null)
 const handleView = (row) => {
   // 深拷贝 row，避免直接修改原始数据
   const notification = { ...row }
-  
-  // 处理内容中的图片路径
-  if (notification.content) {
-    const baseURL = getApiBaseURL()
-    if (baseURL) {
-      // 替换所有以 /api/admin/public/images/ 开头的相对路径
-      // 注意：这里需要根据实际的后端存储路径和 API 配置来调整正则
-      // 目前后端保存的是 /api/admin/public/images/...
-      // 而 baseURL 通常是 http://localhost:3000
-      
-      // 移除末尾斜杠（如果有）
-      const cleanBaseURL = baseURL.replace(/\/+$/, '')
-      
-      // 匹配 src="/api/..." 或 src='/api/...'
-      // 使用正则替换：src=["'](/api/[^"']+)["']
-      // 替换为：src="baseURL/api/..."
-      notification.content = notification.content.replace(
-        /src=["'](\/api\/[^"']+)["']/g,
-        `src="${cleanBaseURL}$1"`
-      )
-    }
-  }
 
   currentNotification.value = notification
   viewDialogVisible.value = true
@@ -205,6 +184,12 @@ const handleView = (row) => {
   if (!row.is_read) {
     handleMarkRead(row)
   }
+}
+
+// 渲染内容（自动判断 HTML 或 Markdown）
+const renderMarkdown = (content) => {
+  if (!content) return ''
+  return renderContent(content, 'auto')
 }
 
 const tableRef = ref(null)
@@ -412,13 +397,6 @@ onMounted(() => {
   loadData()
 })
 
-const stripHtml = (html) => {
-  if (!html) return ''
-  // 创建一个临时 DOM 元素来提取文本
-  const temp = document.createElement('div')
-  temp.innerHTML = html
-  return temp.textContent || temp.innerText || ''
-}
 </script>
 
 <style scoped>
@@ -467,5 +445,79 @@ const stripHtml = (html) => {
 .rich-text-content-view :deep(img) {
   max-width: 100%;
   height: auto;
+  display: block;
+  margin: 10px 0;
+}
+
+.markdown-content :deep(p) {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  margin: 16px 0 8px;
+  font-weight: 600;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  margin: 10px 0;
+  padding-left: 30px;
+}
+
+.markdown-content :deep(li) {
+  margin: 4px 0;
+}
+
+.markdown-content :deep(blockquote) {
+  margin: 10px 0;
+  padding: 10px 15px;
+  border-left: 4px solid #409eff;
+  background-color: #f5f7fa;
+  color: #606266;
+}
+
+.markdown-content :deep(code) {
+  background-color: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.markdown-content :deep(pre) {
+  background-color: #f5f7fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.markdown-content :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
+  border: 1px solid #ebeef5;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.markdown-content :deep(th) {
+  background-color: #f5f7fa;
+  font-weight: 600;
 }
 </style>

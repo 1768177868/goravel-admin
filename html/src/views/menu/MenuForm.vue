@@ -243,7 +243,7 @@ const formFields = computed(() => {
       label: t('menu_management.parent_menu'),
       type: 'tree-select',
       apiUrl: '/options?type=menu',
-      treeProps: { label: 'name', value: 'value', children: 'children' },
+      treeProps: { label: 'name', value: 'id', children: 'children' },
       clearable: true,
       disabled: loading.value,
     },

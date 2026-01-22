@@ -4,8 +4,11 @@
       <FormField v-for="f in basicFormFields" :key="f.prop" :field="f" :model="formData" />
 
       <el-form-item :label="$t('notification.table.content')" prop="content">
-        <WangEditor v-model="formData.content" :placeholder="$t('notification.content_placeholder')" :height="400" />
+        <MarkdownEditor v-model="formData.content" :placeholder="$t('notification.content_placeholder')" :height="400" />
       </el-form-item>
+      <!-- <el-form-item :label="$t('notification.table.content')" prop="content">
+        <WangEditor v-model="formData.content" :placeholder="$t('notification.content_placeholder')" :height="400" />
+      </el-form-item> -->
 
       <!-- <FormField
         v-for="f in titleFormField"
@@ -30,7 +33,8 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import WangEditor from '../../components/WangEditor.vue'
+import MarkdownEditor from '../../components/MarkdownEditor.vue'
+// import WangEditor from '../../components/WangEditor.vue'
 import FormField from '../../components/Form/FormField.vue'
 import { createNotification } from '../../api/notification'
 import { useNotificationStore } from '../../store/notification'

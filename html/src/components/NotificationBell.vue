@@ -50,7 +50,7 @@
           <span class="notification-time">{{ formatTime(item.created_at) }}</span>
         </div>
         <div class="notification-item__title">{{ item.title }}</div>
-        <div class="notification-item__content" v-html="item.content"></div>
+        <div class="notification-item__content markdown-content" v-html="renderMarkdown(item.content)"></div>
         <div class="notification-item__actions">
           <el-tag v-if="!item.is_read" size="small" type="danger" effect="plain">
             {{ $t('notification.unread') }}
@@ -78,6 +78,7 @@ import 'dayjs/locale/zh-cn'
 import { Bell } from '@element-plus/icons-vue'
 import { useNotificationStore } from '../store/notification'
 import { useI18n } from 'vue-i18n'
+import { renderContent } from '../utils/markdown'
 
 dayjs.extend(relativeTime)
 
@@ -116,6 +117,12 @@ const formatTime = (value) => {
   if (!value) return ''
   const currentLocale = locale.value === 'zh-CN' ? 'zh-cn' : 'en'
   return dayjs(value).locale(currentLocale).fromNow()
+}
+
+// 渲染内容（自动判断 HTML 或 Markdown）
+const renderMarkdown = (content) => {
+  if (!content) return ''
+  return renderContent(content, 'auto')
 }
 
 onMounted(() => {
@@ -238,6 +245,22 @@ onBeforeUnmount(() => {
 
 .notification-item__content :deep(img) {
   display: none; /* 列表预览不显示图片 */
+}
+
+.markdown-content :deep(p) {
+  margin: 0;
+  display: inline;
+}
+
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  margin: 0;
+  display: inline;
+  font-weight: 600;
 }
 
 .notification-item__actions {
