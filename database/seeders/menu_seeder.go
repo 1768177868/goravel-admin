@@ -273,7 +273,7 @@ func (s *MenuSeeder) Run() error {
 		Title:     "支付记录管理",
 		Slug:      "payment-record",
 		Icon:      "Document",
-		Path:      "/payments",
+		Path:      "/payment-records",
 		Component: "payment/PaymentList",
 		Type:      2,
 		Status:    1,
