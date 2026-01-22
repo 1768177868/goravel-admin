@@ -12,53 +12,15 @@
         :rules="formRules"
         label-width="120px"
       >
-        <el-form-item :label="$t('payment_method.name')" prop="name">
-          <el-input v-model="formData.name" :disabled="loading" />
-        </el-form-item>
-
-        <el-form-item :label="$t('payment_method.code')" prop="code" v-if="!formData.id">
-          <el-input v-model="formData.code" :disabled="loading" />
-        </el-form-item>
-
-        <el-form-item :label="$t('payment_method.type')" prop="type" v-if="!formData.id">
-          <el-select v-model="formData.type" :disabled="loading">
-            <el-option
-              :label="$t('payment_method.type_wechat')"
-              value="wechat"
-            />
-            <el-option
-              :label="$t('payment_method.type_alipay')"
-              value="alipay"
-            />
-            <el-option
-              :label="$t('payment_method.type_qq')"
-              value="qq"
-            />
-            <el-option
-              :label="$t('payment_method.type_allinpay')"
-              value="allinpay"
-            />
-            <el-option
-              :label="$t('payment_method.type_lakala')"
-              value="lakala"
-            />
-            <el-option
-              :label="$t('payment_method.type_paypal')"
-              value="paypal"
-            />
-            <el-option
-              :label="$t('payment_method.type_apple')"
-              value="apple"
-            />
-            <el-option
-              :label="$t('payment_method.type_saobei')"
-              value="saobei"
-            />
-          </el-select>
-        </el-form-item>
-
-        <!-- 动态配置表单 -->
-        <div v-if="formData.type || formData.id">
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
+        
+        <!-- 动态配置字段（单独处理，因为需要动态生成多个表单项） -->
+        <template v-if="formData.type || formData.id">
           <el-divider content-position="left">{{ $t('payment_method.config') }}</el-divider>
           <template v-for="field in configFields" :key="field.key">
             <el-form-item 
@@ -84,10 +46,7 @@
               />
             </el-form-item>
           </template>
-          <!-- <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-            {{ $t('payment_method.config_tip') }}
-          </div> -->
-        </div>
+        </template>
         
         <!-- JSON 编辑模式（备用） -->
         <el-form-item v-else :label="$t('payment_method.config')" prop="config">
@@ -97,31 +56,6 @@
             :rows="10"
             :disabled="loading"
             :placeholder="$t('payment_method.config_placeholder')"
-          />
-          <!-- <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-            {{ $t('payment_method.config_tip') }}
-          </div> -->
-        </el-form-item>
-
-        <el-form-item :label="$t('table.status')" prop="is_active">
-          <el-switch v-model="formData.is_active" :disabled="loading" />
-        </el-form-item>
-
-        <el-form-item :label="$t('table.sort')" prop="sort">
-          <el-input-number
-            v-model="formData.sort"
-            :min="0"
-            :disabled="loading"
-          />
-        </el-form-item>
-
-        <el-form-item :label="$t('table.description')">
-          <el-input
-            v-model="formData.description"
-            type="textarea"
-            :rows="3"
-            :disabled="loading"
-            :placeholder="$t('payment_method.description_placeholder')"
           />
         </el-form-item>
       </el-form>
@@ -139,6 +73,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import FormField from '../../components/Form/FormField.vue'
 import {
   getPaymentMethodDetail,
   createPaymentMethod,
@@ -251,6 +186,66 @@ const configFields = computed(() => {
   const type = formData.type
   if (!type) return []
   return paymentTypeConfigFields[type] || []
+})
+
+const formFields = computed(() => {
+  void formData.id // 依赖，使 id 变化时字段的 visible 能更新
+  
+  const fields = [
+    {
+      prop: 'name',
+      label: t('payment_method.name'),
+      type: 'input',
+      disabled: loading.value
+    },
+    {
+      prop: 'code',
+      label: t('payment_method.code'),
+      type: 'input',
+      disabled: loading.value,
+      visible: () => !formData.id
+    },
+    {
+      prop: 'type',
+      label: t('payment_method.type'),
+      type: 'select',
+      disabled: loading.value,
+      visible: () => !formData.id,
+      options: [
+        { label: t('payment_method.type_wechat'), value: 'wechat' },
+        { label: t('payment_method.type_alipay'), value: 'alipay' },
+        { label: t('payment_method.type_qq'), value: 'qq' },
+        { label: t('payment_method.type_allinpay'), value: 'allinpay' },
+        { label: t('payment_method.type_lakala'), value: 'lakala' },
+        { label: t('payment_method.type_paypal'), value: 'paypal' },
+        { label: t('payment_method.type_apple'), value: 'apple' },
+        { label: t('payment_method.type_saobei'), value: 'saobei' }
+      ]
+    },
+    {
+      prop: 'is_active',
+      label: t('table.status'),
+      type: 'switch',
+      disabled: loading.value
+    },
+    {
+      prop: 'sort',
+      label: t('table.sort'),
+      type: 'number',
+      min: 0,
+      disabled: loading.value
+    },
+    {
+      prop: 'description',
+      label: t('table.description'),
+      type: 'textarea',
+      rows: 3,
+      disabled: loading.value,
+      placeholder: t('payment_method.description_placeholder')
+    }
+  ]
+  
+  return fields
 })
 
 const formRules = computed(() => {
