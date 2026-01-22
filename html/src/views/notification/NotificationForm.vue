@@ -168,10 +168,10 @@ const handleSubmit = async () => {
 
     submitting.value = true
     try {
+      // 只处理需要转换的字段
       const data = {
-        type: formData.type,
-        title: formData.title.trim(),
-        content: formData.content
+        ...formData,
+        title: formData.title.trim() // 去除首尾空格
       }
 
       // 如果是私信，必须添加接收者ID

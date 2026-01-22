@@ -109,6 +109,8 @@ import { getPermissionList } from '../../api/permission'
 import { getMenuList } from '../../api/menu'
 import { getMenuTranslation } from '../../utils/menuTranslation'
 import { groupBy, map } from 'lodash-es'
+import { mapTree } from '../../utils/tree'
+import { mapFields } from '../../utils/normalizeFormData'
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const InfoFilledIcon = markRaw(InfoFilled)
@@ -297,8 +299,8 @@ const transformPermissionToTree = (permissions) => {
 const transformMenuToTree = (menus) => {
   if (!menus || !Array.isArray(menus)) return []
   
-  const convertNode = (node) => {
-    const children = node.Children || node.children
+  // 使用工具函数递归转换菜单树
+  return mapTree(menus, (node) => {
     const type = node.Type !== undefined ? node.Type : (node.type !== undefined ? node.type : 1)
     const icon = node.Icon || node.icon || ''
     const path = node.Path || node.path || ''
@@ -307,7 +309,7 @@ const transformMenuToTree = (menus) => {
     // 使用多语言函数获取菜单标题
     const title = getMenuTitle(node)
     
-    const result = {
+    return {
       id: `menu_${node.id}`, // 添加前缀避免ID冲突
       rawId: node.id,
       name: title,
@@ -320,13 +322,7 @@ const transformMenuToTree = (menus) => {
       permission: node.Permission || node.permission || '',
       isMenu: true
     }
-    if (children && Array.isArray(children) && children.length > 0) {
-      result.children = children.map(child => convertNode(child))
-    }
-    return result
-  }
-  
-  return menus.map(menu => convertNode(menu))
+  }, 'children')
 }
 
 const attachPermissionsToMenus = (menuTree, permissions) => {
@@ -337,7 +333,8 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
     return perm.MenuID || perm.menu_id || 0
   })
   
-  const processNode = (node) => {
+  // 使用工具函数递归处理菜单树
+  return mapTree(menuTree, (node) => {
     const result = { ...node }
     
     if (result.isMenu && result.rawId) {
@@ -385,14 +382,8 @@ const attachPermissionsToMenus = (menuTree, permissions) => {
       }
     }
     
-    if (result.children && Array.isArray(result.children)) {
-      result.children = result.children.map(child => processNode(child))
-    }
-    
     return result
-  }
-  
-  return menuTree.map(node => processNode(node))
+  }, 'children')
 }
 
 const buildMenuPermissionTree = (menus, permissions) => {
@@ -553,15 +544,20 @@ const loadDetail = async (id) => {
         await loadMenuPermissionTree()
       }
       
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(role, {
+        id: null,
+        name: '',
+        slug: '',
+        description: '',
+        status: 1,
+        sort: 0
+      })
       Object.assign(formData, {
-        id: role.id || role.ID,
-        name: role.Name || role.name || '',
-        slug: role.Slug || role.slug || '',
-        description: role.Description || role.description || '',
+        ...mapped,
         permission_ids: permissionIds,
         menu_ids: menuIds,
-        status: Number(role.Status !== undefined ? role.Status : (role.status !== undefined ? role.status : 1)),
-        sort: role.Sort !== undefined ? role.Sort : (role.sort !== undefined ? role.sort : 0)
+        status: Number(mapped.status)
       })
       
       // 注意：不要在这里设置 checkedKeys，因为如果包含菜单ID，会导致菜单下的所有权限被选中
@@ -733,17 +729,17 @@ const handleSubmit = async () => {
       
       submitting.value = true
       try {
-        const statusValue = formData.status !== undefined && formData.status !== null 
-          ? Number(formData.status) 
-          : 1
-        
+        // 只处理需要转换的字段
         const data = {
-          name: formData.name,
-          slug: formData.slug,
-          description: formData.description || '',
-          status: statusValue,
-          sort: Number(formData.sort) || 0
+          ...formData,
+          status: formData.status !== undefined && formData.status !== null 
+            ? Number(formData.status) 
+            : 1, // 确保是数字
+          sort: Number(formData.sort) || 0, // 确保是数字
+          description: formData.description || '' // 空字符串处理
         }
+        // 删除前端使用的 id 字段（如果存在）
+        delete data.id
         
         // super-admin 角色不需要设置菜单和权限，因为它拥有所有权限
         if (!isProtectedRole(formData)) {

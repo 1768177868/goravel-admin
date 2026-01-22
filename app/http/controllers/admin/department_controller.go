@@ -9,6 +9,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type DepartmentController struct {
@@ -73,14 +74,17 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 		})
 	}
 
-	// 无搜索条件时返回树形结构
+	// 无搜索条件时返回树形结构（前端可直接使用的格式）
 	departments, err := r.treeService.BuildDepartmentTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
+	// 转换为前端格式
+	treeData := utils.ConvertDepartmentTree(departments)
+
 	return response.Success(ctx, http.Json{
-		"list": departments,
+		"list": treeData,
 	})
 }
 

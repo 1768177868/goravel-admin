@@ -186,6 +186,7 @@ import DarkModeSwitch from '../components/DarkModeSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'
+import { filterAndSortTree } from '../utils/tree'
 import {
   Fold,
   Expand,
@@ -215,58 +216,21 @@ const { t } = useI18n()
 
 const activeMenu = computed(() => route.path)
 
-// 根据主题获取 sidebar 背景色
-
-// 转换菜单数据格式并构建树形结构
+// 过滤菜单树形结构（后端已返回树形结构，这里只需要过滤）
 const menuTree = computed(() => {
   const menus = userStore.menus || []
   
   if (menus.length === 0) {
-    // console.warn('No menus found in userStore.menus, userStore:', userStore)
     return []
   }
   
-  // 转换数据格式（后端返回的是扁平数组，需要自己构建树形结构）
-  const transformMenu = (menu) => {
-    // 直接使用后端返回的路径，前后端路径已统一
-    const originalPath = menu.Path || menu.path || ''
-    
-    return {
-      id: menu.id,
-      parent_id: menu.ParentID || menu.parent_id || 0,
-      title: menu.Title || menu.title || '',
-      slug: menu.Slug || menu.slug || '',
-      path: originalPath,
-      icon: menu.Icon || menu.icon || '',
-      type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
-      status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
-      sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
-      is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),
-      link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
-      open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1)
-    }
-  }
-  
-  // 转换所有菜单（扁平数组）
-  const transformedMenus = menus.map(menu => transformMenu(menu))
-  
-  // 构建树形结构（只返回顶级菜单，子菜单在children中）
-  const buildTree = (menus, parentId = 0) => {
-    const result = menus
-      .filter(menu => menu.parent_id === parentId && menu.is_hidden === 0 && menu.status === 1)
-      .map(menu => ({
-        ...menu,
-        children: buildTree(menus, menu.id)
-      }))
-      .sort((a, b) => a.sort - b.sort)
-    
-    return result
-  }
-  
-  const tree = buildTree(transformedMenus)
-  return tree
+  // 后端已返回树形结构，只需要过滤掉隐藏和禁用的菜单，然后排序
+  return filterAndSortTree(
+    menus,
+    menu => menu.is_hidden === 0 && menu.status === 1,
+    (a, b) => a.sort - b.sort
+  )
 })
-
 
 // 监听路由变化，自动添加标签页
 watch(

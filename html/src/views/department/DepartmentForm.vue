@@ -18,6 +18,20 @@
           :field="f"
           :model="formData"
         />
+        <!-- 父部门树形选择插槽 -->
+        <el-form-item :label="$t('department.parent_department')">
+          <el-tree-select
+            v-model="formData.parent_id"
+            :data="treeSelectData"
+            :props="{ label: 'name', value: 'id', children: 'children' }"
+            :placeholder="$t('form.select_parent') + $t('department.parent_department')"
+            clearable
+            check-strictly
+            :render-after-expand="false"
+            :disabled="loading"
+            style="width: 100%"
+          />
+        </el-form-item>
       </el-form>
     </div>
     <template #footer>
@@ -33,11 +47,13 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
 import { getEnableDisableOptions } from '@/utils/options'
+import { excludeNodeAndChildren } from '../../utils/tree'
 import {
   getDepartmentDetail,
   createDepartment,
   updateDepartment
 } from '../../api/department'
+import { mapFields } from '../../utils/normalizeFormData'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -72,19 +88,24 @@ const formRules = computed(() => ({
   name: [{ required: true, message: t('department.name_required'), trigger: 'blur' }]
 }))
 
+// 树形选择数据，排除当前部门及其子部门
+const treeSelectData = computed(() => {
+  if (!props.departmentOptions || props.departmentOptions.length === 0) {
+    return [{ id: 0, name: t('department.top_department') }]
+  }
+  
+  // 如果有编辑ID，需要排除当前部门及其所有子部门
+  if (formData.id) {
+    // 使用工具函数排除当前部门及其子部门
+    const filtered = excludeNodeAndChildren(props.departmentOptions, formData.id, 'id', 'children')
+    return [{ id: 0, name: t('department.top_department') }, ...filtered]
+  }
+  
+  // 新增时，直接使用树形结构
+  return [{ id: 0, name: t('department.top_department') }, ...props.departmentOptions]
+})
+
 const formFields = computed(() => [
-  {
-    prop: 'parent_id',
-    label: t('department.parent_department'),
-    type: 'select',
-    options: [
-      { label: t('department.top_department'), value: 0 },
-      ...(props.departmentOptions || []).map(d => ({ label: d.name, value: d.id }))
-    ],
-    placeholder: t('form.select_parent') + t('department.parent_department'),
-    clearable: false,
-    disabled: loading.value
-  },
   { prop: 'name', label: t('department.name'), type: 'input', disabled: loading.value },
   { prop: 'description', label: t('common.description'), type: 'textarea', disabled: loading.value },
   {
@@ -115,14 +136,17 @@ const loadDetail = async (id) => {
     const res = await getDepartmentDetail(id)
     if (res.data?.department) {
       const dept = res.data.department
-      Object.assign(formData, {
-        id: dept.id,
-        parent_id: dept.ParentID !== undefined ? dept.ParentID : (dept.parent_id || 0),
-        name: dept.Name || dept.name || '',
-        description: dept.Remark || dept.remark || dept.description || '',
-        status: dept.Status !== undefined ? dept.Status : (dept.status ?? 1),
-        sort: dept.Sort !== undefined ? dept.Sort : (dept.sort ?? 0)
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(dept, {
+        id: null,
+        parent_id: 0,
+        name: '',
+        status: 1,
+        sort: 0
       })
+      // 处理 description 字段的特殊映射（Remark -> description）
+      mapped.description = dept.Remark ?? dept.remark ?? dept.description ?? ''
+      Object.assign(formData, mapped)
     }
   } catch (e) {
     console.error('Load department detail error:', e)
@@ -143,13 +167,14 @@ const handleSubmit = async () => {
     if (!valid) return
     submitting.value = true
     try {
+      // 只处理需要转换的字段
       const data = {
-        name: formData.name,
-        remark: formData.description,
-        status: formData.status,
-        sort: formData.sort,
-        parent_id: formData.parent_id === 0 ? null : formData.parent_id
+        ...formData,
+        remark: formData.description, // description -> remark
+        parent_id: formData.parent_id === 0 ? null : formData.parent_id // 0 -> null
       }
+      // 删除前端使用的 description 字段
+      delete data.description
       if (formData.id) {
         await updateDepartment(formData.id, data)
         ElMessage.success(t('department.update_success'))

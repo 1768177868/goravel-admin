@@ -79,6 +79,7 @@ import {
   createPaymentMethod,
   updatePaymentMethod
 } from '../../api/paymentMethod'
+import { mapFields, getField } from '../../utils/normalizeFormData'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
 
@@ -309,20 +310,19 @@ const loadDetail = async (id) => {
     const response = await getPaymentMethodDetail(id)
     const data = response.data?.data || response.data || {}
     
-    const paymentType = data.type || data.Type || ''
-    
-    Object.assign(formData, {
-      id: data.id || data.ID,
-      name: data.name || data.Name || '',
-      code: data.code || data.Code || '',
-      type: paymentType,
-      is_active: data.is_active !== undefined ? data.is_active : (data.IsActive !== undefined ? data.IsActive : true),
-      sort: data.sort || data.Sort || 0,
-      description: data.description || data.Description || ''
-    })
+    // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+    Object.assign(formData, mapFields(data, {
+      id: null,
+      name: '',
+      code: '',
+      type: '',
+      is_active: true,
+      sort: 0,
+      description: ''
+    }))
     
     // 加载配置数据
-    const configData = data.config || data.Config || {}
+    const configData = getField(data, 'config', {})
     formData.config = {}
     
     // 初始化配置字段并填充已有值
@@ -398,21 +398,20 @@ const handleSubmit = async () => {
       
       submitting.value = true
       try {
-        // 确保 sort 是数字类型
-        const sortValue = formData.sort !== null && formData.sort !== undefined ? Number(formData.sort) : 0
-        
+        // 只处理需要转换的字段
         const data = {
-          name: formData.name.trim(),
-          config: config,
-          is_active: formData.is_active,
-          sort: sortValue,
-          description: formData.description || ''
+          ...formData,
+          name: formData.name.trim(), // 去除首尾空格
+          sort: formData.sort !== null && formData.sort !== undefined ? Number(formData.sort) : 0, // 确保是数字
+          config: config, // 使用处理后的配置
+          description: formData.description || '' // 空字符串处理
         }
         
         if (formData.id) {
           await updatePaymentMethod(formData.id, data)
           ElMessage.success(t('payment_method.update_success'))
         } else {
+          // 创建时额外处理 code 和 type
           data.code = formData.code.trim()
           data.type = formData.type
           await createPaymentMethod(data)

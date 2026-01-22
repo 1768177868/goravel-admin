@@ -131,6 +131,7 @@ import MenuForm from './MenuForm.vue'
 import { getMenuList, deleteMenu } from '../../api/menu'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { mapTree } from '../../utils/tree'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
@@ -177,63 +178,20 @@ const getIconComponent = (iconName) => {
 
 // 树形菜单选项（保持树形结构，用于 el-tree-select）
 const menuOptions = computed(() => {
-  const buildTree = (menus) => {
-    return menus.map(menu => {
-      const node = {
-        value: menu.id,
-        label: menu.name,
-        children: menu.children && menu.children.length > 0 ? buildTree(menu.children) : undefined
-      }
-      return node
-    })
-  }
-  return buildTree(tableData.value)
+  return mapTree(tableData.value, menu => ({
+    value: menu.id,
+    label: menu.name
+  }))
 })
-
-// 转换后端数据格式为前端格式
-const transformMenuData = (menu) => {
-  // 处理 children，确保递归转换
-  const children = menu.Children || menu.children
-  let transformedChildren = []
-  
-  if (children && Array.isArray(children) && children.length > 0) {
-    transformedChildren = children.map(child => transformMenuData(child))
-  }
-  
-  const result = {
-    id: menu.id,
-    parent_id: menu.ParentID || menu.parent_id || 0,
-    name: menu.Title || menu.name || '',
-    slug: menu.Slug || menu.slug || '',
-    path: menu.Path || menu.path || '',
-    icon: menu.Icon || menu.icon || '',
-    type: menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1),
-    status: menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1),
-    sort: menu.Sort !== undefined ? menu.Sort : (menu.sort !== undefined ? menu.sort : 0),
-    is_hidden: menu.IsHidden !== undefined ? menu.IsHidden : (menu.is_hidden !== undefined ? menu.is_hidden : 0),
-    link_type: menu.LinkType !== undefined ? menu.LinkType : (menu.link_type !== undefined ? menu.link_type : 1),
-    open_type: menu.OpenType !== undefined ? menu.OpenType : (menu.open_type !== undefined ? menu.open_type : 1),
-    created_at: menu.created_at || '',
-    updated_at: menu.updated_at || ''
-  }
-  
-  // 只有当有子节点时才添加 children 字段
-  if (transformedChildren.length > 0) {
-    result.children = transformedChildren
-  }
-  
-  return result
-}
 
 const loadData = async () => {
   loading.value = true
   try {
     const res = await getMenuList()
     if (res.data) {
-      // 后端返回的是 menus 数组，不是 list
+      // 后端已返回前端可直接使用的树形结构，无需转换
       const menus = res.data.menus || res.data.list || []
-      const transformed = menus.map(menu => transformMenuData(menu))
-      tableData.value = transformed
+      tableData.value = menus
     }
   } catch (error) {
     console.error('Load menu list error:', error)

@@ -12,6 +12,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type MenuController struct {
@@ -71,8 +72,12 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 		menus = r.filterDevMenu(menus)
 	}
 
+	// 转换为前端格式
+	treeData := utils.ConvertMenuTree(menus)
+
 	return response.Success(ctx, http.Json{
-		"menus": menus,
+		"menus": treeData,
+		"list":  treeData, // 兼容前端可能使用的 list 字段
 	})
 }
 

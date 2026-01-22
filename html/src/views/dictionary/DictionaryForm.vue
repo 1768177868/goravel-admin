@@ -41,6 +41,7 @@ import {
   createDictionary,
   updateDictionary
 } from '../../api/dictionary'
+import { mapFields } from '../../utils/normalizeFormData'
 
 const props = defineProps({
   modelValue: {
@@ -163,16 +164,17 @@ const loadDetail = async (id) => {
     const res = await getDictionaryDetail(id)
     if (res.data && res.data.dictionary) {
       const dict = res.data.dictionary
-      // 处理字段映射，支持 PascalCase 和 snake_case
-      Object.assign(formData, {
-        id: dict.id,
-        type: dict.Type || dict.type || '',
-        label: dict.Label || dict.label || '',
-        value: dict.Value || dict.value || '',
-        translation_key: dict.TranslationKey || dict.translation_key || '',
-        status: dict.Status !== undefined ? dict.Status : (dict.status !== undefined ? dict.status : 1),
-        sort: dict.Sort !== undefined ? dict.Sort : (dict.sort !== undefined ? dict.sort : 0)
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(dict, {
+        id: null,
+        type: '',
+        label: '',
+        value: '',
+        translation_key: '',
+        status: 1,
+        sort: 0
       })
+      Object.assign(formData, mapped)
     }
   } catch (error) {
     console.error('Load dictionary detail error:', error)

@@ -67,6 +67,7 @@ import {
   createPermission,
   updatePermission
 } from '../../api/permission'
+import { mapFields } from '../../utils/normalizeFormData'
 
 const props = defineProps({
   modelValue: {
@@ -237,20 +238,19 @@ const loadDetail = async (id) => {
 
     if (res.data && res.data.permission) {
       const permission = res.data.permission
-
-      const mappedData = {
-        id: permission.id || permission.ID,
-        name: permission.Name || permission.name || '',
-        slug: permission.Slug || permission.slug || '',
-        method: permission.Method || permission.method || 'GET',
-        path: permission.Path || permission.path || '',
-        description: permission.Description || permission.description || '',
-        menu_id: permission.MenuID !== undefined ? permission.MenuID : (permission.menu_id !== undefined ? permission.menu_id : null),
-        status: permission.Status !== undefined ? permission.Status : (permission.status !== undefined ? permission.status : 1),
-        sort: permission.Sort !== undefined ? permission.Sort : (permission.sort !== undefined ? permission.sort : 0)
-      }
-
-      Object.assign(formData, mappedData)
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(permission, {
+        id: null,
+        name: '',
+        slug: '',
+        method: 'GET',
+        path: '',
+        description: '',
+        menu_id: null,
+        status: 1,
+        sort: 0
+      })
+      Object.assign(formData, mapped)
     }
   } catch (error) {
     console.error('Load permission detail error:', error)

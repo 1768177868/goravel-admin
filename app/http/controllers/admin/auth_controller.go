@@ -22,6 +22,7 @@ type AuthController struct {
 	authService                services.AuthService
 	captchaService             services.CaptchaService
 	googleAuthenticatorService services.GoogleAuthenticatorService
+	treeService                services.TreeService
 }
 
 func NewAuthController() *AuthController {
@@ -32,6 +33,7 @@ func NewAuthController() *AuthController {
 		authService:                authService,
 		captchaService:             services.NewCaptchaServiceImpl(),
 		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
+		treeService:               services.NewTreeServiceImpl(),
 	}
 }
 
@@ -236,6 +238,34 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		}
 	}
 
+	// 将扁平菜单数组构建为树形结构，然后转换为前端格式
+	var menuTree []models.Menu
+	if len(menus) > 0 {
+		// 先构建树形结构
+		menuTree, _ = r.treeService.BuildMenuTree(0)
+		// 过滤出用户有权限的菜单
+		menuMap := make(map[uint]bool)
+		for _, menu := range menus {
+			menuMap[menu.ID] = true
+		}
+		// 递归过滤树形结构，只保留有权限的菜单
+		var filterMenuTree func([]models.Menu) []models.Menu
+		filterMenuTree = func(menuList []models.Menu) []models.Menu {
+			var result []models.Menu
+			for _, menu := range menuList {
+				if menuMap[menu.ID] {
+					menu.Children = filterMenuTree(menu.Children)
+					result = append(result, menu)
+				}
+			}
+			return result
+		}
+		menuTree = filterMenuTree(menuTree)
+	}
+	
+	// 转换为前端格式
+	menuTreeData := utils.ConvertMenuTree(menuTree)
+
 	return response.Success(ctx, http.Json{
 		"admin": http.Json{
 			"id":             admin.ID,
@@ -248,7 +278,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"department":     admin.Department,
 			"roles":          admin.Roles,
 			"permissions":    permissions,
-			"menus":          menus,
+			"menus":          menuTreeData, // 返回树形结构
 			"is_super_admin": isSuperAdmin,
 		},
 		"config": http.Json{

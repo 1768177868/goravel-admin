@@ -36,6 +36,7 @@ import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
 import { getEnableDisableOptions } from '@/utils/options'
 import { createUser, updateUser, getUserDetail } from '../../api/user'
+import { mapFields } from '../../utils/normalizeFormData'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -187,17 +188,20 @@ const loadData = async () => {
     const res = await getUserDetail(props.editId)
     if (res.code === 200 && res.data && res.data.user) {
       const user = res.data.user
-      // 兼容大小写字段名，确保 status 是数字类型
-      const userStatus = user.status !== undefined ? user.status : (user.Status !== undefined ? user.Status : 1)
-      Object.assign(formData, {
-        id: user.id || user.ID || null,
-        username: user.username || user.Username || '',
-        password: '', // 编辑时不填充密码
-        nickname: user.nickname || user.Nickname || '',
-        email: user.email || user.Email || '',
-        phone: user.phone || user.Phone || '',
-        status: Number(userStatus) // 确保是数字类型
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(user, {
+        id: null,
+        username: '',
+        nickname: '',
+        email: '',
+        phone: '',
+        status: 1
       })
+      // 编辑时不填充密码
+      mapped.password = ''
+      // 确保 status 是数字类型
+      mapped.status = Number(mapped.status)
+      Object.assign(formData, mapped)
     }
   } catch (error) {
     ErrorHandler.handle(error)

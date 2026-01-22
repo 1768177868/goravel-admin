@@ -47,6 +47,7 @@ import {
   createBlacklist,
   updateBlacklist
 } from '../../api/blacklist'
+import { mapFields } from '../../utils/normalizeFormData'
 
 const props = defineProps({
   modelValue: {
@@ -172,12 +173,14 @@ const loadDetail = async (id) => {
     const res = await getBlacklistDetail(id)
     if (res.data && res.data.blacklist) {
       const blacklist = res.data.blacklist
-      Object.assign(formData, {
-        id: blacklist.id,
-        ip: blacklist.IP || blacklist.ip || '',
-        remark: blacklist.Remark || blacklist.remark || '',
-        status: blacklist.Status !== undefined ? blacklist.Status : (blacklist.status !== undefined ? blacklist.status : 1)
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(blacklist, {
+        id: null,
+        ip: '',
+        remark: '',
+        status: 1
       })
+      Object.assign(formData, mapped)
     }
   } catch (error) {
     console.error('Load blacklist detail error:', error)
@@ -206,10 +209,11 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
+        // 只处理需要转换的字段（去除首尾空格）
         const submitData = {
+          ...formData,
           ip: formData.ip.trim(),
-          remark: formData.remark.trim(),
-          status: formData.status
+          remark: formData.remark.trim()
         }
         if (formData.id) {
           await updateBlacklist(formData.id, submitData)

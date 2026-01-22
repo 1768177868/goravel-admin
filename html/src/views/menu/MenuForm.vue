@@ -61,8 +61,9 @@ import { ElMessage } from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 // 引入配置式表单组件
 import FormField from '../../components/Form/FormField.vue'
-import { normalizeFormData } from '../../utils/normalizeFormData'
+import { normalizeFormData, mapFields } from '../../utils/normalizeFormData'
 import { getShowHideOptions, getOpenTypeOptions, getMenuLinkTypeOptions } from '@/utils/options'
+import { excludeNodeAndChildren, mapTree } from '../../utils/tree'
 
 import {
   getMenuDetail,
@@ -101,8 +102,34 @@ const dialogVisible = computed({
 // 对话框标题
 const dialogTitle = computed(() => formData.id ? t('menu_management.edit_menu') : t('menu_management.add_menu'))
 
-// 树形选择数据，包含顶级菜单选项
+// 树形选择数据，排除当前菜单及其子菜单
 const treeSelectData = computed(() => {
+  if (!props.menuOptions || props.menuOptions.length === 0) {
+    return [{ value: 0, label: t('menu_management.top_menu') }]
+  }
+  
+  // 如果有编辑ID，需要排除当前菜单及其所有子菜单
+  if (formData.id) {
+    // 将菜单选项转换为标准格式（value/label -> id/name），用于排除函数
+    const standardTree = mapTree(props.menuOptions, node => ({
+      id: node.value,
+      name: node.label,
+      children: node.children
+    }), 'children')
+    
+    // 使用工具函数排除当前菜单及其子菜单
+    const filtered = excludeNodeAndChildren(standardTree, formData.id, 'id', 'children')
+    
+    // 转换回 el-tree-select 需要的格式（value/label）
+    const result = mapTree(filtered, node => ({
+      value: node.id,
+      label: node.name
+    }), 'children')
+    
+    return [{ value: 0, label: t('menu_management.top_menu') }, ...result]
+  }
+  
+  // 新增时，直接使用菜单选项
   return [
     { value: 0, label: t('menu_management.top_menu') },
     ...props.menuOptions
@@ -352,22 +379,25 @@ const loadDetail = async (id) => {
     const res = await getMenuDetail(id)
     if (res.data && res.data.menu) {
       const menu = res.data.menu
-      // 后端返回的是 PascalCase 字段，需要正确映射
-      const normalized = normalizeFormData({
-        id: menu.id,
-        parent_id: menu.ParentID ?? menu.parent_id ?? 0,
-        type: menu.Type ?? menu.type ?? 2,
-        name: menu.Title ?? menu.name ?? '',
-        slug: menu.Slug ?? menu.slug ?? '',
-        path: menu.Path ?? menu.path ?? '',
-        component: menu.Component ?? menu.component ?? '',
-        icon: menu.Icon ?? menu.icon ?? '',
-        status: menu.Status ?? menu.status ?? 1,
-        sort: menu.Sort ?? menu.sort ?? 0,
-        is_hidden: menu.IsHidden ?? menu.is_hidden ?? 0,
-        link_type: menu.LinkType ?? menu.link_type ?? 1,
-        open_type: menu.OpenType ?? menu.open_type ?? 1
-      }, {
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(menu, {
+        id: null,
+        parent_id: 0,
+        type: 2,
+        slug: '',
+        path: '',
+        component: '',
+        icon: '',
+        status: 1,
+        sort: 0,
+        is_hidden: 0,
+        link_type: 1,
+        open_type: 1
+      })
+      // 处理 name 字段的特殊映射（Title -> name）
+      mapped.name = menu.Title ?? menu.name ?? ''
+      // 规范化表单数据（类型转换）
+      const normalized = normalizeFormData(mapped, {
         status: 'string',
         type: 'string',
       })
@@ -410,21 +440,15 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true
       try {
-        // 转换前端字段名为后端期望的字段名
+        // 转换前端字段名为后端期望的字段名（只处理需要转换的字段）
         const data = {
-          type: formData.type,
-          title: formData.name,
-          slug: formData.slug,
-          path: formData.path,
-          component: formData.link_type === 1 ? formData.component : '',
-          icon: formData.icon,
-          status: formData.status,
-          sort: formData.sort,
-          is_hidden: formData.is_hidden,
-          parent_id: formData.parent_id === 0 ? null : formData.parent_id,
-          link_type: formData.link_type,
-          open_type: formData.open_type
+          ...formData,
+          title: formData.name, // name -> title
+          parent_id: formData.parent_id === 0 ? null : formData.parent_id, // 0 -> null
+          component: formData.link_type === 1 ? formData.component : '' // 外部链接时清空
         }
+        // 删除前端使用的 name 字段，避免后端混淆
+        delete data.name
         
         if (formData.id) {
           await updateMenu(formData.id, data)

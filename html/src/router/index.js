@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../store/user'
 import logger from '../utils/logger'
+import { flattenTree } from '../utils/tree'
 
 /**
  * 带重试和错误处理的动态导入包装函数
@@ -176,7 +177,7 @@ function getComponentImport(component) {
 
 /**
  * 将菜单数据转换为路由配置
- * @param {Array} menus - 菜单数组（扁平结构）
+ * @param {Array} menus - 菜单数组（支持树形结构）
  * @returns {Array} 路由配置数组
  */
 function convertMenusToRoutes(menus) {
@@ -184,10 +185,12 @@ function convertMenusToRoutes(menus) {
     return []
   }
 
+  // 先将树形结构扁平化
+  const flatMenus = flattenTree(menus, 'children')
   const routes = []
   const processedPaths = new Set() // 避免重复路由
 
-  menus.forEach(menu => {
+  flatMenus.forEach(menu => {
     // 只处理类型为菜单（type === 2）且状态为启用（status === 1）的菜单
     const type = menu.Type !== undefined ? menu.Type : (menu.type !== undefined ? menu.type : 1)
     const status = menu.Status !== undefined ? menu.Status : (menu.status !== undefined ? menu.status : 1)

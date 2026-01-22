@@ -103,6 +103,7 @@ import DepartmentForm from './DepartmentForm.vue'
 import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { flattenTree } from '../../utils/tree'
 import {
   getDepartmentList,
   deleteDepartment
@@ -162,53 +163,10 @@ const searchFields = computed(() => [
   }
 ])
 
-// 扁平化部门选项（递归处理树形结构）
+// 部门选项（保持树形结构，用于表单选择）
 const departmentOptions = computed(() => {
-  const flatten = (departments, parentId = 0) => {
-    const result = []
-    departments.forEach(dept => {
-      const deptParentId = dept.parent_id !== undefined ? dept.parent_id : (dept.ParentID !== undefined ? dept.ParentID : 0)
-      if (deptParentId === parentId) {
-        result.push({
-          id: dept.id,
-          name: dept.name || dept.Name || ''
-        })
-        const children = flatten(departments, dept.id)
-        result.push(...children)
-      }
-    })
-    return result
-  }
-  return flatten(tableData.value)
+  return tableData.value || []
 })
-
-// 转换后端数据格式为前端格式
-const transformDepartmentData = (dept) => {
-  const children = dept.Children || dept.children
-  let transformedChildren = []
-  
-  if (children && Array.isArray(children) && children.length > 0) {
-    transformedChildren = children.map(child => transformDepartmentData(child))
-  }
-  
-  const result = {
-    id: dept.id,
-    parent_id: dept.ParentID !== undefined ? dept.ParentID : (dept.parent_id !== undefined ? dept.parent_id : 0),
-    name: dept.Name || dept.name || '',
-    remark: dept.Remark || dept.remark || dept.description || '',
-    description: dept.Remark || dept.remark || dept.description || '', // 兼容字段
-    status: dept.Status !== undefined ? dept.Status : (dept.status !== undefined ? dept.status : 1),
-    sort: dept.Sort !== undefined ? dept.Sort : (dept.sort !== undefined ? dept.sort : 0),
-    created_at: dept.created_at || dept.CreatedAt || ''
-  }
-  
-  // 只有当有子节点时才添加 children 字段
-  if (transformedChildren.length > 0) {
-    result.children = transformedChildren
-  }
-  
-  return result
-}
 
 const loadData = async () => {
   loading.value = true
@@ -217,8 +175,8 @@ const loadData = async () => {
     const res = await getDepartmentList(params)
     
     if (res.data && res.data.list) {
-      const transformed = res.data.list.map(dept => transformDepartmentData(dept))
-      tableData.value = transformed
+      // 后端已返回前端可直接使用的树形结构，无需转换
+      tableData.value = res.data.list
     } else {
       tableData.value = []
     }
