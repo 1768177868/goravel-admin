@@ -46,7 +46,7 @@
       <el-tree
         :data="treeData"
         :props="field.treeProps || { label: 'name', children: 'children' }"
-        node-key="id"
+        :node-key="field.treeProps?.value || 'id'"
         :default-expand-all="field.filterable !== false && filterText ? true : (field.defaultExpandAll || false)"
         :expand-on-click-node="false"
         :highlight-current="true"
@@ -64,7 +64,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, watch , nextTick} from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useTreeSelect } from './useTreeSelect'
@@ -110,16 +110,18 @@ const {
 
 // 计算输入框显示值
 const displayInputValue = computed(() => {
-  // 如果有输入文本，优先显示输入文本
+  // 处理顶级菜单（value=0）的特殊显示
+  if (props.modelValue === 0 && !filterText.value) {
+    return t('menu_management.top_menu'); // 顶级菜单文字
+  }
   if (filterText.value) {
-    return filterText.value
+    return filterText.value;
   }
-  // 如果有选中值，显示选中值的标签（不管弹窗是否打开）
   if (props.modelValue) {
-    return inputValue.value
+    return inputValue.value;
   }
-  return ''
-})
+  return '';
+});
 
 // 监听 field.apiUrl 变化，重新加载数据
 watch(() => props.field.apiUrl, () => {
@@ -139,6 +141,22 @@ watch(() => {
     loadData()
   }
 }, { deep: true, immediate: true })
+
+// treeData 加载完成后，回放一次 modelValue
+watch(
+  () => treeData.value,
+  async (list) => {
+    if (!list || !list.length) return
+    if (props.modelValue === null || props.modelValue === undefined) return
+
+    await nextTick()
+
+    // 强制触发 useTreeSelect 内部的选中逻辑
+    // handleTreeSelectNodeClick({ id: props.modelValue })
+  },
+  { deep: true }
+)
+
 
 const handleNodeClick = (data) => {
   // 获取节点的标签（优先使用 label，否则使用 name）

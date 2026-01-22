@@ -20,6 +20,12 @@ export function normalizeFormData(data, rules = {}) {
           ? String(data[key])
           : null
       }
+      
+      if (type === 'number') {
+        result[key] = data[key] !== undefined && data[key] !== null
+          ? Number(data[key])
+          : null
+      }
     })
   
     return result

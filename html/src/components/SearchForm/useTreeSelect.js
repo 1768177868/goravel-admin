@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch ,nextTick } from 'vue'
 import Storage from '../../utils/storage'
 import { getOptions } from '../../api/option'
 
@@ -139,6 +139,43 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
     return (data || []).map(node => filterNode(node)).filter(Boolean)
   }
 
+  function findNodeById(list, id, idKey = 'id', childrenKey = 'children') {
+    // 统一转换为字符串，避免数字/字符串类型不匹配
+    const targetId = String(id);
+    for (const node of list || []) {
+      const nodeId = String(node[idKey]);
+      if (nodeId === targetId) return node;
+      const children = node[childrenKey];
+      if (children?.length) {
+        const found = findNodeById(children, id, idKey, childrenKey);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function selectById(id) {
+    if (id === null || id === undefined) return
+    if (!treeData.value?.length) return
+    
+    // 特殊处理：id=0 表示顶级/根节点，不在树中
+    if (id === 0 || id === '0') {
+      selectedLabel.value = ''
+      return
+    }
+  
+    const idKey = field.treeProps?.value || 'id'
+    const childrenKey = field.treeProps?.children || 'children'
+    
+    const node = findNodeById(treeData.value, id, idKey, childrenKey)
+    if (!node) return
+  
+    // 只更新显示标签，不触发 onUpdate（避免循环更新）
+    const labelKey = field.treeProps?.label || 'label'
+    const nameKey = field.treeProps?.name || 'name'
+    selectedLabel.value = node[labelKey] || node[nameKey] || ''
+  }
+
   // 加载树形数据
   const loadData = async () => {
     if (!field.apiUrl) {
@@ -222,6 +259,19 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
     }
   })
 
+  watch(
+    [() => treeData.value, () => modelValue.value],
+    async ([newTreeData, newValue], [oldTreeData, oldValue]) => {
+      // 确保树形数据已加载且值有效（排除 null/undefined）
+      if (newTreeData?.length && newValue !== null && newValue !== undefined) {
+        // 等待 DOM 更新完成后再执行选中逻辑
+        await nextTick();
+        selectById(newValue);
+      }
+    },
+    { immediate: true, deep: true }
+  );
+
   // 监听 field.treeData 变化，更新树形数据
   // 使用 computed 来访问 treeData，这样可以正确追踪 getter 的变化
   const treeDataGetter = computed(() => {
@@ -258,7 +308,8 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
     handleNodeClick,
     handleClear,
     handleInput,
-    loadData
+    loadData,
+    selectById
   }
 }
 

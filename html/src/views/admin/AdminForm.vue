@@ -104,10 +104,9 @@ const formFields = computed(() => {
       label: t('table.department'),
       type: 'tree-select',
       apiUrl: '/options?type=department',
-      treeProps: { label: 'name', children: 'children' },
+      treeProps: { label: 'name', value: 'id', children: 'children' },
       clearable: true,
       disabled: isDefaultAdmin.value || loading.value,
-      // visible: () => formData.status === 0   // 启用时不显示
     },
     {
       prop: 'role_ids',
@@ -157,13 +156,13 @@ const loadDetail = async () => {}
 const resetForm = () => {
   loading.value = false
   Object.assign(formData, {
-    id: null,
+    id: 0,
     username: '',
     password: '',
     nickname: '',
     email: '',
     phone: '',
-    department_id: null,
+    department_id: 0,
     role_ids: [],
     status: '1', // 默认启用（注意是 string）
     is_super_admin: false
@@ -178,7 +177,7 @@ const setFormData = async (data) => {
 
     const normalized = normalizeFormData(data, {
       // role_ids: 'string-array',      // 多选角色
-      // department_id: 'string',       // 单选部门（tree-select）
+      department_id: 'number',       // 单选部门（tree-select）
       status: 'string',             // 单选状态
     })
 

@@ -20,7 +20,7 @@
           :model="formData"
         >
           <!-- 父菜单树形选择插槽 -->
-          <template v-if="f.prop === 'parent_id'">
+          <!-- <template v-if="f.prop === 'parent_id'">
             <el-tree-select
               v-model="formData.parent_id"
               :data="treeSelectData"
@@ -32,9 +32,8 @@
               :disabled="loading"
               style="width: 100%"
             />
-          </template>
+          </template> -->
 
-         
           <!-- 组件路径字段的提示文字插槽 -->
           <template v-if="f.prop === 'component'">
             <el-input 
@@ -55,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch ,nextTick} from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
@@ -232,12 +231,21 @@ const formRules = computed(() => ({
 // 配置式表单字段（
 const formFields = computed(() => {
   const fields = [
+    // {
+    //   prop: 'parent_id',
+    //   label: t('menu_management.parent_menu'),
+    //   type: 'custom', // 自定义树形选择
+    //   disabled: loading.value,
+    //   noValidate: true
+    // },
     {
       prop: 'parent_id',
       label: t('menu_management.parent_menu'),
-      type: 'custom', // 自定义树形选择
+      type: 'tree-select',
+      apiUrl: '/options?type=menu',
+      treeProps: { label: 'name', value: 'value', children: 'children' },
+      clearable: true,
       disabled: loading.value,
-      noValidate: true
     },
     {
       prop: 'type',
@@ -396,13 +404,19 @@ const loadDetail = async (id) => {
       })
       // 处理 name 字段的特殊映射（Title -> name）
       mapped.name = menu.Title ?? menu.name ?? ''
+      // 手动处理 parent_id（后端返回 ParentID）
+      mapped.parent_id = menu.ParentID ?? menu.parent_id ?? 0
+
       // 规范化表单数据（类型转换）
       const normalized = normalizeFormData(mapped, {
+        parent_id: 'number',
         status: 'string',
         type: 'string',
       })
-
+      
       Object.assign(formData, normalized)
+      
+      // formData.parent_id = normalized.parent_id
     }
   } catch (error) {
     console.error('Load menu detail error:', error)
