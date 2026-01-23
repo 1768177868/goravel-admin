@@ -61,6 +61,17 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
+  id: null,
+  type: '',
+  label: '',
+  value: '',
+  translation_key: '',
+  status: 1,
+  sort: 0
+})
+
 // 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -71,15 +82,7 @@ const dialogVisible = computed({
 const dialogTitle = computed(() => formData.id ? t('dictionary.edit_dictionary') : t('dictionary.add_dictionary'))
 
 // 表单数据
-const formData = reactive({
-  id: null,
-  type: '',
-  label: '',
-  value: '',
-  translation_key: '',
-  status: 1,
-  sort: 0
-})
+const formData = reactive(getFormInitialValue())
 
 // 表单验证规则
 const formRules = computed(() => ({
@@ -165,15 +168,7 @@ const loadDetail = async (id) => {
     if (res.data && res.data.dictionary) {
       const dict = res.data.dictionary
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(dict, {
-        id: null,
-        type: '',
-        label: '',
-        value: '',
-        translation_key: '',
-        status: 1,
-        sort: 0
-      })
+      const mapped = mapFields(dict, getFormInitialValue())
       Object.assign(formData, mapped)
     }
   } catch (error) {
@@ -186,15 +181,7 @@ const loadDetail = async (id) => {
 // 重置表单
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, {
-    id: null,
-    type: '',
-    label: '',
-    value: '',
-    translation_key: '',
-    status: 1,
-    sort: 0
-  })
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 

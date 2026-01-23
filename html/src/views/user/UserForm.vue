@@ -57,6 +57,17 @@ const formRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
+  id: null,
+  username: '',
+  password: '',
+  nickname: '',
+  email: '',
+  phone: '',
+  status: 0 // 默认禁用状态
+})
+
 // 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -69,15 +80,7 @@ const dialogTitle = computed(() => {
 })
 
 // 表单数据
-const formData = reactive({
-  id: null,
-  username: '',
-  password: '',
-  nickname: '',
-  email: '',
-  phone: '',
-  status: 0 // 默认禁用状态
-})
+const formData = reactive(getFormInitialValue())
 
 // 动态验证规则
 const formRules = computed(() => {
@@ -189,14 +192,7 @@ const loadData = async () => {
     if (res.code === 200 && res.data && res.data.user) {
       const user = res.data.user
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(user, {
-        id: null,
-        username: '',
-        nickname: '',
-        email: '',
-        phone: '',
-        status: 1
-      })
+      const mapped = mapFields(user, getFormInitialValue())
       // 编辑时不填充密码
       mapped.password = ''
       // 确保 status 是数字类型
@@ -212,15 +208,7 @@ const loadData = async () => {
 
 // 重置表单
 const resetForm = () => {
-  Object.assign(formData, {
-    id: null,
-    username: '',
-    password: '',
-    nickname: '',
-    email: '',
-    phone: '',
-    status: 0 // 默认禁用状态
-  })
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 

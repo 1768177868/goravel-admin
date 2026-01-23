@@ -92,17 +92,8 @@ const submitting = ref(false)
 const loading = ref(false)
 const menuSelectVisible = ref(false)
 
-// 对话框显隐状态
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-// 对话框标题
-const dialogTitle = computed(() => formData.id ? t('permission.edit_permission') : t('permission.add_permission'))
-
-// 表单数据
-const formData = reactive({
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
   id: null,
   name: '',
   slug: '',
@@ -113,6 +104,18 @@ const formData = reactive({
   status: 1,
   sort: 0
 })
+
+// 对话框显隐状态
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+// 对话框标题
+const dialogTitle = computed(() => formData.id ? t('permission.edit_permission') : t('permission.add_permission'))
+
+// 表单数据
+const formData = reactive(getFormInitialValue())
 
 // 表单验证规则
 const formRules = computed(() => ({
@@ -239,17 +242,7 @@ const loadDetail = async (id) => {
     if (res.data && res.data.permission) {
       const permission = res.data.permission
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(permission, {
-        id: null,
-        name: '',
-        slug: '',
-        method: 'GET',
-        path: '',
-        description: '',
-        menu_id: null,
-        status: 1,
-        sort: 0
-      })
+      const mapped = mapFields(permission, getFormInitialValue())
       Object.assign(formData, mapped)
     }
   } catch (error) {

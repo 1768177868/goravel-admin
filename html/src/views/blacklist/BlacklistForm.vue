@@ -73,16 +73,19 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-// 对话框标题（新增/编辑区分）
-const dialogTitle = computed(() => formData.id ? t('blacklist.edit_blacklist') : t('blacklist.add_blacklist'))
-
-// 表单数据
-const formData = reactive({
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
   id: null,
   ip: '',
   remark: '',
   status: 1
 })
+
+// 对话框标题（新增/编辑区分）
+const dialogTitle = computed(() => formData.id ? t('blacklist.edit_blacklist') : t('blacklist.add_blacklist'))
+
+// 表单数据
+const formData = reactive(getFormInitialValue())
 
 // 表单验证规则（保留原有IP验证逻辑）
 const formRules = computed(() => ({
@@ -174,12 +177,7 @@ const loadDetail = async (id) => {
     if (res.data && res.data.blacklist) {
       const blacklist = res.data.blacklist
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(blacklist, {
-        id: null,
-        ip: '',
-        remark: '',
-        status: 1
-      })
+      const mapped = mapFields(blacklist, getFormInitialValue())
       Object.assign(formData, mapped)
     }
   } catch (error) {

@@ -53,17 +53,20 @@ const notificationStore = useNotificationStore()
 const formRef = ref(null)
 const submitting = ref(false)
 
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-const formData = reactive({
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
   type: 'announcement',
   receiver_id: '',
   title: '',
   content: ''
 })
+
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+const formData = reactive(getFormInitialValue())
 
 const formRules = computed(() => ({
   type: [
@@ -145,10 +148,7 @@ watch(() => formData.type, (newType) => {
 })
 
 const resetForm = () => {
-  formData.type = 'announcement'
-  formData.receiver_id = ''
-  formData.title = ''
-  formData.content = ''
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 

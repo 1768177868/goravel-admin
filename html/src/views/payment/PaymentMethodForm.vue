@@ -101,16 +101,8 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-const dialogTitle = computed(() => 
-  formData.id ? t('payment_method.edit_payment_method') : t('payment_method.add_payment_method')
-)
-
-const formData = reactive({
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
   id: null,
   name: '',
   code: '',
@@ -120,6 +112,17 @@ const formData = reactive({
   sort: 0,
   description: ''
 })
+
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+const dialogTitle = computed(() => 
+  formData.id ? t('payment_method.edit_payment_method') : t('payment_method.add_payment_method')
+)
+
+const formData = reactive(getFormInitialValue())
 
 // 配置 JSON 字符串（用于备用）
 const configJson = ref('')
@@ -249,6 +252,7 @@ const formFields = computed(() => {
   return fields
 })
 
+
 const formRules = computed(() => {
   const rules = {
     name: [{ required: true, message: t('payment_method.name_required'), trigger: 'blur' }],
@@ -311,15 +315,7 @@ const loadDetail = async (id) => {
     const data = response.data?.data || response.data || {}
     
     // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-    Object.assign(formData, mapFields(data, {
-      id: null,
-      name: '',
-      code: '',
-      type: '',
-      is_active: true,
-      sort: 0,
-      description: ''
-    }))
+    Object.assign(formData, mapFields(data, getFormInitialValue()))
     
     // 加载配置数据
     const configData = getField(data, 'config', {})
@@ -350,16 +346,7 @@ const loadDetail = async (id) => {
 
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, {
-    id: null,
-    name: '',
-    code: '',
-    type: '',
-    config: {},
-    is_active: true,
-    sort: 0,
-    description: ''
-  })
+  Object.assign(formData, getFormInitialValue())
   configJson.value = ''
   formRef.value?.resetFields()
 }

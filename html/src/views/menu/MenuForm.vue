@@ -92,6 +92,23 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
+  id: null,
+  parent_id: 0,
+  type: "2",
+  name: '',
+  slug: '',
+  path: '',
+  component: '',
+  icon: '',
+  status: "1",
+  sort: 0,
+  is_hidden: 0,
+  link_type: 1,
+  open_type: 1
+})
+
 // 对话框显隐状态
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -136,21 +153,7 @@ const treeSelectData = computed(() => {
 })
 
 // 表单数据
-const formData = reactive({
-  id: null,
-  parent_id: 0,
-  type: "2", // 默认为菜单
-  name: '',
-  slug: '',
-  path: '',
-  component: '',
-  icon: '',
-  status: "1",
-  sort: 0,
-  is_hidden: 0, // 0: 显示, 1: 隐藏
-  link_type: 1, // 1: 内部页面, 2: 外部链接
-  open_type: 1 // 1: iframe嵌套, 2: 新窗口打开
-})
+const formData = reactive(getFormInitialValue())
 
 // 图标选择相关逻辑
 const iconComponents = ElementPlusIconsVue
@@ -388,20 +391,7 @@ const loadDetail = async (id) => {
     if (res.data && res.data.menu) {
       const menu = res.data.menu
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(menu, {
-        id: null,
-        parent_id: 0,
-        type: 2,
-        slug: '',
-        path: '',
-        component: '',
-        icon: '',
-        status: 1,
-        sort: 0,
-        is_hidden: 0,
-        link_type: 1,
-        open_type: 1
-      })
+      const mapped = mapFields(menu, getFormInitialValue())
       // 处理 name 字段的特殊映射（Title -> name）
       mapped.name = menu.Title ?? menu.name ?? ''
       // 手动处理 parent_id（后端返回 ParentID）

@@ -59,14 +59,8 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-const dialogTitle = computed(() => formData.id ? t('admin.edit_admin') : t('admin.add_admin'))
-
-const formData = reactive({
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
   id: null,
   username: '',
   password: '',
@@ -78,6 +72,16 @@ const formData = reactive({
   status: "1",
   is_super_admin: false
 })
+
+
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+const dialogTitle = computed(() => formData.id ? t('admin.edit_admin') : t('admin.add_admin'))
+
+const formData = reactive(getFormInitialValue())
 
 const isDefaultAdmin = computed(() => formData.is_super_admin === true && formData.id !== null)
 
@@ -155,18 +159,7 @@ const loadDetail = async () => {}
 
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, {
-    id: 0,
-    username: '',
-    password: '',
-    nickname: '',
-    email: '',
-    phone: '',
-    department_id: 0,
-    role_ids: [],
-    status: '1', // 默认启用（注意是 string）
-    is_super_admin: false
-  })
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 

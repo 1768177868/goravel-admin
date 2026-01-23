@@ -138,6 +138,18 @@ const menuPermissionTreeRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
+  id: null,
+  name: '',
+  slug: '',
+  description: '',
+  permission_ids: [],
+  menu_ids: [],
+  status: 1,
+  sort: 0
+})
+
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
@@ -150,16 +162,7 @@ const checkedKeys = ref([])
 const treeKey = ref(0)
 const protectedRoleSlugs = ref(['super-admin'])
 
-const formData = reactive({
-  id: null,
-  name: '',
-  slug: '',
-  description: '',
-  permission_ids: [],
-  menu_ids: [],
-  status: 1,
-  sort: 0
-})
+const formData = reactive(getFormInitialValue())
 
 const formRules = computed(() => ({
   name: [{ required: true, message: t('role.name_required'), trigger: 'blur' }],
@@ -484,16 +487,7 @@ const isProtectedRole = (row) => {
 
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, {
-    id: null,
-    name: '',
-    slug: '',
-    description: '',
-    permission_ids: [],
-    menu_ids: [],
-    status: 1,
-    sort: 0
-  })
+  Object.assign(formData, getFormInitialValue())
   checkedKeys.value = []
   treeKey.value++
   formRef.value?.resetFields()
@@ -545,14 +539,7 @@ const loadDetail = async (id) => {
       }
       
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(role, {
-        id: null,
-        name: '',
-        slug: '',
-        description: '',
-        status: 1,
-        sort: 0
-      })
+      const mapped = mapFields(role, getFormInitialValue())
       Object.assign(formData, {
         ...mapped,
         permission_ids: permissionIds,
