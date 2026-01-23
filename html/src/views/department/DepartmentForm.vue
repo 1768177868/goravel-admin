@@ -149,19 +149,38 @@ const loadDetail = async (id) => {
     const res = await getDepartmentDetail(id)
     if (res.data?.department) {
       const dept = res.data.department
+      
+      // 直接获取 parent_id，优先使用 ParentID（PascalCase），然后是 parent_id（snake_case）
+      // 注意：需要明确检查字段是否存在，因为 null 也是有效值
+      let parentId = null
+      if ('ParentID' in dept) {
+        parentId = dept.ParentID
+      } else if ('parent_id' in dept) {
+        parentId = dept.parent_id
+      }
+      
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-        const mapped = mapFields(dept, getFormInitialValue())
+      const mapped = mapFields(dept, {
+        id: null,
+        name: '',
+        status: 1,
+        sort: 0
+      })
+      
       // 处理 description 字段的特殊映射（Remark -> description）
       mapped.description = dept.Remark ?? dept.remark ?? dept.description ?? ''
+      
       // 处理 parent_id：如果为 null 或 undefined，转换为 0（顶级部门）
-      // 注意：需要检查原始数据中的 ParentID 字段
-      const parentId = mapped.parent_id ?? dept.ParentID ?? dept.parent_id
       if (parentId === null || parentId === undefined) {
         mapped.parent_id = 0
       } else {
-        mapped.parent_id = Number(parentId) || 0
+        // 确保转换为数字
+        const numParentId = Number(parentId)
+        mapped.parent_id = isNaN(numParentId) ? 0 : numParentId
       }
+      
       Object.assign(formData, mapped)
+      
     }
   } catch (e) {
     console.error('Load department detail error:', e)

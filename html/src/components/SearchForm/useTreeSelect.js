@@ -362,13 +362,12 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
         // 等待 DOM 更新完成后再执行选中逻辑
         await nextTick();
         
-        // 如果树形数据已加载，使用树形数据
-        if (newTreeData?.length) {
-          selectById(newValue);
-        } else {
-          // 即使树形数据未加载，也尝试从 field.treeData 获取数据并设置标签
-          selectById(newValue);
-        }
+        // 无论树形数据是否加载，都尝试设置标签
+        // selectById 函数内部会处理数据源的选择
+        selectById(newValue);
+      } else if (newValue === null || newValue === undefined) {
+        // 如果值被清空，也清空标签
+        selectedLabel.value = ''
       }
     },
     { immediate: true, deep: true }
@@ -396,6 +395,13 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
         const result = field.treeData()
         const data = Array.isArray(result) ? result : []
         updateTreeData(data)
+        
+        // 数据更新后，如果 modelValue 有值，尝试设置标签
+        if (modelValue.value !== null && modelValue.value !== undefined) {
+          nextTick(() => {
+            selectById(modelValue.value)
+          })
+        }
       } catch (e) {
         console.error('Error getting treeData:', e)
         updateTreeData([])
@@ -405,7 +411,15 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
     // 如果 treeData 是数组，直接监听
     watch(
       () => field.treeData,
-      updateTreeData,
+      (newData) => {
+        updateTreeData(newData)
+        // 数据更新后，如果 modelValue 有值，尝试设置标签
+        if (modelValue.value !== null && modelValue.value !== undefined) {
+          nextTick(() => {
+            selectById(modelValue.value)
+          })
+        }
+      },
       { deep: true, immediate: true, flush: 'post' }
     )
   }

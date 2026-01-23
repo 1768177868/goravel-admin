@@ -1,80 +1,50 @@
 <template>
   <el-dialog
-    v-model="visible"
-    :title="editId ? $t('common.edit') : $t('common.add')"
+    v-model="dialogVisible"
+    :title="dialogTitle"
     width="600px"
-    @close="handleClose"
+    @close="handleDialogClose"
   >
-    <el-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      label-width="120px"
-    >
-<<range .FormFields>>
-<<- if .ShowInForm>>
-<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-      <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
-<<if eq .FormType "input">>
-        <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
-<<else if eq .FormType "textarea">>
-        <el-input
-          v-model="form.<<.Name>>"
-          type="textarea"
-          :rows="4"
-          :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
-<<else if eq .FormType "select">>
-        <el-select v-model="form.<<.Name>>" :placeholder="$t('common.select')" clearable>
-          <el-option
-            v-for="item in <<.Name>>Options"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-<<else if eq .FormType "switch">>
-        <el-switch v-model="form.<<.Name>>" />
-<<else if eq .FormType "date-picker">>
-        <el-date-picker
-          v-model="form.<<.Name>>"
-          type="date"
-          :placeholder="$t('common.select_date')" style="width: 100%" />
-<<else if eq .FormType "datetime-picker">>
-        <el-date-picker
-          v-model="form.<<.Name>>"
-          type="datetime"
-          :placeholder="$t('common.select_datetime')" style="width: 100%" />
-<<else if eq .FormType "image-upload">>
-        <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
-<<else if eq .FormType "file-upload">>
-        <el-input v-model="form.<<.Name>>" :placeholder="$t('<<$.ModuleName>>.<<.Name>>')" />
-<<end>>
-      </el-form-item>
-<<- end>>
-<<- end>>
-<<- end>>
-    </el-form>
-
+    <div v-loading="loading">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-width="100px"
+      >
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
+      </el-form>
+    </div>
     <template #footer>
-      <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
-      <el-button type="primary" :loading="submitting" @click="handleSubmit">
-        {{ $t('common.confirm') }}
-      </el-button>
+      <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
+      <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import FormField from '../../components/Form/FormField.vue'
+<<range .FormFields>>
+<<- if and (eq .FormType "select") (or .Relation .ApiUrl)>>
+<<- if .Relation>>
+// 关联字段: <<.Name>> -> <<.Relation.Table>>
+<<- end>>
+<<- end>>
+<<- end>>
 import {
   <<if .HasCreate>>create<<.ModelName>>,<<end>>
   <<if .HasEdit>>update<<.ModelName>>,<<end>>
   get<<.ModelName>>Detail
 } from '../../api/<<.ModuleName>>'
-import { getOptions } from '../../api/option'
-import request from '../../utils/request'
+import { mapFields } from '../../utils/normalizeFormData'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -83,7 +53,7 @@ const props = defineProps({
     default: false
   },
   editId: {
-    type: Number,
+    type: [Number, String],
     default: null
   }
 })
@@ -93,163 +63,168 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 
-<<range .FormFields>>
-<<if eq .FormType "select">>
-const <<.Name>>Options = ref([])
-<<end>>
-<<- end>>
-
-const visible = ref(props.modelValue)
-watch(() => props.modelValue, (val) => {
-  visible.value = val
-})
-watch(visible, (val) => {
-  emit('update:modelValue', val)
-})
-
-const form = ref({
+// 定义表单初始值的复用函数
+const getFormInitialValue = () => ({
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-  <<.Name>>: null,
+  <<.Name>>: <<if eq .FormType "switch">>false<<else if eq .FormType "number">>0<<else if eq .FormType "date-picker">>null<<else if eq .FormType "datetime-picker">>null<<else if .Relation>>null<<else if eq .FormType "select">>null<<else>>''<<end>>,
 <<- end>>
 <<- end>>
 })
 
-const rules = {
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val)
+})
+
+const dialogTitle = computed(() => {
+  return formData.id ? t('<<.ModuleName>>.edit_<<.ModuleName>>') : t('<<.ModuleName>>.add_<<.ModuleName>>')
+})
+
+const formData = reactive(getFormInitialValue())
+
+const formRules = computed(() => {
+  const rules = {}
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-  <<.Name>>: [
-    { required: <<.Required>>, message: t('<<$.ModuleName>>.<<.Name>>_required'), trigger: 'blur' }
-  ],
+  <<- if .Required>>
+  rules['<<.Name>>'] = [
+    { required: true, message: t('<<$.ModuleName>>.<<.Name>>_required'), trigger: 'blur' }
+  ]
+  <<- end>>
 <<- end>>
 <<- end>>
+  return rules
+})
+
+// 配置式表单字段
+const formFields = computed(() => {
+  const fields = []
+<<range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
+  <<- if .ShowInForm>>
+  {
+    prop: '<<.Name>>',
+    label: t('<<$.ModuleName>>.<<.Name>>'),
+    type: <<if eq .FormType "input">>'input'<<else if eq .FormType "textarea">>'textarea'<<else if eq .FormType "select">><<- if .Relation>>'tree-select'<<else>>'select'<<- end>><<else if eq .FormType "switch">>'switch'<<else if eq .FormType "date-picker">>'date'<<else if eq .FormType "datetime-picker">>'datetime'<<else if eq .FormType "number">>'number'<<else>>'input'<<end>>,
+    disabled: loading.value,
+    <<- if eq .FormType "textarea">>
+    rows: 4,
+    <<- end>>
+    <<- if and .Relation (eq .FormType "select")>>
+    apiUrl: '/options?type=<<.Relation.Table>>',
+    treeProps: { label: '<<.Relation.DisplayField>>', value: 'id', children: 'children' },
+    clearable: true,
+    <<- else if .ApiUrl>>
+    apiUrl: '<<.ApiUrl>>',
+    clearable: true,
+    <<- else if eq .FormType "select">>
+    clearable: true,
+    <<- end>>
+    <<- if or (eq .FormType "date-picker") (eq .FormType "datetime-picker")>>
+    clearable: true,
+    <<- end>>
+    <<- if eq .FormType "number">>
+    min: 0,
+    <<- end>>
+  },
+  <<- end>>
+<<- end>>
+<<- end>>
+  return fields
+})
+
+watch(() => props.editId, async (newId) => {
+  if (newId && dialogVisible.value) {
+    await loadData()
+  } else if (!newId && dialogVisible.value) {
+    resetForm()
+  }
+}, { immediate: true })
+
+watch(dialogVisible, (visible) => {
+  if (visible) {
+    if (props.editId) {
+      loadData()
+    } else {
+      resetForm()
+    }
+  }
+})
+
+const loadData = async () => {
+  if (!props.editId) {
+    resetForm()
+    return
+  }
+
+  loading.value = true
+  try {
+    const res = await get<<.ModelName>>Detail(props.editId)
+    if (res.data && res.data.<<.ModuleName>>) {
+      const data = res.data.<<.ModuleName>>
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(data, getFormInitialValue())
+      Object.assign(formData, mapped)
+    }
+  } catch (error) {
+    ErrorHandler.handle(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const resetForm = () => {
+  Object.assign(formData, getFormInitialValue())
+  formRef.value?.resetFields()
+}
+
+const handleDialogClose = () => {
+  formRef.value?.resetFields()
+}
+
+const handleCancel = () => {
+  dialogVisible.value = false
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
 
-  try {
-    await formRef.value.validate()
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+
     submitting.value = true
-
-    if (props.editId) {
+    try {
+      const data = { ...formData }
+      delete data.id
       <<if .HasEdit>>
-      await update<<.ModelName>>(props.editId, form.value)
-      ElMessage.success(t('common.update_success'))
+      if (props.editId) {
+        await update<<.ModelName>>(props.editId, data)
+        ElMessage.success(t('common.update_success'))
+      } else {
+        <<if .HasCreate>>
+        await create<<.ModelName>>(data)
+        ElMessage.success(t('common.create_success'))
+        <<end>>
+      }
       <<else>>
-      ElMessage.error(t('common.operation_failed'))
-      <<end>>
-    } else {
       <<if .HasCreate>>
-      await create<<.ModelName>>(form.value)
+      await create<<.ModelName>>(data)
       ElMessage.success(t('common.create_success'))
-      <<else>>
-      ElMessage.error(t('common.operation_failed'))
       <<end>>
+      <<end>>
+      emit('success')
+      dialogVisible.value = false
+    } catch (error) {
+      ErrorHandler.handle(error)
+    } finally {
+      submitting.value = false
     }
-
-    emit('success')
-    handleClose()
-  } catch (error) {
-    ErrorHandler.handle(error)
-  } finally {
-    submitting.value = false
-  }
+  })
 }
-
-const handleClose = () => {
-  visible.value = false
-  formRef.value?.resetFields()
-}
-
-const loadOptions = async () => {
-<<range .FormFields>>
-<<if eq .FormType "select">>
-  try {
-    <<if .ApiUrl>>
-    const res = await request({
-      url: '<<.ApiUrl>>',
-      method: 'get'
-    })
-    if (res.data) {
-       // 适配不同的返回格式，假设返回 list 或 直接是数组
-       const list = res.data.list || res.data || []
-       <<.Name>>Options.value = list.map(item => ({
-         label: item.label || item.name || item.title,
-         value: item.value || item.id
-       }))
-    }
-    <<else if .Dictionary>>
-    const res = await getOptions('dictionary', { dictionary_type: '<<.Dictionary>>' })
-    if (res.data) {
-      <<.Name>>Options.value = res.data
-    }
-    <<else if .Relation>>
-    // 加载关联数据: <<.Relation.Table>>
-    // 假设存在列表接口 /<<.Relation.Table>> (kebab-case)
-    const res = await request({
-      url: '/<<.Relation.Table>>'.replace(/_/g, '-'), 
-      method: 'get',
-      params: { page: 1, page_size: 100 }
-    })
-    if (res.data && res.data.list) {
-      <<.Name>>Options.value = res.data.list.map(item => ({
-        label: item.<<.Relation.DisplayField>>,
-        value: item.id // 假设关联表主键是 id
-      }))
-    }
-    <<else>>
-    // 未配置数据源，请自行实现
-    // const res = await getOptions('<<.Name>>')
-    // <<.Name>>Options.value = res.data
-    <<end>>
-  } catch (error) {
-    console.error('Failed to load <<.Name>> options:', error)
-  }
-<<end>>
-<<- end>>
-}
-
-const loadData = async () => {
-  if (!props.editId) return
-  
-  try {
-    const res = await get<<.ModelName>>Detail(props.editId)
-    if (res.data && res.data.<<.ModuleName>>) {
-      const data = res.data.<<.ModuleName>>
-      form.value = {
-<<range .FormFields>>
-<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-        <<.Name>>: data.<<.Name>>,
-<<- end>>
-<<- end>>
-      }
-    }
-  } catch (error) {
-    ErrorHandler.handle(error)
-  }
-}
-
-watch(visible, (val) => {
-  if (val) {
-    loadOptions()
-    if (props.editId) {
-      loadData()
-    } else {
-      formRef.value?.resetFields()
-      form.value = {
-<<range .FormFields>>
-<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-        <<.Name>>: null,
-<<- end>>
-<<- end>>
-      }
-    }
-  }
-})
 </script>
 
 <style scoped>
-
 </style>

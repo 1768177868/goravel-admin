@@ -111,22 +111,32 @@ const {
 // 计算输入框显示值
 const displayInputValue = computed(() => {
   // 处理顶级节点（value=0）的特殊显示
-  if (props.modelValue === 0 && !filterText.value) {
-    // 支持通过 field.topNodeLabel 配置自定义顶级节点显示文本
-    if (props.field.topNodeLabel) {
-      return typeof props.field.topNodeLabel === 'function' 
-        ? props.field.topNodeLabel() 
-        : props.field.topNodeLabel
+  if (props.modelValue === 0 || props.modelValue === '0') {
+    if (!filterText.value) {
+      // 支持通过 field.topNodeLabel 配置自定义顶级节点显示文本
+      if (props.field.topNodeLabel) {
+        return typeof props.field.topNodeLabel === 'function' 
+          ? props.field.topNodeLabel() 
+          : props.field.topNodeLabel
+      }
+      // 默认使用菜单相关的翻译（向后兼容）
+      return t('menu_management.top_menu')
     }
-    // 默认使用菜单相关的翻译（向后兼容）
-    return t('menu_management.top_menu')
   }
+  
   if (filterText.value) {
     return filterText.value;
   }
-  if (props.modelValue) {
-    return inputValue.value;
+  
+  if (props.modelValue !== null && props.modelValue !== undefined && props.modelValue !== 0 && props.modelValue !== '0') {
+    const displayValue = inputValue.value
+    // 调试信息
+    if (!displayValue) {
+      console.log('displayInputValue - no display value for modelValue:', props.modelValue, 'inputValue:', inputValue.value, 'selectedLabel:', props.field)
+    }
+    return displayValue
   }
+  
   return '';
 });
 
