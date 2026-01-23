@@ -36,6 +36,11 @@ password: demo123
 </p>
 
 <p align="center">
+  <img src="./images/generator.png" alt="Code Generator" width="800">
+  <p align="center">Code Generator</p>
+</p>
+
+<p align="center">
   <img src="./images/monitor.png" alt="System Monitoring" width="800">
   <p align="center">System Monitoring</p>
 </p>

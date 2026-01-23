@@ -37,6 +37,11 @@ git clone https://github.com/1768177868/goravel-admin.git
 </p>
 
 <p align="center">
+  <img src="./images/generator.png" alt="代码生成器管理界面" width="800">
+  <p align="center">代码生成器界面</p>
+</p>
+
+<p align="center">
   <img src="./images/monitor.png" alt="系统监控" width="800">
   <p align="center">系统监控</p>
 </p>

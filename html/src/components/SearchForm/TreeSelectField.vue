@@ -131,9 +131,9 @@ const displayInputValue = computed(() => {
   if (props.modelValue !== null && props.modelValue !== undefined && props.modelValue !== 0 && props.modelValue !== '0') {
     const displayValue = inputValue.value
     // 调试信息
-    if (!displayValue) {
-      console.log('displayInputValue - no display value for modelValue:', props.modelValue, 'inputValue:', inputValue.value, 'selectedLabel:', props.field)
-    }
+    // if (!displayValue) {
+    //   console.log('displayInputValue - no display value for modelValue:', props.modelValue, 'inputValue:', inputValue.value, 'selectedLabel:', props.field)
+    // }
     return displayValue
   }
   
