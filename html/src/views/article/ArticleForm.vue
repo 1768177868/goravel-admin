@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     :title="dialogTitle"
-    width="600px"
+    width="1000px"
     @close="handleDialogClose"
   >
     <div v-loading="loading">
@@ -10,7 +10,7 @@
         ref="formRef"
         :model="formData"
         :rules="formRules"
-        label-width="100px"
+        label-width="120px"
       >
         
         <el-form-item :label="$t('article.content')" prop="content">

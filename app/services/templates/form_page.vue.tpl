@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     :title="dialogTitle"
-    width="600px"
+    width="1000px"
     @close="handleDialogClose"
   >
     <div v-loading="loading">
@@ -10,7 +10,7 @@
         ref="formRef"
         :model="formData"
         :rules="formRules"
-        label-width="100px"
+        label-width="120px"
       >
         <<range .FormFields>>
         <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
