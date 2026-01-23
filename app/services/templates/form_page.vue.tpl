@@ -12,6 +12,35 @@
         :rules="formRules"
         label-width="100px"
       >
+        <<range .FormFields>>
+        <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
+        <<- if .ShowInForm>>
+        <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload")>>
+        <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
+          <<- if eq .FormType "image-upload">>
+          <!-- 图片上传组件，请根据实际需求实现 -->
+          <el-upload
+            v-model="formData.<<.Name>>"
+            action="/api/upload/image"
+            :show-file-list="false"
+          >
+            <el-button type="primary">上传图片</el-button>
+          </el-upload>
+          <<- else if eq .FormType "file-upload">>
+          <!-- 文件上传组件，请根据实际需求实现 -->
+          <el-upload
+            v-model="formData.<<.Name>>"
+            action="/api/upload/file"
+            :show-file-list="false"
+          >
+            <el-button type="primary">上传文件</el-button>
+          </el-upload>
+          <<- end>>
+        </el-form-item>
+        <<- end>>
+        <<- end>>
+        <<- end>>
+        <<- end>>
         <FormField
           v-for="f in formFields"
           :key="f.prop"
@@ -104,13 +133,13 @@ const formFields = computed(() => {
   const fields = []
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-  <<- if .ShowInForm>>
-  {
+  <<- if and .ShowInForm (ne .FormType "image-upload") (ne .FormType "file-upload")>>
+  fields.push({
     prop: '<<.Name>>',
     label: t('<<$.ModuleName>>.<<.Name>>'),
-    type: <<if eq .FormType "input">>'input'<<else if eq .FormType "textarea">>'textarea'<<else if eq .FormType "select">><<- if .Relation>>'tree-select'<<else>>'select'<<- end>><<else if eq .FormType "switch">>'switch'<<else if eq .FormType "date-picker">>'date'<<else if eq .FormType "datetime-picker">>'datetime'<<else if eq .FormType "number">>'number'<<else>>'input'<<end>>,
+    type: <<if eq .FormType "input">>'input'<<else if eq .FormType "textarea">>'textarea'<<else if eq .FormType "editor">>'textarea'<<else if eq .FormType "select">><<- if .Relation>>'tree-select'<<else>>'select'<<- end>><<else if eq .FormType "switch">>'switch'<<else if eq .FormType "date-picker">>'date'<<else if eq .FormType "datetime-picker">>'datetime'<<else if eq .FormType "number">>'number'<<else>>'input'<<end>>,
     disabled: loading.value,
-    <<- if eq .FormType "textarea">>
+    <<- if or (eq .FormType "textarea") (eq .FormType "editor")>>
     rows: 4,
     <<- end>>
     <<- if and .Relation (eq .FormType "select")>>
@@ -129,7 +158,7 @@ const formFields = computed(() => {
     <<- if eq .FormType "number">>
     min: 0,
     <<- end>>
-  },
+  })
   <<- end>>
 <<- end>>
 <<- end>>

@@ -1,44 +1,46 @@
 <template>
   <el-dialog
-    v-model="visible"
-    :title="editId ? $t('common.edit') : $t('common.add')"
+    v-model="dialogVisible"
+    :title="dialogTitle"
     width="600px"
-    @close="handleClose"
+    @close="handleDialogClose"
   >
-    <el-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      label-width="120px"
-    >
-      <FormField
-        v-for="f in formFields"
-        :key="f.prop"
-        :field="f"
-        :model="form"
-        i18n-prefix="article"
-      />
-    </el-form>
-
+    <div v-loading="loading">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-width="100px"
+      >
+        
+        <FormField
+          v-for="f in formFields"
+          :key="f.prop"
+          :field="f"
+          :model="formData"
+        />
+      </el-form>
+    </div>
     <template #footer>
-      <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
-      <el-button type="primary" :loading="submitting" @click="handleSubmit">
-        {{ $t('common.confirm') }}
-      </el-button>
+      <el-button @click="handleCancel">{{ $t('common.cancel') }}</el-button>
+      <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
+
+// 关联字段: admin_id -> admins
 import {
   createArticle,
   updateArticle,
   getArticleDetail
 } from '../../api/article'
+import { mapFields } from '../../utils/normalizeFormData'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -47,7 +49,7 @@ const props = defineProps({
     default: false
   },
   editId: {
-    type: Number,
+    type: [Number, String],
     default: null
   }
 })
@@ -57,135 +59,164 @@ const emit = defineEmits(['update:modelValue', 'success'])
 const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
 
-// 表单项配置：下拉/单选/多选支持 apiUrl，与搜索一致；也可用 options、optionsFn
-const formFields = computed(() => [
-  { prop: 'title', label: t('article.title'), type: 'input' },
-  { prop: 'content', label: t('article.content'), type: 'textarea', rows: 4 },
-  {
-    prop: 'status',
-    label: t('article.status'),
-    type: 'select',
-    apiUrl: '/options?type=dictionary&dictionary_type=status'
-    // 也可: apiUrl: '/options?type=status'
-  },
-  {
-    prop: 'admin_id',
-    label: t('article.admin_id'),
-    type: 'select',
-    apiUrl: '/admins',
-    apiParams: { page: 1, page_size: 100 },
-    optionLabelKey: 'username',
-    optionValueKey: 'id'
-  }
-])
+// 定义表单初始值的复用函数
+const getFormInitialValue = () => ({
 
-
-
-
-const visible = ref(props.modelValue)
-watch(() => props.modelValue, (val) => {
-  visible.value = val
-})
-watch(visible, (val) => {
-  emit('update:modelValue', val)
-})
-
-const form = ref({
-
-  title: null,
-  content: null,
-  status: null,
+  title: '',
+  content: '',
+  status: '',
   admin_id: null,
 })
 
-const rules = {
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val)
+})
 
-  title: [
+const dialogTitle = computed(() => {
+  return formData.id ? t('article.edit_article') : t('article.add_article')
+})
+
+const formData = reactive(getFormInitialValue())
+
+const formRules = computed(() => {
+  const rules = {}
+
+  rules['title'] = [
     { required: true, message: t('article.title_required'), trigger: 'blur' }
-  ],
-  content: [
-    { required: false, message: t('article.content_required'), trigger: 'blur' }
-  ],
-  status: [
+  ]
+  rules['status'] = [
     { required: true, message: t('article.status_required'), trigger: 'blur' }
-  ],
-  admin_id: [
+  ]
+  rules['admin_id'] = [
     { required: true, message: t('article.admin_id_required'), trigger: 'blur' }
-  ],
+  ]
+  return rules
+})
+
+// 配置式表单字段
+const formFields = computed(() => {
+  const fields = []
+
+  fields.push({
+    prop: 'title',
+    label: t('article.title'),
+    type: 'input',
+    disabled: loading.value,
+  })
+  fields.push({
+    prop: 'content',
+    label: t('article.content'),
+    type: 'textarea',
+    disabled: loading.value,
+    rows: 4,
+  })
+  fields.push({
+    prop: 'status',
+    label: t('article.status'),
+    type: 'input',
+    disabled: loading.value,
+    apiUrl: '/options?type=dictionary&dictionary_type=status',
+    clearable: true,
+  })
+  fields.push({
+    prop: 'admin_id',
+    label: t('article.admin_id'),
+    type: 'tree-select',
+    disabled: loading.value,
+    apiUrl: '/options?type=admins',
+    treeProps: { label: 'username', value: 'id', children: 'children' },
+    clearable: true,
+  })
+  return fields
+})
+
+watch(() => props.editId, async (newId) => {
+  if (newId && dialogVisible.value) {
+    await loadData()
+  } else if (!newId && dialogVisible.value) {
+    resetForm()
+  }
+}, { immediate: true })
+
+watch(dialogVisible, (visible) => {
+  if (visible) {
+    if (props.editId) {
+      loadData()
+    } else {
+      resetForm()
+    }
+  }
+})
+
+const loadData = async () => {
+  if (!props.editId) {
+    resetForm()
+    return
+  }
+
+  loading.value = true
+  try {
+    const res = await getArticleDetail(props.editId)
+    if (res.data && res.data.article) {
+      const data = res.data.article
+      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
+      const mapped = mapFields(data, getFormInitialValue())
+      Object.assign(formData, mapped)
+    }
+  } catch (error) {
+    ErrorHandler.handle(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const resetForm = () => {
+  Object.assign(formData, getFormInitialValue())
+  formRef.value?.resetFields()
+}
+
+const handleDialogClose = () => {
+  formRef.value?.resetFields()
+}
+
+const handleCancel = () => {
+  dialogVisible.value = false
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
 
-  try {
-    await formRef.value.validate()
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+
     submitting.value = true
-
-    if (props.editId) {
+    try {
+      const data = { ...formData }
+      delete data.id
       
-      await updateArticle(props.editId, form.value)
-      ElMessage.success(t('common.update_success'))
-      
-    } else {
-      
-      await createArticle(form.value)
-      ElMessage.success(t('common.create_success'))
-      
-    }
-
-    emit('success')
-    handleClose()
-  } catch (error) {
-    ErrorHandler.handle(error)
-  } finally {
-    submitting.value = false
-  }
-}
-
-const handleClose = () => {
-  visible.value = false
-  formRef.value?.resetFields()
-}
-
-const loadData = async () => {
-  if (!props.editId) return
-  
-  try {
-    const res = await getArticleDetail(props.editId)
-    if (res.data && res.data.article) {
-      const data = res.data.article
-      form.value = {
-
-        title: data.title,
-        content: data.content,
-        status: data.status,
-        admin_id: data.admin_id,
+      if (props.editId) {
+        await updateArticle(props.editId, data)
+        ElMessage.success(t('common.update_success'))
+      } else {
+        
+        await createArticle(data)
+        ElMessage.success(t('common.create_success'))
+        
       }
+      
+      emit('success')
+      dialogVisible.value = false
+    } catch (error) {
+      ErrorHandler.handle(error)
+    } finally {
+      submitting.value = false
     }
-  } catch (error) {
-    ErrorHandler.handle(error)
-  }
+  })
 }
-
-watch(visible, (val) => {
-  if (val) {
-    if (props.editId) {
-      loadData()
-    } else {
-      formRef.value?.resetFields()
-      form.value = {
-
-        title: null,
-        content: null,
-        status: null,
-        admin_id: null,
-      }
-    }
-  }
-})
 </script>
 
 <style scoped>
-
 </style>

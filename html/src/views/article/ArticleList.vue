@@ -153,8 +153,10 @@ const searchFields = computed(() => [
   {
     prop: 'admin_id',
     label: t('article.admin_id'),
-    type: 'input',
+    type: 'select',
     clearable: true,
+
+    
 
     width: '200px',
     advanced: false
