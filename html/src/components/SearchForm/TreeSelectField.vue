@@ -110,9 +110,16 @@ const {
 
 // 计算输入框显示值
 const displayInputValue = computed(() => {
-  // 处理顶级菜单（value=0）的特殊显示
+  // 处理顶级节点（value=0）的特殊显示
   if (props.modelValue === 0 && !filterText.value) {
-    return t('menu_management.top_menu'); // 顶级菜单文字
+    // 支持通过 field.topNodeLabel 配置自定义顶级节点显示文本
+    if (props.field.topNodeLabel) {
+      return typeof props.field.topNodeLabel === 'function' 
+        ? props.field.topNodeLabel() 
+        : props.field.topNodeLabel
+    }
+    // 默认使用菜单相关的翻译（向后兼容）
+    return t('menu_management.top_menu')
   }
   if (filterText.value) {
     return filterText.value;
@@ -131,13 +138,16 @@ watch(() => props.field.apiUrl, () => {
 }, { immediate: true })
 
 // 监听 field.treeData 变化（支持 getter 函数）
+// 注意：只有当使用 apiUrl 时才需要调用 loadData，使用 treeData 时由 useTreeSelect 内部处理
 watch(() => {
   if (typeof props.field.treeData === 'function') {
     return props.field.treeData()
   }
   return props.field.treeData
 }, (newTreeData) => {
-  if (newTreeData && Array.isArray(newTreeData) && newTreeData.length > 0) {
+  // 只有在使用 apiUrl 且 treeData 变化时才重新加载
+  // 如果使用本地 treeData，则由 useTreeSelect 内部的 watch 处理
+  if (props.field.apiUrl && newTreeData && Array.isArray(newTreeData) && newTreeData.length > 0) {
     loadData()
   }
 }, { deep: true, immediate: true })

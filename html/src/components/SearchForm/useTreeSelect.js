@@ -1,4 +1,4 @@
-import { ref, computed, watch ,nextTick } from 'vue'
+import { ref, computed, watch, watchEffect, nextTick } from 'vue'
 import Storage from '../../utils/storage'
 import { getOptions } from '../../api/option'
 
@@ -12,6 +12,25 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
   // 获取树形选择器显示值
   const getTreeSelectDisplayValue = (fieldObj, value) => {
     if (!value) return ''
+    
+    // 获取树形数据
+    let dataSource = []
+    if (typeof fieldObj.treeData === 'function') {
+      try {
+        dataSource = fieldObj.treeData() || []
+      } catch (e) {
+        console.error('Error getting treeData for display:', e)
+        dataSource = []
+      }
+    } else if (Array.isArray(fieldObj.treeData)) {
+      dataSource = fieldObj.treeData
+    } else {
+      dataSource = treeData.value || []
+    }
+    
+    if (!Array.isArray(dataSource) || dataSource.length === 0) {
+      return ''
+    }
     
     const findNode = (data, targetId) => {
       for (const node of data) {
@@ -27,18 +46,56 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
       return ''
     }
     
-    return findNode(fieldObj.treeData || treeData.value || [], value) || ''
+    return findNode(dataSource, value) || ''
   }
 
   // 计算输入框显示值（用于显示选中值的标签）
   const inputValue = computed(() => {
     const selectedValue = modelValue.value
-    if (selectedValue) {
+    if (selectedValue !== null && selectedValue !== undefined) {
+      // 特殊处理：id=0 表示顶级节点
+      if (selectedValue === 0 || selectedValue === '0') {
+        if (field.topNodeLabel) {
+          return typeof field.topNodeLabel === 'function' 
+            ? field.topNodeLabel() 
+            : field.topNodeLabel
+        }
+        return ''
+      }
+      
       // 优先使用保存的标签，如果不存在则通过查找获取
       if (selectedLabel.value) {
         return selectedLabel.value
       }
-      return getTreeSelectDisplayValue(field, selectedValue)
+      
+      // 尝试从 treeData 或 field.treeData 获取标签
+      const label = getTreeSelectDisplayValue(field, selectedValue)
+      if (label) {
+        return label
+      }
+      
+      // 如果还是找不到，尝试从 field.treeData 直接获取
+      let dataSource = []
+      if (typeof field.treeData === 'function') {
+        try {
+          dataSource = field.treeData() || []
+        } catch (e) {
+          console.error('Error getting treeData in inputValue:', e)
+        }
+      } else if (Array.isArray(field.treeData)) {
+        dataSource = field.treeData
+      }
+      
+      if (dataSource.length > 0) {
+        const idKey = field.treeProps?.value || 'id'
+        const childrenKey = field.treeProps?.children || 'children'
+        const node = findNodeById(dataSource, selectedValue, idKey, childrenKey)
+        if (node) {
+          const labelKey = field.treeProps?.label || 'label'
+          const nameKey = field.treeProps?.name || 'name'
+          return node[labelKey] || node[nameKey] || ''
+        }
+      }
     }
     return ''
   })
@@ -156,34 +213,72 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
 
   function selectById(id) {
     if (id === null || id === undefined) return
-    if (!treeData.value?.length) return
     
     // 特殊处理：id=0 表示顶级/根节点，不在树中
     if (id === 0 || id === '0') {
-      selectedLabel.value = ''
+      // 对于顶级节点，使用 topNodeLabel 或默认文本
+      if (field.topNodeLabel) {
+        selectedLabel.value = typeof field.topNodeLabel === 'function' 
+          ? field.topNodeLabel() 
+          : field.topNodeLabel
+      } else {
+        selectedLabel.value = ''
+      }
       return
     }
-  
+    
+    // 获取数据源
+    let dataSource = []
+    if (treeData.value?.length) {
+      dataSource = treeData.value
+    } else {
+      // 如果树形数据未加载，尝试从 field.treeData 获取
+      if (typeof field.treeData === 'function') {
+        try {
+          dataSource = field.treeData() || []
+        } catch (e) {
+          console.error('Error getting treeData in selectById:', e)
+        }
+      } else if (Array.isArray(field.treeData)) {
+        dataSource = field.treeData
+      }
+    }
+    
+    if (dataSource.length === 0) return
+    
     const idKey = field.treeProps?.value || 'id'
     const childrenKey = field.treeProps?.children || 'children'
-    
-    const node = findNodeById(treeData.value, id, idKey, childrenKey)
-    if (!node) return
-  
-    // 只更新显示标签，不触发 onUpdate（避免循环更新）
     const labelKey = field.treeProps?.label || 'label'
     const nameKey = field.treeProps?.name || 'name'
-    selectedLabel.value = node[labelKey] || node[nameKey] || ''
+    
+    const node = findNodeById(dataSource, id, idKey, childrenKey)
+    if (node) {
+      const label = node[labelKey] || node[nameKey] || ''
+      selectedLabel.value = label
+    }
   }
 
   // 加载树形数据
   const loadData = async () => {
     if (!field.apiUrl) {
-      if (field.treeData && Array.isArray(field.treeData)) {
-        treeData.value = getFilteredTreeData(field.treeData)
-        return
+      // 处理 treeData（可能是函数或数组）
+      let data = null
+      if (typeof field.treeData === 'function') {
+        try {
+          data = field.treeData()
+        } catch (e) {
+          console.error('Error getting treeData:', e)
+          data = []
+        }
+      } else {
+        data = field.treeData
       }
-      treeData.value = []
+      
+      if (data && Array.isArray(data)) {
+        treeData.value = getFilteredTreeData(data)
+      } else {
+        treeData.value = []
+      }
       return
     }
     
@@ -262,38 +357,74 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
   watch(
     [() => treeData.value, () => modelValue.value],
     async ([newTreeData, newValue], [oldTreeData, oldValue]) => {
-      // 确保树形数据已加载且值有效（排除 null/undefined）
-      if (newTreeData?.length && newValue !== null && newValue !== undefined) {
+      // 确保值有效（排除 null/undefined）
+      if (newValue !== null && newValue !== undefined) {
         // 等待 DOM 更新完成后再执行选中逻辑
         await nextTick();
-        selectById(newValue);
+        
+        // 如果树形数据已加载，使用树形数据
+        if (newTreeData?.length) {
+          selectById(newValue);
+        } else {
+          // 即使树形数据未加载，也尝试从 field.treeData 获取数据并设置标签
+          selectById(newValue);
+        }
       }
     },
     { immediate: true, deep: true }
   );
 
-  // 监听 field.treeData 变化，更新树形数据
-  // 使用 computed 来访问 treeData，这样可以正确追踪 getter 的变化
-  const treeDataGetter = computed(() => {
-    if (typeof field.treeData === 'function') {
-      return field.treeData()
-    }
-    return field.treeData
-  })
-  
-  watch(treeDataGetter, (newTreeData) => {
-    if (newTreeData && Array.isArray(newTreeData) && newTreeData.length > 0) {
-      treeData.value = getFilteredTreeData(newTreeData)
-    } else if (newTreeData && Array.isArray(newTreeData) && newTreeData.length === 0) {
-      // 如果数据被清空，也更新
+  // 更新树形数据的函数
+  const updateTreeData = (newTreeData) => {
+    if (newTreeData && Array.isArray(newTreeData)) {
+      if (newTreeData.length > 0) {
+        treeData.value = getFilteredTreeData(newTreeData)
+      } else {
+        treeData.value = []
+      }
+    } else {
       treeData.value = []
     }
-  }, { deep: true, immediate: true })
+  }
+  
+  // 监听 field.treeData 变化，更新树形数据
+  // 如果 treeData 是函数，使用 watchEffect 来确保能够追踪到所有响应式依赖
+  if (typeof field.treeData === 'function') {
+    // 使用 watchEffect 自动追踪函数内部访问的所有响应式依赖
+    watchEffect(() => {
+      try {
+        const result = field.treeData()
+        const data = Array.isArray(result) ? result : []
+        updateTreeData(data)
+      } catch (e) {
+        console.error('Error getting treeData:', e)
+        updateTreeData([])
+      }
+    }, { flush: 'post' })
+  } else if (Array.isArray(field.treeData)) {
+    // 如果 treeData 是数组，直接监听
+    watch(
+      () => field.treeData,
+      updateTreeData,
+      { deep: true, immediate: true, flush: 'post' }
+    )
+  }
 
   // 初始化加载数据
-  const initialTreeData = typeof field.treeData === 'function' ? field.treeData() : field.treeData
-  if (initialTreeData && Array.isArray(initialTreeData) && initialTreeData.length > 0) {
-    treeData.value = getFilteredTreeData(initialTreeData)
+  // 注意：如果 treeData 是函数，watch 会在 immediate: true 时自动执行，这里不需要手动初始化
+  // 但如果 treeData 是数组或使用 apiUrl，需要手动初始化
+  if (typeof field.treeData === 'function') {
+    // 函数形式由 watch 处理，但为了确保初始数据正确，也在这里初始化一次
+    try {
+      const initialData = field.treeData()
+      if (initialData && Array.isArray(initialData) && initialData.length > 0) {
+        treeData.value = getFilteredTreeData(initialData)
+      }
+    } catch (e) {
+      console.error('Error initializing treeData:', e)
+    }
+  } else if (Array.isArray(field.treeData) && field.treeData.length > 0) {
+    treeData.value = getFilteredTreeData(field.treeData)
   } else if (field.apiUrl) {
     loadData()
   }

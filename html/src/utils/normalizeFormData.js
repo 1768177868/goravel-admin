@@ -50,8 +50,12 @@ export function getField(data, fieldName, defaultValue = undefined) {
   }
   
   // 优先使用原始字段名（snake_case）
-  if (fieldName in data && data[fieldName] !== undefined && data[fieldName] !== null) {
-    return data[fieldName]
+  if (fieldName in data) {
+    // 如果字段存在，即使值为 null 或 undefined，也返回该值（除非明确需要默认值）
+    const value = data[fieldName]
+    if (value !== undefined) {
+      return value
+    }
   }
   
   // 转换为 PascalCase 查找
@@ -60,8 +64,11 @@ export function getField(data, fieldName, defaultValue = undefined) {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join('')
   
-  if (pascalCase in data && data[pascalCase] !== undefined && data[pascalCase] !== null) {
-    return data[pascalCase]
+  if (pascalCase in data) {
+    const value = data[pascalCase]
+    if (value !== undefined) {
+      return value
+    }
   }
   
   return defaultValue

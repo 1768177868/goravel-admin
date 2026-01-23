@@ -18,20 +18,6 @@
           :field="f"
           :model="formData"
         />
-        <!-- 父部门树形选择插槽 -->
-        <el-form-item :label="$t('department.parent_department')">
-          <el-tree-select
-            v-model="formData.parent_id"
-            :data="treeSelectData"
-            :props="{ label: 'name', value: 'id', children: 'children' }"
-            :placeholder="$t('form.select_parent') + $t('department.parent_department')"
-            clearable
-            check-strictly
-            :render-after-expand="false"
-            :disabled="loading"
-            style="width: 100%"
-          />
-        </el-form-item>
       </el-form>
     </div>
     <template #footer>
@@ -68,14 +54,8 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v)
-})
-
-const dialogTitle = computed(() => formData.id ? t('department.edit_department') : t('department.add_department'))
-
-const formData = reactive({
+// 定义表单初始值的复用函数（返回新对象，避免引用问题）
+const getFormInitialValue = () => ({
   id: null,
   parent_id: 0,
   name: '',
@@ -84,29 +64,62 @@ const formData = reactive({
   sort: 0
 })
 
+
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v)
+})
+
+const dialogTitle = computed(() => formData.id ? t('department.edit_department') : t('department.add_department'))
+
+const formData = reactive(getFormInitialValue())
+
 const formRules = computed(() => ({
   name: [{ required: true, message: t('department.name_required'), trigger: 'blur' }]
 }))
 
 // 树形选择数据，排除当前部门及其子部门
 const treeSelectData = computed(() => {
-  if (!props.departmentOptions || props.departmentOptions.length === 0) {
+  // 确保 departmentOptions 是数组
+  const options = Array.isArray(props.departmentOptions) ? props.departmentOptions : []
+  
+  if (options.length === 0) {
     return [{ id: 0, name: t('department.top_department') }]
   }
   
   // 如果有编辑ID，需要排除当前部门及其所有子部门
   if (formData.id) {
-    // 使用工具函数排除当前部门及其子部门
-    const filtered = excludeNodeAndChildren(props.departmentOptions, formData.id, 'id', 'children')
-    return [{ id: 0, name: t('department.top_department') }, ...filtered]
+    try {
+      // 使用工具函数排除当前部门及其子部门
+      const filtered = excludeNodeAndChildren(options, formData.id, 'id', 'children')
+      // 确保 filtered 是数组
+      const result = Array.isArray(filtered) ? filtered : []
+      return [{ id: 0, name: t('department.top_department') }, ...result]
+    } catch (e) {
+      console.error('Error filtering department tree:', e)
+      // 出错时返回所有选项（除了当前部门）
+      return [{ id: 0, name: t('department.top_department') }, ...options]
+    }
   }
   
   // 新增时，直接使用树形结构
-  return [{ id: 0, name: t('department.top_department') }, ...props.departmentOptions]
+  return [{ id: 0, name: t('department.top_department') }, ...options]
 })
 
 const formFields = computed(() => [
   { prop: 'name', label: t('department.name'), type: 'input', disabled: loading.value },
+  {
+    prop: 'parent_id',
+    label: t('department.parent_department'),
+    type: 'tree-select',
+    treeData: () => treeSelectData.value,
+    treeProps: { label: 'name', value: 'id', children: 'children' },
+    placeholder: () => t('form.select_parent') + t('department.parent_department'),
+    topNodeLabel: () => t('department.top_department'),
+    clearable: true,
+    disabled: loading.value,
+    props: { style: { width: '100%' } }
+  },
   { prop: 'description', label: t('common.description'), type: 'textarea', disabled: loading.value },
   {
     prop: 'status',
@@ -137,15 +150,17 @@ const loadDetail = async (id) => {
     if (res.data?.department) {
       const dept = res.data.department
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
-      const mapped = mapFields(dept, {
-        id: null,
-        parent_id: 0,
-        name: '',
-        status: 1,
-        sort: 0
-      })
+        const mapped = mapFields(dept, getFormInitialValue())
       // 处理 description 字段的特殊映射（Remark -> description）
       mapped.description = dept.Remark ?? dept.remark ?? dept.description ?? ''
+      // 处理 parent_id：如果为 null 或 undefined，转换为 0（顶级部门）
+      // 注意：需要检查原始数据中的 ParentID 字段
+      const parentId = mapped.parent_id ?? dept.ParentID ?? dept.parent_id
+      if (parentId === null || parentId === undefined) {
+        mapped.parent_id = 0
+      } else {
+        mapped.parent_id = Number(parentId) || 0
+      }
       Object.assign(formData, mapped)
     }
   } catch (e) {
@@ -157,7 +172,7 @@ const loadDetail = async (id) => {
 
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, { id: null, parent_id: 0, name: '', description: '', status: 1, sort: 0 })
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 
