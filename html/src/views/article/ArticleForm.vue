@@ -49,7 +49,7 @@ import {
   updateArticle,
   getArticleDetail
 } from '../../api/article'
-import { mapFields } from '../../utils/normalizeFormData'
+import { mapFields, normalizeFormData } from '../../utils/normalizeFormData'
 import ErrorHandler from '../../utils/errorHandler'
 
 const props = defineProps({
@@ -123,6 +123,16 @@ const formFields = computed(() => {
     apiUrl: '/options?type=dictionary&dictionary_type=status',
     clearable: true,
   })
+  fields.push({
+    prop: 'admin_id',
+    label: t('article.admin_id'),
+    type: 'input',
+    disabled: loading.value,
+    apiUrl: '/options?type=admins',
+    clearable: true,
+    optionLabelKey: 'username',
+    optionValueKey: 'id',
+  })
   return fields
 })
 
@@ -157,7 +167,13 @@ const loadData = async () => {
       const data = res.data.article
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
       const mapped = mapFields(data, getFormInitialValue())
-      Object.assign(formData, mapped)
+      // 对于使用字典的字段（radio、select、checkbox），需要将值转换为字符串以匹配选项值
+      // 因为字典选项的值都是字符串类型
+      const normalizeRules = {}
+
+      normalizeRules['status'] = 'string'
+      const normalized = normalizeFormData(mapped, normalizeRules)
+      Object.assign(formData, normalized)
     }
   } catch (error) {
     ErrorHandler.handle(error)

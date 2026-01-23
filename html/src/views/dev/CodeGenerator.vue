@@ -543,6 +543,12 @@ const handleEditFieldConfig = (row) => {
   if (row.type === 'decimal') {
     fieldConfigForm.precision = row.precision || 8
     fieldConfigForm.scale = row.scale || 2
+  } else if (row.dictionary) {
+    // 优先检查 dictionary，如果有字典则设置为字典类型
+    fieldConfigForm.option_type = 'dictionary'
+    fieldConfigForm.dictionary = row.dictionary
+    fieldConfigForm.api_url = ''
+    fieldConfigForm.is_tree = false
   } else if (row.api_url) {
     fieldConfigForm.option_type = 'api'
     fieldConfigForm.api_url = row.api_url
@@ -550,8 +556,9 @@ const handleEditFieldConfig = (row) => {
     // 从 relation 或字段本身读取 is_tree
     fieldConfigForm.is_tree = (row.relation && row.relation.is_tree) || false
   } else {
+    // 默认使用字典类型
     fieldConfigForm.option_type = 'dictionary'
-    fieldConfigForm.dictionary = row.dictionary || ''
+    fieldConfigForm.dictionary = ''
     fieldConfigForm.api_url = ''
     fieldConfigForm.is_tree = false
   }

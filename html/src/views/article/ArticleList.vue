@@ -234,7 +234,7 @@ const tableColumns = computed(() => [
   {
     field: 'created_at',
     title: t('article.created_at'),
-    sortable: false
+    sortable: true
   },
   {
     field: 'updated_at',
