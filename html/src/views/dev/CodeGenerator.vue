@@ -53,6 +53,15 @@
         </el-checkbox-group>
       </el-form-item>
 
+      <el-form-item :label="$t('code_generator.function_options')">
+        <el-checkbox-group v-model="form.options">
+          <el-checkbox label="has_create">{{ $t('code_generator.has_create') }}</el-checkbox>
+          <el-checkbox label="has_edit">{{ $t('code_generator.has_edit') }}</el-checkbox>
+          <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
+          <el-checkbox label="has_export">{{ $t('code_generator.has_export') }}</el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+
       <el-button type="primary" @click="handleAddField">
         <el-icon><Plus /></el-icon>
         {{ $t('code_generator.add_field') }}
@@ -203,6 +212,12 @@
         <el-form-item :label="$t('code_generator.display_field')">
           <el-input v-model="relationForm.display_field" :placeholder="$t('code_generator.display_field_placeholder')" />
         </el-form-item>
+        <el-form-item 
+          v-if="currentField && currentField.api_url"
+          :label="$t('code_generator.is_tree')"
+        >
+          <el-checkbox v-model="relationForm.is_tree">{{ $t('code_generator.is_tree_desc') }}</el-checkbox>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="relationDialogVisible = false">{{ $t('common.cancel') }}</el-button>
@@ -256,6 +271,12 @@
           >
             <el-input v-model="fieldConfigForm.api_url" :placeholder="$t('code_generator.api_url_placeholder')" />
           </el-form-item>
+          <el-form-item 
+            v-if="fieldConfigForm.option_type === 'api'"
+            :label="$t('code_generator.is_tree')"
+          >
+            <el-checkbox v-model="fieldConfigForm.is_tree">{{ $t('code_generator.is_tree_desc') }}</el-checkbox>
+          </el-form-item>
         </template>
       </el-form>
       <template #footer>
@@ -301,12 +322,14 @@ const relationForm = reactive({
   table: '',
   relation_type: 'belongsTo',
   foreign_key: '',
-  display_field: ''
+  display_field: '',
+  is_tree: false
 })
 const fieldConfigForm = reactive({
   option_type: 'dictionary',
   dictionary: '',
   api_url: '',
+  is_tree: false,
   precision: 8,
   scale: 2
 })
@@ -315,6 +338,7 @@ const form = reactive({
   module_name: '',
   table_name: '',
   files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page', 'form_page'],
+  options: ['has_create', 'has_edit', 'has_delete'],
   fields: [
     {
       name: 'name',
@@ -380,15 +404,14 @@ const fileTypes = [
 const formTypes = [
   { value: 'input', label: t('code_generator.form_types.input') },
   { value: 'textarea', label: t('code_generator.form_types.textarea') },
+  { value: 'editor', label: t('code_generator.form_types.editor') },
   { value: 'select', label: t('code_generator.form_types.select') },
   { value: 'radio', label: t('code_generator.form_types.radio') },
   { value: 'checkbox', label: t('code_generator.form_types.checkbox') },
+  { value: 'switch', label: t('code_generator.form_types.switch') },
+  { value: 'number', label: t('code_generator.form_types.number') },
   { value: 'date-picker', label: t('code_generator.form_types.date_picker') },
   { value: 'datetime-picker', label: t('code_generator.form_types.datetime_picker') },
-  { value: 'image-upload', label: t('code_generator.form_types.image_upload') },
-  { value: 'file-upload', label: t('code_generator.form_types.file_upload') },
-  { value: 'editor', label: t('code_generator.form_types.editor') },
-  { value: 'switch', label: t('code_generator.form_types.switch') },
 ]
 
 const loadFieldTypes = async () => {
@@ -487,11 +510,13 @@ const handleEditRelation = (row) => {
     relationForm.relation_type = row.relation.relation_type
     relationForm.foreign_key = row.relation.foreign_key
     relationForm.display_field = row.relation.display_field
+    relationForm.is_tree = row.relation.is_tree || false
   } else {
     relationForm.table = ''
     relationForm.relation_type = 'belongsTo'
     relationForm.foreign_key = ''
     relationForm.display_field = ''
+    relationForm.is_tree = false
   }
   relationDialogVisible.value = true
 }
@@ -506,7 +531,8 @@ const handleSaveRelation = () => {
     relation_type: relationForm.relation_type,
     foreign_key: relationForm.foreign_key,
     display_field: relationForm.display_field,
-    alias: '' // 默认置空，不再需要手动输入
+    alias: '', // 默认置空，不再需要手动输入
+    is_tree: relationForm.is_tree || false
   }
   relationDialogVisible.value = false
   ElMessage.success(t('code_generator.relation_saved'))
@@ -521,10 +547,13 @@ const handleEditFieldConfig = (row) => {
     fieldConfigForm.option_type = 'api'
     fieldConfigForm.api_url = row.api_url
     fieldConfigForm.dictionary = ''
+    // 从 relation 或字段本身读取 is_tree
+    fieldConfigForm.is_tree = (row.relation && row.relation.is_tree) || false
   } else {
     fieldConfigForm.option_type = 'dictionary'
     fieldConfigForm.dictionary = row.dictionary || ''
     fieldConfigForm.api_url = ''
+    fieldConfigForm.is_tree = false
   }
   loadDictionaryTypes()
   fieldConfigDialogVisible.value = true
@@ -538,9 +567,32 @@ const handleSaveFieldConfig = () => {
     } else if (fieldConfigForm.option_type === 'dictionary') {
       currentField.value.dictionary = fieldConfigForm.dictionary
       currentField.value.api_url = ''
+      // 清除树形数据标志
+      if (currentField.value.relation) {
+        currentField.value.relation.is_tree = false
+      }
     } else {
       currentField.value.dictionary = ''
       currentField.value.api_url = fieldConfigForm.api_url
+      // 如果有 relation，更新 is_tree；如果没有 relation 但有 api_url，需要创建 relation 或设置字段级别的 is_tree
+      if (currentField.value.relation) {
+        currentField.value.relation.is_tree = fieldConfigForm.is_tree || false
+      } else if (fieldConfigForm.is_tree) {
+        // 如果没有 relation 但有 api_url 且设置了 is_tree，需要创建一个 relation 对象
+        // 或者我们可以添加一个字段级别的 is_tree，但目前结构中没有，所以先创建 relation
+        // 实际上，对于没有 relation 的情况，is_tree 应该存储在字段本身
+        // 但后端 FieldConfig 中没有 is_tree 字段，只有 Relation.IsTree
+        // 所以我们需要创建一个最小的 relation 对象来存储 is_tree
+        if (!currentField.value.relation) {
+          currentField.value.relation = {
+            table: '',
+            relation_type: 'belongsTo',
+            foreign_key: '',
+            display_field: '',
+            is_tree: fieldConfigForm.is_tree || false
+          }
+        }
+      }
     }
   }
   fieldConfigDialogVisible.value = false
@@ -556,9 +608,10 @@ const handlePreview = async (fileType) => {
       fields: form.fields,
       file_type: fileType,
       options: {
-        has_create: true,
-        has_edit: true,
-        has_delete: true
+        has_create: form.options.includes('has_create'),
+        has_edit: form.options.includes('has_edit'),
+        has_delete: form.options.includes('has_delete'),
+        has_export: form.options.includes('has_export')
       }
     })
     previewCode[fileType] = response.data.code || ''
@@ -598,9 +651,10 @@ const handleGenerate = async () => {
       files: form.files,
       force: false,
       options: {
-        has_create: true,
-        has_edit: true,
-        has_delete: true
+        has_create: form.options.includes('has_create'),
+        has_edit: form.options.includes('has_edit'),
+        has_delete: form.options.includes('has_delete'),
+        has_export: form.options.includes('has_export')
       }
     })
 

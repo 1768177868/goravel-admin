@@ -5,8 +5,12 @@
         <div class="card-header">
           <span>{{ $t('menu.article') }}</span>
           
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('article.store').disabled"
+            @click="handleAdd"
+          >
+            <el-icon><PlusIcon /></el-icon>
             {{ $t('common.add') }}
           </el-button>
           
@@ -20,7 +24,9 @@
         i18n-prefix="article"
         @search="handleSearch"
         @reset="handleReset"
-      />
+      >
+        
+      </SearchForm>
 
       <VxeTable
         ref="tableRef"
@@ -30,17 +36,18 @@
         :height="600"
         @sort-change="handleSortChange"
       >
+        
+        <template #admin_id="{ row }">
+          {{ getadminDisplayName(row.admin || row.admin_id) }}
+        </template>
         <template #operation="{ row }">
-          
-          <el-button type="primary" size="small" @click="handleEdit(row)">
-            {{ $t('common.edit') }}
-          </el-button>
-          
-          
-          <el-button type="danger" size="small" @click="handleDelete(row)">
-            {{ $t('common.delete') }}
-          </el-button>
-          
+          <TableActionButtons
+            :row="row"
+            :primary-actions="getPrimaryActions(row)"
+            :more-actions="getMoreActions(row)"
+            :get-button-state="getButtonState"
+            @action="handleAction"
+          />
         </template>
       </VxeTable>
 
@@ -49,38 +56,51 @@
         :auto-load="true"
         :on-page-change="loadData"
       />
-
-      <ArticleForm
-        ref="formRef"
-        v-model="dialogVisible"
-        :edit-id="editId"
-        @success="handleFormSuccess"
-      />
     </el-card>
+
+    <ArticleForm
+      ref="formRef"
+      v-model="dialogVisible"
+      :edit-id="editId"
+      @success="handleFormSuccess"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
+
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import ArticleForm from './ArticleForm.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+
 import {
   getArticleList,
-  deleteArticle
+  deleteArticle,
+  updateArticle,
+  
 } from '../../api/article'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
 
+const PlusIcon = markRaw(Plus)
+
+// 权限控制
+const { getButtonState } = usePermission()
+
 const { t } = useI18n()
+
 const tableRef = ref(null)
 const formRef = ref(null)
+
 
 const {
   dialogVisible,
@@ -110,7 +130,8 @@ const {
   loadData,
   handleSearch,
   handleReset,
-  handleSortChange
+  handleSortChange,
+  initDefaultSort
 } = useListPage({
   fetchApi: getArticleList,
   initialSearchForm,
@@ -145,7 +166,9 @@ const searchFields = computed(() => [
     type: 'select',
     clearable: true,
 
+    
     apiUrl: '/options?type=dictionary&dictionary_type=status',
+    
 
     width: '200px',
     advanced: false
@@ -153,10 +176,8 @@ const searchFields = computed(() => [
   {
     prop: 'admin_id',
     label: t('article.admin_id'),
-    type: 'select',
+    type: 'input',
     clearable: true,
-
-    
 
     width: '200px',
     advanced: false
@@ -194,43 +215,32 @@ const tableColumns = computed(() => [
     title: t('article.title'),
     sortable: false
   },
-
   {
     field: 'content',
     title: t('article.content'),
     sortable: false
   },
-
   {
     field: 'status',
     title: t('article.status'),
     sortable: false
   },
-
   {
     field: 'admin_id',
     title: t('article.admin_id'),
+    slot: 'admin_id',
     sortable: false
   },
-
-  {
-    field: 'admin.username',
-    title: t('article.admin_id'),
-    sortable: false
-  },
-
   {
     field: 'created_at',
     title: t('article.created_at'),
     sortable: false
   },
-
   {
     field: 'updated_at',
     title: t('article.updated_at'),
     sortable: false
   },
-
   {
     field: 'created_at',
     title: t('table.created_at'),
@@ -240,28 +250,85 @@ const tableColumns = computed(() => [
   {
     field: 'operation',
     title: t('table.operation'),
-    width: 180,
+    width: 220,
     fixed: 'right',
     slot: 'operation'
   }
 ])
+
+
+const getadminDisplayName = (admin_id) => {
+  if (!admin_id) return '-'
+  return admin_id.username || admin_id.admin || '-'
+}
+
+
+
+
 
 const handleEdit = (row) => {
   editId.value = row.id
   dialogVisible.value = true
 }
 
-const handleDelete = async (row) => {
-  await handleDeleteCrud(row, loadData)
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleFormSuccess = () => {
   handleClose()
   loadData()
 }
 
-onMounted(() => {
-  loadData()
+// 获取主要操作按钮配置
+const getPrimaryActions = (row) => {
+  return [
+    
+    {
+      key: 'edit',
+      label: t('common.edit'),
+      type: 'primary',
+      permission: 'article.update',
+      handler: handleEdit
+    },
+    
+    
+    {
+      key: 'delete',
+      label: t('common.delete'),
+      type: 'danger',
+      permission: 'article.destroy',
+      handler: handleDelete
+    }
+    
+  ]
+}
+
+// 获取更多操作按钮配置（可根据需要扩展）
+const getMoreActions = (row) => {
+  return []
+}
+
+// 处理操作事件
+const handleAction = (command, row) => {
+  switch (command) {
+    case 'edit':
+      handleEdit(row)
+      break
+    case 'delete':
+      handleDelete(row)
+      break
+  }
+}
+
+
+
+onMounted(async () => {
+  try {
+    initDefaultSort()
+    await loadData()
+  } catch (error) {
+    logger.error('ListPage onMounted error:', error)
+    ErrorHandler.handle(error)
+  }
 })
 </script>
 

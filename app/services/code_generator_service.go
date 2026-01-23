@@ -43,6 +43,7 @@ type RelationConfig struct {
 	DisplayField string `json:"display_field"` // 显示字段
 	RelationType string `json:"relation_type"` // 关联类型：hasOne, belongsTo, hasMany
 	Alias        string `json:"alias"`         // 别名
+	IsTree       bool   `json:"is_tree"`      // 是否为树形数据
 }
 
 type FieldType struct {
@@ -439,6 +440,12 @@ func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldCon
 		// Precision/Scale
 		precision, scale, _ := ct.DecimalSize()
 
+		// 系统字段默认不在表单中显示
+		showInForm := true
+		if name == "created_at" || name == "updated_at" || name == "deleted_at" {
+			showInForm = false
+		}
+
 		fields = append(fields, FieldConfig{
 			Name:         name,
 			Label:        label,
@@ -448,7 +455,7 @@ func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldCon
 			Searchable:   true,
 			Sortable:     false,
 			ShowInList:   true,
-			ShowInForm:   true,
+			ShowInForm:   showInForm,
 			ShowInDetail: true,
 			SearchType:   searchType,
 			SearchUIType: getSearchUIType("", jsonDBType),
@@ -469,12 +476,14 @@ func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldCon
 			field.FormType = "select"
 			// 推断关联
 			refTable := strings.TrimSuffix(field.Name, "_id") + "s" // 简单复数化
+			// 树形数据只有在自定义API时才可能，默认关联不使用树形
 			field.Relation = &RelationConfig{
 				Table:        refTable,
 				ForeignKey:   field.Name,
 				DisplayField: "name", // 默认猜测 name
 				RelationType: "belongsTo",
 				Alias:        "", // 默认使用表名转 PascalCase
+				IsTree:       false, // 默认不是树形，只有自定义API时才可能是树形
 			}
 		} else if strings.Contains(field.Name, "image") || strings.Contains(field.Name, "avatar") || strings.Contains(field.Name, "photo") || strings.Contains(field.Name, "pic") {
 			field.FormType = "image-upload"
@@ -610,6 +619,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 	hasCreate := true
 	hasEdit := true
 	hasDelete := true
+	hasExport := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -620,6 +630,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 		}
 		if val, ok := options["has_delete"]; ok {
 			hasDelete = val
+		}
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
 		}
 	}
 
@@ -744,6 +757,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate   bool
 			HasEdit     bool
 			HasDelete   bool
+			HasExport   bool
 		}{
 			ModelName:   toPascalCase(moduleName),
 			ModuleName:  moduleName,
@@ -752,6 +766,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate:   hasCreate,
 			HasEdit:     hasEdit,
 			HasDelete:   hasDelete,
+			HasExport:   hasExport,
 		}
 	case "list_page":
 		var searchableFields []TemplateFieldConfig
@@ -774,6 +789,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate        bool
 			HasEdit          bool
 			HasDelete        bool
+			HasExport        bool
 		}{
 			ModelName:        toPascalCase(moduleName),
 			ModuleName:       moduleName,
@@ -784,8 +800,17 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate:        hasCreate,
 			HasEdit:          hasEdit,
 			HasDelete:        hasDelete,
+			HasExport:        hasExport,
 		}
 	case "form_page":
+		// 检查是否有 editor 类型的字段
+		hasEditor := false
+		for _, field := range templateFields {
+			if field.FormType == "editor" && field.ShowInForm {
+				hasEditor = true
+				break
+			}
+		}
 		return struct {
 			ModelName   string
 			ModuleName  string
@@ -793,6 +818,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			FormFields  []TemplateFieldConfig
 			HasCreate   bool
 			HasEdit     bool
+			HasEditor   bool
 		}{
 			ModelName:   toPascalCase(moduleName),
 			ModuleName:  moduleName,
@@ -800,6 +826,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			FormFields:  templateFields,
 			HasCreate:   hasCreate,
 			HasEdit:     hasEdit,
+			HasEditor:   hasEditor,
 		}
 	default:
 		return struct {
@@ -839,7 +866,9 @@ type TemplateFieldConfig struct {
 	Searchable      bool
 	ShowInList      bool
 	ShowInForm      bool
+	ShowInDetail    bool
 	Relation        *TemplateRelationConfig
+	IsTree          bool // 是否为树形数据（用于自定义API）
 	Precision       int
 	Scale           int
 }
@@ -927,7 +956,9 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			Searchable:   field.Searchable,
 			ShowInList:   field.ShowInList,
 			ShowInForm:   field.ShowInForm,
+			ShowInDetail: field.ShowInDetail,
 			Relation:     relation,
+			IsTree:       field.Relation != nil && field.Relation.IsTree, // 从 relation 中读取 is_tree
 			Precision:    field.Precision,
 			Scale:        field.Scale,
 		}
@@ -1187,6 +1218,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 	hasCreate := true
 	hasEdit := true
 	hasDelete := true
+	hasExport := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1197,6 +1229,9 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 		}
 		if val, ok := options["has_delete"]; ok {
 			hasDelete = val
+		}
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
 		}
 	}
 
@@ -1209,6 +1244,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 		HasCreate   bool
 		HasEdit     bool
 		HasDelete   bool
+		HasExport   bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
@@ -1217,6 +1253,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 		HasCreate:   hasCreate,
 		HasEdit:     hasEdit,
 		HasDelete:   hasDelete,
+		HasExport:   hasExport,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1240,6 +1277,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 	hasCreate := true
 	hasEdit := true
 	hasDelete := true
+	hasExport := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1250,6 +1288,9 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		}
 		if val, ok := options["has_delete"]; ok {
 			hasDelete = val
+		}
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
 		}
 	}
 
@@ -1264,6 +1305,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		HasCreate        bool
 		HasEdit          bool
 		HasDelete        bool
+		HasExport        bool
 	}{
 		ModelName:        toPascalCase(moduleName),
 		ModuleName:       moduleName,
@@ -1274,6 +1316,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		HasCreate:        hasCreate,
 		HasEdit:          hasEdit,
 		HasDelete:        hasDelete,
+		HasExport:        hasExport,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1307,6 +1350,16 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
+	
+	// 检查是否有 editor 类型的字段
+	hasEditor := false
+	for _, field := range templateFields {
+		if field.FormType == "editor" && field.ShowInForm {
+			hasEditor = true
+			break
+		}
+	}
+	
 	data := struct {
 		ModelName   string
 		ModuleName  string
@@ -1314,6 +1367,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		FormFields  []TemplateFieldConfig
 		HasCreate   bool
 		HasEdit     bool
+		HasEditor   bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
@@ -1321,6 +1375,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		FormFields:  templateFields,
 		HasCreate:   hasCreate,
 		HasEdit:     hasEdit,
+		HasEditor:   hasEditor,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)

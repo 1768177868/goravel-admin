@@ -13,6 +13,13 @@
         label-width="100px"
       >
         
+        <el-form-item :label="$t('article.content')" prop="content">
+          <WangEditor
+            v-model="formData.content"
+            :placeholder="$t('article.content_placeholder')"
+            :height="400"
+          />
+        </el-form-item>
         <FormField
           v-for="f in formFields"
           :key="f.prop"
@@ -34,7 +41,9 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
 
-// 关联字段: admin_id -> admins
+import WangEditor from '../../components/WangEditor.vue'
+
+
 import {
   createArticle,
   updateArticle,
@@ -66,7 +75,7 @@ const getFormInitialValue = () => ({
 
   title: '',
   content: '',
-  status: '',
+  status: null,
   admin_id: null,
 })
 
@@ -107,27 +116,11 @@ const formFields = computed(() => {
     disabled: loading.value,
   })
   fields.push({
-    prop: 'content',
-    label: t('article.content'),
-    type: 'textarea',
-    disabled: loading.value,
-    rows: 4,
-  })
-  fields.push({
     prop: 'status',
     label: t('article.status'),
-    type: 'input',
+    type: 'radio',
     disabled: loading.value,
     apiUrl: '/options?type=dictionary&dictionary_type=status',
-    clearable: true,
-  })
-  fields.push({
-    prop: 'admin_id',
-    label: t('article.admin_id'),
-    type: 'tree-select',
-    disabled: loading.value,
-    apiUrl: '/options?type=admins',
-    treeProps: { label: 'username', value: 'id', children: 'children' },
     clearable: true,
   })
   return fields

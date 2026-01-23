@@ -43,3 +43,13 @@ export function delete<<.ModelName>>(id) {
   })
 }
 <<end>>
+
+<<if .HasExport>>
+export function export<<.ModelName>>(params) {
+  return request({
+    url: '/<<.ModuleName>>s/export',
+    method: 'post',
+    data: params
+  })
+}
+<<end>>

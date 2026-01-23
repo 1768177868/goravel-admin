@@ -15,7 +15,7 @@
         <<range .FormFields>>
         <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
         <<- if .ShowInForm>>
-        <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload")>>
+        <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload") (eq .FormType "editor")>>
         <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
           <<- if eq .FormType "image-upload">>
           <!-- 图片上传组件，请根据实际需求实现 -->
@@ -35,6 +35,12 @@
           >
             <el-button type="primary">上传文件</el-button>
           </el-upload>
+          <<- else if eq .FormType "editor">>
+          <WangEditor
+            v-model="formData.<<.Name>>"
+            :placeholder="$t('<<$.ModuleName>>.<<.Name>>_placeholder')"
+            :height="400"
+          />
           <<- end>>
         </el-form-item>
         <<- end>>
@@ -61,6 +67,9 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
+<<if .HasEditor>>
+import WangEditor from '../../components/WangEditor.vue'
+<<end>>
 <<range .FormFields>>
 <<- if and (eq .FormType "select") (or .Relation .ApiUrl)>>
 <<- if .Relation>>
@@ -98,7 +107,7 @@ const loading = ref(false)
 const getFormInitialValue = () => ({
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-  <<.Name>>: <<if eq .FormType "switch">>false<<else if eq .FormType "number">>0<<else if eq .FormType "date-picker">>null<<else if eq .FormType "datetime-picker">>null<<else if .Relation>>null<<else if eq .FormType "select">>null<<else>>''<<end>>,
+  <<.Name>>: <<if eq .FormType "switch">>0<<else if eq .FormType "number">>0<<else if eq .FormType "date-picker">>null<<else if eq .FormType "datetime-picker">>null<<else if .Relation>>null<<else if or (eq .FormType "select") (eq .FormType "radio")>>null<<else if eq .FormType "checkbox">>[]<<else>>''<<end>>,
 <<- end>>
 <<- end>>
 })
@@ -133,30 +142,62 @@ const formFields = computed(() => {
   const fields = []
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-  <<- if and .ShowInForm (ne .FormType "image-upload") (ne .FormType "file-upload")>>
+  <<- if and .ShowInForm (ne .FormType "image-upload") (ne .FormType "file-upload") (ne .FormType "editor")>>
   fields.push({
     prop: '<<.Name>>',
     label: t('<<$.ModuleName>>.<<.Name>>'),
-    type: <<if eq .FormType "input">>'input'<<else if eq .FormType "textarea">>'textarea'<<else if eq .FormType "editor">>'textarea'<<else if eq .FormType "select">><<- if .Relation>>'tree-select'<<else>>'select'<<- end>><<else if eq .FormType "switch">>'switch'<<else if eq .FormType "date-picker">>'date'<<else if eq .FormType "datetime-picker">>'datetime'<<else if eq .FormType "number">>'number'<<else>>'input'<<end>>,
+    type: <<if eq .FormType "input">>'input'<<else if eq .FormType "textarea">>'textarea'<<else if eq .FormType "select">><<- if and .ApiUrl (or (and .Relation .Relation.IsTree) .IsTree)>>'tree-select'<<else>>'select'<<- end>><<else if eq .FormType "radio">>'radio'<<else if eq .FormType "checkbox">>'checkbox'<<else if eq .FormType "switch">>'switch'<<else if eq .FormType "date-picker">>'date'<<else if eq .FormType "datetime-picker">>'datetime'<<else if eq .FormType "number">>'number'<<else>>'input'<<end>>,
     disabled: loading.value,
-    <<- if or (eq .FormType "textarea") (eq .FormType "editor")>>
+    <<- if eq .FormType "textarea">>
     rows: 4,
     <<- end>>
-    <<- if and .Relation (eq .FormType "select")>>
-    apiUrl: '/options?type=<<.Relation.Table>>',
+    <<- if .Relation>>
+    <<- if .ApiUrl>>
+    <<- if .Relation.IsTree>>
+    apiUrl: '<<.ApiUrl>>',
     treeProps: { label: '<<.Relation.DisplayField>>', value: 'id', children: 'children' },
     clearable: true,
-    <<- else if .ApiUrl>>
+    <<- else>>
     apiUrl: '<<.ApiUrl>>',
     clearable: true,
-    <<- else if eq .FormType "select">>
+    <<- if .Relation.DisplayField>>
+    optionLabelKey: '<<.Relation.DisplayField>>',
+    <<- end>>
+    optionValueKey: 'id',
+    <<- end>>
+    <<- else>>
+    apiUrl: '/options?type=<<.Relation.Table>>',
     clearable: true,
+    <<- if .Relation.DisplayField>>
+    optionLabelKey: '<<.Relation.DisplayField>>',
+    <<- end>>
+    optionValueKey: 'id',
+    <<- end>>
+    <<- else if .ApiUrl>>
+    <<- if or (eq .FormType "select") (eq .FormType "radio") (eq .FormType "checkbox")>>
+    apiUrl: '<<.ApiUrl>>',
+    <<- if and (not .Relation) .IsTree>>
+    treeProps: { label: 'label', value: 'value', children: 'children' },
+    <<- end>>
+    clearable: true,
+    <<- end>>
+    <<- else if or (eq .FormType "select") (eq .FormType "radio") (eq .FormType "checkbox")>>
+    <<- if .Dictionary>>
+    apiUrl: '/options?type=dictionary&dictionary_type=<<.Dictionary>>',
+    clearable: true,
+    <<- end>>
     <<- end>>
     <<- if or (eq .FormType "date-picker") (eq .FormType "datetime-picker")>>
     clearable: true,
     <<- end>>
     <<- if eq .FormType "number">>
     min: 0,
+    <<- end>>
+    <<- if eq .FormType "switch">>
+    props: {
+      activeValue: 1,
+      inactiveValue: 0
+    },
     <<- end>>
   })
   <<- end>>

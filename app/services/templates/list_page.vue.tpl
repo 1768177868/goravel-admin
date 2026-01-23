@@ -5,8 +5,12 @@
         <div class="card-header">
           <span>{{ $t('menu.<<$.ModuleName>>') }}</span>
           <<if .HasCreate>>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+          <el-button 
+            type="primary" 
+            :disabled="getButtonState('<<.ModuleName>>.store').disabled"
+            @click="handleAdd"
+          >
+            <el-icon><PlusIcon /></el-icon>
             {{ $t('common.add') }}
           </el-button>
           <<end>>
@@ -20,7 +24,20 @@
         i18n-prefix="<<.ModuleName>>"
         @search="handleSearch"
         @reset="handleReset"
-      />
+      >
+        <<if .HasExport>>
+        <template #extra-buttons>
+          <el-button 
+            type="success" 
+            :disabled="getButtonState('<<.ModuleName>>.export').disabled || isExporting"
+            :loading="isExporting"
+            @click="handleExport"
+          >
+            {{ $t('common.export') }}
+          </el-button>
+        </template>
+        <<end>>
+      </SearchForm>
 
       <VxeTable
         ref="tableRef"
@@ -30,17 +47,29 @@
         :height="600"
         @sort-change="handleSortChange"
       >
+        <<range .ListFields>>
+        <<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
+        <template #status="{ row }">
+          <el-switch
+            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+            :disabled="getButtonState('<<$.ModuleName>>.update').disabled"
+            @change="(val) => handleStatusChange(row, val)"
+          />
+        </template>
+        <<- else if and .ShowInList .Relation>>
+        <template #<<.Name>>="{ row }">
+          {{ get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>> || row.<<.Name>>) }}
+        </template>
+        <<- end>>
+        <<- end>>
         <template #operation="{ row }">
-          <<if .HasEdit>>
-          <el-button type="primary" size="small" @click="handleEdit(row)">
-            {{ $t('common.edit') }}
-          </el-button>
-          <<end>>
-          <<if .HasDelete>>
-          <el-button type="danger" size="small" @click="handleDelete(row)">
-            {{ $t('common.delete') }}
-          </el-button>
-          <<end>>
+          <TableActionButtons
+            :row="row"
+            :primary-actions="getPrimaryActions(row)"
+            :more-actions="getMoreActions(row)"
+            :get-button-state="getButtonState"
+            @action="handleAction"
+          />
         </template>
       </VxeTable>
 
@@ -49,38 +78,61 @@
         :auto-load="true"
         :on-page-change="loadData"
       />
-
-      <<print "<">><<.ModelName>>Form
-        ref="formRef"
-        v-model="dialogVisible"
-        :edit-id="editId"
-        @success="handleFormSuccess"
-      />
     </el-card>
+
+    <<print "<">><<.ModelName>>Form
+      ref="formRef"
+      v-model="dialogVisible"
+      :edit-id="editId"
+      @success="handleFormSuccess"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
+<<if .HasExport>>
+import { useRouter } from 'vue-router'
+<<end>>
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableActionButtons from '../../components/TableActionButtons.vue'
 import <<.ModelName>>Form from './<<.ModelName>>Form.vue'
 import { useListPage } from '../../composables/useListPage'
+import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+<<range .ListFields>>
+<<- if and .ShowInList (eq .Name "status") (not .Dictionary)>>
+import { getStatusOptions } from '../../utils/fieldOptions'
+<<- end>>
+<<- end>>
 import {
   get<<.ModelName>>List,
-  delete<<.ModelName>>
+  delete<<.ModelName>>,
+  <<if .HasEdit>>update<<.ModelName>>,<<end>>
+  <<if .HasExport>>export<<.ModelName>>,<<end>>
 } from '../../api/<<.ModuleName>>'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
 
+const PlusIcon = markRaw(Plus)
+
+// 权限控制
+const { getButtonState } = usePermission()
+
 const { t } = useI18n()
+<<if .HasExport>>
+const router = useRouter()
+<<end>>
 const tableRef = ref(null)
 const formRef = ref(null)
+<<if .HasExport>>
+const isExporting = ref(false)
+<<end>>
 
 const {
   dialogVisible,
@@ -106,7 +158,8 @@ const {
   loadData,
   handleSearch,
   handleReset,
-  handleSortChange
+  handleSortChange,
+  initDefaultSort
 } = useListPage({
   fetchApi: get<<.ModelName>>List,
   initialSearchForm,
@@ -120,10 +173,37 @@ const searchFields = computed(() => [
   {
     prop: '<<.Name>>',
     label: t('<<$.ModuleName>>.<<.Name>>'),
-    type: '<<.SearchUIType>>',
+    type: <<if and .ApiUrl (or (and .Relation .Relation.IsTree) .IsTree)>>'tree-select'<<else>>'<<.SearchUIType>>'<<end>>,
     clearable: true,
-<<if eq .SearchUIType "select">>
-    <<if .ApiUrl>>apiUrl: '<<.ApiUrl>>',<<end>>
+<<if or (eq .SearchUIType "select") (eq .SearchUIType "radio") (eq .SearchUIType "checkbox") (and .ApiUrl (and .Relation .Relation.IsTree))>>
+    <<if .Relation>>
+    <<- if .ApiUrl>>
+    <<- if .Relation.IsTree>>
+    apiUrl: '<<.ApiUrl>>',
+    treeProps: { label: '<<.Relation.DisplayField>>', value: 'id', children: 'children' },
+    <<- else>>
+    apiUrl: '<<.ApiUrl>>',
+    optionLabelKey: '<<.Relation.DisplayField>>',
+    optionValueKey: 'id',
+    <<- end>>
+    <<- else>>
+    apiUrl: '/options?type=<<.Relation.Table>>',
+    optionLabelKey: '<<.Relation.DisplayField>>',
+    optionValueKey: 'id',
+    <<- end>>
+    <<else if .ApiUrl>>
+    <<- if or (eq .SearchUIType "select") (eq .SearchUIType "radio") (eq .SearchUIType "checkbox")>>
+    apiUrl: '<<.ApiUrl>>',
+    <<- if and (not .Relation) .IsTree>>
+    treeProps: { label: 'label', value: 'value', children: 'children' },
+    <<- end>>
+    <<- end>>
+    <<end>>
+    <<- if and (not .ApiUrl) (not .Relation) .Dictionary>>
+    apiUrl: '/options?type=dictionary&dictionary_type=<<.Dictionary>>',
+    <<- else if and (eq .Name "status") (not .ApiUrl) (not .Dictionary)>>
+    options: getStatusOptions(t),
+    <<- end>>
 <<end>>
     width: '200px',
     advanced: false
@@ -140,18 +220,28 @@ const tableColumns = computed(() => [
   },
 <<range .ListFields>>
 <<- if .ShowInList>>
+  <<- if and (eq .Name "status") (eq .FormType "switch")>>
+  {
+    field: 'status',
+    title: t('table.status'),
+    width: 100,
+    sortable: false,
+    slot: 'status'
+  },
+  <<- else if .Relation>>
+  {
+    field: '<<.Name>>',
+    title: t('<<$.ModuleName>>.<<.Name>>'),
+    slot: '<<.Name>>',
+    sortable: false
+  },
+  <<- else>>
   {
     field: '<<.Name>>',
     title: t('<<$.ModuleName>>.<<.Name>>'),
     sortable: <<.Sortable>>
   },
-<<if .Relation>>
-  {
-    field: '<<.Relation.JsonName>>.<<.Relation.DisplayField>>',
-    title: t('<<$.ModuleName>>.<<.Name>>'),
-    sortable: false
-  },
-<<end>>
+  <<- end>>
 <<- end>>
 <<- end>>
   {
@@ -163,28 +253,136 @@ const tableColumns = computed(() => [
   {
     field: 'operation',
     title: t('table.operation'),
-    width: 180,
+    width: 220,
     fixed: 'right',
     slot: 'operation'
   }
 ])
+
+<<range .ListFields>>
+<<- if and .ShowInList .Relation>>
+const get<<.Relation.JsonName>>DisplayName = (<<.Name>>) => {
+  if (!<<.Name>>) return '-'
+  return <<.Name>>.<<.Relation.DisplayField>> || <<.Name>>.<<.Relation.JsonName>> || '-'
+}
+<<- end>>
+<<- end>>
+
+<<if .HasEdit>>
+<<range .ListFields>>
+<<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
+const handleStatusChange = async (row, newStatus) => {
+  try {
+    const statusValue = newStatus ? 1 : 0
+    await update<<$.ModelName>>(row.id, {
+      status: statusValue
+    })
+    ElMessage.success(newStatus ? t('common.enabled') : t('common.disabled'))
+    // 更新本地数据
+    const item = tableData.value.find(a => a.id === row.id)
+    if (item) {
+      item.status = statusValue
+      item.Status = statusValue
+    }
+  } catch (error) {
+    logger.error('Status change error:', error)
+    loadData()
+    if (!error.__handled) {
+      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
+      ElMessage.error(errorMessage)
+    }
+  }
+}
+<<- end>>
+<<- end>>
+<<end>>
 
 const handleEdit = (row) => {
   editId.value = row.id
   dialogVisible.value = true
 }
 
-const handleDelete = async (row) => {
-  await handleDeleteCrud(row, loadData)
-}
+const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleFormSuccess = () => {
   handleClose()
   loadData()
 }
 
-onMounted(() => {
-  loadData()
+// 获取主要操作按钮配置
+const getPrimaryActions = (row) => {
+  return [
+    <<if .HasEdit>>
+    {
+      key: 'edit',
+      label: t('common.edit'),
+      type: 'primary',
+      permission: '<<.ModuleName>>.update',
+      handler: handleEdit
+    },
+    <<end>>
+    <<if .HasDelete>>
+    {
+      key: 'delete',
+      label: t('common.delete'),
+      type: 'danger',
+      permission: '<<.ModuleName>>.destroy',
+      handler: handleDelete
+    }
+    <<end>>
+  ]
+}
+
+// 获取更多操作按钮配置（可根据需要扩展）
+const getMoreActions = (row) => {
+  return []
+}
+
+// 处理操作事件
+const handleAction = (command, row) => {
+  switch (command) {
+    case 'edit':
+      handleEdit(row)
+      break
+    case 'delete':
+      handleDelete(row)
+      break
+  }
+}
+
+<<if .HasExport>>
+const handleExport = async () => {
+  if (isExporting.value) {
+    return
+  }
+
+  isExporting.value = true
+
+  try {
+    await export<<.ModelName>>(searchForm)
+    ElMessage.success(t('common.export_task_submitted'))
+    router.push('/exports')
+  } catch (error) {
+    logger.error('Export error:', error)
+    if (error.response?.status === 429) {
+      ElMessage.warning(t('common.export_in_progress'))
+    } else if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true })
+    }
+  } finally {
+    isExporting.value = false
+  }
+}
+<<end>>
+
+onMounted(async () => {
+  try {
+    initDefaultSort()
+    await loadData()
+  } catch (error) {
+    logger.error('ListPage onMounted error:', error)
+    ErrorHandler.handle(error)
+  }
 })
 </script>
 

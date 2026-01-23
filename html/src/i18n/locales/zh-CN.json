@@ -1225,6 +1225,8 @@
     "foreign_key_placeholder": "请输入外键字段，如：category_id",
     "display_field": "显示字段",
     "display_field_placeholder": "请输入显示字段，如：name",
+    "is_tree": "树形数据",
+    "is_tree_desc": "是否为树形数据（如部门、菜单等有层级关系的数据）",
     "relation_alias": "别名（可选）",
     "relation_alias_placeholder": "请输入别名，如：Author（默认为表名或字段名）",
     "relation_required": "请填写完整的关联表信息",
@@ -1290,8 +1292,14 @@
       "image_upload": "图片上传",
       "file_upload": "文件上传",
       "editor": "富文本编辑器",
-      "switch": "开关"
-    }
+      "switch": "开关",
+      "number": "数字输入"
+    },
+    "function_options": "功能选项",
+    "has_create": "支持创建",
+    "has_edit": "支持编辑",
+    "has_delete": "支持删除",
+    "has_export": "支持导出"
   }
 }
 

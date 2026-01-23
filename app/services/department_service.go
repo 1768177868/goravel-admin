@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/dromara/carbon/v2"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
@@ -99,15 +100,17 @@ func (s *DepartmentServiceImpl) HasAdmins(departmentID uint) (bool, error) {
 func (s *DepartmentServiceImpl) Create(parentID uint, name, code, leader, phone, email, remark string, status uint8, sort int) (*models.Department, error) {
 	department := &models.Department{}
 	createData := map[string]any{
-		"parent_id": parentID,
-		"name":      name,
-		"code":      code,
-		"leader":    leader,
-		"phone":     phone,
-		"email":     email,
-		"remark":    remark,
-		"status":    status,
-		"sort":      sort,
+		"parent_id":  parentID,
+		"name":       name,
+		"code":       code,
+		"leader":     leader,
+		"phone":      phone,
+		"email":      email,
+		"remark":     remark,
+		"status":     status,
+		"sort":       sort,
+		"created_at": carbon.Now(),
+		"updated_at": carbon.Now(),
 	}
 
 	if err := facades.Orm().Query().Model(department).Create(createData); err != nil {

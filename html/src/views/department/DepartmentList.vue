@@ -46,21 +46,21 @@
         height="600"
       >
         <el-table-column type="index" width="60" :label="$t('table.seq')" />
-        <el-table-column prop="name" :label="$t('department.name')" min-width="200" />
+        <el-table-column prop="name" :label="$t('department.name')" min-width="150" />
         <el-table-column prop="remark" :label="$t('common.description')" min-width="200">
           <template #default="{ row }">
             {{ row.remark || row.description || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="sort" :label="$t('common.sort')" width="80" />
-        <el-table-column prop="status" :label="$t('table.status')" width="100">
+        <el-table-column prop="sort" :label="$t('common.sort')" width="100" />
+        <el-table-column prop="status" :label="$t('table.status')" width="200">
           <template #default="{ row }">
             <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
               {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" />
+        <!-- <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" /> -->
         <el-table-column :label="$t('table.operation')" width="150" fixed="right">
           <template #default="{ row }">
             <el-button 
