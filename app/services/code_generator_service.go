@@ -811,6 +811,16 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 				break
 			}
 		}
+		
+		// 检查是否有 markdown 类型的字段
+		hasMarkdown := false
+		for _, field := range templateFields {
+			if field.FormType == "markdown" && field.ShowInForm {
+				hasMarkdown = true
+				break
+			}
+		}
+		
 		return struct {
 			ModelName   string
 			ModuleName  string
@@ -819,6 +829,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate   bool
 			HasEdit     bool
 			HasEditor   bool
+			HasMarkdown bool
 		}{
 			ModelName:   toPascalCase(moduleName),
 			ModuleName:  moduleName,
@@ -827,6 +838,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate:   hasCreate,
 			HasEdit:     hasEdit,
 			HasEditor:   hasEditor,
+			HasMarkdown: hasMarkdown,
 		}
 	default:
 		return struct {
@@ -1360,6 +1372,15 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		}
 	}
 	
+	// 检查是否有 markdown 类型的字段
+	hasMarkdown := false
+	for _, field := range templateFields {
+		if field.FormType == "markdown" && field.ShowInForm {
+			hasMarkdown = true
+			break
+		}
+	}
+	
 	data := struct {
 		ModelName   string
 		ModuleName  string
@@ -1368,6 +1389,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		HasCreate   bool
 		HasEdit     bool
 		HasEditor   bool
+		HasMarkdown bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
@@ -1376,6 +1398,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		HasCreate:   hasCreate,
 		HasEdit:     hasEdit,
 		HasEditor:   hasEditor,
+		HasMarkdown: hasMarkdown,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)

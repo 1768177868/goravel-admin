@@ -14,7 +14,7 @@
       >
         
         <el-form-item :label="$t('article.content')" prop="content">
-          <WangEditor
+          <MarkdownEditor
             v-model="formData.content"
             :placeholder="$t('article.content_placeholder')"
             :height="400"
@@ -41,9 +41,11 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
 
-import WangEditor from '../../components/WangEditor.vue'
+
+import MarkdownEditor from '../../components/MarkdownEditor.vue'
 
 
+// 关联字段: admin_id -> admins
 import {
   createArticle,
   updateArticle,
@@ -118,7 +120,7 @@ const formFields = computed(() => {
   fields.push({
     prop: 'status',
     label: t('article.status'),
-    type: 'radio',
+    type: 'select',
     disabled: loading.value,
     apiUrl: '/options?type=dictionary&dictionary_type=status',
     clearable: true,
@@ -126,12 +128,8 @@ const formFields = computed(() => {
   fields.push({
     prop: 'admin_id',
     label: t('article.admin_id'),
-    type: 'input',
+    type: 'select',
     disabled: loading.value,
-    apiUrl: '/options?type=admins',
-    clearable: true,
-    optionLabelKey: 'username',
-    optionValueKey: 'id',
   })
   return fields
 })

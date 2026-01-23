@@ -15,7 +15,7 @@
         <<range .FormFields>>
         <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
         <<- if .ShowInForm>>
-        <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload") (eq .FormType "editor")>>
+        <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload") (eq .FormType "editor") (eq .FormType "markdown")>>
         <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
           <<- if eq .FormType "image-upload">>
           <!-- 图片上传组件，请根据实际需求实现 -->
@@ -37,6 +37,12 @@
           </el-upload>
           <<- else if eq .FormType "editor">>
           <WangEditor
+            v-model="formData.<<.Name>>"
+            :placeholder="$t('<<$.ModuleName>>.<<.Name>>_placeholder')"
+            :height="400"
+          />
+          <<- else if eq .FormType "markdown">>
+          <MarkdownEditor
             v-model="formData.<<.Name>>"
             :placeholder="$t('<<$.ModuleName>>.<<.Name>>_placeholder')"
             :height="400"
@@ -69,6 +75,9 @@ import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
 <<if .HasEditor>>
 import WangEditor from '../../components/WangEditor.vue'
+<<end>>
+<<if .HasMarkdown>>
+import MarkdownEditor from '../../components/MarkdownEditor.vue'
 <<end>>
 <<range .FormFields>>
 <<- if and (eq .FormType "select") (or .Relation .ApiUrl)>>
@@ -142,7 +151,7 @@ const formFields = computed(() => {
   const fields = []
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-  <<- if and .ShowInForm (ne .FormType "image-upload") (ne .FormType "file-upload") (ne .FormType "editor")>>
+  <<- if and .ShowInForm (ne .FormType "image-upload") (ne .FormType "file-upload") (ne .FormType "editor") (ne .FormType "markdown")>>
   fields.push({
     prop: '<<.Name>>',
     label: t('<<$.ModuleName>>.<<.Name>>'),
@@ -165,18 +174,11 @@ const formFields = computed(() => {
     <<- end>>
     optionValueKey: 'id',
     <<- end>>
-    <<- else>>
-    apiUrl: '/options?type=<<.Relation.Table>>',
-    clearable: true,
-    <<- if .Relation.DisplayField>>
-    optionLabelKey: '<<.Relation.DisplayField>>',
-    <<- end>>
-    optionValueKey: 'id',
     <<- end>>
     <<- else if .ApiUrl>>
     <<- if or (eq .FormType "select") (eq .FormType "radio") (eq .FormType "checkbox")>>
     apiUrl: '<<.ApiUrl>>',
-    <<- if and (not .Relation) .IsTree>>
+    <<- if .IsTree>>
     treeProps: { label: 'label', value: 'value', children: 'children' },
     <<- end>>
     clearable: true,

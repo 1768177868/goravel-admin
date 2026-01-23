@@ -186,15 +186,11 @@ const searchFields = computed(() => [
     optionLabelKey: '<<.Relation.DisplayField>>',
     optionValueKey: 'id',
     <<- end>>
-    <<- else>>
-    apiUrl: '/options?type=<<.Relation.Table>>',
-    optionLabelKey: '<<.Relation.DisplayField>>',
-    optionValueKey: 'id',
     <<- end>>
     <<else if .ApiUrl>>
     <<- if or (eq .SearchUIType "select") (eq .SearchUIType "radio") (eq .SearchUIType "checkbox")>>
     apiUrl: '<<.ApiUrl>>',
-    <<- if and (not .Relation) .IsTree>>
+    <<- if .IsTree>>
     treeProps: { label: 'label', value: 'value', children: 'children' },
     <<- end>>
     <<- end>>

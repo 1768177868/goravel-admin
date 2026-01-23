@@ -405,6 +405,7 @@ const formTypes = [
   { value: 'input', label: t('code_generator.form_types.input') },
   { value: 'textarea', label: t('code_generator.form_types.textarea') },
   { value: 'editor', label: t('code_generator.form_types.editor') },
+  { value: 'markdown', label: t('code_generator.form_types.markdown') },
   { value: 'select', label: t('code_generator.form_types.select') },
   { value: 'radio', label: t('code_generator.form_types.radio') },
   { value: 'checkbox', label: t('code_generator.form_types.checkbox') },
