@@ -45,7 +45,7 @@ func (s *ArticleServiceImpl) BuildArticleQuery(filters ArticleFilters) orm.Query
 	}
 	if filters.Content != "" {
 
-		query = query.Where("content LIKE ?", "%"+filters.Content+"%")
+		query = query.Where("content = ?", filters.Content)
 
 	}
 	if filters.Status != "" {

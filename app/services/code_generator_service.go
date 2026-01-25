@@ -821,6 +821,15 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			}
 		}
 		
+		// 检查是否有 image-upload 类型的字段
+		hasImageUpload := false
+		for _, field := range templateFields {
+			if field.FormType == "image-upload" && field.ShowInForm {
+				hasImageUpload = true
+				break
+			}
+		}
+		
 		return struct {
 			ModelName   string
 			ModuleName  string
@@ -830,6 +839,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit     bool
 			HasEditor   bool
 			HasMarkdown bool
+			HasImageUpload bool
 		}{
 			ModelName:   toPascalCase(moduleName),
 			ModuleName:  moduleName,
@@ -839,6 +849,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit:     hasEdit,
 			HasEditor:   hasEditor,
 			HasMarkdown: hasMarkdown,
+			HasImageUpload: hasImageUpload,
 		}
 	default:
 		return struct {
@@ -1381,6 +1392,15 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		}
 	}
 	
+	// 检查是否有 image-upload 类型的字段
+	hasImageUpload := false
+	for _, field := range templateFields {
+		if field.FormType == "image-upload" && field.ShowInForm {
+			hasImageUpload = true
+			break
+		}
+	}
+	
 	data := struct {
 		ModelName   string
 		ModuleName  string
@@ -1390,6 +1410,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		HasEdit     bool
 		HasEditor   bool
 		HasMarkdown bool
+		HasImageUpload bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
@@ -1399,6 +1420,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 		HasEdit:     hasEdit,
 		HasEditor:   hasEditor,
 		HasMarkdown: hasMarkdown,
+		HasImageUpload: hasImageUpload,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)

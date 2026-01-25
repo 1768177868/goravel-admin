@@ -14,10 +14,10 @@
       >
         
         <el-form-item :label="$t('article.content')" prop="content">
-          <MarkdownEditor
+          <ImageUpload
             v-model="formData.content"
-            :placeholder="$t('article.content_placeholder')"
             :height="400"
+            :width="400"
           />
         </el-form-item>
         <FormField
@@ -42,10 +42,10 @@ import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
 
 
-import MarkdownEditor from '../../components/MarkdownEditor.vue'
+
+import ImageUpload from '../../components/ImageUpload.vue'
 
 
-// 关联字段: admin_id -> admins
 import {
   createArticle,
   updateArticle,
@@ -120,7 +120,7 @@ const formFields = computed(() => {
   fields.push({
     prop: 'status',
     label: t('article.status'),
-    type: 'select',
+    type: 'radio',
     disabled: loading.value,
     apiUrl: '/options?type=dictionary&dictionary_type=status',
     clearable: true,
@@ -128,7 +128,7 @@ const formFields = computed(() => {
   fields.push({
     prop: 'admin_id',
     label: t('article.admin_id'),
-    type: 'select',
+    type: 'input',
     disabled: loading.value,
   })
   return fields

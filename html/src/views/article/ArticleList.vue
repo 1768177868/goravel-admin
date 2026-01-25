@@ -37,6 +37,17 @@
         @sort-change="handleSortChange"
       >
         
+        <template #content="{ row }">
+          <el-image
+            v-if="row.content"
+            :src="row.content"
+            :preview-src-list="[row.content]"
+            fit="cover"
+            style="width: 60px; height: 60px; border-radius: 4px; cursor: pointer;"
+            lazy
+          />
+          <span v-else>-</span>
+        </template>
         <template #admin_id="{ row }">
           {{ getadminDisplayName(row.admin || row.admin_id) }}
         </template>
@@ -163,12 +174,8 @@ const searchFields = computed(() => [
   {
     prop: 'status',
     label: t('article.status'),
-    type: 'select',
+    type: 'input',
     clearable: true,
-
-    
-    apiUrl: '/options?type=dictionary&dictionary_type=status',
-    
 
     width: '200px',
     advanced: false
@@ -218,7 +225,9 @@ const tableColumns = computed(() => [
   {
     field: 'content',
     title: t('article.content'),
-    sortable: false
+    slot: 'content',
+    sortable: false,
+    width: 120
   },
   {
     field: 'status',

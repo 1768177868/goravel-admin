@@ -18,14 +18,11 @@
         <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload") (eq .FormType "editor") (eq .FormType "markdown")>>
         <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
           <<- if eq .FormType "image-upload">>
-          <!-- 图片上传组件，请根据实际需求实现 -->
-          <el-upload
+          <ImageUpload
             v-model="formData.<<.Name>>"
-            action="/api/upload/image"
-            :show-file-list="false"
-          >
-            <el-button type="primary">上传图片</el-button>
-          </el-upload>
+            :height="400"
+            :width="400"
+          />
           <<- else if eq .FormType "file-upload">>
           <!-- 文件上传组件，请根据实际需求实现 -->
           <el-upload
@@ -78,6 +75,9 @@ import WangEditor from '../../components/WangEditor.vue'
 <<end>>
 <<if .HasMarkdown>>
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
+<<end>>
+<<if .HasImageUpload>>
+import ImageUpload from '../../components/ImageUpload.vue'
 <<end>>
 <<range .FormFields>>
 <<- if and (eq .FormType "select") (or .Relation .ApiUrl)>>

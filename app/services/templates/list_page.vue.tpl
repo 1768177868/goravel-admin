@@ -56,6 +56,18 @@
             @change="(val) => handleStatusChange(row, val)"
           />
         </template>
+        <<- else if and .ShowInList (eq .FormType "image-upload")>>
+        <template #<<.Name>>="{ row }">
+          <el-image
+            v-if="row.<<.Name>>"
+            :src="row.<<.Name>>"
+            :preview-src-list="[row.<<.Name>>]"
+            fit="cover"
+            style="width: 60px; height: 60px; border-radius: 4px; cursor: pointer;"
+            lazy
+          />
+          <span v-else>-</span>
+        </template>
         <<- else if and .ShowInList .Relation>>
         <template #<<.Name>>="{ row }">
           {{ get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>> || row.<<.Name>>) }}
@@ -223,6 +235,14 @@ const tableColumns = computed(() => [
     width: 100,
     sortable: false,
     slot: 'status'
+  },
+  <<- else if eq .FormType "image-upload">>
+  {
+    field: '<<.Name>>',
+    title: t('<<$.ModuleName>>.<<.Name>>'),
+    slot: '<<.Name>>',
+    sortable: false,
+    width: 120
   },
   <<- else if .Relation>>
   {
