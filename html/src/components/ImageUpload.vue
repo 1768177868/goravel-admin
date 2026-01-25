@@ -2,6 +2,7 @@
   <div class="image-upload-wrapper">
     <div v-if="!imageUrl" class="upload-buttons">
       <el-upload
+        v-if="uploadMode === 'both' || uploadMode === 'direct'"
         :action="uploadAction"
         :headers="uploadHeaders"
         :data="uploadData"
@@ -14,11 +15,12 @@
       >
         <el-button type="primary">
           <el-icon><UploadIcon /></el-icon>
-          {{ $t('common.direct_upload') }}
+          {{ $t('common.image_upload') }}
         </el-button>
       </el-upload>
       
       <el-button 
+        v-if="uploadMode === 'both' || uploadMode === 'crop'"
         type="success" 
         @click="handleCropUpload"
       >
@@ -36,6 +38,7 @@
       />
       <div class="image-actions">
         <el-button 
+          v-if="uploadMode === 'both' || uploadMode === 'crop'"
           type="primary" 
           size="small"
           @click="handleCropUpload"
@@ -135,6 +138,11 @@ const props = defineProps({
   aspectRatio: {
     type: Number,
     default: null // null 表示不限制比例
+  },
+  uploadMode: {
+    type: String,
+    default: 'both', // 'both' | 'direct' | 'crop'
+    validator: (value) => ['both', 'direct', 'crop'].includes(value)
   }
 })
 
