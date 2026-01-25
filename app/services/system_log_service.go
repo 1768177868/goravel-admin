@@ -94,6 +94,13 @@ func (s *SystemLogServiceImpl) GetList(filters SystemLogFilters, page, pageSize 
 
 // RecordHTTP 记录系统日志（HTTP context）
 func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, message string, attributes map[string]any) error {
+	// 检查数据库连接是否可用
+	orm := facades.Orm()
+	if orm == nil {
+		// 数据库未初始化时，静默跳过日志记录
+		return nil
+	}
+
 	var contextJSON string
 	if len(attributes) > 0 {
 		if data, err := json.Marshal(attributes); err == nil {
@@ -116,7 +123,7 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 		UserAgent: ctx.Request().Header("User-Agent", ""),
 	}
 
-	if err := facades.Orm().Query().Create(&log); err != nil {
+	if err := orm.Query().Create(&log); err != nil {
 		return err
 	}
 	return nil
@@ -124,6 +131,13 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 
 // Record 记录系统日志（标准 context）
 func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, message string, attributes map[string]any) error {
+	// 检查数据库连接是否可用
+	orm := facades.Orm()
+	if orm == nil {
+		// 数据库未初始化时，静默跳过日志记录
+		return nil
+	}
+
 	var contextJSON string
 	if len(attributes) > 0 {
 		if data, err := json.Marshal(attributes); err == nil {
@@ -146,7 +160,7 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 		Context: contextJSON,
 	}
 
-	if err := facades.Orm().Query().Create(&log); err != nil {
+	if err := orm.Query().Create(&log); err != nil {
 		return err
 	}
 	return nil
