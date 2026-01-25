@@ -2,8 +2,11 @@
   <el-dialog
     v-model="dialogVisible"
     :title="dialogTitle"
-    width="1000px"
+    :width="isMobile ? '95%' : '1000px'"
+    :fullscreen="isMobile"
+    :close-on-click-modal="false"
     @close="handleDialogClose"
+    class="article-form-dialog"
   >
     <div v-loading="loading">
       <el-form
@@ -14,10 +17,9 @@
       >
         
         <el-form-item :label="$t('article.content')" prop="content">
-          <ImageUpload
+          <MarkdownEditor
             v-model="formData.content"
-            :height="400"
-            :width="400"
+            :height="isMobile ? 300 : 400"
           />
         </el-form-item>
         <FormField
@@ -40,12 +42,8 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import FormField from '../../components/Form/FormField.vue'
-
-
-
 import ImageUpload from '../../components/ImageUpload.vue'
-
-
+import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import {
   createArticle,
   updateArticle,
@@ -53,6 +51,9 @@ import {
 } from '../../api/article'
 import { mapFields, normalizeFormData } from '../../utils/normalizeFormData'
 import ErrorHandler from '../../utils/errorHandler'
+import { useResponsive } from '../../composables/useResponsive'
+
+const { isMobile } = useResponsive()
 
 const props = defineProps({
   modelValue: {
@@ -225,5 +226,43 @@ const handleSubmit = async () => {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.article-form-dialog {
+  :deep(.el-dialog__body) {
+    padding: 20px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+
+  :deep(.el-form-item__label) {
+    font-weight: 500;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .article-form-dialog {
+    :deep(.el-dialog) {
+      margin: 0;
+      height: 100vh;
+      border-radius: 0;
+    }
+
+    :deep(.el-dialog__body) {
+      padding: 16px;
+      max-height: calc(100vh - 120px);
+    }
+
+    :deep(.el-form-item) {
+      margin-bottom: 20px;
+    }
+
+    :deep(.el-form-item__label) {
+      width: 100% !important;
+      text-align: left;
+      margin-bottom: 8px;
+      padding: 0;
+    }
+  }
+}
 </style>

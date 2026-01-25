@@ -1,6 +1,109 @@
 <template>
   <el-container class="layout-container" :class="`layout-${appStore.layoutSize}`">
+    <!-- 移动端抽屉式侧边栏 -->
+    <el-drawer
+      v-model="drawerVisible"
+      :with-header="false"
+      direction="ltr"
+      :size="isMobile ? '80%' : '240px'"
+      :modal="true"
+      :show-close="false"
+      class="mobile-drawer"
+      @close="handleDrawerClose"
+    >
+      <div class="drawer-content">
+        <div class="logo">
+          <h3>{{ $t('header.system') }}</h3>
+        </div>
+        <el-menu
+          :default-active="activeMenu"
+          class="sidebar-menu"
+          @select="handleMenuSelect"
+        >
+          <el-menu-item index="/dashboard">
+            <el-icon><Odometer /></el-icon>
+            <template #title>{{ $t('menu.dashboard') }}</template>
+          </el-menu-item>
+          <template v-if="menuTree.length > 0">
+            <MenuItem
+              v-for="menu in menuTree"
+              :key="menu.id"
+              :menu="menu"
+            />
+          </template>
+          <template v-else>
+            <!-- 默认菜单 -->
+            <el-sub-menu index="system">
+              <template #title>
+                <el-icon><Setting /></el-icon>
+                <span>{{ $t('menu.system') }}</span>
+              </template>
+              <el-menu-item index="/admins">
+                <el-icon><User /></el-icon>
+                <template #title>{{ $t('menu.admin') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/roles">
+                <el-icon><Avatar /></el-icon>
+                <template #title>{{ $t('menu.role') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/permissions">
+                <el-icon><Key /></el-icon>
+                <template #title>{{ $t('menu.permission') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/menus">
+                <el-icon><Menu /></el-icon>
+                <template #title>{{ $t('menu.menu') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/departments">
+                <el-icon><OfficeBuilding /></el-icon>
+                <template #title>{{ $t('menu.department') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/dictionaries">
+                <el-icon><Document /></el-icon>
+                <template #title>{{ $t('menu.dictionary') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/configs">
+                <el-icon><Setting /></el-icon>
+                <template #title>{{ $t('menu.config') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/blacklists">
+                <el-icon><Warning /></el-icon>
+                <template #title>{{ $t('menu.blacklist') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/online-admins">
+                <el-icon><User /></el-icon>
+                <template #title>{{ $t('menu.online_admin') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/exports">
+                <el-icon><Document /></el-icon>
+                <template #title>{{ $t('menu.export') }}</template>
+              </el-menu-item>
+            </el-sub-menu>
+            <el-sub-menu index="logs">
+              <template #title>
+                <el-icon><Document /></el-icon>
+                <span>{{ $t('menu.log') }}</span>
+              </template>
+              <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
+              <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
+              <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
+            </el-sub-menu>
+            <el-menu-item index="/notifications">
+              <el-icon><Bell /></el-icon>
+              <template #title>{{ $t('menu.notification_center') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/monitor">
+              <el-icon><Monitor /></el-icon>
+              <template #title>{{ $t('menu.service_monitor') }}</template>
+            </el-menu-item>
+          </template>
+        </el-menu>
+      </div>
+    </el-drawer>
+
+    <!-- 桌面端固定侧边栏 -->
     <el-aside
+      v-if="!isMobile"
       :width="appStore.sidebarCollapsed ? '64px' : '240px'"
       class="sidebar"
       :class="{ 'is-collapse': appStore.sidebarCollapsed }"
@@ -98,17 +201,29 @@
     <el-container>
       <el-header class="header">
         <div class="header-left">
+          <!-- 移动端显示菜单按钮，桌面端显示折叠按钮 -->
           <el-button
+            v-if="isMobile"
+            type="text"
+            class="collapse-btn mobile-menu-btn"
+            @click="drawerVisible = true"
+          >
+            <el-icon><Menu /></el-icon>
+          </el-button>
+          <el-button
+            v-else
             type="text"
             class="collapse-btn"
             @click="appStore.toggleSidebar"
           >
             <el-icon><Fold v-if="!appStore.sidebarCollapsed" /><Expand v-else /></el-icon>
           </el-button>
-          <BreadcrumbView />
+          <BreadcrumbView :class="{ 'mobile-hidden': isXs }" />
         </div>
         <div class="header-right">
+          <!-- 移动端隐藏全屏按钮 -->
           <el-button
+            v-if="!isMobile"
             type="text"
             class="header-btn"
             @click="appStore.toggleFullscreen"
@@ -121,21 +236,26 @@
           </el-button>
           <NotificationBell />
           <!-- <DarkModeSwitch /> -->
-          <TimezoneSwitch />
-          <LanguageSwitch />
+          <!-- 移动端隐藏时区和语言切换 -->
+          <TimezoneSwitch :class="{ 'mobile-hidden': isMobile }" />
+          <LanguageSwitch :class="{ 'mobile-hidden': isXs }" />
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <span class="user-info">
               <el-avatar 
                 v-if="userStore.adminInfo?.avatar" 
-                :size="32" 
+                :size="isMobile ? 28 : 32" 
                 :src="userStore.adminInfo.avatar"
                 class="user-avatar"
               >
                 <el-icon><User /></el-icon>
               </el-avatar>
               <el-icon v-else class="user-icon"><User /></el-icon>
-              <span class="user-name">{{ userStore.adminInfo?.nickname || userStore.adminInfo?.username }}</span>
-              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <span class="user-name" :class="{ 'mobile-hidden': isXs }">
+                {{ userStore.adminInfo?.nickname || userStore.adminInfo?.username }}
+              </span>
+              <el-icon class="el-icon--right" :class="{ 'mobile-hidden': isMobile }">
+                <ArrowDown />
+              </el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -150,7 +270,7 @@
         </div>
       </el-header>
 
-      <div class="tabs-wrapper">
+      <div class="tabs-wrapper" :class="{ 'mobile-hidden': isMobile }">
         <TabsView />
       </div>
       
@@ -187,6 +307,7 @@ import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'
 import { filterAndSortTree } from '../utils/tree'
+import { useResponsive } from '../composables/useResponsive'
 import {
   Fold,
   Expand,
@@ -206,6 +327,12 @@ import {
   Monitor,
   Warning
 } from '@element-plus/icons-vue'
+
+// 响应式检测
+const { isMobile, isTablet, isXs } = useResponsive()
+
+// 移动端抽屉控制
+const drawerVisible = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -300,8 +427,17 @@ const handleMenuSelect = (index) => {
     // 检查是否是有效的内部路由路径（不以 http:// 或 https:// 开头）
     if (!index.startsWith('http://') && !index.startsWith('https://')) {
       router.push(index)
+      // 移动端选择菜单后自动关闭抽屉
+      if (isMobile.value) {
+        drawerVisible.value = false
+      }
     }
   }
+}
+
+// 处理抽屉关闭
+const handleDrawerClose = () => {
+  drawerVisible.value = false
 }
 
 const handleCommand = async (command) => {
@@ -567,5 +703,139 @@ const handleCommand = async (command) => {
 .is-active {
   color: #409EFF;
   font-weight: bold;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .layout-container {
+    position: relative;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .header {
+    padding: 0 12px;
+    height: 50px;
+    line-height: 50px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  .mobile-menu-btn {
+    font-size: 20px;
+    padding: 8px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .collapse-btn {
+    font-size: 20px;
+    padding: 8px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .header-btn {
+    padding: 6px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .user-info {
+    gap: 4px;
+  }
+
+  .user-name {
+    font-size: 14px;
+  }
+
+  .main-content {
+    padding: 12px;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+}
+
+/* 平板适配 */
+@media (min-width: 769px) and (max-width: 991px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+
+  .sidebar {
+    width: 200px !important;
+  }
+
+  .sidebar.is-collapse {
+    width: 64px;
+  }
+}
+
+/* 移动端抽屉样式 */
+.mobile-drawer {
+  z-index: 2000;
+}
+
+.mobile-drawer :deep(.el-drawer__body) {
+  padding: 0;
+}
+
+.drawer-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-content .logo {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-color-light);
+  padding: 0 20px;
+}
+
+.drawer-content .logo h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #383853;
+}
+
+.drawer-content .sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+  border-right: none;
+}
+
+/* 触摸优化 - 增大点击区域 */
+@media (max-width: 768px) {
+  .el-button {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  .el-menu-item {
+    min-height: 48px;
+    line-height: 48px;
+  }
+
+  .el-dropdown-menu__item {
+    min-height: 44px;
+    line-height: 44px;
+  }
 }
 </style>

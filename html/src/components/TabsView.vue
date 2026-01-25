@@ -463,5 +463,41 @@ onMounted(() => {
 .el-tabs__nav-scroll{
   margin-left: 10px;
 }
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .tabs-container :deep(.el-tabs__item) {
+    padding: 0 10px;
+    font-size: 11px;
+    height: 32px;
+    line-height: 32px;
+  }
+
+  .tab-label {
+    max-width: 120px;
+    gap: 4px;
+  }
+
+  .tab-title {
+    font-size: 11px;
+  }
+
+  .refresh-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    padding: 2px;
+  }
+
+  .context-menu {
+    min-width: 140px;
+    font-size: 13px;
+  }
+
+  .context-menu-item {
+    padding: 10px 14px;
+    min-height: 44px;
+  }
+}
 </style>
 

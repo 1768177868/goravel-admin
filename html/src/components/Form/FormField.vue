@@ -4,6 +4,8 @@
     :label="getFieldLabel(field)"
     :prop="field.prop"
     :style="field.style || {}"
+    :label-width="isMobile ? '100%' : undefined"
+    :class="{ 'mobile-form-item': isMobile }"
   >
     <!-- 输入框（inputType: text|password|number 等，透传至 el-input type） -->
     <el-input
@@ -236,6 +238,9 @@ import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
 import { useFieldOptions } from '../SearchForm/useFieldOptions'
 import { useIconPicker } from '../SearchForm/useIconPicker'
+import { useResponsive } from '../../composables/useResponsive'
+
+const { isMobile } = useResponsive()
 
 const props = defineProps({
   field: {
@@ -380,4 +385,35 @@ watch(() => [props.field?.apiUrl, props.field?.type], ensureOptionsLoaded)
     margin-top: 4px;
     line-height: 1.4;
   }
-  </style>
+
+  /* 移动端优化 */
+  .mobile-form-item {
+    margin-bottom: 20px;
+  }
+
+  .mobile-form-item :deep(.el-form-item__label) {
+    width: 100% !important;
+    text-align: left;
+    margin-bottom: 8px;
+    padding: 0;
+    font-weight: 500;
+  }
+
+  .mobile-form-item :deep(.el-form-item__content) {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  @media (max-width: 768px) {
+    .icon-grid {
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      max-height: 250px;
+    }
+
+    .icon-grid .el-button {
+      width: 32px;
+      height: 32px;
+    }
+  }
+</style>
