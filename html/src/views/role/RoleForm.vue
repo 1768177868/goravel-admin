@@ -493,6 +493,150 @@ const resetForm = () => {
   formRef.value?.resetFields()
 }
 
+// 设置树形组件的选中状态
+const setTreeCheckedKeys = async () => {
+  // 如果对话框未打开，不处理
+  if (!dialogVisible.value) return
+  
+  // 如果是新增角色，清空选中状态
+  if (!formData.id && !props.editId) {
+    await nextTick()
+    if (menuPermissionTreeRef.value) {
+      menuPermissionTreeRef.value.setCheckedKeys([], false)
+      checkedKeys.value = []
+    }
+    return
+  }
+  
+  // 如果是编辑角色，设置选中状态
+  // 确保树组件引用和树数据都已准备好
+  if (!menuPermissionTreeRef.value || menuPermissionTree.value.length === 0) {
+    return
+  }
+  
+  // 确保不在加载中
+  if (loading.value) {
+    return
+  }
+  
+  // 从 formData 中获取选中的权限 ID 和菜单 ID
+  const permissionIds = (formData.permission_ids || []).map(id => Number(id))
+  const menuIds = (formData.menu_ids || []).map(id => Number(id))
+  
+  // 构建权限ID集合，用于快速查找
+  const permissionIdSet = new Set(permissionIds)
+  
+  // 收集树中所有节点的映射关系
+  const nodeMap = new Map() // key: rawId, value: node
+  const menuNodeMap = new Map() // key: menu rawId, value: menu node
+  const permissionNodeMap = new Map() // key: permission rawId, value: permission node
+  
+  const collectNodes = (nodes) => {
+    nodes.forEach(node => {
+      if (node.rawId !== undefined) {
+        nodeMap.set(node.rawId, node)
+        if (node.isMenu) {
+          menuNodeMap.set(node.rawId, node)
+        } else if (node.isPermission) {
+          permissionNodeMap.set(node.rawId, node)
+        }
+      }
+      if (node.children) {
+        collectNodes(node.children)
+      }
+    })
+  }
+  collectNodes(menuPermissionTree.value)
+  
+  // 收集需要选中的节点ID
+  const keysToCheck = new Set()
+  
+  // 1. 添加所有权限节点ID
+  permissionIds.forEach(id => {
+    const node = permissionNodeMap.get(id)
+    if (node && node.id) {
+      keysToCheck.add(node.id)
+    }
+  })
+  
+  // 2. 处理菜单节点：只添加那些应该被完全选中的菜单
+  // 判断逻辑：菜单ID在 menuIds 中，且该菜单下没有权限被选中（或者所有权限都被选中）
+  menuIds.forEach(menuId => {
+    const menuNode = menuNodeMap.get(menuId)
+    if (!menuNode || !menuNode.id) return
+    
+    // 检查该菜单下是否有权限
+    const hasPermissions = menuNode.children && menuNode.children.some(child => child.isPermission)
+    
+    if (!hasPermissions) {
+      // 如果菜单下没有权限，直接选中菜单
+      keysToCheck.add(menuNode.id)
+    } else {
+      // 如果菜单下有权限，检查是否所有权限都被选中
+      const menuPermissionIds = []
+      menuNode.children.forEach(child => {
+        if (child.isPermission && child.rawId) {
+          menuPermissionIds.push(child.rawId)
+        }
+      })
+      
+      // 如果该菜单下的所有权限都被选中，则选中菜单
+      const allPermissionsSelected = menuPermissionIds.length > 0 && 
+        menuPermissionIds.every(permId => permissionIdSet.has(permId))
+      
+      if (allPermissionsSelected) {
+        keysToCheck.add(menuNode.id)
+      }
+      // 如果只有部分权限被选中，Element Plus 会自动显示半选状态，不需要手动设置
+    }
+  })
+  
+  try {
+    // 验证节点ID是否存在于树中
+    const allNodeIds = new Set()
+    const collectAllNodeIds = (nodes) => {
+      nodes.forEach(node => {
+        if (node.id) {
+          allNodeIds.add(node.id)
+        }
+        if (node.children) {
+          collectAllNodeIds(node.children)
+        }
+      })
+    }
+    collectAllNodeIds(menuPermissionTree.value)
+    
+    // 过滤出存在于树中的节点ID
+    const validCheckedKeys = Array.from(keysToCheck).filter(id => allNodeIds.has(id))
+    
+    if (validCheckedKeys.length !== keysToCheck.size) {
+      console.warn('Some node IDs not found in tree:', {
+        requested: Array.from(keysToCheck),
+        valid: validCheckedKeys,
+        allInTree: Array.from(allNodeIds)
+      })
+    }
+    
+    // 等待 DOM 更新
+    await nextTick()
+    
+    // 设置选中的节点，第二个参数为 false 表示不自动选中父节点
+    // 对于菜单节点，我们已经手动添加了应该被完全选中的菜单
+    // 对于权限节点，我们添加了所有应该被选中的权限
+    // Element Plus 会自动根据子节点的选中状态来显示父节点的半选状态
+    menuPermissionTreeRef.value.setCheckedKeys(validCheckedKeys, false)
+    
+    // 等待一下让树组件更新
+    await nextTick()
+    
+    // 获取实际选中的 keys
+    const actualCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
+    checkedKeys.value = actualCheckedKeys
+  } catch (error) {
+    console.error('Set checked keys error:', error)
+  }
+}
+
 // 监听 editId 变化，加载详情
 watch(() => props.editId, async (newId) => {
   if (newId && dialogVisible.value) {
@@ -512,6 +656,19 @@ watch(dialogVisible, async (visible) => {
     }
   }
 })
+
+// 监听树形数据加载完成，自动设置选中状态（替代固定次数的重试机制）
+watch(
+  [() => menuPermissionTree.value, () => dialogVisible.value, () => formData.id, () => loading.value],
+  async ([tree, visible, formId, isLoading]) => {
+    // 当对话框打开、树数据已加载、不在加载中、且有表单数据时，设置选中状态
+    if (visible && tree && tree.length > 0 && !isLoading && (formId || props.editId)) {
+      await nextTick()
+      await setTreeCheckedKeys()
+    }
+  },
+  { deep: true }
+)
 
 const loadDetail = async (id) => {
   loading.value = true
@@ -570,16 +727,9 @@ const handleDialogClose = () => {
 const handleDialogOpened = async () => {
   if (!formData.id && !props.editId) {
     // 新增角色，清空选中状态
-    checkedKeys.value = []
-    await nextTick()
-    setTimeout(() => {
-      if (menuPermissionTreeRef.value) {
-        menuPermissionTreeRef.value.setCheckedKeys([], false)
-        checkedKeys.value = []
-      }
-    }, 100)
+    await setTreeCheckedKeys()
   } else {
-    // 编辑角色，确保选中状态正确设置
+    // 编辑角色，确保数据已加载
     // 如果正在加载数据，等待加载完成
     if (loading.value) {
       // 等待 loading 完成
@@ -596,101 +746,10 @@ const handleDialogOpened = async () => {
     // 确保菜单权限树数据已加载
     if (menuPermissionTree.value.length === 0) {
       await loadMenuPermissionTree()
-      // 等待数据加载完成
-      await nextTick()
     }
     
-    // 从 formData 中获取选中的菜单和权限 ID
-    const menuIds = (formData.menu_ids || []).map(id => Number(id))
-    const permissionIds = (formData.permission_ids || []).map(id => Number(id))
-    
-    // 只设置权限ID，不设置菜单ID
-    // Element Plus 的 el-tree 会自动根据子节点的选中状态来显示父节点的半选状态
-    // 如果设置了菜单ID，会导致该菜单下的所有权限都被选中
-    const checkedPermissionKeys = permissionIds.map(id => `perm_${id}`)
-    
-    // 等待 DOM 更新
-    await nextTick()
-    
-    // 多次尝试设置选中状态，确保树组件已完全渲染
-    const setCheckedKeysWithRetry = (retries = 5) => {
-      if (retries <= 0) {
-        console.warn('Failed to set checked keys after retries')
-        return
-      }
-      
-      setTimeout(() => {
-        if (!menuPermissionTreeRef.value) {
-          // 树组件引用不存在，重试
-          if (retries > 1) {
-            setCheckedKeysWithRetry(retries - 1)
-          }
-          return
-        }
-        
-        if (menuPermissionTree.value.length === 0) {
-          // 树数据还没准备好，重试
-          if (retries > 1) {
-            setCheckedKeysWithRetry(retries - 1)
-          }
-          return
-        }
-        
-        try {
-          // 验证权限ID是否存在于树中
-          const permissionIdSet = new Set()
-          const collectPermissionIds = (nodes) => {
-            nodes.forEach(node => {
-              if (node.isPermission && node.id) {
-                permissionIdSet.add(node.id)
-              }
-              if (node.children) {
-                collectPermissionIds(node.children)
-              }
-            })
-          }
-          collectPermissionIds(menuPermissionTree.value)
-          
-          // 过滤出存在于树中的权限ID
-          const validPermissionIds = checkedPermissionKeys.filter(id => permissionIdSet.has(id))
-          
-          if (validPermissionIds.length !== checkedPermissionKeys.length) {
-            console.warn('Some permission IDs not found in tree:', {
-              requested: checkedPermissionKeys,
-              valid: validPermissionIds,
-              allInTree: Array.from(permissionIdSet)
-            })
-          }
-          
-          // 只设置权限ID，第二个参数为 false 表示不自动选中父节点
-          // Element Plus 会自动根据子节点的选中状态来显示父节点的半选状态
-          menuPermissionTreeRef.value.setCheckedKeys(validPermissionIds, false)
-          
-          // 等待一下让树组件更新
-          setTimeout(() => {
-            // 获取实际选中的 keys
-            const actualCheckedKeys = menuPermissionTreeRef.value.getCheckedKeys() || []
-            checkedKeys.value = actualCheckedKeys
-            
-            // 验证是否设置成功
-            const allPermissionsSet = validPermissionIds.length === 0 || 
-              validPermissionIds.every(id => actualCheckedKeys.includes(id))
-            
-            if (!allPermissionsSet && retries > 1) {
-              // 如果还有未选中的，重试
-              setCheckedKeysWithRetry(retries - 1)
-            }
-          }, 100)
-        } catch (error) {
-          console.error('Set checked keys error:', error)
-          if (retries > 1) {
-            setCheckedKeysWithRetry(retries - 1)
-          }
-        }
-      }, 300)
-    }
-    
-    setCheckedKeysWithRetry()
+    // 设置选中状态（如果树数据已准备好）
+    await setTreeCheckedKeys()
   }
 }
 
