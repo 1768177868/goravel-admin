@@ -125,3 +125,42 @@ html.dark .vxe-pager {
   background: transparent !important;
 }
 
+/* Element Plus Descriptions 暗黑模式支持 */
+html.dark .el-descriptions {
+  background-color: var(--el-bg-color) !important;
+}
+
+html.dark .el-descriptions__header {
+  color: var(--el-text-color-primary) !important;
+}
+
+html.dark .el-descriptions__title {
+  color: var(--el-text-color-primary) !important;
+}
+
+html.dark .el-descriptions__table {
+  background-color: var(--el-bg-color) !important;
+}
+
+html.dark .el-descriptions__cell {
+  background-color: var(--el-bg-color) !important;
+}
+
+html.dark .el-descriptions__label {
+  background-color: var(--el-bg-color-page) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark .el-descriptions__content {
+  background-color: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark .el-descriptions__cell.is-bordered-content {
+  background-color: var(--el-bg-color) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+html.dark .el-descriptions--border .el-descriptions__cell {
+  border-color: var(--el-border-color) !important;
+}

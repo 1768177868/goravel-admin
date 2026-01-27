@@ -1017,5 +1017,30 @@ pre {
   word-break: break-all;
   white-space: pre-wrap;
 }
+
+/* 暗黑模式样式 */
+html.dark pre {
+  background: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+  border: 1px solid var(--el-border-color);
+}
+
+html.dark .request-params-content {
+  background: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+  border: 1px solid var(--el-border-color);
+}
+
+html.dark .request-params-header {
+  border-bottom-color: var(--el-border-color) !important;
+}
+
+html.dark .preview-text {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark .text-muted {
+  color: var(--el-text-color-secondary) !important;
+}
 </style>
 

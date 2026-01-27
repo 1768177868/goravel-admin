@@ -542,6 +542,13 @@ pre {
   overflow-y: auto;
 }
 
+/* 暗黑模式样式 */
+html.dark pre {
+  background: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+  border: 1px solid var(--el-border-color);
+}
+
 .context-preview {
   max-width: 200px;
   overflow: hidden;

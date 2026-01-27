@@ -91,7 +91,7 @@
         <el-descriptions-item :label="$t('log.login_time')">{{ logDetail.created_at }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.message')" :span="2">{{ translateLoginMessage(logDetail.message || '') }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.request')" :span="2">
-          <pre v-if="logDetail.request" style="white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; border-radius: 4px; margin: 0;">{{ formatRequest(logDetail.request) }}</pre>
+          <pre v-if="logDetail.request" class="request-preview-content">{{ formatRequest(logDetail.request) }}</pre>
           <span v-else>-</span>
         </el-descriptions-item>
       </el-descriptions>
@@ -458,6 +458,22 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.request-preview-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 0;
+}
 
+/* 暗黑模式样式 */
+html.dark .request-preview-content {
+  background: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+  border: 1px solid var(--el-border-color);
+}
 </style>
 
