@@ -762,4 +762,14 @@ onMounted(() => {
 .code-preview code {
   color: #333;
 }
+
+/* 暗黑模式样式 */
+html.dark .code-preview pre {
+  background: var(--el-bg-color) !important;
+  border: 1px solid var(--el-border-color);
+}
+
+html.dark .code-preview code {
+  color: var(--el-text-color-regular) !important;
+}
 </style>
