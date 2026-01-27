@@ -396,7 +396,8 @@
     "attachment.destroy": "Delete Attachment",
     "attachment.batch_delete": "Batch Delete Attachments",
     "attachment.update_display_name": "Update Attachment Display Name",
-    "notification.store": "Create Notification"
+    "notification.store": "Create Notification",
+    "menu_id_required": "Please select menu"
   },
   "menu_management": {
     "add_menu": "Add Menu",

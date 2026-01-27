@@ -164,3 +164,8 @@ html.dark .el-descriptions__cell.is-bordered-content {
 html.dark .el-descriptions--border .el-descriptions__cell {
   border-color: var(--el-border-color) !important;
 }
+
+html.dark .error-stack {
+  background-color: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+}
