@@ -197,15 +197,7 @@ const loadDetail = async (id) => {
 // 重置表单
 const resetForm = () => {
   loading.value = false
-  formData.id = null
-  formData.menu_id = null
-  formData.name = ''
-  formData.slug = ''
-  formData.method = 'GET'
-  formData.path = ''
-  formData.description = ''
-  formData.status = 1
-  formData.sort = 0
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 
