@@ -3,47 +3,7 @@
     <div v-loading="loading">
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
         <!-- 配置式渲染表单字段 -->
-        <FormField v-for="f in formFields" :key="f.prop" :field="f" :model="formData">
-          <!-- 菜单选择的自定义插槽 -->
-          <template v-if="f.prop === 'menu_id'">
-            <el-popover v-model:visible="menuSelectVisible" placement="bottom-start" :width="300" trigger="click"
-              :popper-options="{
-                modifiers: [
-                  {
-                    name: 'computeStyles',
-                    options: {
-                      gpuAcceleration: false,
-                    },
-                  },
-                  {
-                    name: 'flip',
-                    options: {
-                      fallbackPlacements: ['top-start', 'bottom-start'],
-                    },
-                  },
-                ],
-              }" popper-class="menu-select-popover">
-              <template #reference>
-                <el-input :model-value="getSelectedMenuLabel()"
-                  :placeholder="$t('form.please_select') + $t('menu.title')" readonly clearable :disabled="loading"
-                  @clear="formData.menu_id = null" style="cursor: pointer">
-                  <template #suffix>
-                    <el-icon class="el-input__icon">
-                      <ArrowDown />
-                    </el-icon>
-                  </template>
-                </el-input>
-              </template>
-              <el-tree :data="menuTreeData" :props="{ label: 'label', children: 'children' }"
-                :default-expand-all="false" node-key="value" highlight-current :current-node-key="formData.menu_id"
-                @node-click="handleMenuSelect" class="menu-select-tree">
-                <template #default="{ node, data }">
-                  <span class="tree-node-label">{{ data.label }}</span>
-                </template>
-              </el-tree>
-            </el-popover>
-          </template>
-        </FormField>
+        <FormField v-for="f in formFields" :key="f.prop" :field="f" :model="formData" />
       </el-form>
     </div>
     <template #footer>
@@ -57,7 +17,6 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
 // 引入配置式表单组件
 import FormField from '../../components/Form/FormField.vue'
 import { getEnableDisableOptions, getMethodOptions } from '@/utils/options'
@@ -90,7 +49,6 @@ const { t } = useI18n()
 const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
-const menuSelectVisible = ref(false)
 
 // 定义表单初始值的复用函数（返回新对象，避免引用问题）
 const getFormInitialValue = () => ({
@@ -167,9 +125,13 @@ const formFields = computed(() => {
     {
       prop: 'menu_id',
       label: t('menu.title'),
-      type: 'custom', // 自定义类型（通过插槽渲染）
+      type: 'tree-select',
+      treeData: () => props.menuTreeData,
+      treeProps: { label: 'label', value: 'value', children: 'children' },
+      placeholder: t('form.please_select') + t('menu.title'),
+      clearable: true,
       disabled: loading.value,
-      noValidate: false // 需要验证（保留prop在formRules中）
+      props: { style: { width: '100%' } }
     },
     {
       prop: 'status',
@@ -190,31 +152,7 @@ const formFields = computed(() => {
   return fields
 })
 
-// 获取选中的菜单标签
-const getSelectedMenuLabel = () => {
-  if (!formData.menu_id) return ''
-  const findMenu = (menus, id) => {
-    const found = menus.find(menu => menu.value === id)
-    if (found) return found.label
-
-    for (const menu of menus) {
-      if (menu.children && menu.children.length > 0) {
-        const found = findMenu(menu.children, id)
-        if (found) return found
-      }
-    }
-    return ''
-  }
-  return findMenu(props.menuTreeData, formData.menu_id) || ''
-}
-
-// 处理菜单选择
-const handleMenuSelect = (data) => {
-  formData.menu_id = data.value
-  menuSelectVisible.value = false
-}
-
-// 监听editId变化，加载详情（
+// 监听editId变化，加载详情
 watch(() => props.editId, async (newId) => {
   if (newId && dialogVisible.value) {
     await loadDetail(newId)
@@ -244,6 +182,8 @@ const loadDetail = async (id) => {
       const permission = res.data.permission
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
       const mapped = mapFields(permission, getFormInitialValue())
+
+      mapped.menu_id = permission.MenuID ?? permission.menu_id ?? null
       
       Object.assign(formData, mapped)
     }
@@ -310,21 +250,3 @@ const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 </script>
-
-<style scoped>
-.tree-node-label {
-  font-size: 14px;
-}
-</style>
-
-<style>
-.menu-select-popover {
-  max-height: 400px;
-  overflow: hidden;
-}
-
-.menu-select-tree {
-  max-height: 400px;
-  overflow-y: auto;
-}
-</style>
