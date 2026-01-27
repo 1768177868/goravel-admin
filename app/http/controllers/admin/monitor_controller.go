@@ -295,8 +295,18 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 
 	// 获取数据库连接配置
 	driver := strings.ToLower(facades.Orm().Query().Driver())
-	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", driver), "127.0.0.1")
-	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", driver), 3306)
+	// 获取默认连接名（用于读取配置）
+	connectionName := facades.Config().GetString("database.default", "")
+	// 如果连接名为空，尝试根据驱动名推断
+	if connectionName == "" {
+		if driver == "postgresql" {
+			connectionName = "postgres"
+		} else if driver == "mysql" {
+			connectionName = "mysql"
+		}
+	}
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", connectionName), "127.0.0.1")
+	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", connectionName), 3306)
 
 	// 检查是否为本地数据库
 	if !isLocalHost(dbHost) {
@@ -322,14 +332,18 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	}
 
 	// 执行MySQL状态查询
-	var version string
 	var uptime, threads, queries, connections int64
+	hasData := false
 
 	// 获取MySQL版本
 	query := ormInstance.Query()
 	if query != nil {
-		if err := query.Raw("SELECT VERSION() as version").Scan(&version); err == nil {
-			result["version"] = version
+		var versionResult struct {
+			Version string `gorm:"column:version"`
+		}
+		if err := query.Raw("SELECT VERSION() as version").Scan(&versionResult); err == nil && versionResult.Version != "" {
+			result["version"] = versionResult.Version
+			hasData = true
 		}
 
 		// 获取MySQL状态信息
@@ -356,6 +370,9 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 			result["threads"] = threads
 			result["queries"] = queries
 			result["connections"] = connections // 当前连接数
+			if len(statusRows) > 0 {
+				hasData = true
+			}
 		}
 
 		// 获取MySQL变量信息（内存相关）
@@ -410,7 +427,12 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 		}
 	}
 
-	result["status"] = "connected"
+	// 只有当成功获取到数据时才设置为 connected
+	if hasData {
+		result["status"] = "connected"
+	} else {
+		result["status"] = "disconnected"
+	}
 	return result
 }
 
@@ -434,8 +456,18 @@ func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
 
 	// 获取数据库连接配置
 	driver := strings.ToLower(facades.Orm().Query().Driver())
-	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", driver), "127.0.0.1")
-	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", driver), 5432)
+	// 获取默认连接名（用于读取配置）
+	connectionName := facades.Config().GetString("database.default", "")
+	// 如果连接名为空，尝试根据驱动名推断
+	if connectionName == "" {
+		if driver == "postgresql" {
+			connectionName = "postgres"
+		} else if driver == "mysql" {
+			connectionName = "mysql"
+		}
+	}
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", connectionName), "127.0.0.1")
+	dbPort := facades.Config().GetInt(fmt.Sprintf("database.connections.%s.port", connectionName), 5432)
 
 	// 检查是否为本地数据库
 	if !isLocalHost(dbHost) {
@@ -460,10 +492,14 @@ func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
 
 	// 执行PostgreSQL查询
 	query := ormInstance.Query()
+	hasData := false
 	if query != nil {
 		// 获取PostgreSQL版本
-		var version string
-		if err := query.Raw("SELECT version() as version").Scan(&version); err == nil {
+		var versionResult struct {
+			Version string `gorm:"column:version"`
+		}
+		if err := query.Raw("SELECT version() as version").Scan(&versionResult); err == nil && versionResult.Version != "" {
+			version := versionResult.Version
 			// 提取版本号（例如：PostgreSQL 14.5 on x86_64-pc-linux-gnu）
 			if strings.Contains(version, "PostgreSQL") {
 				parts := strings.Fields(version)
@@ -475,52 +511,75 @@ func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
 			} else {
 				result["version"] = version
 			}
+			hasData = true
 		}
 
 		// 获取PostgreSQL运行时间（秒）
-		var uptime int64
-		if err := query.Raw("SELECT EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time()))::bigint as uptime").Scan(&uptime); err == nil {
-			result["uptime"] = uptime
+		var uptimeResult struct {
+			Uptime int64 `gorm:"column:uptime"`
+		}
+		if err := query.Raw("SELECT EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time()))::bigint as uptime").Scan(&uptimeResult); err == nil {
+			result["uptime"] = uptimeResult.Uptime
+			hasData = true
 		}
 
 		// 获取当前连接数
-		var connections int64
-		if err := query.Raw("SELECT count(*) FROM pg_stat_activity").Scan(&connections); err == nil {
-			result["connections"] = connections
+		var connectionsResult struct {
+			Count int64 `gorm:"column:count"`
+		}
+		if err := query.Raw("SELECT count(*) as count FROM pg_stat_activity").Scan(&connectionsResult); err == nil {
+			result["connections"] = connectionsResult.Count
+			hasData = true
 		}
 
 		// 获取最大连接数
-		var maxConnections int64
-		if err := query.Raw("SELECT setting::bigint FROM pg_settings WHERE name = 'max_connections'").Scan(&maxConnections); err == nil {
-			result["max_connections"] = maxConnections
+		var maxConnectionsResult struct {
+			Setting int64 `gorm:"column:setting"`
+		}
+		if err := query.Raw("SELECT setting::bigint as setting FROM pg_settings WHERE name = 'max_connections'").Scan(&maxConnectionsResult); err == nil {
+			result["max_connections"] = maxConnectionsResult.Setting
+			hasData = true
 		}
 
 		// 获取数据库大小
-		var dbSize int64
-		if err := query.Raw("SELECT pg_database_size(current_database())").Scan(&dbSize); err == nil {
-			result["database_size"] = dbSize
+		var dbSizeResult struct {
+			PgDatabaseSize *int64 `gorm:"column:pg_database_size"`
+		}
+		if err := query.Raw("SELECT pg_database_size(current_database()) as pg_database_size").Scan(&dbSizeResult); err == nil && dbSizeResult.PgDatabaseSize != nil {
+			result["database_size"] = *dbSizeResult.PgDatabaseSize
 		}
 
 		// 获取活跃连接数
-		var activeConnections int64
-		if err := query.Raw("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'").Scan(&activeConnections); err == nil {
-			result["active_connections"] = activeConnections
+		var activeConnectionsResult struct {
+			Count int64 `gorm:"column:count"`
+		}
+		if err := query.Raw("SELECT count(*) as count FROM pg_stat_activity WHERE state = 'active'").Scan(&activeConnectionsResult); err == nil {
+			result["active_connections"] = activeConnectionsResult.Count
 		}
 
 		// 获取空闲连接数
-		var idleConnections int64
-		if err := query.Raw("SELECT count(*) FROM pg_stat_activity WHERE state = 'idle'").Scan(&idleConnections); err == nil {
-			result["idle_connections"] = idleConnections
+		var idleConnectionsResult struct {
+			Count int64 `gorm:"column:count"`
+		}
+		if err := query.Raw("SELECT count(*) as count FROM pg_stat_activity WHERE state = 'idle'").Scan(&idleConnectionsResult); err == nil {
+			result["idle_connections"] = idleConnectionsResult.Count
 		}
 
 		// 获取总查询数（从启动开始）
-		var totalQueries int64
-		if err := query.Raw("SELECT sum(xact_commit + xact_rollback) FROM pg_stat_database WHERE datname = current_database()").Scan(&totalQueries); err == nil {
-			result["queries"] = totalQueries
+		var totalQueriesResult struct {
+			Sum *int64 `gorm:"column:sum"`
+		}
+		if err := query.Raw("SELECT COALESCE(sum(xact_commit + xact_rollback), 0)::bigint as sum FROM pg_stat_database WHERE datname = current_database()").Scan(&totalQueriesResult); err == nil && totalQueriesResult.Sum != nil {
+			result["queries"] = *totalQueriesResult.Sum
 		}
 	}
 
-	result["status"] = "connected"
+	// 只有当成功获取到数据时才设置为 connected
+	if hasData {
+		result["status"] = "connected"
+	} else {
+		result["status"] = "disconnected"
+	}
 	return result
 }
 
@@ -736,14 +795,27 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	}()
 
 	// 获取数据库和Redis连接配置
-	driver := strings.ToLower(facades.Orm().Query().Driver())
-	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", driver), "127.0.0.1")
-	redisHost := facades.Config().GetString("database.redis.default.host", "")
-
-	// 获取当前数据库驱动
-	if facades.Orm() != nil {
-		driver = facades.Orm().Query().Driver()
+	var driver string
+	var connectionName string
+	if facades.Orm() != nil && facades.Orm().Query() != nil {
+		driver = strings.ToLower(facades.Orm().Query().Driver())
+		// 获取默认连接名（用于读取配置）
+		connectionName = facades.Config().GetString("database.default", "")
+		// 如果连接名为空，尝试根据驱动名推断
+		if connectionName == "" {
+			if driver == "postgresql" {
+				connectionName = "postgres"
+			} else if driver == "mysql" {
+				connectionName = "mysql"
+			}
+		}
+	} else {
+		driver = ""
+		connectionName = ""
 	}
+	// 使用连接名获取配置，而不是驱动名
+	dbHost := facades.Config().GetString(fmt.Sprintf("database.connections.%s.host", connectionName), "127.0.0.1")
+	redisHost := facades.Config().GetString("database.redis.default.host", "")
 
 	// PostgreSQL处理：检查是否为PostgreSQL数据库
 	if driver == "postgresql" {
