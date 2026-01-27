@@ -5,6 +5,7 @@
       :height="height"
       :placeholder="placeholder"
       :toolbars="toolbars"
+      :theme="isDark ? 'dark' : 'light'"
       @onUploadImg="handleUploadImg"
       @onChange="handleChange"
     />
@@ -17,9 +18,11 @@ import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import Storage from '../utils/storage'
 import { useI18n } from 'vue-i18n'
+import { useAppStore } from '../store/app'
 import axios from 'axios'
 
 const { locale } = useI18n()
+const appStore = useAppStore()
 
 const props = defineProps({
   modelValue: {
@@ -39,6 +42,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const markdownValue = ref(props.modelValue)
+const isDark = computed(() => appStore.darkMode)
 
 // 监听 props 变化
 watch(() => props.modelValue, (newVal) => {
@@ -177,5 +181,43 @@ const handleChange = (value) => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
+}
+
+/* 暗黑模式样式 */
+html.dark .markdown-editor-wrapper {
+  border-color: var(--el-border-color);
+}
+
+/* 确保 md-editor-v3 使用 Element Plus 的颜色变量 */
+html.dark :deep(.md-editor) {
+  background-color: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.md-editor .md-editor-toolbar) {
+  background-color: var(--el-bg-color) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+html.dark :deep(.md-editor .md-editor-toolbar button) {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.md-editor .md-editor-toolbar button:hover) {
+  background-color: var(--el-fill-color-light) !important;
+}
+
+html.dark :deep(.md-editor .md-editor-textarea) {
+  background-color: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.md-editor .md-editor-textarea::placeholder) {
+  color: var(--el-text-color-placeholder) !important;
+}
+
+html.dark :deep(.md-editor .md-editor-preview) {
+  background-color: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
 }
 </style>

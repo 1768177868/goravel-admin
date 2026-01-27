@@ -1,7 +1,6 @@
 <template>
-  <div style="border: 1px solid #ccc">
+  <div class="wang-editor-wrapper" :class="{ 'dark-mode': isDark }">
     <Toolbar
-      style="border-bottom: 1px solid #ccc"
       :editor="editorRef"
       :defaultConfig="toolbarConfig"
       :mode="mode"
@@ -23,8 +22,10 @@ import { onBeforeUnmount, ref, shallowRef, onMounted, watch, computed } from 'vu
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import Storage from '../utils/storage'
 import { useI18n } from 'vue-i18n'
+import { useAppStore } from '../store/app'
 
 const { locale } = useI18n()
+const appStore = useAppStore()
 
 const props = defineProps({
   modelValue: {
@@ -52,6 +53,9 @@ const editorRef = shallowRef()
 
 // 内容 HTML
 const valueHtml = ref('')
+
+// 暗黑模式状态
+const isDark = computed(() => appStore.darkMode)
 
 // 初始化内容
 onMounted(() => {
@@ -177,10 +181,112 @@ onBeforeUnmount(() => {
 
 const handleCreated = (editor) => {
     editorRef.value = editor // 记录 editor 实例，重要！
+    // 初始化时应用暗黑模式样式
+    if (isDark.value) {
+        const editorContainer = editor.getEditableContainer()
+        if (editorContainer) {
+            editorContainer.classList.add('dark')
+        }
+    }
 }
 
 const handleChange = (editor) => {
     emit('update:modelValue', editor.getHtml())
     emit('change', editor.getHtml())
 }
+
+// 监听暗黑模式变化，更新编辑器样式
+watch(() => appStore.darkMode, (isDark) => {
+    const editor = editorRef.value
+    if (editor) {
+        // wangEditor 通过设置编辑器容器的 class 来切换主题
+        const editorContainer = editor.getEditableContainer()
+        if (editorContainer) {
+            if (isDark) {
+                editorContainer.classList.add('dark')
+            } else {
+                editorContainer.classList.remove('dark')
+            }
+        }
+    }
+}, { immediate: true })
 </script>
+
+<style scoped>
+.wang-editor-wrapper {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.wang-editor-wrapper :deep(.w-e-toolbar) {
+  border-bottom: 1px solid #ccc;
+}
+
+/* 暗黑模式样式 */
+html.dark .wang-editor-wrapper {
+  border-color: var(--el-border-color);
+}
+
+html.dark .wang-editor-wrapper :deep(.w-e-toolbar) {
+  border-bottom-color: var(--el-border-color);
+}
+
+html.dark :deep(.w-e-text-container) {
+  background-color: var(--el-bg-color) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.w-e-toolbar) {
+  background-color: var(--el-bg-color) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+html.dark :deep(.w-e-toolbar .w-e-bar-item button) {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.w-e-toolbar .w-e-bar-item button:hover) {
+  background-color: var(--el-fill-color-light) !important;
+}
+
+html.dark :deep(.w-e-text-placeholder) {
+  color: var(--el-text-color-placeholder) !important;
+}
+
+html.dark :deep(.w-e-text-container) {
+  border-color: var(--el-border-color) !important;
+}
+
+html.dark :deep(.w-e-text-container .w-e-text) {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.w-e-text-container .w-e-text p),
+html.dark :deep(.w-e-text-container .w-e-text div),
+html.dark :deep(.w-e-text-container .w-e-text span),
+html.dark :deep(.w-e-text-container .w-e-text h1),
+html.dark :deep(.w-e-text-container .w-e-text h2),
+html.dark :deep(.w-e-text-container .w-e-text h3),
+html.dark :deep(.w-e-text-container .w-e-text h4),
+html.dark :deep(.w-e-text-container .w-e-text h5),
+html.dark :deep(.w-e-text-container .w-e-text h6),
+html.dark :deep(.w-e-text-container .w-e-text li),
+html.dark :deep(.w-e-text-container .w-e-text td),
+html.dark :deep(.w-e-text-container .w-e-text th) {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.w-e-toolbar .w-e-bar-item .w-e-bar-item-menus-container) {
+  background-color: var(--el-bg-color-overlay) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+html.dark :deep(.w-e-toolbar .w-e-bar-item .w-e-bar-item-menus-container .w-e-bar-item-menu) {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark :deep(.w-e-toolbar .w-e-bar-item .w-e-bar-item-menus-container .w-e-bar-item-menu:hover) {
+  background-color: var(--el-fill-color-light) !important;
+}
+</style>
