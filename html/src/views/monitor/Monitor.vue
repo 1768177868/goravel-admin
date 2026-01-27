@@ -1199,6 +1199,7 @@ const initCharts = () => {
     if (cpuChartRef.value && !cpuChartInstance) {
       cpuChartInstance = echarts.init(cpuChartRef.value)
       cpuChartInstance.setOption({
+        backgroundColor: 'transparent',
         grid: { top: 10, left: 30, right: 10, bottom: 30 },
         xAxis: {
           type: 'category',
@@ -1248,6 +1249,7 @@ const initCharts = () => {
     if (memoryChartRef.value && !memoryChartInstance) {
       memoryChartInstance = echarts.init(memoryChartRef.value)
       memoryChartInstance.setOption({
+        backgroundColor: 'transparent',
         grid: { top: 10, left: 30, right: 10, bottom: 30 },
         xAxis: {
           type: 'category',
@@ -1297,6 +1299,7 @@ const initCharts = () => {
     if (diskChartRef.value && !diskChartInstance) {
       diskChartInstance = echarts.init(diskChartRef.value)
       diskChartInstance.setOption({
+        backgroundColor: 'transparent',
         grid: { top: 10, left: 30, right: 10, bottom: 30 },
         xAxis: {
           type: 'category',
@@ -1346,6 +1349,7 @@ const initCharts = () => {
     if (networkChartRef.value && !networkChartInstance) {
       networkChartInstance = echarts.init(networkChartRef.value)
       networkChartInstance.setOption({
+        backgroundColor: 'transparent',
         grid: { top: 20, left: 40, right: 20, bottom: 30 },
         legend: {
           data: [t('monitor.net_send'), t('monitor.net_receive')],
@@ -1409,6 +1413,7 @@ const initCharts = () => {
     if (resourcePieChartRef.value && !resourcePieChartInstance) {
       resourcePieChartInstance = echarts.init(resourcePieChartRef.value)
       resourcePieChartInstance.setOption({
+        backgroundColor: 'transparent',
         tooltip: {
           trigger: 'item',
           backgroundColor: isDark.value ? '#2d2d30' : '#fff',
@@ -2068,6 +2073,15 @@ html.dark .connections-info {
 
 .monitor-content {
   padding: 0;
+}
+
+/* 暗黑模式样式 - 确保图表容器背景透明 */
+html.dark .monitor-content {
+  background: transparent !important;
+}
+
+html.dark .monitor-content > div {
+  background: transparent !important;
 }
 
 .usage-item {
