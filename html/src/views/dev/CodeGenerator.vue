@@ -290,7 +290,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, Delete, Setting } from '@element-plus/icons-vue'
@@ -309,10 +309,18 @@ const formRef = ref(null)
 const generating = ref(false)
 const previewing = ref('')
 const activeTab = ref('model')
-const fieldTypes = ref([])
+const fieldTypesRaw = ref([])
 const dictionaryTypes = ref([])
 const tables = ref([])
 const selectedTable = ref('')
+
+// 使用 computed 让字段类型标签响应语言变化
+const fieldTypes = computed(() => {
+  return fieldTypesRaw.value.map(type => ({
+    ...type,
+    label: t(`code_generator.field_types.${type.value}`, type.label)
+  }))
+})
 
 const previewCode = reactive({})
 const relationDialogVisible = ref(false)
@@ -419,7 +427,7 @@ const formTypes = [
 const loadFieldTypes = async () => {
   try {
     const response = await getFieldTypes()
-    fieldTypes.value = response.data.field_types || []
+    fieldTypesRaw.value = response.data.field_types || []
   } catch (error) {
     logger.error('Failed to load field types:', error)
     ElMessage.error(t('code_generator.load_field_types_failed'))
@@ -457,7 +465,7 @@ const handleTableChange = async (val) => {
     const response = await getTableColumns(val)
     form.fields = (response.data.fields || []).map(field => {
       // 自动匹配字段类型
-      const fieldType = fieldTypes.value.find(ft => ft.value === field.db_type)
+      const fieldType = fieldTypesRaw.value.find(ft => ft.value === field.db_type)
       if (fieldType) {
         field.type = fieldType.value
       } else {
