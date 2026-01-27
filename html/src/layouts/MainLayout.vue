@@ -271,9 +271,9 @@
           </el-dropdown>
           <NotificationBell />
           <DarkModeSwitch />
-          <!-- 移动端隐藏时区和语言切换 -->
-          <TimezoneSwitch :class="{ 'mobile-hidden': isMobile }" />
           <LanguageSwitch :class="{ 'mobile-hidden': isXs }" />
+          <!-- 移动端隐藏时区切换 -->
+          <TimezoneSwitch :class="{ 'mobile-hidden': isMobile }" />
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <span class="user-info">
               <el-avatar 
