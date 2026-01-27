@@ -428,6 +428,11 @@ onMounted(() => {
   color: #606266;
 }
 
+/* 暗黑模式样式 */
+html.dark .text-truncate {
+  color: var(--el-text-color-regular, #cfd3dc);
+}
+
 .rich-text-content-view {
   min-height: 100px;
   max-height: 60vh;
@@ -436,6 +441,13 @@ onMounted(() => {
   padding: 10px;
   border: 1px solid #eee;
   border-radius: 4px;
+}
+
+/* 暗黑模式样式 */
+html.dark .rich-text-content-view {
+  background-color: var(--el-bg-color, #1d1e1f);
+  border-color: var(--el-border-color, #3d3e40);
+  color: var(--el-text-color-regular, #cfd3dc);
 }
 
 .rich-text-content-view :deep(p) {

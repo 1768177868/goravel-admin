@@ -83,3 +83,39 @@ body {
   gap: 10px;
 }
 
+/* 通知弹窗暗黑模式支持 */
+html.dark .notification-popover {
+  background-color: var(--el-bg-color, #1d1e1f) !important;
+  border-color: var(--el-border-color, #3d3e40) !important;
+}
+
+html.dark .notification-popover .notification-popover__header {
+  color: var(--el-text-color-primary, #e5eaf3) !important;
+}
+
+html.dark .notification-popover .notification-empty {
+  color: var(--el-text-color-secondary, #a3a6ad) !important;
+}
+
+html.dark .notification-popover .notification-item {
+  background: var(--el-bg-color, #1d1e1f) !important;
+  border-color: var(--el-border-color, #3d3e40) !important;
+}
+
+html.dark .notification-popover .notification-item.unread {
+  border-color: var(--el-color-warning, #e6a23c) !important;
+  background: var(--el-color-warning-light-9, rgba(230, 162, 60, 0.1)) !important;
+}
+
+html.dark .notification-popover .notification-item__head {
+  color: var(--el-text-color-secondary, #a3a6ad) !important;
+}
+
+html.dark .notification-popover .notification-item__title {
+  color: var(--el-text-color-primary, #e5eaf3) !important;
+}
+
+html.dark .notification-popover .notification-item__content {
+  color: var(--el-text-color-regular, #cfd3dc) !important;
+}
+

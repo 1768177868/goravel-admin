@@ -62,7 +62,6 @@ export const useAppStore = defineStore('app', {
     toggleDarkMode() {
       this.darkMode = !this.darkMode
       Storage.setItem('darkMode', this.darkMode.toString())
-      VxeUI.setTheme('dark')
       // 使用 Element Plus 官方暗黑模式方式：在 html 元素上添加/移除 dark 类
       if (this.darkMode) {
         document.documentElement.classList.add('dark')

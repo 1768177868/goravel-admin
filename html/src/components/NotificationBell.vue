@@ -269,5 +269,40 @@ onBeforeUnmount(() => {
   gap: 8px;
   margin-top: 8px;
 }
+
+/* 暗黑模式样式 */
+:deep(.notification-popover) {
+  background-color: var(--el-bg-color, #1d1e1f);
+}
+
+:deep(.notification-popover .notification-popover__header) {
+  color: var(--el-text-color-primary, #e5eaf3);
+}
+
+:deep(.notification-popover .notification-empty) {
+  color: var(--el-text-color-secondary, #a3a6ad);
+}
+
+:deep(.notification-popover .notification-item) {
+  background: var(--el-bg-color, #1d1e1f);
+  border-color: var(--el-border-color, #3d3e40);
+}
+
+:deep(.notification-popover .notification-item.unread) {
+  border-color: var(--el-color-warning, #e6a23c);
+  background: var(--el-color-warning-light-9, rgba(230, 162, 60, 0.1));
+}
+
+:deep(.notification-popover .notification-item__head) {
+  color: var(--el-text-color-secondary, #a3a6ad);
+}
+
+:deep(.notification-popover .notification-item__title) {
+  color: var(--el-text-color-primary, #e5eaf3);
+}
+
+:deep(.notification-popover .notification-item__content) {
+  color: var(--el-text-color-regular, #cfd3dc);
+}
 </style>
 
