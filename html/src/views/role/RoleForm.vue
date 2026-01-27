@@ -523,6 +523,16 @@ const setTreeCheckedKeys = async () => {
   const permissionIds = (formData.permission_ids || []).map(id => Number(id))
   const menuIds = (formData.menu_ids || []).map(id => Number(id))
   
+  // 如果权限ID和菜单ID都为空，清空所有选中状态
+  if (permissionIds.length === 0 && menuIds.length === 0) {
+    await nextTick()
+    if (menuPermissionTreeRef.value) {
+      menuPermissionTreeRef.value.setCheckedKeys([], false)
+      checkedKeys.value = []
+    }
+    return
+  }
+  
   // 构建权限ID集合，用于快速查找
   const permissionIdSet = new Set(permissionIds)
   
@@ -551,7 +561,7 @@ const setTreeCheckedKeys = async () => {
   // 收集需要选中的节点ID
   const keysToCheck = new Set()
   
-  // 1. 添加所有权限节点ID
+  // 添加所有权限节点ID
   permissionIds.forEach(id => {
     const node = permissionNodeMap.get(id)
     if (node && node.id) {
@@ -559,35 +569,33 @@ const setTreeCheckedKeys = async () => {
     }
   })
   
-  // 2. 处理菜单节点：只添加那些应该被完全选中的菜单
-  // 判断逻辑：菜单ID在 menuIds 中，且该菜单下没有权限被选中（或者所有权限都被选中）
   menuIds.forEach(menuId => {
     const menuNode = menuNodeMap.get(menuId)
     if (!menuNode || !menuNode.id) return
     
     // 检查该菜单下是否有权限
-    const hasPermissions = menuNode.children && menuNode.children.some(child => child.isPermission)
-    
-    if (!hasPermissions) {
-      // 如果菜单下没有权限，直接选中菜单
-      keysToCheck.add(menuNode.id)
-    } else {
-      // 如果菜单下有权限，检查是否所有权限都被选中
-      const menuPermissionIds = []
+    const menuPermissionIds = []
+    if (menuNode.children) {
       menuNode.children.forEach(child => {
         if (child.isPermission && child.rawId) {
           menuPermissionIds.push(child.rawId)
         }
       })
+    }
+    
+    const hasPermissions = menuPermissionIds.length > 0
+    
+    if (!hasPermissions) {
+      // 如果菜单下没有权限，直接选中菜单
+      keysToCheck.add(menuNode.id)
+    } else {
+      // 如果菜单下有权限，检查权限的选中情况
+      const selectedPermissionCount = menuPermissionIds.filter(permId => permissionIdSet.has(permId)).length
       
-      // 如果该菜单下的所有权限都被选中，则选中菜单
-      const allPermissionsSelected = menuPermissionIds.length > 0 && 
-        menuPermissionIds.every(permId => permissionIdSet.has(permId))
-      
-      if (allPermissionsSelected) {
+      if (selectedPermissionCount === menuPermissionIds.length) {
+        // 所有权限都被选中，选中菜单（显示全选状态）
         keysToCheck.add(menuNode.id)
       }
-      // 如果只有部分权限被选中，Element Plus 会自动显示半选状态，不需要手动设置
     }
   })
   
@@ -618,6 +626,10 @@ const setTreeCheckedKeys = async () => {
     }
     
     // 等待 DOM 更新
+    await nextTick()
+    
+    // 先清空所有选中状态，确保不会保留之前的状态
+    menuPermissionTreeRef.value.setCheckedKeys([], false)
     await nextTick()
     
     // 设置选中的节点，第二个参数为 false 表示不自动选中父节点
@@ -814,10 +826,14 @@ const handleSubmit = async () => {
               
               // 如果是菜单节点，检查是否应该保存
               if (node.isMenu && nodeId !== 'other_permissions') {
-                // 检查该菜单下是否有权限被选中
-                const hasSelectedPermission = checkHasSelectedPermission(node, allCheckedKeys)
-                // 如果菜单被完全选中，或者有子权限被选中（半选状态），则保存该菜单
-                if (isChecked || hasSelectedPermission) {
+                // 检查该菜单下是否有权限被选中（只检查直接子权限，不包括子菜单下的权限）
+                const hasDirectPermission = node.children && node.children.some(child => 
+                  child.isPermission && allCheckedKeys.includes(child.id)
+                )
+                
+                // 检查该菜单是否被完全选中（包括所有直接子权限和子菜单）
+                // 如果菜单被完全选中，或者有直接权限被选中，则保存该菜单
+                if (isChecked || hasDirectPermission) {
                   // 提取菜单ID (去除 menu_ 前缀)
                   if (nodeId.startsWith('menu_')) {
                     menuIds.push(Number(nodeId.replace('menu_', '')))

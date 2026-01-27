@@ -262,24 +262,30 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 
 	// super-admin 角色拥有所有权限，不需要设置菜单和权限
 	// 处理权限关联
-	if !isProtected && ctx.Request().Input("permission_ids") != "" {
-		permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
-		if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
-			return response.ErrorWithLog(ctx, "role", err, map[string]any{
-				"role_id":        role.ID,
-				"permission_ids": permissionIDs,
-			})
+	// 检查字段是否存在（即使值为空数组，也应该同步以清空关联）
+	if !isProtected {
+		if _, exists := allInputs["permission_ids"]; exists {
+			permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
+			if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
+				return response.ErrorWithLog(ctx, "role", err, map[string]any{
+					"role_id":        role.ID,
+					"permission_ids": permissionIDs,
+				})
+			}
 		}
 	}
 
 	// 处理菜单关联
-	if !isProtected && ctx.Request().Input("menu_ids") != "" {
-		menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
-		if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
-			return response.ErrorWithLog(ctx, "role", err, map[string]any{
-				"role_id":  role.ID,
-				"menu_ids": menuIDs,
-			})
+	// 检查字段是否存在（即使值为空数组，也应该同步以清空关联）
+	if !isProtected {
+		if _, exists := allInputs["menu_ids"]; exists {
+			menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
+			if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
+				return response.ErrorWithLog(ctx, "role", err, map[string]any{
+					"role_id":  role.ID,
+					"menu_ids": menuIDs,
+				})
+			}
 		}
 	}
 
