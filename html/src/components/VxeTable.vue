@@ -29,6 +29,7 @@
       :data="data"
       :loading="loading"
       border
+      :size="vxeSize"
       :column-config="{ resizable: true }"
       :height="height"
       :tree-config="treeConfig"
@@ -64,8 +65,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useResponsive } from '../composables/useResponsive'
+import { useVxeTableSize } from '../composables/useVxeTableSize'
 
 const { isMobile } = useResponsive()
+const { vxeSize } = useVxeTableSize()
 
 const props = defineProps({
   data: {

@@ -879,7 +879,11 @@
     "profile": "Profile",
     "timezone": "Timezone",
     "switch_to_dark": "Switch to dark mode",
-    "switch_to_light": "Switch to light mode"
+    "switch_to_light": "Switch to light mode",
+    "layout_size": "Layout Size",
+    "layout_size_large": "Large",
+    "layout_size_default": "Default",
+    "layout_size_small": "Small"
   },
   "profile": {
     "basic_info": "Basic Information",

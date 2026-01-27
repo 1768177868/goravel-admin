@@ -229,11 +229,46 @@
             @click="appStore.toggleFullscreen"
             :title="$t('header.fullscreen')"
           >
-            <el-icon>
+            <el-icon class="header-icon-fixed">
               <FullScreen v-if="!appStore.isFullscreen" />
               <Aim v-else />
             </el-icon>
           </el-button>
+          <!-- 布局大小设置 -->
+          <el-dropdown
+            v-if="!isMobile"
+            @command="handleLayoutSizeChange"
+            class="layout-size-dropdown"
+          >
+            <el-button type="text" class="header-btn" :title="$t('header.layout_size')">
+              <el-icon class="header-icon-fixed"><Grid /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="large" :class="{ 'is-active': appStore.layoutSize === 'large' }">
+                  <span style="display: flex; align-items: center; gap: 8px;">
+                    <el-icon v-if="appStore.layoutSize === 'large'" style="font-size: 16px;"><Check /></el-icon>
+                    <span v-else style="width: 16px;"></span>
+                    {{ $t('header.layout_size_large') }}
+                  </span>
+                </el-dropdown-item>
+                <el-dropdown-item command="default" :class="{ 'is-active': appStore.layoutSize === 'default' }">
+                  <span style="display: flex; align-items: center; gap: 8px;">
+                    <el-icon v-if="appStore.layoutSize === 'default'" style="font-size: 16px;"><Check /></el-icon>
+                    <span v-else style="width: 16px;"></span>
+                    {{ $t('header.layout_size_default') }}
+                  </span>
+                </el-dropdown-item>
+                <el-dropdown-item command="small" :class="{ 'is-active': appStore.layoutSize === 'small' }">
+                  <span style="display: flex; align-items: center; gap: 8px;">
+                    <el-icon v-if="appStore.layoutSize === 'small'" style="font-size: 16px;"><Check /></el-icon>
+                    <span v-else style="width: 16px;"></span>
+                    {{ $t('header.layout_size_small') }}
+                  </span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <NotificationBell />
           <DarkModeSwitch />
           <!-- 移动端隐藏时区和语言切换 -->
@@ -325,7 +360,9 @@ import {
   Document,
   Bell,
   Monitor,
-  Warning
+  Warning,
+  Grid,
+  Check
 } from '@element-plus/icons-vue'
 
 // 响应式检测
@@ -457,6 +494,10 @@ const handleCommand = async (command) => {
       // 用户取消
     }
   }
+}
+
+const handleLayoutSizeChange = (size) => {
+  appStore.setLayoutSize(size)
 }
 
 </script>
@@ -632,9 +673,31 @@ const handleCommand = async (command) => {
   transition: all 0.3s;
 }
 
+.header-icon-fixed {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .header-btn:hover {
   background-color: var(--bg-color-tertiary);
   color: #409EFF;
+}
+
+.layout-size-dropdown {
+  margin-right: 0;
+}
+
+.layout-size-dropdown :deep(.el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.layout-size-dropdown :deep(.el-dropdown-menu__item .el-icon) {
+  margin-right: 0;
+  font-size: 16px;
 }
 
 .user-dropdown {

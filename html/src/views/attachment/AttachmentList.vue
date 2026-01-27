@@ -69,6 +69,7 @@
         :loading="loading"
         border
         stripe
+        :size="vxeSize"
         height="600"
         :sort-config="{ multiple: false, trigger: 'default' }"
         @sort-change="handleSortChange"
@@ -295,6 +296,7 @@ import Pagination from '../../components/Pagination.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useVxeTableSize } from '../../composables/useVxeTableSize'
 import axios from 'axios'
 import { 
   getAttachmentList, 
@@ -314,6 +316,7 @@ import { VueCropper } from 'vue-cropper'
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
+const { vxeSize } = useVxeTableSize()
 
 // 使用 CRUD composable
 const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({

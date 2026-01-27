@@ -45,7 +45,7 @@
     <el-form-item class="action-item">
       <el-button
         type="primary"
-        :size="buttonSize"
+        :size="computedButtonSize"
         :loading="loading"
         :icon="searchIcon"
         @click="handleSearch"
@@ -53,7 +53,7 @@
         {{ searchText }}
       </el-button>
       <el-button
-        :size="buttonSize"
+        :size="computedButtonSize"
         :icon="resetIcon"
         @click="handleReset"
       >
@@ -64,7 +64,7 @@
         v-if="computedShouldShowExpandButton"
         :type="expandButtonType"
         :plain="expandButtonPlain"
-        :size="buttonSize"
+        :size="computedButtonSize"
         @click="toggleExpand"
       >
         <el-icon><component :is="expanded ? ArrowUp : ArrowDown" /></el-icon>
@@ -83,6 +83,7 @@ import { forOwn } from 'lodash-es'
 import SearchFormField from './SearchForm/SearchFormField.vue'
 import { useFormHeight } from './SearchForm/useFormHeight'
 import { useFieldOptions } from './SearchForm/useFieldOptions'
+import { useAppStore } from '../store/app'
 
 // 防抖函数
 const debounce = (fn, delay) => {
@@ -147,11 +148,11 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // 按钮尺寸
+  // 按钮尺寸（如果不传，则使用全局布局大小）
   buttonSize: {
     type: String,
-    default: 'default',
-    validator: (value) => ['large', 'default', 'small'].includes(value)
+    default: undefined, // undefined 表示使用全局布局大小
+    validator: (value) => !value || ['large', 'default', 'small'].includes(value)
   },
   // 搜索按钮文本
   searchText: {
@@ -225,6 +226,18 @@ let resizeObserver = null
 
 // 国际化文本
 const { t } = useI18n()
+
+// 获取全局布局大小
+const appStore = useAppStore()
+
+// 计算按钮尺寸：如果传入了 buttonSize prop，使用 prop；否则使用全局布局大小
+const computedButtonSize = computed(() => {
+  if (props.buttonSize) {
+    return props.buttonSize
+  }
+  // 使用全局布局大小
+  return appStore.layoutSize === 'default' ? 'default' : appStore.layoutSize
+})
 
 // 检查是否有高级搜索项插槽
 const hasAdvancedSlot = computed(() => {

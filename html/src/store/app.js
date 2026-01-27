@@ -36,6 +36,30 @@ export const useAppStore = defineStore('app', {
       // 应用布局大小到 body
       document.body.className = document.body.className.replace(/layout-\w+/g, '')
       document.body.classList.add(`layout-${size}`)
+      
+      // 映射 size 值到 Element Plus: default -> default, large -> large, small -> small
+      // Element Plus 支持 'large', 'default', 'small'
+      const elementSize = size === 'default' ? 'default' : size
+      
+      // 映射 size 值到 VXE Table: default -> medium, large -> '' (空字符串，最大), small -> small
+      // VXE Table 支持 'medium', 'small', 'mini', '' (空字符串表示默认/最大)
+      let vxeSize = ''
+      if (size === 'small') {
+        vxeSize = 'small'
+      } else if (size === 'default') {
+        vxeSize = 'medium'
+      } else if (size === 'large') {
+        vxeSize = '' // 空字符串表示默认/最大尺寸
+      }
+      
+      // 设置 VXE Table 大小
+      try {
+        if (VxeUI && typeof VxeUI.setSize === 'function') {
+          VxeUI.setSize(vxeSize)
+        }
+      } catch (error) {
+        console.error('Failed to set VXE Table size:', error)
+      }
     },
 
     toggleFullscreen() {

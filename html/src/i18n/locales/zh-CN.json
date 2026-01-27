@@ -887,7 +887,11 @@
     "profile": "个人中心",
     "timezone": "时区",
     "switch_to_dark": "切换到夜间模式",
-    "switch_to_light": "切换到日间模式"
+    "switch_to_light": "切换到日间模式",
+    "layout_size": "布局大小",
+    "layout_size_large": "大",
+    "layout_size_default": "默认",
+    "layout_size_small": "小"
   },
   "profile": {
     "basic_info": "基本信息",

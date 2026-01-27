@@ -39,6 +39,7 @@
         :data="tableData"
         :loading="loading"
         border
+        :size="vxeSize"
         :column-config="optimizedTableConfig"
         :height="tableHeight"
         :scroll-y="scrollYConfig"
@@ -101,6 +102,9 @@ import { Plus } from '@element-plus/icons-vue'
 import SearchForm from './SearchForm.vue'
 import Pagination from './Pagination.vue'
 import { useTablePerformance } from '../composables/useTablePerformance'
+import { useVxeTableSize } from '../composables/useVxeTableSize'
+
+const { vxeSize } = useVxeTableSize()
 
 const props = defineProps({
   // 页面类名

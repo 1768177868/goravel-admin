@@ -54,6 +54,7 @@
         :data="tableData"
         :loading="loading"
         border
+        :size="vxeSize"
         :column-config="{ resizable: true }"
         height="600"
         :sort-config="{ multiple: false, trigger: 'default' }"
@@ -67,7 +68,7 @@
               <vxe-table
                 :data="row.details || row.Details || []"
                 border
-                size="small"
+                :size="vxeSize"
                 :show-header="true"
               >
                 <vxe-column field="product_name" :title="t('order.product_name')" width="200">
@@ -240,6 +241,7 @@
         <vxe-table
           :data="orderDetail.details || []"
           border
+          :size="vxeSize"
         >
           <vxe-column field="product_name" :title="$t('order.product_name')" />
           <vxe-column field="price" :title="$t('order.price')" :formatter="({ row }) => formatAmount(row.price || row.Price)" />
@@ -265,6 +267,7 @@ import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import { useAppStore } from '../../store/app'
+import { useVxeTableSize } from '../../composables/useVxeTableSize'
 import {
   getOrderList,
   getOrderDetail,
@@ -283,6 +286,7 @@ import { validateTimeRange, ORDER_MAX_TIME_RANGE_MONTHS } from '../../utils/time
 const { getButtonState } = usePermission()
 const appStore = useAppStore()
 const isDark = computed(() => appStore.darkMode)
+const { vxeSize } = useVxeTableSize()
 
 const { t } = useI18n()
 const router = useRouter()
