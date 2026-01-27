@@ -378,6 +378,11 @@ func (s *OrderServiceImpl) GetOrderByOrderNo(orderNo string) (*models.Order, []m
 		return nil, nil, err
 	}
 
+	// 防御性检查：确保 order 不为 nil
+	if order == nil {
+		return nil, nil, apperrors.ErrOrderNotFound
+	}
+
 	// 使用订单的 created_at 确定详情分表
 	timeStr := order.CreatedAt.ToDateTimeString()
 	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
