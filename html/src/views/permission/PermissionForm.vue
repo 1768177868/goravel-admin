@@ -119,6 +119,7 @@ const formData = reactive(getFormInitialValue())
 
 // 表单验证规则
 const formRules = computed(() => ({
+  menu_id: [{ required: true, message: t('permission.menu_id_required'), trigger: 'blur' }],
   name: [{ required: true, message: t('permission.name_required'), trigger: 'blur' }],
   slug: [{ required: true, message: t('permission.slug_required'), trigger: 'blur' }],
   method: [{ required: true, message: t('permission.method_required'), trigger: 'change' }],
@@ -243,6 +244,7 @@ const loadDetail = async (id) => {
       const permission = res.data.permission
       // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
       const mapped = mapFields(permission, getFormInitialValue())
+      
       Object.assign(formData, mapped)
     }
   } catch (error) {
