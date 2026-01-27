@@ -886,6 +886,15 @@ onMounted(async () => {
   color: #303133;
 }
 
+/* 暗黑模式样式 */
+html.dark .order-details-expand {
+  background-color: var(--el-bg-color) !important;
+}
+
+html.dark .order-details-expand h4 {
+  color: var(--el-text-color-primary) !important;
+}
+
 
 .order-detail {
   padding: 20px 0;
