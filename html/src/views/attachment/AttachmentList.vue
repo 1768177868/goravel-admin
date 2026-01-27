@@ -63,116 +63,98 @@
         @reset="handleReset"
       />
 
-      <vxe-table
+      <VxeTable
         ref="tableRef"
         :data="tableData"
         :loading="loading"
-        border
-        stripe
-        :size="vxeSize"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
         @checkbox-change="handleSelectionChange"
         @checkbox-all="handleSelectionChange"
       >
-        <template v-for="(column, index) in tableColumns" :key="column.field || column.slot || column.type || index">
-          <vxe-column
-            v-if="column.type"
-            :type="column.type"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :min-width="column.minWidth"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-          >
-            <template v-if="column.slot === 'filename'" #default="{ row }">
-              <div class="filename-cell">
-                <el-image
-                  v-if="row.file_type === 'image' && getImageUrl(row)"
-                  :src="getImageUrl(row)"
-                  :preview-src-list="[getImageUrl(row)]"
-                  fit="cover"
-                  class="filename-thumbnail"
-                  :preview-teleported="true"
-                  :lazy="true"
-                  @load="handleImageLoad(row)"
-                  @error="handleImageError(row)"
-                >
-                  <template #placeholder>
-                    <div class="image-placeholder">
-                      <el-icon class="is-loading"><Loading /></el-icon>
-                    </div>
-                  </template>
-                  <template #error>
-                    <div class="image-error">
-                      <el-icon><Picture /></el-icon>
-                    </div>
-                  </template>
-                </el-image>
-                <div
-                  v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'loading'"
-                  class="image-placeholder"
-                >
+        <template #filename="{ row }">
+          <div class="filename-cell">
+            <el-image
+              v-if="row.file_type === 'image' && getImageUrl(row)"
+              :src="getImageUrl(row)"
+              :preview-src-list="[getImageUrl(row)]"
+              fit="cover"
+              class="filename-thumbnail"
+              :preview-teleported="true"
+              :lazy="true"
+              @load="handleImageLoad(row)"
+              @error="handleImageError(row)"
+            >
+              <template #placeholder>
+                <div class="image-placeholder">
                   <el-icon class="is-loading"><Loading /></el-icon>
                 </div>
-                <div
-                  v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'error'"
-                  class="image-error"
-                >
+              </template>
+              <template #error>
+                <div class="image-error">
                   <el-icon><Picture /></el-icon>
                 </div>
-                <span class="filename-text">{{ row.filename || row.Filename }}</span>
-              </div>
-            </template>
-            <template v-else-if="column.slot === 'display_name'" #default="{ row }">
-              <el-input
-                v-model="row.display_name"
-                :placeholder="$t('attachment.display_name_placeholder')"
-                size="small"
-                @blur="handleUpdateDisplayName(row)"
-                @keyup.enter="handleUpdateDisplayName(row)"
-              />
-            </template>
-            <template v-else-if="column.slot === 'file_type'" #default="{ row }">
-              <el-tag :type="getFileTypeTagType(row.file_type)">
-                {{ getFileTypeLabel(row.file_type) }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'disk'" #default="{ row }">
-              <el-tag size="small" type="info">
-                {{ row.disk || row.Disk || '-' }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <el-button 
-                type="success" 
-                link 
-                :disabled="downloadingIds.has(row.id || row.ID)"
-                :loading="downloadingIds.has(row.id || row.ID)"
-                @click="handleDownload(row)"
-              >
-                {{ $t('common.download') }}
-              </el-button>
-              <el-button 
-                type="danger" 
-                link 
-                :disabled="getButtonState('attachment.destroy').disabled"
-                @click="handleDelete(row)"
-              >
-                {{ $t('common.delete') }}
-              </el-button>
-            </template>
-          </vxe-column>
+              </template>
+            </el-image>
+            <div
+              v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'loading'"
+              class="image-placeholder"
+            >
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <div
+              v-else-if="row.file_type === 'image' && getImageLoadingState(row) === 'error'"
+              class="image-error"
+            >
+              <el-icon><Picture /></el-icon>
+            </div>
+            <span class="filename-text">{{ row.filename || row.Filename }}</span>
+          </div>
         </template>
-      </vxe-table>
+
+        <template #display_name="{ row }">
+          <el-input
+            v-model="row.display_name"
+            :placeholder="$t('attachment.display_name_placeholder')"
+            size="small"
+            @blur="handleUpdateDisplayName(row)"
+            @keyup.enter="handleUpdateDisplayName(row)"
+          />
+        </template>
+
+        <template #file_type="{ row }">
+          <el-tag :type="getFileTypeTagType(row.file_type)">
+            {{ getFileTypeLabel(row.file_type) }}
+          </el-tag>
+        </template>
+
+        <template #disk="{ row }">
+          <el-tag size="small" type="info">
+            {{ row.disk || row.Disk || '-' }}
+          </el-tag>
+        </template>
+
+        <template #operation="{ row }">
+          <el-button 
+            type="success" 
+            link 
+            :disabled="downloadingIds.has(row.id || row.ID)"
+            :loading="downloadingIds.has(row.id || row.ID)"
+            @click="handleDownload(row)"
+          >
+            {{ $t('common.download') }}
+          </el-button>
+          <el-button 
+            type="danger" 
+            link 
+            :disabled="getButtonState('attachment.destroy').disabled"
+            @click="handleDelete(row)"
+          >
+            {{ $t('common.delete') }}
+          </el-button>
+        </template>
+      </VxeTable>
 
       <Pagination
         v-model="pagination"
@@ -293,10 +275,10 @@ const DeleteIcon = markRaw(Delete)
 const CropIcon = markRaw(Crop)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
+import VxeTable from '../../components/VxeTable.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
-import { useVxeTableSize } from '../../composables/useVxeTableSize'
 import axios from 'axios'
 import { 
   getAttachmentList, 
@@ -316,7 +298,6 @@ import { VueCropper } from 'vue-cropper'
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
-const { vxeSize } = useVxeTableSize()
 
 // 使用 CRUD composable
 const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
@@ -409,7 +390,7 @@ const {
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value),
+  tableRef: computed(() => tableRef.value?.tableRef),
   transformData: transformAttachmentData,
   onLoadSuccess: () => {
     // 加载所有图片的blob URL
@@ -1215,7 +1196,7 @@ const handleDownload = async (row) => {
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleSelectionChange = () => {
-  selectedRows.value = tableRef.value?.getCheckboxRecords() || []
+  selectedRows.value = tableRef.value?.tableRef?.getCheckboxRecords() || []
 }
 
 const handleBatchDelete = () => {
