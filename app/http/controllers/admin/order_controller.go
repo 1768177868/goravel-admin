@@ -413,7 +413,7 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *OrderController) Update(ctx http.Context) http.Response {
 	// 使用订单号查询（可直接定位分表）
-	orderNo := ctx.Request().Route("id")
+	orderNo := ctx.Request().Query("order_no", "")
 	if orderNo == "" {
 		return response.Error(ctx, http.StatusBadRequest, "order_no_required")
 	}
