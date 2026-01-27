@@ -119,3 +119,9 @@ html.dark .notification-popover .notification-item__content {
   color: var(--el-text-color-regular, #cfd3dc) !important;
 }
 
+/* VXE 分页器暗黑模式：去除背景色 */
+html.dark .vxe-pager {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
