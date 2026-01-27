@@ -1006,7 +1006,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 // 主题相关计算属性
-const isDark = computed(() => appStore.theme === 'dark')
+const isDark = computed(() => appStore.darkMode)
 const textColor = computed(() => isDark.value ? '#cfd3dc' : '#303133')
 const secondaryTextColor = computed(() => isDark.value ? '#909399' : '#606266')
 
@@ -1323,6 +1323,9 @@ const initCharts = () => {
         tooltip: { 
           trigger: 'axis', 
           axisPointer: { type: 'cross' },
+          backgroundColor: isDark.value ? '#2d2d30' : '#fff',
+          borderColor: isDark.value ? '#3d3e40' : '#e4e7ed',
+          textStyle: { color: textColor.value },
           formatter: (params) => {
             if (Array.isArray(params) && params.length > 0) {
               const time = params[0].axisValue
@@ -1383,6 +1386,9 @@ const initCharts = () => {
         tooltip: { 
           trigger: 'axis', 
           axisPointer: { type: 'cross' },
+          backgroundColor: isDark.value ? '#2d2d30' : '#fff',
+          borderColor: isDark.value ? '#3d3e40' : '#e4e7ed',
+          textStyle: { color: textColor.value },
           formatter: (params) => {
             if (Array.isArray(params) && params.length > 0) {
               const time = params[0].axisValue
@@ -1758,7 +1764,7 @@ const cleanup = () => {
 }
 
 // 监听主题变化，重新初始化图表
-watch(() => appStore.theme, () => {
+watch(() => appStore.darkMode, () => {
   if (cpuChartInstance) {
     cpuChartInstance.dispose()
     cpuChartInstance = null
@@ -1842,6 +1848,11 @@ onUnmounted(() => {
   transition: background 0.3s ease;
 }
 
+/* 暗黑模式样式 */
+html.dark .monitor-page {
+  background: var(--el-bg-color-page) !important;
+}
+
 .monitor-card {
   border-radius: 8px;
   border: 1px solid #e4e7ed;
@@ -1865,6 +1876,11 @@ onUnmounted(() => {
     background: white;
     transition: background-color 0.3s ease;
   }
+}
+
+/* 暗黑模式样式 */
+html.dark .monitor-card :deep(.el-card__body) {
+  background: var(--el-bg-color) !important;
 }
 
 .cpu-card :deep(.el-card__header) {
@@ -1923,6 +1939,17 @@ onUnmounted(() => {
   }
 }
 
+/* 暗黑模式样式 */
+html.dark .process-card {
+  background: var(--el-bg-color) !important;
+  border-color: var(--el-border-color) !important;
+  
+  &:hover {
+    background: var(--el-bg-color-page) !important;
+    border-color: var(--el-color-primary) !important;
+  }
+}
+
 .process-header {
   display: flex;
   justify-content: space-between;
@@ -1930,6 +1957,11 @@ onUnmounted(() => {
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 2px solid #e4e7ed;
+}
+
+/* 暗黑模式样式 */
+html.dark .process-header {
+  border-bottom-color: var(--el-border-color) !important;
 }
 
 .process-content {
@@ -1970,6 +2002,15 @@ onUnmounted(() => {
   }
 }
 
+/* 暗黑模式样式 */
+html.dark .process-label {
+  color: var(--el-text-color-secondary) !important;
+}
+
+html.dark .process-value {
+  color: var(--el-text-color-regular) !important;
+}
+
 .connections-info {
   font-size: 13px;
   color: #909399;
@@ -1993,6 +2034,11 @@ onUnmounted(() => {
     color: #f56c6c;
     font-weight: 600;
   }
+}
+
+/* 暗黑模式样式 */
+html.dark .connections-info {
+  color: var(--el-text-color-secondary) !important;
 }
 
 .no-border {
@@ -2030,6 +2076,11 @@ onUnmounted(() => {
   border-bottom: 2px solid #f0f0f0;
 }
 
+/* 暗黑模式样式 */
+html.dark .usage-item {
+  border-bottom-color: var(--el-border-color-lighter) !important;
+}
+
 .usage-header {
   display: flex;
   justify-content: space-between;
@@ -2047,6 +2098,11 @@ onUnmounted(() => {
     font-size: 18px;
     color: #409eff;
   }
+}
+
+/* 暗黑模式样式 */
+html.dark .usage-header .label {
+  color: var(--el-text-color-primary) !important;
 }
 
 .usage-progress {
@@ -2089,6 +2145,17 @@ onUnmounted(() => {
   }
 }
 
+/* 暗黑模式样式 */
+html.dark .info-item {
+  background: var(--el-bg-color-page) !important;
+  border-color: var(--el-border-color) !important;
+  
+  &:hover {
+    background: var(--el-fill-color-light) !important;
+    border-color: var(--el-color-primary) !important;
+  }
+}
+
 .info-label {
   font-size: 12px;
   color: #909399;
@@ -2113,12 +2180,27 @@ onUnmounted(() => {
   }
 }
 
+/* 暗黑模式样式 */
+html.dark .info-label {
+  color: var(--el-text-color-secondary) !important;
+}
+
+html.dark .info-value {
+  color: var(--el-text-color-regular) !important;
+}
+
 .load-display {
   text-align: center;
   padding: 30px 20px;
   background: #ffffff;
   border-radius: 8px;
   border: 1px solid #e4e7ed;
+}
+
+/* 暗黑模式样式 */
+html.dark .load-display {
+  background: var(--el-bg-color) !important;
+  border-color: var(--el-border-color) !important;
 }
 
 .load-value {
@@ -2143,6 +2225,15 @@ onUnmounted(() => {
   font-size: 14px;
   color: #606266;
   font-weight: 500;
+}
+
+/* 暗黑模式样式 */
+html.dark .load-label {
+  color: var(--el-text-color-regular) !important;
+}
+
+html.dark .load-percent {
+  color: var(--el-text-color-secondary) !important;
 }
 
 .interfaces-table {
@@ -2171,6 +2262,11 @@ onUnmounted(() => {
       }
     }
   }
+}
+
+/* 暗黑模式样式 - Element Plus Table会自动适配，这里只需要确保hover效果 */
+html.dark .interfaces-table :deep(.el-table__row:hover) {
+  background-color: var(--el-fill-color-light) !important;
 }
 
 // 响应式设计
