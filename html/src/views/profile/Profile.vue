@@ -884,7 +884,6 @@ onMounted(() => {
   align-items: center;
   gap: 20px;
   padding: 20px;
-  /* background: #f5f7fa; */
   border-radius: 8px;
   margin-bottom: 20px;
 }
@@ -918,6 +917,7 @@ onMounted(() => {
 .verify-section {
   padding: 20px 0;
 }
+
 
 </style>
 
