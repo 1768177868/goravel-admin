@@ -28,7 +28,7 @@ const toggleDarkMode = () => {
 
 <style scoped>
 .dark-mode-switch {
-  color: #606266;
+  color: var(--text-color-regular, #606266);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -36,10 +36,12 @@ const toggleDarkMode = () => {
   border-radius: 4px;
   transition: all 0.3s;
   margin: 0;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .dark-mode-switch:hover {
-  background-color: #f5f7fa;
+  background-color: var(--bg-color-tertiary, #f5f7fa);
   color: #409EFF;
 }
 
@@ -48,6 +50,16 @@ const toggleDarkMode = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 暗黑模式下的样式 */
+:deep(html.dark) .dark-mode-switch {
+  color: var(--el-text-color-regular);
+}
+
+:deep(html.dark) .dark-mode-switch:hover {
+  background-color: var(--el-bg-color-page);
+  color: #409EFF;
 }
 </style>
 

@@ -264,6 +264,7 @@ import OrderForm from './OrderForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useAppStore } from '../../store/app'
 import {
   getOrderList,
   getOrderDetail,
@@ -280,6 +281,8 @@ import { validateTimeRange, ORDER_MAX_TIME_RANGE_MONTHS } from '../../utils/time
 
 // 权限控制
 const { getButtonState } = usePermission()
+const appStore = useAppStore()
+const isDark = computed(() => appStore.darkMode)
 
 const { t } = useI18n()
 const router = useRouter()

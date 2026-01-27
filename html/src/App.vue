@@ -24,7 +24,7 @@ const elementLocale = computed(() => {
 
 // 初始化夜间模式
 onMounted(() => {
-  // appStore.initDarkMode()
+  appStore.initDarkMode()
 })
 </script>
 

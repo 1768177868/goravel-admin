@@ -193,7 +193,7 @@ const appStore = useAppStore()
 const { t, te, tm } = useI18n()
 
 // 获取当前主题
-const isDark = computed(() => appStore.theme === 'dark')
+const isDark = computed(() => appStore.darkMode)
 const textColor = computed(() => isDark.value ? '#e5eaf3' : '#303133')
 const secondaryTextColor = computed(() => isDark.value ? '#a3a6ad' : '#909399')
 
@@ -560,7 +560,8 @@ const formatNumber = (num) => {
 const initVisitTrendChart = () => {
   if (!visitTrendChart.value) return
   
-  visitTrendChartInstance = echarts.init(visitTrendChart.value)
+  // 使用暗黑主题（如果启用）
+  visitTrendChartInstance = echarts.init(visitTrendChart.value, isDark.value ? 'dark' : null)
   
   // 如果没有数据，使用默认空数据
   if (!visitTrendData.value.dates || visitTrendData.value.dates.length === 0) {
@@ -667,7 +668,7 @@ const initVisitTrendChart = () => {
 const initAccessSourceChart = () => {
   if (!accessSourceChart.value) return
   
-  accessSourceChartInstance = echarts.init(accessSourceChart.value)
+  accessSourceChartInstance = echarts.init(accessSourceChart.value, isDark.value ? 'dark' : null)
   
   // 如果没有数据，使用默认空数据
   if (!accessSourceData.value || accessSourceData.value.length === 0) {
@@ -729,7 +730,7 @@ const initAccessSourceChart = () => {
 const initDeviceChart = () => {
   if (!deviceChart.value) return
   
-  deviceChartInstance = echarts.init(deviceChart.value)
+  deviceChartInstance = echarts.init(deviceChart.value, isDark.value ? 'dark' : null)
   
   // 如果没有数据，使用默认空数据
   if (!deviceData.value || deviceData.value.length === 0) {
@@ -779,7 +780,7 @@ const initDeviceChart = () => {
 const initRegionChart = () => {
   if (!regionChart.value) return
   
-  regionChartInstance = echarts.init(regionChart.value)
+  regionChartInstance = echarts.init(regionChart.value, isDark.value ? 'dark' : null)
   
   // 如果没有数据，使用默认空数据
   if (!regionData.value || regionData.value.length === 0) {
@@ -898,16 +899,21 @@ const initCharts = async () => {
 
 // 监听主题变化，重新初始化图表以应用新的文字颜色
 watch(isDark, () => {
+  // 暗黑模式切换时，重新初始化所有图表
   if (visitTrendChartInstance) {
+    visitTrendChartInstance.dispose()
     initVisitTrendChart()
   }
   if (accessSourceChartInstance) {
+    accessSourceChartInstance.dispose()
     initAccessSourceChart()
   }
   if (deviceChartInstance) {
+    deviceChartInstance.dispose()
     initDeviceChart()
   }
   if (regionChartInstance) {
+    regionChartInstance.dispose()
     initRegionChart()
   }
 })
@@ -944,7 +950,7 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-color-primary, #303133);
 }
 
 .stats-row {
@@ -987,14 +993,14 @@ onBeforeUnmount(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-color-primary, #303133);
   margin-bottom: 6px;
   line-height: 1.2;
 }
 
 .stat-title {
   font-size: 14px;
-  color: #909399;
+  color: var(--text-color-secondary, #909399);
   margin-bottom: 4px;
 }
 

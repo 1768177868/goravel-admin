@@ -2,6 +2,8 @@ import { createApp, watch, nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+// 导入 Element Plus 暗黑模式样式
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import VXETable from 'vxe-table'
 import 'vxe-table/lib/style.css'

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import Storage from '../utils/storage'
+import { VxeUI } from 'vxe-table'
 
 const detectBrowserTimezone = () => {
   try {
@@ -61,20 +62,25 @@ export const useAppStore = defineStore('app', {
     toggleDarkMode() {
       this.darkMode = !this.darkMode
       Storage.setItem('darkMode', this.darkMode.toString())
-      // 应用或移除 dark-mode 类到 body
+      VxeUI.setTheme('dark')
+      // 使用 Element Plus 官方暗黑模式方式：在 html 元素上添加/移除 dark 类
       if (this.darkMode) {
-        document.body.classList.add('dark-mode')
+        document.documentElement.classList.add('dark')
+        VxeUI.setTheme('dark')
       } else {
-        document.body.classList.remove('dark-mode')
+        document.documentElement.classList.remove('dark')
+        VxeUI.setTheme('light')
       }
     },
 
     initDarkMode() {
       // 初始化时应用夜间模式
       if (this.darkMode) {
-        document.body.classList.add('dark-mode')
+        document.documentElement.classList.add('dark')
+        VxeUI.setTheme('dark')
       } else {
-        document.body.classList.remove('dark-mode')
+        document.documentElement.classList.remove('dark')
+        VxeUI.setTheme('light')
       }
     }
   }

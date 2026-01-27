@@ -937,7 +937,7 @@ defineExpose({
 .permission-name,
 .menu-name {
   font-weight: 500;
-  color: #303133;
+  /* color: #303133; */
   flex: 1;
   min-width: 0;
   word-break: break-word;

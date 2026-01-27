@@ -35,10 +35,10 @@
       :sort-config="{ multiple: false, trigger: 'default' }"
       :scroll-x="{ enabled: true }"
       :scroll-y="{ enabled: true }"
+      class="desktop-table"
       @sort-change="handleSortChange"
       @checkbox-change="handleCheckboxChange"
       @checkbox-all="handleCheckboxAll"
-      class="desktop-table"
     >
       <template v-for="(column, index) in columns" :key="column.field || column.slot || index">
         <vxe-column
@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useResponsive } from '../composables/useResponsive'
 
 const { isMobile } = useResponsive()
@@ -234,5 +234,8 @@ defineExpose({
     padding: 10px 6px;
   }
 }
+
+/* 注意：暗黑模式通过全局 CSS 变量映射自动适配（参考 vue3-element-admin）
+   详见 style.css 中的 --vxe-* 变量映射到 Element Plus 变量 */
 </style>
 

@@ -235,7 +235,7 @@
             </el-icon>
           </el-button>
           <NotificationBell />
-          <!-- <DarkModeSwitch /> -->
+          <DarkModeSwitch />
           <!-- 移动端隐藏时区和语言切换 -->
           <TimezoneSwitch :class="{ 'mobile-hidden': isMobile }" />
           <LanguageSwitch :class="{ 'mobile-hidden': isXs }" />
@@ -468,10 +468,10 @@ const handleCommand = async (command) => {
 
 .sidebar {
   /* background-color: var(--sidebar-bg); */
-  background-color:#fff;
+  background-color: var(--card-bg, #fff);
   overflow-y: auto;
-  transition: width 0.3s;
-  border-right: 1px solid #00000014;
+  transition: width 0.3s, background-color 0.3s ease;
+  border-right: 1px solid var(--border-color-light, #00000014);
 }
 
 /* 自定义滚动条样式 - 更细更美观 */
@@ -516,7 +516,7 @@ const handleCommand = async (command) => {
   margin: 0;
   font-size: 18px;
   white-space: nowrap;
-  color:#383853;
+  color: var(--text-color-primary, #383853);
   opacity: 1;
 }
 
