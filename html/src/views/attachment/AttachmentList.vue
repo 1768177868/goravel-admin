@@ -63,8 +63,21 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -276,9 +289,11 @@ const CropIcon = markRaw(Crop)
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import axios from 'axios'
 import { 
   getAttachmentList, 
@@ -404,21 +419,70 @@ const {
   }
 })
 
+// 格式化函数（需要在 allTableColumns 之前定义）
+const formatSize = ({ cellValue }) => {
+  return formatFileSize(cellValue)
+}
+
+const formatFileSize = (size) => {
+  if (!size) return '-'
+  const numSize = Number(size)
+  if (numSize < 1024) return `${numSize} B`
+  if (numSize < 1024 * 1024) return `${(numSize / 1024).toFixed(2)} KB`
+  if (numSize < 1024 * 1024 * 1024) return `${(numSize / 1024 / 1024).toFixed(2)} MB`
+  return `${(numSize / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+const formatAdmin = ({ row }) => {
+  if (row.Admin && (row.Admin.Username || row.Admin.username)) {
+    return row.Admin.Username || row.Admin.username
+  }
+  if (row.admin && row.admin.username) {
+    return row.admin.username
+  }
+  return '-'
+}
+
 // 表格列配置
-const tableColumns = computed(() => [
-  { type: 'checkbox', width: 60 },
-  { field: 'id', title: t('table.id'), width: 80, sortable: true },
-  { field: 'filename', title: t('attachment.filename'), minWidth: 200, slot: 'filename' },
-  { field: 'display_name', title: t('attachment.display_name'), minWidth: 200, slot: 'display_name' },
-  { field: 'file_type', title: t('attachment.file_type'), width: 120, slot: 'file_type' },
-  { field: 'disk', title: t('attachment.disk'), width: 100, slot: 'disk' },
-  { field: 'extension', title: t('attachment.extension'), width: 100 },
-  { field: 'size', title: t('attachment.size'), width: 140, formatter: formatSize },
-  { field: 'mime_type', title: t('attachment.mime_type'), minWidth: 150 },
-  { field: 'admin', title: t('log.admin'), width: 140, formatter: formatAdmin },
-  { field: 'created_at', title: t('table.created_at'), width: 180, sortable: true },
-  { title: t('table.operation'), width: 200, fixed: 'right', slot: 'operation' }
+const allTableColumns = computed(() => [
+  { type: 'checkbox', width: 60, key: 'checkbox' },
+  { field: 'id', title: t('table.id'), width: 80, sortable: true, key: 'id' },
+  { field: 'filename', title: t('attachment.filename'), minWidth: 200, slot: 'filename', key: 'filename' },
+  { field: 'display_name', title: t('attachment.display_name'), minWidth: 200, slot: 'display_name', key: 'display_name' },
+  { field: 'file_type', title: t('attachment.file_type'), width: 120, slot: 'file_type', key: 'file_type' },
+  { field: 'disk', title: t('attachment.disk'), width: 100, slot: 'disk', key: 'disk' },
+  { field: 'extension', title: t('attachment.extension'), width: 100, key: 'extension' },
+  { field: 'size', title: t('attachment.size'), width: 140, formatter: formatSize, key: 'size' },
+  { field: 'mime_type', title: t('attachment.mime_type'), minWidth: 150, key: 'mime_type' },
+  { field: 'admin', title: t('log.admin'), width: 140, formatter: formatAdmin, key: 'admin' },
+  { field: 'created_at', title: t('table.created_at'), width: 180, sortable: true, key: 'created_at' },
+  { title: t('table.operation'), width: 200, fixed: 'right', slot: 'operation', key: 'operation' }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('attachment', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 const searchFields = computed(() => [
   {
@@ -623,30 +687,6 @@ const handleImageError = (row) => {
   if (attachmentId) {
     imageLoadingMap.value.set(attachmentId, 'error')
   }
-}
-
-
-const formatSize = ({ cellValue }) => {
-  return formatFileSize(cellValue)
-}
-
-const formatFileSize = (size) => {
-  if (!size) return '-'
-  const numSize = Number(size)
-  if (numSize < 1024) return `${numSize} B`
-  if (numSize < 1024 * 1024) return `${(numSize / 1024).toFixed(2)} KB`
-  if (numSize < 1024 * 1024 * 1024) return `${(numSize / 1024 / 1024).toFixed(2)} MB`
-  return `${(numSize / 1024 / 1024 / 1024).toFixed(2)} GB`
-}
-
-const formatAdmin = ({ row }) => {
-  if (row.Admin && (row.Admin.Username || row.Admin.username)) {
-    return row.Admin.Username || row.Admin.username
-  }
-  if (row.admin && row.admin.username) {
-    return row.admin.username
-  }
-  return '-'
 }
 
 const getFileTypeTagType = (fileType) => {
