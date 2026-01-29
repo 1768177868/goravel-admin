@@ -221,6 +221,8 @@
           <BreadcrumbView :class="{ 'mobile-hidden': isXs }" />
         </div>
         <div class="header-right">
+          <!-- 菜单搜索 -->
+          <MenuSearch v-if="!isMobile" :menus="menuTree" />
           <!-- 移动端隐藏全屏按钮 -->
           <el-button
             v-if="!isMobile"
@@ -341,6 +343,7 @@ import DarkModeSwitch from '../components/DarkModeSwitch.vue'
 import TabsView from '../components/TabsView.vue'
 import BreadcrumbView from '../components/BreadcrumbView.vue'
 import MenuItem from '../components/MenuItem.vue'
+import MenuSearch from '../components/MenuSearch.vue'
 import { filterAndSortTree } from '../utils/tree'
 import { useResponsive } from '../composables/useResponsive'
 import {

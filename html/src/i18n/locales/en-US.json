@@ -890,7 +890,11 @@
     "layout_size": "Layout Size",
     "layout_size_large": "Large",
     "layout_size_default": "Default",
-    "layout_size_small": "Small"
+    "layout_size_small": "Small",
+    "menu_search": "Search Menu",
+    "menu_search_placeholder": "Search menu...",
+    "menu_search_no_results": "No matching menus found",
+    "menu_search_hint": "Enter keywords to search menus"
   },
   "profile": {
     "basic_info": "Basic Information",

@@ -898,7 +898,11 @@
     "layout_size": "布局大小",
     "layout_size_large": "大",
     "layout_size_default": "默认",
-    "layout_size_small": "小"
+    "layout_size_small": "小",
+    "menu_search": "搜索菜单",
+    "menu_search_placeholder": "搜索菜单...",
+    "menu_search_no_results": "未找到匹配的菜单",
+    "menu_search_hint": "输入关键词搜索菜单"
   },
   "profile": {
     "basic_info": "基本信息",
