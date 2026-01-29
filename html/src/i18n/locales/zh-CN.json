@@ -46,6 +46,13 @@
     "column_setting_tip": "请选择要在表格中显示的列",
     "save_success": "保存成功",
     "required": "必选",
+    "select_all": "全选",
+    "refresh": "刷新",
+    "fullscreen": "全屏",
+    "freeze_left": "冻结列左侧",
+    "freeze_right": "冻结列右侧",
+    "unfreeze": "取消冻结列",
+    "drag_to_sort": "拖拽调整列顺序",
     "all": "全部",
     "back": "返回",
     "loading": "加载中",
@@ -1324,6 +1331,32 @@
       "datetime": "日期时间",
       "timestamp": "时间戳",
       "json": "JSON"
+    }
+  },
+  "vxe": {
+    "toolbar": {
+      "customAll": "全选",
+      "customCancel": "取消",
+      "customConfirm": "确认",
+      "customReset": "重置",
+      "refresh": "刷新",
+      "zoom": "全屏",
+      "custom": "列设置",
+      "fixedLeft": "冻结列左侧",
+      "fixedRight": "冻结列右侧",
+      "cancelFixed": "取消冻结列"
+    },
+    "table": {
+      "customRestore": "恢复默认",
+      "customCancel": "取消",
+      "customConfirm": "确认",
+      "customReset": "重置"
+    },
+    "custom": {
+      "setting": {
+        "colVisible": "显示/隐藏列",
+        "sortHelpTip": "拖拽调整列顺序"
+      }
     }
   }
 }

@@ -25,8 +25,21 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -77,7 +90,9 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import PermissionForm from './PermissionForm.vue'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
@@ -137,79 +152,115 @@ const initialSearchForm = {
 }
 
 // 表格列配置
-const tableColumns = computed(() => [
+const allTableColumns = computed(() => [
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true
+    sortable: true,
+    key: 'id'
   },
   {
     field: 'name',
     title: t('permission.name'),
     sortable: false,
-    formatter: ({ row }) => row.Name || row.name || '-'
+    formatter: ({ row }) => row.Name || row.name || '-',
+    key: 'name'
   },
   {
     field: 'slug',
     title: t('permission.slug'),
     sortable: false,
-    formatter: ({ row }) => row.Slug || row.slug || '-'
+    formatter: ({ row }) => row.Slug || row.slug || '-',
+    key: 'slug'
   },
   {
     field: 'method',
     title: t('permission.method'),
     width: 100,
     sortable: false,
-    formatter: ({ row }) => row.Method || row.method || '-'
+    formatter: ({ row }) => row.Method || row.method || '-',
+    key: 'method'
   },
   {
     field: 'path',
     title: t('permission.path'),
     sortable: false,
-    formatter: ({ row }) => row.Path || row.path || '-'
+    formatter: ({ row }) => row.Path || row.path || '-',
+    key: 'path'
   },
   {
     field: 'description',
     title: t('common.description'),
     sortable: false,
-    formatter: ({ row }) => row.Description || row.description || '-'
+    formatter: ({ row }) => row.Description || row.description || '-',
+    key: 'description'
   },
   {
     field: 'menu',
     title: t('menu.title'),
     width: 150,
     slot: 'menu',
-    sortable: false
+    sortable: false,
+    key: 'menu'
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 80,
     sortable: false,
-    slot: 'status'
+    slot: 'status',
+    key: 'status'
   },
   {
     field: 'sort',
     title: t('common.sort'),
     width: 80,
     sortable: true,
-    formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0)
+    formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0),
+    key: 'sort'
   },
   {
     field: 'created_at',
     title: t('table.created_at'),
     sortable: true,
-    formatter: ({ row }) => row.created_at || row.CreatedAt || '-'
+    formatter: ({ row }) => row.created_at || row.CreatedAt || '-',
+    key: 'created_at'
   },
   {
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
     slot: 'operation',
-    sortable: false
+    sortable: false,
+    key: 'operation'
   }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('permission', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 // 搜索表单字段配置
 const searchFields = computed(() => {

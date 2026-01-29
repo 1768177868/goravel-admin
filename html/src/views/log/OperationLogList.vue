@@ -28,8 +28,21 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -137,9 +150,11 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { useListPage } from '../../composables/useListPage'
 import { useCrud } from '../../composables/useCrud'
 import { usePermission } from '../../composables/usePermission'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { getMethodOptions } from '../../utils/fieldOptions'
 import { getSevenDaysAgo } from '../../utils/dateUtils'
 import { validateTimeRange, OPERATION_LOG_MAX_TIME_RANGE_MONTHS } from '../../utils/timeRangeValidator'
@@ -649,46 +664,53 @@ const getOperationTitle = (titleKey) => {
 }
 
 // 表格列配置（使用 vxe-table columns）
-const tableColumns = computed(() => [
+const allTableColumns = computed(() => [
   {
     type: 'checkbox',
-    width: 60
+    width: 60,
+    key: 'checkbox'
   },
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true
+    sortable: true,
+    key: 'id'
   },
   {
     field: 'admin',
     title: t('log.admin'),
     slot: 'admin',
-    sortable: false
+    sortable: false,
+    key: 'admin'
   },
   {
     field: 'title',
     title: t('log.title'),
     slot: 'title',
     sortable: false,
-    width: 200
+    width: 200,
+    key: 'title'
   },
   {
     field: 'method',
     title: t('log.method'),
     width: 100,
-    sortable: false
+    sortable: false,
+    key: 'method'
   },
   {
     field: 'path',
     title: t('log.path'),
-    sortable: false
+    sortable: false,
+    key: 'path'
   },
   {
     field: 'ip',
     title: t('log.ip'),
     width: 150,
-    sortable: false
+    sortable: false,
+    key: 'ip'
   },
   {
     field: 'status_code',
@@ -704,7 +726,8 @@ const tableColumns = computed(() => [
         return t('log.failed')
       }
       return v ?? '-'
-    }
+    },
+    key: 'status_code'
   },
   {
     field: 'request',
@@ -712,21 +735,49 @@ const tableColumns = computed(() => [
     slot: 'request',
     sortable: false,
     width: 250,
-    showOverflow: 'tooltip'
+    showOverflow: 'tooltip',
+    key: 'request'
   },
   {
     field: 'created_at',
     title: t('log.operation_time'),
     width: 180,
-    sortable: true
+    sortable: true,
+    key: 'created_at'
   },
   {
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    key: 'operation'
   }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('operation_log', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 // 搜索表单字段配置（JSON 方式）
 const searchFields = computed(() => {

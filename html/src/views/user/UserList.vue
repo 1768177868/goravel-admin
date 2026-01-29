@@ -37,8 +37,21 @@
         </template>
       </SearchForm>
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".user-list"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -97,10 +110,12 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import UserForm from './UserForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getUserList,
@@ -208,61 +223,95 @@ const searchFields = computed(() => [
   }
 ])
 
-const tableColumns = computed(() => [
+const allTableColumns = computed(() => [
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true
+    sortable: true,
+    key: 'id'
   },
   {
     field: 'username',
     title: t('table.username'),
-    sortable: false
+    sortable: false,
+    key: 'username'
   },
   {
     field: 'nickname',
     title: t('table.nickname'),
-    sortable: false
+    sortable: false,
+    key: 'nickname'
   },
   {
     field: 'email',
     title: t('table.email'),
-    sortable: false
+    sortable: false,
+    key: 'email'
   },
   {
     field: 'phone',
     title: t('table.phone'),
-    sortable: false
+    sortable: false,
+    key: 'phone'
   },
   {
     field: 'balance',
     title: t('user.balance'),
     width: 120,
     sortable: true,
-    slot: 'balance'
+    slot: 'balance',
+    key: 'balance'
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 100,
     sortable: false,
-    slot: 'status'
+    slot: 'status',
+    key: 'status'
   },
   {
     field: 'created_at',
     title: t('table.created_at'),
     width: 180,
-    sortable: true
+    sortable: true,
+    key: 'created_at'
   },
   {
     field: 'operation',
     title: t('table.operation'),
     width: 220,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    key: 'operation'
   }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('user', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 const getPrimaryActions = (row) => {
   return [

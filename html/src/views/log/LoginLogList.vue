@@ -36,8 +36,21 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -108,10 +121,12 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { useListPage } from '../../composables/useListPage'
 import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import {
   getLoginLogList,
   getLoginLogDetail,
@@ -224,67 +239,102 @@ const {
 // 使用回调清除选中状态，无需重写方法
 
 // 表格列配置（使用 vxe-table columns）
-const tableColumns = computed(() => [
+const allTableColumns = computed(() => [
   {
     type: 'checkbox',
-    width: 60
+    width: 60,
+    key: 'checkbox'
   },
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true
+    sortable: true,
+    key: 'id'
   },
   {
     field: 'admin',
     title: t('log.admin'),
     slot: 'admin',
-    sortable: false
+    sortable: false,
+    key: 'admin'
   },
   {
     field: 'ip',
     title: t('log.ip'),
     width: 150,
-    sortable: false
+    sortable: false,
+    key: 'ip'
   },
   {
     field: 'location',
     title: t('log.location'),
     width: 200,
-    sortable: false
+    sortable: false,
+    key: 'location'
   },
   {
     field: 'user_agent',
     title: t('log.user_agent'),
-    sortable: false
+    sortable: false,
+    key: 'user_agent'
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 100,
     sortable: false,
-    slot: 'status'
+    slot: 'status',
+    key: 'status'
   },
   {
     field: 'message',
     title: t('log.message'),
     sortable: false,
-    slot: 'message'
+    slot: 'message',
+    key: 'message'
   },
   {
     field: 'created_at',
     title: t('log.login_time'),
     width: 180,
-    sortable: true
+    sortable: true,
+    key: 'created_at'
   },
   {
     title: t('table.operation'),
     width: 150,
     fixed: 'right',
     slot: 'operation',
-    sortable: false
+    sortable: false,
+    key: 'operation'
   }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('login_log', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 // 搜索表单字段配置
 const searchFields = computed(() => [

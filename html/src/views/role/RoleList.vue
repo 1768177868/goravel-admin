@@ -24,8 +24,21 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -75,9 +88,11 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import RoleForm from './RoleForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { useCrud } from '../../composables/useCrud'
 import { getRoleList, deleteRole, updateRole } from '../../api/role'
 
@@ -98,59 +113,92 @@ const dialogVisible = ref(false)
 const editId = ref(null)
 
 // 表格列配置
-const tableColumns = computed(() => [
+const allTableColumns = computed(() => [
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true
+    sortable: true,
+    key: 'id'
   },
   {
     field: 'name',
     title: t('role.name'),
     sortable: false,
-    formatter: ({ row }) => getDisplayValue(row, 'name')
+    formatter: ({ row }) => getDisplayValue(row, 'name'),
+    key: 'name'
   },
   {
     field: 'slug',
     title: t('role.slug'),
     sortable: false,
-    formatter: ({ row }) => getDisplayValue(row, 'slug')
+    formatter: ({ row }) => getDisplayValue(row, 'slug'),
+    key: 'slug'
   },
   {
     field: 'description',
     title: t('common.description'),
     sortable: false,
-    formatter: ({ row }) => getDisplayValue(row, 'description')
+    formatter: ({ row }) => getDisplayValue(row, 'description'),
+    key: 'description'
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 100,
     sortable: false,
-    slot: 'status'
+    slot: 'status',
+    key: 'status'
   },
   {
     field: 'sort',
     title: t('common.sort'),
     width: 80,
     sortable: true,
-    formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0)
+    formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0),
+    key: 'sort'
   },
   {
     field: 'created_at',
     title: t('table.created_at'),
     sortable: true,
-    formatter: ({ row }) => getDisplayValue(row, 'created_at')
+    formatter: ({ row }) => getDisplayValue(row, 'created_at'),
+    key: 'created_at'
   },
   {
     title: t('table.operation'),
     width: 200,
     fixed: 'right',
     slot: 'operation',
-    sortable: false
+    sortable: false,
+    key: 'operation'
   }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('role', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 const getDisplayValue = (row, field) => {
   if (!row || !field) return '-'

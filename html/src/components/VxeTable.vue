@@ -41,7 +41,7 @@
       @checkbox-change="handleCheckboxChange"
       @checkbox-all="handleCheckboxAll"
     >
-      <template v-for="(column, index) in columns" :key="column.field || column.slot || index">
+      <template v-for="(column, index) in columns" :key="`${index}-${column.field || column.slot || column.key || column.type}`">
         <vxe-column
           :type="column.type"
           :field="column.field"

@@ -36,8 +36,21 @@
         </template>
       </SearchForm>
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <VxeTable
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -111,10 +124,12 @@ import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import AdminForm from './AdminForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { getStatusOptions } from '../../utils/fieldOptions'
 import {
   getAdminList,
@@ -184,71 +199,107 @@ const initialSearchForm = {
 }
 
 // 表格列配置（使用 vxe-table columns）
-const tableColumns = computed(() => [
+const allTableColumns = computed(() => [
   {
     field: 'id',
     title: t('table.id'),
     width: 80,
-    sortable: true
+    sortable: true,
+    key: 'id'
   },
   {
     field: 'username',
     title: t('table.username'),
-    sortable: false
+    sortable: false,
+    key: 'username'
   },
   {
     field: 'nickname',
     title: t('table.nickname'),
-    sortable: false
+    sortable: false,
+    key: 'nickname'
   },
   {
     field: 'email',
     title: t('table.email'),
-    sortable: false
+    sortable: false,
+    key: 'email'
   },
   {
     field: 'phone',
     title: t('table.phone'),
-    sortable: false
+    sortable: false,
+    key: 'phone'
   },
   {
     field: 'status',
     title: t('table.status'),
     width: 100,
     sortable: false,
-    slot: 'status'
+    slot: 'status',
+    key: 'status'
   },
   {
     field: 'is_2fa_bound',
     title: t('admin.google_auth_status'),
     width: 120,
     sortable: false,
-    slot: 'is_2fa_bound'
+    slot: 'is_2fa_bound',
+    key: 'is_2fa_bound'
   },
   {
     field: 'department',
     title: t('table.department'),
     slot: 'department',
-    sortable: false
+    sortable: false,
+    key: 'department'
   },
   {
     field: 'roles',
     title: t('table.roles'),
     slot: 'roles',
-    sortable: false
+    sortable: false,
+    key: 'roles'
   },
   {
     field: 'created_at',
     title: t('table.created_at'),
-    sortable: true
+    sortable: true,
+    key: 'created_at'
   },
   {
     title: t('table.operation'),
     width: 220,
     fixed: 'right',
-    slot: 'operation'
+    slot: 'operation',
+    key: 'operation'
   }
 ])
+
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('admin', allTableColumns)
+
+// 处理列设置确认
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    handleSaveColumnSetting(result)
+  } else {
+    handleSaveColumnSetting(result)
+  }
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
+}
 
 // 搜索表单字段配置
 const searchFields = computed(() => [

@@ -25,21 +25,51 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".online-admin-list"
+        :visible-columns="visibleColumns"
+        :all-columns="allColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <!-- 表格 -->
-      <vxe-grid
-        ref="gridRef"
+      <VxeTable
+        ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
         :data="tableData"
-        :columns="columns"
         :loading="loading"
-        height="600"
-        border
-        :toolbar-config="toolbarConfig"
-        :column-config="{ resizable: true }"
-        :sort-config="{ multiple: false, trigger: 'default' }"
+        :columns="tableColumns"
+        :height="600"
         @sort-change="handleSortChange"
         @checkbox-change="handleCheckboxChange"
         @checkbox-all="handleCheckboxAll"
-      />
+      >
+        <template #avatar="{ row }">
+          <el-avatar :size="32" :src="row.avatar">
+            {{ row.nickname ? row.nickname.charAt(0) : (row.username ? row.username.charAt(0) : 'U') }}
+          </el-avatar>
+        </template>
+
+        <template #last_active="{ row }">
+          {{ formatTime(row.last_active) }}
+        </template>
+
+        <template #operation="{ row }">
+          <el-button 
+            type="danger" 
+            link 
+            :disabled="getButtonState('admin.kick_out').disabled"
+            @click="handleKickOut(row)"
+          >
+            {{ $t('online_admin.kick_out') }}
+          </el-button>
+        </template>
+      </VxeTable>
 
       <!-- 分页 -->
       <Pagination
@@ -52,13 +82,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
-import { ElMessage, ElMessageBox, ElAvatar, ElButton } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
 import SearchForm from '@/components/SearchForm.vue'
 import Pagination from '@/components/Pagination.vue'
+import VxeTable from '@/components/VxeTable.vue'
+import TableToolbar from '@/components/TableToolbar.vue'
+import { useColumnSetting } from '@/composables/useColumnSetting'
 import { usePermission } from '@/composables/usePermission'
 import { useListPage } from '@/composables/useListPage'
 import {
@@ -72,7 +105,7 @@ import {
 const { t } = useI18n()
 const { getButtonState } = usePermission()
 
-const gridRef = ref(null)
+const tableRef = ref(null)
 const selectedRows = ref([])
 
 /* ================= 列表逻辑 ================= */
@@ -99,7 +132,7 @@ const {
     last_active: 'last_used_at'
   },
   defaultSort: 'last_used_at:desc',
-  tableRef: computed(() => gridRef.value)
+  tableRef: computed(() => tableRef.value)
 })
 
 /* ================= 搜索 ================= */
@@ -120,73 +153,95 @@ const searchFields = computed(() => [
 
 /* ================= 表格列 ================= */
 
-const columns = computed(() => [
-  { type: 'checkbox', width: 50, fixed: 'left' },
-
-  { field: 'username', title: t('online_admin.username'), width: 120 },
-  { field: 'nickname', title: t('online_admin.nickname'), width: 120 },
-
+// 所有列的完整配置（用于列设置）
+const allTableColumns = computed(() => [
+  { type: 'checkbox', width: 50, fixed: 'left', key: 'checkbox' },
+  {
+    field: 'username',
+    title: t('online_admin.username'),
+    width: 120,
+    sortable: false,
+    key: 'username'
+  },
+  {
+    field: 'nickname',
+    title: t('online_admin.nickname'),
+    width: 120,
+    sortable: false,
+    key: 'nickname'
+  },
   {
     field: 'avatar',
     title: t('online_admin.avatar'),
     width: 80,
-    slots: {
-      default: ({ row }) =>
-        h(
-          ElAvatar,
-          { size: 32, src: row.avatar },
-          () =>
-            row.nickname?.charAt(0) ||
-            row.username?.charAt(0) ||
-            'U'
-        )
-    }
+    slot: 'avatar',
+    key: 'avatar'
   },
-
-  { field: 'browser', title: t('online_admin.browser'), width: 150 },
-  { field: 'ip', title: t('online_admin.ip'), width: 150 },
-  { field: 'os', title: t('online_admin.os'), width: 150 },
-  { field: 'session_id', title: t('online_admin.session_id'), width: 200 },
-
+  {
+    field: 'browser',
+    title: t('online_admin.browser'),
+    width: 150,
+    sortable: false,
+    key: 'browser'
+  },
+  {
+    field: 'ip',
+    title: t('online_admin.ip'),
+    width: 150,
+    sortable: false,
+    key: 'ip'
+  },
+  {
+    field: 'os',
+    title: t('online_admin.os'),
+    width: 150,
+    sortable: false,
+    key: 'os'
+  },
+  {
+    field: 'session_id',
+    title: t('online_admin.session_id'),
+    width: 200,
+    key: 'session_id'
+  },
   {
     field: 'last_active',
     title: t('online_admin.last_active'),
     width: 180,
     sortable: true,
-    slots: {
-      default: ({ row }) => formatTime(row.last_active)
-    }
+    slot: 'last_active',
+    key: 'last_active'
   },
-
   {
     title: t('common.operation'),
     width: 120,
     fixed: 'right',
-    slots: {
-      default: ({ row }) =>
-        h(
-          ElButton,
-          {
-            type: 'danger',
-            link: true,
-            disabled: getButtonState('admin.kick_out').disabled,
-            onClick: () => handleKickOut(row)
-          },
-          () => t('online_admin.kick_out')
-        )
-    }
+    slot: 'operation',
+    key: 'operation'
   }
 ])
 
-/* ================= 工具栏 ================= */
+// 使用列设置 composable
+const {
+  tableColumns,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleSaveColumnSetting
+} = useColumnSetting('online_admin', allTableColumns)
 
-const toolbarConfig = computed(() => ({
-  custom: true,
-  refresh: {
-    query: loadData
-  },
-  zoom: true
-}))
+// 处理列设置确认（支持冻结列和列顺序）
+const handleColumnSettingConfirm = (result) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    // 新格式：包含 visibleColumns, fixedColumns, columnOrder
+    handleSaveColumnSetting(result)
+  } else {
+    // 兼容旧格式：直接是 visibleColumns 数组
+    handleSaveColumnSetting(result)
+  }
+}
 
 /* ================= 勾选 ================= */
 
@@ -237,6 +292,11 @@ const formatTime = (time) => {
   const d = new Date(time)
   if (isNaN(d.getTime())) return time
   return d.toLocaleString().replace(/\//g, '-')
+}
+
+// 处理刷新
+const handleRefresh = () => {
+  loadData()
 }
 
 onMounted(() => {

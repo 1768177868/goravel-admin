@@ -40,6 +40,13 @@
     "column_setting_tip": "Please select columns to display in table",
     "save_success": "Save successful",
     "required": "Required",
+    "select_all": "Select All",
+    "refresh": "Refresh",
+    "fullscreen": "Fullscreen",
+    "freeze_left": "Freeze Column Left",
+    "freeze_right": "Freeze Column Right",
+    "unfreeze": "Unfreeze Column",
+    "drag_to_sort": "Drag to reorder columns",
     "all": "All",
     "back": "Back",
     "loading": "Loading",
@@ -1316,6 +1323,32 @@
       "datetime": "Date Time",
       "timestamp": "Timestamp",
       "json": "JSON"
+    }
+  },
+  "vxe": {
+    "toolbar": {
+      "customAll": "Select All",
+      "customCancel": "Cancel",
+      "customConfirm": "Confirm",
+      "customReset": "Reset",
+      "refresh": "Refresh",
+      "zoom": "Fullscreen",
+      "custom": "Column Setting",
+      "fixedLeft": "Freeze Column Left",
+      "fixedRight": "Freeze Column Right",
+      "cancelFixed": "Unfreeze Column"
+    },
+    "table": {
+      "customRestore": "Restore Default",
+      "customCancel": "Cancel",
+      "customConfirm": "Confirm",
+      "customReset": "Reset"
+    },
+    "custom": {
+      "setting": {
+        "colVisible": "Show/Hide Column",
+        "sortHelpTip": "Drag to reorder columns"
+      }
     }
   }
 }

@@ -34,6 +34,13 @@
         @reset="handleReset"
       />
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :show-column-setting="false"
+      />
+
       <el-table
         ref="tableRef"
         :data="tableData"
@@ -99,6 +106,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Fold, Expand } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import DepartmentForm from './DepartmentForm.vue'
 import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
