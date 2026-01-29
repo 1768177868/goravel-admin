@@ -284,17 +284,8 @@ const {
   defaultVisibleColumns,
   columnOrder,
   fixedColumns,
-  handleSaveColumnSetting
+  handleColumnSettingConfirm
 } = useColumnSetting('admin', allTableColumns)
-
-// 处理列设置确认
-const handleColumnSettingConfirm = (result) => {
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
-    handleSaveColumnSetting(result)
-  } else {
-    handleSaveColumnSetting(result)
-  }
-}
 
 // 处理刷新
 const handleRefresh = () => {

@@ -267,6 +267,17 @@ export function useColumnSetting(storageKey, tableColumns) {
     return result
   })
 
+  // 处理列设置确认（统一处理逻辑，避免每个页面重复）
+  const handleColumnSettingConfirm = (result) => {
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      // 新格式：包含 visibleColumns, fixedColumns, columnOrder
+      handleSaveColumnSetting(result)
+    } else {
+      // 兼容旧格式：直接是 visibleColumns 数组
+      handleSaveColumnSetting(result)
+    }
+  }
+
   return {
     // 过滤后的表格列（直接用于 vxe-table）
     tableColumns: filteredColumns,
@@ -283,6 +294,8 @@ export function useColumnSetting(storageKey, tableColumns) {
     // 冻结列配置
     fixedColumns,
     // 保存列设置
-    handleSaveColumnSetting
+    handleSaveColumnSetting,
+    // 处理列设置确认（统一方法）
+    handleColumnSettingConfirm
   }
 }

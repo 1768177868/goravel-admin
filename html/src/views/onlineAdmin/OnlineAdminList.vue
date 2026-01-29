@@ -229,19 +229,8 @@ const {
   defaultVisibleColumns,
   columnOrder,
   fixedColumns,
-  handleSaveColumnSetting
+  handleColumnSettingConfirm
 } = useColumnSetting('online_admin', allTableColumns)
-
-// 处理列设置确认（支持冻结列和列顺序）
-const handleColumnSettingConfirm = (result) => {
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
-    // 新格式：包含 visibleColumns, fixedColumns, columnOrder
-    handleSaveColumnSetting(result)
-  } else {
-    // 兼容旧格式：直接是 visibleColumns 数组
-    handleSaveColumnSetting(result)
-  }
-}
 
 /* ================= 勾选 ================= */
 

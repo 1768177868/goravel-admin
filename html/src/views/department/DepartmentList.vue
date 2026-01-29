@@ -35,14 +35,26 @@
       />
 
       <!-- 表格工具栏 -->
+      <!-- <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :show-column-setting="true"
+      /> -->
+
       <TableToolbar
         :on-refresh="handleRefresh"
         fullscreen-target=".list-page"
-        :show-column-setting="false"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
       />
 
       <el-table
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
         :data="tableData"
         :loading="loading"
         border
@@ -52,40 +64,43 @@
         style="width: 100%"
         height="600"
       >
-        <el-table-column type="index" width="60" :label="$t('table.seq')" />
-        <el-table-column prop="name" :label="$t('department.name')" min-width="150" />
-        <el-table-column prop="remark" :label="$t('common.description')" min-width="200">
-          <template #default="{ row }">
-            {{ row.remark || row.description || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" :label="$t('common.sort')" width="100" />
-        <el-table-column prop="status" :label="$t('table.status')" width="200">
-          <template #default="{ row }">
-            <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
-              {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <!-- <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" /> -->
-        <el-table-column :label="$t('table.operation')" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button 
-              type="primary" 
-              link 
-              :disabled="getButtonState('department.update').disabled"
-              @click="handleEdit(row)"
-            >
-              {{ $t('common.edit') }}
-            </el-button>
-            <el-button 
-              type="danger" 
-              link 
-              :disabled="getButtonState('department.destroy').disabled"
-              @click="handleDelete(row)"
-            >
-              {{ $t('common.delete') }}
-            </el-button>
+        <el-table-column 
+          v-for="column in tableColumns" 
+          :key="column.key || column.prop || column.type"
+          :type="column.type"
+          :prop="column.prop"
+          :label="column.label"
+          :width="column.width"
+          :min-width="column.minWidth"
+          :fixed="column.fixed"
+        >
+          <template v-if="column.slot" #default="{ row }">
+            <template v-if="column.key === 'remark'">
+              {{ row.remark || row.description || '-' }}
+            </template>
+            <template v-else-if="column.key === 'status'">
+              <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
+                {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.key === 'operation'">
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('department.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('department.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -111,6 +126,7 @@ import DepartmentForm from './DepartmentForm.vue'
 import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { flattenTree } from '../../utils/tree'
 import {
   getDepartmentList,
@@ -174,6 +190,100 @@ const searchFields = computed(() => [
 // 部门选项（保持树形结构，用于表单选择）
 const departmentOptions = computed(() => {
   return tableData.value || []
+})
+
+// 表格列配置
+const allTableColumns = computed(() => [
+  { type: 'index', width: 60, title: t('table.seq'), key: 'index' },
+  { field: 'name', title: t('department.name'), minWidth: 150, key: 'name' },
+  { field: 'remark', title: t('common.description'), minWidth: 200, slot: 'remark', key: 'remark' },
+  { field: 'sort', title: t('common.sort'), width: 100, key: 'sort' },
+  { field: 'status', title: t('table.status'), width: 200, slot: 'status', key: 'status' },
+  { title: t('table.operation'), width: 150, fixed: 'right', slot: 'operation', key: 'operation' }
+])
+
+// 使用列设置 composable
+const {
+  tableColumns: tableColumnsConfig,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleColumnSettingConfirm
+} = useColumnSetting('department', allTableColumns)
+
+// 将 VxeTable 格式的列配置转换为 el-table 格式
+const tableColumns = computed(() => {
+  const configs = tableColumnsConfig.value || []
+  
+  // 创建列映射
+  const columnMap = {}
+  configs.forEach(col => {
+    const key = col.key || col.field || col.slot
+    if (key) {
+      columnMap[key] = col
+    }
+  })
+  
+  // 按照 columnOrder 排序（如果存在）
+  const orderedKeys = columnOrder.value.length > 0 
+    ? columnOrder.value.filter(key => columnMap[key])
+    : configs.map(col => col.key || col.field || col.slot).filter(Boolean)
+  
+  // 构建最终列数组
+  const result = []
+  
+  // 先添加 index 列（如果存在）
+  if (columnMap['index']) {
+    result.push({
+      key: 'index',
+      type: 'index',
+      width: 60,
+      label: t('table.seq')
+    })
+  }
+  
+  // 按顺序添加其他列（排除 index 和 operation）
+  orderedKeys.forEach(key => {
+    if (key === 'index' || key === 'operation') return
+    
+    const col = columnMap[key]
+    if (!col) return
+    
+    // 检查是否可见
+    if (!visibleColumns.value.includes(key)) return
+    
+    const elColumn = {
+      key: key,
+      prop: col.field,
+      label: col.title,
+      width: col.width,
+      minWidth: col.minWidth,
+      fixed: fixedColumns.value[key] || col.fixed,
+      type: col.type
+    }
+    
+    // 如果有 slot，标记需要自定义模板
+    if (col.slot) {
+      elColumn.slot = col.slot
+    }
+    
+    result.push(elColumn)
+  })
+  
+  // 最后添加 operation 列（如果存在）
+  if (columnMap['operation']) {
+    result.push({
+      key: 'operation',
+      label: t('table.operation'),
+      width: 150,
+      fixed: 'right',
+      slot: 'operation'
+    })
+  }
+  
+  return result
 })
 
 const loadData = async () => {
