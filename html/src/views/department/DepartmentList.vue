@@ -127,6 +127,7 @@ import { buildSearchParams } from '../../utils/buildSearchParams'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import { useColumnSetting } from '../../composables/useColumnSetting'
+import { useElTableColumns } from '../../composables/useElTableColumns'
 import { flattenTree } from '../../utils/tree'
 import {
   getDepartmentList,
@@ -214,77 +215,7 @@ const {
 } = useColumnSetting('department', allTableColumns)
 
 // 将 VxeTable 格式的列配置转换为 el-table 格式
-const tableColumns = computed(() => {
-  const configs = tableColumnsConfig.value || []
-  
-  // 创建列映射
-  const columnMap = {}
-  configs.forEach(col => {
-    const key = col.key || col.field || col.slot
-    if (key) {
-      columnMap[key] = col
-    }
-  })
-  
-  // 按照 columnOrder 排序（如果存在）
-  const orderedKeys = columnOrder.value.length > 0 
-    ? columnOrder.value.filter(key => columnMap[key])
-    : configs.map(col => col.key || col.field || col.slot).filter(Boolean)
-  
-  // 构建最终列数组
-  const result = []
-  
-  // 先添加 index 列（如果存在）
-  if (columnMap['index']) {
-    result.push({
-      key: 'index',
-      type: 'index',
-      width: 60,
-      label: t('table.seq')
-    })
-  }
-  
-  // 按顺序添加其他列（排除 index 和 operation）
-  orderedKeys.forEach(key => {
-    if (key === 'index' || key === 'operation') return
-    
-    const col = columnMap[key]
-    if (!col) return
-    
-    // 检查是否可见
-    if (!visibleColumns.value.includes(key)) return
-    
-    const elColumn = {
-      key: key,
-      prop: col.field,
-      label: col.title,
-      width: col.width,
-      minWidth: col.minWidth,
-      fixed: fixedColumns.value[key] || col.fixed,
-      type: col.type
-    }
-    
-    // 如果有 slot，标记需要自定义模板
-    if (col.slot) {
-      elColumn.slot = col.slot
-    }
-    
-    result.push(elColumn)
-  })
-  
-  // 最后添加 operation 列（如果存在）
-  if (columnMap['operation']) {
-    result.push({
-      key: 'operation',
-      label: t('table.operation'),
-      width: 150,
-      fixed: 'right',
-      slot: 'operation'
-    })
-  }
-  
-  return result
-})
+const tableColumns = useElTableColumns(tableColumnsConfig, visibleColumns, columnOrder, fixedColumns)
 
 const loadData = async () => {
   loading.value = true

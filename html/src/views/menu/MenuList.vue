@@ -5,10 +5,6 @@
         <div class="card-header">
           <span>{{ $t('menu.menu') }}</span>
           <div class="header-actions">
-            <el-button @click="handleRefresh">
-              <el-icon><Refresh /></el-icon>
-              {{ $t('tabs.refresh') }}
-            </el-button>
             <el-button @click="handleToggleExpand">
               <el-icon><component :is="isExpanded ? 'Fold' : 'Expand'" /></el-icon>
               {{ isExpanded ? $t('menu_management.collapse_all') : $t('menu_management.expand_all') }}
@@ -25,8 +21,21 @@
         </div>
       </template>
 
+      <!-- 表格工具栏 -->
+      <TableToolbar
+        :on-refresh="handleRefresh"
+        fullscreen-target=".list-page"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
+
       <el-table
         ref="tableRef"
+        :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
         :data="tableData"
         :loading="loading"
         border
@@ -36,77 +45,70 @@
         style="width: 100%"
         height="600"
       >
-        <el-table-column type="index" width="60" :label="$t('table.seq')" />
-        <el-table-column prop="name" :label="$t('menu_management.name')" min-width="200" />
-        <el-table-column prop="slug" :label="$t('menu_management.slug')" min-width="150" />
-        <el-table-column prop="path" :label="$t('menu_management.path')" min-width="200" />
-        <el-table-column prop="type" :label="$t('table.type')" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.type === 1 ? 'info' : (row.type === 2 ? 'primary' : 'warning')">
-              {{ row.type === 1 ? $t('menu.type_directory') : (row.type === 2 ? $t('menu.type_menu') : $t('menu.type_button')) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="link_type" :label="$t('menu_management.link_type')" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.link_type === 1 ? 'primary' : 'success'">
-              {{ row.link_type === 1 ? $t('menu_management.link_type_internal') : $t('menu_management.link_type_external') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="open_type" :label="$t('menu_management.open_type')" width="140">
-          <template #default="{ row }">
-            <span v-if="row.link_type === 2">
-              <el-tag :type="row.open_type === 1 ? 'info' : 'warning'">
-                {{ row.open_type === 1 ? $t('menu_management.open_type_iframe') : $t('menu_management.open_type_new_window') }}
+        <el-table-column 
+          v-for="column in tableColumns" 
+          :key="column.key || column.prop || column.type"
+          :type="column.type"
+          :prop="column.prop"
+          :label="column.label"
+          :width="column.width"
+          :min-width="column.minWidth"
+          :fixed="column.fixed"
+        >
+          <template v-if="column.slot" #default="{ row }">
+            <template v-if="column.key === 'type'">
+              <el-tag :type="row.type === 1 ? 'info' : (row.type === 2 ? 'primary' : 'warning')">
+                {{ row.type === 1 ? $t('menu.type_directory') : (row.type === 2 ? $t('menu.type_menu') : $t('menu.type_button')) }}
               </el-tag>
-            </span>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="icon" :label="$t('menu_management.icon')" width="140">
-          <template #default="{ row }">
-            <span v-if="getIconComponent(row.icon)" class="menu-icon-preview">
-              <el-icon><component :is="getIconComponent(row.icon)" /></el-icon>
-              <span class="menu-icon-name">{{ normalizeIconName(row.icon) }}</span>
-            </span>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sort" :label="$t('common.sort')" width="80" />
-        <el-table-column prop="status" :label="$t('table.status')" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="is_hidden" :label="$t('menu_management.is_hidden')" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.is_hidden === 0 ? 'success' : 'info'">
-              {{ row.is_hidden === 0 ? $t('menu_management.is_hidden_show') : $t('menu_management.is_hidden_hide') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" :label="$t('table.created_at')" width="180" />
-        <el-table-column :label="$t('table.operation')" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button 
-              type="primary" 
-              link 
-              :disabled="getButtonState('menu.update').disabled"
-              @click="handleEdit(row)"
-            >
-              {{ $t('common.edit') }}
-            </el-button>
-            <el-button 
-              type="danger" 
-              link 
-              :disabled="getButtonState('menu.destroy').disabled"
-              @click="handleDelete(row)"
-            >
-              {{ $t('common.delete') }}
-            </el-button>
+            </template>
+            <template v-else-if="column.key === 'link_type'">
+              <el-tag :type="row.link_type === 1 ? 'primary' : 'success'">
+                {{ row.link_type === 1 ? $t('menu_management.link_type_internal') : $t('menu_management.link_type_external') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.key === 'open_type'">
+              <span v-if="row.link_type === 2">
+                <el-tag :type="row.open_type === 1 ? 'info' : 'warning'">
+                  {{ row.open_type === 1 ? $t('menu_management.open_type_iframe') : $t('menu_management.open_type_new_window') }}
+                </el-tag>
+              </span>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="column.key === 'icon'">
+              <span v-if="getIconComponent(row.icon)" class="menu-icon-preview">
+                <el-icon><component :is="getIconComponent(row.icon)" /></el-icon>
+                <span class="menu-icon-name">{{ normalizeIconName(row.icon) }}</span>
+              </span>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="column.key === 'status'">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+                {{ row.status === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.key === 'is_hidden'">
+              <el-tag :type="row.is_hidden === 0 ? 'success' : 'info'">
+                {{ row.is_hidden === 0 ? $t('menu_management.is_hidden_show') : $t('menu_management.is_hidden_hide') }}
+              </el-tag>
+            </template>
+            <template v-else-if="column.key === 'operation'">
+              <el-button 
+                type="primary" 
+                link 
+                :disabled="getButtonState('menu.update').disabled"
+                @click="handleEdit(row)"
+              >
+                {{ $t('common.edit') }}
+              </el-button>
+              <el-button 
+                type="danger" 
+                link 
+                :disabled="getButtonState('menu.destroy').disabled"
+                @click="handleDelete(row)"
+              >
+                {{ $t('common.delete') }}
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -128,9 +130,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Fold, Expand, Plus, Refresh } from '@element-plus/icons-vue'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import MenuForm from './MenuForm.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { getMenuList, deleteMenu } from '../../api/menu'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { useColumnSetting } from '../../composables/useColumnSetting'
+import { useElTableColumns } from '../../composables/useElTableColumns'
 import { mapTree } from '../../utils/tree'
 
 const { t } = useI18n()
@@ -183,6 +188,37 @@ const menuOptions = computed(() => {
     label: menu.name
   }))
 })
+
+// 表格列配置
+const allTableColumns = computed(() => [
+  { type: 'index', width: 60, title: t('table.seq'), key: 'index' },
+  { field: 'name', title: t('menu_management.name'), minWidth: 200, key: 'name' },
+  { field: 'slug', title: t('menu_management.slug'), minWidth: 150, key: 'slug' },
+  { field: 'path', title: t('menu_management.path'), minWidth: 200, key: 'path' },
+  { field: 'type', title: t('table.type'), width: 100, slot: 'type', key: 'type' },
+  { field: 'link_type', title: t('menu_management.link_type'), width: 120, slot: 'link_type', key: 'link_type' },
+  { field: 'open_type', title: t('menu_management.open_type'), width: 140, slot: 'open_type', key: 'open_type' },
+  { field: 'icon', title: t('menu_management.icon'), width: 140, slot: 'icon', key: 'icon' },
+  { field: 'sort', title: t('common.sort'), width: 80, key: 'sort' },
+  { field: 'status', title: t('table.status'), width: 100, slot: 'status', key: 'status' },
+  { field: 'is_hidden', title: t('menu_management.is_hidden'), width: 100, slot: 'is_hidden', key: 'is_hidden' },
+  { field: 'created_at', title: t('table.created_at'), width: 180, key: 'created_at' },
+  { title: t('table.operation'), width: 150, fixed: 'right', slot: 'operation', key: 'operation' }
+])
+
+// 使用列设置 composable
+const {
+  tableColumns: tableColumnsConfig,
+  visibleColumns,
+  allColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleColumnSettingConfirm
+} = useColumnSetting('menu', allTableColumns)
+
+// 将 VxeTable 格式的列配置转换为 el-table 格式
+const tableColumns = useElTableColumns(tableColumnsConfig, visibleColumns, columnOrder, fixedColumns)
 
 const loadData = async () => {
   loading.value = true
