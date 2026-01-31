@@ -19,6 +19,7 @@ type Menu struct {
 	IsHidden   uint8  `gorm:"default:0;comment:是否隐藏 1:是 0:否"`
 	LinkType   uint8  `gorm:"default:1;comment:链接类型 1:内部页面 2:外部链接"`
 	OpenType   uint8  `gorm:"default:1;comment:打开方式 1:iframe嵌套 2:新窗口打开"`
+	NoCache    uint8  `gorm:"default:0;comment:是否缓存 1:否-每次进页面刷新 0:是"`
 	Children   []Menu `gorm:"foreignKey:ParentID"`
 	Roles      []Role `gorm:"many2many:role_menu;comment:角色"`
 }

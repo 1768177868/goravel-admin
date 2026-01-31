@@ -277,7 +277,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, markRaw, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, markRaw, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Delete, Loading, Picture, Crop } from '@element-plus/icons-vue'
@@ -1242,9 +1242,7 @@ onMounted(() => {
   loadData()
 })
 
-onActivated(() => {
-  loadData()
-})
+// 刷新由菜单的「是否缓存」设置控制：no_cache=1 时每次进入会 remount 触发 onMounted 刷新
 </script>
 
 <style scoped>

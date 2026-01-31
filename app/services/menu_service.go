@@ -11,7 +11,7 @@ type MenuService interface {
 	// GetByID 根据ID获取菜单
 	GetByID(id uint) (*models.Menu, error)
 	// Create 创建菜单
-	Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType uint8) (*models.Menu, error)
+	Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType, noCache uint8) (*models.Menu, error)
 	// Update 更新菜单
 	Update(menu *models.Menu) error
 	// Delete 删除菜单
@@ -35,7 +35,7 @@ func (s *MenuServiceImpl) GetByID(id uint) (*models.Menu, error) {
 }
 
 // Create 创建菜单
-func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType uint8) (*models.Menu, error) {
+func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType, noCache uint8) (*models.Menu, error) {
 	menu := &models.Menu{
 		ParentID:   parentID,
 		Title:      title,
@@ -50,6 +50,7 @@ func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, compone
 		IsHidden:   isHidden,
 		LinkType:   linkType,
 		OpenType:   openType,
+		NoCache:    noCache,
 	}
 
 	if err := facades.Orm().Query().Create(menu); err != nil {

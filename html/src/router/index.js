@@ -252,6 +252,9 @@ function convertMenusToRoutes(menus) {
     // 注意：这里我们无法直接检查翻译键，所以先尝试添加 _management
     // BreadcrumbView 会使用智能翻译函数来处理
     
+    // 是否缓存：no_cache 为 1 时每次进页面刷新接口
+    const noCache = menu.no_cache === 1 || menu.NoCache === 1
+
     // 构建路由配置
     const route = {
       path: routePath,
@@ -259,7 +262,8 @@ function convertMenusToRoutes(menus) {
       meta: {
         titleKey: titleKey,
         menuId: menu.id || menu.ID,
-        menuSlug: cleanSlug // 保存 slug，供 BreadcrumbView 使用
+        menuSlug: cleanSlug, // 保存 slug，供 BreadcrumbView 使用
+        noCache: !!noCache
       }
     }
 

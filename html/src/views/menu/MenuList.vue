@@ -74,6 +74,11 @@
               </span>
               <span v-else>-</span>
             </template>
+            <template v-else-if="column.key === 'no_cache'">
+              <el-tag :type="row.no_cache === 1 ? 'warning' : 'success'">
+                {{ row.no_cache === 1 ? $t('menu_management.no_cache_no') : $t('menu_management.no_cache_yes') }}
+              </el-tag>
+            </template>
             <template v-else-if="column.key === 'icon'">
               <span v-if="getIconComponent(row.icon)" class="menu-icon-preview">
                 <el-icon><component :is="getIconComponent(row.icon)" /></el-icon>
@@ -198,6 +203,7 @@ const allTableColumns = computed(() => [
   { field: 'type', title: t('table.type'), width: 100, slot: 'type', key: 'type' },
   { field: 'link_type', title: t('menu_management.link_type'), width: 120, slot: 'link_type', key: 'link_type' },
   { field: 'open_type', title: t('menu_management.open_type'), width: 140, slot: 'open_type', key: 'open_type' },
+  { field: 'no_cache', title: t('menu_management.no_cache'), width: 100, slot: 'no_cache', key: 'no_cache' },
   { field: 'icon', title: t('menu_management.icon'), width: 140, slot: 'icon', key: 'icon' },
   { field: 'sort', title: t('common.sort'), width: 80, key: 'sort' },
   { field: 'status', title: t('table.status'), width: 100, slot: 'status', key: 'status' },

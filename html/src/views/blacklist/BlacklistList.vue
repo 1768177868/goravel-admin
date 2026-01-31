@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
@@ -232,9 +232,7 @@ onMounted(() => {
   loadData()
 })
 
-onActivated(() => {
-  loadData()
-})
+// 刷新由菜单的「是否缓存」设置控制：no_cache=1 时每次进入会 remount 触发 onMounted 刷新
 </script>
 
 <style scoped>

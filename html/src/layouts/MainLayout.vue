@@ -405,6 +405,10 @@ watch(
   (newPath) => {
     if (route.meta.requiresAuth !== false && route.name !== 'Login') {
       tabsStore.addTab(route)
+      // 菜单设置为不缓存时，每次进入页面刷新（更新 key 使组件重新挂载并请求接口）
+      if (route.meta?.noCache) {
+        tabsStore.refreshTab(route.path)
+      }
     }
   },
   { immediate: true }

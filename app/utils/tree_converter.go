@@ -38,6 +38,7 @@ type MenuTreeItem struct {
 	IsHidden   uint8          `json:"is_hidden"`
 	LinkType   uint8          `json:"link_type"`
 	OpenType   uint8          `json:"open_type"`
+	NoCache    uint8          `json:"no_cache"`
 	CreatedAt  string         `json:"created_at,omitempty"`
 	UpdatedAt  string         `json:"updated_at,omitempty"`
 	Children   []MenuTreeItem `json:"children,omitempty"`
@@ -93,6 +94,7 @@ func ConvertMenuTree(menus []models.Menu) []MenuTreeItem {
 			IsHidden:   menu.IsHidden,
 			LinkType:   menu.LinkType,
 			OpenType:   menu.OpenType,
+			NoCache:    menu.NoCache,
 		}
 		
 		// 递归转换子节点

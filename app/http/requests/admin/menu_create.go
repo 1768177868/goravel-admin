@@ -22,6 +22,7 @@ type MenuCreate struct {
 	IsHidden   uint8  `form:"is_hidden" json:"is_hidden"`
 	LinkType   uint8  `form:"link_type" json:"link_type"`
 	OpenType   uint8  `form:"open_type" json:"open_type"`
+	NoCache    uint8  `form:"no_cache" json:"no_cache"`
 }
 
 func (r *MenuCreate) Authorize(ctx http.Context) error {
@@ -40,6 +41,7 @@ func (r *MenuCreate) Rules(ctx http.Context) map[string]string {
 		"is_hidden":  "in:0,1",
 		"link_type":  "in:1,2",
 		"open_type":  "in:1,2",
+		"no_cache":   "in:0,1",
 	}
 
 	// 根据 link_type 动态设置 path 的验证规则
@@ -104,6 +106,9 @@ func (r *MenuCreate) PrepareForValidation(ctx http.Context, data validation.Data
 		return err
 	}
 	if err := helpers.PrepareNumericFieldForValidation(data, "open_type"); err != nil {
+		return err
+	}
+	if err := helpers.PrepareNumericFieldForValidation(data, "no_cache"); err != nil {
 		return err
 	}
 	return nil

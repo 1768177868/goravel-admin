@@ -129,6 +129,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		menuCreate.IsHidden,
 		menuCreate.LinkType,
 		menuCreate.OpenType,
+		menuCreate.NoCache,
 	)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
@@ -213,6 +214,9 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	}
 	if _, exists := allInputs["open_type"]; exists {
 		menu.OpenType = menuUpdate.OpenType
+	}
+	if _, exists := allInputs["no_cache"]; exists {
+		menu.NoCache = menuUpdate.NoCache
 	}
 
 	if err := r.menuService.Update(menu); err != nil {

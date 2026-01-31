@@ -106,7 +106,8 @@ const getFormInitialValue = () => ({
   sort: 0,
   is_hidden: 0,
   link_type: 1,
-  open_type: 1
+  open_type: 1,
+  no_cache: 0
 })
 
 // 对话框显隐状态
@@ -311,6 +312,19 @@ const formFields = computed(() => {
       visible: () => formData.link_type === 2
     },
     {
+      prop: 'no_cache',
+      label: t('menu_management.no_cache'),
+      type: 'radio',
+      disabled: loading.value,
+      options: [
+        { label: t('menu_management.no_cache_yes'), value: 0 },
+        { label: t('menu_management.no_cache_no'), value: 1 }
+      ],
+      noValidate: true,
+      // 仅内部页面时显示
+      visible: () => formData.link_type === 1
+    },
+    {
       prop: 'icon',
       label: t('menu_management.icon'),
       type: 'icon', // 原生支持的 icon 类型
@@ -431,7 +445,8 @@ const resetForm = () => {
     sort: 0,
     is_hidden: 0,
     link_type: 1,
-    open_type: 1
+    open_type: 1,
+    no_cache: 0
   })
   formRef.value?.resetFields()
 }
