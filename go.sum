@@ -453,8 +453,8 @@ github.com/goravel/cos v1.4.1-0.20251020055616-03c68b78269e h1:fEOCUgcsDgG+ViRV3
 github.com/goravel/cos v1.4.1-0.20251020055616-03c68b78269e/go.mod h1:g/e+yhbAVr0FEr9ONQALffVxfC2M4WS/4kl/HCKOthA=
 github.com/goravel/file-rotatelogs/v2 v2.4.2 h1:g68AzbePXcm0V2CpUMc9j4qVzcDn7+7aoWSjZ51C0m4=
 github.com/goravel/file-rotatelogs/v2 v2.4.2/go.mod h1:23VuSW8cBS4ax5cmbV+5AaiLpq25b8UJ96IhbAkdo8I=
-github.com/goravel/framework v1.16.6 h1:qaEKH+bXAyZu3xtfbG/oOIskcKccCtTjnNuYD+IUVJk=
-github.com/goravel/framework v1.16.6/go.mod h1:drpy24MryZ2g7C0s20UVmPTQFont3wpzmqSOGzOT1S8=
+github.com/goravel/framework v1.16.7 h1:QTcV8qp2clymTTGrCKigup+ByYOUptx72gkbFmkYEn8=
+github.com/goravel/framework v1.16.7/go.mod h1:drpy24MryZ2g7C0s20UVmPTQFont3wpzmqSOGzOT1S8=
 github.com/goravel/gin v1.4.1-0.20250922060926-8d0edce5d25f h1:gi0jWNkebquBufU4L9FslohCItVO6Vrpv9DC/aocx20=
 github.com/goravel/gin v1.4.1-0.20250922060926-8d0edce5d25f/go.mod h1:AUmM10X9mXnRRS0k+GvfXpH8Pollz3UfgUp5W3CWCI8=
 github.com/goravel/minio v1.4.1-0.20251020060255-97cb1d9a3f50 h1:zUKFQx2vrxRAMXqc72E1aOEuyKLCDSruWThegIcVoFU=
