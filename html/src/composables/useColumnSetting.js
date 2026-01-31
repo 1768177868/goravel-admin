@@ -244,7 +244,7 @@ export function useColumnSetting(storageKey, tableColumns) {
       }
     })
     
-    // 最后添加 operation 列（如果存在且可见）
+    // 最后添加 operation 列（操作列始终显示，不受列设置控制）
     const operationCol = columns.find(col => {
       const key = getColumnKey(col)
       return !key || key === 'operation'
@@ -252,14 +252,11 @@ export function useColumnSetting(storageKey, tableColumns) {
     if (operationCol) {
       const opKey = getColumnKey(operationCol)
       if (!opKey || opKey === 'operation') {
-        // operation 列始终显示，或者如果它在 visibleColumns 中
-        if (!opKey || currentVisibleColumns.includes('operation')) {
-          const fixed = currentFixedColumns['operation']
-          if (fixed) {
-            result.push({ ...operationCol, fixed })
-          } else {
-            result.push(operationCol)
-          }
+        const fixed = currentFixedColumns['operation']
+        if (fixed) {
+          result.push({ ...operationCol, fixed })
+        } else {
+          result.push(operationCol)
         }
       }
     }
