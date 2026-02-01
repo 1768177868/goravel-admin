@@ -173,7 +173,8 @@ export const useAppStore = defineStore('app', {
         const mixed = mixRgb(rgb, WHITE, i * 10)
         root.style.setProperty(`--el-color-primary-light-${i}`, mixed)
       }
-      root.style.setProperty('--el-color-primary-dark-2', mixRgb(BLACK, rgb, 20))
+      // dark-2 = 80% 主色 + 20% 黑（按下时略深）
+      root.style.setProperty('--el-color-primary-dark-2', mixRgb(rgb, BLACK, 20))
     },
 
     setThemeColor(key) {
