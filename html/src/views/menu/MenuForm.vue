@@ -93,9 +93,10 @@ const submitting = ref(false)
 const loading = ref(false)
 
 // 定义表单初始值的复用函数（返回新对象，避免引用问题）
+// 新增时 parent_id 为 null，不高亮任何节点；用户选择「顶级菜单」后再设为 0
 const getFormInitialValue = () => ({
   id: null,
-  parent_id: 0,
+  parent_id: null,
   type: "2",
   name: '',
   slug: '',
@@ -432,22 +433,7 @@ const loadDetail = async (id) => {
 // 重置表单
 const resetForm = () => {
   loading.value = false
-  Object.assign(formData, {
-    id: null,
-    parent_id: 0,
-    type: "2",
-    name: '',
-    slug: '',
-    path: '',
-    component: '',
-    icon: '',
-    status: "1",
-    sort: 0,
-    is_hidden: 0,
-    link_type: 1,
-    open_type: 1,
-    no_cache: 0
-  })
+  Object.assign(formData, getFormInitialValue())
   formRef.value?.resetFields()
 }
 
@@ -463,7 +449,7 @@ const handleSubmit = async () => {
         const data = {
           ...formData,
           title: formData.name, // name -> title
-          parent_id: formData.parent_id === 0 ? null : formData.parent_id, // 0 -> null
+          parent_id: (formData.parent_id === 0 || formData.parent_id == null) ? null : formData.parent_id, // 0/null -> null
           component: formData.link_type === 1 ? formData.component : '' // 外部链接时清空
         }
         // 删除前端使用的 name 字段，避免后端混淆

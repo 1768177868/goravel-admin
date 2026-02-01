@@ -44,9 +44,11 @@
     </template>
     <div @click.stop @mousedown.stop>
       <el-tree
+        ref="treeRef"
         :data="treeData"
         :props="field.treeProps || { label: 'name', children: 'children' }"
-        :node-key="field.treeProps?.value || 'id'"
+        :node-key="nodeKey"
+        :current-node-key="currentNodeKey"
         :default-expand-all="field.filterable !== false && filterText ? true : (field.defaultExpandAll || false)"
         :expand-on-click-node="false"
         :highlight-current="true"
@@ -64,7 +66,7 @@
 </template>
 
 <script setup>
-import { computed, watch , nextTick} from 'vue'
+import { computed, watch, nextTick, ref } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useTreeSelect } from './useTreeSelect'
@@ -106,6 +108,29 @@ const {
     emit('update:modelValue', value)
     emit('change', value)
   }
+})
+
+// 树节点唯一键字段名，与 current-node-key 配合实现选中高亮
+const nodeKey = computed(() => props.field.treeProps?.value || 'id')
+// 当前选中节点的 key，展开时选中项会有背景色
+const currentNodeKey = computed(() => {
+  const v = props.modelValue
+  if (v === null || v === undefined || v === '') return undefined
+  return v === 0 || v === '0' ? 0 : v
+})
+
+const treeRef = ref(null)
+// 弹窗打开时：有选中值则高亮对应节点，无选中值则清除高亮（避免添加时沿用上次编辑的高亮）
+watch(popoverVisible, async (visible) => {
+  if (!visible || !treeRef.value) return
+  await nextTick()
+  try {
+    if (currentNodeKey.value !== undefined) {
+      treeRef.value.setCurrentKey(currentNodeKey.value)
+    } else {
+      treeRef.value.setCurrentKey(null)
+    }
+  } catch (_) {}
 })
 
 // 计算输入框显示值
@@ -256,6 +281,10 @@ const handleInputClick = (e) => {
 <style scoped>
 :deep(.el-input__icon.is-reverse) {
   transform: rotate(180deg);
+}
+/* 树形选择器展开时，当前选中的节点背景高亮 */
+:deep(.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content) {
+  background-color: var(--el-color-primary-light-9) !important;
 }
 </style>
 

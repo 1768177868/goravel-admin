@@ -55,9 +55,10 @@ const submitting = ref(false)
 const loading = ref(false)
 
 // 定义表单初始值的复用函数（返回新对象，避免引用问题）
+// 新增时 parent_id 为 null，不高亮任何节点；用户选择「顶级部门」后再设为 0
 const getFormInitialValue = () => ({
   id: null,
-  parent_id: 0,
+  parent_id: null,
   name: '',
   description: '',
   status: 1,
