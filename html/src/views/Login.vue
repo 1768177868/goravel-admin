@@ -309,7 +309,7 @@ const handleLogin = async () => {
   align-items: center;
   min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #409EFF 0%, #66b1ff 50%, #79bbff 100%);
+  background: linear-gradient(135deg, var(--el-color-primary) 0%, #66b1ff 50%, #79bbff 100%);
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
 }
@@ -428,7 +428,7 @@ const handleLogin = async () => {
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: #409EFF;
+  background: var(--el-color-primary);
   border-radius: 10px;
   color: white;
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
@@ -458,9 +458,9 @@ const handleLogin = async () => {
 }
 
 .login-language-switch :deep(.language-switch):hover {
-  border-color: #409EFF;
+  border-color: var(--el-color-primary);
   background: #ecf5ff;
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .login-form {
@@ -488,7 +488,7 @@ const handleLogin = async () => {
 }
 
 .login-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #409EFF inset;
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
 }
 
 .login-input :deep(.el-input__inner) {
@@ -508,7 +508,7 @@ const handleLogin = async () => {
   font-size: 16px;
   font-weight: 500;
   border-radius: 6px;
-  background: #409EFF;
+  background: var(--el-color-primary);
   border: none;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
   transition: all 0.3s ease;
@@ -545,8 +545,8 @@ const handleLogin = async () => {
 }
 
 .captcha-image:hover {
-  border-color: #409EFF;
-  box-shadow: 0 0 0 1px #409EFF;
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 1px var(--el-color-primary);
 }
 
 .captcha-refresh {
@@ -559,7 +559,7 @@ const handleLogin = async () => {
 }
 
 .captcha-refresh:hover {
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .captcha-refresh .refresh-icon {

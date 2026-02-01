@@ -159,7 +159,7 @@
 import { ref, onMounted, nextTick, onBeforeUnmount, markRaw, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { useAppStore } from '../store/app'
+import { useAppStore, THEME_COLORS } from '../store/app'
 import { 
   getCount, 
   getUserAccessSource, 
@@ -190,12 +190,25 @@ import {
 
 const router = useRouter()
 const appStore = useAppStore()
+
+const hexToRgba = (hex, alpha = 1) => {
+  const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i)
+  if (!m) return `rgba(64, 158, 255, ${alpha})`
+  const r = parseInt(m[1], 16)
+  const g = parseInt(m[2], 16)
+  const b = parseInt(m[3], 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 const { t, te, tm } = useI18n()
 
 // 获取当前主题
 const isDark = computed(() => appStore.darkMode)
 const textColor = computed(() => isDark.value ? '#e5eaf3' : '#303133')
 const secondaryTextColor = computed(() => isDark.value ? '#a3a6ad' : '#909399')
+const primaryColor = computed(() => {
+  const preset = THEME_COLORS.find((t) => t.key === appStore.themeColor) || THEME_COLORS[0]
+  return preset.color
+})
 
 // 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
 const UserFilledIcon = markRaw(UserFilled)
@@ -208,13 +221,13 @@ const PlusIcon = markRaw(Plus)
 const SettingIcon = markRaw(Setting)
 const RefreshIcon = markRaw(Refresh)
 
-// 统计数据
-const stats = ref([
-  { 
-    title: '最近一年订单总数', 
-    value: 0, 
-    icon: markRaw(ShoppingCart), 
-    color: '#409EFF',
+// 统计数据（第一项颜色随主题色变化）
+const statsData = ref([
+  {
+    title: '最近一年订单总数',
+    value: 0,
+    icon: markRaw(ShoppingCart),
+    colorKey: 'primary',
     trend: 0
   },
   { 
@@ -231,14 +244,20 @@ const stats = ref([
     color: '#E6A23C',
     trend: 0
   },
-  { 
-    title: '菜单数量', 
-    value: 0, 
-    icon: MenuIcon, 
+  {
+    title: '菜单数量',
+    value: 0,
+    icon: MenuIcon,
     color: '#F56C6C',
     trend: 0
   }
 ])
+const stats = computed(() =>
+  statsData.value.map((s) => ({
+    ...s,
+    color: s.colorKey === 'primary' ? primaryColor.value : s.color
+  }))
+)
 
 // 图表引用
 const visitTrendChart = ref(null)
@@ -535,7 +554,7 @@ const updateRecentActivities = (activities) => {
       time: item.time || '',
       status: item.status || '成功',
       type: item.type || 'success',
-      avatarColor: item.avatarColor || '#409EFF'
+      avatarColor: item.avatarColor || primaryColor.value
     }))
   }
 }
@@ -635,7 +654,7 @@ const initVisitTrendChart = () => {
         smooth: true,
         data: visitTrendData.value.visits,
         itemStyle: {
-          color: '#409EFF'
+          color: primaryColor.value
         },
         areaStyle: {
           color: {
@@ -645,8 +664,8 @@ const initVisitTrendChart = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-              { offset: 1, color: 'rgba(64, 158, 255, 0.1)' }
+              { offset: 0, color: hexToRgba(primaryColor.value, 0.3) },
+              { offset: 1, color: hexToRgba(primaryColor.value, 0.1) }
             ]
           }
         }

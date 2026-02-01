@@ -339,15 +339,15 @@ onMounted(() => {
 }
 
 .tabs-container :deep(.el-tabs__item:hover) {
-  color: #409EFF;
+  color: var(--el-color-primary);
   background: var(--bg-color-tertiary);
 }
 
 .tabs-container :deep(.el-tabs__item.is-active) {
   background: var(--header-bg);
-  border: 1px solid #409EFF;
-  border-bottom: 2px solid #409EFF;
-  color: #409EFF;
+  border: 1px solid var(--el-color-primary);
+  border-bottom: 2px solid var(--el-color-primary);
+  color: var(--el-color-primary);
   font-weight: 500;
   margin-bottom: -1px;
 }
@@ -368,7 +368,7 @@ onMounted(() => {
 }
 
 .tabs-container :deep(.el-tabs__item.is-active .el-icon-close) {
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .tabs-container :deep(.el-tabs__item.is-active .el-icon-close:hover) {
@@ -398,7 +398,7 @@ onMounted(() => {
   padding: 3px;
   border-radius: 4px;
   transition: all 0.2s;
-  color: #409EFF;
+  color: var(--el-color-primary);
   font-size: 14px;
   width: 20px;
   height: 20px;

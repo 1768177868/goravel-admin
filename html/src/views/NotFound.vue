@@ -69,7 +69,7 @@ const goBack = () => {
 .not-found-title {
   font-size: 72px;
   font-weight: bold;
-  color: #409eff;
+  color: var(--el-color-primary);
   margin: 0 0 20px 0;
   line-height: 1;
 }

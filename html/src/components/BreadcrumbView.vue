@@ -95,7 +95,7 @@ const breadcrumbList = computed(() => {
 }
 
 .breadcrumb :deep(.el-breadcrumb__inner.is-link:hover) {
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .breadcrumb :deep(.el-breadcrumb__separator) {

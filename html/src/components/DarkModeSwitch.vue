@@ -42,7 +42,7 @@ const toggleDarkMode = () => {
 
 .dark-mode-switch:hover {
   background-color: var(--bg-color-tertiary, #f5f7fa);
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .dark-mode-icon {
@@ -59,7 +59,7 @@ const toggleDarkMode = () => {
 
 :deep(html.dark) .dark-mode-switch:hover {
   background-color: var(--el-bg-color-page);
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 </style>
 

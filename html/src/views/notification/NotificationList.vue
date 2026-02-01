@@ -489,7 +489,7 @@ html.dark .rich-text-content-view {
 .markdown-content :deep(blockquote) {
   margin: 10px 0;
   padding: 10px 15px;
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--el-color-primary);
   background-color: #f5f7fa;
   color: #606266;
 }

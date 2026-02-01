@@ -910,7 +910,8 @@
     "menu_mode": "导航模式",
     "menu_mode_sidebar": "左侧菜单",
     "menu_mode_top": "顶部菜单",
-    "watermark": "开启水印"
+    "watermark": "开启水印",
+    "theme_color": "主题色"
   },
   "profile": {
     "basic_info": "基本信息",

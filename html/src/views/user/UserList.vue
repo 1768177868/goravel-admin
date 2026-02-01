@@ -67,7 +67,7 @@
         </template>
 
         <template #balance="{ row }">
-          <span style="color: #409EFF; font-weight: bold;">
+          <span style="color: var(--el-color-primary); font-weight: bold;">
             {{ formatBalance(row.balance || 0, row.currency) }}
           </span>
         </template>

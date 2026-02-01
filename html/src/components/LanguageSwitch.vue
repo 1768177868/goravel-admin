@@ -83,7 +83,7 @@ const handleCommand = (command) => {
 
 .language-switch:hover {
   background-color: #f5f7fa;
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .language-icon {
@@ -104,7 +104,7 @@ const handleCommand = (command) => {
 }
 
 .is-active {
-  color: #409EFF;
+  color: var(--el-color-primary);
   font-weight: bold;
 }
 </style>

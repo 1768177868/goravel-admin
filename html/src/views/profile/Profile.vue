@@ -843,12 +843,12 @@ onMounted(() => {
 }
 
 .avatar-item:hover {
-  border-color: #409EFF;
+  border-color: var(--el-color-primary);
   transform: scale(1.05);
 }
 
 .avatar-item.active {
-  border-color: #409EFF;
+  border-color: var(--el-color-primary);
   background-color: #ecf5ff;
 }
 

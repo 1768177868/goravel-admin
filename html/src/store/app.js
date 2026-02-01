@@ -10,6 +10,37 @@ const detectBrowserTimezone = () => {
   }
 }
 
+// 主题色预设：key 存 localStorage，color 用于设置 CSS 变量
+export const THEME_COLORS = [
+  { key: 'blue', color: '#409EFF' },
+  { key: 'green', color: '#67C23A' },
+  { key: 'orange', color: '#E6A23C' },
+  { key: 'red', color: '#F56C6C' },
+  { key: 'purple', color: '#9C27B0' },
+  { key: 'cyan', color: '#00BCD4' }
+]
+
+const DEFAULT_THEME_KEY = 'blue'
+
+/** 将 hex 转为 [r, g, b] */
+function hexToRgb(hex) {
+  const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i)
+  if (!m) return [64, 158, 255]
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]
+}
+
+/** 混合两种 RGB，weight 为 color2 的占比 0–100，返回 #rrggbb */
+function mixRgb(rgb1, rgb2, weight) {
+  const w = weight / 100
+  const r = Math.round(rgb1[0] * (1 - w) + rgb2[0] * w)
+  const g = Math.round(rgb1[1] * (1 - w) + rgb2[1] * w)
+  const b = Math.round(rgb1[2] * (1 - w) + rgb2[2] * w)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
+const WHITE = [255, 255, 255]
+const BLACK = [0, 0, 0]
+
 export const useAppStore = defineStore('app', {
   state: () => ({
     sidebarCollapsed: Storage.getItem('sidebarCollapsed', 'false') === 'true',
@@ -20,7 +51,9 @@ export const useAppStore = defineStore('app', {
     // 导航模式: sidebar 左侧菜单, top 顶部菜单
     menuMode: Storage.getItem('menuMode', 'sidebar') || 'sidebar',
     // 是否开启水印
-    watermarkEnabled: Storage.getItem('watermarkEnabled', 'false') === 'true'
+    watermarkEnabled: Storage.getItem('watermarkEnabled', 'false') === 'true',
+    // 主题色 key，对应 THEME_COLORS[].key
+    themeColor: Storage.getItem('themeColor', DEFAULT_THEME_KEY) || DEFAULT_THEME_KEY
   }),
 
   actions: {
@@ -124,6 +157,35 @@ export const useAppStore = defineStore('app', {
     toggleWatermark() {
       this.watermarkEnabled = !this.watermarkEnabled
       Storage.setItem('watermarkEnabled', this.watermarkEnabled.toString())
+    },
+
+    /** 将当前 themeColor 对应的色值应用到根节点 CSS 变量（含 hover 用的 light/dark 变体） */
+    applyThemeColor() {
+      const preset = THEME_COLORS.find((t) => t.key === this.themeColor) || THEME_COLORS[0]
+      const color = preset.color
+      const rgb = hexToRgb(color)
+      const root = document.documentElement
+      root.style.setProperty('--el-color-primary', color)
+      root.style.setProperty('--el-menu-active-color', color)
+      root.style.setProperty('--sidebar-active', color)
+      // Element Plus hover 使用 --el-color-primary-light-*，需一并设置（light-i = i*10% 白色 + base）
+      for (let i = 1; i <= 9; i++) {
+        const mixed = mixRgb(rgb, WHITE, i * 10)
+        root.style.setProperty(`--el-color-primary-light-${i}`, mixed)
+      }
+      root.style.setProperty('--el-color-primary-dark-2', mixRgb(BLACK, rgb, 20))
+    },
+
+    setThemeColor(key) {
+      const preset = THEME_COLORS.find((t) => t.key === key)
+      if (!preset) return
+      this.themeColor = key
+      Storage.setItem('themeColor', key)
+      this.applyThemeColor()
+    },
+
+    initThemeColor() {
+      this.applyThemeColor()
     }
   }
 })

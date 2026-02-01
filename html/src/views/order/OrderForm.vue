@@ -87,7 +87,7 @@
                 </el-table-column>
                 <el-table-column :label="$t('order.subtotal')" width="140" align="right">
                   <template #default="{ row }">
-                    <span style="font-weight: bold; color: #409eff;">
+                    <span style="font-weight: bold; color: var(--el-color-primary);">
                       {{ formatAmount((row.price || 0) * (row.quantity || 0)) }}
                     </span>
                   </template>

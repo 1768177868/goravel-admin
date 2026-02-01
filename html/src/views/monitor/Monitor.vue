@@ -211,7 +211,7 @@
               <div style="font-size: 13px; color: #606266; margin-bottom: 8px; font-weight: 600">{{ $t('monitor.bandwidth_speed') }}</div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
                 <span style="font-size: 12px; color: #909399">{{ $t('monitor.current_speed') }}:</span>
-                <span style="font-size: 16px; font-weight: 600; color: #409eff">
+                <span style="font-size: 16px; font-weight: 600; color: var(--el-color-primary)">
                   {{ formatNumber(systemInfo.net?.speed_total_mbps || 0, 2) }} Mbps
                 </span>
               </div>
@@ -986,7 +986,7 @@ import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, next
 import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { useAppStore } from '../../store/app'
+import { useAppStore, THEME_COLORS } from '../../store/app'
 import * as echarts from 'echarts'
 import { 
   Cpu, 
@@ -1009,6 +1009,10 @@ const appStore = useAppStore()
 const isDark = computed(() => appStore.darkMode)
 const textColor = computed(() => isDark.value ? '#cfd3dc' : '#303133')
 const secondaryTextColor = computed(() => isDark.value ? '#909399' : '#606266')
+const primaryColor = computed(() => {
+  const preset = THEME_COLORS.find((t) => t.key === appStore.themeColor) || THEME_COLORS[0]
+  return preset.color
+})
 
 const systemInfo = ref({
   os: 'linux',
@@ -1270,8 +1274,8 @@ const initCharts = () => {
           type: 'line',
           smooth: true,
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#409EFF', width: 2 },
-          itemStyle: { color: '#409EFF' }
+          lineStyle: { color: primaryColor.value, width: 2 },
+          itemStyle: { color: primaryColor.value }
         }],
         tooltip: { 
           trigger: 'axis', 
@@ -1375,8 +1379,8 @@ const initCharts = () => {
             data: [],
             type: 'line',
             smooth: true,
-            lineStyle: { color: '#409EFF', width: 2 },
-            itemStyle: { color: '#409EFF' }
+            lineStyle: { color: primaryColor.value, width: 2 },
+            itemStyle: { color: primaryColor.value }
           },
           {
             name: t('monitor.net_receive'),
@@ -1528,7 +1532,7 @@ const updateCharts = () => {
           { 
             value: memoryPercent, 
             name: t('monitor.memory'),
-            itemStyle: { color: '#409EFF' }
+            itemStyle: { color: primaryColor.value }
           },
           { 
             value: diskPercent, 
@@ -1870,7 +1874,7 @@ html.dark .monitor-page {
   }
 
   :deep(.el-card__header) {
-    background: #409EFF;
+    background: var(--el-color-primary);
     color: white;
     padding: 16px 20px;
     border-bottom: none;
@@ -1893,7 +1897,7 @@ html.dark .monitor-card :deep(.el-card__body) {
 }
 
 .memory-card :deep(.el-card__header) {
-  background: #409EFF;
+  background: var(--el-color-primary);
 }
 
 .disk-card :deep(.el-card__header) {
@@ -1909,7 +1913,7 @@ html.dark .monitor-card :deep(.el-card__body) {
 }
 
 .load-card :deep(.el-card__header) {
-  background: #409EFF;
+  background: var(--el-color-primary);
 }
 
 .fd-card :deep(.el-card__header) {
@@ -1917,7 +1921,7 @@ html.dark .monitor-card :deep(.el-card__body) {
 }
 
 .runtime-card :deep(.el-card__header) {
-  background: #409EFF;
+  background: var(--el-color-primary);
 }
 
 .system-card :deep(.el-card__header) {
@@ -1925,7 +1929,7 @@ html.dark .monitor-card :deep(.el-card__body) {
 }
 
 .processes-card :deep(.el-card__header) {
-  background: #409EFF;
+  background: var(--el-color-primary);
 }
 
 .process-card {
@@ -1938,7 +1942,7 @@ html.dark .monitor-card :deep(.el-card__body) {
   
   &:hover {
     background: #f5f7fa;
-    border-color: #409eff;
+    border-color: var(--el-color-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
   }
@@ -1994,7 +1998,7 @@ html.dark .process-header {
   font-weight: 600;
   
   &.highlight {
-    color: #409eff;
+    color: var(--el-color-primary);
     font-size: 15px;
   }
   
@@ -2110,7 +2114,7 @@ html.dark .usage-item {
   .percent-value {
     font-weight: 700;
     font-size: 18px;
-    color: #409eff;
+    color: var(--el-color-primary);
   }
 }
 
@@ -2153,7 +2157,7 @@ html.dark .usage-header .label {
   
   &:hover {
     background: #f5f7fa;
-    border-color: #409eff;
+    border-color: var(--el-color-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
   }
@@ -2185,7 +2189,7 @@ html.dark .info-item {
   word-break: break-all;
   
   &.highlight {
-    color: #409eff;
+    color: var(--el-color-primary);
     font-size: 16px;
   }
   
@@ -2224,7 +2228,7 @@ html.dark .load-display {
 .load-number {
   font-size: 48px;
   font-weight: 700;
-  color: #409eff;
+  color: var(--el-color-primary);
   display: inline-block;
   margin-right: 8px;
 }

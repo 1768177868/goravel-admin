@@ -555,7 +555,7 @@ html.dark pre {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 </style>
 

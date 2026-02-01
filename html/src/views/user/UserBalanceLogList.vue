@@ -71,7 +71,7 @@
         </template>
 
         <template #balance="{ row }">
-          <span style="color: #409EFF; font-weight: bold;">¥{{ formatMoney(row.balance) }}</span>
+          <span style="color: var(--el-color-primary); font-weight: bold;">¥{{ formatMoney(row.balance) }}</span>
         </template>
 
         <template #source="{ row }">
@@ -329,7 +329,7 @@ onMounted(() => {
 }
 
 .stat-item .value.balance {
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 </style>
 

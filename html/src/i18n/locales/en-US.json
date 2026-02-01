@@ -902,7 +902,8 @@
     "menu_mode": "Navigation Mode",
     "menu_mode_sidebar": "Sidebar",
     "menu_mode_top": "Top Menu",
-    "watermark": "Enable Watermark"
+    "watermark": "Enable Watermark",
+    "theme_color": "Theme Color"
   },
   "profile": {
     "basic_info": "Basic Information",

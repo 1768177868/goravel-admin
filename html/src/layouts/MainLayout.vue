@@ -300,6 +300,21 @@
                 <span class="settings-label">{{ $t('header.watermark') }}</span>
                 <el-switch v-model="appStore.watermarkEnabled" @change="appStore.setWatermarkEnabled(appStore.watermarkEnabled)" />
               </div>
+              <div class="settings-item settings-item-theme">
+                <span class="settings-label">{{ $t('header.theme_color') }}</span>
+                <div class="theme-color-swatches">
+                  <button
+                    v-for="t in themeColorOptions"
+                    :key="t.key"
+                    type="button"
+                    class="theme-swatch"
+                    :class="{ active: appStore.themeColor === t.key }"
+                    :style="{ backgroundColor: t.color }"
+                    :title="t.key"
+                    @click="appStore.setThemeColor(t.key)"
+                  />
+                </div>
+              </div>
             </div>
           </el-popover>
           <NotificationBell />
@@ -479,7 +494,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
-import { useAppStore } from '../store/app'
+import { useAppStore, THEME_COLORS } from '../store/app'
 import request from '../utils/request'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
@@ -513,6 +528,9 @@ import {
   Check,
   Tools
 } from '@element-plus/icons-vue'
+
+// 主题色选项（与设置面板色块一致）
+const themeColorOptions = THEME_COLORS
 
 // 响应式检测
 const { isMobile, isTablet, isXs } = useResponsive()
@@ -847,7 +865,7 @@ const handleLayoutSizeChange = (size) => {
 
 .header-btn:hover {
   background-color: var(--bg-color-tertiary);
-  color: #409EFF;
+  color: var(--el-color-primary);
 }
 
 .layout-size-dropdown {
@@ -937,6 +955,37 @@ const handleLayoutSizeChange = (size) => {
 .settings-item .el-radio-button {
   margin-bottom: 4px;
 }
+.settings-item-theme {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.settings-item-theme .settings-label {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.theme-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.theme-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.theme-swatch:hover {
+  transform: scale(1.1);
+}
+.theme-swatch.active {
+  border-color: var(--text-color-primary);
+  box-shadow: 0 0 0 1px var(--bg-color);
+}
 
 /* 顶部菜单栏 */
 .top-menu-bar {
@@ -957,8 +1006,8 @@ const handleLayoutSizeChange = (size) => {
 }
 .top-menu :deep(.el-menu-item.is-active),
 .top-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-  border-bottom-color: var(--el-menu-active-color, #409eff);
-  color: var(--el-menu-active-color, #409eff);
+  border-bottom-color: var(--el-menu-active-color, var(--el-color-primary));
+  color: var(--el-menu-active-color, var(--el-color-primary));
 }
 .top-menu :deep(.el-sub-menu .el-menu-item) {
   min-width: 120px;
@@ -1004,7 +1053,7 @@ const handleLayoutSizeChange = (size) => {
 }
 
 .is-active {
-  color: #409EFF;
+  color: var(--el-color-primary);
   font-weight: bold;
 }
 

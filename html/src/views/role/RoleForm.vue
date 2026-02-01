@@ -969,7 +969,7 @@ defineExpose({
 
 .menu-permission-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
   background-color: var(--bg-color-tertiary, #e1f3ff);
-  border-color: var(--sidebar-active, #409eff);
+  border-color: var(--sidebar-active, var(--el-color-primary));
 }
 
 .menu-permission-tree :deep(.el-tree-node__expand-icon) {
@@ -979,7 +979,7 @@ defineExpose({
 }
 
 .menu-permission-tree :deep(.el-tree-node__expand-icon:hover) {
-  color: var(--sidebar-active, #409eff);
+  color: var(--sidebar-active, var(--el-color-primary));
 }
 
 .menu-permission-tree :deep(.el-checkbox) {
@@ -1002,7 +1002,7 @@ defineExpose({
 }
 
 .menu-icon {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .permission-icon {
@@ -1052,7 +1052,7 @@ defineExpose({
 }
 
 .method-post {
-  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+  background: linear-gradient(135deg, var(--el-color-primary) 0%, #66b1ff 100%);
 }
 
 .method-put {
@@ -1077,7 +1077,7 @@ defineExpose({
 }
 
 .permission-path-icon:hover {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .protected-tip {
@@ -1105,12 +1105,12 @@ defineExpose({
   background: #f0f9ff;
   border: 1px solid #b3d8ff;
   border-radius: 4px;
-  color: #409eff;
+  color: var(--el-color-primary);
   font-size: 13px;
 }
 
 .protected-role-tip .el-icon {
   font-size: 16px;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 </style>

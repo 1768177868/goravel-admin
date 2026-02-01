@@ -582,7 +582,7 @@ onBeforeUnmount(() => {
 }
 
 .vxe-table-custom--option.drag-over {
-  border-top: 2px solid #409eff;
+  border-top: 2px solid var(--el-color-primary);
   background-color: #ecf5ff;
 }
 
@@ -606,8 +606,8 @@ onBeforeUnmount(() => {
 }
 
 .vxe-table-custom--checkbox-option.is--checked :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-  background-color: #409eff;
-  border-color: #409eff;
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
 }
 
 .vxe-table-custom--name-option {
@@ -637,7 +637,7 @@ onBeforeUnmount(() => {
 }
 
 .vxe-table-custom--sort-btn:hover {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .vxe-table-icon-drag-handle {
@@ -684,12 +684,12 @@ onBeforeUnmount(() => {
 }
 
 .vxe-button.type--text:hover {
-  color: #409eff;
+  color: var(--el-color-primary);
   background: #ecf5ff;
 }
 
 .vxe-button.theme--primary {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .vxe-button--prefix-icon {

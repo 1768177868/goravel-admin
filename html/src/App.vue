@@ -29,9 +29,10 @@ const elementSize = computed(() => {
   return size === 'default' ? 'default' : size
 })
 
-// 初始化夜间模式
+// 初始化夜间模式与主题色
 onMounted(() => {
   appStore.initDarkMode()
+  appStore.initThemeColor()
 })
 </script>
 
