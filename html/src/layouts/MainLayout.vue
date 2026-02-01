@@ -271,6 +271,37 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+          <!-- 设置（导航模式、水印） -->
+          <el-popover
+            v-if="!isMobile"
+            placement="bottom-end"
+            :width="280"
+            trigger="click"
+          >
+            <template #reference>
+              <el-button
+                type="text"
+                class="header-btn"
+                :title="$t('header.settings')"
+              >
+                <el-icon class="header-icon-fixed"><Tools /></el-icon>
+              </el-button>
+            </template>
+            <div class="settings-panel">
+              <div class="settings-title">{{ $t('header.settings') }}</div>
+              <div class="settings-item">
+                <span class="settings-label">{{ $t('header.menu_mode') }}</span>
+                <el-radio-group :model-value="appStore.menuMode" size="small" @update:model-value="appStore.setMenuMode">
+                  <el-radio-button label="sidebar">{{ $t('header.menu_mode_sidebar') }}</el-radio-button>
+                  <el-radio-button label="top">{{ $t('header.menu_mode_top') }}</el-radio-button>
+                </el-radio-group>
+              </div>
+              <div class="settings-item">
+                <span class="settings-label">{{ $t('header.watermark') }}</span>
+                <el-switch v-model="appStore.watermarkEnabled" @change="appStore.setWatermarkEnabled(appStore.watermarkEnabled)" />
+              </div>
+            </div>
+          </el-popover>
           <NotificationBell />
           <DarkModeSwitch />
           <LanguageSwitch :class="{ 'mobile-hidden': isXs }" />
@@ -304,37 +335,6 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <!-- 设置（导航模式、水印）- 最右上角 -->
-          <el-popover
-            v-if="!isMobile"
-            placement="bottom-end"
-            :width="280"
-            trigger="click"
-          >
-            <template #reference>
-              <el-button
-                type="text"
-                class="header-btn"
-                :title="$t('header.settings')"
-              >
-                <el-icon class="header-icon-fixed"><Tools /></el-icon>
-              </el-button>
-            </template>
-            <div class="settings-panel">
-              <div class="settings-title">{{ $t('header.settings') }}</div>
-              <div class="settings-item">
-                <span class="settings-label">{{ $t('header.menu_mode') }}</span>
-                <el-radio-group :model-value="appStore.menuMode" size="small" @update:model-value="appStore.setMenuMode">
-                  <el-radio-button label="sidebar">{{ $t('header.menu_mode_sidebar') }}</el-radio-button>
-                  <el-radio-button label="top">{{ $t('header.menu_mode_top') }}</el-radio-button>
-                </el-radio-group>
-              </div>
-              <div class="settings-item">
-                <span class="settings-label">{{ $t('header.watermark') }}</span>
-                <el-switch v-model="appStore.watermarkEnabled" @change="appStore.setWatermarkEnabled(appStore.watermarkEnabled)" />
-              </div>
-            </div>
-          </el-popover>
         </div>
       </el-header>
 
