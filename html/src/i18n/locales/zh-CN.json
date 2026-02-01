@@ -905,7 +905,12 @@
     "menu_search": "搜索菜单",
     "menu_search_placeholder": "搜索菜单...",
     "menu_search_no_results": "未找到匹配的菜单",
-    "menu_search_hint": "输入关键词搜索菜单"
+    "menu_search_hint": "输入关键词搜索菜单",
+    "settings": "设置",
+    "menu_mode": "导航模式",
+    "menu_mode_sidebar": "左侧菜单",
+    "menu_mode_top": "顶部菜单",
+    "watermark": "开启水印"
   },
   "profile": {
     "basic_info": "基本信息",

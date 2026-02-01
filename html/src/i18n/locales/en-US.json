@@ -897,7 +897,12 @@
     "menu_search": "Search Menu",
     "menu_search_placeholder": "Search menu...",
     "menu_search_no_results": "No matching menus found",
-    "menu_search_hint": "Enter keywords to search menus"
+    "menu_search_hint": "Enter keywords to search menus",
+    "settings": "Settings",
+    "menu_mode": "Navigation Mode",
+    "menu_mode_sidebar": "Sidebar",
+    "menu_mode_top": "Top Menu",
+    "watermark": "Enable Watermark"
   },
   "profile": {
     "basic_info": "Basic Information",

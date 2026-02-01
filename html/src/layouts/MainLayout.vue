@@ -1,5 +1,5 @@
 <template>
-  <el-container class="layout-container" :class="`layout-${appStore.layoutSize}`">
+  <el-container class="layout-container" :class="[`layout-${appStore.layoutSize}`, { 'layout-top-menu': appStore.menuMode === 'top' && !isMobile }]">
     <!-- 移动端抽屉式侧边栏 -->
     <el-drawer
       v-model="drawerVisible"
@@ -101,9 +101,9 @@
       </div>
     </el-drawer>
 
-    <!-- 桌面端固定侧边栏 -->
+    <!-- 桌面端固定侧边栏（仅左侧菜单模式显示） -->
     <el-aside
-      v-if="!isMobile"
+      v-if="!isMobile && appStore.menuMode === 'sidebar'"
       :width="appStore.sidebarCollapsed ? '64px' : '240px'"
       class="sidebar"
       :class="{ 'is-collapse': appStore.sidebarCollapsed }"
@@ -201,7 +201,7 @@
     <el-container>
       <el-header class="header">
         <div class="header-left">
-          <!-- 移动端显示菜单按钮，桌面端显示折叠按钮 -->
+          <!-- 移动端显示菜单按钮；桌面端左侧菜单模式显示折叠按钮；顶部菜单模式不显示 -->
           <el-button
             v-if="isMobile"
             type="text"
@@ -211,7 +211,7 @@
             <el-icon><Menu /></el-icon>
           </el-button>
           <el-button
-            v-else
+            v-else-if="appStore.menuMode === 'sidebar'"
             type="text"
             class="collapse-btn"
             @click="appStore.toggleSidebar"
@@ -304,24 +304,169 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+          <!-- 设置（导航模式、水印）- 最右上角 -->
+          <el-popover
+            v-if="!isMobile"
+            placement="bottom-end"
+            :width="280"
+            trigger="click"
+          >
+            <template #reference>
+              <el-button
+                type="text"
+                class="header-btn"
+                :title="$t('header.settings')"
+              >
+                <el-icon class="header-icon-fixed"><Tools /></el-icon>
+              </el-button>
+            </template>
+            <div class="settings-panel">
+              <div class="settings-title">{{ $t('header.settings') }}</div>
+              <div class="settings-item">
+                <span class="settings-label">{{ $t('header.menu_mode') }}</span>
+                <el-radio-group :model-value="appStore.menuMode" size="small" @update:model-value="appStore.setMenuMode">
+                  <el-radio-button label="sidebar">{{ $t('header.menu_mode_sidebar') }}</el-radio-button>
+                  <el-radio-button label="top">{{ $t('header.menu_mode_top') }}</el-radio-button>
+                </el-radio-group>
+              </div>
+              <div class="settings-item">
+                <span class="settings-label">{{ $t('header.watermark') }}</span>
+                <el-switch v-model="appStore.watermarkEnabled" @change="appStore.setWatermarkEnabled(appStore.watermarkEnabled)" />
+              </div>
+            </div>
+          </el-popover>
         </div>
       </el-header>
+
+      <!-- 顶部菜单模式：水平菜单栏 -->
+      <div v-if="!isMobile && appStore.menuMode === 'top'" class="top-menu-bar">
+        <el-menu
+          :default-active="activeMenu"
+          mode="horizontal"
+          class="top-menu"
+          @select="handleMenuSelect"
+        >
+          <el-menu-item index="/dashboard">
+            <el-icon><Odometer /></el-icon>
+            <template #title>{{ $t('menu.dashboard') }}</template>
+          </el-menu-item>
+          <template v-if="menuTree.length > 0">
+            <MenuItem
+              v-for="menu in menuTree"
+              :key="menu.id"
+              :menu="menu"
+            />
+          </template>
+          <template v-else>
+            <el-sub-menu index="system">
+              <template #title>
+                <el-icon><Setting /></el-icon>
+                <span>{{ $t('menu.system') }}</span>
+              </template>
+              <el-menu-item index="/admins">
+                <el-icon><User /></el-icon>
+                <template #title>{{ $t('menu.admin') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/roles">
+                <el-icon><Avatar /></el-icon>
+                <template #title>{{ $t('menu.role') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/permissions">
+                <el-icon><Key /></el-icon>
+                <template #title>{{ $t('menu.permission') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/menus">
+                <el-icon><Menu /></el-icon>
+                <template #title>{{ $t('menu.menu') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/departments">
+                <el-icon><OfficeBuilding /></el-icon>
+                <template #title>{{ $t('menu.department') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/dictionaries">
+                <el-icon><Document /></el-icon>
+                <template #title>{{ $t('menu.dictionary') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/configs">
+                <el-icon><Setting /></el-icon>
+                <template #title>{{ $t('menu.config') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/blacklists">
+                <el-icon><Warning /></el-icon>
+                <template #title>{{ $t('menu.blacklist') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/online-admins">
+                <el-icon><User /></el-icon>
+                <template #title>{{ $t('menu.online_admin') }}</template>
+              </el-menu-item>
+              <el-menu-item index="/exports">
+                <el-icon><Document /></el-icon>
+                <template #title>{{ $t('menu.export') }}</template>
+              </el-menu-item>
+            </el-sub-menu>
+            <el-sub-menu index="logs">
+              <template #title>
+                <el-icon><Document /></el-icon>
+                <span>{{ $t('menu.log') }}</span>
+              </template>
+              <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
+              <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
+              <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
+            </el-sub-menu>
+            <el-menu-item index="/notifications">
+              <el-icon><Bell /></el-icon>
+              <template #title>{{ $t('menu.notification_center') }}</template>
+            </el-menu-item>
+            <el-menu-item index="/monitor">
+              <el-icon><Monitor /></el-icon>
+              <template #title>{{ $t('menu.service_monitor') }}</template>
+            </el-menu-item>
+          </template>
+        </el-menu>
+      </div>
 
       <div class="tabs-wrapper" :class="{ 'mobile-hidden': isMobile }">
         <TabsView />
       </div>
       
       <el-main class="main-content">
-        <router-view v-slot="{ Component, route: routeItem }">
-          <transition name="fade-transform" mode="out-in">
-            <keep-alive>
-              <component
-                :is="Component"
-                :key="`${routeItem.path}-${tabsStore.getRefreshKey(routeItem.path)}`"
-              />
-            </keep-alive>
-          </transition>
-        </router-view>
+        <!-- 使用 Element Plus 水印：开启时包裹内容，水印浮在内容之上 -->
+        <el-watermark
+          v-if="appStore.watermarkEnabled"
+          :content="watermarkText"
+          :font="watermarkFont"
+          :width="120"
+          :height="48"
+          :z-index="9"
+          :gap="[80, 80]"
+          :rotate="-22"
+          class="main-watermark"
+        >
+          <div class="main-content-inner">
+            <router-view v-slot="{ Component, route: routeItem }">
+              <transition name="fade-transform" mode="out-in">
+                <keep-alive>
+                  <component
+                    :is="Component"
+                    :key="`${routeItem.path}-${tabsStore.getRefreshKey(routeItem.path)}`"
+                  />
+                </keep-alive>
+              </transition>
+            </router-view>
+          </div>
+        </el-watermark>
+        <div v-else class="main-content-inner">
+          <router-view v-slot="{ Component, route: routeItem }">
+            <transition name="fade-transform" mode="out-in">
+              <keep-alive>
+                <component
+                  :is="Component"
+                  :key="`${routeItem.path}-${tabsStore.getRefreshKey(routeItem.path)}`"
+                />
+              </keep-alive>
+            </transition>
+          </router-view>
+        </div>
       </el-main>
     </el-container>
   </el-container>
@@ -365,7 +510,8 @@ import {
   Monitor,
   Warning,
   Grid,
-  Check
+  Check,
+  Tools
 } from '@element-plus/icons-vue'
 
 // 响应式检测
@@ -373,6 +519,18 @@ const { isMobile, isTablet, isXs } = useResponsive()
 
 // 移动端抽屉控制
 const drawerVisible = ref(false)
+
+// 水印文字（当前用户）
+const watermarkText = computed(() => {
+  const name = userStore.adminInfo?.nickname || userStore.adminInfo?.username || 'Admin'
+  return name
+})
+// Element Plus 水印字体：小字号、半透明，暗色模式适配
+const watermarkFont = computed(() => ({
+  fontSize: 14,
+  color: appStore.darkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+  fontWeight: 'normal'
+}))
 
 const route = useRoute()
 const router = useRouter()
@@ -739,10 +897,85 @@ const handleLayoutSizeChange = (size) => {
 }
 
 .main-content {
+  position: relative;
   background-color: var(--bg-color-secondary);
   padding: 20px;
   overflow-y: auto;
   transition: background-color 0.3s ease;
+}
+
+/* 设置面板 */
+.settings-panel {
+  padding: 4px 0;
+}
+.settings-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color-primary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color-light);
+}
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.settings-item:last-child {
+  margin-bottom: 0;
+}
+.settings-label {
+  font-size: 13px;
+  color: var(--text-color-regular);
+  flex-shrink: 0;
+}
+.settings-item .el-radio-group {
+  flex-wrap: wrap;
+}
+.settings-item .el-radio-button {
+  margin-bottom: 4px;
+}
+
+/* 顶部菜单栏 */
+.top-menu-bar {
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color-light);
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+.top-menu {
+  border-bottom: none !important;
+  background: transparent !important;
+}
+.top-menu :deep(.el-menu-item),
+.top-menu :deep(.el-sub-menu__title) {
+  height: 48px;
+  line-height: 48px;
+  border-bottom: 2px solid transparent;
+}
+.top-menu :deep(.el-menu-item.is-active),
+.top-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  border-bottom-color: var(--el-menu-active-color, #409eff);
+  color: var(--el-menu-active-color, #409eff);
+}
+.top-menu :deep(.el-sub-menu .el-menu-item) {
+  min-width: 120px;
+}
+
+/* Element Plus 水印容器：占满主内容区 */
+.main-watermark {
+  display: block;
+  min-height: 100%;
+  width: 100%;
+}
+.main-watermark :deep(.el-watermark) {
+  min-height: 100%;
+}
+.main-content-inner {
+  position: relative;
+  min-height: 100%;
 }
 
 /* 布局大小样式 */

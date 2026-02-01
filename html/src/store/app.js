@@ -16,7 +16,11 @@ export const useAppStore = defineStore('app', {
     layoutSize: Storage.getItem('layoutSize', 'default') || 'default', // default, large, small
     isFullscreen: false,
     timezone: Storage.getItem('timezone', detectBrowserTimezone()) || detectBrowserTimezone(),
-    darkMode: Storage.getItem('darkMode', 'false') === 'true'
+    darkMode: Storage.getItem('darkMode', 'false') === 'true',
+    // 导航模式: sidebar 左侧菜单, top 顶部菜单
+    menuMode: Storage.getItem('menuMode', 'sidebar') || 'sidebar',
+    // 是否开启水印
+    watermarkEnabled: Storage.getItem('watermarkEnabled', 'false') === 'true'
   }),
 
   actions: {
@@ -105,6 +109,21 @@ export const useAppStore = defineStore('app', {
         document.documentElement.classList.remove('dark')
         VxeUI.setTheme('light')
       }
+    },
+
+    setMenuMode(mode) {
+      this.menuMode = mode === 'top' ? 'top' : 'sidebar'
+      Storage.setItem('menuMode', this.menuMode)
+    },
+
+    setWatermarkEnabled(enabled) {
+      this.watermarkEnabled = !!enabled
+      Storage.setItem('watermarkEnabled', this.watermarkEnabled.toString())
+    },
+
+    toggleWatermark() {
+      this.watermarkEnabled = !this.watermarkEnabled
+      Storage.setItem('watermarkEnabled', this.watermarkEnabled.toString())
     }
   }
 })
