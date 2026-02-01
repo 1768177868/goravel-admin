@@ -43,7 +43,7 @@ type RelationConfig struct {
 	DisplayField string `json:"display_field"` // 显示字段
 	RelationType string `json:"relation_type"` // 关联类型：hasOne, belongsTo, hasMany
 	Alias        string `json:"alias"`         // 别名
-	IsTree       bool   `json:"is_tree"`      // 是否为树形数据
+	IsTree       bool   `json:"is_tree"`       // 是否为树形数据
 }
 
 type FieldType struct {
@@ -482,7 +482,7 @@ func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldCon
 				ForeignKey:   field.Name,
 				DisplayField: "name", // 默认猜测 name
 				RelationType: "belongsTo",
-				Alias:        "", // 默认使用表名转 PascalCase
+				Alias:        "",    // 默认使用表名转 PascalCase
 				IsTree:       false, // 默认不是树形，只有自定义API时才可能是树形
 			}
 		} else if strings.Contains(field.Name, "image") || strings.Contains(field.Name, "avatar") || strings.Contains(field.Name, "photo") || strings.Contains(field.Name, "pic") {
@@ -612,7 +612,7 @@ func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string) (string, err
 	}
 }
 
-func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) interface{} {
+func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) any {
 	templateFields := s.convertFieldsToTemplateFields(fields)
 
 	// Default options
@@ -811,7 +811,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 				break
 			}
 		}
-		
+
 		// 检查是否有 markdown 类型的字段
 		hasMarkdown := false
 		for _, field := range templateFields {
@@ -820,7 +820,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 				break
 			}
 		}
-		
+
 		// 检查是否有 image-upload 类型的字段
 		hasImageUpload := false
 		for _, field := range templateFields {
@@ -829,26 +829,26 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 				break
 			}
 		}
-		
+
 		return struct {
-			ModelName   string
-			ModuleName  string
-			ModuleNameK string
-			FormFields  []TemplateFieldConfig
-			HasCreate   bool
-			HasEdit     bool
-			HasEditor   bool
-			HasMarkdown bool
+			ModelName      string
+			ModuleName     string
+			ModuleNameK    string
+			FormFields     []TemplateFieldConfig
+			HasCreate      bool
+			HasEdit        bool
+			HasEditor      bool
+			HasMarkdown    bool
 			HasImageUpload bool
 		}{
-			ModelName:   toPascalCase(moduleName),
-			ModuleName:  moduleName,
-			ModuleNameK: toKebabCase(moduleName),
-			FormFields:  templateFields,
-			HasCreate:   hasCreate,
-			HasEdit:     hasEdit,
-			HasEditor:   hasEditor,
-			HasMarkdown: hasMarkdown,
+			ModelName:      toPascalCase(moduleName),
+			ModuleName:     moduleName,
+			ModuleNameK:    toKebabCase(moduleName),
+			FormFields:     templateFields,
+			HasCreate:      hasCreate,
+			HasEdit:        hasEdit,
+			HasEditor:      hasEditor,
+			HasMarkdown:    hasMarkdown,
 			HasImageUpload: hasImageUpload,
 		}
 	default:
@@ -1373,7 +1373,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	
+
 	// 检查是否有 editor 类型的字段
 	hasEditor := false
 	for _, field := range templateFields {
@@ -1382,7 +1382,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 			break
 		}
 	}
-	
+
 	// 检查是否有 markdown 类型的字段
 	hasMarkdown := false
 	for _, field := range templateFields {
@@ -1391,7 +1391,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 			break
 		}
 	}
-	
+
 	// 检查是否有 image-upload 类型的字段
 	hasImageUpload := false
 	for _, field := range templateFields {
@@ -1400,26 +1400,26 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 			break
 		}
 	}
-	
+
 	data := struct {
-		ModelName   string
-		ModuleName  string
-		ModuleNameK string
-		FormFields  []TemplateFieldConfig
-		HasCreate   bool
-		HasEdit     bool
-		HasEditor   bool
-		HasMarkdown bool
+		ModelName      string
+		ModuleName     string
+		ModuleNameK    string
+		FormFields     []TemplateFieldConfig
+		HasCreate      bool
+		HasEdit        bool
+		HasEditor      bool
+		HasMarkdown    bool
 		HasImageUpload bool
 	}{
-		ModelName:   toPascalCase(moduleName),
-		ModuleName:  moduleName,
-		ModuleNameK: toKebabCase(moduleName),
-		FormFields:  templateFields,
-		HasCreate:   hasCreate,
-		HasEdit:     hasEdit,
-		HasEditor:   hasEditor,
-		HasMarkdown: hasMarkdown,
+		ModelName:      toPascalCase(moduleName),
+		ModuleName:     moduleName,
+		ModuleNameK:    toKebabCase(moduleName),
+		FormFields:     templateFields,
+		HasCreate:      hasCreate,
+		HasEdit:        hasEdit,
+		HasEditor:      hasEditor,
+		HasMarkdown:    hasMarkdown,
 		HasImageUpload: hasImageUpload,
 	}
 
@@ -1434,7 +1434,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendFormPage(moduleName, tableNam
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) executeTemplate(templateContent string, data interface{}) (string, error) {
+func (s *CodeGeneratorServiceImpl) executeTemplate(templateContent string, data any) (string, error) {
 	tmpl, err := template.New("code").Delims("<<", ">>").Parse(templateContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)

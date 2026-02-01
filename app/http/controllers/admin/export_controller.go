@@ -162,9 +162,10 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 
 	// 根据文件扩展名设置 Content-Type
 	contentType := "application/octet-stream"
-	if export.Extension == "csv" {
+	switch export.Extension {
+	case "csv":
 		contentType = "text/csv; charset=utf-8"
-	} else if export.Extension == "xlsx" || export.Extension == "xls" {
+	case "xlsx", "xls":
 		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	}
 
