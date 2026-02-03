@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('code_generator.title') }}</span>
-          <el-button type="primary" :loading="generating" @click="handleGenerate">
+          <el-button v-if="activeMode === 'manual'" type="primary" :loading="generating" @click="handleGenerate">
             <el-icon><Document /></el-icon>
             {{ $t('code_generator.generate') }}
           </el-button>
@@ -847,7 +847,129 @@ const handleApplyAIConfig = () => {
   // 应用 AI 生成的配置到表单
   form.module_name = aiGeneratedConfig.value.module_name || ''
   form.table_name = aiGeneratedConfig.value.table_name || ''
-  form.fields = aiGeneratedConfig.value.fields || []
+  
+  // 转换字段格式：将 db_type 映射到 type，并设置其他默认值
+  const fields = (aiGeneratedConfig.value.fields || []).map(field => {
+    const dbType = field.db_type || field.type || 'string'
+    
+    // 智能推断 type（前端表单使用 type）
+    let type = dbType
+    const typeExists = fieldTypes.value.some(ft => ft.value === type)
+    if (!typeExists) {
+      // 根据 db_type 智能映射
+      if (dbType.includes('bigint')) {
+        type = 'bigInteger'
+      } else if (dbType.includes('int')) {
+        type = 'integer'
+      } else if (dbType.includes('char') || dbType.includes('text')) {
+        type = 'string'
+      } else if (dbType.includes('date') || dbType.includes('time')) {
+        type = 'datetime'
+      } else if (dbType.includes('decimal') || dbType.includes('float') || dbType.includes('double')) {
+        type = 'decimal'
+      } else if (dbType.includes('bool')) {
+        type = 'boolean'
+      } else if (dbType.includes('json')) {
+        type = 'json'
+      } else {
+        type = 'string' // 默认
+      }
+    }
+    
+    // 智能推断 form_type
+    let formType = field.form_type
+    if (!formType) {
+      if (dbType === 'text' || (field.name && (field.name.includes('content') || field.name.includes('description') || field.name.includes('detail')))) {
+        formType = 'textarea'
+      } else if (dbType === 'date') {
+        formType = 'date-picker'
+      } else if (dbType === 'datetime' || dbType === 'timestamp') {
+        formType = 'datetime-picker'
+      } else if (dbType === 'boolean') {
+        formType = 'switch'
+      } else if (dbType === 'json') {
+        formType = 'textarea'
+      } else {
+        formType = 'input'
+      }
+    }
+    
+    // 智能推断 search_ui_type
+    let searchUIType = field.search_ui_type
+    if (!searchUIType) {
+      if (dbType === 'date') {
+        searchUIType = 'date'
+      } else if (dbType === 'datetime' || dbType === 'timestamp') {
+        searchUIType = 'datetime'
+      } else if (dbType === 'boolean') {
+        searchUIType = 'select'
+      } else {
+        searchUIType = 'input'
+      }
+    }
+    
+    // 智能推断 search_type
+    const searchType = field.search_type || (dbType === 'string' || dbType === 'text' ? 'like' : '=')
+    
+    // 处理关联表对象，确保结构完整
+    let relation = field.relation || null
+    if (relation && typeof relation === 'object') {
+      // 确保关联对象包含所有必要字段
+      relation = {
+        table: relation.table || '',
+        relation_type: relation.relation_type || 'belongsTo',
+        foreign_key: relation.foreign_key || '',
+        display_field: relation.display_field || '',
+        alias: relation.alias || '',
+        is_tree: relation.is_tree || false
+      }
+      // 如果关联表为空，则设为 null
+      if (!relation.table) {
+        relation = null
+      }
+    }
+    
+    // 处理精度和标度（decimal 类型）
+    let precision = field.precision
+    let scale = field.scale
+    if (type === 'decimal') {
+      if (!precision || precision === 0) {
+        precision = 8 // 默认精度
+      }
+      if (scale === undefined || scale === null) {
+        scale = 2 // 默认标度
+      }
+    }
+    
+    const mappedField = {
+      ...field,
+      // 基本字段
+      type: type,
+      label: field.label || field.name || '',
+      // 布尔字段
+      required: field.required !== undefined ? field.required : false,
+      searchable: field.searchable !== undefined ? field.searchable : true,
+      sortable: field.sortable !== undefined ? field.sortable : false,
+      show_in_list: field.show_in_list !== undefined ? field.show_in_list : true,
+      show_in_form: field.show_in_form !== undefined ? field.show_in_form : true,
+      show_in_detail: field.show_in_detail !== undefined ? field.show_in_detail : true,
+      // 搜索和表单配置
+      search_type: searchType,
+      search_ui_type: searchUIType,
+      form_type: formType,
+      // 关联和选项配置
+      relation: relation,
+      dictionary: field.dictionary || '',
+      api_url: field.api_url || '',
+      // 精度和标度
+      precision: precision,
+      scale: scale
+    }
+    
+    return mappedField
+  })
+  
+  form.fields = fields
 
   // 切换到手动模式
   activeMode.value = 'manual'

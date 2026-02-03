@@ -1711,6 +1711,15 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 		if field.FormType == "" {
 			field.FormType = getFormType(field.DBType)
 		}
+		// 为 decimal 类型设置默认精度和标度
+		if field.DBType == "decimal" {
+			if field.Precision == 0 {
+				field.Precision = 8 // 默认精度
+			}
+			if field.Scale == 0 {
+				field.Scale = 2 // 默认标度
+			}
+		}
 		if !field.Searchable {
 			field.Searchable = true
 		}
@@ -1722,6 +1731,15 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 		}
 		if !field.ShowInDetail {
 			field.ShowInDetail = true
+		}
+		// 确保关联表对象结构完整
+		if field.Relation != nil {
+			if field.Relation.RelationType == "" {
+				field.Relation.RelationType = "belongsTo"
+			}
+			if field.Relation.Table == "" {
+				field.Relation = nil // 如果关联表为空，则清除关联
+			}
 		}
 	}
 
