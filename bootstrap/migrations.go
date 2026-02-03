@@ -1,8 +1,9 @@
 package bootstrap
 
 import (
-	"github.com/goravel/framework/contracts/database/schema"
 	"goravel/database/migrations"
+
+	"github.com/goravel/framework/contracts/database/schema"
 )
 
 func Migrations() []schema.Migration {
@@ -56,6 +57,5 @@ func Migrations() []schema.Migration {
 		&migrations.M20250301000025AddTranslationKeyToDictionaries{},
 		// 添加是否缓存字段
 		&migrations.M20250131000020AddNoCacheToMenus{},
-		&migrations.M20260203105254AddModeToRecordsTable{},
 	}
 }
