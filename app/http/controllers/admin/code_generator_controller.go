@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
@@ -36,6 +38,10 @@ type SaveRequest struct {
 	Force      bool                   `json:"force"`
 	Files      []string               `json:"files"`
 	Options    map[string]bool        `json:"options"`
+}
+
+type GenerateWithAIRequest struct {
+	Description string `json:"description"`
 }
 
 func NewCodeGeneratorController() *CodeGeneratorController {
@@ -176,5 +182,29 @@ func (c *CodeGeneratorController) GetTableColumns(ctx http.Context) http.Respons
 	}
 	return response.Success(ctx, http.Json{
 		"fields": fields,
+	})
+}
+
+// GenerateWithAI 使用 AI 生成模块配置
+func (c *CodeGeneratorController) GenerateWithAI(ctx http.Context) http.Response {
+	var req GenerateWithAIRequest
+	if err := ctx.Request().Bind(&req); err != nil {
+		return response.Error(ctx, http.StatusBadRequest, "invalid_fields")
+	}
+
+	if req.Description == "" {
+		return response.Error(ctx, http.StatusBadRequest, "description_required")
+	}
+
+	config, err := c.codeGeneratorService.GenerateWithAI(context.Background(), req.Description)
+	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
+		}
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.Success(ctx, http.Json{
+		"config": config,
 	})
 }

@@ -11,180 +11,261 @@
         </div>
       </template>
 
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="120px">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item :label="$t('code_generator.select_table')">
-              <el-select 
-                v-model="selectedTable" 
-                filterable 
-                clearable 
-                @change="handleTableChange" 
-                :placeholder="$t('code_generator.select_table_placeholder')" 
-                style="width: 100%"
+      <el-tabs v-model="activeMode" type="border-card">
+        <!-- 手动配置标签页 -->
+        <el-tab-pane :label="$t('code_generator.manual_mode')" name="manual">
+          <el-form :model="form" :rules="rules" ref="formRef" label-width="120px">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.select_table')">
+                  <el-select 
+                    v-model="selectedTable" 
+                    filterable 
+                    clearable 
+                    @change="handleTableChange" 
+                    :placeholder="$t('code_generator.select_table_placeholder')" 
+                    style="width: 100%"
+                  >
+                    <el-option v-for="table in tables" :key="table" :label="table" :value="table" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.module_name')" prop="module_name">
+                  <el-input v-model="form.module_name" :placeholder="$t('code_generator.module_name_placeholder')" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.table_name')" prop="table_name">
+                  <el-input v-model="form.table_name" :placeholder="$t('code_generator.table_name_placeholder')" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-divider>{{ $t('code_generator.fields_config') }}</el-divider>
+
+            <el-form-item :label="$t('code_generator.generated_files')">
+              <el-checkbox-group v-model="form.files">
+                <el-checkbox v-for="fileType in fileTypes" :key="fileType.value" :label="fileType.value">
+                  {{ fileType.label }}
+                </el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+
+            <el-form-item :label="$t('code_generator.function_options')">
+              <el-checkbox-group v-model="form.options">
+                <el-checkbox label="has_create">{{ $t('code_generator.has_create') }}</el-checkbox>
+                <el-checkbox label="has_edit">{{ $t('code_generator.has_edit') }}</el-checkbox>
+                <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
+                <el-checkbox label="has_export">{{ $t('code_generator.has_export') }}</el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+
+            <el-button type="primary" @click="handleAddField">
+              <el-icon><Plus /></el-icon>
+              {{ $t('code_generator.add_field') }}
+            </el-button>
+
+            <el-table :data="form.fields" border style="margin-top: 20px">
+              <el-table-column type="index" :label="$t('table.index')" width="60" />
+              <el-table-column prop="name" :label="$t('code_generator.field_name')" width="150">
+                <template #default="{ row }">
+                  <el-input v-model="row.name" :placeholder="$t('code_generator.field_name_placeholder')" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="type" :label="$t('code_generator.field_type')" width="150">
+                <template #default="{ row }">
+                  <el-select v-model="row.type" :placeholder="$t('common.select')">
+                    <el-option
+                      v-for="type in fieldTypes"
+                      :key="type.value"
+                      :label="type.label"
+                      :value="type.value"
+                    />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column prop="label" :label="$t('code_generator.field_label')" width="150">
+                <template #default="{ row }">
+                  <el-input v-model="row.label" :placeholder="$t('code_generator.field_label_placeholder')" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="form_type" :label="$t('code_generator.form_type')" width="150">
+                <template #default="{ row }">
+                  <el-select v-model="row.form_type" :placeholder="$t('common.select')">
+                    <el-option
+                      v-for="type in formTypes"
+                      :key="type.value"
+                      :label="type.label"
+                      :value="type.value"
+                    />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column prop="search_type" :label="$t('code_generator.search_type')" width="120">
+                <template #default="{ row }">
+                  <el-select v-model="row.search_type" :placeholder="$t('common.select')">
+                    <el-option label="LIKE" value="like" />
+                    <el-option label="=" value="=" />
+                    <el-option label=">" value=">" />
+                    <el-option label=">=" value=">=" />
+                    <el-option label="<" value="<" />
+                    <el-option label="<=" value="<=" />
+                    <el-option label="!=" value="!=" />
+                    <el-option label="IN" value="in" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column prop="search_ui_type" :label="$t('code_generator.search_ui_type')" width="150">
+                <template #default="{ row }">
+                  <el-select v-model="row.search_ui_type" :placeholder="$t('common.select')">
+                    <el-option :label="$t('code_generator.search_ui_types.input')" value="input" />
+                    <el-option :label="$t('code_generator.search_ui_types.select')" value="select" />
+                    <el-option :label="$t('code_generator.search_ui_types.date')" value="date" />
+                    <el-option :label="$t('code_generator.search_ui_types.datetime')" value="datetime" />
+                    <el-option :label="$t('code_generator.search_ui_types.daterange')" value="daterange" />
+                    <el-option :label="$t('code_generator.search_ui_types.datetimerange')" value="datetimerange" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('code_generator.relation')" width="150">
+                <template #default="{ row }">
+                  <el-button size="small" @click="handleEditRelation(row)">
+                    {{ row.relation ? $t('code_generator.edit_relation') : $t('code_generator.add_relation') }}
+                  </el-button>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('code_generator.field_config')" width="100">
+                <template #default="{ row }">
+                  <el-button 
+                    v-if="row.form_type === 'select' || row.form_type === 'radio' || row.form_type === 'checkbox' || row.type === 'decimal' || row.search_ui_type === 'select'"
+                    size="small" 
+                    @click="handleEditFieldConfig(row)"
+                  >
+                    <el-icon><Setting /></el-icon>
+                  </el-button>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('code_generator.field_options')" width="300">
+                <template #default="{ row }">
+                  <el-checkbox v-model="row.required">{{ $t('code_generator.required') }}</el-checkbox>
+                  <el-checkbox v-model="row.searchable">{{ $t('code_generator.searchable') }}</el-checkbox>
+                  <el-checkbox v-model="row.sortable">{{ $t('code_generator.sortable') }}</el-checkbox>
+                  <el-checkbox v-model="row.show_in_list">{{ $t('code_generator.show_in_list') }}</el-checkbox>
+                  <el-checkbox v-model="row.show_in_form">{{ $t('code_generator.show_in_form') }}</el-checkbox>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('table.operation')" width="100" fixed="right">
+                <template #default="{ $index }">
+                  <el-button type="danger" size="small" @click="handleRemoveField($index)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <el-divider>{{ $t('code_generator.code_preview') }}</el-divider>
+
+            <el-tabs v-model="activeTab" type="border-card">
+              <el-tab-pane
+                v-for="fileType in fileTypes"
+                :key="fileType.value"
+                :label="fileType.label"
+                :name="fileType.value"
               >
-                <el-option v-for="table in tables" :key="table" :label="table" :value="table" />
-              </el-select>
-            </el-form-item>
-          </el-col>
+                <div class="code-preview">
+                  <el-button
+                    type="primary"
+                    size="small"
+                    @click="handlePreview(fileType.value)"
+                    :loading="previewing === fileType.value"
+                  >
+                    {{ $t('code_generator.refresh_preview') }}
+                  </el-button>
+                  <pre v-if="previewCode[fileType.value]"><code>{{ previewCode[fileType.value] }}</code></pre>
+                  <el-empty v-else :description="$t('code_generator.click_preview')" />
+                </div>
+              </el-tab-pane>
+            </el-tabs>
+          </el-form>
+      </el-tab-pane>
 
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item :label="$t('code_generator.module_name')" prop="module_name">
-              <el-input v-model="form.module_name" :placeholder="$t('code_generator.module_name_placeholder')" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="$t('code_generator.table_name')" prop="table_name">
-              <el-input v-model="form.table_name" :placeholder="$t('code_generator.table_name_placeholder')" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
+        <!-- AI 辅助标签页 -->
+        <el-tab-pane :label="$t('code_generator.ai_mode')" name="ai">
+          <div class="ai-assistant">
+            <el-alert
+              :title="$t('code_generator.ai_mode_tip')"
+              type="info"
+              :closable="false"
+              style="margin-bottom: 20px"
+            />
+            <el-form label-width="120px">
+              <el-form-item :label="$t('code_generator.ai_description')">
+                <el-input
+                  v-model="aiDescription"
+                  type="textarea"
+                  :rows="8"
+                  :placeholder="$t('code_generator.ai_description_placeholder')"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button
+                  type="primary"
+                  :loading="aiGenerating"
+                  @click="handleGenerateWithAI"
+                >
+                  <el-icon><Document /></el-icon>
+                  {{ $t('code_generator.ai_generate') }}
+                </el-button>
+                <el-button @click="handleApplyAIConfig" :disabled="!aiGeneratedConfig">
+                  {{ $t('code_generator.ai_apply_config') }}
+                </el-button>
+              </el-form-item>
+            </el-form>
 
-      <el-divider>{{ $t('code_generator.fields_config') }}</el-divider>
+            <el-divider v-if="aiGeneratedConfig">{{ $t('code_generator.ai_generated_config') }}</el-divider>
 
-      <el-form-item :label="$t('code_generator.generated_files')">
-        <el-checkbox-group v-model="form.files">
-          <el-checkbox v-for="fileType in fileTypes" :key="fileType.value" :label="fileType.value">
-            {{ fileType.label }}
-          </el-checkbox>
-        </el-checkbox-group>
-      </el-form-item>
+            <div v-if="aiGeneratedConfig" class="ai-config-preview">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item :label="$t('code_generator.module_name')">
+                  {{ aiGeneratedConfig.module_name }}
+                </el-descriptions-item>
+                <el-descriptions-item :label="$t('code_generator.table_name')">
+                  {{ aiGeneratedConfig.table_name }}
+                </el-descriptions-item>
+                <el-descriptions-item :label="$t('code_generator.fields_count')" :span="2">
+                  {{ aiGeneratedConfig.fields?.length || 0 }}
+                </el-descriptions-item>
+              </el-descriptions>
 
-      <el-form-item :label="$t('code_generator.function_options')">
-        <el-checkbox-group v-model="form.options">
-          <el-checkbox label="has_create">{{ $t('code_generator.has_create') }}</el-checkbox>
-          <el-checkbox label="has_edit">{{ $t('code_generator.has_edit') }}</el-checkbox>
-          <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
-          <el-checkbox label="has_export">{{ $t('code_generator.has_export') }}</el-checkbox>
-        </el-checkbox-group>
-      </el-form-item>
-
-      <el-button type="primary" @click="handleAddField">
-        <el-icon><Plus /></el-icon>
-        {{ $t('code_generator.add_field') }}
-      </el-button>
-
-      <el-table :data="form.fields" border style="margin-top: 20px">
-        <el-table-column type="index" :label="$t('table.index')" width="60" />
-        <el-table-column prop="name" :label="$t('code_generator.field_name')" width="150">
-          <template #default="{ row }">
-            <el-input v-model="row.name" :placeholder="$t('code_generator.field_name_placeholder')" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="type" :label="$t('code_generator.field_type')" width="150">
-          <template #default="{ row }">
-            <el-select v-model="row.type" :placeholder="$t('common.select')">
-              <el-option
-                v-for="type in fieldTypes"
-                :key="type.value"
-                :label="type.label"
-                :value="type.value"
-              />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column prop="label" :label="$t('code_generator.field_label')" width="150">
-          <template #default="{ row }">
-            <el-input v-model="row.label" :placeholder="$t('code_generator.field_label_placeholder')" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="form_type" :label="$t('code_generator.form_type')" width="150">
-          <template #default="{ row }">
-            <el-select v-model="row.form_type" :placeholder="$t('common.select')">
-              <el-option
-                v-for="type in formTypes"
-                :key="type.value"
-                :label="type.label"
-                :value="type.value"
-              />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column prop="search_type" :label="$t('code_generator.search_type')" width="120">
-          <template #default="{ row }">
-            <el-select v-model="row.search_type" :placeholder="$t('common.select')">
-              <el-option label="LIKE" value="like" />
-              <el-option label="=" value="=" />
-              <el-option label=">" value=">" />
-              <el-option label=">=" value=">=" />
-              <el-option label="<" value="<" />
-              <el-option label="<=" value="<=" />
-              <el-option label="!=" value="!=" />
-              <el-option label="IN" value="in" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column prop="search_ui_type" :label="$t('code_generator.search_ui_type')" width="150">
-          <template #default="{ row }">
-            <el-select v-model="row.search_ui_type" :placeholder="$t('common.select')">
-              <el-option :label="$t('code_generator.search_ui_types.input')" value="input" />
-              <el-option :label="$t('code_generator.search_ui_types.select')" value="select" />
-              <el-option :label="$t('code_generator.search_ui_types.date')" value="date" />
-              <el-option :label="$t('code_generator.search_ui_types.datetime')" value="datetime" />
-              <el-option :label="$t('code_generator.search_ui_types.daterange')" value="daterange" />
-              <el-option :label="$t('code_generator.search_ui_types.datetimerange')" value="datetimerange" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('code_generator.relation')" width="150">
-          <template #default="{ row }">
-            <el-button size="small" @click="handleEditRelation(row)">
-              {{ row.relation ? $t('code_generator.edit_relation') : $t('code_generator.add_relation') }}
-            </el-button>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('code_generator.field_config')" width="100">
-          <template #default="{ row }">
-            <el-button 
-              v-if="row.form_type === 'select' || row.form_type === 'radio' || row.form_type === 'checkbox' || row.type === 'decimal' || row.search_ui_type === 'select'"
-              size="small" 
-              @click="handleEditFieldConfig(row)"
-            >
-              <el-icon><Setting /></el-icon>
-            </el-button>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('code_generator.field_options')" width="300">
-          <template #default="{ row }">
-            <el-checkbox v-model="row.required">{{ $t('code_generator.required') }}</el-checkbox>
-            <el-checkbox v-model="row.searchable">{{ $t('code_generator.searchable') }}</el-checkbox>
-            <el-checkbox v-model="row.sortable">{{ $t('code_generator.sortable') }}</el-checkbox>
-            <el-checkbox v-model="row.show_in_list">{{ $t('code_generator.show_in_list') }}</el-checkbox>
-            <el-checkbox v-model="row.show_in_form">{{ $t('code_generator.show_in_form') }}</el-checkbox>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('table.operation')" width="100" fixed="right">
-          <template #default="{ $index }">
-            <el-button type="danger" size="small" @click="handleRemoveField($index)">
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-divider>{{ $t('code_generator.code_preview') }}</el-divider>
-
-      <el-tabs v-model="activeTab" type="border-card">
-        <el-tab-pane
-          v-for="fileType in fileTypes"
-          :key="fileType.value"
-          :label="fileType.label"
-          :name="fileType.value"
-        >
-          <div class="code-preview">
-            <el-button
-              type="primary"
-              size="small"
-              @click="handlePreview(fileType.value)"
-              :loading="previewing === fileType.value"
-            >
-              {{ $t('code_generator.refresh_preview') }}
-            </el-button>
-            <pre v-if="previewCode[fileType.value]"><code>{{ previewCode[fileType.value] }}</code></pre>
-            <el-empty v-else :description="$t('code_generator.click_preview')" />
+              <el-table
+                v-if="aiGeneratedConfig.fields && aiGeneratedConfig.fields.length > 0"
+                :data="aiGeneratedConfig.fields"
+                border
+                style="margin-top: 20px"
+                max-height="400"
+              >
+                <el-table-column type="index" :label="$t('table.index')" width="60" />
+                <el-table-column prop="name" :label="$t('code_generator.field_name')" width="120" />
+                <el-table-column prop="label" :label="$t('code_generator.field_label')" width="120" />
+                <el-table-column prop="db_type" :label="$t('code_generator.field_type')" width="100" />
+                <el-table-column prop="form_type" :label="$t('code_generator.form_type')" width="120" />
+                <el-table-column prop="required" :label="$t('code_generator.required')" width="80">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.required" type="success">{{ $t('common.yes') }}</el-tag>
+                    <el-tag v-else type="info">{{ $t('common.no') }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="searchable" :label="$t('code_generator.searchable')" width="80">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.searchable" type="success">{{ $t('common.yes') }}</el-tag>
+                    <el-tag v-else type="info">{{ $t('common.no') }}</el-tag>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -294,7 +375,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, Delete, Setting } from '@element-plus/icons-vue'
-import { getFieldTypes, getTables, getTableColumns, previewCode as previewCodeApi, generateCode, saveCode } from '../../api/codeGenerator'
+import { getFieldTypes, getTables, getTableColumns, previewCode as previewCodeApi, generateCode, saveCode, generateWithAI } from '../../api/codeGenerator'
 import { getDictionaryTypes } from '../../api/dictionary'
 import { isDev } from '../../utils/env'
 import logger from '../../utils/logger'
@@ -309,10 +390,14 @@ const formRef = ref(null)
 const generating = ref(false)
 const previewing = ref('')
 const activeTab = ref('model')
+const activeMode = ref('manual')
 const fieldTypesRaw = ref([])
 const dictionaryTypes = ref([])
 const tables = ref([])
 const selectedTable = ref('')
+const aiDescription = ref('')
+const aiGenerating = ref(false)
+const aiGeneratedConfig = ref(null)
 
 // 使用 computed 让字段类型标签响应语言变化
 const fieldTypes = computed(() => {
@@ -725,6 +810,49 @@ const handleGenerate = async () => {
   } finally {
     generating.value = false
   }
+}
+
+const handleGenerateWithAI = async () => {
+  if (!aiDescription.value || aiDescription.value.trim() === '') {
+    ElMessage.warning(t('code_generator.ai_description_required'))
+    return
+  }
+
+  try {
+    aiGenerating.value = true
+    const response = await generateWithAI({
+      description: aiDescription.value
+    })
+
+    if (response.data && response.data.config) {
+      aiGeneratedConfig.value = response.data.config
+      ElMessage.success(t('code_generator.ai_generate_success'))
+    } else {
+      ElMessage.error(t('code_generator.ai_generate_failed'))
+    }
+  } catch (error) {
+    logger.error('Failed to generate with AI:', error)
+    const errorMessage = error.response?.data?.message || error.message || t('code_generator.ai_generate_failed')
+    ElMessage.error(errorMessage)
+  } finally {
+    aiGenerating.value = false
+  }
+}
+
+const handleApplyAIConfig = () => {
+  if (!aiGeneratedConfig.value) {
+    return
+  }
+
+  // 应用 AI 生成的配置到表单
+  form.module_name = aiGeneratedConfig.value.module_name || ''
+  form.table_name = aiGeneratedConfig.value.table_name || ''
+  form.fields = aiGeneratedConfig.value.fields || []
+
+  // 切换到手动模式
+  activeMode.value = 'manual'
+
+  ElMessage.success(t('code_generator.ai_config_applied'))
 }
 
 onMounted(() => {

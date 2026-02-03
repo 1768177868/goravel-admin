@@ -232,6 +232,7 @@ func Admin() {
 				router.Post("code-generator/preview", codeGeneratorController.Preview)
 				router.Post("code-generator/generate", codeGeneratorController.Generate)
 				router.Post("code-generator/save", codeGeneratorController.Save)
+				router.Post("code-generator/generate-with-ai", codeGeneratorController.GenerateWithAI)
 			})
 
 		})

@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"go/format"
 	"os"
@@ -75,6 +77,13 @@ type CodeGeneratorService interface {
 	GetTables() ([]string, error)
 	GetTableColumns(tableName string) ([]FieldConfig, error)
 	Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error)
+	GenerateWithAI(ctx context.Context, userDescription string) (*AIGeneratedConfig, error)
+}
+
+type AIGeneratedConfig struct {
+	ModuleName string        `json:"module_name"`
+	TableName  string        `json:"table_name"`
+	Fields     []FieldConfig `json:"fields"`
 }
 
 type CodeGeneratorServiceImpl struct{}
@@ -1560,4 +1569,161 @@ func getApiUrl(dictionary string, apiUrl string) string {
 		return "/options?type=dictionary&dictionary_type=" + dictionary
 	}
 	return ""
+}
+
+// GenerateWithAI 使用 AI 辅助生成代码配置
+func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescription string) (*AIGeneratedConfig, error) {
+	// 读取 AI 模块开发提示词
+	promptFile, err := os.ReadFile("docs/AI_MODULE_DEVELOPMENT_PROMPT.md")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read AI_MODULE_DEVELOPMENT_PROMPT.md: %w", err)
+	}
+
+	// 构建系统提示词
+	systemPrompt := `你是一位经验丰富的全栈开发工程师，精通 Go 语言（Goravel 框架）和 Vue 3（Element Plus）开发。
+你的任务是根据用户的自然语言描述，生成符合项目规范的模块配置。
+
+请仔细阅读以下项目规范和开发指南，然后根据用户需求生成 JSON 格式的配置。`
+
+	// 构建用户提示词
+	userPrompt := fmt.Sprintf(`%s
+
+## 用户需求
+
+%s
+
+## 任务
+
+请根据以上规范和用户需求，生成模块配置。配置必须是有效的 JSON 格式，包含以下字段：
+- module_name: 模块名称（小写，如 "guestbook", "order"）
+- table_name: 表名（小写复数，如 "guestbooks", "orders"）
+- fields: 字段配置数组
+
+每个字段配置应包含：
+- name: 字段名（小写，如 "title", "content", "status"）
+- label: 字段标签（中文，如 "标题", "内容", "状态"）
+- db_type: 数据库类型（如 "string", "text", "integer", "bigInteger", "decimal", "boolean", "date", "datetime", "json"）
+- go_type: Go 类型（如 "string", "int", "int64", "float64", "bool", "time.Time"）
+- required: 是否必填（布尔值）
+- searchable: 是否可搜索（布尔值，默认 true）
+- sortable: 是否可排序（布尔值，默认 false）
+- search_type: 搜索类型（如 "like", "=", ">", "<", "in"）
+- search_ui_type: 搜索 UI 类型（如 "input", "select", "date", "datetime", "daterange"）
+- form_type: 表单类型（如 "input", "textarea", "select", "switch", "date-picker", "datetime-picker", "image-upload", "file-upload", "editor"）
+- show_in_list: 是否在列表中显示（布尔值，默认 true）
+- show_in_form: 是否在表单中显示（布尔值，默认 true）
+- show_in_detail: 是否在详情中显示（布尔值，默认 true）
+
+请根据用户描述智能推断字段类型和配置。例如：
+- 如果提到"状态"，通常是 integer 或 boolean 类型，form_type 为 "select" 或 "switch"
+- 如果提到"图片"、"头像"、"照片"，form_type 应为 "image-upload"
+- 如果提到"文件"，form_type 应为 "file-upload"
+- 如果提到"内容"、"描述"、"详情"且是长文本，db_type 应为 "text"，form_type 可为 "editor" 或 "textarea"
+- 如果提到"时间"、"日期"，db_type 应为 "datetime" 或 "date"，form_type 为 "date-picker" 或 "datetime-picker"
+- 如果提到"金额"、"价格"，db_type 应为 "decimal"，go_type 为 "float64"
+
+请只返回 JSON 配置，不要包含其他说明文字。`, string(promptFile), userDescription)
+
+	// 调用 AI Service
+	aiService := NewAIService()
+	response, err := aiService.Complete(ctx, userPrompt, systemPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("AI completion failed: %w", err)
+	}
+
+	// 尝试提取 JSON（AI 可能返回带 markdown 代码块的 JSON）
+	jsonStr := response
+	if strings.Contains(jsonStr, "```json") {
+		start := strings.Index(jsonStr, "```json")
+		end := strings.Index(jsonStr[start:], "```")
+		if end > 0 {
+			jsonStr = jsonStr[start+7 : start+end]
+		}
+	} else if strings.Contains(jsonStr, "```") {
+		start := strings.Index(jsonStr, "```")
+		end := strings.Index(jsonStr[start+3:], "```")
+		if end > 0 {
+			jsonStr = jsonStr[start+3 : start+3+end]
+		}
+	}
+
+	// 解析 JSON
+	var config AIGeneratedConfig
+	if err := json.Unmarshal([]byte(strings.TrimSpace(jsonStr)), &config); err != nil {
+		return nil, fmt.Errorf("failed to parse AI response as JSON: %w. Response: %s", err, response)
+	}
+
+	// 验证配置
+	if config.ModuleName == "" {
+		return nil, fmt.Errorf("module_name is required")
+	}
+	if config.TableName == "" {
+		return nil, fmt.Errorf("table_name is required")
+	}
+	if len(config.Fields) == 0 {
+		return nil, fmt.Errorf("fields cannot be empty")
+	}
+
+	// 为字段设置默认值
+	fieldTypes := s.GetFieldTypes()
+	fieldTypeMap := make(map[string]FieldType)
+	for _, ft := range fieldTypes {
+		fieldTypeMap[ft.Value] = ft
+	}
+
+	for i := range config.Fields {
+		field := &config.Fields[i]
+		
+		// 设置默认值
+		if field.Label == "" {
+			field.Label = field.Name
+		}
+		if field.DBType == "" {
+			field.DBType = "string"
+		}
+		if fieldType, ok := fieldTypeMap[field.DBType]; ok {
+			if field.GoType == "" {
+				field.GoType = fieldType.GoType
+			}
+		} else {
+			if field.GoType == "" {
+				field.GoType = "string"
+			}
+		}
+		if field.SearchType == "" {
+			if field.DBType == "string" || field.DBType == "text" {
+				field.SearchType = "like"
+			} else {
+				field.SearchType = "="
+			}
+		}
+		if field.SearchUIType == "" {
+			if field.DBType == "date" {
+				field.SearchUIType = "date"
+			} else if field.DBType == "datetime" {
+				field.SearchUIType = "datetime"
+			} else if field.DBType == "boolean" {
+				field.SearchUIType = "select"
+			} else {
+				field.SearchUIType = "input"
+			}
+		}
+		if field.FormType == "" {
+			field.FormType = getFormType(field.DBType)
+		}
+		if !field.Searchable {
+			field.Searchable = true
+		}
+		if !field.ShowInList {
+			field.ShowInList = true
+		}
+		if !field.ShowInForm {
+			field.ShowInForm = true
+		}
+		if !field.ShowInDetail {
+			field.ShowInDetail = true
+		}
+	}
+
+	return &config, nil
 }

@@ -45,3 +45,11 @@ export function saveCode(data) {
     data
   })
 }
+
+export function generateWithAI(data) {
+  return request({
+    url: '/code-generator/generate-with-ai',
+    method: 'post',
+    data
+  })
+}
