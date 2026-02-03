@@ -1632,25 +1632,47 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 	}
 
 	// 尝试提取 JSON（AI 可能返回带 markdown 代码块的 JSON）
-	jsonStr := response
+	jsonStr := strings.TrimSpace(response)
+
+	// 处理 ```json 代码块
 	if strings.Contains(jsonStr, "```json") {
 		start := strings.Index(jsonStr, "```json")
-		end := strings.Index(jsonStr[start:], "```")
-		if end > 0 {
-			jsonStr = jsonStr[start+7 : start+end]
+		if start >= 0 {
+			// 从 ```json 之后开始查找结束的 ```
+			codeStart := start + 7 // ```json 的长度是 7
+			end := strings.Index(jsonStr[codeStart:], "```")
+			if end > 0 {
+				jsonStr = strings.TrimSpace(jsonStr[codeStart : codeStart+end])
+			}
 		}
 	} else if strings.Contains(jsonStr, "```") {
+		// 处理普通的 ``` 代码块
 		start := strings.Index(jsonStr, "```")
-		end := strings.Index(jsonStr[start+3:], "```")
-		if end > 0 {
-			jsonStr = jsonStr[start+3 : start+3+end]
+		if start >= 0 {
+			codeStart := start + 3 // ``` 的长度是 3
+			end := strings.Index(jsonStr[codeStart:], "```")
+			if end > 0 {
+				jsonStr = strings.TrimSpace(jsonStr[codeStart : codeStart+end])
+			}
+		}
+	}
+
+	// 尝试查找 JSON 对象（以 { 开头，以 } 结尾）
+	if !strings.HasPrefix(jsonStr, "{") {
+		start := strings.Index(jsonStr, "{")
+		if start >= 0 {
+			// 找到最后一个 }
+			lastBrace := strings.LastIndex(jsonStr, "}")
+			if lastBrace > start {
+				jsonStr = strings.TrimSpace(jsonStr[start : lastBrace+1])
+			}
 		}
 	}
 
 	// 解析 JSON
 	var config AIGeneratedConfig
-	if err := json.Unmarshal([]byte(strings.TrimSpace(jsonStr)), &config); err != nil {
-		return nil, fmt.Errorf("failed to parse AI response as JSON: %w. Response: %s", err, response)
+	if err := json.Unmarshal([]byte(jsonStr), &config); err != nil {
+		return nil, fmt.Errorf("AI 返回的配置格式不正确，无法解析 JSON。请检查 AI 响应格式或重试。错误详情: %v", err)
 	}
 
 	// 验证配置
@@ -1673,7 +1695,7 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 
 	for i := range config.Fields {
 		field := &config.Fields[i]
-		
+
 		// 设置默认值
 		if field.Label == "" {
 			field.Label = field.Name

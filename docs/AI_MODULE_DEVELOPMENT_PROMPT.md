@@ -24,18 +24,28 @@ goravel-admin/
 │   │   ├── controllers/admin/    # 后台控制器
 │   │   ├── requests/admin/       # 请求验证
 │   │   ├── helpers/              # 辅助函数
-│   │   └── response/             # 统一响应
+│   │   ├── response/             # 统一响应
+│   │   ├── trans/                # 翻译工具
+│   │   └── middleware/           # 中间件
 │   ├── models/                   # 数据模型
-│   ├── services/                 # 业务逻辑服务
-│   └── errors/                   # 错误定义
-├── database/migrations/          # 数据库迁移
-├── routes/admin.go                # 后台路由
+│   ├── services/                 # 业务逻辑服务（接口+实现）
+│   ├── errors/                   # 错误定义
+│   ├── facades/                  # Facade 定义
+│   └── utils/                    # 工具函数
+├── database/
+│   ├── migrations/               # 数据库迁移
+│   └── seeders/                  # 数据填充
+├── routes/
+│   └── admin.go                  # 后台路由
+├── config/                       # 配置文件
 ├── html/src/
 │   ├── api/                      # API 客户端
 │   ├── views/                    # 页面组件
 │   ├── components/               # 通用组件
 │   ├── composables/              # 组合式函数
-│   └── router/                    # 路由配置
+│   ├── router/                   # 路由配置
+│   ├── store/                    # Pinia 状态管理
+│   └── i18n/                     # 国际化
 └── docs/                         # 文档
 ```
 
@@ -87,24 +97,30 @@ goravel-admin/
        "page_size": pageSize,
    })
    
-   // 错误响应
-   return response.Error(ctx, http.StatusBadRequest, err.Error())
+   // 错误响应（使用错误码）
+   return response.Error(ctx, http.StatusNotFound, apperrors.ErrXxxNotFound.Code)
    
-   // 验证错误
-   return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+   // 错误响应（使用错误消息）
+   return response.Error(ctx, http.StatusInternalServerError, err.Error())
    ```
 
 2. **错误处理**
    ```go
    // 使用项目错误定义
    if err != nil {
-       return nil, apperrors.ErrNotFound.WithError(err)
+       return nil, apperrors.ErrXxxNotFound.WithError(err)
+   }
+   
+   // 在控制器中返回错误响应
+   if err != nil {
+       return response.Error(ctx, http.StatusNotFound, apperrors.ErrXxxNotFound.Code)
    }
    ```
 
 3. **时间处理**
    ```go
-   // 时间转换
+   // 时间转换（支持从查询参数或请求体读取）
+   startTimeStr := ctx.Request().Input("start_time", ctx.Request().Query("start_time", ""))
    startTime := ""
    if startTimeStr != "" {
        startTime = helpers.ConvertTimeToUTC(ctx, startTimeStr)
@@ -113,16 +129,31 @@ goravel-admin/
 
 4. **排序处理**
    ```go
+   // 在服务层处理排序
    orderBy := filters.OrderBy
    if orderBy == "" {
        orderBy = "created_at:desc"
    }
    query = helpers.ApplySort(query, orderBy, "created_at:desc")
+   
+   // 在控制器中获取查询参数
+   orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
    ```
 
-5. **Swagger 注解**
+5. **查询参数处理**
+   ```go
+   // 使用辅助函数获取查询参数
+   page := helpers.GetIntQuery(ctx, "page", 1)
+   pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
+   
+   // 支持从查询参数或请求体读取（兼容 GET 和 POST）
+   username := ctx.Request().Input("username", ctx.Request().Query("username", ""))
+   ```
+
+6. **Swagger 注解**
    - 每个控制器方法必须添加完整的 Swagger 注解
    - 包括 `@Summary`, `@Description`, `@Tags`, `@Param`, `@Success`, `@Failure`, `@Router`, `@Security`
+   - 响应结构体需要定义在控制器文件中
 
 #### 前端规范
 
@@ -262,7 +293,7 @@ import (
 )
 
 type XxxService interface {
-	GetByID(id uint) (*models.Xxx, error)
+	GetByID(id uint, withRelations ...bool) (*models.Xxx, error)
 	GetList(filters XxxFilters, page, pageSize int) ([]models.Xxx, int64, error)
 	Create(data map[string]any) (*models.Xxx, error)
 	Update(id uint, data map[string]any) error
@@ -272,6 +303,7 @@ type XxxService interface {
 type XxxFilters struct {
 	// 筛选字段
 	OrderBy   string
+	// 其他筛选条件
 }
 
 type XxxServiceImpl struct{}
@@ -311,10 +343,12 @@ func (s *XxxServiceImpl) GetList(filters XxxFilters, page, pageSize int) ([]mode
 ```
 
 **注意事项**:
-- 使用 `buildQuery` 方法构建查询条件
+- 使用 `buildQuery` 方法构建查询条件（列表和导出共用）
 - 默认排序为 `created_at:desc`
 - 使用 `helpers.ApplySort` 处理排序
-- 错误处理使用 `apperrors`
+- 错误处理使用 `apperrors`，如 `apperrors.ErrXxxNotFound`
+- 使用 `facades.Orm().Query()` 进行数据库查询
+- 预加载关联使用 `query.With("RelationName")`
 
 ### 步骤 4: 创建请求验证
 
@@ -327,12 +361,16 @@ func (s *XxxServiceImpl) GetList(filters XxxFilters, page, pageSize int) ([]mode
 package admin
 
 import (
+	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/validation"
 )
 
 type XxxCreate struct {
-	// 字段定义
+	// 字段定义（使用 form 和 json 标签）
+	Name  string `form:"name" json:"name"`
+	Status uint8  `form:"status" json:"status"`
 }
 
 func (r *XxxCreate) Authorize(ctx http.Context) error {
@@ -341,20 +379,29 @@ func (r *XxxCreate) Authorize(ctx http.Context) error {
 
 func (r *XxxCreate) Rules(ctx http.Context) map[string]string {
 	return map[string]string{
-		// 验证规则
+		"name":   "required|max_len:255",
+		"status": "in:0,1",
 	}
 }
 
 func (r *XxxCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		// 错误消息
+		"name.required": trans.Get(ctx, "validation_name_required"),
+		"name.max_len":  trans.Get(ctx, "validation_name_max"),
+		"status.in":     trans.Get(ctx, "validation_status_in"),
 	}
 }
 
 func (r *XxxCreate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		// 字段名称
+		"name":   trans.Get(ctx, "validation_name"),
+		"status": trans.Get(ctx, "validation_status"),
 	}
+}
+
+func (r *XxxCreate) PrepareForValidation(ctx http.Context, data validation.Data) error {
+	// 数值字段预处理（如 status）
+	return helpers.PrepareNumericFieldForValidation(data, "status")
 }
 ```
 
@@ -362,6 +409,8 @@ func (r *XxxCreate) Attributes(ctx http.Context) map[string]string {
 - 使用 `trans.Get(ctx, "key")` 获取翻译
 - Create 请求字段通常为 `required`
 - Update 请求字段通常为可选（不设置 `required`）
+- 数值字段需要使用 `PrepareForValidation` 进行预处理
+- 使用 `form` 和 `json` 标签支持多种请求格式
 
 ### 步骤 5: 创建控制器
 
@@ -386,6 +435,7 @@ import (
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
+	"goravel/app/models"
 	"goravel/app/services"
 )
 
@@ -399,6 +449,26 @@ func NewXxxController() *XxxController {
 	}
 }
 
+// buildFilters 构建查询过滤器（列表和导出共用）
+func (r *XxxController) buildFilters(ctx http.Context) services.XxxFilters {
+	// 支持从查询参数或请求体读取（兼容 GET 和 POST）
+	name := ctx.Request().Input("name", ctx.Request().Query("name", ""))
+	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
+	
+	// 时间字段转换
+	startTimeStr := ctx.Request().Input("start_time", ctx.Request().Query("start_time", ""))
+	startTime := ""
+	if startTimeStr != "" {
+		startTime = helpers.ConvertTimeToUTC(ctx, startTimeStr)
+	}
+	
+	return services.XxxFilters{
+		Name:     name,
+		OrderBy:  orderBy,
+		StartTime: startTime,
+	}
+}
+
 // Index 列表
 // @Summary      获取列表
 // @Description  分页获取列表
@@ -406,37 +476,163 @@ func NewXxxController() *XxxController {
 // @Accept       json
 // @Produce      json
 // @Param        page       query     int     false  "页码" default(1)
-// @Param        page_size  query     int     false  "每页数量" default(20)
+// @Param        page_size  query     int     false  "每页数量" default(10)
+// @Param        name       query     string  false  "名称（模糊搜索）"
+// @Param        order_by   query     string  false  "排序（格式：字段:asc/desc）"
 // @Success      200        {object}  map[string]any
+// @Failure      400        {object}  map[string]any "参数错误"
+// @Failure      401        {object}  map[string]any "未登录"
+// @Failure      403        {object}  map[string]any "无权限"
+// @Failure      500        {object}  map[string]any "服务器错误"
 // @Router       /api/admin/xxx [get]
 // @Security     BearerAuth
 func (r *XxxController) Index(ctx http.Context) http.Response {
-	page := cast.ToInt(ctx.Request().Query("page", "1"))
-	pageSize := cast.ToInt(ctx.Request().Query("page_size", "20"))
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 	
-	filters := services.XxxFilters{
-		OrderBy: ctx.Request().Query("order_by", ""),
-	}
+	filters := r.buildFilters(ctx)
 	
 	list, total, err := r.xxxService.GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 	
+	// 转换数据格式
+	listData := make([]http.Json, len(list))
+	for i, item := range list {
+		listData[i] = http.Json{
+			"id":         item.ID,
+			"name":       item.Name,
+			"created_at": item.CreatedAt,
+			// ... 其他字段
+		}
+	}
+	
 	return response.Success(ctx, http.Json{
-		"list":      list,
+		"list":      listData,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
 	})
+}
+
+// Show 详情
+// @Summary      获取详情
+// @Description  根据ID获取详情
+// @Tags         模块管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int  true  "ID"
+// @Success      200  {object} map[string]any
+// @Router       /api/admin/xxx/{id} [get]
+// @Security     BearerAuth
+func (r *XxxController) Show(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+	
+	item, err := r.xxxService.GetByID(id)
+	if err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrXxxNotFound.Code)
+	}
+	
+	return response.Success(ctx, http.Json{
+		"id":         item.ID,
+		"name":       item.Name,
+		"created_at": item.CreatedAt,
+		// ... 其他字段
+	})
+}
+
+// Store 创建
+// @Summary      创建
+// @Description  创建新记录
+// @Tags         模块管理
+// @Accept       json
+// @Produce      json
+// @Param        data  body     adminrequests.XxxCreate  true  "创建数据"
+// @Success      200   {object} map[string]any
+// @Router       /api/admin/xxx [post]
+// @Security     BearerAuth
+func (r *XxxController) Store(ctx http.Context) http.Response {
+	var req adminrequests.XxxCreate
+	if err := ctx.Request().Bind(&req); err != nil {
+		return response.Error(ctx, http.StatusBadRequest, "invalid_fields")
+	}
+	
+	data := map[string]any{
+		"name":   req.Name,
+		"status": req.Status,
+	}
+	
+	item, err := r.xxxService.Create(data)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+	
+	return response.Success(ctx, http.Json{
+		"id": item.ID,
+	})
+}
+
+// Update 更新
+// @Summary      更新
+// @Description  更新记录
+// @Tags         模块管理
+// @Accept       json
+// @Produce      json
+// @Param        id    path     int                      true  "ID"
+// @Param        data  body     adminrequests.XxxUpdate  true  "更新数据"
+// @Success      200   {object} map[string]any
+// @Router       /api/admin/xxx/{id} [put]
+// @Security     BearerAuth
+func (r *XxxController) Update(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+	
+	var req adminrequests.XxxUpdate
+	if err := ctx.Request().Bind(&req); err != nil {
+		return response.Error(ctx, http.StatusBadRequest, "invalid_fields")
+	}
+	
+	data := map[string]any{
+		"name":   req.Name,
+		"status": req.Status,
+	}
+	
+	if err := r.xxxService.Update(id, data); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+	
+	return response.Success(ctx, http.Json{})
+}
+
+// Destroy 删除
+// @Summary      删除
+// @Description  删除记录
+// @Tags         模块管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int  true  "ID"
+// @Success      200  {object} map[string]any
+// @Router       /api/admin/xxx/{id} [delete]
+// @Security     BearerAuth
+func (r *XxxController) Destroy(ctx http.Context) http.Response {
+	id := cast.ToUint(ctx.Request().Route("id"))
+	
+	if err := r.xxxService.Delete(id); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+	
+	return response.Success(ctx, http.Json{})
 }
 ```
 
 **注意事项**:
 - 每个方法必须添加完整的 Swagger 注解
 - 使用 `response.Success` 和 `response.Error` 返回响应
-- 使用 `cast` 进行类型转换
+- 使用 `helpers.GetIntQuery` 获取查询参数
+- 使用 `buildFilters` 方法构建查询过滤器（列表和导出共用）
 - 时间字段使用 `helpers.ConvertTimeToUTC` 转换
+- 错误处理使用 `apperrors` 错误码
+- 数据转换在控制器层完成，服务层返回模型对象
 
 ### 步骤 6: 注册路由
 
@@ -444,16 +640,35 @@ func (r *XxxController) Index(ctx http.Context) http.Response {
 
 **添加代码**:
 ```go
-// 在 Admin() 函数中添加控制器实例
-xxxController := admin.NewXxxController()
-
-// 在需要认证、权限验证的路由组中添加
-router.Resource("xxx", xxxController)
+func Admin() {
+	// ... 其他控制器实例
+	xxxController := admin.NewXxxController()
+	
+	// Admin 路由组：统一前缀和域名限制
+	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
+		
+		// 需要认证、多语言、权限验证和操作日志的路由
+		router.Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
+			
+			// 使用 Resource 自动注册 RESTful 路由
+			router.Resource("xxx", xxxController)
+			
+			// 自定义路由（如导出）
+			router.Post("xxx/export", xxxController.Export)
+		})
+	})
+}
 ```
 
 **注意事项**:
-- `router.Resource` 会自动注册 RESTful 路由
+- `router.Resource` 会自动注册以下 RESTful 路由：
+  - `GET /api/admin/xxx` - Index (列表)
+  - `GET /api/admin/xxx/{id}` - Show (详情)
+  - `POST /api/admin/xxx` - Store (创建)
+  - `PUT /api/admin/xxx/{id}` - Update (更新)
+  - `DELETE /api/admin/xxx/{id}` - Destroy (删除)
 - 自定义路由需要单独添加
+- 路由组使用中间件链：`Lang() -> Jwt() -> Permission() -> OperationLog()`
 
 ### 步骤 7: 运行迁移
 
@@ -586,14 +801,18 @@ import { usePermission } from '../../composables/usePermission'
 
 ### 后端检查
 - [ ] 迁移文件已创建并包含所有字段
-- [ ] 模型定义正确，包含必要的标签
-- [ ] 服务层实现了所有必需的方法
-- [ ] 请求验证规则完整
-- [ ] 控制器方法都有 Swagger 注解
-- [ ] 路由已正确注册
-- [ ] 错误处理统一使用 `response.Error`
+- [ ] 模型定义正确，包含必要的标签（gorm 和 json）
+- [ ] 服务层接口和实现分离，实现了所有必需的方法
+- [ ] 服务层使用 `buildQuery` 方法构建查询条件
+- [ ] 请求验证规则完整，包含 `PrepareForValidation` 方法
+- [ ] 控制器方法都有完整的 Swagger 注解
+- [ ] 控制器使用 `buildFilters` 方法构建查询过滤器
+- [ ] 路由已正确注册在 `routes/admin.go` 中
+- [ ] 错误处理统一使用 `response.Error` 和 `apperrors`
 - [ ] 时间字段使用 `helpers.ConvertTimeToUTC` 转换
 - [ ] 排序使用 `helpers.ApplySort` 处理
+- [ ] 查询参数使用 `helpers.GetIntQuery` 获取
+- [ ] 支持从查询参数或请求体读取参数（兼容 GET 和 POST）
 
 ### 前端检查
 - [ ] API 客户端已创建
@@ -638,8 +857,14 @@ facades.Orm().Query().Delete(&model)
 
 ### 4. 关联查询
 ```go
-// 预加载关联
-query = query.Preload("RelationName")
+// 预加载关联（在服务层）
+query = query.With("RelationName")
+
+// 在控制器中指定是否加载关联
+item, err := r.xxxService.GetByID(id, true, true) // withDepartment, withRoles
+
+// 批量加载关联（列表使用）
+err = r.xxxService.LoadRelationsForList(list)
 ```
 
 ### 5. 权限控制

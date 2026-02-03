@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"strings"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -198,6 +199,16 @@ func (c *CodeGeneratorController) GenerateWithAI(ctx http.Context) http.Response
 
 	config, err := c.codeGeneratorService.GenerateWithAI(context.Background(), req.Description)
 	if err != nil {
+		// 检查是否是 JSON 解析错误
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "parse AI response") || strings.Contains(errMsg, "parse") || strings.Contains(errMsg, "JSON") {
+			// JSON 解析错误返回 400，并返回友好的错误信息
+			return ctx.Response().Json(400, http.Json{
+				"code":       400,
+				"message":    errMsg,
+				"error_code": "ai_response_parse_error",
+			})
+		}
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
 		}
