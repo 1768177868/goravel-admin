@@ -97,7 +97,7 @@ func (s *AIServiceImpl) Complete(ctx context.Context, prompt string, systemPromp
 
 	// 如果 timeout 为 0 或太小，设置默认值
 	if timeout <= 0 {
-		timeout = 120 // 默认 120 秒
+		timeout = 300 // 默认 300 秒（5分钟）
 	}
 
 	// 构建请求 URL

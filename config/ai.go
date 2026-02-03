@@ -19,7 +19,7 @@ func init() {
 		"max_tokens": config.Env("AI_MAX_TOKENS", 2048),
 		// Temperature (0.0-2.0)
 		"temperature": config.Env("AI_TEMPERATURE", 0.7),
-		// Timeout in seconds
-		"timeout": config.Env("AI_TIMEOUT", 120),
+		// Timeout in seconds (default 300 seconds = 5 minutes)
+		"timeout": config.Env("AI_TIMEOUT", 300),
 	})
 }

@@ -50,6 +50,7 @@ export function generateWithAI(data) {
   return request({
     url: '/code-generator/generate-with-ai',
     method: 'post',
-    data
+    data,
+    timeout: 300000 // 5 分钟（300 秒）
   })
 }
