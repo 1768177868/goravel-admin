@@ -27,6 +27,8 @@
     "status": "状态",
     "enabled": "启用",
     "disabled": "禁用",
+    "yes": "是",
+    "no": "否",
     "success": "成功",
     "failed": "失败",
     "created_at": "创建时间",

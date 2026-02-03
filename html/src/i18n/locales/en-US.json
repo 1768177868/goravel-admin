@@ -21,6 +21,8 @@
     "status": "Status",
     "enabled": "Enabled",
     "disabled": "Disabled",
+    "yes": "Yes",
+    "no": "No",
     "success": "Success",
     "failed": "Failed",
     "created_at": "Created At",
