@@ -27,14 +27,6 @@ func init() {
 				// "tries": 3,        // 最大重试次数（可选，默认由队列工作进程设置）
 				// "retry_after": 90, // 重试延迟时间（秒，可选）
 			},
-			"machinery": map[string]any{
-				"driver":     "machinery",
-				"connection": "default",
-				"queue":      "default",
-				"concurrent": 1,
-				// "tries": 3,        // 最大重试次数（可选，默认由队列工作进程设置）
-				// "retry_after": 90, // 重试延迟时间（秒，可选）
-			},
 			"redis1": map[string]any{
 				"driver":     "custom",
 				"connection": "default",

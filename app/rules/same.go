@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/validation"
 )
 
@@ -22,7 +24,7 @@ func (receiver *Same) Signature() string {
 }
 
 // Passes Determine if the validation rule passes.
-func (receiver *Same) Passes(data validation.Data, val any, options ...any) bool {
+func (receiver *Same) Passes(_ context.Context, data validation.Data, val any, options ...any) bool {
 	if len(options) == 0 {
 		return false
 	}
@@ -52,8 +54,8 @@ func (receiver *Same) Passes(data validation.Data, val any, options ...any) bool
 	return valStr == compareStr
 }
 
-// Message Get the validation error message.
-func (receiver *Same) Message() string {
+// Message Get the validation error message with context.
+func (receiver *Same) Message(ctx context.Context) string {
 	return "The :attribute must match :other."
 }
 

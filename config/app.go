@@ -30,6 +30,7 @@ import (
 	"github.com/goravel/framework/http"
 	"github.com/goravel/framework/log"
 	"github.com/goravel/framework/mail"
+	"github.com/goravel/framework/process"
 	"github.com/goravel/framework/queue"
 	"github.com/goravel/framework/route"
 	"github.com/goravel/framework/schedule"
@@ -38,6 +39,7 @@ import (
 	"github.com/goravel/framework/testing"
 	"github.com/goravel/framework/translation"
 	"github.com/goravel/framework/validation"
+	"github.com/goravel/framework/view"
 )
 
 // Boot Start all init methods of the current folder to bootstrap all config.
@@ -116,6 +118,8 @@ func init() {
 			&session.ServiceProvider{},
 			&translation.ServiceProvider{},
 			&testing.ServiceProvider{},
+			&process.ServiceProvider{},
+			&view.ServiceProvider{},
 			&providers.AppServiceProvider{},
 			&providers.AuthServiceProvider{},
 			&providers.RouteServiceProvider{},
