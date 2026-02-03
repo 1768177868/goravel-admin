@@ -4,8 +4,6 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	httpmiddleware "github.com/goravel/framework/http/middleware"
 
-	// sessionmiddleware "github.com/goravel/framework/session/middleware" // 已禁用
-
 	appmiddleware "goravel/app/http/middleware"
 )
 

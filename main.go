@@ -7,8 +7,8 @@ import (
 	"syscall"
 
 	"github.com/goravel/framework/contracts/queue"
-	"github.com/goravel/framework/facades"
 
+	"goravel/app/facades"
 	"goravel/app/services"
 	"goravel/bootstrap"
 )
@@ -33,23 +33,27 @@ import (
 // @name                       Authorization
 // @description                JWT 认证，格式：Bearer {token}
 
-// runApplication 启动应用程序的核心逻辑
-func runApplication() {
-	// This bootstraps the framework and gets it ready for use.
-	bootstrap.Boot()
+func main() {
+	// Bootstrap the application
+	app := bootstrap.Boot()
+
+	// Start the application (this will start HTTP server, schedule, etc. via service provider runners)
+	app.Start()
 
 	// Create a channel to listen for OS signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start http server by facades.Route().
-	go func() {
-		if err := facades.Route().Run(); err != nil {
-			facades.Log().Errorf("Route run error: %v", err)
-		}
-	}()
+	// Start queue workers manually (as they are not handled by service provider runners)
+	startQueueWorkers()
 
-	// Start queue server by facades.Queue().
+	// Listen for the OS signal
+	<-quit
+	shutdownApplication()
+}
+
+// startQueueWorkers 启动队列工作进程
+func startQueueWorkers() {
 	// 从配置文件读取重试次数和并发数（支持环境变量）
 	// 重试次数是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
 	tries := facades.Config().GetInt("queue.tries", 5)
@@ -96,15 +100,6 @@ func runApplication() {
 			facades.Log().Errorf("长时间任务队列工作进程运行错误: %v", err)
 		}
 	}()
-
-	// Listen for the OS signal
-	go func() {
-		<-quit
-		shutdownApplication()
-		os.Exit(0)
-	}()
-
-	select {}
 }
 
 // shutdownApplication 优雅关闭应用程序
@@ -116,8 +111,4 @@ func shutdownApplication() {
 	if err := worker.Shutdown(); err != nil {
 		facades.Log().Errorf("Queue Shutdown error: %v", err)
 	}
-}
-
-func main() {
-	runApplication()
 }

@@ -3,8 +3,8 @@ package providers
 import (
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/contracts/queue"
-	"github.com/goravel/framework/facades"
 
+	"goravel/app/facades"
 	"goravel/app/jobs"
 )
 

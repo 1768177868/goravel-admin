@@ -1,10 +1,7 @@
 package providers
 
 import (
-	"goravel/database"
-
 	"github.com/goravel/framework/contracts/foundation"
-	"github.com/goravel/framework/facades"
 )
 
 type DatabaseServiceProvider struct {
@@ -15,7 +12,5 @@ func (receiver *DatabaseServiceProvider) Register(app foundation.Application) {
 }
 
 func (receiver *DatabaseServiceProvider) Boot(app foundation.Application) {
-	kernel := database.Kernel{}
-	facades.Schema().Register(kernel.Migrations())
-	facades.Seeder().Register(kernel.Seeders())
+	// Migrations and seeders are now registered in bootstrap/app.go via WithMigrations and WithSeeders
 }

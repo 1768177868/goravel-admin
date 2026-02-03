@@ -2,9 +2,9 @@ package providers
 
 import (
 	"github.com/goravel/framework/contracts/foundation"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/console"
+	"goravel/app/facades"
 )
 
 type ConsoleServiceProvider struct {

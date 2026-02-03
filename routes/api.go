@@ -2,9 +2,9 @@ package routes
 
 import (
 	"github.com/goravel/framework/contracts/route"
-	"github.com/goravel/framework/facades"
 	httpmiddleware "github.com/goravel/framework/http/middleware"
 
+	"goravel/app/facades"
 	"goravel/app/http/controllers/api"
 	"goravel/app/http/middleware"
 )

@@ -3,9 +3,9 @@ package console
 import (
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/schedule"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/console/commands"
+	"goravel/app/facades"
 )
 
 type Kernel struct {
