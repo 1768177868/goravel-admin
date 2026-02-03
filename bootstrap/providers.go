@@ -2,13 +2,6 @@ package bootstrap
 
 import (
 	"github.com/goravel/cos"
-	"github.com/goravel/gin"
-	"github.com/goravel/minio"
-	"github.com/goravel/mysql"
-	"github.com/goravel/oss"
-	"github.com/goravel/postgres"
-	"github.com/goravel/redis"
-	"github.com/goravel/s3"
 	"github.com/goravel/framework/auth"
 	"github.com/goravel/framework/cache"
 	"github.com/goravel/framework/console"
@@ -30,7 +23,13 @@ import (
 	"github.com/goravel/framework/translation"
 	"github.com/goravel/framework/validation"
 	"github.com/goravel/framework/view"
-
+	"github.com/goravel/gin"
+	"github.com/goravel/minio"
+	"github.com/goravel/mysql"
+	"github.com/goravel/oss"
+	"github.com/goravel/postgres"
+	"github.com/goravel/redis"
+	"github.com/goravel/s3"
 	"goravel/app/providers"
 )
 
