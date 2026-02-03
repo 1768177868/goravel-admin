@@ -50,3 +50,24 @@ query.Find(&users)
 ```
 
 当前仅做代码预留，无需改表或改业务逻辑；等需要租户时再按上述步骤接入即可。
+
+## 使用 v1.17 的 WithoutGlobalScopes
+
+Goravel v1.17 引入了 `WithoutGlobalScopes` 功能，可以用于排除租户过滤：
+
+```go
+// 排除所有全局作用域（包括租户作用域）
+facades.Orm().Query().Model(&models.User{}).WithoutGlobalScopes().Find(&users)
+
+// 只排除名为 "tenant" 的全局作用域
+facades.Orm().Query().Model(&models.User{}).WithoutGlobalScopes("tenant").Find(&users)
+
+// 使用 TenantQueryService 的便捷方法
+tenantQuery := services.NewTenantQueryService(ctx)
+tenantQuery.QueryModelWithoutTenant(&models.User{}).Find(&users)  // 排除租户过滤
+tenantQuery.QueryModelWithoutScopes(&models.User{}).Find(&users)   // 排除所有全局作用域
+```
+
+**注意**：由于 Goravel 的 GlobalScopes 函数签名无法直接访问 HTTP Context，当前实现中租户过滤是通过 `ScopeTenant` 手动添加的。如果将来迁移到使用模型的 `GlobalScopes()` 方法，`WithoutGlobalScopes("tenant")` 会自动生效。
+
+详见：[多租户迁移到 GlobalScopes 指南](./TENANT_GLOBALSCOPE_MIGRATION.md)
