@@ -46,6 +46,12 @@ password: demo123
 </p>
 
 <p align="center">
+  <img src="./images/ai.png" alt="AI code generation" width="800">
+  <p align="center">AI code generation</p>
+</p>
+
+
+<p align="center">
   <img src="./images/pages.png" alt="cloudflare" width="800">
   <p align="center">cloudflare</p>
 </p>
@@ -310,8 +316,6 @@ upx -9 main
 | [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | Database sharding guide (creating, using, and modifying sharding tables) |
 | [BUILD.md](./docs/BUILD.md) | Build and deployment |
 | [TESTING.md](./docs/TESTING.md) | Testing guide (unit & integration) |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |
-| [CHANGELOG.md](./CHANGELOG.md) | Version history |
 | [Frontend Guide](./html/DEVELOPMENT.md) | Frontend development guide |
 
 ### Goravel Framework

@@ -47,6 +47,11 @@ git clone https://github.com/1768177868/goravel-admin.git
 </p>
 
 <p align="center">
+  <img src="./images/ai.png" alt="系统监控" width="800">
+  <p align="center">AI代码生成器</p>
+</p>
+
+<p align="center">
   <img src="./images/pages.png" alt="cloudflare" width="800">
   <p align="center">cloudflare</p>
 </p>
@@ -309,8 +314,6 @@ upx -9 main
 | [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | 数据库分表指南（创建、使用和修改分表） |
 | [BUILD.md](./docs/BUILD.md) | 编译打包与部署 |
 | [TESTING.md](./docs/TESTING.md) | 测试指南（单元测试 & 集成测试） |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
-| [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
 | [前端开发指南](./html/DEVELOPMENT.md) | 前端开发文档 |
 
 ### Goravel 框架文档
