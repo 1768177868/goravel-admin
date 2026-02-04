@@ -21,7 +21,7 @@
     <div class="notification-popover__header">
       <span>{{ $t('notification.center') }}</span>
       <div class="header-actions">
-        <el-button size="small" text @click="handleMarkAll" :disabled="notificationStore.unreadCount === 0">
+        <el-button size="small" text @click="handleMarkAll" :disabled="currentUnreadCount === 0">
           {{ $t('notification.mark_all') }}
         </el-button>
         <el-button size="small" text @click="goList">
@@ -30,42 +30,122 @@
       </div>
     </div>
 
-    <el-scrollbar
-      class="notification-list"
-      v-loading="notificationStore.loading"
-      height="360px"
-    >
-      <div v-if="notificationStore.items.length === 0" class="notification-empty">
-        <el-icon><Bell /></el-icon>
-        <p>{{ $t('notification.empty') }}</p>
-      </div>
-      <div
-        v-for="item in notificationStore.items"
-        :key="item.id"
-        class="notification-item"
-        :class="{ unread: !item.is_read }"
-      >
-        <div class="notification-item__head">
-          <span class="notification-type">{{ typeLabel(item.type) }}</span>
-          <span class="notification-time">{{ formatTime(item.created_at) }}</span>
-        </div>
-        <div class="notification-item__title">{{ item.title }}</div>
-        <div class="notification-item__content markdown-content" v-html="renderMarkdown(item.content)"></div>
-        <div class="notification-item__actions">
-          <el-tag v-if="!item.is_read" size="small" type="danger" effect="plain">
-            {{ $t('notification.unread') }}
-          </el-tag>
-          <el-button
-            v-if="!item.is_read"
-            size="small"
-            text
-            @click="notificationStore.markAsRead(item.id)"
+    <el-tabs v-model="activeTab" class="notification-tabs">
+      <el-tab-pane :label="$t('notification.types.announcement')" name="announcement">
+        <el-scrollbar
+          class="notification-list"
+          v-loading="notificationStore.loading"
+          height="360px"
+        >
+          <div v-if="filteredItems.announcement.length === 0" class="notification-empty">
+            <el-icon><Bell /></el-icon>
+            <p>{{ $t('notification.empty') }}</p>
+          </div>
+          <div
+            v-for="item in filteredItems.announcement"
+            :key="item.id"
+            class="notification-item"
+            :class="{ unread: !item.is_read }"
           >
-            {{ $t('notification.mark_read') }}
-          </el-button>
-        </div>
-      </div>
-    </el-scrollbar>
+            <div class="notification-item__head">
+              <span class="notification-type">{{ typeLabel(item.type) }}</span>
+              <span class="notification-time">{{ formatTime(item.created_at) }}</span>
+            </div>
+            <div class="notification-item__title">{{ item.title }}</div>
+            <div class="notification-item__content markdown-content" v-html="renderMarkdown(item.content)"></div>
+            <div class="notification-item__actions">
+              <el-tag v-if="!item.is_read" size="small" type="danger" effect="plain">
+                {{ $t('notification.unread') }}
+              </el-tag>
+              <el-button
+                v-if="!item.is_read"
+                size="small"
+                text
+                @click="notificationStore.markAsRead(item.id)"
+              >
+                {{ $t('notification.mark_read') }}
+              </el-button>
+            </div>
+          </div>
+        </el-scrollbar>
+      </el-tab-pane>
+      <el-tab-pane :label="$t('notification.types.notice')" name="notice">
+        <el-scrollbar
+          class="notification-list"
+          v-loading="notificationStore.loading"
+          height="360px"
+        >
+          <div v-if="filteredItems.notice.length === 0" class="notification-empty">
+            <el-icon><Bell /></el-icon>
+            <p>{{ $t('notification.empty') }}</p>
+          </div>
+          <div
+            v-for="item in filteredItems.notice"
+            :key="item.id"
+            class="notification-item"
+            :class="{ unread: !item.is_read }"
+          >
+            <div class="notification-item__head">
+              <span class="notification-type">{{ typeLabel(item.type) }}</span>
+              <span class="notification-time">{{ formatTime(item.created_at) }}</span>
+            </div>
+            <div class="notification-item__title">{{ item.title }}</div>
+            <div class="notification-item__content markdown-content" v-html="renderMarkdown(item.content)"></div>
+            <div class="notification-item__actions">
+              <el-tag v-if="!item.is_read" size="small" type="danger" effect="plain">
+                {{ $t('notification.unread') }}
+              </el-tag>
+              <el-button
+                v-if="!item.is_read"
+                size="small"
+                text
+                @click="notificationStore.markAsRead(item.id)"
+              >
+                {{ $t('notification.mark_read') }}
+              </el-button>
+            </div>
+          </div>
+        </el-scrollbar>
+      </el-tab-pane>
+      <el-tab-pane :label="$t('notification.types.message')" name="message">
+        <el-scrollbar
+          class="notification-list"
+          v-loading="notificationStore.loading"
+          height="360px"
+        >
+          <div v-if="filteredItems.message.length === 0" class="notification-empty">
+            <el-icon><Bell /></el-icon>
+            <p>{{ $t('notification.empty') }}</p>
+          </div>
+          <div
+            v-for="item in filteredItems.message"
+            :key="item.id"
+            class="notification-item"
+            :class="{ unread: !item.is_read }"
+          >
+            <div class="notification-item__head">
+              <span class="notification-type">{{ typeLabel(item.type) }}</span>
+              <span class="notification-time">{{ formatTime(item.created_at) }}</span>
+            </div>
+            <div class="notification-item__title">{{ item.title }}</div>
+            <div class="notification-item__content markdown-content" v-html="renderMarkdown(item.content)"></div>
+            <div class="notification-item__actions">
+              <el-tag v-if="!item.is_read" size="small" type="danger" effect="plain">
+                {{ $t('notification.unread') }}
+              </el-tag>
+              <el-button
+                v-if="!item.is_read"
+                size="small"
+                text
+                @click="notificationStore.markAsRead(item.id)"
+              >
+                {{ $t('notification.mark_read') }}
+              </el-button>
+            </div>
+          </div>
+        </el-scrollbar>
+      </el-tab-pane>
+    </el-tabs>
   </el-popover>
 </template>
 
@@ -86,11 +166,28 @@ const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
 const popoverVisible = ref(false)
+const activeTab = ref('announcement')
 const badgeValue = computed(() => {
   const count = notificationStore.unreadCount || 0
   return count > 99 ? '99+' : count
 })
 const { t, locale } = useI18n()
+
+// 按类型过滤通知
+const filteredItems = computed(() => {
+  const items = notificationStore.items || []
+  return {
+    announcement: items.filter(item => item.type === 'announcement'),
+    notice: items.filter(item => item.type === 'notice'),
+    message: items.filter(item => item.type === 'message')
+  }
+})
+
+// 当前 tab 的未读数量
+const currentUnreadCount = computed(() => {
+  const items = filteredItems.value[activeTab.value] || []
+  return items.filter(item => !item.is_read).length
+})
 
 const typeLabel = (type) => {
   if (type === 'message') {
@@ -103,7 +200,14 @@ const typeLabel = (type) => {
 }
 
 const handleMarkAll = () => {
-  notificationStore.markAllRead()
+  // 只标记当前 tab 的未读通知为已读
+  const items = filteredItems.value[activeTab.value] || []
+  const unreadItems = items.filter(item => !item.is_read)
+  if (unreadItems.length === 0) {
+    return
+  }
+  // 批量标记当前 tab 的未读通知
+  Promise.all(unreadItems.map(item => notificationStore.markAsRead(item.id)))
 }
 
 const goList = () => {
@@ -126,7 +230,7 @@ const renderMarkdown = (content) => {
 }
 
 onMounted(() => {
-  notificationStore.refresh({ limit: 7 })
+  notificationStore.refresh({ limit: 20 })
   notificationStore.connect()
 })
 
@@ -173,6 +277,27 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   margin-bottom: 8px;
   font-weight: 600;
+}
+
+.notification-tabs {
+  margin-top: 8px;
+}
+
+.notification-tabs :deep(.el-tabs__header) {
+  margin: 0 0 8px 0;
+}
+
+.notification-tabs :deep(.el-tabs__nav-wrap) {
+  padding: 0;
+}
+
+.notification-tabs :deep(.el-tabs__item) {
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.notification-tabs :deep(.el-tabs__content) {
+  padding: 0;
 }
 
 .notification-list {
@@ -303,6 +428,18 @@ onBeforeUnmount(() => {
 
 :deep(.notification-popover .notification-item__content) {
   color: var(--el-text-color-regular, #cfd3dc);
+}
+
+:deep(.notification-popover .notification-tabs) {
+  color: var(--el-text-color-primary, #e5eaf3);
+}
+
+:deep(.notification-popover .el-tabs__item) {
+  color: var(--el-text-color-regular, #cfd3dc);
+}
+
+:deep(.notification-popover .el-tabs__item.is-active) {
+  color: var(--el-color-primary, #409eff);
 }
 </style>
 

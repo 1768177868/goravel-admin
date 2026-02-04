@@ -200,8 +200,9 @@ export const useNotificationStore = defineStore('notification', {
           // 播放提示音（带防抖，1秒内只播放一次）
           this.playNotificationSoundWithDebounce()
         }
-        if (this.items.length > 7) {
-          this.items = this.items.slice(0, 7)
+        // 增加到 20 条，以支持三个 tab 分别显示
+        if (this.items.length > 20) {
+          this.items = this.items.slice(0, 20)
         }
       } else {
         this.items = this.items.map(item => item.id === notification.id ? notification : item)
