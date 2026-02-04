@@ -510,19 +510,19 @@ const handleLogin = async () => {
   border-radius: 6px;
   background: var(--el-color-primary);
   border: none;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
   transition: all 0.3s ease;
   margin-top: 8px;
 }
 
 .login-button:hover {
-  background: #66b1ff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+  background: var(--el-color-primary-light-3);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--el-color-primary) 40%, transparent);
 }
 
 .login-button:active {
-  background: #3a8ee6;
-  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
+  background: var(--el-color-primary-dark-2);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
 }
 
 .captcha-row {
