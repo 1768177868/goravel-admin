@@ -1,94 +1,122 @@
 <template>
-  <div class="login-container">
-    <div class="login-background">
-    </div>
-    <div class="login-box">
-      <div class="login-header">
-        <div class="login-logo">
-          <div class="logo-icon">
-            <el-icon :size="32"><Lock /></el-icon>
-          </div>
-          <h2>{{ $t('login.title') }}</h2>
+  <div class="login-page">
+
+    <div class="login-page__left">
+      <div class="login-page__brand">
+        <div class="brand-logo">
+          <el-icon :size="40"><Lock /></el-icon>
         </div>
-        <LanguageSwitch class="login-language-switch" />
+        <h1 class="brand-title">{{ $t('login.title') }}</h1>
+        <p class="brand-desc">{{ $t('login.page_description') }}</p>
       </div>
-      <el-form
-        ref="loginFormRef"
-        :model="loginForm"
-        :rules="loginRules"
-        class="login-form"
-      >
-        <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
-            :placeholder="$t('login.username')"
-            size="large"
-            prefix-icon="User"
-            class="login-input"
+      <div class="login-page__deco">
+        <span class="deco-circle deco-circle--1" />
+        <span class="deco-circle deco-circle--2" />
+        <span class="deco-circle deco-circle--3" />
+        <span class="deco-line deco-line--1" />
+        <span class="deco-line deco-line--2" />
+      </div>
+    </div>
+    <!-- 右侧：表单区 -->
+    <div class="login-page__right">
+      <div class="login-page__toolbar">
+        <div class="login-toolbar__theme">
+          <button
+            v-for="t in themeColorOptions"
+            :key="t.key"
+            type="button"
+            class="login-theme-swatch"
+            :class="{ active: appStore.themeColor === t.key }"
+            :style="{ backgroundColor: t.color }"
+            :title="t.key"
+            @click="appStore.setThemeColor(t.key)"
           />
-        </el-form-item>
-        <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            :placeholder="$t('login.password')"
-            size="large"
-            prefix-icon="Lock"
-            class="login-input"
-            show-password
-            @keyup.enter="handleLogin"
-          />
-        </el-form-item>
-        <el-form-item v-if="needGoogleCode" prop="google_code">
-          <el-input
-            v-model="loginForm.google_code"
-            :placeholder="$t('login.google_code_placeholder')"
-            size="large"
-            class="login-input"
-            maxlength="6"
-            @keyup.enter="handleLogin"
-          />
-        </el-form-item>
-        <el-form-item v-if="captchaInfo.shouldShow && !needGoogleCode" prop="captcha_answer">
-          <div class="captcha-row">
-            <img
-              v-if="captchaInfo.image"
-              :src="captchaInfo.image"
-              class="captcha-image"
-              :alt="$t('login.captcha_alt')"
-              @click.prevent="fetchCaptcha"
-            />
-            <el-button
-              class="captcha-refresh"
-              type="primary"
-              size="small"
-              text
-              @click.prevent="fetchCaptcha"
-            >
-              <el-icon class="refresh-icon"><Refresh /></el-icon>
-              <span>{{ $t('login.refresh_captcha') }}</span>
-            </el-button>
-          </div>
-          <el-input
-            v-model="loginForm.captcha_answer"
-            :placeholder="$t('login.captcha_placeholder')"
-            size="large"
-            class="login-input"
-            @keyup.enter="handleLogin"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            size="large"
-            class="login-button"
-            :loading="loading"
-            @click="handleLogin"
+        </div>
+        <DarkModeSwitch class="login-toolbar-dark" />
+        <LanguageSwitch class="login-toolbar-switch" />
+      </div>
+      <div class="login-page__form-wrap">
+        <div class="login-form-card">
+          <h2 class="login-form-title">{{ $t('login.login') }}</h2>
+          <el-form
+            ref="loginFormRef"
+            :model="loginForm"
+            :rules="loginRules"
+            class="login-form"
           >
-            {{ $t('login.login') }}
-          </el-button>
-        </el-form-item>
-      </el-form>
+            <el-form-item prop="username">
+              <el-input
+                v-model="loginForm.username"
+                :placeholder="$t('login.username')"
+                size="large"
+                prefix-icon="User"
+                class="login-input"
+              />
+            </el-form-item>
+            <el-form-item prop="password">
+              <el-input
+                v-model="loginForm.password"
+                type="password"
+                :placeholder="$t('login.password')"
+                size="large"
+                prefix-icon="Lock"
+                class="login-input"
+                show-password
+                @keyup.enter="handleLogin"
+              />
+            </el-form-item>
+            <el-form-item v-if="needGoogleCode" prop="google_code">
+              <el-input
+                v-model="loginForm.google_code"
+                :placeholder="$t('login.google_code_placeholder')"
+                size="large"
+                class="login-input"
+                maxlength="6"
+                @keyup.enter="handleLogin"
+              />
+            </el-form-item>
+            <el-form-item v-if="captchaInfo.shouldShow && !needGoogleCode" prop="captcha_answer">
+              <div class="captcha-row">
+                <img
+                  v-if="captchaInfo.image"
+                  :src="captchaInfo.image"
+                  class="captcha-image"
+                  :alt="$t('login.captcha_alt')"
+                  @click.prevent="fetchCaptcha"
+                />
+                <el-button
+                  class="captcha-refresh"
+                  type="primary"
+                  size="small"
+                  text
+                  @click.prevent="fetchCaptcha"
+                >
+                  <el-icon class="refresh-icon"><Refresh /></el-icon>
+                  <span>{{ $t('login.refresh_captcha') }}</span>
+                </el-button>
+              </div>
+              <el-input
+                v-model="loginForm.captcha_answer"
+                :placeholder="$t('login.captcha_placeholder')"
+                size="large"
+                class="login-input"
+                @keyup.enter="handleLogin"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button
+                type="primary"
+                size="large"
+                class="login-button"
+                :loading="loading"
+                @click="handleLogin"
+              >
+                {{ $t('login.login') }}
+              </el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -101,8 +129,13 @@ import { ElMessage } from 'element-plus'
 import { Lock, Refresh } from '@element-plus/icons-vue'
 import { login, getLoginCaptcha } from '../api/auth'
 import { useUserStore } from '../store/user'
+import { useAppStore, THEME_COLORS } from '../store/app'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
+import DarkModeSwitch from '../components/DarkModeSwitch.vue'
 import { ERROR_CODES } from '../utils/request'
+
+const appStore = useAppStore()
+const themeColorOptions = THEME_COLORS
 import Storage from '../utils/storage'
 
 const router = useRouter()
@@ -302,106 +335,219 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-container {
-  position: relative;
+
+.login-page {
   display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--el-color-primary) 0%, #66b1ff 50%, #79bbff 100%);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
 }
 
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
 
-.login-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.login-page__left {
+  position: relative;
+  width: 52%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: linear-gradient(160deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 50%, #1a1d24 100%);
   overflow: hidden;
-  z-index: 0;
 }
 
-.bg-shape {
+.login-page__brand {
+  position: relative;
+  z-index: 2;
+  max-width: 380px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  color: #fff;
+  margin-bottom: 32px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.brand-logo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.brand-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px;
+  letter-spacing: -0.5px;
+  line-height: 1.25;
+}
+
+.brand-desc {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* 左侧装饰（几何图形） */
+.login-page__deco {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.deco-circle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  animation: float 20s infinite ease-in-out;
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.bg-shape-1 {
-  width: 300px;
-  height: 300px;
-  top: -100px;
-  left: -100px;
-  animation-delay: 0s;
+.deco-circle--1 {
+  width: 400px;
+  height: 400px;
+  top: -120px;
+  right: -120px;
+  animation: decoFloat 18s ease-in-out infinite;
 }
 
-.bg-shape-2 {
-  width: 200px;
-  height: 200px;
-  bottom: -50px;
-  right: -50px;
-  animation-delay: 5s;
+.deco-circle--2 {
+  width: 260px;
+  height: 260px;
+  bottom: 10%;
+  left: -80px;
+  animation: decoFloat 14s ease-in-out infinite reverse;
+  animation-delay: 2s;
 }
 
-.bg-shape-3 {
-  width: 150px;
-  height: 150px;
-  top: 50%;
-  right: 10%;
-  animation-delay: 10s;
+.deco-circle--3 {
+  width: 120px;
+  height: 120px;
+  top: 40%;
+  left: 20%;
+  animation: decoFloat 12s ease-in-out infinite;
+  animation-delay: 4s;
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  33% {
-    transform: translate(30px, -30px) rotate(120deg);
-  }
-  66% {
-    transform: translate(-20px, 20px) rotate(240deg);
-  }
+.deco-line {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  height: 1px;
 }
 
-.login-box {
-  position: relative;
-  z-index: 1;
-  width: 420px;
-  padding: 48px 40px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.12),
-              0 2px 8px rgba(0, 0, 0, 0.08);
-  animation: slideUp 0.6s ease-out;
-  transition: all 0.3s ease;
+.deco-line--1 {
+  width: 60%;
+  top: 25%;
+  left: 0;
+  transform: rotate(-15deg);
 }
 
-.login-box:hover {
-  box-shadow: 0 12px 40px rgba(64, 158, 255, 0.16),
-              0 4px 12px rgba(0, 0, 0, 0.1);
+.deco-line--2 {
+  width: 40%;
+  bottom: 30%;
+  right: 0;
+  transform: rotate(10deg);
 }
 
-@keyframes slideUp {
+@keyframes decoFloat {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, -15px); }
+}
+
+/* ========== 右侧表单区 ========== */
+.login-page__right {
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-color-tertiary, #f5f7fa);
+}
+
+.login-page__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 32px;
+}
+
+.login-toolbar__theme {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-right: 4px;
+}
+
+.login-theme-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.login-theme-swatch:hover {
+  transform: scale(1.12);
+}
+
+.login-theme-swatch.active {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 1px var(--card-bg, #fff);
+}
+
+.login-toolbar-dark :deep(.dark-mode-switch) {
+  padding: 6px 10px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.login-toolbar-switch :deep(.language-switch) {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color-light, #e4e7ed);
+  background: var(--card-bg, #fff);
+  transition: all 0.2s ease;
+}
+
+.login-toolbar-switch :deep(.language-switch):hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+}
+
+.login-page__form-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-form-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 48px 44px;
+  background: var(--card-bg, #fff);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  animation: formSlideIn 0.5s ease-out;
+}
+
+@keyframes formSlideIn {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -409,66 +555,21 @@ const handleLogin = async () => {
   }
 }
 
-.login-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 40px;
-}
-
-.login-logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: var(--el-color-primary);
-  border-radius: 10px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-  transition: all 0.3s ease;
-}
-
-.logo-icon:hover {
-  background: #66b1ff;
-  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
-  transform: translateY(-2px);
-}
-
-.login-header h2 {
-  color: #303133;
-  font-size: 28px;
+.login-form-title {
+  font-size: 24px;
   font-weight: 600;
-  margin: 0;
-  letter-spacing: -0.5px;
-}
-
-.login-language-switch :deep(.language-switch) {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #dcdfe6;
-  background: #ffffff;
-  transition: all 0.3s ease;
-}
-
-.login-language-switch :deep(.language-switch):hover {
-  border-color: var(--el-color-primary);
-  background: #ecf5ff;
-  color: var(--el-color-primary);
+  color: var(--text-color-primary, #303133);
+  margin: 0 0 32px;
+  text-align: center;
+  letter-spacing: -0.3px;
 }
 
 .login-form {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .login-form :deep(.el-form-item) {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .login-form :deep(.el-form-item:last-child) {
@@ -476,11 +577,11 @@ const handleLogin = async () => {
 }
 
 .login-input :deep(.el-input__wrapper) {
-  border-radius: 6px;
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
-  transition: all 0.3s ease;
-  background: #ffffff;
-  padding: 0 12px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--border-color-light, #e4e7ed) inset;
+  transition: all 0.2s ease;
+  background: var(--card-bg, #fff);
+  padding: 0 14px;
 }
 
 .login-input :deep(.el-input__wrapper):hover {
@@ -488,30 +589,30 @@ const handleLogin = async () => {
 }
 
 .login-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 30%, transparent) inset;
 }
 
 .login-input :deep(.el-input__inner) {
-  font-size: 14px;
-  color: #606266;
-  height: 40px;
-  line-height: 40px;
+  font-size: 15px;
+  color: var(--text-color-primary, #303133);
+  height: 44px;
+  line-height: 44px;
 }
 
 .login-input :deep(.el-input__inner::placeholder) {
-  color: #c0c4cc;
+  color: #909399;
 }
 
 .login-button {
   width: 100%;
-  height: 44px;
+  height: 46px;
   font-size: 16px;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--el-color-primary);
   border: none;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   margin-top: 8px;
 }
 
@@ -538,10 +639,9 @@ const handleLogin = async () => {
   width: 170px;
   object-fit: cover;
   cursor: pointer;
-  border-radius: 6px;
-  border: 1px solid #dcdfe6;
-  box-shadow: 0 0 0 1px #dcdfe6;
-  transition: all 0.3s ease;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  transition: all 0.2s ease;
 }
 
 .captcha-image:hover {
@@ -552,7 +652,7 @@ const handleLogin = async () => {
 .captcha-refresh {
   white-space: nowrap;
   padding: 0 8px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -571,21 +671,75 @@ const handleLogin = async () => {
   transform: rotate(180deg);
 }
 
-/* 响应式设计 */
-@media (max-width: 480px) {
-  .login-box {
-    width: 90%;
+/* ========== 响应式：小屏改为上下布局 ========== */
+@media (max-width: 1024px) {
+  .login-page {
+    flex-direction: column;
+  }
+
+  .login-page__left {
+    width: 100%;
+    min-height: 280px;
+    padding: 32px 24px;
+  }
+
+  .login-page__brand {
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .brand-logo {
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 20px;
+  }
+
+  .brand-title {
+    font-size: 26px;
+  }
+
+  .brand-desc {
+    font-size: 14px;
+  }
+
+  .login-page__right {
+    min-height: auto;
+  }
+
+  .login-page__form-wrap {
+    padding: 32px 24px;
+  }
+
+  .login-form-card {
     padding: 36px 28px;
-    margin: 20px;
   }
 
-  .login-header h2 {
-    font-size: 24px;
+  .login-form-title {
+    font-size: 22px;
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page__left {
+    min-height: 220px;
   }
 
-  .logo-icon {
-    width: 40px;
-    height: 40px;
+  .brand-logo {
+    width: 56px;
+    height: 56px;
+  }
+
+  .brand-logo .el-icon {
+    font-size: 28px;
+  }
+
+  .brand-title {
+    font-size: 22px;
+  }
+
+  .login-form-card {
+    padding: 28px 20px;
   }
 }
 </style>

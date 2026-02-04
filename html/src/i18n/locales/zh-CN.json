@@ -77,6 +77,7 @@
   },
   "login": {
     "title": "后台管理系统",
+    "page_description": "安全、高效的后台管理平台",
     "username": "用户名",
     "password": "密码",
     "login": "登录",

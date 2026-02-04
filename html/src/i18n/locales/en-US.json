@@ -72,6 +72,7 @@
   },
   "login": {
     "title": "Admin Management System",
+    "page_description": "Secure and efficient admin platform",
     "username": "Username",
     "password": "Password",
     "login": "Login",
