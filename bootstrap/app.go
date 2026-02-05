@@ -1,10 +1,11 @@
 package bootstrap
 
 import (
-	contractsfoundation "github.com/goravel/framework/contracts/foundation"
-	"github.com/goravel/framework/foundation"
 	"goravel/config"
 	"goravel/routes"
+
+	contractsfoundation "github.com/goravel/framework/contracts/foundation"
+	"github.com/goravel/framework/foundation"
 )
 
 func Boot() contractsfoundation.Application {
@@ -18,6 +19,9 @@ func Boot() contractsfoundation.Application {
 			routes.Pprof()
 		}).
 		WithProviders(Providers).
+		WithRunners(func() []contractsfoundation.Runner {
+			return QueueRunners()
+		}).
 		WithConfig(config.Boot).
 		Create()
 }

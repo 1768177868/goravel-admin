@@ -1,15 +1,11 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/goravel/framework/contracts/queue"
-
 	"goravel/app/facades"
-	"goravel/app/services"
 	"goravel/bootstrap"
 )
 
@@ -37,78 +33,22 @@ func main() {
 	// Bootstrap the application
 	app := bootstrap.Boot()
 
-	// Start the application (this will start HTTP server, schedule, etc. via service provider runners)
+	// Start the application (HTTP server, schedule, queue workers via runners)
 	app.Start()
 
 	// Create a channel to listen for OS signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start queue workers manually (as they are not handled by service provider runners)
-	startQueueWorkers()
-
 	// Listen for the OS signal
 	<-quit
-	shutdownApplication()
+	shutdownApplication(app)
 }
 
-// startQueueWorkers 启动队列工作进程
-func startQueueWorkers() {
-	// 从配置文件读取重试次数和并发数（支持环境变量）
-	// 重试次数是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
-	tries := facades.Config().GetInt("queue.tries", 5)
-	concurrent := facades.Config().GetInt("queue.concurrent", 1)
-
-	// 启动默认队列工作进程（处理常规任务）
-	worker := facades.Queue().Worker(queue.Args{
-		Connection: "",         // 使用默认连接
-		Queue:      "",         // 使用默认队列
-		Concurrent: concurrent, // 并发数（从配置读取，支持环境变量 QUEUE_CONCURRENT）
-		Tries:      tries,      // 最大重试次数上限（从配置读取，支持环境变量 QUEUE_TRIES）
-	})
-	facades.Log().Infof("默认队列工作进程启动 - 队列: default, 并发数: %d, 最大重试次数: %d", concurrent, tries)
-	systemLogService := services.NewSystemLogService()
-	_ = systemLogService.Record(context.Background(), "info", "queue", "默认队列工作进程启动", map[string]any{
-		"queue":      "default",
-		"concurrent": concurrent,
-		"tries":      tries,
-	})
-	go func() {
-		if err := worker.Run(); err != nil {
-			facades.Log().Errorf("默认队列工作进程运行错误: %v", err)
-		}
-	}()
-
-	// 启动长时间任务队列工作进程（处理所有耗时任务：导出、报表生成、批量处理等）
-	// 长时间任务队列使用较小的并发数（1），因为这些任务通常比较耗时且占用资源
-	// 所有耗时任务都应该使用 .OnQueue("long-running") 提交到此队列
-	longRunningConcurrent := facades.Config().GetInt("queue.long_running_concurrent", 1)
-	longRunningWorker := facades.Queue().Worker(queue.Args{
-		Connection: "",                    // 使用默认连接
-		Queue:      "long-running",        // 使用 long-running 队列
-		Concurrent: longRunningConcurrent, // 长时间任务队列并发数（默认1，可通过环境变量 QUEUE_LONG_RUNNING_CONCURRENT 设置）
-		Tries:      tries,                 // 最大重试次数上限
-	})
-	facades.Log().Infof("长时间任务队列工作进程启动 - 队列: long-running, 并发数: %d, 最大重试次数: %d", longRunningConcurrent, tries)
-	_ = systemLogService.Record(context.Background(), "info", "queue", "长时间任务队列工作进程启动", map[string]any{
-		"queue":      "long-running",
-		"concurrent": longRunningConcurrent,
-		"tries":      tries,
-	})
-	go func() {
-		if err := longRunningWorker.Run(); err != nil {
-			facades.Log().Errorf("长时间任务队列工作进程运行错误: %v", err)
-		}
-	}()
-}
-
-// shutdownApplication 优雅关闭应用程序
-func shutdownApplication() {
-	if err := facades.Route().Shutdown(); err != nil {
-		facades.Log().Errorf("Route Shutdown error: %v", err)
-	}
-	worker := facades.Queue().Worker()
-	if err := worker.Shutdown(); err != nil {
-		facades.Log().Errorf("Queue Shutdown error: %v", err)
+// shutdownApplication 优雅关闭应用程序（框架会依次关闭所有 runners：Route、Queue 等）
+func shutdownApplication(app interface{ Shutdown() error }) {
+	if err := app.Shutdown(); err != nil {
+		facades.Log().Errorf("Application Shutdown error: %v", err)
+		os.Exit(1)
 	}
 }

@@ -44,7 +44,7 @@ func Providers() []foundation.ServiceProvider {
 		&route.ServiceProvider{},
 		&schedule.ServiceProvider{},
 		&event.ServiceProvider{},
-		&queue.ServiceProvider{},
+		&queueProvider{queue.ServiceProvider{}},
 		&mail.ServiceProvider{},
 		&auth.ServiceProvider{},
 		&hash.ServiceProvider{},
