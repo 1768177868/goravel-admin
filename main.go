@@ -6,6 +6,8 @@ import (
 	"syscall"
 
 	"goravel/app/facades"
+	"goravel/app/utils"
+	"goravel/app/websocket/notifications"
 	"goravel/bootstrap"
 )
 
@@ -47,6 +49,18 @@ func main() {
 
 // shutdownApplication 优雅关闭应用程序（框架会依次关闭所有 runners：Route、Queue 等）
 func shutdownApplication(app interface{ Shutdown() error }) {
+	// 停止 NotificationHub（关闭所有 WebSocket 连接）
+	notifications.Hub().Stop()
+	facades.Log().Info("NotificationHub stopped")
+
+	// 关闭所有 Redis 客户端
+	if err := utils.CloseAllRedisClients(); err != nil {
+		facades.Log().Errorf("Close Redis clients error: %v", err)
+	} else {
+		facades.Log().Info("Redis clients closed")
+	}
+
+	// 关闭应用程序（框架会依次关闭所有 runners：Route、Queue 等）
 	if err := app.Shutdown(); err != nil {
 		facades.Log().Errorf("Application Shutdown error: %v", err)
 		os.Exit(1)

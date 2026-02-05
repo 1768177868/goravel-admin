@@ -13,6 +13,7 @@ type NotificationHub struct {
 	register   chan *notificationClient
 	unregister chan *notificationClient
 	broadcast  chan *models.Notification
+	stop       chan struct{} // 停止信号
 	mu         sync.RWMutex
 }
 
@@ -32,12 +33,24 @@ func newNotificationHub() *NotificationHub {
 		register:   make(chan *notificationClient),
 		unregister: make(chan *notificationClient),
 		broadcast:  make(chan *models.Notification, 100),
+		stop:       make(chan struct{}),
 	}
 }
 
 func (h *NotificationHub) run() {
 	for {
 		select {
+		case <-h.stop:
+			// 收到停止信号，关闭所有客户端连接并退出
+			h.mu.Lock()
+			for _, adminClients := range h.clients {
+				for client := range adminClients {
+					close(client.send)
+				}
+			}
+			h.clients = make(map[uint]map[*notificationClient]bool)
+			h.mu.Unlock()
+			return
 		case client := <-h.register:
 			h.addClient(client)
 		case client := <-h.unregister:
@@ -131,6 +144,16 @@ func (h *NotificationHub) payload(notification *models.Notification) map[string]
 }
 
 func (h *NotificationHub) Broadcast(notification *models.Notification) {
-	h.broadcast <- notification
+	select {
+	case h.broadcast <- notification:
+		// 成功发送
+	case <-h.stop:
+		// Hub 已停止，忽略广播
+	}
+}
+
+// Stop 停止 NotificationHub，关闭所有连接并退出 goroutine
+func (h *NotificationHub) Stop() {
+	close(h.stop)
 }
 

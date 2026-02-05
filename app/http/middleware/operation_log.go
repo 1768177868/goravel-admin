@@ -125,7 +125,15 @@ func OperationLog() http.Middleware {
 			}
 
 			// 异步记录日志，避免影响响应速度
-			go func(ctx context.Context) {
+			// 使用新的 context，避免使用可能已过期的 traceCtx
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.ErrorfContext(context.Background(), "Panic in operation log goroutine: %v", r)
+					}
+				}()
+				// 使用新的 context，避免请求 context 已过期导致操作失败
+				ctx := context.Background()
 				if err := facades.Orm().Query().Create(&operationLog); err != nil {
 					_ = systemLogService.Record(ctx, "error", "operation-log", "failed to persist operation log", map[string]any{
 						"error": err.Error(),
@@ -133,7 +141,7 @@ func OperationLog() http.Middleware {
 					})
 					logger.ErrorfContext(ctx, "Failed to create operation log: %v", err)
 				}
-			}(traceCtx)
+			}()
 		}
 	}
 }

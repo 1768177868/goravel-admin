@@ -822,6 +822,7 @@
     "account_disabled": "账号已禁用",
     "validation_failed": "验证失败",
     "google_code_required": "需要谷歌验证码",
+    "captcha_required": "请输入验证码",
     "captcha_invalid": "验证码错误"
   },
   "export": {

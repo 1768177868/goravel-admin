@@ -814,6 +814,7 @@
     "account_disabled": "Account disabled",
     "validation_failed": "Validation failed",
     "google_code_required": "Google code required",
+    "captcha_required": "Please enter the verification code",
     "captcha_invalid": "Captcha invalid"
   },
   "export": {

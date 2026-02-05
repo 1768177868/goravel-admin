@@ -229,7 +229,16 @@ func (s *ExportServiceImpl) ExportToCSVStreamAtWithProgress(headers []string, fi
 		shouldSkip := len(skipAutoCreate) > 0 && skipAutoCreate[0]
 		if !shouldSkip {
 			// 复用 ExportToCSV 的异步记录逻辑：这里先简单沿用（不阻塞主流程）
-			go s.recordExportLog(filePath, absPath)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
+					}
+				}()
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				s.recordExportLogWithContext(ctx, filePath, absPath)
+			}()
 		}
 
 		return filePath, nil
@@ -298,7 +307,16 @@ func (s *ExportServiceImpl) ExportToCSVStreamAtWithProgress(headers []string, fi
 
 	shouldSkip := len(skipAutoCreate) > 0 && skipAutoCreate[0]
 	if !shouldSkip {
-		go s.recordExportLog(filePath, tmpPath)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
+				}
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			s.recordExportLogWithContext(ctx, filePath, tmpPath)
+		}()
 	}
 
 	return filePath, nil
@@ -384,6 +402,9 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 				}
 			}()
 
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
 			adminID := uint(0)
 			if s.ctx != nil {
 				if id, err := helpers.GetAdminIDFromContext(s.ctx); err == nil {
@@ -419,8 +440,20 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 				Status:    1,
 			}
 
-			if err := facades.Orm().Query().Create(&exportRecord); err != nil {
-				facades.Log().Errorf("ExportService: failed to record export log: %v", err)
+			// 使用带超时的 context 执行数据库操作
+			// 注意：虽然 ORM 可能不支持 WithContext，但超时控制通过 goroutine 的 context 实现
+			done := make(chan error, 1)
+			go func() {
+				done <- facades.Orm().Query().Create(&exportRecord)
+			}()
+			
+			select {
+			case err := <-done:
+				if err != nil {
+					facades.Log().Errorf("ExportService: failed to record export log: %v", err)
+				}
+			case <-ctx.Done():
+				facades.Log().Errorf("ExportService: timeout while recording export log")
 			}
 		}()
 	}
@@ -429,6 +462,13 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 }
 
 func (s *ExportServiceImpl) recordExportLog(filePath string, absOrTmpPathForSize string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	s.recordExportLogWithContext(ctx, filePath, absOrTmpPathForSize)
+}
+
+// recordExportLogWithContext 使用指定的 context 记录导出日志（支持超时控制）
+func (s *ExportServiceImpl) recordExportLogWithContext(ctx context.Context, filePath string, absOrTmpPathForSize string) {
 	defer func() {
 		if r := recover(); r != nil {
 			facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
@@ -468,8 +508,20 @@ func (s *ExportServiceImpl) recordExportLog(filePath string, absOrTmpPathForSize
 		Status:    1,
 	}
 
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
-		facades.Log().Errorf("ExportService: failed to record export log: %v", err)
+	// 使用带超时的 context 执行数据库操作
+	// 注意：虽然 ORM 可能不支持 WithContext，但超时控制通过 goroutine 的 context 实现
+	done := make(chan error, 1)
+	go func() {
+		done <- facades.Orm().Query().Create(&exportRecord)
+	}()
+	
+	select {
+	case err := <-done:
+		if err != nil {
+			facades.Log().Errorf("ExportService: failed to record export log: %v", err)
+		}
+	case <-ctx.Done():
+		facades.Log().Errorf("ExportService: timeout while recording export log")
 	}
 }
 
