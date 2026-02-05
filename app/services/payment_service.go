@@ -129,6 +129,8 @@ func NewPaymentService() PaymentService {
 		GetColumns: func() string {
 			return service.getPaymentTableColumns()
 		},
+		UnionCollation: "utf8mb4_unicode_ci", // 解决 MySQL UNION 时 "Illegal mix of collations" 错误
+		StringColumns:  []string{"payment_no", "order_no", "status", "third_party_no", "fail_reason", "notify_data", "remark"},
 		BuildWhereClause: func(filters any) (string, []any) {
 			return service.buildPaymentShardingWhereClause(filters)
 		},

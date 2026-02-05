@@ -150,6 +150,8 @@ func NewOrderService() *OrderServiceImpl {
 		GetColumns: func() string {
 			return service.getOrderTableColumns()
 		},
+		UnionCollation: "utf8mb4_unicode_ci", // 解决 MySQL UNION 时 "Illegal mix of collations" 错误
+		StringColumns:  []string{"order_no", "status", "remark"},
 		BuildWhereClause: func(filters any) (string, []any) {
 			return service.buildOrderWhereClause(filters)
 		},

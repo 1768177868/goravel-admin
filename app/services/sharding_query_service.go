@@ -21,6 +21,12 @@ type ShardingQueryConfig struct {
 	// GetColumns 获取表的所有列名（用于 UNION ALL 查询）
 	// 返回格式：如 "id, order_no, user_id, created_at, updated_at, deleted_at"
 	GetColumns func() string
+	// UnionCollation MySQL UNION 时字符串列的排序规则，解决 "Illegal mix of collations" 错误
+	// 例如 "utf8mb4_unicode_ci"，仅 MySQL 且设置 StringColumns 时生效
+	UnionCollation string
+	// StringColumns 需要添加 COLLATE 的字符串列名（用于 UNION 时统一排序规则）
+	// 例如 ["order_no", "status", "remark"]
+	StringColumns []string
 	// BuildWhereClause 构建 WHERE 条件
 	// 返回：WHERE 子句（不包含 WHERE 关键字）和参数列表
 	// 例如：返回 ("user_id = ? AND status = ?", []any{1, "paid"})
@@ -88,8 +94,8 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	// 构建排序
 	orderField, orderDir := s.parseOrderBy(filters)
 
-	// 获取列名
-	columnsStr := s.config.GetColumns()
+	// 获取列名（MySQL UNION 时对字符串列添加 COLLATE，解决 collation 冲突）
+	columnsStr := s.getColumnsForUnion()
 
 	// 优化：每个分表先排序和限制，然后再合并（避免合并大量数据后再排序）
 	// 计算每个分表需要查询的数量
@@ -228,8 +234,8 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 	// 构建排序
 	orderField, orderDir := s.parseOrderBy(filters)
 
-	// 获取列名
-	columnsStr := s.config.GetColumns()
+	// 获取列名（MySQL UNION 时对字符串列添加 COLLATE，解决 collation 冲突）
+	columnsStr := s.getColumnsForUnion()
 
 	// 优化：每个分表先排序，然后再合并（对于导出，虽然需要所有数据，但先排序可以减少合并后的排序成本）
 	// 构建 UNION ALL 查询
@@ -286,6 +292,35 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 	}
 
 	return nil
+}
+
+// getColumnsForUnion 获取用于 UNION 的列名（MySQL 时对字符串列添加 COLLATE，解决 "Illegal mix of collations" 错误）
+func (s *ShardingQueryServiceImpl) getColumnsForUnion() string {
+	columnsStr := s.config.GetColumns()
+	if columnsStr == "" {
+		return columnsStr
+	}
+	// 仅 MySQL 且配置了 UnionCollation 和 StringColumns 时，对字符串列添加 COLLATE
+	driver := strings.ToLower(facades.Orm().Query().Driver())
+	if driver != "mysql" || s.config.UnionCollation == "" || len(s.config.StringColumns) == 0 {
+		return columnsStr
+	}
+	stringColSet := make(map[string]bool)
+	for _, col := range s.config.StringColumns {
+		stringColSet[strings.TrimSpace(col)] = true
+	}
+	parts := strings.Split(columnsStr, ",")
+	var result []string
+	for _, p := range parts {
+		col := strings.TrimSpace(p)
+		col = strings.Trim(col, "`")
+		if stringColSet[col] {
+			result = append(result, fmt.Sprintf("`%s` COLLATE %s AS `%s`", col, s.config.UnionCollation, col))
+		} else {
+			result = append(result, fmt.Sprintf("`%s`", col))
+		}
+	}
+	return strings.Join(result, ", ")
 }
 
 // parseOrderBy 解析排序字段
