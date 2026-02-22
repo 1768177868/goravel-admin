@@ -12,7 +12,7 @@ require (
 	github.com/go-pay/gopay v1.5.115
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/goravel/cos v1.17.0
-	github.com/goravel/framework v1.17.0
+	github.com/goravel/framework v1.17.1
 	github.com/goravel/gin v1.17.0
 	github.com/goravel/minio v1.17.0
 	github.com/goravel/mysql v1.17.1
