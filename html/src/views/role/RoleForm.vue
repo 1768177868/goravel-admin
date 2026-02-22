@@ -106,7 +106,7 @@ import { ElMessage } from 'element-plus'
 import { InfoFilled, FolderOpened, Key, Lock } from '@element-plus/icons-vue'
 import { getRoleDetail, createRole, updateRole } from '../../api/role'
 import { getPermissionList } from '../../api/permission'
-import { getMenuList } from '../../api/menu'
+import { getMenuTree } from '../../api/menu'
 import { getMenuTranslation } from '../../utils/menuTranslation'
 import { groupBy, map } from 'lodash-es'
 import { mapTree } from '../../utils/tree'
@@ -467,7 +467,7 @@ const getMenuTypeText = (type) => {
 const loadMenuPermissionTree = async () => {
   try {
     const [menuRes, permissionRes] = await Promise.all([
-      getMenuList(),
+      getMenuTree(),
       getPermissionList({ page_size: 1000 })
     ])
     

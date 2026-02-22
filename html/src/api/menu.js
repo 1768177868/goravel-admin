@@ -1,11 +1,19 @@
 import request from '../utils/request'
 
-// 获取菜单列表
+// 获取菜单列表（需要菜单权限，用于菜单管理页）
 export function getMenuList(params) {
   return request({
     url: '/menus',
     method: 'get',
     params
+  })
+}
+
+// 获取菜单树（仅登录即可，不校验菜单权限；用于角色/权限表单、下拉等）
+export function getMenuTree() {
+  return request({
+    url: '/menus/tree',
+    method: 'get'
   })
 }
 

@@ -75,6 +75,9 @@ func Admin() {
 			// 统一的下拉选项接口（不需要权限验证）
 			router.Get("options", optionController.Index)
 
+			// 菜单树（仅登录即可，不校验菜单权限；用于角色/权限表单、刷新后展示等）
+			router.Get("menus/tree", menuController.Tree)
+
 			router.Get("dictionaries/types", dictionaryController.GetAllTypes)
 
 			// 附件预览（公开接口，以便富文本编辑器等可以直接访问图片）

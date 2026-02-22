@@ -34,18 +34,29 @@ func (r *MenuController) findMenuByID(ctx http.Context, id uint) (*models.Menu, 
 	})
 }
 
-// Index 菜单列表（树形结构）
-func (r *MenuController) Index(ctx http.Context) http.Response {
+// buildMenuTreeResponse 构建菜单树并转为前端格式（供 Index 与 Tree 复用）
+func (r *MenuController) buildMenuTreeResponse(ctx http.Context, menus []models.Menu) http.Response {
+	treeData := utils.ConvertMenuTree(menus)
+	return response.Success(ctx, http.Json{
+		"menus": treeData,
+		"list":  treeData, // 兼容前端可能使用的 list 字段
+	})
+}
+
+// Tree 菜单树（仅登录即可访问，不校验菜单权限；用于角色/权限表单等）
+func (r *MenuController) Tree(ctx http.Context) http.Response {
 	menus, err := r.treeService.BuildMenuTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
+	menus = r.applyMenuTreeFilters(ctx, menus)
+	return r.buildMenuTreeResponse(ctx, menus)
+}
 
-	// 检查是否需要隐藏服务监控菜单
-	// 只有当配置值不为空且不等于 "0" 时才隐藏（"0" 表示不隐藏）
+// applyMenuTreeFilters 应用监控/开发工具等过滤
+func (r *MenuController) applyMenuTreeFilters(ctx http.Context, menus []models.Menu) []models.Menu {
 	monitorHidden := facades.Config().GetString("admin.monitor_hidden", "")
 	if monitorHidden != "" && monitorHidden != "0" {
-		// 获取当前管理员ID
 		adminValue := ctx.Value("admin")
 		var adminID uint
 		if adminValue != nil {
@@ -55,30 +66,25 @@ func (r *MenuController) Index(ctx http.Context) http.Response {
 				adminID = adminPtr.ID
 			}
 		}
-
-		// 检查是否是开发者管理员
 		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
-		isDeveloperAdmin := r.isDeveloperAdmin(adminID, developerIDsStr)
-
-		// 如果不是开发者管理员，则过滤掉服务监控菜单
-		if !isDeveloperAdmin {
+		if !r.isDeveloperAdmin(adminID, developerIDsStr) {
 			menus = r.filterMonitorMenu(menus)
 		}
 	}
-
-	// 检查是否需要隐藏开发工具菜单
-	enableDevTool := facades.Config().GetBool("app.enable_dev_tool")
-	if !enableDevTool {
+	if !facades.Config().GetBool("app.enable_dev_tool") {
 		menus = r.filterDevMenu(menus)
 	}
+	return menus
+}
 
-	// 转换为前端格式
-	treeData := utils.ConvertMenuTree(menus)
-
-	return response.Success(ctx, http.Json{
-		"menus": treeData,
-		"list":  treeData, // 兼容前端可能使用的 list 字段
-	})
+// Index 菜单列表（树形结构，需要菜单权限）
+func (r *MenuController) Index(ctx http.Context) http.Response {
+	menus, err := r.treeService.BuildMenuTree(0)
+	if err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
+	}
+	menus = r.applyMenuTreeFilters(ctx, menus)
+	return r.buildMenuTreeResponse(ctx, menus)
 }
 
 // Show 菜单详情

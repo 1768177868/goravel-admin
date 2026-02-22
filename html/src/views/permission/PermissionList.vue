@@ -101,7 +101,7 @@ import {
   getPermissionList,
   deletePermission
 } from '../../api/permission'
-import { getMenuList } from '../../api/menu'
+import { getMenuTree } from '../../api/menu'
 
 const { t, te } = useI18n()
 const { getButtonState } = usePermission()
@@ -357,10 +357,10 @@ const convertMenuToTreeData = (menus) => {
   })
 }
 
-// 获取菜单列表
+// 获取菜单列表（使用 tree 接口，仅登录即可，不校验菜单权限）
 const loadMenuList = async () => {
   try {
-    const { data } = await getMenuList()
+    const { data } = await getMenuTree()
     // 菜单返回的是树形结构，直接转换为树形选择器格式
     menuTreeData.value = convertMenuToTreeData(data.menus || [])
   } catch (error) {

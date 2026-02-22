@@ -28,23 +28,25 @@ func NewTreeServiceImpl() *TreeServiceImpl {
 	return &TreeServiceImpl{}
 }
 
-// BuildMenuTree 构建菜单树形结构
+// BuildMenuTree 构建菜单树形结构（一次查询全量菜单后在内存中组树，避免 N+1 导致 /api/admin/info 等接口慢）
 func (s *TreeServiceImpl) BuildMenuTree(parentID uint) ([]models.Menu, error) {
-	var menus []models.Menu
-	if err := facades.Orm().Query().Where("parent_id", parentID).Order("sort asc, id asc").Get(&menus); err != nil {
+	var all []models.Menu
+	if err := facades.Orm().Query().Order("sort asc, id asc").Get(&all); err != nil {
 		return nil, err
 	}
-
-	// 递归加载子菜单
-	for i := range menus {
-		children, err := s.BuildMenuTree(menus[i].ID)
-		if err != nil {
-			return nil, err
-		}
-		menus[i].Children = children
+	byParent := make(map[uint][]models.Menu)
+	for _, m := range all {
+		byParent[m.ParentID] = append(byParent[m.ParentID], m)
 	}
+	return s.buildMenuTreeFromMap(byParent, parentID), nil
+}
 
-	return menus, nil
+func (s *TreeServiceImpl) buildMenuTreeFromMap(byParent map[uint][]models.Menu, parentID uint) []models.Menu {
+	children := byParent[parentID]
+	for i := range children {
+		children[i].Children = s.buildMenuTreeFromMap(byParent, children[i].ID)
+	}
+	return children
 }
 
 // BuildDepartmentTree 构建部门树形结构
