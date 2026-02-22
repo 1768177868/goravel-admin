@@ -239,21 +239,37 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 	}
 
 	// 将扁平菜单数组构建为树形结构，然后转换为前端格式
+	// 可见菜单 = 角色勾选的菜单 + 权限关联的菜单（只要勾选了某目录下任一权限，该目录就显示）+ 这些菜单的所有祖先
 	var menuTree []models.Menu
-	if len(menus) > 0 {
-		// 先构建树形结构
-		menuTree, _ = r.treeService.BuildMenuTree(0)
-		// 过滤出用户有权限的菜单
-		menuMap := make(map[uint]bool)
-		for _, menu := range menus {
-			menuMap[menu.ID] = true
+	menuIDSet := make(map[uint]bool)
+	for _, menu := range menus {
+		menuIDSet[menu.ID] = true
+	}
+	for _, perm := range permissions {
+		if perm.MenuID > 0 {
+			menuIDSet[perm.MenuID] = true
 		}
-		// 递归过滤树形结构，只保留有权限的菜单
+	}
+	var menuIDs []uint
+	for id := range menuIDSet {
+		menuIDs = append(menuIDs, id)
+	}
+	if len(menuIDs) > 0 {
+		expandedIDs, err := r.treeService.GetMenuIDsWithAncestors(menuIDs)
+		if err == nil && len(expandedIDs) > 0 {
+			menuIDSet = make(map[uint]bool)
+			for _, id := range expandedIDs {
+				menuIDSet[id] = true
+			}
+		}
+		// 先构建完整树形结构
+		menuTree, _ = r.treeService.BuildMenuTree(0)
+		// 递归过滤树形结构，只保留有权限的菜单（含因权限而显示的目录）
 		var filterMenuTree func([]models.Menu) []models.Menu
 		filterMenuTree = func(menuList []models.Menu) []models.Menu {
 			var result []models.Menu
 			for _, menu := range menuList {
-				if menuMap[menu.ID] {
+				if menuIDSet[menu.ID] {
 					menu.Children = filterMenuTree(menu.Children)
 					result = append(result, menu)
 				}

@@ -17,6 +17,8 @@ type TreeService interface {
 	HasDepartmentChildren(departmentID uint) (bool, error)
 	// GetMenuChildrenIDs 获取菜单及其所有子菜单的ID列表
 	GetMenuChildrenIDs(menuID uint) ([]uint, error)
+	// GetMenuIDsWithAncestors 给定菜单ID列表，返回这些ID及其所有祖先菜单ID（用于在只勾选权限时也能显示父级目录）
+	GetMenuIDsWithAncestors(ids []uint) ([]uint, error)
 }
 
 type TreeServiceImpl struct {
@@ -111,4 +113,38 @@ func (s *TreeServiceImpl) GetMenuChildrenIDs(menuID uint) ([]uint, error) {
 	}
 
 	return menuIDs, nil
+}
+
+// GetMenuIDsWithAncestors 给定菜单ID列表，返回这些ID及其所有祖先菜单ID（用于在只勾选权限时也能显示父级目录）
+func (s *TreeServiceImpl) GetMenuIDsWithAncestors(ids []uint) ([]uint, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	result := make(map[uint]bool)
+	for _, id := range ids {
+		result[id] = true
+	}
+	current := ids
+	for len(current) > 0 {
+		var rows []struct {
+			ID       uint
+			ParentID uint
+		}
+		if err := facades.Orm().Query().Model(&models.Menu{}).Where("id IN ?", current).Select("id", "parent_id").Get(&rows); err != nil {
+			return nil, err
+		}
+		var next []uint
+		for _, row := range rows {
+			if row.ParentID != 0 && !result[row.ParentID] {
+				result[row.ParentID] = true
+				next = append(next, row.ParentID)
+			}
+		}
+		current = next
+	}
+	out := make([]uint, 0, len(result))
+	for id := range result {
+		out = append(out, id)
+	}
+	return out, nil
 }
