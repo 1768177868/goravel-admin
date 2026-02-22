@@ -17,6 +17,7 @@ func (kernel Kernel) Middleware() []http.Middleware {
 		appmiddleware.Cors(),      // CORS 跨域处理（需要在最前面处理预检请求）
 		appmiddleware.Blacklist(), // 黑名单检查
 		appmiddleware.Trace(),
+		appmiddleware.Gzip(),      // 仅本地/开发环境对 JSON 等响应做 gzip 压缩
 		httpmiddleware.Throttle("global"),
 		// sessionmiddleware.StartSession(), // 已禁用：项目使用 JWT 认证，不需要 Session
 	}
