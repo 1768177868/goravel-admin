@@ -71,7 +71,7 @@
                   <el-input v-model="infoForm.phone" />
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" @click="handleUpdateInfo" :loading="infoSubmitting">
+                  <el-button type="primary" @click="handleUpdateInfo" :loading="infoSubmitting" :disabled="getButtonState('profile.update').disabled">
                     {{ $t('common.save') }}
                   </el-button>
                   <el-button @click="handleResetInfo">{{ $t('common.reset') }}</el-button>
@@ -109,7 +109,7 @@
                   />
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" @click="handleUpdatePassword" :loading="passwordSubmitting">
+                  <el-button type="primary" @click="handleUpdatePassword" :loading="passwordSubmitting" :disabled="getButtonState('password.update').disabled">
                     {{ $t('common.save') }}
                   </el-button>
                   <el-button @click="handleResetPassword">{{ $t('common.reset') }}</el-button>
@@ -268,9 +268,11 @@ import {
   unbindGoogleAuthenticator 
 } from '../../api/auth'
 import { useUserStore } from '../../store/user'
+import { usePermission } from '../../composables/usePermission'
 
 const { t } = useI18n()
 const userStore = useUserStore()
+const { getButtonState } = usePermission()
 
 const activeTab = ref('info')
 const infoFormRef = ref(null)
