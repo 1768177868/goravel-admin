@@ -1191,3 +1191,15 @@ const handleLayoutSizeChange = (size) => {
   }
 }
 </style>
+
+<style>
+/* 夜间模式：侧边栏菜单悬停时使用深色背景，避免浅字+浅底看不清（仅侧栏，顶部菜单保持蓝色标题不变） */
+html.dark .sidebar-menu .el-menu-item:hover,
+html.dark .sidebar-menu .el-sub-menu__title:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .drawer-content .sidebar-menu .el-menu-item:hover,
+html.dark .drawer-content .sidebar-menu .el-sub-menu__title:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+</style>
