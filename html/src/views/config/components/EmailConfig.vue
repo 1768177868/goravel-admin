@@ -65,10 +65,10 @@
       </el-row>
 
       <el-form-item>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">
+        <el-button type="primary" @click="handleSubmit" :loading="submitting" :disabled="getButtonState('config.save').disabled">
           {{ $t('common.save') }}
         </el-button>
-        <el-button type="success" @click="handleTest" :loading="testing">
+        <el-button type="success" @click="handleTest" :loading="testing" :disabled="getButtonState('config.test_email').disabled">
           {{ $t('config.test_email') }}
         </el-button>
       </el-form-item>
@@ -82,8 +82,10 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { forOwn } from 'lodash-es'
 import { getConfigByGroup, saveConfig, testEmail } from '../../../api/config'
+import { usePermission } from '../../../composables/usePermission'
 
 const { t } = useI18n()
+const { getButtonState } = usePermission()
 const formRef = ref(null)
 const submitting = ref(false)
 const testing = ref(false)
