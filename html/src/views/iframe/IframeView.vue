@@ -68,6 +68,8 @@ onMounted(() => {
 .iframe-container {
   width: 100%;
   height: 100%;
+  min-height: 0;
+  flex: 1;
   position: relative;
   overflow: hidden;
 }
@@ -75,6 +77,7 @@ onMounted(() => {
 .iframe-content {
   width: 100%;
   height: 100%;
+  min-height: 0;
   border: none;
   display: block;
 }

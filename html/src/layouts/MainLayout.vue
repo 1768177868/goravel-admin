@@ -444,7 +444,7 @@
         <TabsView />
       </div>
       
-      <el-main class="main-content">
+      <el-main class="main-content" :class="{ 'main-content-iframe': isIframePage }">
         <!-- 使用 Element Plus 水印：开启时包裹内容，水印浮在内容之上 -->
         <el-watermark
           v-if="appStore.watermarkEnabled"
@@ -558,6 +558,9 @@ const appStore = useAppStore()
 const { t } = useI18n()
 
 const activeMenu = computed(() => route.path)
+
+// 是否为 iframe 外部链接页面（用于占满主内容区高度）
+const isIframePage = computed(() => route.path === '/iframe')
 
 // 过滤菜单树形结构（后端已返回树形结构，这里只需要过滤）
 const menuTree = computed(() => {
@@ -920,6 +923,35 @@ const handleLayoutSizeChange = (size) => {
   padding: 20px;
   overflow-y: auto;
   transition: background-color 0.3s ease;
+}
+
+/* iframe 外部链接页面：去掉内边距并让内容区占满高度 */
+.main-content-iframe.main-content {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.main-content-iframe .main-content-inner,
+.main-content-iframe .main-content-inner > *,
+.main-content-iframe .main-content-inner > * > *,
+.main-content-iframe .main-content-inner > * > * > * {
+  height: 100%;
+  min-height: 0;
+}
+.main-content-iframe .main-content-inner {
+  display: flex;
+  flex-direction: column;
+}
+.main-content-iframe .main-content-inner > * {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.main-content-iframe .main-content-inner > * > *,
+.main-content-iframe .main-content-inner > * > * > * {
+  flex: 1;
+  min-height: 0;
 }
 
 /* 设置面板 */
