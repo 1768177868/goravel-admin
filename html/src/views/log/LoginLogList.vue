@@ -89,7 +89,7 @@
       />
     </el-card>
 
-    <el-dialog v-model="detailVisible" :title="$t('log.detail')" width="800px">
+    <el-dialog v-model="detailVisible" :title="$t('log.detail')" width="1100px">
       <el-descriptions :column="2" border v-if="logDetail">
         <el-descriptions-item :label="$t('table.id')">{{ logDetail.id }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.admin')">{{ logDetail.admin?.username }}</el-descriptions-item>
