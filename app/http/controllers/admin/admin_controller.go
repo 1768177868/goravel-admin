@@ -623,6 +623,56 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	return response.Success(ctx, "unbind_success")
 }
 
+// ResetGoogleAuthenticator 重置管理员的谷歌验证码（强制清除绑定，无需验证码，用于管理员丢失手机等场景）
+// @Summary      重置管理员的谷歌验证码
+// @Description  由有权限的管理员强制清除指定管理员的谷歌验证码绑定，无需输入验证码。被重置的管理员可重新绑定。
+// @Tags         管理员管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int true "要重置的管理员ID"
+// @Success      200  {object} map[string]any "重置成功"
+// @Failure      400  {object} map[string]any "参数错误或该管理员未绑定谷歌验证码"
+// @Failure      401  {object} map[string]any "未登录"
+// @Failure      403  {object} map[string]any "无权限或不可操作受保护管理员"
+// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      500  {object} map[string]any "服务器错误"
+// @Router       /api/admin/admins/{id}/reset-google-auth [post]
+// @Security     BearerAuth
+func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Response {
+	targetAdminID := helpers.GetUintRoute(ctx, "id")
+	if targetAdminID == 0 {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
+	}
+
+	var targetAdmin models.Admin
+	if err := facades.Orm().Query().Where("id", targetAdminID).FirstOrFail(&targetAdmin); err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
+	}
+
+	protected := r.getAllProtectedAdminIDs()
+	if protected[targetAdminID] {
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrProtectedAdmin.Code)
+	}
+
+	targetIsBound, err := r.googleAuthenticatorService.IsBound(targetAdminID)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
+			"target_admin_id": targetAdminID,
+		})
+	}
+	if !targetIsBound {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleAuthenticatorNotBound.Code)
+	}
+
+	if err := r.googleAuthenticatorService.Unbind(targetAdminID); err != nil {
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
+			"target_admin_id": targetAdminID,
+		})
+	}
+
+	return response.Success(ctx, "reset_success")
+}
+
 // getAllProtectedAdminIDs 获取所有受保护的管理员ID（用于删除等操作）
 func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 	return r.adminService.GetProtectedAdminIDs()

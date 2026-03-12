@@ -194,6 +194,7 @@ const defaultTitleSlugs = [
   'admin.password',
   'admin.kick_out',
   'admin.unbind_google_auth',
+  'admin.reset_google_auth',
   // 角色
   'role.store',
   'role.update',

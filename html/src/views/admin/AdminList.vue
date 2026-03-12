@@ -138,7 +138,8 @@ import {
   exportAdmin,
   resetPassword,
   kickOutUser,
-  unbindAdminGoogleAuth
+  unbindAdminGoogleAuth,
+  resetAdminGoogleAuth
 } from '../../api/admin'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
@@ -518,8 +519,16 @@ const getMoreActions = (row) => {
       label: t('admin.unbind_google_auth'),
       permission: 'admin.unbind_google_auth',
       show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
-      divided: true, // 在解绑谷歌验证码和踢出之间添加分割线
       handler: handleUnbindGoogleAuth
+    },
+    {
+      key: 'resetGoogleAuth',
+      command: 'resetGoogleAuth',
+      label: t('admin.reset_google_auth'),
+      permission: 'admin.reset_google_auth',
+      show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
+      divided: true,
+      handler: handleResetGoogleAuth
     }
   ]
 }
@@ -541,6 +550,9 @@ const handleAction = (command, row) => {
       break
     case 'unbindGoogleAuth':
       handleUnbindGoogleAuth(row)
+      break
+    case 'resetGoogleAuth':
+      handleResetGoogleAuth(row)
       break
   }
 }
@@ -566,6 +578,31 @@ const handleUnbindGoogleAuth = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       logger.error('Unbind google auth error:', error)
+      if (!error?.__handled) {
+        const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+        ElMessage.error(errorMessage)
+      }
+    }
+  }
+}
+
+const handleResetGoogleAuth = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      t('admin.reset_google_auth_confirm', { username: row.username || row.Username }),
+      t('admin.reset_google_auth'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    )
+    await resetAdminGoogleAuth(row.id)
+    ElMessage.success(t('admin.reset_google_auth_success'))
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      logger.error('Reset google auth error:', error)
       if (!error?.__handled) {
         const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
         ElMessage.error(errorMessage)

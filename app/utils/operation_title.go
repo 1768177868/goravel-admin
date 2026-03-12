@@ -96,6 +96,11 @@ func generateDefaultTitle(method, path string) string {
 		return "admin.unbind_google_auth"
 	}
 
+	// 管理员重置谷歌验证码
+	if pathStr.Contains("/admins/") && pathStr.EndsWith("/reset-google-auth") && method == "POST" {
+		return "admin.reset_google_auth"
+	}
+
 	// 更新个人资料
 	if pathStr.EndsWith("/profile") && (method == "PUT" || method == "PATCH") {
 		return "profile.update"

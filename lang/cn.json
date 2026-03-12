@@ -238,6 +238,8 @@
     "bind_failed": "绑定失败",
     "unbind_success": "解绑成功",
     "unbind_failed": "解绑失败",
+    "reset_success": "重置成功",
+    "protected_admin": "受保护的管理员不能进行此操作",
     "ip_address_required": "IP地址不能为空",
     "invalid_cidr_format": "CIDR格式错误",
     "invalid_ip_range_format": "IP范围格式错误",

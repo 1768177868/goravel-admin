@@ -103,6 +103,7 @@ func Admin() {
 			router.Post("admins/export", adminController.Export)
 			router.Delete("admins/{id}/tokens", adminAuthController.KickOutUser)                     // 踢出指定用户的所有token
 			router.Post("admins/{id}/unbind-google-auth", adminController.UnbindGoogleAuthenticator) // 解绑管理员的谷歌验证码
+			router.Post("admins/{id}/reset-google-auth", adminController.ResetGoogleAuthenticator)   // 重置管理员的谷歌验证码（无需验证码）
 
 			// 角色管理 - 使用 Resource 路由
 			router.Resource("roles", roleController)

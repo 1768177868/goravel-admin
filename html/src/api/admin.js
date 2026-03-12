@@ -39,6 +39,14 @@ const adminApi = extendApi(baseAdminApi, {
       method: 'post',
       data
     })
+  },
+
+  // 重置管理员的谷歌验证码（无需验证码，用于丢失手机等场景）
+  resetGoogleAuth: (id) => {
+    return request({
+      url: `/admins/${id}/reset-google-auth`,
+      method: 'post'
+    })
   }
 })
 
@@ -52,6 +60,7 @@ export const {
   export: exportAdmin,
   resetPassword,
   kickOutUser,
-  unbindGoogleAuth: unbindAdminGoogleAuth
+  unbindGoogleAuth: unbindAdminGoogleAuth,
+  resetGoogleAuth: resetAdminGoogleAuth
 } = adminApi
 

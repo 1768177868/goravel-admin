@@ -161,6 +161,7 @@ var (
 	ErrUserNotFound       = NewBusinessError("user_not_found", "用户不存在")
 
 	// 权限保护错误
+	ErrProtectedAdmin                = NewBusinessError("protected_admin", "受保护的管理员不能进行此操作")
 	ErrAdminProtectedCannotDisable   = NewBusinessError("admin_protected_cannot_disable", "受保护的管理员不能禁用")
 	ErrAdminCannotModifyRoles        = NewBusinessError("admin_cannot_modify_roles", "不能修改管理员角色")
 	ErrAdminProtectedCannotDelete    = NewBusinessError("admin_protected_cannot_delete", "受保护的管理员不能删除")

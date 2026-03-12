@@ -66,6 +66,7 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "管理员重置密码", Slug: "admin.password", Method: "PUT", Path: "/api/admin/admins/*/password", Description: "重置管理员密码", Status: 1, Sort: 7, MenuID: adminMenu.ID},
 		{Name: "踢出用户", Slug: "admin.kick_out", Method: "DELETE", Path: "/api/admin/admins/*/tokens", Description: "踢出指定用户的所有token", Status: 1, Sort: 8, MenuID: adminMenu.ID},
 		{Name: "解绑谷歌验证码", Slug: "admin.unbind_google_auth", Method: "POST", Path: "/api/admin/admins/*/unbind-google-auth", Description: "解绑管理员的谷歌验证码", Status: 1, Sort: 9, MenuID: adminMenu.ID},
+		{Name: "重置谷歌验证码", Slug: "admin.reset_google_auth", Method: "POST", Path: "/api/admin/admins/*/reset-google-auth", Description: "重置管理员的谷歌验证码（无需验证码，用于丢失手机等场景）", Status: 1, Sort: 10, MenuID: adminMenu.ID},
 		// 角色管理
 		{Name: "角色列表", Slug: "role.index", Method: "GET", Path: "/api/admin/roles", Description: "查看角色列表", Status: 1, Sort: 1, MenuID: roleMenu.ID},
 		{Name: "角色详情", Slug: "role.show", Method: "GET", Path: "/api/admin/roles/*", Description: "查看角色详情", Status: 1, Sort: 2, MenuID: roleMenu.ID},

@@ -235,6 +235,8 @@
     "bind_failed": "Bind failed",
     "unbind_success": "Unbind successful",
     "unbind_failed": "Unbind failed",
+    "reset_success": "Reset successful",
+    "protected_admin": "This admin is protected and this operation is not allowed",
     "ip_address_required": "IP address cannot be empty",
     "invalid_cidr_format": "Invalid CIDR format",
     "invalid_ip_range_format": "Invalid IP range format",

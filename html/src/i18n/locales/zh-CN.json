@@ -212,7 +212,11 @@
     "unbind_google_auth": "解绑谷歌验证码",
     "unbind_google_auth_confirm": "确定要解绑管理员 {username} 的谷歌验证码吗？请输入您的谷歌验证码以确认操作。",
     "unbind_google_auth_success": "解绑成功",
-    "unbind_google_auth_failed": "解绑失败"
+    "unbind_google_auth_failed": "解绑失败",
+    "reset_google_auth": "重置谷歌验证码",
+    "reset_google_auth_confirm": "确定要重置管理员 {username} 的谷歌验证码吗？重置后该管理员可重新绑定，无需输入验证码。",
+    "reset_google_auth_success": "重置成功",
+    "reset_google_auth_failed": "重置失败"
   },
   "user": {
     "add_user": "添加用户",
@@ -314,6 +318,7 @@
     "admin.password": "重置管理员密码",
     "admin.kick_out": "踢出用户",
     "admin.unbind_google_auth": "解绑谷歌验证码",
+    "admin.reset_google_auth": "重置谷歌验证码",
     "role.index": "查看角色列表",
     "role.show": "查看角色详情",
     "role.store": "创建角色",

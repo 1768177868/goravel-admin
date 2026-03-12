@@ -206,7 +206,11 @@
     "unbind_google_auth": "Unbind Google Authenticator",
     "unbind_google_auth_confirm": "Are you sure you want to unbind Google Authenticator for admin {username}? Please enter your Google Authenticator code to confirm.",
     "unbind_google_auth_success": "Unbind successful",
-    "unbind_google_auth_failed": "Unbind failed"
+    "unbind_google_auth_failed": "Unbind failed",
+    "reset_google_auth": "Reset Google Authenticator",
+    "reset_google_auth_confirm": "Are you sure you want to reset Google Authenticator for admin {username}? After reset, they can bind again without entering a code.",
+    "reset_google_auth_success": "Reset successful",
+    "reset_google_auth_failed": "Reset failed"
   },
   "user": {
     "add_user": "Add User",
@@ -308,6 +312,7 @@
     "admin.password": "Reset Admin Password",
     "admin.kick_out": "Kick Out User",
     "admin.unbind_google_auth": "Unbind Google Authenticator",
+    "admin.reset_google_auth": "Reset Google Authenticator",
     "role.index": "View Role List",
     "role.show": "View Role Detail",
     "role.store": "Create Role",
