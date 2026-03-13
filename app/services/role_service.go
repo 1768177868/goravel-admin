@@ -152,16 +152,16 @@ func (s *RoleServiceImpl) ParseIDsFromRequest(ctx http.Context, key string) []ui
 
 // Create 创建角色
 func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, sort int) (*models.Role, error) {
-	role := &models.Role{}
-	createData := map[string]any{
-		"name":        name,
-		"slug":        slug,
-		"description": description,
-		"status":      status,
-		"sort":        sort,
+	// 使用结构体创建，这样数据库生成的主键 ID 会回填到 role 上
+	role := &models.Role{
+		Name:        name,
+		Slug:        slug,
+		Description: description,
+		Status:      status,
+		Sort:        sort,
 	}
 
-	if err := facades.Orm().Query().Model(role).Create(createData); err != nil {
+	if err := facades.Orm().Query().Create(role); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
