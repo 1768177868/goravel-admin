@@ -510,7 +510,6 @@ const getMoreActions = (row) => {
       command: 'kickOut',
       label: t('admin.kick_out'),
       permission: 'admin.kick_out',
-      divided: true, // 在踢出和重置密码之间添加分割线
       handler: handleKickOut
     },
     {
@@ -518,6 +517,7 @@ const getMoreActions = (row) => {
       command: 'unbindGoogleAuth',
       label: t('admin.unbind_google_auth'),
       permission: 'admin.unbind_google_auth',
+      divided: true,
       show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
       handler: handleUnbindGoogleAuth
     },
@@ -527,7 +527,6 @@ const getMoreActions = (row) => {
       label: t('admin.reset_google_auth'),
       permission: 'admin.reset_google_auth',
       show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
-      divided: true,
       handler: handleResetGoogleAuth
     }
   ]
