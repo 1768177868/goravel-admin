@@ -185,6 +185,7 @@
     "token_refresh_success": "Token refreshed successfully",
     "token_refresh_failed": "Token refresh failed",
     "heartbeat_success": "Heartbeat successful",
+    "login_locked": "Too many failed login attempts, account is temporarily locked for {minutes} minutes, please try again later",
     "too_many_attempts": "Too many attempts, please try again later",
     "captcha_required": "Please enter the verification code",
     "log.captcha_required": "Please enter the verification code",

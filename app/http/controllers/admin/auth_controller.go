@@ -23,6 +23,7 @@ type AuthController struct {
 	captchaService             services.CaptchaService
 	googleAuthenticatorService services.GoogleAuthenticatorService
 	treeService                services.TreeService
+	lockoutService             services.LoginLockoutService
 }
 
 func NewAuthController() *AuthController {
@@ -33,7 +34,8 @@ func NewAuthController() *AuthController {
 		authService:                authService,
 		captchaService:             services.NewCaptchaServiceImpl(),
 		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
-		treeService:               services.NewTreeServiceImpl(),
+		treeService:                services.NewTreeServiceImpl(),
+		lockoutService:             services.NewLoginLockoutService(),
 	}
 }
 
@@ -60,22 +62,28 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	var loginRequest admin.Login
 	errors, err := ctx.Request().ValidateRequest(&loginRequest)
 	if err != nil {
-		// 记录验证失败日志
 		requestData := r.getLoginRequestData(ctx)
 		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
 		return response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
 	if errors != nil {
-		// 记录验证失败日志
 		requestData := r.getLoginRequestData(ctx)
 		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 获取请求数据用于日志记录
 	requestData := r.getLoginRequestData(ctx)
+	ip := helpers.GetRealIP(ctx)
 
-	// 先验证用户名是否存在
+	// ---- 登录失败锁定检查 ----
+	if locked, _ := r.lockoutService.IsLocked(ip, loginRequest.Username); locked {
+		lockMinutes := facades.Config().GetInt("login_security.lock_duration_minutes", 15)
+		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "login_locked", requestData)
+		return response.Error(ctx, http.StatusTooManyRequests,
+			apperrors.ErrLoginLocked.WithParams(map[string]any{"minutes": lockMinutes}))
+	}
+
+	// 验证用户名是否存在
 	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", loginRequest.Username).Exists()
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
@@ -83,7 +91,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		})
 	}
 	if !exists {
-		// 记录用户名不存在日志
+		r.lockoutService.RecordFailure(ip, loginRequest.Username)
 		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "username_not_found", requestData)
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
@@ -97,14 +105,13 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 
 	if admin.Status == 0 {
-		// 记录账号禁用日志
 		r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "account_disabled", requestData)
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAccountDisabled.Code)
 	}
 
 	// 验证密码
 	if !facades.Hash().Check(loginRequest.Password, admin.Password) {
-		// 记录登录失败日志
+		r.lockoutService.RecordFailure(ip, loginRequest.Username)
 		r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "password_error", requestData)
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
@@ -121,12 +128,10 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	if isBound {
 		googleCode := loginRequest.GoogleCode
 		if googleCode == "" {
-			// 记录谷歌验证码缺失日志
 			r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_required", requestData)
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeRequired.Code)
 		}
 
-		// 获取管理员的密钥
 		secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
 		if err != nil {
 			return response.ErrorWithLog(ctx, "auth", err, map[string]any{
@@ -134,14 +139,12 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 			})
 		}
 
-		// 验证谷歌验证码
 		if !r.googleAuthenticatorService.Verify(secret, googleCode) {
-			// 记录登录失败日志
+			r.lockoutService.RecordFailure(ip, loginRequest.Username)
 			r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_error", requestData)
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
 	} else {
-		// 如果没有绑定谷歌验证码，验证图形验证码（如果启用了）
 		if r.captchaService.Enabled() {
 			captchaID := ctx.Request().Input("captcha_id")
 			captchaAnswer := ctx.Request().Input("captcha_answer")
@@ -149,18 +152,17 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 				if messageKey == "" {
 					messageKey = "captcha_invalid"
 				}
-				// 记录验证码错误日志
 				r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, messageKey, requestData)
 				return response.Error(ctx, http.StatusBadRequest, messageKey)
 			}
 		}
 	}
 
+	// 所有验证通过，清除失败计数
+	r.lockoutService.ClearFailures(ip, loginRequest.Username)
+
 	// 验证通过，生成token并完成登录
-	// 获取浏览器和操作系统信息
 	browser, os := helpers.GetBrowserAndOS(ctx)
-	// 获取真实IP地址
-	ip := helpers.GetRealIP(ctx)
 
 	// 生成token
 	var expiresAt *time.Time
@@ -278,7 +280,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		}
 		menuTree = filterMenuTree(menuTree)
 	}
-	
+
 	// 转换为前端格式
 	menuTreeData := utils.ConvertMenuTree(menuTree)
 

@@ -42,7 +42,7 @@ func Admin() {
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
 
-		// 登录相关（不需要认证，但需要多语言）
+		// 登录相关
 		router.Middleware(middleware.Lang()).Group(func(router route.Router) {
 			router.Middleware(httpmiddleware.Throttle("login")).Post("login", adminAuthController.Login)
 			router.Get("login/captcha", adminAuthController.Captcha)

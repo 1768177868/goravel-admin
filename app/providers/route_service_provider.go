@@ -10,6 +10,8 @@ import (
 
 	"goravel/app/facades"
 	"goravel/app/http"
+	"goravel/app/http/helpers"
+	"goravel/app/http/trans"
 	"goravel/app/services"
 )
 
@@ -47,43 +49,39 @@ func (receiver *RouteServiceProvider) configureRateLimiting() {
 		}
 	})
 
-	// 登录速率限制器
+	// 登录速率限制器（IP + 账号 双维度，避免攻击者锁住其他 IP 的同名账号）
 	facades.RateLimiter().For("login", func(ctx contractshttp.Context) contractshttp.Limit {
-		username := ctx.Request().Input("username", "")
-		if username == "" {
-			username = ctx.Request().Input("email", "")
-		}
-		if username == "" {
-			username = ctx.Request().Header("X-Username", "")
-		}
-		username = strings.ToLower(strings.TrimSpace(username))
-		if username == "" {
-			username = ctx.Request().Ip()
-		}
-		return limit.PerMinute(10).By("login:" + username)
+		ip := helpers.GetRealIP(ctx)
+		username := resolveLoginIdentifier(ctx, ip)
+
+		return limit.PerMinute(6).Response(func(ctx contractshttp.Context) {
+			_ = ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"code":    contractshttp.StatusTooManyRequests,
+				"message": trans.Get(ctx, "too_many_requests"),
+			}).Abort()
+		}).By(ip + ":login:" + username)
 	})
 
-	// 测试响应速率限制器
+	// 测试响应速率限制器（仅开发环境使用）
 	facades.RateLimiter().For("testResponse", func(ctx contractshttp.Context) contractshttp.Limit {
 		return limit.PerMinute(6).Response(func(ctx contractshttp.Context) {
-
-			method := ctx.Request().Method()
-			ip := ctx.Request().Ip()
-
-			// 示例: 根据请求方法判断
-			if method == "GET" {
-				ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
-					"message": "GET请求过于频繁",
-					"ip":      ip,
-				}).Abort()
-				return
-			}
-
-			// 默认响应
-			ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
-				"ip": ip,
+			_ = ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"code":    contractshttp.StatusTooManyRequests,
+				"message": trans.Get(ctx, "too_many_requests"),
 			}).Abort()
 		})
 	})
+}
 
+// resolveLoginIdentifier 从请求中提取登录标识（username > email > X-Username > IP fallback）。
+func resolveLoginIdentifier(ctx contractshttp.Context, fallbackIP string) string {
+	for _, field := range []string{"username", "email"} {
+		if v := strings.TrimSpace(ctx.Request().Input(field, "")); v != "" {
+			return strings.ToLower(v)
+		}
+	}
+	if v := strings.TrimSpace(ctx.Request().Header("X-Username", "")); v != "" {
+		return strings.ToLower(v)
+	}
+	return fallbackIP
 }

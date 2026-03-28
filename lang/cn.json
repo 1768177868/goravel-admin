@@ -188,6 +188,7 @@
     "token_refresh_success": "Token刷新成功",
     "token_refresh_failed": "Token刷新失败",
     "heartbeat_success": "心跳成功",
+    "login_locked": "登录失败次数过多，账号已被临时锁定 {minutes} 分钟，请稍后再试",
     "too_many_attempts": "尝试次数过多，请稍后再试",
     "captcha_required": "请输入验证码",
     "log.captcha_required": "请输入验证码",

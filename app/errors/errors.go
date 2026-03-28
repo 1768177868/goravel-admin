@@ -18,6 +18,7 @@ var (
 	ErrNotLoggedIn           = NewBusinessError("not_logged_in", "未登录")
 	ErrUsernameOrPasswordErr = NewBusinessError("username_or_password_error", "用户名或密码错误")
 	ErrLoginFailed           = NewBusinessError("login_failed", "登录失败")
+	ErrLoginLocked           = NewBusinessError("login_locked", "登录失败次数过多，请稍后再试")
 
 	// 验证相关错误
 	ErrValidationFailed = NewBusinessError("validation_failed", "验证失败")
