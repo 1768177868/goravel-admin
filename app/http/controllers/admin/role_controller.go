@@ -192,7 +192,6 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	if resp != nil {
 		return resp
 	}
-
 	// 检查是否是受保护的角色（通过slug判断）
 	isProtected := r.isProtectedRole(role.Slug)
 
@@ -306,7 +305,6 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	if r.isProtectedRole(role.Slug) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDelete.Code)
 	}
-
 	if _, err := facades.Orm().Query().Delete(role); err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,

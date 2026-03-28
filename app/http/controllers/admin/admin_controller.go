@@ -345,12 +345,10 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *AdminController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	// 加载管理员的当前角色，用于后续比较角色是否改变
-	admin, resp := r.findAdminByID(ctx, id, false, true) // 预加载 Roles 关联
+	admin, resp := r.findAdminByID(ctx, id, false, true)
 	if resp != nil {
 		return resp
 	}
-
 	allProtectedIDs := r.getAllProtectedAdminIDs()
 	isProtected := allProtectedIDs[id]
 
@@ -511,7 +509,6 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	if resp != nil {
 		return resp
 	}
-
 	if _, err := facades.Orm().Query().Delete(admin); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": admin.ID,

@@ -211,16 +211,21 @@ func FillFiltersFromMap(m map[string]any, filtersPtr any) {
 
 // toSnakeCase 将 PascalCase/camelCase 转换为 snake_case
 func toSnakeCase(s string) string {
-	var result []byte
-	for i, c := range s {
+	var buf []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
 		if c >= 'A' && c <= 'Z' {
 			if i > 0 {
-				result = append(result, '_')
+				prevLower := s[i-1] >= 'a' && s[i-1] <= 'z'
+				nextLower := i+1 < len(s) && s[i+1] >= 'a' && s[i+1] <= 'z'
+				if prevLower || nextLower {
+					buf = append(buf, '_')
+				}
 			}
-			result = append(result, byte(c+'a'-'A'))
+			buf = append(buf, c+32)
 		} else {
-			result = append(result, byte(c))
+			buf = append(buf, c)
 		}
 	}
-	return string(result)
+	return string(buf)
 }

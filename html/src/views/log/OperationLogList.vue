@@ -136,6 +136,23 @@
             <pre ref="requestParamsPre" class="request-params-content">{{ formatRequestParamsFull(logDetail.params || logDetail.request || {}) }}</pre>
           </div>
         </el-descriptions-item>
+        <el-descriptions-item v-if="logDetail.changes && logDetail.changes.length > 0" :label="$t('log.changes')" :span="2">
+          <div class="changes-detail">
+            <el-table :data="logDetail.changes" border size="small" class="changes-table">
+              <el-table-column :label="$t('log.changes_field')" prop="field" width="180" />
+              <el-table-column :label="$t('log.changes_old')">
+                <template #default="{ row }">
+                  <span class="changes-value changes-old">{{ formatChangeValue(row.old) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('log.changes_new')">
+                <template #default="{ row }">
+                  <span class="changes-value changes-new">{{ formatChangeValue(row.new) }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -272,6 +289,16 @@ const transformOperationLogData = (log) => {
     params = log.Request || log.request || log.Params || log.params || null
   }
   
+  let changes = null
+  try {
+    const raw = log.Changes || log.changes
+    if (raw) {
+      changes = typeof raw === 'string' ? JSON.parse(raw) : raw
+    }
+  } catch (e) {
+    changes = null
+  }
+
   return {
     id: log.ID || log.id,
     admin: log.Admin ? {
@@ -287,7 +314,8 @@ const transformOperationLogData = (log) => {
     created_at: log.CreatedAt || log.created_at || '',
     params: params,
     request: log.Request || log.request || null,
-    response: log.Response || log.response || null
+    response: log.Response || log.response || null,
+    changes: changes
   }
 }
 
@@ -361,6 +389,13 @@ const formatRequestParamsFull = (request) => {
   } catch (e) {
     return String(request)
   }
+}
+
+// 格式化变更值（用于 diff 表格显示）
+const formatChangeValue = (value) => {
+  if (value === null || value === undefined) return '-'
+  if (typeof value === 'object') return JSON.stringify(value, null, 2)
+  return String(value)
 }
 
 // 复制请求参数
@@ -1059,6 +1094,29 @@ pre {
   overflow-y: auto;
   word-break: break-all;
   white-space: pre-wrap;
+}
+
+.changes-detail {
+  width: 100%;
+}
+
+.changes-table {
+  width: 100%;
+}
+
+.changes-value {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-size: 12px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.changes-old {
+  color: #f56c6c;
+}
+
+.changes-new {
+  color: #67c23a;
 }
 
 /* 暗黑模式样式 */

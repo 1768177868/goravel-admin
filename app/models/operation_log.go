@@ -15,6 +15,7 @@ type OperationLog struct {
 	UserAgent string `gorm:"size:500;comment:用户代理"`
 	Request   string `gorm:"type:text;comment:请求参数"`
 	Response  string `gorm:"type:text;comment:响应数据"`
+	Changes   string `gorm:"type:text;comment:变更详情(JSON diff)"`
 	Status    uint8  `gorm:"default:1;comment:状态 1:成功 0:失败"`
 	ErrorMsg  string `gorm:"type:text;comment:错误信息"`
 	Duration  int    `gorm:"comment:耗时(毫秒)"`

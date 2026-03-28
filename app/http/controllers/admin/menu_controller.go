@@ -155,7 +155,6 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	if resp != nil {
 		return resp
 	}
-
 	// 使用请求验证
 	var menuUpdate adminrequests.MenuUpdate
 	errors, err := ctx.Request().ValidateRequest(&menuUpdate)
@@ -230,7 +229,6 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 			"menu_id": menu.ID,
 		})
 	}
-
 	return response.Success(ctx, http.Json{
 		"menu": *menu,
 	})
@@ -250,7 +248,6 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 	if hasChildren {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuHasChildren.Code)
 	}
-
 	if err := r.menuService.Delete(menu); err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"menu_id": menu.ID,

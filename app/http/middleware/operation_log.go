@@ -101,6 +101,13 @@ func OperationLog() http.Middleware {
 			adminID = admin.ID
 		}
 
+		// PUT/DELETE 时预加载修改前的记录快照，用于变更对比
+		var beforeSnapshot map[string]any
+		if method == "PUT" || method == "DELETE" {
+			tableName, recordID := utils.ParseResourcePath(path)
+			beforeSnapshot = utils.LoadModelSnapshot(tableName, recordID)
+		}
+
 		// 继续处理请求
 		ctx.Request().Next()
 
@@ -139,6 +146,14 @@ func OperationLog() http.Middleware {
 				logger.ErrorfContext(traceCtx, "Failed to generate operation title, method: %s, path: %s", savedMethod, savedPath)
 			}
 
+			// 根据 PUT/DELETE 的请求体与修改前快照对比，生成变更详情
+			var changes string
+			if method == "PUT" && beforeSnapshot != nil && savedRequestBody != "" {
+				changes = utils.ComputeDiffFromRequest(beforeSnapshot, savedRequestBody)
+			} else if method == "DELETE" && beforeSnapshot != nil {
+				changes = utils.FormatDeleteSnapshot(beforeSnapshot)
+			}
+
 			operationLog := models.OperationLog{
 				AdminID:   savedAdminID,
 				Method:    savedMethod,
@@ -147,6 +162,7 @@ func OperationLog() http.Middleware {
 				IP:        savedIP,
 				UserAgent: savedUserAgent,
 				Request:   savedRequestBody,
+				Changes:   changes,
 				Status:    status,
 				ErrorMsg:  errorMsg,
 				Duration:  savedDuration,

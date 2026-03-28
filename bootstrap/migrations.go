@@ -57,5 +57,7 @@ func Migrations() []schema.Migration {
 		&migrations.M20250301000025AddTranslationKeyToDictionaries{},
 		// 添加是否缓存字段
 		&migrations.M20250131000020AddNoCacheToMenus{},
+		// 操作日志增加变更详情字段
+		&migrations.M20260328000001AddChangesToOperationLogs{},
 	}
 }
