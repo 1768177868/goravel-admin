@@ -1161,7 +1161,7 @@ const handleLayoutSizeChange = (size) => {
   }
 
   .sidebar {
-    width: 200px !important;
+    /* width: 200px !important; */
   }
 
   .sidebar.is-collapse {
