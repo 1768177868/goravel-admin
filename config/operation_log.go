@@ -31,5 +31,21 @@ func init() {
 			"secret",
 			"key",
 		},
+
+		// ========== 操作日志过滤规则 ==========
+
+		// 需要记录操作日志的 HTTP 方法（仅写操作）
+		"allowed_methods": []string{"POST", "PUT", "PATCH", "DELETE"},
+
+		// 精确匹配排除的路径（这些路径的请求不记录操作日志）
+		"excluded_paths": []string{
+			"/api/admin/login",
+			"/api/admin/info",
+		},
+
+		// 前缀匹配排除的路径（以这些前缀开头的请求不记录操作日志）
+		"excluded_path_prefixes": []string{
+			"/api/admin/code-generator/",
+		},
 	})
 }

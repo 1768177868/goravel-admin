@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +17,51 @@ import (
 	"goravel/app/utils/logger"
 	"goravel/app/utils/traceid"
 )
+
+// configStrings 从 Goravel 配置中读取字符串切片，兼容 []string 和 []any 两种底层类型。
+func configStrings(key string) []string {
+	val := facades.Config().Get(key, []string{})
+	switch v := val.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// shouldPersistOperationLog 根据配置判断本次请求是否需要写入操作日志。
+// 规则来源：config/operation_log.go，新增排除项只需修改配置。
+func shouldPersistOperationLog(method, path string, ctx http.Context) bool {
+	if !slices.Contains(configStrings("operation_log.allowed_methods"), method) {
+		return false
+	}
+	if slices.Contains(configStrings("operation_log.excluded_paths"), path) {
+		return false
+	}
+	for _, prefix := range configStrings("operation_log.excluded_path_prefixes") {
+		if strings.HasPrefix(path, prefix) {
+			return false
+		}
+	}
+	// 分片上传仅 merge 操作记录日志
+	chunkPath := "/api/admin/attachments/chunk"
+	if chunkPath != "" && path == chunkPath {
+		action := ctx.Request().Input("action", "")
+		if action == "" {
+			action = ctx.Request().Query("action", "")
+		}
+		return action == "merge"
+	}
+	return true
+}
 
 // OperationLog 操作日志中间件
 func OperationLog() http.Middleware {
@@ -61,25 +107,7 @@ func OperationLog() http.Middleware {
 		// 计算耗时
 		duration := int(time.Since(startTime).Milliseconds())
 
-		// 只记录新增、修改、删除操作（POST、PUT、PATCH、DELETE），排除 GET 请求
-		// 同时排除登录和info接口，以及分片上传的进度查询（GET请求）
-		// 排除代码生成器相关操作
-		// 对于分片上传，只记录 merge 操作（最终完成上传），排除 init 和 upload 操作
-		if (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE") &&
-			path != "/api/admin/login" && path != "/api/admin/info" &&
-			!strings.HasPrefix(path, "/api/admin/code-generator/") {
-
-			// 排除分片上传的中间操作（init 和 upload），只记录 merge（最终完成上传）
-			if path == "/api/admin/attachments/chunk" {
-				action := ctx.Request().Input("action", "")
-				if action == "" {
-					action = ctx.Request().Query("action", "")
-				}
-				// 只记录 merge 操作，排除 init、upload 和 progress
-				if action != "merge" {
-					return
-				}
-			}
+		if shouldPersistOperationLog(method, path, ctx) {
 			// 在请求处理后再获取一次管理员ID（确保JWT中间件已执行）
 			// 如果之前没有获取到，再次尝试从context获取
 			if adminID == 0 {
