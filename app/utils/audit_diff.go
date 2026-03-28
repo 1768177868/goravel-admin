@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,15 +19,14 @@ type FieldChange struct {
 	New   any    `json:"new"`
 }
 
-// auditModelFactories 审计变更对比的模型工厂。
-// 新增审计表只需在此追加一行即可。
+// auditModelFactories 仅用于「路径中带 ID」的 REST 更新/删除（见 audit_handlers 默认规则）。
+// 无路径 ID、按 body 批量更新的接口勿在此登记，应使用 RegisterNestedMapBatchAudit / RegisterAuditHandler。
 var auditModelFactories = map[string]func() any{
 	"admins":      func() any { return &models.Admin{} },
 	"roles":       func() any { return &models.Role{} },
 	"menus":       func() any { return &models.Menu{} },
 	"departments": func() any { return &models.Department{} },
-	"blacklists":  func() any { return &models.Blacklist{} },
-	"configs":     func() any { return &models.Config{} },
+	"blacklists": func() any { return &models.Blacklist{} },
 }
 
 // ParseResourcePath 从 REST API 路径中提取资源表名和记录 ID。
@@ -122,4 +122,89 @@ func FormatDeleteSnapshot(before map[string]any) string {
 		return ""
 	}
 	return string(data)
+}
+
+// LoadConfigSnapshotByGroup 加载某分组下全部配置项，返回 key → value（用于 configs/save 等批量保存审计）。
+func LoadConfigSnapshotByGroup(group string) map[string]any {
+	if group == "" {
+		return nil
+	}
+	var configs []models.Config
+	if err := facades.Orm().Query().Where("group", group).Get(&configs); err != nil || len(configs) == 0 {
+		return nil
+	}
+	snapshot := make(map[string]any, len(configs))
+	for _, c := range configs {
+		if IsSensitiveField(c.Key) {
+			continue
+		}
+		snapshot[c.Key] = c.Value
+	}
+	return snapshot
+}
+
+// ComputeDiffAgainstNestedMap 将请求体中 nestedKey 对应的对象（如 configs）与扁平快照 before（key→旧值）对比。
+// 用于无 REST 路径 ID、但在 body 中带嵌套 map 的保存接口。
+func ComputeDiffAgainstNestedMap(before map[string]any, requestBody, nestedKey string) string {
+	var body map[string]any
+	if err := json.Unmarshal([]byte(requestBody), &body); err != nil {
+		return ""
+	}
+	nestedRaw, ok := body[nestedKey]
+	if !ok {
+		return ""
+	}
+	nested, ok := nestedRaw.(map[string]any)
+	if !ok {
+		return ""
+	}
+	if before == nil {
+		before = map[string]any{}
+	}
+	var changes []FieldChange
+	for key, newVal := range nested {
+		if IsSensitiveField(key) {
+			continue
+		}
+		oldVal, exists := before[key]
+		if !exists {
+			changes = append(changes, FieldChange{Field: key, Old: nil, New: newVal})
+			continue
+		}
+		if !configValuesEqual(oldVal, newVal) {
+			changes = append(changes, FieldChange{Field: key, Old: oldVal, New: newVal})
+		}
+	}
+	if len(changes) == 0 {
+		return ""
+	}
+	data, err := json.Marshal(changes)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// configValuesEqual 对比配置项旧值（库中多为字符串）与新值（JSON 可能为 bool/数字）。
+func configValuesEqual(oldVal, newVal any) bool {
+	return normalizeConfigValue(oldVal) == normalizeConfigValue(newVal)
+}
+
+func normalizeConfigValue(v any) string {
+	switch x := v.(type) {
+	case bool:
+		if x {
+			return "1"
+		}
+		return "0"
+	case float64:
+		if x == float64(int64(x)) {
+			return strconv.FormatInt(int64(x), 10)
+		}
+		return strconv.FormatFloat(x, 'f', -1, 64)
+	case nil:
+		return ""
+	default:
+		return strings.TrimSpace(fmt.Sprint(x))
+	}
 }

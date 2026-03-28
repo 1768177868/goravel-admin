@@ -47,17 +47,5 @@ func init() {
 		"excluded_path_prefixes": []string{
 			"/api/admin/code-generator/",
 		},
-
-		// ========== 审计变更对比 ==========
-
-		// 需要记录变更详情的数据表（PUT 时自动对比修改前后差异，DELETE 时记录删除快照）
-		// 新增表只需在此追加表名即可
-		"auditable_tables": []string{
-			"admins",
-			"roles",
-			"menus",
-			"departments",
-			"blacklists",
-		},
 	})
 }
