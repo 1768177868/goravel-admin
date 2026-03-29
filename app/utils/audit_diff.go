@@ -20,7 +20,7 @@ type FieldChange struct {
 }
 
 // auditModelFactories 仅用于「路径中带 ID」的 REST 更新/删除（见 audit_handlers 默认规则）。
-// 无路径 ID、按 body 批量更新的接口勿在此登记，应使用 RegisterNestedMapBatchAudit / RegisterAuditHandler。
+// 无路径 ID、按 body 批量更新的接口勿在此登记，应使用 RegisterAuditHandler（Diff 可用 ComputeDiffAgainstNestedMap 等）。
 var auditModelFactories = map[string]func() any{
 	"admins":      func() any { return &models.Admin{} },
 	"roles":       func() any { return &models.Role{} },

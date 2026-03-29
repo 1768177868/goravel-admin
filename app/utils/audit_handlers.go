@@ -3,7 +3,10 @@
 // 路径带数字 ID 的 REST（PUT/DELETE …/admins/1）：在 audit_diff.auditModelFactories 登记模型即可。
 //
 // 路径无 ID、靠请求体区分批次（如 POST …/configs/save、body 内含 group + configs）：
-// 使用 RegisterNestedMapBatchAudit，在 loadBefore 里按 body 条件查库，返回 key→旧值，再与 body 中嵌套字段对比。
+// 使用 RegisterAuditHandler，Before 按 body 查库得到 key→旧值，Diff 用 ComputeDiffAgainstNestedMap 与 body 中嵌套字段对比。
+//
+// 路径无 ID、但修改的是当前登录用户（如 PUT …/profile）：Before 会收到 operatorAdminID（JWT），用其加载 admins 快照。
+//
 // 其它表同理；若需优先匹配，用 RegisterAuditHandlerFirst。
 //
 // 对比逻辑非嵌套 map 时：RegisterAuditHandler 自定义 Before + Diff。
@@ -14,11 +17,14 @@ import (
 	"strings"
 )
 
+// AuditBeforeFunc 在 Next 之前加载快照；operatorAdminID 为当前登录管理员 ID（JWT），无则 0。
+type AuditBeforeFunc func(method, path, requestBody string, operatorAdminID uint) map[string]any
+
 // AuditHandler 自定义审计规则：匹配请求 → 加载修改前快照 → 与请求体对比生成 changes JSON。
 type AuditHandler struct {
 	Name   string
 	Match  func(method, path string) bool
-	Before func(method, path, requestBody string) map[string]any
+	Before AuditBeforeFunc
 	Diff   func(method, path string, before map[string]any, requestBody string) string
 }
 
@@ -35,28 +41,15 @@ func RegisterAuditHandlerFirst(h AuditHandler) {
 	auditHandlers = append([]AuditHandler{h}, auditHandlers...)
 }
 
-// RegisterNestedMapBatchAudit 通用模板：无 REST 路径 ID、请求体为「若干条件字段 + 嵌套 map」的批量保存。
-// loadBefore 中根据 requestBody 查库，返回「业务键 → 修改前值」的扁平 map；再与 body[nestedKey] 逐项对比（见 ComputeDiffAgainstNestedMap）。
-// 典型：configs 按 group 加载；其它表可按 slug、tenant_id 等在 loadBefore 里自行 ORM 查询。
-func RegisterNestedMapBatchAudit(name string, match func(method, path string) bool, nestedKey string, loadBefore func(method, path, requestBody string) map[string]any) {
-	RegisterAuditHandler(AuditHandler{
-		Name:   name,
-		Match:  match,
-		Before: loadBefore,
-		Diff: func(method, path string, before map[string]any, requestBody string) string {
-			return ComputeDiffAgainstNestedMap(before, requestBody, nestedKey)
-		},
-	})
-}
-
 // PrepareAuditChanges 在 Next 之前调用；返回的闭包在 Next 之后执行以生成 changes JSON。
+// operatorAdminID 为 JWT 中的管理员 ID（个人资料等无路径 ID 的接口依赖此值加载快照）。
 // 无匹配规则时返回 nil。
-func PrepareAuditChanges(method, path, requestBody string) func() string {
+func PrepareAuditChanges(method, path, requestBody string, operatorAdminID uint) func() string {
 	for _, h := range auditHandlers {
 		if h.Match == nil || !h.Match(method, path) {
 			continue
 		}
-		before := safeBefore(h.Before, method, path, requestBody)
+		before := safeBefore(h.Before, method, path, requestBody, operatorAdminID)
 		h := h
 		return func() string {
 			if h.Diff == nil {
@@ -68,11 +61,11 @@ func PrepareAuditChanges(method, path, requestBody string) func() string {
 	return nil
 }
 
-func safeBefore(before func(string, string, string) map[string]any, method, path, requestBody string) map[string]any {
+func safeBefore(before AuditBeforeFunc, method, path, requestBody string, operatorAdminID uint) map[string]any {
 	if before == nil {
 		return nil
 	}
-	return before(method, path, requestBody)
+	return before(method, path, requestBody, operatorAdminID)
 }
 
 func init() {
@@ -80,13 +73,37 @@ func init() {
 }
 
 func registerDefaultAuditHandlers() {
-	// 1) 配置批量保存（嵌套 map 模板，路径可在 config operation_log.audit_config_save_path 修改）
-	RegisterNestedMapBatchAudit("config_batch_save", matchConfigSavePath, "configs", func(method, path, requestBody string) map[string]any {
-		g := ExtractStringFromJSON(requestBody, "group")
-		return LoadConfigSnapshotByGroup(g)
+	// 配置批量保存：POST …/configs/save，body.group + body.configs
+	RegisterAuditHandler(AuditHandler{
+		Name:  "config_batch_save",
+		Match: matchConfigSavePath,
+		Before: func(method, path, requestBody string, _ uint) map[string]any {
+			g := ExtractStringFromJSON(requestBody, "group")
+			return LoadConfigSnapshotByGroup(g)
+		},
+		Diff: func(method, path string, before map[string]any, requestBody string) string {
+			return ComputeDiffAgainstNestedMap(before, requestBody, "configs")
+		},
 	})
 
-	// 2) REST：PUT，路径 .../resource/id
+	// 个人资料：PUT /api/admin/profile（无路径 ID，用当前登录管理员 ID 加载 admins 快照）
+	RegisterAuditHandler(AuditHandler{
+		Name: "profile_put",
+		Match: func(method, path string) bool {
+			return method == "PUT" && path == "/api/admin/profile"
+		},
+		Before: func(method, path, requestBody string, operatorAdminID uint) map[string]any {
+			if operatorAdminID == 0 {
+				return nil
+			}
+			return LoadModelSnapshot("admins", operatorAdminID)
+		},
+		Diff: func(method, path string, before map[string]any, requestBody string) string {
+			return ComputeDiffFromRequest(before, requestBody)
+		},
+	})
+
+	// REST：PUT，路径 .../resource/id
 	RegisterAuditHandler(AuditHandler{
 		Name: "rest_put",
 		Match: func(method, path string) bool {
@@ -96,7 +113,7 @@ func registerDefaultAuditHandlers() {
 			_, id := ParseResourcePath(path)
 			return id > 0
 		},
-		Before: func(method, path, requestBody string) map[string]any {
+		Before: func(method, path, requestBody string, _ uint) map[string]any {
 			table, id := ParseResourcePath(path)
 			return LoadModelSnapshot(table, id)
 		},
@@ -105,7 +122,7 @@ func registerDefaultAuditHandlers() {
 		},
 	})
 
-	// 3) REST：DELETE，路径 .../resource/id
+	// REST：DELETE，路径 .../resource/id
 	RegisterAuditHandler(AuditHandler{
 		Name: "rest_delete",
 		Match: func(method, path string) bool {
@@ -115,7 +132,7 @@ func registerDefaultAuditHandlers() {
 			_, id := ParseResourcePath(path)
 			return id > 0
 		},
-		Before: func(method, path, requestBody string) map[string]any {
+		Before: func(method, path, requestBody string, _ uint) map[string]any {
 			table, id := ParseResourcePath(path)
 			return LoadModelSnapshot(table, id)
 		},
