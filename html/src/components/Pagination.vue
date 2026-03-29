@@ -21,20 +21,7 @@
       @page-size-change="handlePageSizeChange"
     />
     
-    <!-- 快速跳转 -->
-    <div v-if="showQuickJumper && totalPages > 0 && shouldShowQuickJumper" class="pagination-jumper">
-      <span>{{ jumpTextComputed }}</span>
-      <el-input-number
-        v-model="jumpPage"
-        :min="1"
-        :max="Math.max(1, totalPages)"
-        :size="inputSize"
-        :controls="false"
-        style="width: 80px; margin: 0 8px"
-        @keyup.enter="handleJump"
-      />
-      <el-button :size="buttonSize" @click="handleJump">{{ confirmTextComputed }}</el-button>
-    </div>
+
   </div>
 </template>
 
