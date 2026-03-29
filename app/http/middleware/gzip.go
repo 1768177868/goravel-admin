@@ -64,6 +64,12 @@ func Gzip() http.Middleware {
 			return
 		}
 
+		// SSE 端点不能做 gzip：gzip 会缓冲全部数据直到流关闭，导致 EventStream 始终为空
+		if strings.HasSuffix(ctx.Request().Path(), "/stream") {
+			ctx.Request().Next()
+			return
+		}
+
 		ae := ctx.Request().Header("Accept-Encoding", "")
 		if !strings.Contains(strings.ToLower(ae), gzipEncoding) {
 			ctx.Request().Next()

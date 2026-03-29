@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	nethttp "net/http"
 	"os"
 	"runtime"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -29,6 +31,84 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/utils/errorlog"
 )
+
+// cloneJSONSafeForSSE 深拷贝监控数据并将 NaN/Inf 转为 0。
+// encoding/json 遇到 NaN/Inf 会报错，导致 SSE 静默跳过推送、前端一直无数据。
+func cloneJSONSafeForSSE(v any) any {
+	switch x := v.(type) {
+	case nil:
+		return nil
+	case float64:
+		if math.IsNaN(x) || math.IsInf(x, 0) {
+			return float64(0)
+		}
+		return x
+	case float32:
+		xf := float64(x)
+		if math.IsNaN(xf) || math.IsInf(xf, 0) {
+			return float32(0)
+		}
+		return x
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, val := range x {
+			out[k] = cloneJSONSafeForSSE(val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, val := range x {
+			out[i] = cloneJSONSafeForSSE(val)
+		}
+		return out
+	case []map[string]any:
+		out := make([]map[string]any, len(x))
+		for i, val := range x {
+			if m, ok := cloneJSONSafeForSSE(val).(map[string]any); ok {
+				out[i] = m
+			} else {
+				out[i] = val
+			}
+		}
+		return out
+	default:
+		return x
+	}
+}
+
+// writeMonitorSystemInfoSSE 推送一帧 system_info；返回 false 表示应结束 SSE（写入失败，通常客户端已断开）。
+func (r *MonitorController) writeMonitorSystemInfoSSE(ctx http.Context, writer nethttp.ResponseWriter) bool {
+	defer func() {
+		if rec := recover(); rec != nil {
+			facades.Log().Debugf("Monitor SSE: panic in write: %v", rec)
+		}
+	}()
+
+	systemInfo := r.collectSystemInfo(ctx)
+	safePayload := cloneJSONSafeForSSE(systemInfo)
+	message := map[string]any{
+		"type":      "system_info",
+		"data":      safePayload,
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+
+	messageData, err := json.Marshal(message)
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "monitor", "Failed to marshal system info (SSE)", map[string]any{
+			"error": err.Error(),
+		}, "Marshal system info SSE error: %v", err)
+		return true
+	}
+
+	if _, err := fmt.Fprintf(writer, "data: %s\n\n", string(messageData)); err != nil {
+		facades.Log().Debugf("Monitor SSE: write failed, client may have disconnected: %v", err)
+		return false
+	}
+	if flusher, ok := writer.(nethttp.Flusher); ok {
+		flusher.Flush()
+	}
+	return true
+}
 
 // 监控数据缓存（短期缓存，减少系统调用）
 var (
@@ -221,8 +301,105 @@ func getProcessInfo(ctx http.Context, processName string, pid int32) map[string]
 	return result
 }
 
-// getProcessTopRankings 按 CPU、内存分别取 Top N 进程（复用进程句柄以计算 CPU%，行为接近 htop/top）
+// processTopSample 进程采样数据
+type processTopSample struct {
+	pid           int32
+	name          string
+	user          string
+	cpuPercent    float64
+	memoryBytes   uint64
+	memoryPercent float64
+}
+
+// processTopResult 进程排行缓存结果
+var (
+	processTopCacheMu    sync.RWMutex
+	processTopCacheData  map[string]any
+	processTopCacheTime  time.Time
+	processTopCacheTTL   = 3 * time.Second
+	processTopCollecting int32 // 0=空闲，1=正在采集（atomic CAS）
+)
+
+// getProcessTopRankings 按 CPU、内存分别取 Top N 进程。
+// 采集可能很慢（Windows 上 CPUPercent/Username 等系统调用开销大），
+// 因此使用 "后台采集 + 读缓存" 策略：SSE 主循环永远不会被阻塞。
 func (r *MonitorController) getProcessTopRankings(ctx http.Context, memTotal uint64) map[string]any {
+	empty := map[string]any{
+		"by_cpu":    []map[string]any{},
+		"by_memory": []map[string]any{},
+		"limit":     processTopLimit,
+	}
+
+	// 1. 尝试返回缓存
+	processTopCacheMu.RLock()
+	if processTopCacheData != nil && time.Since(processTopCacheTime) < processTopCacheTTL {
+		cached := processTopCacheData
+		processTopCacheMu.RUnlock()
+		return cached
+	}
+	processTopCacheMu.RUnlock()
+
+	// 2. 如果已有 goroutine 在采集，直接返回上一次缓存（或空）
+	if !swapProcessTopCollecting(0, 1) {
+		processTopCacheMu.RLock()
+		if processTopCacheData != nil {
+			cached := processTopCacheData
+			processTopCacheMu.RUnlock()
+			return cached
+		}
+		processTopCacheMu.RUnlock()
+		return empty
+	}
+
+	// 3. 在后台 goroutine 中采集，带整体 8 秒超时
+	go func() {
+		defer swapProcessTopCollecting(1, 0)
+		result := r.doCollectProcessTop(memTotal)
+		processTopCacheMu.Lock()
+		processTopCacheData = result
+		processTopCacheTime = time.Now()
+		processTopCacheMu.Unlock()
+	}()
+
+	// 4. 本次返回旧缓存或空
+	processTopCacheMu.RLock()
+	if processTopCacheData != nil {
+		cached := processTopCacheData
+		processTopCacheMu.RUnlock()
+		return cached
+	}
+	processTopCacheMu.RUnlock()
+	return empty
+}
+
+// swapProcessTopCollecting 原子 CAS
+func swapProcessTopCollecting(old, new int32) bool {
+	return atomic.CompareAndSwapInt32(&processTopCollecting, old, new)
+}
+
+// doCollectProcessTop 实际采集逻辑（可能耗时较长，只在后台 goroutine 调用）
+func (r *MonitorController) doCollectProcessTop(memTotal uint64) map[string]any {
+	empty := map[string]any{
+		"by_cpu":    []map[string]any{},
+		"by_memory": []map[string]any{},
+		"limit":     processTopLimit,
+	}
+
+	// 整体超时 8 秒
+	done := make(chan map[string]any, 1)
+	go func() {
+		done <- r.collectProcessTopSamples(memTotal)
+	}()
+	select {
+	case result := <-done:
+		return result
+	case <-time.After(8 * time.Second):
+		return empty
+	}
+}
+
+// collectProcessTopSamples 枚举进程并采样
+func (r *MonitorController) collectProcessTopSamples(memTotal uint64) map[string]any {
 	empty := map[string]any{
 		"by_cpu":    []map[string]any{},
 		"by_memory": []map[string]any{},
@@ -231,81 +408,105 @@ func (r *MonitorController) getProcessTopRankings(ctx http.Context, memTotal uin
 
 	procs, err := process.Processes()
 	if err != nil {
-		errorlog.RecordHTTP(ctx, "monitor", "Get processes list for top rankings error", map[string]any{
-			"error": err.Error(),
-		}, "Get processes list for top rankings error: %v", err)
 		return empty
 	}
 
-	type sample struct {
-		pid           int32
-		name          string
-		user          string
-		cpuPercent    float64
-		memoryBytes   uint64
-		memoryPercent float64
+	type sampleResult struct {
+		s  processTopSample
+		ok bool
 	}
 
-	samples := make([]sample, 0, len(procs))
-	current := make(map[int32]struct{}, len(procs))
+	// 并发采样，限制并发数
+	concurrency := 16
+	if runtime.GOOS == "windows" {
+		concurrency = 8
+	}
+	sem := make(chan struct{}, concurrency)
+	results := make(chan sampleResult, len(procs))
+
+	var wg sync.WaitGroup
 
 	processTopMu.Lock()
+	current := make(map[int32]struct{}, len(procs))
 	for _, p := range procs {
-		pid := p.Pid
-		if pid <= 0 {
+		if p.Pid <= 0 {
 			continue
 		}
-		current[pid] = struct{}{}
-
-		proc, ok := processTopHandles[pid]
-		if !ok {
-			processTopHandles[pid] = p
-			proc = p
+		current[p.Pid] = struct{}{}
+		if _, ok := processTopHandles[p.Pid]; !ok {
+			processTopHandles[p.Pid] = p
 		}
-
-		cpuPct, errCPU := proc.CPUPercent()
-		if errCPU != nil {
-			cpuPct = 0
-		}
-
-		var rss uint64
-		if mi, errMem := proc.MemoryInfo(); errMem == nil && mi != nil {
-			rss = mi.RSS
-		}
-
-		name, errName := proc.Name()
-		if errName != nil || name == "" {
-			name = "?"
-		}
-
-		user := ""
-		if u, errU := proc.Username(); errU == nil {
-			user = u
-		}
-
-		memPct := 0.0
-		if memTotal > 0 {
-			memPct = float64(rss) / float64(memTotal) * 100
-		}
-
-		samples = append(samples, sample{
-			pid: pid, name: name, user: user,
-			cpuPercent: cpuPct, memoryBytes: rss, memoryPercent: memPct,
-		})
 	}
-
+	// 清理已退出的进程句柄
 	for pid := range processTopHandles {
 		if _, ok := current[pid]; !ok {
 			delete(processTopHandles, pid)
 		}
 	}
+	// 拷贝出需要采样的句柄（避免长时间持锁）
+	handlesCopy := make(map[int32]*process.Process, len(processTopHandles))
+	for pid, proc := range processTopHandles {
+		handlesCopy[pid] = proc
+	}
 	processTopMu.Unlock()
+
+	for pid, proc := range handlesCopy {
+		wg.Add(1)
+		go func(pid int32, proc *process.Process) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			s := processTopSample{pid: pid}
+
+			name, errName := proc.Name()
+			if errName != nil || name == "" {
+				name = "?"
+			}
+			s.name = name
+
+			cpuPct, errCPU := proc.CPUPercent()
+			if errCPU != nil || math.IsNaN(cpuPct) || math.IsInf(cpuPct, 0) {
+				cpuPct = 0
+			}
+			s.cpuPercent = cpuPct
+
+			if mi, errMem := proc.MemoryInfo(); errMem == nil && mi != nil {
+				s.memoryBytes = mi.RSS
+			}
+
+			if memTotal > 0 {
+				s.memoryPercent = float64(s.memoryBytes) / float64(memTotal) * 100
+			}
+
+			// Username 在 Windows 上极慢，跳过
+			if runtime.GOOS != "windows" {
+				if u, errU := proc.Username(); errU == nil {
+					s.user = u
+				}
+			}
+
+			results <- sampleResult{s: s, ok: true}
+		}(pid, proc)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	samples := make([]processTopSample, 0, len(handlesCopy))
+	for r := range results {
+		if r.ok {
+			samples = append(samples, r.s)
+		}
+	}
 
 	if len(samples) == 0 {
 		return empty
 	}
 
-	byCPU := make([]sample, len(samples))
+	byCPU := make([]processTopSample, len(samples))
 	copy(byCPU, samples)
 	sort.Slice(byCPU, func(i, j int) bool {
 		if byCPU[i].cpuPercent == byCPU[j].cpuPercent {
@@ -317,7 +518,7 @@ func (r *MonitorController) getProcessTopRankings(ctx http.Context, memTotal uin
 		byCPU = byCPU[:processTopLimit]
 	}
 
-	byMem := make([]sample, len(samples))
+	byMem := make([]processTopSample, len(samples))
 	copy(byMem, samples)
 	sort.Slice(byMem, func(i, j int) bool {
 		if byMem[i].memoryBytes == byMem[j].memoryBytes {
@@ -329,7 +530,7 @@ func (r *MonitorController) getProcessTopRankings(ctx http.Context, memTotal uin
 		byMem = byMem[:processTopLimit]
 	}
 
-	toMaps := func(list []sample) []map[string]any {
+	toMaps := func(list []processTopSample) []map[string]any {
 		out := make([]map[string]any, len(list))
 		for i, s := range list {
 			m := map[string]any{
@@ -1529,65 +1730,31 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 		flusher.Flush()
 	}
 
+	// 检测客户端断开连接
+	clientGone := ctx.Request().Origin().Context().Done()
+
+	// 立即推送首帧：time.NewTicker 首次在整段 interval 后才触发，否则首屏长时间无业务数据
+	select {
+	case <-clientGone:
+		return nil
+	default:
+		if !r.writeMonitorSystemInfoSSE(ctx, writer) {
+			return nil
+		}
+	}
+
 	// 创建 ticker，定期推送数据
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
-	// 检测客户端断开连接
-	clientGone := ctx.Request().Origin().Context().Done()
-
 	for {
 		select {
 		case <-clientGone:
-			// 客户端断开连接
 			return nil
 		case <-ticker.C:
-			// 检查客户端是否已断开
-			select {
-			case <-clientGone:
+			if !r.writeMonitorSystemInfoSSE(ctx, writer) {
 				return nil
-			default:
 			}
-
-			// 使用 recover 捕获可能的 panic（客户端断开时 writer 可能为 nil）
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						// 客户端断开连接，静默返回
-						facades.Log().Debugf("Monitor SSE: client disconnected, error: %v", r)
-					}
-				}()
-
-				// 获取系统信息（复用 GetSystemInfo 的逻辑）
-				systemInfo := r.collectSystemInfo(ctx)
-
-				// 构造 SSE 消息
-				message := map[string]any{
-					"type":      "system_info",
-					"data":      systemInfo,
-					"timestamp": time.Now().Format(time.RFC3339),
-				}
-
-				messageData, err := json.Marshal(message)
-				if err != nil {
-					errorlog.RecordHTTP(ctx, "monitor", "Failed to marshal system info", map[string]any{
-						"error": err.Error(),
-					}, "Marshal system info error: %v", err)
-					return
-				}
-
-				// 发送 SSE 消息（可能因客户端断开而失败）
-				if _, err := fmt.Fprintf(writer, "data: %s\n\n", string(messageData)); err != nil {
-					// 写入失败，客户端可能已断开
-					facades.Log().Debugf("Monitor SSE: write failed, client may have disconnected: %v", err)
-					return
-				}
-
-				// 刷新缓冲区（可能因客户端断开而失败）
-				if flusher, ok := writer.(nethttp.Flusher); ok {
-					flusher.Flush()
-				}
-			}()
 		}
 	}
 }
