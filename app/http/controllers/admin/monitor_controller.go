@@ -7,6 +7,7 @@ import (
 	nethttp "net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,6 +38,14 @@ var (
 	cacheDuration    = 1 * time.Second // 缓存1秒，SSE推送间隔2秒时可以减少一半的系统调用
 	// singleflight 确保同一时间只有一个 goroutine 执行缓存重建，避免锁竞争
 	monitorCacheGroup singleflight.Group
+)
+
+// 进程 Top 排行：复用 *process.Process 以使 CPUPercent() 能基于两次采样算出差值（类似 htop）
+const processTopLimit = 20
+
+var (
+	processTopMu      sync.Mutex
+	processTopHandles = make(map[int32]*process.Process)
 )
 
 // 网络带宽监控缓存（用于计算速度和峰值）
@@ -210,6 +219,139 @@ func getProcessInfo(ctx http.Context, processName string, pid int32) map[string]
 	}
 
 	return result
+}
+
+// getProcessTopRankings 按 CPU、内存分别取 Top N 进程（复用进程句柄以计算 CPU%，行为接近 htop/top）
+func (r *MonitorController) getProcessTopRankings(ctx http.Context, memTotal uint64) map[string]any {
+	empty := map[string]any{
+		"by_cpu":    []map[string]any{},
+		"by_memory": []map[string]any{},
+		"limit":     processTopLimit,
+	}
+
+	procs, err := process.Processes()
+	if err != nil {
+		errorlog.RecordHTTP(ctx, "monitor", "Get processes list for top rankings error", map[string]any{
+			"error": err.Error(),
+		}, "Get processes list for top rankings error: %v", err)
+		return empty
+	}
+
+	type sample struct {
+		pid           int32
+		name          string
+		user          string
+		cpuPercent    float64
+		memoryBytes   uint64
+		memoryPercent float64
+	}
+
+	samples := make([]sample, 0, len(procs))
+	current := make(map[int32]struct{}, len(procs))
+
+	processTopMu.Lock()
+	for _, p := range procs {
+		pid := p.Pid
+		if pid <= 0 {
+			continue
+		}
+		current[pid] = struct{}{}
+
+		proc, ok := processTopHandles[pid]
+		if !ok {
+			processTopHandles[pid] = p
+			proc = p
+		}
+
+		cpuPct, errCPU := proc.CPUPercent()
+		if errCPU != nil {
+			cpuPct = 0
+		}
+
+		var rss uint64
+		if mi, errMem := proc.MemoryInfo(); errMem == nil && mi != nil {
+			rss = mi.RSS
+		}
+
+		name, errName := proc.Name()
+		if errName != nil || name == "" {
+			name = "?"
+		}
+
+		user := ""
+		if u, errU := proc.Username(); errU == nil {
+			user = u
+		}
+
+		memPct := 0.0
+		if memTotal > 0 {
+			memPct = float64(rss) / float64(memTotal) * 100
+		}
+
+		samples = append(samples, sample{
+			pid: pid, name: name, user: user,
+			cpuPercent: cpuPct, memoryBytes: rss, memoryPercent: memPct,
+		})
+	}
+
+	for pid := range processTopHandles {
+		if _, ok := current[pid]; !ok {
+			delete(processTopHandles, pid)
+		}
+	}
+	processTopMu.Unlock()
+
+	if len(samples) == 0 {
+		return empty
+	}
+
+	byCPU := make([]sample, len(samples))
+	copy(byCPU, samples)
+	sort.Slice(byCPU, func(i, j int) bool {
+		if byCPU[i].cpuPercent == byCPU[j].cpuPercent {
+			return byCPU[i].memoryBytes > byCPU[j].memoryBytes
+		}
+		return byCPU[i].cpuPercent > byCPU[j].cpuPercent
+	})
+	if len(byCPU) > processTopLimit {
+		byCPU = byCPU[:processTopLimit]
+	}
+
+	byMem := make([]sample, len(samples))
+	copy(byMem, samples)
+	sort.Slice(byMem, func(i, j int) bool {
+		if byMem[i].memoryBytes == byMem[j].memoryBytes {
+			return byMem[i].cpuPercent > byMem[j].cpuPercent
+		}
+		return byMem[i].memoryBytes > byMem[j].memoryBytes
+	})
+	if len(byMem) > processTopLimit {
+		byMem = byMem[:processTopLimit]
+	}
+
+	toMaps := func(list []sample) []map[string]any {
+		out := make([]map[string]any, len(list))
+		for i, s := range list {
+			m := map[string]any{
+				"pid":            s.pid,
+				"name":           s.name,
+				"cpu_percent":    s.cpuPercent,
+				"memory_bytes":   s.memoryBytes,
+				"memory_percent": s.memoryPercent,
+			}
+			if s.user != "" {
+				m["user"] = s.user
+			}
+			out[i] = m
+		}
+		return out
+	}
+
+	return map[string]any{
+		"by_cpu":    toMaps(byCPU),
+		"by_memory": toMaps(byMem),
+		"limit":     processTopLimit,
+	}
 }
 
 // findProcessByName 根据进程名查找进程 PID
@@ -1351,8 +1493,9 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 			"os":         runtime.GOOS,
 			"go_version": runtime.Version(),
 		},
-		"processes": r.getProcessesInfo(ctx),
-		"alerts":    alerts,
+		"processes":   r.getProcessesInfo(ctx),
+		"process_top": r.getProcessTopRankings(ctx, memInfo.Total),
+		"alerts":      alerts,
 	})
 }
 
@@ -1975,7 +2118,8 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 			"os":         runtime.GOOS,
 			"go_version": runtime.Version(),
 		},
-		"processes": r.getProcessesInfo(ctx),
+		"processes":   r.getProcessesInfo(ctx),
+		"process_top": r.getProcessTopRankings(ctx, memInfo.Total),
 		// 注意：alerts 不包含在缓存中，会在返回时根据当前语言动态生成
 	}
 

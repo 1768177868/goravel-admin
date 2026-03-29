@@ -749,6 +749,93 @@
       </el-col>
     </el-row>
 
+    <!-- 进程占用排行 -->
+    <el-row
+      v-if="systemInfo.process_top && ((systemInfo.process_top.by_cpu && systemInfo.process_top.by_cpu.length) || (systemInfo.process_top.by_memory && systemInfo.process_top.by_memory.length))"
+      :gutter="20"
+      style="margin-top: 20px"
+    >
+      <el-col :span="24">
+        <el-card class="monitor-card process-top-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon"><TrendCharts /></el-icon>
+                <span>{{ $t('monitor.process_ranking') }}</span>
+              </div>
+              <span class="process-top-hint"></span>
+            </div>
+          </template>
+          <div class="monitor-content process-top-body">
+            <el-row :gutter="16">
+              <el-col :xs="24" :sm="24" :md="12">
+                <div class="process-top-subtitle">{{ $t('monitor.process_top_by_cpu') }}</div>
+                <el-table
+                  :data="systemInfo.process_top.by_cpu"
+                  stripe
+                  border
+                  size="small"
+                  class="process-top-table"
+                  max-height="380"
+                >
+                  <el-table-column type="index" :label="'#'" width="48" />
+                  <el-table-column prop="pid" :label="$t('monitor.process_pid')" width="88" />
+                  <el-table-column prop="name" :label="$t('monitor.process_name')" min-width="120" show-overflow-tooltip />
+                  <el-table-column v-if="hasProcessTopUser(systemInfo.process_top.by_cpu)" prop="user" :label="$t('monitor.process_top_user')" width="100" show-overflow-tooltip />
+                  <el-table-column :label="$t('monitor.process_cpu')" width="100" align="right">
+                    <template #default="{ row }">
+                      {{ formatPercent(row.cpu_percent || 0) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column :label="$t('monitor.memory_usage')" width="100" align="right">
+                    <template #default="{ row }">
+                      {{ formatPercent(row.memory_percent || 0) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column :label="$t('monitor.process_memory')" min-width="110" align="right">
+                    <template #default="{ row }">
+                      {{ formatBytes(row.memory_bytes || 0) }}
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </el-col>
+              <el-col :xs="24" :sm="24" :md="12" class="process-top-col-second">
+                <div class="process-top-subtitle">{{ $t('monitor.process_top_by_memory') }}</div>
+                <el-table
+                  :data="systemInfo.process_top.by_memory"
+                  stripe
+                  border
+                  size="small"
+                  class="process-top-table"
+                  max-height="380"
+                >
+                  <el-table-column type="index" :label="'#'" width="48" />
+                  <el-table-column prop="pid" :label="$t('monitor.process_pid')" width="88" />
+                  <el-table-column prop="name" :label="$t('monitor.process_name')" min-width="120" show-overflow-tooltip />
+                  <el-table-column v-if="hasProcessTopUser(systemInfo.process_top.by_memory)" prop="user" :label="$t('monitor.process_top_user')" width="100" show-overflow-tooltip />
+                  <el-table-column :label="$t('monitor.process_cpu')" width="100" align="right">
+                    <template #default="{ row }">
+                      {{ formatPercent(row.cpu_percent || 0) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column :label="$t('monitor.memory_usage')" width="100" align="right">
+                    <template #default="{ row }">
+                      {{ formatPercent(row.memory_percent || 0) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column :label="$t('monitor.process_memory')" min-width="110" align="right">
+                    <template #default="{ row }">
+                      {{ formatBytes(row.memory_bytes || 0) }}
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 详细监控信息：TCP连接、磁盘IO、磁盘分区、网卡详情 -->
     <el-row v-if="systemInfo.tcp_connections || (systemInfo.disk_io && systemInfo.disk_io.total_read_bytes > 0) || (systemInfo.disk_partitions && systemInfo.disk_partitions.length > 0)" :gutter="20" style="margin-top: 20px">
       <!-- TCP连接统计 -->
@@ -1028,7 +1115,12 @@ const systemInfo = ref({
   alerts: [],
   tcp_connections: {},
   disk_io: {},
-  disk_partitions: []
+  disk_partitions: [],
+  process_top: {
+    by_cpu: [],
+    by_memory: [],
+    limit: 20
+  }
 })
 
 // 判断是否为Linux系统
@@ -1594,6 +1686,12 @@ const loadData = async () => {
   }
 }
 
+// 进程排行中是否展示「用户」列（任一进程有 user 则显示）
+const hasProcessTopUser = (rows) => {
+  if (!rows || !rows.length) return false
+  return rows.some((r) => r && r.user)
+}
+
 const formatBytes = (bytes) => {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -1930,6 +2028,44 @@ html.dark .monitor-card :deep(.el-card__body) {
 
 .processes-card :deep(.el-card__header) {
   background: var(--el-color-primary);
+}
+
+.process-top-card :deep(.el-card__header) {
+  background: var(--el-color-primary);
+}
+
+.process-top-hint {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.92;
+  max-width: 58%;
+  text-align: right;
+  line-height: 1.45;
+}
+
+.process-top-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 10px;
+}
+
+html.dark .process-top-subtitle {
+  color: var(--el-text-color-regular) !important;
+}
+
+.process-top-body {
+  padding-top: 4px;
+}
+
+.process-top-table {
+  width: 100%;
+}
+
+@media (max-width: 991px) {
+  .process-top-col-second {
+    margin-top: 18px;
+  }
 }
 
 .process-card {

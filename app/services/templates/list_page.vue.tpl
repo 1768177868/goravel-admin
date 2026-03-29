@@ -404,6 +404,6 @@ onMounted(async () => {
 
 <style scoped>
 .<<.ModuleName>>-list {
-  padding: 20px;
+
 }
 </style>
