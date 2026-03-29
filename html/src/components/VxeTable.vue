@@ -4,13 +4,13 @@
     <div v-if="isMobile && data.length > 0" class="mobile-card-list">
       <div
         v-for="(row, index) in data"
-        :key="index"
+        :key="row.id ?? row.ID ?? index"
         class="mobile-card-item"
         @click="handleCardClick(row)"
       >
         <div
-          v-for="column in mobileColumns"
-          :key="column.field || column.slot"
+          v-for="column in mobileDataColumns"
+          :key="column.field || column.slot || column.key"
           class="card-field"
         >
           <div class="card-label">{{ column.title }}</div>
@@ -18,6 +18,13 @@
             <slot v-if="column.slot" :name="column.slot" :row="row" />
             <span v-else>{{ getFieldValue(row, column.field) }}</span>
           </div>
+        </div>
+        <div
+          v-if="slots.operation"
+          class="card-actions"
+          @click.stop
+        >
+          <slot name="operation" :row="row" />
         </div>
       </div>
     </div>
@@ -63,9 +70,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, useSlots } from 'vue'
 import { useResponsive } from '../composables/useResponsive'
 import { useVxeTableSize } from '../composables/useVxeTableSize'
+
+const slots = useSlots()
 
 const { isMobile } = useResponsive()
 const { vxeSize } = useVxeTableSize()
@@ -97,14 +106,33 @@ const emit = defineEmits(['sort-change', 'checkbox-change', 'checkbox-all', 'row
 
 const tableRef = ref(null)
 
-// 移动端显示的列（排除操作列，操作列在卡片底部显示）
-const mobileColumns = computed(() => {
-  return props.columns.filter(col => 
-    col.field && 
-    col.field !== 'operation' && 
-    col.type !== 'checkbox' &&
-    col.type !== 'seq'
-  ).slice(0, 4) // 移动端最多显示4个字段
+function isOperationColumn(col) {
+  return (
+    col.slot === 'operation' ||
+    col.key === 'operation' ||
+    col.field === 'operation'
+  )
+}
+
+function isSpecialColumnType(col) {
+  const t = col.type
+  return (
+    t === 'checkbox' ||
+    t === 'seq' ||
+    t === 'radio' ||
+    t === 'expand' ||
+    t === 'index'
+  )
+}
+
+// 移动端卡片：展示全部数据列（操作列由底部 #operation 插槽渲染）
+const mobileDataColumns = computed(() => {
+  return props.columns.filter((col) => {
+    if (isOperationColumn(col)) return false
+    if (isSpecialColumnType(col)) return false
+    if (!col.field && !col.slot) return false
+    return true
+  })
 })
 
 // 获取字段值
@@ -195,6 +223,21 @@ defineExpose({
   color: var(--text-color-primary, #303133);
   text-align: right;
   word-break: break-word;
+}
+
+.card-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color-lighter, #ebeef5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.card-actions :deep(.el-button) {
+  min-height: 36px;
 }
 
 /* 桌面端表格 */

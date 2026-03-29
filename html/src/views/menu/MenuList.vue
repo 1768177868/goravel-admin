@@ -33,6 +33,7 @@
         :on-column-setting-confirm="handleColumnSettingConfirm"
       />
 
+      <div class="list-table-scroll">
       <el-table
         ref="tableRef"
         :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
@@ -117,6 +118,7 @@
           </template>
         </el-table-column>
       </el-table>
+      </div>
     </el-card>
 
     <MenuForm

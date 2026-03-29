@@ -2442,5 +2442,15 @@ html.dark .interfaces-table :deep(.el-table__row:hover) {
   .load-number {
     font-size: 36px;
   }
+
+  /* 宽表格在窄屏可横向滚动，避免列被裁切 */
+  .monitor-page :deep(.el-card__body) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .monitor-page :deep(.el-table) {
+    min-width: 640px;
+  }
 }
 </style>

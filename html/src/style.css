@@ -83,6 +83,19 @@ body {
   gap: 10px;
 }
 
+/* 移动端：列表页内 Element 表格可横向滚动，避免多列/右侧固定列不可见 */
+@media (max-width: 768px) {
+  .list-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  .list-table-scroll .el-table {
+    min-width: 680px;
+  }
+}
+
 /* 通知弹窗暗黑模式支持 */
 html.dark .notification-popover {
   background-color: var(--el-bg-color, #1d1e1f) !important;
