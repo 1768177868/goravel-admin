@@ -150,7 +150,7 @@ const emit = defineEmits(['update:modelValue', 'change'])
 
 const { locale } = useI18n()
 
-const imageUrl = ref(props.modelValue)
+const imagePath = ref(props.modelValue)
 const cropDialogVisible = ref(false)
 const cropperRef = ref(null)
 const cropUploading = ref(false)
@@ -176,14 +176,57 @@ const cropOption = reactive({
 
 // 监听 props 变化
 watch(() => props.modelValue, (newVal) => {
-  imageUrl.value = newVal
+  imagePath.value = newVal
 })
 
-// 监听 imageUrl 变化，同步到父组件
-watch(imageUrl, (newVal) => {
-  emit('update:modelValue', newVal)
-  emit('change', newVal)
-})
+const normalizeUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url
+
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+  const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
+
+  if (apiBaseURL) {
+    const base = apiBaseURL.replace(/\/+$/, '')
+    const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
+    if (url.startsWith(prefix)) return `${base}${url}`
+    return `${base}${prefix}${url.startsWith('/') ? '' : '/'}${url}`
+  }
+
+  const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
+  if (url.startsWith(prefix)) return url
+  return `${prefix}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+const imageUrl = computed(() => normalizeUrl(imagePath.value || ''))
+
+const toSubmitUrl = (url) => {
+  const value = String(url || '').trim()
+  if (!value) return ''
+  if (value.startsWith('/')) return value
+
+  if (value.startsWith('http')) {
+    const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
+    const normalizedPrefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
+    try {
+      const parsed = new URL(value)
+      if (parsed.pathname.startsWith(normalizedPrefix)) {
+        return `${parsed.pathname}${parsed.search || ''}`
+      }
+      return value
+    } catch {
+      return value
+    }
+  }
+
+  return value
+}
+
+const emitValue = (value) => {
+  const finalValue = toSubmitUrl(value)
+  emit('update:modelValue', finalValue)
+  emit('change', finalValue)
+}
 
 // 上传配置
 const uploadAction = computed(() => {
@@ -229,29 +272,9 @@ const beforeUpload = (file) => {
 // 上传成功
 const handleUploadSuccess = (response) => {
   if (response.code === 200 && response.data) {
-    const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-    const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
-    
-    let url = response.data.preview_url || response.data.file_url
-    
-    if (url && !url.startsWith('http')) {
-      if (apiBaseURL) {
-        const base = apiBaseURL.replace(/\/+$/, '')
-        const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-        if (url.startsWith(prefix)) {
-          url = `${base}${url}`
-        } else {
-          url = `${base}${prefix}${url.startsWith('/') ? '' : '/'}${url}`
-        }
-      } else {
-        const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-        if (!url.startsWith(prefix)) {
-          url = `${prefix}${url.startsWith('/') ? '' : '/'}${url}`
-        }
-      }
-    }
-    
-    imageUrl.value = url
+    const path = toSubmitUrl(response.data.file_url || response.data.preview_url || '')
+    imagePath.value = path
+    emitValue(path)
     ElMessage.success('上传成功')
   } else {
     ElMessage.error(response.message || '上传失败')
@@ -320,29 +343,9 @@ const handleCropConfirm = () => {
     }).then(response => {
       cropUploading.value = false
       if (response.data.code === 200 && response.data.data) {
-        const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-        const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
-        
-        let url = response.data.data.preview_url || response.data.data.file_url
-        
-        if (url && !url.startsWith('http')) {
-          if (apiBaseURL) {
-            const base = apiBaseURL.replace(/\/+$/, '')
-            const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-            if (url.startsWith(prefix)) {
-              url = `${base}${url}`
-            } else {
-              url = `${base}${prefix}${url.startsWith('/') ? '' : '/'}${url}`
-            }
-          } else {
-            const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-            if (!url.startsWith(prefix)) {
-              url = `${prefix}${url.startsWith('/') ? '' : '/'}${url}`
-            }
-          }
-        }
-        
-        imageUrl.value = url
+        const path = toSubmitUrl(response.data.data.file_url || response.data.data.preview_url || '')
+        imagePath.value = path
+        emitValue(path)
         cropDialogVisible.value = false
         ElMessage.success('上传成功')
       } else {
@@ -358,9 +361,8 @@ const handleCropConfirm = () => {
 
 // 删除图片
 const handleRemove = () => {
-  imageUrl.value = ''
-  emit('update:modelValue', '')
-  emit('change', '')
+  imagePath.value = ''
+  emitValue('')
 }
 </script>
 

@@ -1120,6 +1120,8 @@
     "icon_name": "图标选择（icon）",
     "icon_name_remote": "图标选择（icon + apiUrl）",
     "avatar": "头像上传（image-upload）",
+    "avatar_list": "图片组上传（image-upload-multiple）",
+    "avatar_list_min": "请至少上传 {count} 张图片",
     "color": "颜色",
     "region": "地区",
     "region_remote": "地区（cascader + apiUrl）",

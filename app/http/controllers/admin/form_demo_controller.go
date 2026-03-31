@@ -42,10 +42,15 @@ func (c *FormDemoController) GetData(ctx http.Context) http.Response {
 		"enabled":                     true,
 		"icon_name":                   "User",
 		"icon_name_remote":            "Bell",
-		"color":                       "#E6A23C",
-		"region":                      []string{"china", "guangdong", "guangzhou"},
-		"region_remote":               []int{100, 110, 112},
-		"custom_note":                 "This value is loaded from test API.",
+		"avatar":                      "/api/admin/public/images/70",
+		"avatar_list": []string{
+			"/api/admin/public/images/70",
+			"/api/admin/public/images/71",
+		},
+		"color":         "#E6A23C",
+		"region":        []string{"china", "guangdong", "guangzhou"},
+		"region_remote": []int{100, 110, 112},
+		"custom_note":   "This value is loaded from test API.",
 	}
 
 	return response.Success(ctx, data)

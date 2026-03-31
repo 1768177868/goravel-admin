@@ -59,6 +59,7 @@ import request from '@/utils/request'
 const { t } = useI18n()
 
 const formRef = ref(null)
+const avatarListMinCount = 2
 
 const getInitialValue = () => ({
   username: '',
@@ -89,6 +90,7 @@ const getInitialValue = () => ({
   icon_name: '',
   icon_name_remote: '',
   avatar: '',
+  avatar_list: [],
   color: '#409EFF',
   region: [],
   region_remote: [],
@@ -100,7 +102,18 @@ const formData = reactive(getInitialValue())
 const formRules = computed(() => ({
   username: [{ required: true, message: t('form.username_required'), trigger: 'blur' }],
   password: [{ required: true, message: t('form.password_required'), trigger: 'blur' }],
-  gender: [{ required: true, message: t('form_demo.gender_required'), trigger: 'change' }]
+  gender: [{ required: true, message: t('form_demo.gender_required'), trigger: 'change' }],
+  avatar_list: [{
+    validator: (_rule, value, callback) => {
+      const count = Array.isArray(value) ? value.filter(Boolean).length : 0
+      if (count < avatarListMinCount) {
+        callback(new Error(t('form_demo.avatar_list_min', { count: avatarListMinCount })))
+        return
+      }
+      callback()
+    },
+    trigger: 'change'
+  }]
 }))
 
 const genderOptions = computed(() => [
@@ -243,6 +256,14 @@ const formFields = computed(() => [
     cropWidth: 300,
     cropHeight: 300
   },
+  {
+    prop: 'avatar_list',
+    label: t('form_demo.avatar_list'),
+    type: 'image-upload-multiple',
+    limit: 6,
+    minCount: avatarListMinCount,
+    maxSizeMB: 2
+  },
   { prop: 'color', label: t('form_demo.color'), type: 'color', showAlpha: false },
   {
     prop: 'region',
@@ -338,6 +359,7 @@ const submitForm = async () => {
   if (!formRef.value) return
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
+  console.log('[FormDemo] submit formData:', JSON.parse(JSON.stringify(formData)))
   ElMessage.success(t('common.success'))
 }
 </script>

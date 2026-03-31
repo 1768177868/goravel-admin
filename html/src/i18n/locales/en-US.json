@@ -1112,6 +1112,8 @@
     "icon_name": "Icon Picker (icon)",
     "icon_name_remote": "Icon Picker (icon + apiUrl)",
     "avatar": "Avatar Upload (image-upload)",
+    "avatar_list": "Images Upload (image-upload-multiple)",
+    "avatar_list_min": "Please upload at least {count} images",
     "color": "Color",
     "region": "Region",
     "region_remote": "Region (cascader + apiUrl)",

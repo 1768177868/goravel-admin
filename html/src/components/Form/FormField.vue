@@ -201,6 +201,15 @@
       v-bind="field.props || {}"
     />
 
+    <ImageUploadMultiple
+      v-else-if="field.type === 'image-upload-multiple'"
+      v-model="model[field.prop]"
+      :limit="field.limit ?? 9"
+      :min-count="field.minCount ?? 0"
+      :max-size-m-b="field.maxSizeMB ?? 10"
+      v-bind="field.props || {}"
+    />
+
      <!-- 新增：图标选择器 -->
      <div v-else-if="field.type === 'icon'" class="icon-picker">
       <el-input
@@ -279,6 +288,7 @@ import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
 import TransferField from './TransferField.vue'
 import ImageUpload from '../ImageUpload.vue'
+import ImageUploadMultiple from '../ImageUploadMultiple.vue'
 import { useFieldOptions } from '../SearchForm/useFieldOptions'
 import { useIconPicker } from '../SearchForm/useIconPicker'
 import { useResponsive } from '../../composables/useResponsive'

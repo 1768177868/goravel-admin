@@ -612,7 +612,7 @@ const loadImageAsBlob = async (row) => {
     // 设置加载成功状态（但实际加载由浏览器完成，等待 @load 事件）
     imageLoadingMap.value.set(attachmentId, 'loading')
   } catch (error) {
-    console.error('Failed to load image:', error)
+    // console.error('Failed to load image:', error)
     // 加载失败时设置为错误状态
     imageLoadingMap.value.set(attachmentId, 'error')
     imageUrlMap.value.set(attachmentId, '')
