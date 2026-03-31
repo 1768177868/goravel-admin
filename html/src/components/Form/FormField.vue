@@ -217,6 +217,14 @@
       </el-popover>
     </div>
 
+    <!-- 穿梭框（支持 apiUrl / options / optionsFn） -->
+    <TransferField
+      v-else-if="field.type === 'transfer'"
+      :field="field"
+      :model-value="model[field.prop]"
+      @update:model-value="model[field.prop] = $event"
+    />
+
     <!-- 默认插槽：自定义表单项（如富文本、上传、图标选择等） -->
     <slot v-else />
   </el-form-item>
@@ -230,12 +238,13 @@
  * - tree-select（支持 apiUrl / treeData，与 SearchForm 一致）
  * - cascader（支持 apiUrl / options，树形 {value,label,children}）
  * - date, datetime, daterange, datetimerange
- * - number, switch, rate, slider, color
+ * - number, switch, rate, slider, color, transfer
  * - 其它 type 走默认插槽，可自定义富文本、上传等
  */
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
+import TransferField from './TransferField.vue'
 import { useFieldOptions } from '../SearchForm/useFieldOptions'
 import { useIconPicker } from '../SearchForm/useIconPicker'
 import { useResponsive } from '../../composables/useResponsive'

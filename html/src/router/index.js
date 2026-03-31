@@ -101,6 +101,12 @@ const staticRoutes = [
         meta: { titleKey: 'menu.external_link' }
       },
       {
+        path: 'dev/form-demo',
+        name: 'FormDemo',
+        component: () => lazyLoad(() => import('../views/dev/FormDemo.vue')),
+        meta: { titleKey: 'menu.form_demo' }
+      },
+      {
         // 404 路由，必须放在最后，作为 catch-all 路由
         // 在子路由中使用相对路径（不带前导斜杠）
         path: ':pathMatch(.*)*',

@@ -432,6 +432,19 @@ func (s *MenuSeeder) Run() error {
 			Sort:      1,
 			IsHidden:  0,
 		})
+
+		createOrUpdateMenu(models.Menu{
+			ParentID:  devMenu.ID,
+			Title:     "表单组件演示",
+			Slug:      "form_demo",
+			Icon:      "EditPen",
+			Path:      "/dev/form-demo",
+			Component: "dev/FormDemo",
+			Type:      2,
+			Status:    1,
+			Sort:      2,
+			IsHidden:  0,
+		})
 	}
 
 	return nil
