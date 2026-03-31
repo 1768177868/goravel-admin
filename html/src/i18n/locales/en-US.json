@@ -1067,6 +1067,8 @@
   },
   "form_demo": {
     "title": "Form Component Demo",
+    "load_api_data": "Load API Data",
+    "loaded_from_api": "Loaded and mapped from API",
     "fill_sample": "Fill Sample Data",
     "preview": "Current Form Data",
     "gender": "Gender",

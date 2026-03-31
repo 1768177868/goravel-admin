@@ -5,6 +5,7 @@
         <div class="card-header">
           <span>{{ t('form_demo.title') }}</span>
           <div class="header-actions">
+            <el-button @click="loadFromApi">{{ t('form_demo.load_api_data') }}</el-button>
             <el-button @click="fillSampleData">{{ t('form_demo.fill_sample') }}</el-button>
             <el-button @click="resetForm">{{ t('common.reset') }}</el-button>
           </div>
@@ -53,6 +54,7 @@ import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import FormField from '@/components/Form/FormField.vue'
+import request from '@/utils/request'
 
 const { t } = useI18n()
 
@@ -306,6 +308,21 @@ const fillSampleData = () => {
     region_remote: [100, 110, 111],
     custom_note: 'This field is rendered via FormField default slot.'
   })
+}
+
+const loadFromApi = async () => {
+  try {
+    const res = await request({
+      url: '/form-demo/data',
+      method: 'get'
+    })
+    if (res?.data) {
+      Object.assign(formData, res.data)
+      ElMessage.success(t('form_demo.loaded_from_api'))
+    }
+  } catch {
+    // Global interceptor handles error
+  }
 }
 
 const submitForm = async () => {

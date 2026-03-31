@@ -1075,6 +1075,8 @@
   },
   "form_demo": {
     "title": "Form 组件演示",
+    "load_api_data": "接口加载数据",
+    "loaded_from_api": "已从接口加载并回填",
     "fill_sample": "填充示例数据",
     "preview": "当前表单数据",
     "gender": "性别",

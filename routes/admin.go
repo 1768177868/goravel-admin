@@ -38,6 +38,7 @@ func Admin() {
 	paymentController := admin.NewPaymentController()
 	codeGeneratorController := admin.NewCodeGeneratorController()
 	articleController := admin.NewArticleController()
+	formDemoController := admin.NewFormDemoController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -74,6 +75,7 @@ func Admin() {
 
 			// 统一的下拉选项接口（不需要权限验证）
 			router.Get("options", optionController.Index)
+			router.Get("form-demo/data", formDemoController.GetData)
 
 			// 菜单树（仅登录即可，不校验菜单权限；用于角色/权限表单、刷新后展示等）
 			router.Get("menus/tree", menuController.Tree)
