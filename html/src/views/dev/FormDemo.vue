@@ -15,7 +15,7 @@
         ref="formRef"
         :model="formData"
         :rules="formRules"
-        label-width="110px"
+        label-width="250px"
       >
         <FormField
           v-for="field in formFields"
@@ -63,11 +63,15 @@ const getInitialValue = () => ({
   password: '',
   intro: '',
   role: '',
+  role_remote: null,
   department_id: null,
   department_remote_id: null,
   gender: '',
+  gender_remote: null,
   interests: [],
+  interests_remote: [],
   hobbies: [],
+  hobbies_remote: [],
   birthday: '',
   meeting_at: '',
   active_days: [],
@@ -76,12 +80,15 @@ const getInitialValue = () => ({
   transfer_permissions_remote: [],
   score: 0,
   score_input_number: 0,
+  score_input_number_suffix: 0,
   satisfaction: 3,
   volume: 40,
   enabled: true,
   icon_name: '',
+  icon_name_remote: '',
   color: '#409EFF',
   region: [],
+  region_remote: [],
   custom_note: ''
 })
 
@@ -135,6 +142,13 @@ const formFields = computed(() => [
   { prop: 'intro', label: t('common.description'), type: 'textarea', rows: 3 },
   { prop: 'role', label: t('table.roles'), type: 'select', options: roleOptions.value },
   {
+    prop: 'role_remote',
+    label: t('form_demo.role_remote'),
+    type: 'select',
+    apiUrl: '/options?type=form_demo&scene=default',
+    clearable: true
+  },
+  {
     prop: 'department_id',
     label: t('table.department'),
     type: 'tree-select',
@@ -146,13 +160,31 @@ const formFields = computed(() => [
     prop: 'department_remote_id',
     label: t('form_demo.department_remote'),
     type: 'tree-select',
-    apiUrl: '/options?type=department',
+    apiUrl: '/options?type=form_demo&scene=tree',
     treeProps: { label: 'name', value: 'id', children: 'children' },
     clearable: true
   },
   { prop: 'gender', label: t('form_demo.gender'), type: 'radio', options: genderOptions.value },
+  {
+    prop: 'gender_remote',
+    label: t('form_demo.gender_remote'),
+    type: 'radio',
+    apiUrl: '/options?type=form_demo&scene=default'
+  },
   { prop: 'interests', label: t('form_demo.interests'), type: 'checkbox', options: hobbyOptions.value },
+  {
+    prop: 'interests_remote',
+    label: t('form_demo.interests_remote'),
+    type: 'checkbox',
+    apiUrl: '/options?type=form_demo&scene=default'
+  },
   { prop: 'hobbies', label: t('form_demo.hobbies'), type: 'checkbox-group', options: hobbyOptions.value },
+  {
+    prop: 'hobbies_remote',
+    label: t('form_demo.hobbies_remote'),
+    type: 'checkbox-group',
+    apiUrl: '/options?type=form_demo&scene=default'
+  },
   { prop: 'birthday', label: t('form_demo.birthday'), type: 'date' },
   { prop: 'meeting_at', label: t('form_demo.meeting_at'), type: 'datetime' },
   { prop: 'active_days', label: t('form_demo.active_days'), type: 'daterange' },
@@ -168,17 +200,38 @@ const formFields = computed(() => [
     prop: 'transfer_permissions_remote',
     label: t('form_demo.transfer_permissions_remote'),
     type: 'transfer',
-    apiUrl: '/options?type=role',
+    apiUrl: '/options?type=form_demo&scene=default',
     optionLabelKey: 'label',
     optionValueKey: 'value',
     titles: [t('form_demo.transfer_source'), t('form_demo.transfer_target')]
   },
   { prop: 'score', label: t('form_demo.score'), type: 'number', min: 0, max: 100 },
-  { prop: 'score_input_number', label: t('form_demo.score_input_number'), type: 'input-number', min: 0, max: 100 },
+  {
+    prop: 'score_input_number',
+    label: t('form_demo.score_input_number'),
+    type: 'input-number',
+    min: 0,
+    max: 999,
+    prefix: '￥'
+  },
+  {
+    prop: 'score_input_number_suffix',
+    label: t('form_demo.score_input_number_suffix'),
+    type: 'input-number',
+    min: 0,
+    max: 999,
+    suffix: 'RMB'
+  },
   { prop: 'satisfaction', label: t('form_demo.satisfaction'), type: 'rate' },
   { prop: 'volume', label: t('form_demo.volume'), type: 'slider', min: 0, max: 100, step: 5 },
   { prop: 'enabled', label: t('table.status'), type: 'switch' },
   { prop: 'icon_name', label: t('form_demo.icon_name'), type: 'icon' },
+  {
+    prop: 'icon_name_remote',
+    label: t('form_demo.icon_name_remote'),
+    type: 'icon',
+    apiUrl: '/options?type=form_demo&scene=icon'
+  },
   { prop: 'color', label: t('form_demo.color'), type: 'color', showAlpha: false },
   {
     prop: 'region',
@@ -197,6 +250,13 @@ const formFields = computed(() => [
         ]
       }
     ]
+  },
+  {
+    prop: 'region_remote',
+    label: t('form_demo.region_remote'),
+    type: 'cascader',
+    apiUrl: '/options?type=form_demo&scene=cascader',
+    cascaderProps: { value: 'id', label: 'name', children: 'children' }
   },
   {
     prop: 'custom_note',
@@ -218,24 +278,32 @@ const fillSampleData = () => {
     password: '123456',
     intro: 'This is a sample form for FormField testing.',
     role: 'editor',
+    role_remote: 'A',
     department_id: 11,
     department_remote_id: 11,
     gender: 'male',
+    gender_remote: 'A',
     interests: ['sports'],
+    interests_remote: ['A'],
     hobbies: ['reading', 'music'],
+    hobbies_remote: ['A'],
     birthday: '2026-03-31',
     meeting_at: '2026-03-31 09:30:00',
     active_days: ['2026-03-01', '2026-03-31'],
     active_period: ['2026-03-01 08:00:00', '2026-03-31 18:00:00'],
     transfer_permissions: ['user.view', 'role.view'],
+    transfer_permissions_remote: ['A', 'C'],
     score: 88,
     score_input_number: 92,
+    score_input_number_suffix: 120,
     satisfaction: 4,
     volume: 65,
     enabled: true,
     icon_name: 'User',
+    icon_name_remote: 'Setting',
     color: '#67C23A',
     region: ['china', 'guangdong', 'guangzhou'],
+    region_remote: [100, 110, 111],
     custom_note: 'This field is rendered via FormField default slot.'
   })
 }

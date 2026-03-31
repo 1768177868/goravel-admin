@@ -106,9 +106,23 @@
       v-bind="field.props || {}"
     />
 
-    <!-- 数字输入框：新增支持 input-number 类型（与 number 等价） -->
+    <!-- 数字输入（原生 number 输入） -->
+    <el-input
+      v-else-if="field.type === 'number'"
+      v-model="model[field.prop]"
+      :type="'number'"
+      :placeholder="getPlaceholder(field)"
+      :clearable="field.clearable !== false"
+      :disabled="field.disabled"
+      :min="field.min"
+      :max="field.max"
+      :step="field.step"
+      v-bind="field.props || {}"
+    />
+
+    <!-- 数字步进器（支持单位显示） -->
     <el-input-number
-      v-else-if="field.type === 'number' || field.type === 'input-number'"
+      v-else-if="field.type === 'input-number'"
       v-model="model[field.prop]"
       :placeholder="getPlaceholder(field)"
       :disabled="field.disabled"
@@ -116,7 +130,15 @@
       :max="field.max"
       :step="field.step"
       v-bind="field.props || {}"
-    />
+    >
+      <template v-if="field.prefix" #prefix>
+        <span>{{ field.prefix }}</span>
+      </template>
+      <template v-if="field.suffix" #suffix>
+        <span>{{ field.suffix }}</span>
+      </template>
+    </el-input-number>
+    <span v-if="field.type === 'input-number' && field.unit" class="input-number-unit">{{ field.unit }}</span>
 
     <!-- 开关 -->
     <el-switch
@@ -200,7 +222,7 @@
           />
           <div class="icon-grid">
             <el-tooltip
-              v-for="icon in filteredIcons"
+              v-for="icon in iconOptions"
               :key="icon"
               :content="icon"
               placement="top"
@@ -241,7 +263,7 @@
  * - number, switch, rate, slider, color, transfer
  * - 其它 type 走默认插槽，可自定义富文本、上传等
  */
-import { onMounted, watch, nextTick } from 'vue'
+import { computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
 import TransferField from './TransferField.vue'
@@ -276,10 +298,41 @@ const {
   iconSearch,
   normalizeIconName,
   getIconComponent,
-  filteredIcons,
+  filteredIcons: defaultFilteredIcons,
   selectIcon,
   clearIcon
 } = useIconPicker()
+
+const iconOptions = computed(() => {
+  const dynamicOptions = getFieldOptions(props.field)
+  const hasDynamicSource = !!(
+    props.field?.apiUrl ||
+    (Array.isArray(props.field?.options) && props.field.options.length > 0) ||
+    typeof props.field?.optionsFn === 'function'
+  )
+
+  if (!hasDynamicSource) {
+    return defaultFilteredIcons.value
+  }
+
+  const keyword = iconSearch.value.trim().toLowerCase()
+  const normalizedIcons = (Array.isArray(dynamicOptions) ? dynamicOptions : [])
+    .map((item) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object') {
+        return item.value ?? item.name ?? item.icon ?? item.label ?? ''
+      }
+      return ''
+    })
+    .map((name) => normalizeIconName(String(name)))
+    .filter(Boolean)
+
+  const uniqueIcons = [...new Set(normalizedIcons)]
+  const source = uniqueIcons.length > 0 ? uniqueIcons : defaultFilteredIcons.value
+
+  if (!keyword) return source
+  return source.filter((name) => name.toLowerCase().includes(keyword))
+})
 
 function getFieldLabel(f) {
   if (f?.label) {
@@ -326,7 +379,7 @@ function resolveVisible(f) {
 
 
 
-const OPTION_TYPES = ['select', 'radio', 'checkbox', 'checkbox-group', 'cascader']
+const OPTION_TYPES = ['select', 'radio', 'checkbox', 'checkbox-group', 'cascader', 'icon']
 
 // function ensureOptionsLoaded() {
 //   const f = props.field
@@ -393,6 +446,12 @@ watch(() => [props.field?.apiUrl, props.field?.type], ensureOptionsLoaded)
     color: #909399;
     margin-top: 4px;
     line-height: 1.4;
+  }
+
+  .input-number-unit {
+    margin-left: 8px;
+    color: var(--el-text-color-regular);
+    white-space: nowrap;
   }
 
   /* 移动端优化 */
