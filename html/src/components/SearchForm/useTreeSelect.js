@@ -297,7 +297,13 @@ export function useTreeSelect({ field, modelValue, onUpdate }) {
       if (field.apiUrl.startsWith('/options')) {
         const url = new URL(field.apiUrl, window.location.origin)
         const type = url.searchParams.get('type')
-        const res = await getOptions(type)
+        const params = {}
+        for (const [key, value] of url.searchParams) {
+          if (key !== 'type') {
+            params[key] = value
+          }
+        }
+        const res = await getOptions(type, params)
         if (res.data) {
           if (res.data.options && Array.isArray(res.data.options)) {
             fieldOptionsCache.value[cacheKey] = res.data.options
