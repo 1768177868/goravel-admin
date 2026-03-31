@@ -88,6 +88,7 @@ const getInitialValue = () => ({
   enabled: true,
   icon_name: '',
   icon_name_remote: '',
+  avatar: '',
   color: '#409EFF',
   region: [],
   region_remote: [],
@@ -233,6 +234,14 @@ const formFields = computed(() => [
     label: t('form_demo.icon_name_remote'),
     type: 'icon',
     apiUrl: '/options?type=form_demo&scene=icon'
+  },
+  {
+    prop: 'avatar',
+    label: t('form_demo.avatar'),
+    type: 'image-upload',
+    uploadMode: 'both',
+    cropWidth: 300,
+    cropHeight: 300
   },
   { prop: 'color', label: t('form_demo.color'), type: 'color', showAlpha: false },
   {

@@ -190,6 +190,17 @@
       v-bind="field.props || {}"
     />
 
+    <!-- 图片上传（复用封装组件） -->
+    <ImageUpload
+      v-else-if="field.type === 'image-upload'"
+      v-model="model[field.prop]"
+      :upload-mode="field.uploadMode || 'both'"
+      :width="field.cropWidth || 400"
+      :height="field.cropHeight || 400"
+      :aspect-ratio="field.aspectRatio ?? null"
+      v-bind="field.props || {}"
+    />
+
      <!-- 新增：图标选择器 -->
      <div v-else-if="field.type === 'icon'" class="icon-picker">
       <el-input
@@ -267,6 +278,7 @@ import { computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
 import TransferField from './TransferField.vue'
+import ImageUpload from '../ImageUpload.vue'
 import { useFieldOptions } from '../SearchForm/useFieldOptions'
 import { useIconPicker } from '../SearchForm/useIconPicker'
 import { useResponsive } from '../../composables/useResponsive'

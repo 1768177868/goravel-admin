@@ -1111,6 +1111,7 @@
     "volume": "Volume (slider)",
     "icon_name": "Icon Picker (icon)",
     "icon_name_remote": "Icon Picker (icon + apiUrl)",
+    "avatar": "Avatar Upload (image-upload)",
     "color": "Color",
     "region": "Region",
     "region_remote": "Region (cascader + apiUrl)",

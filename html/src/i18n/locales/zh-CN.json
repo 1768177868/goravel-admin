@@ -1119,6 +1119,7 @@
     "volume": "音量（slider）",
     "icon_name": "图标选择（icon）",
     "icon_name_remote": "图标选择（icon + apiUrl）",
+    "avatar": "头像上传（image-upload）",
     "color": "颜色",
     "region": "地区",
     "region_remote": "地区（cascader + apiUrl）",
