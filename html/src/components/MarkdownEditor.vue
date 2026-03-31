@@ -178,9 +178,16 @@ const handleChange = (value) => {
 
 <style scoped>
 .markdown-editor-wrapper {
+  width: 100%;
+  min-width: 0;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
+}
+
+.markdown-editor-wrapper :deep(.md-editor) {
+  width: 100%;
+  min-width: 0;
 }
 
 /* 暗黑模式样式 */

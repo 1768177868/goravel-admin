@@ -32,6 +32,20 @@
             />
             <div class="custom-tip">{{ t('form_demo.custom_slot_tip') }}</div>
           </template>
+          <template v-if="field.prop === 'rich_content_wang'">
+            <WangEditor
+              v-model="formData.rich_content_wang"
+              :height="260"
+              :placeholder="t('form_demo.rich_content_wang_placeholder')"
+            />
+          </template>
+          <template v-if="field.prop === 'rich_content_markdown'">
+            <MarkdownEditor
+              v-model="formData.rich_content_markdown"
+              :height="260"
+              :placeholder="t('form_demo.rich_content_markdown_placeholder')"
+            />
+          </template>
         </FormField>
       </el-form>
 
@@ -54,6 +68,8 @@ import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import FormField from '@/components/Form/FormField.vue'
+import WangEditor from '@/components/WangEditor.vue'
+import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import request from '@/utils/request'
 
 const { t } = useI18n()
@@ -94,6 +110,8 @@ const getInitialValue = () => ({
   color: '#409EFF',
   region: [],
   region_remote: [],
+  rich_content_wang: '',
+  rich_content_markdown: '',
   custom_note: ''
 })
 
@@ -291,6 +309,16 @@ const formFields = computed(() => [
     cascaderProps: { value: 'id', label: 'name', children: 'children' }
   },
   {
+    prop: 'rich_content_wang',
+    label: t('form_demo.rich_content_wang'),
+    type: 'custom'
+  },
+  {
+    prop: 'rich_content_markdown',
+    label: t('form_demo.rich_content_markdown'),
+    type: 'custom'
+  },
+  {
     prop: 'custom_note',
     label: t('form_demo.custom_slot'),
     type: 'custom'
@@ -336,6 +364,8 @@ const fillSampleData = () => {
     color: '#67C23A',
     region: ['china', 'guangdong', 'guangzhou'],
     region_remote: [100, 110, 111],
+    rich_content_wang: '<p>WangEditor demo content</p>',
+    rich_content_markdown: '## Markdown Demo\n\n- item 1\n- item 2',
     custom_note: 'This field is rendered via FormField default slot.'
   })
 }
