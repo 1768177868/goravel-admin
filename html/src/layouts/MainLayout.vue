@@ -494,6 +494,32 @@
       </el-main>
     </el-container>
 
+    <el-dialog
+      v-model="lockDialogVisible"
+      :title="$t('header.lock_screen')"
+      width="420px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      append-to-body
+    >
+      <el-input
+        v-model="pendingLockPassword"
+        type="password"
+        show-password
+        :name="lockDialogInputName"
+        autocomplete="new-password"
+        autocorrect="off"
+        spellcheck="false"
+        :placeholder="$t('header.lock_password_placeholder')"
+        @keyup.enter="confirmLockScreen"
+      />
+      <div v-if="lockDialogError" class="lock-screen-error">{{ lockDialogError }}</div>
+      <template #footer>
+        <el-button @click="lockDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmLockScreen">{{ $t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
+
     <div v-if="isScreenLocked" class="lock-screen-overlay">
       <div class="lock-screen-card">
         <div class="lock-screen-avatar-wrap">
@@ -608,6 +634,10 @@ const lockPassword = ref('')
 const unlockPassword = ref('')
 const unlockError = ref('')
 const lockInputName = `lock-screen-password-${Math.random().toString(36).slice(2)}`
+const lockDialogInputName = `set-lock-password-${Math.random().toString(36).slice(2)}`
+const lockDialogVisible = ref(false)
+const pendingLockPassword = ref('')
+const lockDialogError = ref('')
 
 // 是否为 iframe 外部链接页面（用于占满主内容区高度）
 const isIframePage = computed(() => route.path === '/iframe')
@@ -737,31 +767,24 @@ const handleLayoutSizeChange = (size) => {
 }
 
 const handleLockScreen = async () => {
-  try {
-    const { value } = await ElMessageBox.prompt(
-      t('header.lock_password_placeholder'),
-      t('header.lock_screen'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        inputType: 'password',
-        inputValue: '',
-        inputValidator: (val) => {
-          if (!val || !val.trim()) {
-            return t('header.lock_password_required')
-          }
-          return true
-        }
-      }
-    )
+  pendingLockPassword.value = ''
+  lockDialogError.value = ''
+  lockDialogVisible.value = true
+}
 
-    lockPassword.value = value.trim()
-    unlockPassword.value = ''
-    unlockError.value = ''
-    isScreenLocked.value = true
-  } catch (error) {
-    // 用户取消锁屏
+const confirmLockScreen = () => {
+  if (!pendingLockPassword.value || !pendingLockPassword.value.trim()) {
+    lockDialogError.value = t('header.lock_password_required')
+    return
   }
+
+  lockPassword.value = pendingLockPassword.value.trim()
+  unlockPassword.value = ''
+  unlockError.value = ''
+  pendingLockPassword.value = ''
+  lockDialogError.value = ''
+  lockDialogVisible.value = false
+  isScreenLocked.value = true
 }
 
 const handleUnlockInput = () => {
@@ -796,6 +819,9 @@ const goToLogin = async () => {
     lockPassword.value = ''
     unlockPassword.value = ''
     unlockError.value = ''
+    pendingLockPassword.value = ''
+    lockDialogError.value = ''
+    lockDialogVisible.value = false
     router.push('/login')
   }
 }
