@@ -156,6 +156,34 @@ const nonEmptyArrayRule = (message, trigger = 'change') => [{
   },
   trigger
 }]
+const numberRangeRule = ({ label, min, max, trigger = 'blur', required = true }) => [{
+  validator: (_rule, value, callback) => {
+    const raw = value === undefined || value === null ? '' : String(value).trim()
+    if (!raw) {
+      if (required) {
+        callback(new Error(t('form.please_enter') + label))
+        return
+      }
+      callback()
+      return
+    }
+    const numeric = Number(raw)
+    if (Number.isNaN(numeric)) {
+      callback(new Error(label + '格式不正确'))
+      return
+    }
+    if (typeof min === 'number' && numeric < min) {
+      callback(new Error(`${label} ${min}-${max}`))
+      return
+    }
+    if (typeof max === 'number' && numeric > max) {
+      callback(new Error(`${label} ${min}-${max}`))
+      return
+    }
+    callback()
+  },
+  trigger
+}]
 const domainRegex = /^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/
 
 const formRules = computed(() => ({
@@ -197,28 +225,9 @@ const formRules = computed(() => ({
   active_period: nonEmptyArrayRule(t('form.please_select') + t('form_demo.active_period')),
   transfer_permissions: nonEmptyArrayRule(t('form.please_select') + t('form_demo.transfer_permissions')),
   transfer_permissions_remote: nonEmptyArrayRule(t('form.please_select') + t('form_demo.transfer_permissions_remote')),
-  score: [{
-    type: 'number',
-    required: true,
-    min: 1,
-    max: 100,
-    message: t('form_demo.score') + ' 1-100',
-    trigger: 'blur'
-  }],
-  score_input_number: [{
-    type: 'number',
-    required: true,
-    min: 0,
-    message: t('form.please_enter') + t('form_demo.score_input_number'),
-    trigger: 'change'
-  }],
-  score_input_number_suffix: [{
-    type: 'number',
-    required: true,
-    min: 0,
-    message: t('form.please_enter') + t('form_demo.score_input_number_suffix'),
-    trigger: 'change'
-  }],
+  score: numberRangeRule({ label: t('form_demo.score'), min: 1, max: 100, trigger: 'blur' }),
+  score_input_number: numberRangeRule({ label: t('form_demo.score_input_number'), min: 0, max: 999, trigger: 'change' }),
+  score_input_number_suffix: numberRangeRule({ label: t('form_demo.score_input_number_suffix'), min: 0, max: 999, trigger: 'change' }),
   satisfaction: [{
     type: 'number',
     required: true,
@@ -390,11 +399,11 @@ const formFields = computed(() => [
     optionValueKey: 'value',
     titles: [t('form_demo.transfer_source'), t('form_demo.transfer_target')]
   },
-  { prop: 'score', label: t('form_demo.score'), type: 'number', min: 0, max: 100, style: fieldWidthSm },
+  { prop: 'score', label: t('form_demo.score'), type: 'input-number', min: 0, max: 100, style: fieldWidthSm },
   {
     prop: 'score_input_number',
     label: t('form_demo.score_input_number'),
-    type: 'input-number',
+    type: 'number',
     min: 0,
     max: 999,
     prefix: '￥'
@@ -402,7 +411,7 @@ const formFields = computed(() => [
   {
     prop: 'score_input_number_suffix',
     label: t('form_demo.score_input_number_suffix'),
-    type: 'input-number',
+    type: 'number',
     min: 0,
     max: 999,
     suffix: 'RMB'

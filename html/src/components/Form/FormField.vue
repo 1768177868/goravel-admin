@@ -116,23 +116,9 @@
       v-bind="field.props || {}"
     />
 
-    <!-- 数字输入（原生 number 输入） -->
-    <el-input
-      v-else-if="field.type === 'number'"
-      v-model="model[field.prop]"
-      :type="'number'"
-      :placeholder="getPlaceholder(field)"
-      :clearable="field.clearable !== false"
-      :disabled="field.disabled"
-      :min="field.min"
-      :max="field.max"
-      :step="field.step"
-      v-bind="field.props || {}"
-    />
-
-    <!-- 数字步进器（支持单位显示） -->
+    <!-- 数字步进器（兼容历史：type=number 也使用带加减的输入框） -->
     <el-input-number
-      v-else-if="field.type === 'input-number'"
+      v-else-if="field.type === 'number'"
       v-model="model[field.prop]"
       :placeholder="getPlaceholder(field)"
       :disabled="field.disabled"
@@ -148,7 +134,21 @@
         <span>{{ field.suffix }}</span>
       </template>
     </el-input-number>
-    <span v-if="field.type === 'input-number' && field.unit" class="input-number-unit">{{ field.unit }}</span>
+    <span v-if="field.type === 'number' && field.unit" class="input-number-unit">{{ field.unit }}</span>
+
+    <!-- 原生 number 输入（与 input-number 语义对调） -->
+    <el-input
+      v-else-if="field.type === 'input-number'"
+      v-model="model[field.prop]"
+      :type="'number'"
+      :placeholder="getPlaceholder(field)"
+      :clearable="field.clearable !== false"
+      :disabled="field.disabled"
+      :min="field.min"
+      :max="field.max"
+      :step="field.step"
+      v-bind="field.props || {}"
+    />
 
     <!-- 开关 -->
     <el-switch
