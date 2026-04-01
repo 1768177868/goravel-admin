@@ -37,6 +37,7 @@
               v-model="formData.rich_content_wang"
               :width="800"
               :height="300"
+              :exclude-toolbar-keys="['group-video', 'group-image']"
               :placeholder="t('form_demo.rich_content_wang_placeholder')"
             />
           </template>
@@ -45,6 +46,7 @@
               v-model="formData.rich_content_markdown"
               width="80%"
               :height="300"
+              :toolbars="['bold', 'underline', 'italic', '-', 'title', 'quote', 'link', 'image', 'table', '-', 'revoke', 'next', '=', 'preview', 'fullscreen']"
               :placeholder="t('form_demo.rich_content_markdown_placeholder')"
             />
           </template>

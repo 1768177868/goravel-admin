@@ -40,6 +40,18 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: '请输入内容...'
+  },
+  toolbars: {
+    type: Array,
+    default: () => [
+      'bold', 'underline', 'italic', '-',
+      'title', 'strikeThrough', 'sub', 'sup',
+      'quote', 'unorderedList', 'orderedList', 'task', '-',
+      'codeRow', 'code', 'link', 'image', 'table', '-',
+      'revoke', 'next', 'save',
+      '=',
+      'pageFullscreen', 'fullscreen', 'preview', 'catalog'
+    ]
   }
 })
 
@@ -57,37 +69,6 @@ watch(() => props.modelValue, (newVal) => {
     markdownValue.value = newVal
   }
 })
-
-// 工具栏配置
-const toolbars = [
-  'bold',
-  'underline',
-  'italic',
-  '-',
-  'title',
-  'strikeThrough',
-  'sub',
-  'sup',
-  'quote',
-  'unorderedList',
-  'orderedList',
-  'task',
-  '-',
-  'codeRow',
-  'code',
-  'link',
-  'image',
-  'table',
-  '-',
-  'revoke',
-  'next',
-  'save',
-  '=',
-  'pageFullscreen',
-  'fullscreen',
-  'preview',
-  'catalog'
-]
 
 // 上传配置
 const uploadAction = computed(() => {

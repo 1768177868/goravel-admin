@@ -47,6 +47,10 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: '请输入内容...'
+  },
+  excludeToolbarKeys: {
+    type: Array,
+    default: () => ['group-video']
   }
 })
 
@@ -105,11 +109,9 @@ const uploadHeaders = computed(() => {
   }
 })
 
-const toolbarConfig = {
-    excludeKeys: [
-        'group-video' // 排除视频相关菜单
-    ]
-}
+const toolbarConfig = computed(() => ({
+    excludeKeys: props.excludeToolbarKeys
+}))
 const editorConfig = { 
     placeholder: props.placeholder,
     MENU_CONF: {
