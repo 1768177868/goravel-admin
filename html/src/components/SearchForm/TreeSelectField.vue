@@ -4,6 +4,7 @@
     :width="field.popoverWidth || 300"
     :visible="popoverVisible"
     trigger="manual"
+    popper-class="tree-select-popper"
     @update:visible="(val) => { 
       // 只有在明确设置为 false 时才关闭，避免点击外部时意外关闭
       if (val === false) {

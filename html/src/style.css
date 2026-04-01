@@ -282,3 +282,109 @@ html.dark .error-stack {
   background-color: var(--el-bg-color) !important;
   color: var(--el-text-color-regular) !important;
 }
+
+/* ========== el-tree-select 下拉面板暗黑模式 ========== */
+
+/* 面板容器 */
+html.dark .el-tree-select__popper {
+  background-color: var(--el-bg-color-overlay) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+/* el-tree 整体背景 */
+html.dark .el-tree-select__popper .el-tree {
+  background-color: var(--el-bg-color-overlay) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+/* 节点文字 */
+html.dark .el-tree-select__popper .el-tree-node__label {
+  color: var(--el-text-color-regular) !important;
+}
+
+/* 节点 hover */
+html.dark .el-tree-select__popper .el-tree-node__content:hover {
+  background-color: var(--el-fill-color-light) !important;
+}
+
+/* 选中节点背景 */
+html.dark .el-tree-select__popper .el-tree-node.is-current > .el-tree-node__content,
+html.dark .el-tree-select__popper .el-tree-node__content.is-selected {
+  background-color: var(--el-fill-color) !important;
+}
+
+/* 选中节点文字用主题色 */
+html.dark .el-tree-select__popper .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+  color: var(--el-color-primary) !important;
+}
+
+/* 展开/折叠箭头图标 */
+html.dark .el-tree-select__popper .el-tree-node__expand-icon {
+  color: var(--el-text-color-secondary) !important;
+}
+
+/* 搜索框（如果有） */
+html.dark .el-tree-select__popper .el-input__wrapper {
+  background-color: var(--el-fill-color-blank) !important;
+  box-shadow: 0 0 0 1px var(--el-border-color) inset !important;
+}
+
+html.dark .el-tree-select__popper .el-input__inner {
+  color: var(--el-text-color-regular) !important;
+  background-color: transparent !important;
+}
+
+/* ========== TreeSelectField (el-popover + el-tree) 暗黑模式 ========== */
+
+/* 弹出面板背景 */
+html.dark .tree-select-popper {
+  background-color: var(--el-bg-color-overlay) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+/* 弹出面板箭头 */
+html.dark .tree-select-popper .el-popper__arrow::before {
+  background-color: var(--el-bg-color-overlay) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+/* 树整体背景 */
+html.dark .tree-select-popper .el-tree {
+  background-color: var(--el-bg-color-overlay) !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+/* 节点文字 */
+html.dark .tree-select-popper .el-tree-node__label {
+  color: var(--el-text-color-regular) !important;
+}
+
+/* 节点 hover */
+html.dark .tree-select-popper .el-tree-node__content:hover {
+  background-color: var(--el-fill-color-light) !important;
+}
+
+/* 选中节点背景 */
+html.dark .tree-select-popper .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+  background-color: var(--el-fill-color) !important;
+}
+
+/* 选中节点文字用主题色 */
+html.dark .tree-select-popper .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+  color: var(--el-color-primary) !important;
+}
+
+/* 展开/折叠箭头 */
+html.dark .tree-select-popper .el-tree-node__expand-icon {
+  color: var(--el-text-color-secondary) !important;
+}
+
+/* 自定义节点文字 */
+html.dark .tree-select-popper .custom-tree-node span {
+  color: var(--el-text-color-regular) !important;
+}
+
+/* 选中节点内的自定义节点文字也用主题色 */
+html.dark .tree-select-popper .el-tree-node.is-current > .el-tree-node__content .custom-tree-node span {
+  color: var(--el-color-primary) !important;
+}
