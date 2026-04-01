@@ -25,6 +25,23 @@
           :field="field"
           :model="formData"
         >
+          <template v-if="field.prop === 'domain_url'">
+            <div class="domain-inline">
+              <el-select
+                v-model="formData.domain_protocol"
+                :clearable="false"
+                style="width: 92px"
+              >
+                <el-option label="https://" value="https" />
+                <el-option label="http://" value="http" />
+              </el-select>
+              <el-input
+                v-model="formData.domain"
+                placeholder="example.com"
+                clearable
+              />
+            </div>
+          </template>
           <template v-if="field.prop === 'custom_note'">
             <el-input
               v-model="formData.custom_note"
@@ -84,6 +101,9 @@ const avatarListMinCount = 2
 
 const getInitialValue = () => ({
   username: '',
+  domain_url: '',
+  domain_protocol: 'https',
+  domain: '',
   password: '',
   intro: '',
   role: '',
@@ -124,10 +144,99 @@ const getInitialValue = () => ({
 
 const formData = reactive(getInitialValue())
 
+const requiredRule = (message, trigger = 'blur') => [{ required: true, message, trigger }]
+const requiredSelectRule = (message) => [{ required: true, message, trigger: 'change' }]
+const nonEmptyArrayRule = (message, trigger = 'change') => [{
+  validator: (_rule, value, callback) => {
+    if (!Array.isArray(value) || value.length === 0) {
+      callback(new Error(message))
+      return
+    }
+    callback()
+  },
+  trigger
+}]
+const domainRegex = /^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/
+
 const formRules = computed(() => ({
-  username: [{ required: true, message: t('form.username_required'), trigger: 'blur' }],
-  password: [{ required: true, message: t('form.password_required'), trigger: 'blur' }],
+  username: requiredRule(t('form.username_required')),
+  domain_url: [
+    {
+      validator: (_rule, _value, callback) => {
+        const domain = String(formData.domain || '').trim()
+        if (!domain) {
+          callback(new Error(t('form.please_enter') + '域名'))
+          return
+        }
+        if (!domainRegex.test(domain)) {
+          callback(new Error('域名格式不正确，例如：example.com'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur'
+    }
+  ],
+  password: requiredRule(t('form.password_required')),
+  intro: requiredRule(t('form.please_enter') + t('common.description')),
+  role: requiredSelectRule(t('form.please_select') + t('table.roles')),
+  role_remote: requiredSelectRule(t('form.please_select') + t('form_demo.role_remote')),
+  department_id: requiredSelectRule(t('form.please_select') + t('table.department')),
+  department_remote_id: requiredSelectRule(t('form.please_select') + t('form_demo.department_remote')),
+  department_id_custom: requiredSelectRule(t('form.please_select') + `${t('table.department')} (Custom)`),
+  department_remote_id_custom: requiredSelectRule(t('form.please_select') + `${t('form_demo.department_remote')} (Custom)`),
   gender: [{ required: true, message: t('form_demo.gender_required'), trigger: 'change' }],
+  gender_remote: requiredSelectRule(t('form.please_select') + t('form_demo.gender_remote')),
+  interests: nonEmptyArrayRule(t('form.please_select') + t('form_demo.interests')),
+  interests_remote: nonEmptyArrayRule(t('form.please_select') + t('form_demo.interests_remote')),
+  hobbies: nonEmptyArrayRule(t('form.please_select') + t('form_demo.hobbies')),
+  hobbies_remote: nonEmptyArrayRule(t('form.please_select') + t('form_demo.hobbies_remote')),
+  birthday: requiredSelectRule(t('form.please_select') + t('form_demo.birthday')),
+  meeting_at: requiredSelectRule(t('form.please_select') + t('form_demo.meeting_at')),
+  active_days: nonEmptyArrayRule(t('form.please_select') + t('form_demo.active_days')),
+  active_period: nonEmptyArrayRule(t('form.please_select') + t('form_demo.active_period')),
+  transfer_permissions: nonEmptyArrayRule(t('form.please_select') + t('form_demo.transfer_permissions')),
+  transfer_permissions_remote: nonEmptyArrayRule(t('form.please_select') + t('form_demo.transfer_permissions_remote')),
+  score: [{
+    type: 'number',
+    required: true,
+    min: 1,
+    max: 100,
+    message: t('form_demo.score') + ' 1-100',
+    trigger: 'blur'
+  }],
+  score_input_number: [{
+    type: 'number',
+    required: true,
+    min: 0,
+    message: t('form.please_enter') + t('form_demo.score_input_number'),
+    trigger: 'change'
+  }],
+  score_input_number_suffix: [{
+    type: 'number',
+    required: true,
+    min: 0,
+    message: t('form.please_enter') + t('form_demo.score_input_number_suffix'),
+    trigger: 'change'
+  }],
+  satisfaction: [{
+    type: 'number',
+    required: true,
+    min: 1,
+    message: t('form.please_select') + t('form_demo.satisfaction'),
+    trigger: 'change'
+  }],
+  volume: [{
+    type: 'number',
+    required: true,
+    min: 0,
+    max: 100,
+    message: t('form_demo.volume') + ' 0-100',
+    trigger: 'change'
+  }],
+  icon_name: requiredRule(t('form.please_enter') + t('form_demo.icon_name')),
+  icon_name_remote: requiredRule(t('form.please_enter') + t('form_demo.icon_name_remote')),
+  avatar: requiredRule(t('form.please_enter') + t('form_demo.avatar')),
   avatar_list: [{
     validator: (_rule, value, callback) => {
       const count = Array.isArray(value) ? value.filter(Boolean).length : 0
@@ -138,7 +247,13 @@ const formRules = computed(() => ({
       callback()
     },
     trigger: 'change'
-  }]
+  }],
+  color: requiredSelectRule(t('form.please_select') + t('form_demo.color')),
+  region: nonEmptyArrayRule(t('form.please_select') + t('form_demo.region')),
+  region_remote: nonEmptyArrayRule(t('form.please_select') + t('form_demo.region_remote')),
+  rich_content_wang: requiredRule(t('form.please_enter') + t('form_demo.rich_content_wang')),
+  rich_content_markdown: requiredRule(t('form.please_enter') + t('form_demo.rich_content_markdown')),
+  custom_note: requiredRule(t('form.please_enter') + t('form_demo.custom_slot'))
 }))
 
 const genderOptions = computed(() => [
@@ -183,6 +298,12 @@ const fieldWidthLg = { width: '100%', maxWidth: '520px' }
 
 const formFields = computed(() => [
   { prop: 'username', label: t('table.username'), type: 'input', autocomplete: 'off' },
+  {
+    prop: 'domain_url',
+    label: '域名',
+    type: 'custom',
+    style: fieldWidthLg
+  },
   { prop: 'password', label: t('common.password'), type: 'password', style: fieldWidthMd },
   { prop: 'intro', label: t('common.description'), type: 'textarea', rows: 3, style: fieldWidthLg },
   { prop: 'role', label: t('table.roles'), type: 'select', options: roleOptions.value, style: fieldWidthMd },
@@ -365,6 +486,8 @@ const resetForm = () => {
 const fillSampleData = () => {
   Object.assign(formData, {
     username: 'demo_admin',
+    domain_protocol: 'https',
+    domain: 'demo.example.com',
     password: '123456',
     intro: 'This is a sample form for FormField testing.',
     role: 'editor',
@@ -462,5 +585,16 @@ pre {
   margin-top: 6px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.domain-inline {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.domain-inline .el-input {
+  flex: 1;
 }
 </style>
