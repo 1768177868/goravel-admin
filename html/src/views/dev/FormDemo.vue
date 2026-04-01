@@ -90,6 +90,8 @@ const getInitialValue = () => ({
   role_remote: null,
   department_id: null,
   department_remote_id: null,
+  department_id_custom: null,
+  department_remote_id_custom: null,
   gender: '',
   gender_remote: null,
   interests: [],
@@ -196,6 +198,7 @@ const formFields = computed(() => [
     prop: 'department_id',
     label: t('table.department'),
     type: 'tree-select',
+    native: true,
     treeData: () => departmentTree.value,
     treeProps: { label: 'name', value: 'id', children: 'children' },
     clearable: true
@@ -203,6 +206,23 @@ const formFields = computed(() => [
   {
     prop: 'department_remote_id',
     label: t('form_demo.department_remote'),
+    type: 'tree-select',
+    native: true,
+    apiUrl: '/options?type=form_demo&scene=tree',
+    treeProps: { label: 'name', value: 'id', children: 'children' },
+    clearable: true
+  },
+  {
+    prop: 'department_id_custom',
+    label: `${t('table.department')} (Custom)`,
+    type: 'tree-select',
+    treeData: () => departmentTree.value,
+    treeProps: { label: 'name', value: 'id', children: 'children' },
+    clearable: true
+  },
+  {
+    prop: 'department_remote_id_custom',
+    label: `${t('form_demo.department_remote')} (Custom)`,
     type: 'tree-select',
     apiUrl: '/options?type=form_demo&scene=tree',
     treeProps: { label: 'name', value: 'id', children: 'children' },
@@ -351,6 +371,8 @@ const fillSampleData = () => {
     role_remote: 'A',
     department_id: 11,
     department_remote_id: 11,
+    department_id_custom: 11,
+    department_remote_id_custom: 11,
     gender: 'male',
     gender_remote: 'A',
     interests: ['sports'],

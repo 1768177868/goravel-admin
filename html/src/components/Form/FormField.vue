@@ -32,7 +32,16 @@
       v-bind="field.props || {}"
     />
 
-    <!-- 树形选择（支持 apiUrl / treeData / options，与 SearchForm 一致） -->
+    <!-- 树形选择：原生 el-tree-select 版本（field.native=true） -->
+    <TreeSelectNativeField
+      v-else-if="field.type === 'tree-select' && field.native"
+      :field="field"
+      :model-value="model[field.prop]"
+      :placeholder="getPlaceholder(field)"
+      @update:model-value="model[field.prop] = $event"
+    />
+
+    <!-- 树形选择：自定义弹层版本（默认） -->
     <TreeSelectField
       v-else-if="field.type === 'tree-select'"
       :field="field"
@@ -287,6 +296,7 @@
 import { computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TreeSelectField from '../SearchForm/TreeSelectField.vue'
+import TreeSelectNativeField from '../SearchForm/TreeSelectNativeField.vue'
 import TransferField from './TransferField.vue'
 import ImageUpload from '../ImageUpload.vue'
 import ImageUploadMultiple from '../ImageUploadMultiple.vue'
