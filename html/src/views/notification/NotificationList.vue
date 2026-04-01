@@ -231,6 +231,12 @@ const searchFields = computed(() => [
 // 表格列配置
 const tableColumns = computed(() => [
   {
+    field: 'id',
+    title: t('table.id'),
+    width: 80,
+    // sortable: true
+  },
+  {
     field: 'title',
     title: t('notification.table.title'),
     minWidth: 160

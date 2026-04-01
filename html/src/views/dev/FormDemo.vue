@@ -35,14 +35,16 @@
           <template v-if="field.prop === 'rich_content_wang'">
             <WangEditor
               v-model="formData.rich_content_wang"
-              :height="260"
+              :width="800"
+              :height="300"
               :placeholder="t('form_demo.rich_content_wang_placeholder')"
             />
           </template>
           <template v-if="field.prop === 'rich_content_markdown'">
             <MarkdownEditor
               v-model="formData.rich_content_markdown"
-              :height="260"
+              width="80%"
+              :height="300"
               :placeholder="t('form_demo.rich_content_markdown_placeholder')"
             />
           </template>

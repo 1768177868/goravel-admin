@@ -1,5 +1,5 @@
 <template>
-  <div class="wang-editor-wrapper" :class="{ 'dark-mode': isDark }">
+  <div class="wang-editor-wrapper" :class="{ 'dark-mode': isDark }" :style="{ width: normalizedWidth }">
     <Toolbar
       :editor="editorRef"
       :defaultConfig="toolbarConfig"
@@ -36,6 +36,10 @@ const props = defineProps({
     type: String,
     default: 'default' // 'default' or 'simple'
   },
+  width: {
+    type: [String, Number],
+    default: '100%'
+  },
   height: {
     type: Number,
     default: 300
@@ -54,8 +58,10 @@ const editorRef = shallowRef()
 // 内容 HTML
 const valueHtml = ref('')
 
-// 暗黑模式状态
 const isDark = computed(() => appStore.darkMode)
+const normalizedWidth = computed(() =>
+  typeof props.width === 'number' ? `${props.width}px` : props.width
+)
 
 // 初始化内容
 onMounted(() => {

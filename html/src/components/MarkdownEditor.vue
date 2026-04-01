@@ -1,5 +1,5 @@
 <template>
-  <div class="markdown-editor-wrapper">
+  <div class="markdown-editor-wrapper" :style="{ width: normalizedWidth }">
     <MdEditor
       v-model="markdownValue"
       :height="height"
@@ -29,6 +29,10 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  width: {
+    type: [String, Number],
+    default: '100%'
+  },
   height: {
     type: Number,
     default: 300
@@ -43,6 +47,9 @@ const emit = defineEmits(['update:modelValue', 'change'])
 
 const markdownValue = ref(props.modelValue)
 const isDark = computed(() => appStore.darkMode)
+const normalizedWidth = computed(() =>
+  typeof props.width === 'number' ? `${props.width}px` : props.width
+)
 
 // 监听 props 变化
 watch(() => props.modelValue, (newVal) => {
