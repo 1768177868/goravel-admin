@@ -320,6 +320,15 @@
           <NotificationBell />
           <DarkModeSwitch />
           <LanguageSwitch :class="{ 'mobile-hidden': isXs }" />
+          <el-button
+            type="text"
+            class="header-btn"
+            :class="{ 'mobile-hidden': isXs }"
+            :title="$t('header.lock_screen')"
+            @click="handleLockScreen"
+          >
+            <el-icon class="header-icon-fixed"><Lock /></el-icon>
+          </el-button>
           <!-- 移动端隐藏时区切换 -->
           <TimezoneSwitch :class="{ 'mobile-hidden': isMobile }" />
           <el-dropdown @command="handleCommand" class="user-dropdown">
@@ -484,6 +493,41 @@
         </div>
       </el-main>
     </el-container>
+
+    <div v-if="isScreenLocked" class="lock-screen-overlay">
+      <div class="lock-screen-card">
+        <div class="lock-screen-avatar-wrap">
+          <el-avatar
+            v-if="userStore.adminInfo?.avatar"
+            :size="68"
+            :src="userStore.adminInfo.avatar"
+          />
+          <el-avatar v-else :size="68">
+            <el-icon><User /></el-icon>
+          </el-avatar>
+        </div>
+        <div class="lock-screen-title">{{ $t('header.lock_screen_title') }}</div>
+        <div class="lock-screen-user">{{ userStore.adminInfo?.nickname || userStore.adminInfo?.username }}</div>
+        <el-input
+          v-model="unlockPassword"
+          type="password"
+          show-password
+          class="lock-screen-input"
+          autocomplete="new-password"
+          :name="lockInputName"
+          autocorrect="off"
+          spellcheck="false"
+          :placeholder="$t('header.lock_password_placeholder')"
+          @input="handleUnlockInput"
+          @keyup.enter="handleUnlockScreen"
+        />
+        <div v-if="unlockError" class="lock-screen-error">{{ unlockError }}</div>
+        <div class="lock-screen-actions">
+          <el-button type="primary" @click="handleUnlockScreen">{{ $t('header.unlock') }}</el-button>
+          <el-button @click="goToLogin">{{ $t('header.back_to_login') }}</el-button>
+        </div>
+      </div>
+    </div>
   </el-container>
 </template>
 
@@ -526,7 +570,8 @@ import {
   Warning,
   Grid,
   Check,
-  Tools
+  Tools,
+  Lock
 } from '@element-plus/icons-vue'
 
 // 主题色选项（与设置面板色块一致）
@@ -558,6 +603,11 @@ const appStore = useAppStore()
 const { t } = useI18n()
 
 const activeMenu = computed(() => route.path)
+const isScreenLocked = ref(false)
+const lockPassword = ref('')
+const unlockPassword = ref('')
+const unlockError = ref('')
+const lockInputName = `lock-screen-password-${Math.random().toString(36).slice(2)}`
 
 // 是否为 iframe 外部链接页面（用于占满主内容区高度）
 const isIframePage = computed(() => route.path === '/iframe')
@@ -684,6 +734,70 @@ const handleCommand = async (command) => {
 
 const handleLayoutSizeChange = (size) => {
   appStore.setLayoutSize(size)
+}
+
+const handleLockScreen = async () => {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      t('header.lock_password_placeholder'),
+      t('header.lock_screen'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        inputType: 'password',
+        inputValue: '',
+        inputValidator: (val) => {
+          if (!val || !val.trim()) {
+            return t('header.lock_password_required')
+          }
+          return true
+        }
+      }
+    )
+
+    lockPassword.value = value.trim()
+    unlockPassword.value = ''
+    unlockError.value = ''
+    isScreenLocked.value = true
+  } catch (error) {
+    // 用户取消锁屏
+  }
+}
+
+const handleUnlockInput = () => {
+  if (unlockError.value) {
+    unlockError.value = ''
+  }
+}
+
+const handleUnlockScreen = () => {
+  if (!unlockPassword.value.trim()) {
+    unlockError.value = t('header.lock_password_required')
+    return
+  }
+
+  if (unlockPassword.value !== lockPassword.value) {
+    unlockError.value = t('header.lock_password_invalid')
+    return
+  }
+
+  isScreenLocked.value = false
+  lockPassword.value = ''
+  unlockPassword.value = ''
+  unlockError.value = ''
+}
+
+const goToLogin = async () => {
+  try {
+    await userStore.logout()
+  } finally {
+    tabsStore.removeAllTabs()
+    isScreenLocked.value = false
+    lockPassword.value = ''
+    unlockPassword.value = ''
+    unlockError.value = ''
+    router.push('/login')
+  }
 }
 
 </script>
@@ -1059,6 +1173,64 @@ const handleLayoutSizeChange = (size) => {
   min-height: 100%;
 }
 
+.lock-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.lock-screen-card {
+  width: 360px;
+  max-width: 100%;
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  padding: 24px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.lock-screen-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.lock-screen-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-color-primary);
+}
+
+.lock-screen-user {
+  margin-top: 6px;
+  margin-bottom: 16px;
+  color: var(--text-color-regular);
+}
+
+.lock-screen-input {
+  margin-bottom: 8px;
+}
+
+.lock-screen-error {
+  min-height: 20px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--el-color-danger);
+  text-align: left;
+}
+
+.lock-screen-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
 /* 布局大小样式 */
 .layout-small .main-content {
   padding: 10px;
@@ -1158,10 +1330,6 @@ const handleLayoutSizeChange = (size) => {
 
   .main-content {
     padding: 16px;
-  }
-
-  .sidebar {
-    /* width: 200px !important; */
   }
 
   .sidebar.is-collapse {
