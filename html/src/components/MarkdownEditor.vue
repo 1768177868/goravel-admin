@@ -5,6 +5,7 @@
       :height="height"
       :placeholder="placeholder"
       :toolbars="toolbars"
+      :language="editorLanguage"
       :theme="isDark ? 'dark' : 'light'"
       @onUploadImg="handleUploadImg"
       @onChange="handleChange"
@@ -59,6 +60,7 @@ const emit = defineEmits(['update:modelValue', 'change'])
 
 const markdownValue = ref(props.modelValue)
 const isDark = computed(() => appStore.darkMode)
+const editorLanguage = computed(() => (locale.value === 'en-US' ? 'en-US' : 'zh-CN'))
 const normalizedWidth = computed(() =>
   typeof props.width === 'number' ? `${props.width}px` : props.width
 )
