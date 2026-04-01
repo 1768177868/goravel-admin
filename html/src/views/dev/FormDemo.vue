@@ -175,17 +175,22 @@ const departmentTree = computed(() => [
   }
 ])
 
+const fieldWidthSm = { width: '100%', maxWidth: '360px' }
+const fieldWidthMd = { width: '100%', maxWidth: '420px' }
+const fieldWidthLg = { width: '100%', maxWidth: '520px' }
+
 const formFields = computed(() => [
   { prop: 'username', label: t('table.username'), type: 'input', autocomplete: 'off' },
-  { prop: 'password', label: t('common.password'), type: 'password' },
-  { prop: 'intro', label: t('common.description'), type: 'textarea', rows: 3 },
-  { prop: 'role', label: t('table.roles'), type: 'select', options: roleOptions.value },
+  { prop: 'password', label: t('common.password'), type: 'password', style: fieldWidthMd },
+  { prop: 'intro', label: t('common.description'), type: 'textarea', rows: 3, style: fieldWidthLg },
+  { prop: 'role', label: t('table.roles'), type: 'select', options: roleOptions.value, style: fieldWidthMd },
   {
     prop: 'role_remote',
     label: t('form_demo.role_remote'),
     type: 'select',
     apiUrl: '/options?type=form_demo&scene=default',
-    clearable: true
+    clearable: true,
+    style: fieldWidthMd
   },
   {
     prop: 'department_id',
@@ -226,8 +231,8 @@ const formFields = computed(() => [
   },
   { prop: 'birthday', label: t('form_demo.birthday'), type: 'date' },
   { prop: 'meeting_at', label: t('form_demo.meeting_at'), type: 'datetime' },
-  { prop: 'active_days', label: t('form_demo.active_days'), type: 'daterange' },
-  { prop: 'active_period', label: t('form_demo.active_period'), type: 'datetimerange' },
+  { prop: 'active_days', label: t('form_demo.active_days'), type: 'daterange', style: fieldWidthLg },
+  { prop: 'active_period', label: t('form_demo.active_period'), type: 'datetimerange', style: fieldWidthLg },
   {
     prop: 'transfer_permissions',
     label: t('form_demo.transfer_permissions'),
@@ -244,7 +249,7 @@ const formFields = computed(() => [
     optionValueKey: 'value',
     titles: [t('form_demo.transfer_source'), t('form_demo.transfer_target')]
   },
-  { prop: 'score', label: t('form_demo.score'), type: 'number', min: 0, max: 100 },
+  { prop: 'score', label: t('form_demo.score'), type: 'number', min: 0, max: 100, style: fieldWidthSm },
   {
     prop: 'score_input_number',
     label: t('form_demo.score_input_number'),
@@ -262,7 +267,7 @@ const formFields = computed(() => [
     suffix: 'RMB'
   },
   { prop: 'satisfaction', label: t('form_demo.satisfaction'), type: 'rate' },
-  { prop: 'volume', label: t('form_demo.volume'), type: 'slider', min: 0, max: 100, step: 5 },
+  { prop: 'volume', label: t('form_demo.volume'), type: 'slider', min: 0, max: 100, step: 5, style: fieldWidthMd },
   { prop: 'enabled', label: t('table.status'), type: 'switch' },
   { prop: 'icon_name', label: t('form_demo.icon_name'), type: 'icon' },
   {
