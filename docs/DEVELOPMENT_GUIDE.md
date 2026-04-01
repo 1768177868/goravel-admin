@@ -677,7 +677,7 @@ router.Post("guestbooks/{id}/reply", guestbookController.Reply) // 回复留言�
 # 运行迁移
 go run . artisan migrate
 
-# 或者使用 artisan
+# linux使用
 ./main artisan migrate
 ```
 
