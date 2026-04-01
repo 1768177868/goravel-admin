@@ -188,36 +188,13 @@ onBeforeUnmount(() => {
 })
 
 const handleCreated = (editor) => {
-    editorRef.value = editor // 记录 editor 实例，重要！
-    // 初始化时应用暗黑模式样式
-    if (isDark.value) {
-        const editorContainer = editor.getEditableContainer()
-        if (editorContainer) {
-            editorContainer.classList.add('dark')
-        }
-    }
+    editorRef.value = editor
 }
 
 const handleChange = (editor) => {
     emit('update:modelValue', editor.getHtml())
     emit('change', editor.getHtml())
 }
-
-// 监听暗黑模式变化，更新编辑器样式
-watch(() => appStore.darkMode, (isDark) => {
-    const editor = editorRef.value
-    if (editor) {
-        // wangEditor 通过设置编辑器容器的 class 来切换主题
-        const editorContainer = editor.getEditableContainer()
-        if (editorContainer) {
-            if (isDark) {
-                editorContainer.classList.add('dark')
-            } else {
-                editorContainer.classList.remove('dark')
-            }
-        }
-    }
-}, { immediate: true })
 </script>
 
 <style scoped>
@@ -225,76 +202,230 @@ watch(() => appStore.darkMode, (isDark) => {
   border: 1px solid #ccc;
   border-radius: 4px;
   overflow: hidden;
+  transition: border-color 0.3s;
 }
 
 .wang-editor-wrapper :deep(.w-e-toolbar) {
   border-bottom: 1px solid #ccc;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
-/* 暗黑模式样式 */
-html.dark .wang-editor-wrapper {
+.wang-editor-wrapper :deep(.w-e-text-container) {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ========== 暗黑模式 ========== */
+
+/* --- 外框 --- */
+.dark-mode {
   border-color: var(--el-border-color);
 }
 
-html.dark .wang-editor-wrapper :deep(.w-e-toolbar) {
+/* --- 工具栏 --- */
+.dark-mode :deep(.w-e-toolbar) {
+  background-color: var(--el-bg-color-overlay);
   border-bottom-color: var(--el-border-color);
 }
 
-html.dark :deep(.w-e-text-container) {
-  background-color: var(--el-bg-color) !important;
-  color: var(--el-text-color-regular) !important;
+.dark-mode :deep(.w-e-bar-item button) {
+  color: var(--el-text-color-regular);
 }
 
-html.dark :deep(.w-e-toolbar) {
-  background-color: var(--el-bg-color) !important;
-  border-color: var(--el-border-color) !important;
+.dark-mode :deep(.w-e-bar-item button:hover) {
+  background-color: var(--el-fill-color-light);
 }
 
-html.dark :deep(.w-e-toolbar .w-e-bar-item button) {
-  color: var(--el-text-color-regular) !important;
+.dark-mode :deep(.w-e-bar-item .active) {
+  background-color: var(--el-fill-color);
+  color: var(--el-text-color-primary);
 }
 
-html.dark :deep(.w-e-toolbar .w-e-bar-item button:hover) {
-  background-color: var(--el-fill-color-light) !important;
+/* --- 工具栏下拉菜单 / 子菜单 --- */
+.dark-mode :deep(.w-e-bar-item-menus-container) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-html.dark :deep(.w-e-text-placeholder) {
-  color: var(--el-text-color-placeholder) !important;
+.dark-mode :deep(.w-e-bar-item-menus-container .w-e-bar-item button) {
+  color: var(--el-text-color-regular);
 }
 
-html.dark :deep(.w-e-text-container) {
-  border-color: var(--el-border-color) !important;
+.dark-mode :deep(.w-e-bar-item-menus-container .w-e-bar-item button:hover) {
+  background-color: var(--el-fill-color-light);
 }
 
-html.dark :deep(.w-e-text-container .w-e-text) {
-  color: var(--el-text-color-regular) !important;
+/* --- Select 下拉列表 (标题、字体等) --- */
+.dark-mode :deep(.w-e-drop-down-menu) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-html.dark :deep(.w-e-text-container .w-e-text p),
-html.dark :deep(.w-e-text-container .w-e-text div),
-html.dark :deep(.w-e-text-container .w-e-text span),
-html.dark :deep(.w-e-text-container .w-e-text h1),
-html.dark :deep(.w-e-text-container .w-e-text h2),
-html.dark :deep(.w-e-text-container .w-e-text h3),
-html.dark :deep(.w-e-text-container .w-e-text h4),
-html.dark :deep(.w-e-text-container .w-e-text h5),
-html.dark :deep(.w-e-text-container .w-e-text h6),
-html.dark :deep(.w-e-text-container .w-e-text li),
-html.dark :deep(.w-e-text-container .w-e-text td),
-html.dark :deep(.w-e-text-container .w-e-text th) {
-  color: var(--el-text-color-regular) !important;
+.dark-mode :deep(.w-e-drop-down-menu li) {
+  color: var(--el-text-color-regular);
 }
 
-html.dark :deep(.w-e-toolbar .w-e-bar-item .w-e-bar-item-menus-container) {
-  background-color: var(--el-bg-color-overlay) !important;
-  border-color: var(--el-border-color) !important;
+.dark-mode :deep(.w-e-drop-down-menu li:hover) {
+  background-color: var(--el-fill-color-light);
 }
 
-html.dark :deep(.w-e-toolbar .w-e-bar-item .w-e-bar-item-menus-container .w-e-bar-item-menu) {
-  color: var(--el-text-color-regular) !important;
+/* --- 颜色选择面板 --- */
+.dark-mode :deep(.w-e-panel-content-color) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-html.dark :deep(.w-e-toolbar .w-e-bar-item .w-e-bar-item-menus-container .w-e-bar-item-menu:hover) {
-  background-color: var(--el-fill-color-light) !important;
+.dark-mode :deep(.w-e-panel-content-color li .color-block) {
+  border-color: var(--el-border-color-lighter);
+}
+
+.dark-mode :deep(.w-e-panel-content-color .clear-color-btn) {
+  color: var(--el-text-color-regular);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.w-e-panel-content-color .clear-color-btn:hover) {
+  background-color: var(--el-fill-color-light);
+}
+
+/* --- 编辑区域 --- */
+.dark-mode :deep(.w-e-text-container) {
+  background-color: var(--el-fill-color-blank);
+  color: var(--el-text-color-regular);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.w-e-text-container [data-slate-editor]) {
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.w-e-text-container [data-slate-editor] p),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] div),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] span),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] h1),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] h2),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] h3),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] h4),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] h5),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] li),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] td),
+.dark-mode :deep(.w-e-text-container [data-slate-editor] th) {
+  color: var(--el-text-color-regular);
+}
+
+/* --- 占位符 --- */
+.dark-mode :deep(.w-e-text-placeholder) {
+  color: var(--el-text-color-placeholder);
+}
+
+/* --- 链接 --- */
+.dark-mode :deep(.w-e-text-container a) {
+  color: var(--el-color-primary);
+}
+
+/* --- 引用块 --- */
+.dark-mode :deep(.w-e-text-container blockquote) {
+  border-left-color: var(--el-border-color);
+  color: var(--el-text-color-secondary);
+  background-color: var(--el-fill-color-light);
+}
+
+/* --- 代码 --- */
+.dark-mode :deep(.w-e-text-container code) {
+  background-color: var(--el-fill-color);
+  color: var(--el-color-danger);
+}
+
+.dark-mode :deep(.w-e-text-container pre) {
+  background-color: var(--el-fill-color-darker);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.w-e-text-container pre code) {
+  background-color: transparent;
+  color: var(--el-text-color-regular);
+}
+
+/* --- 表格 --- */
+.dark-mode :deep(.w-e-text-container table) {
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.w-e-text-container td),
+.dark-mode :deep(.w-e-text-container th) {
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.w-e-text-container th) {
+  background-color: var(--el-fill-color);
+}
+
+/* --- 分割线 --- */
+.dark-mode :deep(.w-e-text-container hr) {
+  border-color: var(--el-border-color);
+}
+
+/* --- 模态框 (插入链接 / 图片 / 表格等) --- */
+.dark-mode :deep(.w-e-modal) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  color: var(--el-text-color-regular);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode :deep(.w-e-modal .btn-close svg) {
+  fill: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.w-e-modal label) {
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.w-e-modal input[type="text"]),
+.dark-mode :deep(.w-e-modal input[type="number"]),
+.dark-mode :deep(.w-e-modal input[type="url"]),
+.dark-mode :deep(.w-e-modal textarea),
+.dark-mode :deep(.w-e-modal select) {
+  background-color: var(--el-fill-color-blank);
+  border-color: var(--el-border-color);
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.w-e-modal input:focus),
+.dark-mode :deep(.w-e-modal textarea:focus),
+.dark-mode :deep(.w-e-modal select:focus) {
+  border-color: var(--el-color-primary);
+}
+
+.dark-mode :deep(.w-e-modal button) {
+  background-color: var(--el-fill-color);
+  color: var(--el-text-color-regular);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.w-e-modal button:hover) {
+  background-color: var(--el-fill-color-light);
+}
+
+/* --- Hover bar (选中文字时的浮动工具条) --- */
+.dark-mode :deep(.w-e-hover-bar) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode :deep(.w-e-hover-bar .w-e-bar-item button) {
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.w-e-hover-bar .w-e-bar-item button:hover) {
+  background-color: var(--el-fill-color-light);
+}
+
+/* --- 全屏模式 --- */
+.dark-mode :deep(.w-e-full-screen-container) {
+  background-color: var(--el-bg-color-overlay);
 }
 </style>

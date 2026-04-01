@@ -1,5 +1,5 @@
 <template>
-  <div class="markdown-editor-wrapper" :style="{ width: normalizedWidth }">
+  <div class="markdown-editor-wrapper" :class="{ 'dark-mode': isDark }" :style="{ width: normalizedWidth }">
     <MdEditor
       v-model="markdownValue"
       :height="height"
@@ -171,6 +171,7 @@ const handleChange = (value) => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
+  transition: border-color 0.3s;
 }
 
 .markdown-editor-wrapper :deep(.md-editor) {
@@ -178,41 +179,237 @@ const handleChange = (value) => {
   min-width: 0;
 }
 
-/* 暗黑模式样式 */
-html.dark .markdown-editor-wrapper {
+.markdown-editor-wrapper :deep(.md-editor-toolbar-wrapper) {
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.markdown-editor-wrapper :deep(.md-editor-input-wrapper),
+.markdown-editor-wrapper :deep(.md-editor-preview-wrapper) {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ========== 暗黑模式 — 覆盖 md-editor-v3 内置 dark 主题的深色 ========== */
+
+/* --- 用 Element Plus 变量覆盖 md-editor-v3 的 CSS 变量 --- */
+.dark-mode :deep(.md-editor-dark) {
+  --md-bk-color: var(--el-bg-color-overlay);
+  --md-bk-color-outstand: var(--el-fill-color-blank);
+  --md-bk-hover: var(--el-fill-color-light);
+  --md-border-color: var(--el-border-color);
+  --md-border-hover-color: var(--el-border-color-lighter);
+  --md-border-active-color: var(--el-color-primary);
+  --md-color: var(--el-text-color-regular);
+  --md-hover-color: var(--el-text-color-primary);
+}
+
+/* --- 外框 --- */
+.dark-mode {
   border-color: var(--el-border-color);
 }
 
-/* 确保 md-editor-v3 使用 Element Plus 的颜色变量 */
-html.dark :deep(.md-editor) {
-  background-color: var(--el-bg-color) !important;
-  color: var(--el-text-color-regular) !important;
+/* --- 工具栏 --- */
+.dark-mode :deep(.md-editor-toolbar-wrapper) {
+  background-color: var(--el-bg-color-overlay);
+  border-bottom-color: var(--el-border-color);
 }
 
-html.dark :deep(.md-editor .md-editor-toolbar) {
-  background-color: var(--el-bg-color) !important;
-  border-color: var(--el-border-color) !important;
+.dark-mode :deep(.md-editor-toolbar li > span) {
+  color: var(--el-text-color-regular);
 }
 
-html.dark :deep(.md-editor .md-editor-toolbar button) {
-  color: var(--el-text-color-regular) !important;
+.dark-mode :deep(.md-editor-toolbar li > span:hover) {
+  background-color: var(--el-fill-color-light);
 }
 
-html.dark :deep(.md-editor .md-editor-toolbar button:hover) {
-  background-color: var(--el-fill-color-light) !important;
+.dark-mode :deep(.md-editor-toolbar .active > span) {
+  background-color: var(--el-fill-color);
+  color: var(--el-text-color-primary);
 }
 
-html.dark :deep(.md-editor .md-editor-textarea) {
-  background-color: var(--el-bg-color) !important;
-  color: var(--el-text-color-regular) !important;
+/* --- 工具栏下拉面板 --- */
+.dark-mode :deep(.md-editor-dropdown) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-html.dark :deep(.md-editor .md-editor-textarea::placeholder) {
-  color: var(--el-text-color-placeholder) !important;
+.dark-mode :deep(.md-editor-dropdown li) {
+  color: var(--el-text-color-regular);
 }
 
-html.dark :deep(.md-editor .md-editor-preview) {
-  background-color: var(--el-bg-color) !important;
-  color: var(--el-text-color-regular) !important;
+.dark-mode :deep(.md-editor-dropdown li:hover) {
+  background-color: var(--el-fill-color-light);
+}
+
+/* --- 编辑区域 --- */
+.dark-mode :deep(.md-editor-input-wrapper) {
+  background-color: var(--el-fill-color-blank);
+}
+
+.dark-mode :deep(.md-editor-input-wrapper .inputWrapper textarea),
+.dark-mode :deep(.cm-editor),
+.dark-mode :deep(.cm-content) {
+  color: var(--el-text-color-regular);
+  caret-color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.cm-editor .cm-gutters) {
+  background-color: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
+  color: var(--el-text-color-secondary);
+}
+
+.dark-mode :deep(.cm-editor .cm-activeLineGutter) {
+  background-color: var(--el-fill-color);
+}
+
+.dark-mode :deep(.cm-editor .cm-activeLine) {
+  background-color: var(--el-fill-color-light);
+}
+
+.dark-mode :deep(.cm-editor .cm-cursor) {
+  border-left-color: var(--el-text-color-regular);
+}
+
+/* --- 预览区域 --- */
+.dark-mode :deep(.md-editor-preview-wrapper) {
+  background-color: var(--el-fill-color-blank);
+}
+
+.dark-mode :deep(.md-editor-preview) {
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.md-editor-preview h1),
+.dark-mode :deep(.md-editor-preview h2),
+.dark-mode :deep(.md-editor-preview h3),
+.dark-mode :deep(.md-editor-preview h4),
+.dark-mode :deep(.md-editor-preview h5),
+.dark-mode :deep(.md-editor-preview h6) {
+  color: var(--el-text-color-primary);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.md-editor-preview a) {
+  color: var(--el-color-primary);
+}
+
+.dark-mode :deep(.md-editor-preview blockquote) {
+  border-left-color: var(--el-border-color);
+  color: var(--el-text-color-secondary);
+  background-color: var(--el-fill-color-light);
+}
+
+.dark-mode :deep(.md-editor-preview code) {
+  background-color: var(--el-fill-color);
+  color: var(--el-color-danger);
+}
+
+.dark-mode :deep(.md-editor-preview pre) {
+  background-color: var(--el-fill-color-darker);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.md-editor-preview pre code) {
+  background-color: transparent;
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.md-editor-preview table) {
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.md-editor-preview td),
+.dark-mode :deep(.md-editor-preview th) {
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.md-editor-preview th) {
+  background-color: var(--el-fill-color);
+}
+
+.dark-mode :deep(.md-editor-preview hr) {
+  border-color: var(--el-border-color);
+}
+
+/* --- 占位符 --- */
+.dark-mode :deep(.md-editor-input-wrapper .placeholder-wrapper) {
+  color: var(--el-text-color-placeholder);
+}
+
+/* --- 底部状态栏 --- */
+.dark-mode :deep(.md-editor-footer) {
+  background-color: var(--el-bg-color-overlay);
+  border-top-color: var(--el-border-color);
+  color: var(--el-text-color-secondary);
+}
+
+/* --- 弹窗 / 模态框 --- */
+.dark-mode :deep(.md-editor-modal) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  color: var(--el-text-color-regular);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode :deep(.md-editor-modal input),
+.dark-mode :deep(.md-editor-modal textarea),
+.dark-mode :deep(.md-editor-modal select) {
+  background-color: var(--el-fill-color-blank);
+  border-color: var(--el-border-color);
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.md-editor-modal input:focus),
+.dark-mode :deep(.md-editor-modal textarea:focus) {
+  border-color: var(--el-color-primary);
+}
+
+.dark-mode :deep(.md-editor-modal button) {
+  background-color: var(--el-fill-color);
+  color: var(--el-text-color-regular);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.md-editor-modal button:hover) {
+  background-color: var(--el-fill-color-light);
+}
+
+/* --- 目录 (catalog) --- */
+.dark-mode :deep(.md-editor-catalog-editor) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+}
+
+.dark-mode :deep(.md-editor-catalog-editor a) {
+  color: var(--el-text-color-regular);
+}
+
+.dark-mode :deep(.md-editor-catalog-editor a:hover),
+.dark-mode :deep(.md-editor-catalog-editor .active > a) {
+  color: var(--el-color-primary);
+}
+
+/* --- 编辑 / 预览分隔线 --- */
+.dark-mode :deep(.md-editor-resize-operate) {
+  border-color: var(--el-border-color);
+}
+
+/* --- 全屏模式 --- */
+.dark-mode :deep(.md-editor-fullscreen) {
+  background-color: var(--el-bg-color-overlay);
+}
+
+/* --- 滚动条 --- */
+.dark-mode :deep(.md-editor ::-webkit-scrollbar-thumb) {
+  background-color: var(--el-fill-color);
+}
+
+.dark-mode :deep(.md-editor ::-webkit-scrollbar-thumb:hover) {
+  background-color: var(--el-fill-color-dark);
+}
+
+.dark-mode :deep(.md-editor ::-webkit-scrollbar-track) {
+  background-color: var(--el-bg-color-overlay);
 }
 </style>
