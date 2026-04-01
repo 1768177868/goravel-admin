@@ -17,6 +17,7 @@
         :model="formData"
         :rules="formRules"
         label-width="250px"
+        autocomplete="off"
       >
         <FormField
           v-for="field in formFields"
@@ -175,7 +176,7 @@ const departmentTree = computed(() => [
 ])
 
 const formFields = computed(() => [
-  { prop: 'username', label: t('table.username'), type: 'input' },
+  { prop: 'username', label: t('table.username'), type: 'input', autocomplete: 'off' },
   { prop: 'password', label: t('common.password'), type: 'password' },
   { prop: 'intro', label: t('common.description'), type: 'textarea', rows: 3 },
   { prop: 'role', label: t('table.roles'), type: 'select', options: roleOptions.value },

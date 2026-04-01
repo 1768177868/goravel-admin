@@ -16,6 +16,7 @@
       :clearable="field.clearable !== false"
       :show-password="field.type === 'password' && (field.showPassword !== false)"
       :disabled="field.disabled"
+      :autocomplete="field.autocomplete || (field.type === 'password' ? 'new-password' : undefined)"
       v-bind="field.props || {}"
     />
 
