@@ -605,6 +605,11 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+/* 避免 checkbox 容器 hover 背景覆盖整行 hover 背景 */
+.vxe-table-custom--panel-list .vxe-table-custom--checkbox-option:hover {
+  background-color: transparent !important;
+}
+
 .vxe-table-custom--checkbox-option.is--checked :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
   background-color: var(--el-color-primary);
   border-color: var(--el-color-primary);
