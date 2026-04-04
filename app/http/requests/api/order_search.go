@@ -7,9 +7,9 @@ import (
 	"goravel/app/http/trans"
 )
 
-// OrderSearch C 端订单关键词检索（ES demo）查询参数。
-// 分页：控制器中 helpers.ValidatePaginationEx(req.Page, req.PageSize, helpers.PaginationLimits{})；GET 无表单时可用 helpers.PaginationFromQuery。
-// 可选 created_from / created_to：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS（与写入 ES 的 created_at 格式一致）。
+// OrderSearch C 端「我的订单」搜索查询参数。
+// 分页：helpers.ValidatePaginationEx 或 GET 场景 helpers.PaginationFromQuery。
+// 可选 created_from / created_to：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS；数据库模式下无时间参数时默认近 3 个月，ES 模式下无参数则不在 ES 侧按时间过滤。
 type OrderSearch struct {
 	Q           string `form:"q" json:"q"`
 	Page        int    `form:"page" json:"page"`

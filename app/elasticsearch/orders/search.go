@@ -13,18 +13,8 @@ import (
 
 	"goravel/app/binding"
 	"goravel/app/clients"
+	"goravel/app/dto"
 )
-
-// MyOrderSearchHit 单条命中（与 OrderDocument 字段对齐，供 C 端展示）。
-type MyOrderSearchHit struct {
-	ID           uint     `json:"id"`
-	OrderNo      string   `json:"order_no"`
-	Amount       float64  `json:"amount"`
-	Status       int      `json:"status"`
-	Remark       string   `json:"remark"`
-	CreatedAt    string   `json:"created_at"`
-	ProductNames []string `json:"product_names"`
-}
 
 type esSearchResponse struct {
 	Hits struct {
@@ -39,7 +29,7 @@ type esSearchResponse struct {
 
 // SearchMyOrders 在 ES 中限定 user_id，按关键词多字段检索；keyword 为空时仅列出该用户订单（按 created_at 降序）。
 // createdAtGTE、createdAtLTE 为可选的 created_at 字符串边界（与 OrderDocument 中格式一致），用于 range 过滤。
-func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, pageSize int, createdAtGTE, createdAtLTE *string) (total int64, items []MyOrderSearchHit, err error) {
+func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, pageSize int, createdAtGTE, createdAtLTE *string) (total int64, items []dto.OrderSearchListItem, err error) {
 	raw, err := facades.App().Make(binding.ElasticsearchClient)
 	if err != nil {
 		return 0, nil, err
@@ -120,9 +110,9 @@ func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, page
 	}
 
 	total = parsed.Hits.Total.Value
-	items = make([]MyOrderSearchHit, 0, len(parsed.Hits.Hits))
+	items = make([]dto.OrderSearchListItem, 0, len(parsed.Hits.Hits))
 	for _, h := range parsed.Hits.Hits {
-		var hit MyOrderSearchHit
+		var hit dto.OrderSearchListItem
 		if err := json.Unmarshal(h.Source, &hit); err != nil {
 			continue
 		}

@@ -13,6 +13,8 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/dto"
+	esorders "goravel/app/elasticsearch/orders"
 	"goravel/app/models"
 	"goravel/app/repositories"
 	"goravel/app/support"
@@ -32,6 +34,11 @@ func ApplyOrderFiltersToQuery(query orm.Query, filters OrderFilters) orm.Query {
 	// 订单号模糊搜索
 	if filters.OrderNo != "" {
 		query = query.Where("order_no = ?", filters.OrderNo)
+	}
+
+	if kw := strings.TrimSpace(filters.Keyword); kw != "" {
+		pattern := "%" + kw + "%"
+		query = query.Where("(order_no LIKE ? OR remark LIKE ?)", pattern, pattern)
 	}
 
 	// 订单状态筛选
@@ -100,12 +107,15 @@ type OrderService interface {
 	DeleteOrderByOrderNo(orderNo string) error
 	// GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
 	GetOrdersCountInYear() (int64, error)
+	// SearchMyOrdersForUser C 端「我的订单」检索：开启 ES 时走索引，否则走分表数据库（关键词仅匹配订单号、备注）。
+	SearchMyOrdersForUser(ctx context.Context, userID uint, keyword string, page, pageSize int, tr dto.OrderSearchCreatedRange) ([]dto.OrderSearchListItem, int64, error)
 }
 
 // OrderFilters 订单查询筛选条件
 type OrderFilters struct {
 	UserID    uint      // 用户ID（0表示不筛选）
-	OrderNo   string    // 订单号（模糊搜索）
+	OrderNo   string    // 订单号（精确匹配，后台列表）
+	Keyword   string    // 关键词（订单号、备注 LIKE，供 C 端搜索等）
 	Status    string    // 订单状态
 	MinAmount float64   // 最小金额（0表示不筛选）
 	MaxAmount float64   // 最大金额（0表示不筛选）
@@ -393,6 +403,12 @@ func (s *OrderServiceImpl) buildOrderWhereClause(filters any) (string, []any) {
 		// args = append(args, "%"+orderFilters.OrderNo+"%")
 		conditions = append(conditions, "order_no = ?")
 		args = append(args, orderFilters.OrderNo)
+	}
+
+	if kw := strings.TrimSpace(orderFilters.Keyword); kw != "" {
+		pattern := "%" + kw + "%"
+		conditions = append(conditions, "(order_no LIKE ? OR remark LIKE ?)")
+		args = append(args, pattern, pattern)
 	}
 
 	// 订单状态筛选
@@ -929,4 +945,53 @@ func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
 	}
 
 	return total, nil
+}
+
+func orderWithDetailsToSearchListItem(o OrderWithDetails) dto.OrderSearchListItem {
+	names := make([]string, 0, len(o.Details))
+	for _, d := range o.Details {
+		names = append(names, d.ProductName)
+	}
+	return dto.OrderSearchListItem{
+		ID:           o.ID,
+		OrderNo:      o.OrderNo,
+		Amount:       o.Amount,
+		Status:       o.Status,
+		Remark:       o.Remark,
+		CreatedAt:    o.CreatedAt.ToDateTimeString(),
+		ProductNames: names,
+	}
+}
+
+// SearchMyOrdersForUser C 端「我的订单」检索：ELASTICSEARCH_ENABLED 时走 ES（含商品名等多字段）；否则走分表数据库（关键词仅订单号、备注；时间无参数时默认近 3 个月，与列表接口一致）。
+func (s *OrderServiceImpl) SearchMyOrdersForUser(ctx context.Context, userID uint, keyword string, page, pageSize int, tr dto.OrderSearchCreatedRange) ([]dto.OrderSearchListItem, int64, error) {
+	if facades.Config().GetBool("elasticsearch.enabled", false) {
+		total, items, err := esorders.SearchMyOrders(ctx, userID, keyword, page, pageSize, tr.ESGTE, tr.ESLTE)
+		if err != nil {
+			return nil, 0, err
+		}
+		return items, total, nil
+	}
+
+	valid, err := utils.ValidateTimeRange(tr.DBStart, tr.DBEnd)
+	if !valid {
+		return nil, 0, err
+	}
+
+	filters := OrderFilters{
+		UserID:    userID,
+		StartTime: tr.DBStart,
+		EndTime:   tr.DBEnd,
+		Keyword:   strings.TrimSpace(keyword),
+		OrderBy:   "created_at:desc",
+	}
+	rows, total, err := s.GetOrdersWithDetails(filters, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]dto.OrderSearchListItem, 0, len(rows))
+	for i := range rows {
+		out = append(out, orderWithDetailsToSearchListItem(rows[i]))
+	}
+	return out, total, nil
 }

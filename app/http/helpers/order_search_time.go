@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"goravel/app/dto"
 )
 
 const orderESDateLayout = "2006-01-02"
 const orderESDateTimeLayout = "2006-01-02 15:04:05"
 
-// ParseOrderCreatedAtRangeForES 解析订单 ES 检索可选时间范围；空字符串表示不限制。
-// 日期支持 YYYY-MM-DD（起：当天 00:00:00，止：当天 23:59:59）或 YYYY-MM-DD HH:MM:SS（本地时区，与写入 ES 的 ToDateTimeString 一致）。
-// 若解析失败，返回 errField + errMsgKey（i18n 键）；errMsgKey 为空表示成功。
-func ParseOrderCreatedAtRangeForES(createdFrom, createdTo string) (gte, lte *string, errField, errMsgKey string) {
+// ParseOrderSearchCreatedRange 解析 created_from / created_to。
+// ES：两参数皆空则 ESGTE/ESLTE 为 nil（不按时间过滤）；否则为格式化后的边界字符串。
+// DB：两参数皆空则默认 [now-3个月, now]；否则按解析结果构造窗口（单侧缺失时与「近 3 个月」规则组合）。
+// 解析失败时返回 errField + errMsgKey（i18n 键）。
+func ParseOrderSearchCreatedRange(createdFrom, createdTo string) (dto.OrderSearchCreatedRange, string, string) {
+	var out dto.OrderSearchCreatedRange
 	fromS := strings.TrimSpace(createdFrom)
 	toS := strings.TrimSpace(createdTo)
-	if fromS == "" && toS == "" {
-		return nil, nil, "", ""
-	}
+	now := time.Now()
 
 	var fromT, toT time.Time
 	var hasFrom, hasTo bool
@@ -25,27 +27,41 @@ func ParseOrderCreatedAtRangeForES(createdFrom, createdTo string) (gte, lte *str
 	if fromS != "" {
 		t, err := parseOrderCreatedBound(fromS, true)
 		if err != nil {
-			return nil, nil, "created_from", "validation_order_search_created_from_invalid"
+			return out, "created_from", "validation_order_search_created_from_invalid"
 		}
-		fromT = t
-		hasFrom = true
-		s := fromT.Format(orderESDateTimeLayout)
-		gte = &s
+		fromT, hasFrom = t, true
+		s := t.Format(orderESDateTimeLayout)
+		out.ESGTE = &s
 	}
 	if toS != "" {
 		t, err := parseOrderCreatedBound(toS, false)
 		if err != nil {
-			return nil, nil, "created_to", "validation_order_search_created_to_invalid"
+			return out, "created_to", "validation_order_search_created_to_invalid"
 		}
-		toT = t
-		hasTo = true
-		s := toT.Format(orderESDateTimeLayout)
-		lte = &s
+		toT, hasTo = t, true
+		s := t.Format(orderESDateTimeLayout)
+		out.ESLTE = &s
 	}
 	if hasFrom && hasTo && fromT.After(toT) {
-		return nil, nil, "created_to", "validation_order_search_time_range_inverted"
+		return out, "created_to", "validation_order_search_time_range_inverted"
 	}
-	return gte, lte, "", ""
+
+	switch {
+	case !hasFrom && !hasTo:
+		out.DBEnd = now
+		out.DBStart = now.AddDate(0, -3, 0)
+	case hasFrom && !hasTo:
+		out.DBStart = fromT
+		out.DBEnd = now
+	case !hasFrom && hasTo:
+		out.DBEnd = toT
+		out.DBStart = toT.AddDate(0, -3, 0)
+	default:
+		out.DBStart = fromT
+		out.DBEnd = toT
+	}
+
+	return out, "", ""
 }
 
 func parseOrderCreatedBound(s string, isStartBound bool) (time.Time, error) {
