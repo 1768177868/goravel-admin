@@ -62,7 +62,7 @@ func (r *DefaultQueueRunner) Shutdown() error {
 	return nil
 }
 
-// LongRunningQueueRunner 长时间任务队列工作进程 runner
+// LongRunningQueueRunner 耗时任务队列工作进程 runner
 type LongRunningQueueRunner struct {
 	worker queue.Worker
 	mu     sync.Mutex
@@ -91,9 +91,9 @@ func (r *LongRunningQueueRunner) Run() error {
 	})
 	r.mu.Unlock()
 
-	facades.Log().Infof("长时间任务队列工作进程启动 - 队列: long-running, 并发数: %d, 最大重试次数: %d", longRunningConcurrent, tries)
+	facades.Log().Infof("耗时任务队列工作进程启动 - 队列: long-running, 并发数: %d, 最大重试次数: %d", longRunningConcurrent, tries)
 	systemLogService := services.NewSystemLogService()
-	_ = systemLogService.Record(context.Background(), "info", "queue", "长时间任务队列工作进程启动", map[string]any{
+	_ = systemLogService.Record(context.Background(), "info", "queue", "耗时任务队列工作进程启动", map[string]any{
 		"queue":      "long-running",
 		"concurrent": longRunningConcurrent,
 		"tries":      tries,
