@@ -66,5 +66,6 @@ func init() {
 		// 建议值：根据服务器性能和任务特性调整（1-10 或更多）
 		"concurrent":              config.Env("QUEUE_CONCURRENT", 3),              // 并发数（同时处理的任务数量）
 		"long_running_concurrent": config.Env("QUEUE_LONG_RUNNING_CONCURRENT", 1), // 长时间任务队列的并发数
+		// "test_concurrent":         config.Env("QUEUE_TEST_CONCURRENT", 1),         // 逻辑队列 test，见 bootstrap.TestQueueRunner
 	})
 }
