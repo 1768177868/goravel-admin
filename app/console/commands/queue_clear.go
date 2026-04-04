@@ -10,7 +10,7 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
-	"goravel/app/utils"
+	"goravel/app/clients"
 	"goravel/app/utils/errorlog"
 )
 
@@ -125,7 +125,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 
 	// 执行清理
 	ctx.Info("开始清理队列...")
-	redisClient, err := utils.GetRedisClient(redisConnectionName)
+	redisClient, err := clients.GetRedisClient(redisConnectionName)
 	if err != nil {
 		ctx.Error(fmt.Sprintf("获取 Redis 客户端失败: %v", err))
 		return err
@@ -197,7 +197,7 @@ func (r *QueueClear) getRedisConnectionName(queueConnectionName string) string {
 
 // getRedisQueueStats 获取 Redis 队列统计信息
 func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
-	redisClient, err := utils.GetRedisClient(redisConnectionName)
+	redisClient, err := clients.GetRedisClient(redisConnectionName)
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
 			"connection": redisConnectionName,

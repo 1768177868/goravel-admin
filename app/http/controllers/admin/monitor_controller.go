@@ -18,7 +18,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
-	"goravel/app/utils"
+	"goravel/app/clients"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -964,7 +964,7 @@ func getRedisInfoFromConnection(ctx http.Context) map[string]any {
 	}
 
 	// 使用公共 Redis 客户端（用于执行INFO命令）
-	redisClient, err := utils.GetRedisClient("default")
+	redisClient, err := clients.GetRedisClient("default")
 	if err != nil {
 		result["status"] = "disconnected"
 		return result

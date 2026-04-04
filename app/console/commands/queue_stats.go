@@ -11,7 +11,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/samber/lo"
 
-	"goravel/app/utils"
+	"goravel/app/clients"
 	"goravel/app/utils/errorlog"
 )
 
@@ -345,7 +345,7 @@ func (r *QueueStats) getRedisConnectionName(queueConnectionName string) string {
 // getRedisQueueStats 获取 Redis 队列统计信息
 func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
 	// 使用公共 Redis 客户端
-	redisClient, err := utils.GetRedisClient(redisConnectionName)
+	redisClient, err := clients.GetRedisClient(redisConnectionName)
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
 			"connection": redisConnectionName,
@@ -439,7 +439,7 @@ func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueConnectionName
 // getRedisStatsByQueue 按队列分组获取 Redis 队列统计信息
 func (r *QueueStats) getRedisStatsByQueue(redisConnectionName, queueConnectionName string) (map[string]*RedisQueueStatsInfo, error) {
 	// 使用公共 Redis 客户端
-	redisClient, err := utils.GetRedisClient(redisConnectionName)
+	redisClient, err := clients.GetRedisClient(redisConnectionName)
 	if err != nil {
 		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
 			"connection": redisConnectionName,

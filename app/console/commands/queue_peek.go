@@ -13,6 +13,7 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
+	"goravel/app/clients"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
@@ -109,7 +110,7 @@ func (r *QueuePeek) Handle(ctx console.Context) error {
 			return nil
 		}
 
-		redisClient, err := utils.GetRedisClient(redisConnectionName)
+		redisClient, err := clients.GetRedisClient(redisConnectionName)
 		if err != nil {
 			errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
 				"connection": redisConnectionName,

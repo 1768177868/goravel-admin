@@ -57,6 +57,7 @@ func Providers() []foundation.ServiceProvider {
 		&process.ServiceProvider{},
 		&view.ServiceProvider{},
 		&providers.AppServiceProvider{},
+		&providers.ElasticsearchServiceProvider{},
 		&providers.AuthServiceProvider{},
 		&providers.RouteServiceProvider{},
 		&providers.ConsoleServiceProvider{},

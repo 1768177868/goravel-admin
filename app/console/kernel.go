@@ -42,5 +42,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.GenerateTestPayments{},
 		&commands.AnalyzeStats{},
 		&commands.OptimizeTables{},
+		&commands.ElasticsearchExample{},
 	}
 }

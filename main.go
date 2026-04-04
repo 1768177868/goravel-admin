@@ -5,8 +5,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"goravel/app/clients"
 	"goravel/app/facades"
-	"goravel/app/utils"
 	"goravel/app/websocket/notifications"
 	"goravel/bootstrap"
 )
@@ -54,7 +54,7 @@ func shutdownApplication(app interface{ Shutdown() error }) {
 	facades.Log().Info("NotificationHub stopped")
 
 	// 关闭所有 Redis 客户端
-	if err := utils.CloseAllRedisClients(); err != nil {
+	if err := clients.CloseAllRedisClients(); err != nil {
 		facades.Log().Errorf("Close Redis clients error: %v", err)
 	} else {
 		facades.Log().Info("Redis clients closed")

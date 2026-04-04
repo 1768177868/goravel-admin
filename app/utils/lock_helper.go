@@ -7,6 +7,8 @@ import (
 
 	"github.com/goravel/framework/facades"
 	"github.com/redis/go-redis/v9"
+
+	"goravel/app/clients"
 )
 
 // LockResult 锁操作结果
@@ -27,7 +29,7 @@ func TryAcquireLock(lockKey, lockValue string, ttl time.Duration) *LockResult {
 	}
 
 	// 优先使用 Redis SETNX 原子操作
-	redisClient, err := GetRedisClient("default")
+	redisClient, err := clients.GetRedisClient("default")
 	if err != nil {
 		facades.Log().Warningf("获取 Redis 客户端失败，降级到缓存锁: %v", err)
 		// 降级到普通缓存检查（不保证原子性，但至少提供基本保护）
