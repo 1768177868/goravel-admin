@@ -61,11 +61,18 @@ func init() {
 
 		// Concurrent Configuration
 		//
-		// 队列工作进程的并发数（同时处理的任务数量）
-		// 可以通过环境变量 QUEUE_CONCURRENT 设置，默认值为 1
-		// 建议值：根据服务器性能和任务特性调整（1-10 或更多）
-		"concurrent":              config.Env("QUEUE_CONCURRENT", 3),              // 并发数（同时处理的任务数量）
-		"long_running_concurrent": config.Env("QUEUE_LONG_RUNNING_CONCURRENT", 1), // 长时间任务队列的并发数
+		// 并发数 = 同一队列上同时执行的任务个数（不是进程数）。以下为经验示例，按机器 CPU、任务是否占满 CPU/IO 再调。
+		//
+		// QUEUE_CONCURRENT（默认队列 default）示例：
+		//   - 本地开发 / 任务很轻：1～2
+		//   - 小生产、以 IO 为主（发邮件、调外部 API）：4～8
+		//   - CPU 密集（图片处理、大报表）：1～2，避免把机器打满
+		//   - 内存占用大的 Job：宁小勿大，例如 1～2
+		//
+		// QUEUE_LONG_RUNNING_CONCURRENT（long-running 队列）示例：
+		//   - 导出、大文件、长耗时：通常 1；允许并行多条时再 2～3，注意数据库与磁盘压力
+		"concurrent":              config.Env("QUEUE_CONCURRENT", 3),              // 默认队列；见上注释
+		"long_running_concurrent": config.Env("QUEUE_LONG_RUNNING_CONCURRENT", 1), // 耗时队列；见上注释
 		// "test_concurrent":         config.Env("QUEUE_TEST_CONCURRENT", 1),         // 逻辑队列 test，见 bootstrap.TestQueueRunner
 	})
 }
