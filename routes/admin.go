@@ -40,7 +40,6 @@ func Admin() {
 	codeGeneratorController := admin.NewCodeGeneratorController()
 	articleController := admin.NewArticleController()
 	formDemoController := admin.NewFormDemoController()
-	elasticsearchController := admin.NewElasticsearchController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -61,8 +60,6 @@ func Admin() {
 
 			router.Post("logout", adminAuthController.Logout)
 			router.Get("heartbeat", adminAuthController.Heartbeat)
-			// Elasticsearch 连通性（需 ELASTICSEARCH_ENABLED=true；示例见 artisan es:example）
-			router.Get("elasticsearch/ping", elasticsearchController.Ping)
 
 			// 谷歌验证码相关
 			router.Get("google-authenticator/status", adminAuthController.GetGoogleAuthenticatorStatus)

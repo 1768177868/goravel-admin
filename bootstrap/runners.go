@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/contracts/queue"
 
+	esworker "goravel/app/elasticsearch/worker"
 	"goravel/app/facades"
 	"goravel/app/services"
 )
@@ -112,11 +113,66 @@ func (r *LongRunningQueueRunner) Shutdown() error {
 	return nil
 }
 
+// ElasticsearchQueueRunner ES 同步等任务专用逻辑队列（与默认队列隔离，避免阻塞其它 Job）
+type ElasticsearchQueueRunner struct {
+	worker queue.Worker
+	mu     sync.Mutex
+}
+
+func (r *ElasticsearchQueueRunner) Signature() string {
+	return "queue-elasticsearch"
+}
+
+func (r *ElasticsearchQueueRunner) ShouldRun() bool {
+	connection := facades.Config().GetString("queue.default")
+	driver := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.driver", connection))
+	if connection == "" || driver == "sync" || !facades.Config().GetBool("app.auto_run", true) {
+		return false
+	}
+	return esworker.ShouldRunQueueWorker()
+}
+
+func (r *ElasticsearchQueueRunner) Run() error {
+	tries := facades.Config().GetInt("queue.tries", 5)
+	concurrent := facades.Config().GetInt("queue.elasticsearch_concurrent", 2)
+	queueName := facades.Config().GetString("elasticsearch.sync_queue", "elasticsearch")
+
+	r.mu.Lock()
+	r.worker = facades.Queue().Worker(queue.Args{
+		Connection: "",
+		Queue:      queueName,
+		Concurrent: concurrent,
+		Tries:      tries,
+	})
+	r.mu.Unlock()
+
+	facades.Log().Infof("Elasticsearch 同步队列启动 - 队列: %s, 并发数: %d, 最大重试: %d", queueName, concurrent, tries)
+	systemLogService := services.NewSystemLogService()
+	_ = systemLogService.Record(context.Background(), "info", "queue", "Elasticsearch 同步队列启动", map[string]any{
+		"queue":      queueName,
+		"concurrent": concurrent,
+		"tries":      tries,
+	})
+
+	return r.worker.Run()
+}
+
+func (r *ElasticsearchQueueRunner) Shutdown() error {
+	r.mu.Lock()
+	worker := r.worker
+	r.mu.Unlock()
+	if worker != nil {
+		return worker.Shutdown()
+	}
+	return nil
+}
+
 // QueueRunners 返回队列相关的 runners
 func QueueRunners() []foundation.Runner {
 	return []foundation.Runner{
 		&DefaultQueueRunner{},
 		&LongRunningQueueRunner{},
+		&ElasticsearchQueueRunner{},
 		// &TestQueueRunner{}, // 需要时再取消下面整块注释并取消本行注释；config 见 queue.test_concurrent
 	}
 }

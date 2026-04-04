@@ -6,6 +6,7 @@ import (
 
 	"goravel/app/facades"
 	"goravel/app/jobs"
+	"goravel/app/queuejobs"
 )
 
 type QueueServiceProvider struct {
@@ -30,5 +31,6 @@ func (receiver *QueueServiceProvider) Jobs() []queue.Job {
 		&jobs.ExportOrders{},
 		&jobs.ExportPayments{},
 		&jobs.ExportUsers{},
+		&queuejobs.SyncOrderToElasticsearch{},
 	}
 }

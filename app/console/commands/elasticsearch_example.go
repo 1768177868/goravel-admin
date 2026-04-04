@@ -9,7 +9,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/binding"
-	"goravel/app/services"
+	"goravel/app/elasticsearch/demo"
 )
 
 // ElasticsearchExample 演示 Ping / 写入 / 搜索 / 删除（需 ELASTICSEARCH_ENABLED=true）。
@@ -58,13 +58,12 @@ func (r *ElasticsearchExample) Handle(ctx console.Context) error {
 		return err
 	}
 
-	svc := services.NewElasticsearchService()
 	op := ctx.Option("op")
 	c := context.Background()
 
 	switch op {
 	case "ping", "":
-		if err := svc.Ping(c); err != nil {
+		if err := esdemo.Ping(c); err != nil {
 			ctx.Error(err.Error())
 			return err
 		}
@@ -72,14 +71,14 @@ func (r *ElasticsearchExample) Handle(ctx console.Context) error {
 		return nil
 
 	case "index":
-		index := svc.DemoIndex()
+		index := esdemo.DemoIndex()
 		doc := map[string]any{
 			"title":       "Goravel ES 示例文档",
 			"description": "这是一条用于演示索引与搜索的示例数据",
 			"tags":        []string{"demo", "goravel"},
 		}
 		id := ctx.Option("id")
-		if err := svc.IndexDocument(c, index, id, doc); err != nil {
+		if err := esdemo.IndexDocument(c, index, id, doc); err != nil {
 			ctx.Error(err.Error())
 			return err
 		}
@@ -88,8 +87,8 @@ func (r *ElasticsearchExample) Handle(ctx console.Context) error {
 		return nil
 
 	case "search":
-		index := svc.DemoIndex()
-		raw, err := svc.SearchMatch(c, index, "title", ctx.Option("q"), 5)
+		index := esdemo.DemoIndex()
+		raw, err := esdemo.SearchMatch(c, index, "title", ctx.Option("q"), 5)
 		if err != nil {
 			ctx.Error(err.Error())
 			return err
@@ -98,9 +97,9 @@ func (r *ElasticsearchExample) Handle(ctx console.Context) error {
 		return nil
 
 	case "delete":
-		index := svc.DemoIndex()
+		index := esdemo.DemoIndex()
 		id := ctx.Option("id")
-		if err := svc.DeleteDocument(c, index, id); err != nil {
+		if err := esdemo.DeleteDocument(c, index, id); err != nil {
 			ctx.Error(err.Error())
 			return err
 		}

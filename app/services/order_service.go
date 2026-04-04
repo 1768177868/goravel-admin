@@ -14,6 +14,8 @@ import (
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
+	"goravel/app/repositories"
+	"goravel/app/support"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
@@ -308,95 +310,27 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 		details = append(details, detail)
 	}
 
+	support.DispatchOrderElasticsearchSync(order.ID, order.OrderNo, "index")
+
 	return order, details, nil
 }
 
-// findOrderByID 通过订单ID查找订单
-// 如果提供了订单号，会优先使用订单号直接定位分表（更高效）
-// 如果没有订单号，则遍历最近几个月的分表
+// findOrderByID 委托 orderrepo，与 ES 同步等只读场景共用同一套分表查找逻辑。
 func (s *OrderServiceImpl) findOrderByID(orderID uint, orderNo ...string) (*models.Order, error) {
-	// 如果提供了订单号，优先使用订单号直接定位分表（更高效）
 	if len(orderNo) > 0 && orderNo[0] != "" {
-		order, err := s.findOrderByOrderNo(orderNo[0])
-		if err == nil {
-			// 如果通过订单号找到了，验证订单ID是否匹配（如果提供了订单ID）
-			if orderID > 0 && order.ID != orderID {
-				// 订单号找到了但ID不匹配，继续用ID查找
-			} else {
-				return order, nil
-			}
-		}
-		// 如果通过订单号查找失败，继续用ID查找
+		return orderrepo.FindOrderByID(orderID, orderNo[0])
 	}
-
-	// 如果没有订单号或通过订单号查找失败，使用ID遍历分表
-	if orderID == 0 {
-		return nil, apperrors.ErrOrderIDRequired
-	}
-
-	// 查询最近6个月的分表（足够覆盖大部分场景）
-	now := time.Now().UTC()
-	startTime := now.AddDate(0, -6, 0)
-	tableNames := utils.GetShardingTableNames("orders", startTime, now)
-
-	// 从最新的分表开始查询（Model 自动应用软删除过滤）
-	for i := len(tableNames) - 1; i >= 0; i-- {
-		var order models.Order
-		if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("id", orderID).First(&order); err == nil {
-			return &order, nil
-		}
-	}
-
-	return nil, apperrors.ErrOrderNotFound
+	return orderrepo.FindOrderByID(orderID)
 }
 
 // GetOrderByID 根据ID查询订单
 func (s *OrderServiceImpl) GetOrderByID(orderID uint, orderTime time.Time) (*models.Order, []models.OrderDetail, error) {
-	// 先查找订单获取 created_at
-	order, err := s.findOrderByID(orderID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// 使用订单的 created_at 确定分表
-	timeStr := order.CreatedAt.ToDateTimeString()
-	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
-
-	// 查询订单详情
-	detailTableName := utils.GetShardingTableName("order_details", createdAt)
-	var details []models.OrderDetail
-	if err := facades.Orm().Query().Table(detailTableName).Where("order_id", orderID).Find(&details); err != nil {
-		return nil, nil, apperrors.ErrQueryOrderDetailFailed.WithError(err)
-	}
-
-	return order, details, nil
+	return orderrepo.FindOrderWithDetails(orderID, "")
 }
 
 // GetOrderByOrderNo 根据订单号查询订单（直接定位分表，更高效）
 func (s *OrderServiceImpl) GetOrderByOrderNo(orderNo string) (*models.Order, []models.OrderDetail, error) {
-	// 通过订单号查找订单（直接定位分表）
-	order, err := s.findOrderByOrderNo(orderNo)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// 防御性检查：确保 order 不为 nil
-	if order == nil {
-		return nil, nil, apperrors.ErrOrderNotFound
-	}
-
-	// 使用订单的 created_at 确定详情分表
-	timeStr := order.CreatedAt.ToDateTimeString()
-	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
-
-	// 查询订单详情
-	detailTableName := utils.GetShardingTableName("order_details", createdAt)
-	var details []models.OrderDetail
-	if err := facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Find(&details); err != nil {
-		return nil, nil, apperrors.ErrQueryOrderDetailFailed.WithError(err)
-	}
-
-	return order, details, nil
+	return orderrepo.FindOrderWithDetails(0, orderNo)
 }
 
 // GetOrders 查询订单列表（限制不超过3个月）
@@ -831,7 +765,11 @@ func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status
 	_, err = facades.Orm().Query().Table(tableName).
 		Where("id", orderID).
 		Update(updateData)
-	return err
+	if err != nil {
+		return err
+	}
+	support.DispatchOrderElasticsearchSync(orderID, order.OrderNo, "index")
+	return nil
 }
 
 // DeleteOrder 删除订单（软删除）
@@ -868,7 +806,11 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 	// 软删除订单主表
 	tableName := utils.GetShardingTableName("orders", createdAt)
 	_, err = facades.Orm().Query().Table(tableName).Where("id", orderID).Delete(&models.Order{})
-	return err
+	if err != nil {
+		return err
+	}
+	support.DispatchOrderElasticsearchSync(orderID, "", "delete")
+	return nil
 }
 
 // UpdateOrderByOrderNo 根据订单号更新订单（状态和备注）
@@ -892,7 +834,11 @@ func (s *OrderServiceImpl) UpdateOrderByOrderNo(orderNo string, status string, r
 
 	// 更新订单
 	_, err = facades.Orm().Query().Table(tableName).Where("order_no", orderNo).Update(updateData)
-	return err
+	if err != nil {
+		return err
+	}
+	support.DispatchOrderElasticsearchSync(order.ID, orderNo, "index")
+	return nil
 }
 
 // DeleteOrderByOrderNo 根据订单号删除订单（软删除）
@@ -921,7 +867,11 @@ func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
 	// 软删除订单主表
 	tableName := utils.GetShardingTableName("orders", createdAt)
 	_, err = facades.Orm().Query().Table(tableName).Where("order_no", orderNo).Delete(&models.Order{})
-	return err
+	if err != nil {
+		return err
+	}
+	support.DispatchOrderElasticsearchSync(order.ID, "", "delete")
+	return nil
 }
 
 // generateOrderNo 生成订单号（格式：ORD + YYYYMM + ULID）
@@ -931,61 +881,9 @@ func (s *OrderServiceImpl) generateOrderNo() string {
 	return utils.GenerateShardingNo(utils.OrderNoConfig)
 }
 
-// parseOrderNoYearMonth 从订单号解析年月信息
-// 订单号格式：ORD + YYYYMM + ULID
-// 返回：年月字符串（如 "202501"）和是否成功解析
-func parseOrderNoYearMonth(orderNo string) (string, bool) {
-	return utils.ParseShardingNoYearMonth(orderNo, utils.OrderNoConfig)
-}
-
-// findOrderByOrderNo 通过订单号查找订单（直接定位分表）
+// findOrderByOrderNo 委托 orderrepo。
 func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, error) {
-	// 从订单号解析年月信息
-	yearMonth, ok := parseOrderNoYearMonth(orderNo)
-	if !ok {
-		// 如果无法解析（可能是旧格式订单号），回退到遍历分表的方式
-		now := time.Now().UTC()
-		startTime := now.AddDate(0, -6, 0)
-		tableNames := utils.GetShardingTableNames("orders", startTime, now)
-
-		// 从最新的分表开始查询（
-		for i := len(tableNames) - 1; i >= 0; i-- {
-			var order models.Order
-			if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
-				return &order, nil
-			}
-		}
-		return nil, apperrors.ErrOrderNotFound
-	}
-
-	// 解析年月字符串为时间
-	// 格式：200601 -> 2025年01月
-	parsedTime, err := time.Parse("200601", yearMonth)
-	if err != nil {
-		// 解析失败，回退到遍历分表
-		now := time.Now().UTC()
-		startTime := now.AddDate(0, -6, 0)
-		tableNames := utils.GetShardingTableNames("orders", startTime, now)
-
-		for i := len(tableNames) - 1; i >= 0; i-- {
-			var order models.Order
-			if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
-				return &order, nil
-			}
-		}
-		return nil, apperrors.ErrOrderNotFound
-	}
-
-	// 使用解析的年月确定分表
-	tableName := utils.GetShardingTableName("orders", parsedTime)
-
-	// 直接查询对应的分表（Model 自动应用软删除过滤）
-	var order models.Order
-	if err := facades.Orm().Query().Model(&models.Order{}).Table(tableName).Where("order_no", orderNo).First(&order); err == nil {
-		return &order, nil
-	}
-
-	return nil, apperrors.ErrOrderNotFound
+	return orderrepo.FindOrderByOrderNo(orderNo)
 }
 
 // GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
