@@ -68,6 +68,7 @@ const getFormInitialValue = () => ({
   email: '',
   phone: '',
   department_id: null,
+  position_id: null,
   role_ids: [],
   status: "1",
   is_super_admin: false
@@ -110,6 +111,15 @@ const formFields = computed(() => {
       apiUrl: '/options?type=department',
       treeProps: { label: 'name', value: 'id', children: 'children' },
       clearable: true,
+      disabled: isDefaultAdmin.value || loading.value,
+    },
+    {
+      prop: 'position_id',
+      label: t('table.position'),
+      type: 'select',
+      apiUrl: '/options?type=position',
+      clearable: true,
+      filterable: true,
       disabled: isDefaultAdmin.value || loading.value,
     },
     {
@@ -171,8 +181,17 @@ const setFormData = async (data) => {
     const normalized = normalizeFormData(data, {
       // role_ids: 'string-array',      // 多选角色
       department_id: 'number',       // 单选部门（tree-select）
+      position_id: 'number',
       status: 'string',             // 单选状态
     })
+
+    // 未设置部门/岗位时后端为 0；树形/下拉应显示为空，提交时再发 0
+    if (normalized.department_id === 0 || normalized.department_id === '0') {
+      normalized.department_id = null
+    }
+    if (normalized.position_id === 0 || normalized.position_id === '0') {
+      normalized.position_id = null
+    }
 
     Object.assign(formData, normalized)
 
@@ -191,6 +210,16 @@ const handleSubmit = async () => {
     try {
       const data = { ...formData }
       if (data.username) data.username = data.username.trim()
+      const did = data.department_id
+      data.department_id =
+        did === null || did === undefined || did === '' || did === 0 || did === '0'
+          ? 0
+          : Number(did)
+      const pid = data.position_id
+      data.position_id =
+        pid === null || pid === undefined || pid === '' || pid === 0 || pid === '0'
+          ? 0
+          : Number(pid)
       if (formData.id) {
         if (!data.password) delete data.password
         if (isDefaultAdmin.value) delete data.role_ids

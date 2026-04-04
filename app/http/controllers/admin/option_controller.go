@@ -25,6 +25,7 @@ func NewOptionController() *OptionController {
 	providers := make(map[string]services.OptionProvider)
 	providers["role"] = option_providers.NewRoleOptionProvider()
 	providers["department"] = option_providers.NewDepartmentOptionProvider()
+	providers["position"] = option_providers.NewPositionOptionProvider()
 	providers["menu"] = option_providers.NewMenuOptionProvider(services.NewTreeServiceImpl())
 	providers["status"] = option_providers.NewStatusOptionProvider()
 	providers["method"] = option_providers.NewMethodOptionProvider()

@@ -146,7 +146,7 @@ const displayInputValue = computed(() => {
           : props.field.topNodeLabel
       }
       // 默认使用菜单相关的翻译（向后兼容）
-      return t('menu_management.top_menu')
+      return t('menu_management.top')
     }
   }
   

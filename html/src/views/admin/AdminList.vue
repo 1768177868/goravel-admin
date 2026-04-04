@@ -69,6 +69,10 @@
           {{ getDepartmentDisplayName(row.Department || row.department) }}
         </template>
 
+        <template #position="{ row }">
+          {{ getPositionDisplayName(row.Position || row.position) }}
+        </template>
+
         <template #roles="{ row }">
           <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
             <el-tag
@@ -183,6 +187,7 @@ const {
     status: '',
     role_id: '',
     department_id: '',
+    position_id: '',
     is_2fa_bound: ''
   },
   fieldMapping: {},
@@ -196,6 +201,7 @@ const initialSearchForm = {
   status: '',
   role_id: '',
   department_id: '',
+  position_id: '',
   is_2fa_bound: ''
 }
 
@@ -256,6 +262,14 @@ const allTableColumns = computed(() => [
     key: 'department'
   },
   {
+    field: 'position',
+    title: t('table.position'),
+    slot: 'position',
+    sortable: false,
+    key: 'position',
+    required: true
+  },
+  {
     field: 'roles',
     title: t('table.roles'),
     slot: 'roles',
@@ -286,7 +300,9 @@ const {
   columnOrder,
   fixedColumns,
   handleColumnSettingConfirm
-} = useColumnSetting('admin', allTableColumns)
+} = useColumnSetting('admin', allTableColumns, {
+  adjacentPairs: [['department', 'position']]
+})
 
 // 处理刷新
 const handleRefresh = () => {
@@ -340,6 +356,15 @@ const searchFields = computed(() => [
     apiUrl: '/options?type=department', 
     treeProps: { label: 'name', children: 'children', value: 'id' },
     advanced: false
+  },
+  {
+    prop: 'position_id',
+    label: t('table.position'),
+    type: 'select',
+    width: '180px',
+    filterable: true,
+    apiUrl: '/options?type=position',
+    advanced: false
   }
 ])
 
@@ -360,6 +385,14 @@ const getUniqueRoles = (roles) => {
 const getDepartmentDisplayName = (department) => {
   if (!department) return '-'
   return department.Name || department.name || '-'
+}
+
+const getPositionDisplayName = (position) => {
+  if (!position) return '-'
+  const name = position.Name || position.name
+  const id = position.ID ?? position.id
+  if (!name && (!id || id === 0)) return '-'
+  return name || '-'
 }
 
 const handleEdit = async (row) => {
@@ -386,6 +419,7 @@ const handleEdit = async (row) => {
       email: row.Email || row.email || '',
       phone: row.Phone || row.phone || '',
       department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
+      position_id: row.PositionID !== undefined ? row.PositionID : (row.position_id !== undefined ? row.position_id : 0),
       role_ids: uniqueRoleIds,
       status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
       is_super_admin: row.is_super_admin === true || row.IsSuperAdmin === true

@@ -29,6 +29,7 @@ type AdminExportRequest struct {
 	Status       string `json:"status" form:"status" example:"1"`                           // 状态：1-启用，0-禁用
 	RoleID       string `json:"role_id" form:"role_id" example:"1"`                         // 角色ID
 	DepartmentID string `json:"department_id" form:"department_id" example:"1"`             // 部门ID
+	PositionID   string `json:"position_id" form:"position_id" example:"1"`                 // 岗位ID
 	Is2FABound   string `json:"is_2fa_bound" form:"is_2fa_bound" example:"1"`               // 是否绑定2FA：1-已绑定，0-未绑定
 	StartTime    string `json:"start_time" form:"start_time" example:"2024-01-01 00:00:00"` // 开始时间
 	EndTime      string `json:"end_time" form:"end_time" example:"2024-12-31 23:59:59"`     // 结束时间
@@ -47,6 +48,8 @@ type AdminResponse struct {
 	Is2FABound   bool             `json:"is_2fa_bound" example:"true"`              // 是否绑定2FA
 	DepartmentID uint             `json:"department_id" example:"1"`                // 部门ID
 	Department   map[string]any   `json:"department"`                               // 部门信息
+	PositionID   uint             `json:"position_id" example:"1"`                // 岗位ID
+	Position     map[string]any   `json:"position"`                               // 岗位信息
 	Roles        []map[string]any `json:"roles"`                                    // 角色列表
 	CreatedAt    string           `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
 	UpdatedAt    string           `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
@@ -97,6 +100,7 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
 	roleID := ctx.Request().Input("role_id", ctx.Request().Query("role_id", ""))
 	departmentID := ctx.Request().Input("department_id", ctx.Request().Query("department_id", ""))
+	positionID := ctx.Request().Input("position_id", ctx.Request().Query("position_id", ""))
 	is2FABound := ctx.Request().Input("is_2fa_bound", ctx.Request().Query("is_2fa_bound", ""))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
 	// 时间参数同时支持从请求体和查询参数读取，并转换为 UTC
@@ -116,6 +120,7 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 		Status:       status,
 		RoleID:       roleID,
 		DepartmentID: departmentID,
+		PositionID:   positionID,
 		Is2FABound:   is2FABound,
 		StartTime:    startTime,
 		EndTime:      endTime,
@@ -175,6 +180,8 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 			"is_super_admin": admin.ID == superAdminID,
 			"department_id":  admin.DepartmentID,
 			"department":     admin.Department,
+			"position_id":    admin.PositionID,
+			"position":       admin.Position,
 			"roles":          admin.Roles,
 			"created_at":     admin.CreatedAt,
 			"updated_at":     admin.UpdatedAt,
@@ -226,6 +233,8 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 			"is_super_admin": admin.ID == superAdminID, // 标识是否是超级管理员
 			"department_id":  admin.DepartmentID,
 			"department":     admin.Department,
+			"position_id":    admin.PositionID,
+			"position":       admin.Position,
 			"roles":          admin.Roles,
 			"created_at":     admin.CreatedAt,
 			"updated_at":     admin.UpdatedAt,
@@ -289,6 +298,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		"email":         adminCreate.Email,
 		"phone":         adminCreate.Phone,
 		"department_id": adminCreate.DepartmentID,
+		"position_id":   adminCreate.PositionID,
 		"status":        adminCreate.Status,
 		"created_at":    now,
 		"updated_at":    now,
@@ -376,6 +386,9 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	}
 	if _, exists := allInputs["department_id"]; exists {
 		admin.DepartmentID = adminUpdate.DepartmentID
+	}
+	if _, exists := allInputs["position_id"]; exists {
+		admin.PositionID = adminUpdate.PositionID
 	}
 	if _, exists := allInputs["status"]; exists {
 		// 请求中提供了 status 字段，使用验证后的值
@@ -721,6 +734,7 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		"export_header_phone",
 		"export_header_status",
 		"export_header_department",
+		"export_header_position",
 		"export_header_roles",
 		"export_header_created_at",
 		"export_header_updated_at",
@@ -738,6 +752,11 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		departmentName := ""
 		if admin.Department.ID > 0 {
 			departmentName = admin.Department.Name
+		}
+
+		positionName := ""
+		if admin.Position.ID > 0 {
+			positionName = admin.Position.Name
 		}
 
 		// 角色名称（多个角色用逗号分隔）
@@ -763,6 +782,7 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 			admin.Phone,
 			statusText,
 			departmentName,
+			positionName,
 			roleNames,
 			createdAt,
 			updatedAt,

@@ -15,6 +15,7 @@ type AdminCreate struct {
 	Email        string `form:"email" json:"email"`
 	Phone        string `form:"phone" json:"phone"`
 	DepartmentID uint   `form:"department_id" json:"department_id"`
+	PositionID   uint   `form:"position_id" json:"position_id"`
 	Status       uint8  `form:"status" json:"status"`
 	RoleIDs      []uint `form:"role_ids" json:"role_ids"`
 }

@@ -33,6 +33,7 @@ var (
 	ErrMenuNotFound         = NewBusinessError("menu_not_found", "菜单不存在")
 	ErrPermissionNotFound   = NewBusinessError("permission_not_found", "权限不存在")
 	ErrDepartmentNotFound   = NewBusinessError("department_not_found", "部门不存在")
+	ErrPositionNotFound     = NewBusinessError("position_not_found", "岗位不存在")
 	ErrDictionaryNotFound   = NewBusinessError("dictionary_not_found", "字典不存在")
 	ErrLogNotFound          = NewBusinessError("log_not_found", "日志不存在")
 
@@ -91,6 +92,7 @@ var (
 	ErrMenuHasChildren                 = NewBusinessError("menu_has_children", "菜单存在子菜单，无法删除")
 	ErrDepartmentHasChildren           = NewBusinessError("department_has_children", "部门存在子部门，无法删除")
 	ErrDepartmentHasAdmins             = NewBusinessError("department_has_admins", "部门存在管理员，无法删除")
+	ErrPositionHasAdmins               = NewBusinessError("position_has_admins", "岗位存在管理员，无法删除")
 	ErrGoogleAuthenticatorNotBound     = NewBusinessError("google_authenticator_not_bound", "未绑定谷歌验证器")
 	ErrGoogleAuthenticatorAlreadyBound = NewBusinessError("google_authenticator_already_bound", "已绑定谷歌验证器")
 	ErrGoogleCodeInvalid               = NewBusinessError("google_code_invalid", "谷歌验证码无效")

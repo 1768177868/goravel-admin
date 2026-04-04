@@ -251,6 +251,7 @@ const formFields = computed(() => {
       treeProps: { label: 'name', value: 'id', children: 'children' },
       clearable: true,
       disabled: loading.value,
+      topNodeLabel: t('menu_management.top_menu'),
     },
     {
       prop: 'type',

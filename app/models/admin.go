@@ -16,6 +16,8 @@ type Admin struct {
 	Status       uint8      `gorm:"default:1;comment:状态 1:启用 0:禁用" json:"status"`
 	DepartmentID uint       `gorm:"index;comment:部门ID" json:"department_id"`
 	Department   Department `gorm:"foreignKey:DepartmentID" json:"department"`
+	PositionID   uint       `gorm:"index;comment:岗位ID" json:"position_id"`
+	Position     Position   `gorm:"foreignKey:PositionID" json:"position"`
 	Roles        []Role     `gorm:"many2many:admin_role;comment:角色" json:"roles"`
 	orm.SoftDeletes
 }

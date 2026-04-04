@@ -26,6 +26,7 @@ var auditModelFactories = map[string]func() any{
 	"roles":       func() any { return &models.Role{} },
 	"menus":       func() any { return &models.Menu{} },
 	"departments": func() any { return &models.Department{} },
+	"positions":   func() any { return &models.Position{} },
 	"blacklists": func() any { return &models.Blacklist{} },
 }
 

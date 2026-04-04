@@ -150,6 +150,19 @@ func (s *MenuSeeder) Run() error {
 
 	createOrUpdateMenu(models.Menu{
 		ParentID:  systemMenu.ID,
+		Title:     "岗位管理",
+		Slug:      "position",
+		Icon:      "Briefcase",
+		Path:      "/positions",
+		Component: "position/PositionList",
+		Type:      2,
+		Status:    1,
+		Sort:      6,
+		IsHidden:  0,
+	})
+
+	createOrUpdateMenu(models.Menu{
+		ParentID:  systemMenu.ID,
 		Title:     "在线管理员",
 		Slug:      "online-admin",
 		Icon:      "User",
@@ -157,7 +170,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "onlineAdmin/OnlineAdminList",
 		Type:      2,
 		Status:    1,
-		Sort:      6,
+		Sort:      7,
 		IsHidden:  0,
 	})
 
@@ -170,7 +183,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "dictionary/DictionaryList",
 		Type:      2,
 		Status:    1,
-		Sort:      7,
+		Sort:      8,
 		IsHidden:  0,
 	})
 
@@ -183,7 +196,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "config/ConfigList",
 		Type:      2,
 		Status:    1,
-		Sort:      8,
+		Sort:      9,
 		IsHidden:  0,
 	})
 
@@ -196,7 +209,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "export/ExportList",
 		Type:      2,
 		Status:    1,
-		Sort:      9,
+		Sort:      10,
 		IsHidden:  0,
 	})
 
@@ -209,7 +222,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "attachment/AttachmentList",
 		Type:      2,
 		Status:    1,
-		Sort:      10,
+		Sort:      11,
 		IsHidden:  0,
 	})
 
@@ -222,7 +235,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "blacklist/BlacklistList",
 		Type:      2,
 		Status:    1,
-		Sort:      11,
+		Sort:      12,
 		IsHidden:  0,
 	})
 
@@ -235,7 +248,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "order/OrderList",
 		Type:      2,
 		Status:    1,
-		Sort:      12,
+		Sort:      13,
 		IsHidden:  0,
 	})
 
@@ -249,7 +262,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "Layout",
 		Type:      1,
 		Status:    1,
-		Sort:      14,
+		Sort:      15,
 		IsHidden:  0,
 	})
 
@@ -290,7 +303,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "user/UserList",
 		Type:      2,
 		Status:    1,
-		Sort:      13,
+		Sort:      14,
 		IsHidden:  0,
 	})
 

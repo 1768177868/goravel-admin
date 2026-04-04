@@ -309,14 +309,15 @@ func (s *CodeGeneratorServiceImpl) GetTables() ([]string, error) {
 		"configs":                true,
 		"currencies":             true,
 		"departments":            true,
+		"positions":              true,
 		"dictionaries":           true,
 		"exports":                true,
 		"login_logs":             true,
 		"notifications":          true,
 		"operation_logs":         true,
 		"system_logs":            true,
-		"payment_methods":        true,
-		"payments":               true,
+		// "payment_methods":        true,
+		// "payments":               true,
 	}
 
 	var filteredTables []string

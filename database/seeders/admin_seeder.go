@@ -138,5 +138,12 @@ func (s *AdminSeeder) Run() error {
 	// super-admin 角色不需要分配权限和菜单，因为它在权限中间件中会跳过权限检查
 	// 在获取用户信息时，会特殊处理 super-admin 角色，返回所有菜单用于前端显示
 
+	// 关联默认岗位（若已存在岗位数据）
+	var gmPosition models.Position
+	if err := facades.Orm().Query().Where("code", "GM").First(&gmPosition); err == nil && gmPosition.ID > 0 {
+		_, _ = facades.Orm().Query().Model(&superAdmin).Update("position_id", gmPosition.ID)
+		_, _ = facades.Orm().Query().Model(&developerAdmin).Update("position_id", gmPosition.ID)
+	}
+
 	return nil
 }

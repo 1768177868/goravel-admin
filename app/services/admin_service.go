@@ -43,6 +43,7 @@ type AdminFilters struct {
 	Status       string
 	RoleID       string
 	DepartmentID string
+	PositionID   string
 	Is2FABound   string
 	StartTime    string
 	EndTime      string
@@ -63,7 +64,7 @@ func (s *AdminServiceImpl) GetByID(id uint, withDepartment bool, withRoles bool)
 
 	// 预加载关联
 	if withDepartment {
-		query = query.With("Department")
+		query = query.With("Department").With("Position")
 	}
 	if withRoles {
 		query = query.With("Roles")
@@ -121,6 +122,11 @@ func (s *AdminServiceImpl) buildQuery(filters AdminFilters) orm.Query {
 			}
 		}
 	}
+	if filters.PositionID != "" {
+		if pid := cast.ToUint(filters.PositionID); pid > 0 {
+			query = query.Where("position_id", pid)
+		}
+	}
 	if filters.Is2FABound != "" {
 		switch filters.Is2FABound {
 		case "1":
@@ -155,7 +161,7 @@ func (s *AdminServiceImpl) GetList(filters AdminFilters, page, pageSize int) ([]
 	// 分页查询
 	var admins []models.Admin
 	var total int64
-	if err := query.With("Department").With("Roles").Paginate(page, pageSize, &admins, &total); err != nil {
+	if err := query.With("Department").With("Position").With("Roles").Paginate(page, pageSize, &admins, &total); err != nil {
 		return nil, 0, err
 	}
 
@@ -175,7 +181,7 @@ func (s *AdminServiceImpl) GetAllAdminsForExport(filters AdminFilters) ([]models
 
 	// 不分页，获取所有数据
 	var admins []models.Admin
-	if err := query.With("Department").With("Roles").Find(&admins); err != nil {
+	if err := query.With("Department").With("Position").With("Roles").Find(&admins); err != nil {
 		return nil, apperrors.ErrQueryFailed.WithError(err)
 	}
 
@@ -256,6 +262,12 @@ func (s *AdminServiceImpl) LoadRelations(admin *models.Admin) error {
 		var department models.Department
 		if err := facades.Orm().Query().Where("id", admin.DepartmentID).First(&department); err == nil {
 			admin.Department = department
+		}
+	}
+	if admin.PositionID > 0 {
+		var position models.Position
+		if err := facades.Orm().Query().Where("id", admin.PositionID).First(&position); err == nil {
+			admin.Position = position
 		}
 	}
 
@@ -402,10 +414,14 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 
 	// 收集所有需要查询的 ID
 	var departmentIDs []uint
+	var positionIDs []uint
 	var adminIDs []uint
 	for _, admin := range admins {
 		if admin.DepartmentID > 0 {
 			departmentIDs = append(departmentIDs, admin.DepartmentID)
+		}
+		if admin.PositionID > 0 {
+			positionIDs = append(positionIDs, admin.PositionID)
 		}
 		adminIDs = append(adminIDs, admin.ID)
 	}
@@ -428,6 +444,25 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 		}
 		for _, dept := range departments {
 			departmentsMap[dept.ID] = dept
+		}
+	}
+
+	positionsMap := make(map[uint]models.Position)
+	if len(positionIDs) > 0 {
+		uniquePosIDs := make(map[uint]bool)
+		var uniqueIDs []uint
+		for _, id := range positionIDs {
+			if !uniquePosIDs[id] {
+				uniqueIDs = append(uniqueIDs, id)
+				uniquePosIDs[id] = true
+			}
+		}
+		var positions []models.Position
+		if err := facades.Orm().Query().Where("id IN ?", uniqueIDs).Find(&positions); err != nil {
+			return err
+		}
+		for _, pos := range positions {
+			positionsMap[pos.ID] = pos
 		}
 	}
 
@@ -471,6 +506,11 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 		if admins[i].DepartmentID > 0 {
 			if dept, ok := departmentsMap[admins[i].DepartmentID]; ok {
 				admins[i].Department = dept
+			}
+		}
+		if admins[i].PositionID > 0 {
+			if pos, ok := positionsMap[admins[i].PositionID]; ok {
+				admins[i].Position = pos
 			}
 		}
 

@@ -16,6 +16,7 @@ func Admin() {
 	permissionController := admin.NewPermissionController()
 	menuController := admin.NewMenuController()
 	departmentController := admin.NewDepartmentController()
+	positionController := admin.NewPositionController()
 	dictionaryController := admin.NewDictionaryController()
 	configController := admin.NewConfigController()
 	blacklistController := admin.NewBlacklistController()
@@ -118,6 +119,9 @@ func Admin() {
 
 			// 部门管理 - 使用 Resource 路由
 			router.Resource("departments", departmentController)
+
+			// 岗位管理
+			router.Resource("positions", positionController)
 
 			// 字典管理
 			router.Resource("dictionaries", dictionaryController)

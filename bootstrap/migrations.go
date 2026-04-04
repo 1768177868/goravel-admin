@@ -59,5 +59,7 @@ func Migrations() []schema.Migration {
 		&migrations.M20250131000020AddNoCacheToMenus{},
 		// 操作日志增加变更详情字段
 		&migrations.M20260328000001AddChangesToOperationLogs{},
+		&migrations.M20260404000001CreatePositionsTable{},
+		&migrations.M20260404000002AddPositionIdToAdminsTable{},
 	}
 }

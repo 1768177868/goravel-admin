@@ -4,6 +4,59 @@ import { useI18n } from 'vue-i18n'
 import Storage from '../utils/storage'
 
 /**
+ * 将缺失列按 tableColumns 定义顺序插入到当前顺序中（而非一律追加到末尾）
+ */
+function insertMissingKeysNaturally(middleKeys, allMiddleKeys) {
+  const missing = allMiddleKeys.filter((key) => !middleKeys.includes(key))
+  const result = [...middleKeys]
+  for (const key of missing) {
+    const targetIdx = allMiddleKeys.indexOf(key)
+    let insertAt = result.length
+    for (let i = targetIdx - 1; i >= 0; i--) {
+      const prev = allMiddleKeys[i]
+      const idx = result.indexOf(prev)
+      if (idx !== -1) {
+        insertAt = idx + 1
+        break
+      }
+    }
+    result.splice(insertAt, 0, key)
+  }
+  return result
+}
+
+/**
+ * 强制 right 列紧跟在 left 列之后（用于修正本地缓存列顺序）
+ */
+function applyAdjacentPairs(middleKeys, pairs) {
+  if (!pairs || !pairs.length) return middleKeys
+  let result = [...middleKeys]
+  for (const [left, right] of pairs) {
+    const li = result.indexOf(left)
+    const ri = result.indexOf(right)
+    if (li === -1 || ri === -1) continue
+    if (ri === li + 1) continue
+    result = result.filter((k) => k !== right)
+    const newLi = result.indexOf(left)
+    result.splice(newLi + 1, 0, right)
+  }
+  return result
+}
+
+/**
+ * 解析中间列顺序：去掉已删除列、插入新列、可选地应用相邻约束
+ */
+function resolveMiddleKeys(savedMiddle, allMiddleKeys, adjacentPairs) {
+  let middleKeys = savedMiddle.filter((k) => allMiddleKeys.includes(k))
+  if (middleKeys.length === 0) {
+    middleKeys = [...allMiddleKeys]
+  }
+  middleKeys = insertMissingKeysNaturally(middleKeys, allMiddleKeys)
+  middleKeys = applyAdjacentPairs(middleKeys, adjacentPairs || [])
+  return middleKeys
+}
+
+/**
  * 列设置 composable（简化版）
  * 
  * 使用示例：
@@ -11,9 +64,11 @@ import Storage from '../utils/storage'
  * 
  * @param {string} storageKey localStorage 存储键名（会自动加上 '_column_setting' 后缀）
  * @param {ComputedRef|Array} tableColumns 表格列配置数组
+ * @param {Object} [options]
+ * @param {Array<[string, string]>} [options.adjacentPairs] 初始化时强制列顺序，如 [['department','position']]；仅首次加载持久化时应用，之后可由用户在列设置中调整
  * @returns {Object} 返回列设置相关的状态和方法
  */
-export function useColumnSetting(storageKey, tableColumns) {
+export function useColumnSetting(storageKey, tableColumns, options = {}) {
   const { t } = useI18n()
   
   // 处理存储键
@@ -88,6 +143,29 @@ export function useColumnSetting(storageKey, tableColumns) {
   if (!columnOrder.value.length) {
     const columns = Array.isArray(tableColumns) ? tableColumns : (tableColumns?.value || [])
     columnOrder.value = columns.map(col => getColumnKey(col)).filter(Boolean)
+  }
+
+  // 一次性规范化：去掉无效 key、按定义顺序插入新列、可选相邻约束（修正旧缓存，如岗位被追加在末尾）
+  const adjacentPairsOnInit = options.adjacentPairs || []
+  {
+    const columnsForInit = Array.isArray(tableColumns) ? tableColumns : (tableColumns?.value || [])
+    const allMiddleKeysInit = columnsForInit
+      .map((col) => getColumnKey(col))
+      .filter((key) => key && key !== 'checkbox' && key !== 'operation')
+    const rawOrder = [...columnOrder.value]
+    const savedMiddle = rawOrder.filter((key) => key && key !== 'checkbox' && key !== 'operation')
+    const prefix = rawOrder.filter((k) => k === 'checkbox')
+    const suffix = rawOrder.filter((k) => k === 'operation')
+    const normalizedMiddle = resolveMiddleKeys(savedMiddle, allMiddleKeysInit, adjacentPairsOnInit)
+    const newFullOrder = [...prefix, ...normalizedMiddle, ...suffix]
+    if (newFullOrder.join(',') !== rawOrder.join(',')) {
+      columnOrder.value = newFullOrder
+      Storage.setItem(fullStorageKey, {
+        visibleColumns: visibleColumns.value,
+        columnOrder: columnOrder.value,
+        fixedColumns: fixedColumns.value
+      })
+    }
   }
 
   // 保存列设置
@@ -189,16 +267,11 @@ export function useColumnSetting(storageKey, tableColumns) {
       .map(col => getColumnKey(col))
       .filter(key => key && key !== 'checkbox' && key !== 'operation')
     
-    // 使用 columnOrder 中的顺序，如果 columnOrder 为空则使用默认顺序
-    let middleKeys = currentColumnOrder.length > 0 
-      ? currentColumnOrder.filter(key => key && key !== 'checkbox' && key !== 'operation')
-      : allMiddleKeys
-    
-    // 确保 middleKeys 包含所有中间列（处理新列添加的情况）
-    const missingMiddleKeys = allMiddleKeys.filter(key => !middleKeys.includes(key))
-    if (missingMiddleKeys.length > 0) {
-      middleKeys = [...middleKeys, ...missingMiddleKeys]
-    }
+    const savedMiddle = currentColumnOrder.filter(
+      (key) => key && key !== 'checkbox' && key !== 'operation'
+    )
+    // 与初始化一致：去无效列、新列按定义顺序插入；不在此重复 adjacentPairs，避免覆盖用户在列设置中的调整
+    const middleKeys = resolveMiddleKeys(savedMiddle, allMiddleKeys, [])
     
     // 构建最终的 orderedKeys：checkbox + 中间列 + operation
     // 注意：这个 orderedKeys 只用于调试，实际排序使用 middleKeys
@@ -230,8 +303,8 @@ export function useColumnSetting(storageKey, tableColumns) {
       const column = columnMap[key]
       if (column) {
         const colKey = getColumnKey(column)
-        // 只添加可见的列
-        if (currentVisibleColumns.includes(colKey)) {
+        // 只添加可见的列（required 列始终显示，避免旧本地缓存缺少新列）
+        if (currentVisibleColumns.includes(colKey) || column.required) {
           // 应用冻结设置
           const fixed = currentFixedColumns[colKey]
           if (fixed) {

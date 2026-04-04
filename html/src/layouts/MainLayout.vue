@@ -24,79 +24,11 @@
             <el-icon><Odometer /></el-icon>
             <template #title>{{ $t('menu.dashboard') }}</template>
           </el-menu-item>
-          <template v-if="menuTree.length > 0">
-            <MenuItem
-              v-for="menu in menuTree"
-              :key="menu.id"
-              :menu="menu"
-            />
-          </template>
-          <template v-else>
-            <!-- 默认菜单 -->
-            <el-sub-menu index="system">
-              <template #title>
-                <el-icon><Setting /></el-icon>
-                <span>{{ $t('menu.system') }}</span>
-              </template>
-              <el-menu-item index="/admins">
-                <el-icon><User /></el-icon>
-                <template #title>{{ $t('menu.admin') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/roles">
-                <el-icon><Avatar /></el-icon>
-                <template #title>{{ $t('menu.role') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/permissions">
-                <el-icon><Key /></el-icon>
-                <template #title>{{ $t('menu.permission') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/menus">
-                <el-icon><Menu /></el-icon>
-                <template #title>{{ $t('menu.menu') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/departments">
-                <el-icon><OfficeBuilding /></el-icon>
-                <template #title>{{ $t('menu.department') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/dictionaries">
-                <el-icon><Document /></el-icon>
-                <template #title>{{ $t('menu.dictionary') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/configs">
-                <el-icon><Setting /></el-icon>
-                <template #title>{{ $t('menu.config') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/blacklists">
-                <el-icon><Warning /></el-icon>
-                <template #title>{{ $t('menu.blacklist') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/online-admins">
-                <el-icon><User /></el-icon>
-                <template #title>{{ $t('menu.online_admin') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/exports">
-                <el-icon><Document /></el-icon>
-                <template #title>{{ $t('menu.export') }}</template>
-              </el-menu-item>
-            </el-sub-menu>
-            <el-sub-menu index="logs">
-              <template #title>
-                <el-icon><Document /></el-icon>
-                <span>{{ $t('menu.log') }}</span>
-              </template>
-              <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
-              <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
-              <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
-            </el-sub-menu>
-            <el-menu-item index="/notifications">
-              <el-icon><Bell /></el-icon>
-              <template #title>{{ $t('menu.notification_center') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/monitor">
-              <el-icon><Monitor /></el-icon>
-              <template #title>{{ $t('menu.service_monitor') }}</template>
-            </el-menu-item>
-          </template>
+          <MenuItem
+            v-for="menu in menuTree"
+            :key="menu.id"
+            :menu="menu"
+          />
         </el-menu>
       </div>
     </el-drawer>
@@ -122,79 +54,11 @@
           <el-icon><Odometer /></el-icon>
           <template #title>{{ $t('menu.dashboard') }}</template>
         </el-menu-item>
-        <template v-if="menuTree.length > 0">
-          <MenuItem
-            v-for="menu in menuTree"
-            :key="menu.id"
-            :menu="menu"
-          />
-        </template>
-        <template v-else>
-          <!-- 如果菜单数据为空，显示默认菜单 -->
-          <el-sub-menu index="system">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>{{ $t('menu.system') }}</span>
-            </template>
-            <el-menu-item index="/admins">
-              <el-icon><User /></el-icon>
-              <template #title>{{ $t('menu.admin') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/roles">
-              <el-icon><Avatar /></el-icon>
-              <template #title>{{ $t('menu.role') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/permissions">
-              <el-icon><Key /></el-icon>
-              <template #title>{{ $t('menu.permission') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/menus">
-              <el-icon><Menu /></el-icon>
-              <template #title>{{ $t('menu.menu') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/departments">
-              <el-icon><OfficeBuilding /></el-icon>
-              <template #title>{{ $t('menu.department') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/dictionaries">
-              <el-icon><Document /></el-icon>
-              <template #title>{{ $t('menu.dictionary') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/configs">
-              <el-icon><Setting /></el-icon>
-              <template #title>{{ $t('menu.config') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/blacklists">
-              <el-icon><Warning /></el-icon>
-              <template #title>{{ $t('menu.blacklist') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/online-admins">
-              <el-icon><User /></el-icon>
-              <template #title>{{ $t('menu.online_admin') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/exports">
-              <el-icon><Document /></el-icon>
-              <template #title>{{ $t('menu.export') }}</template>
-            </el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="logs">
-            <template #title>
-              <el-icon><Document /></el-icon>
-              <span>{{ $t('menu.log') }}</span>
-            </template>
-            <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
-            <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
-            <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
-          </el-sub-menu>
-          <el-menu-item index="/notifications">
-            <el-icon><Bell /></el-icon>
-            <template #title>{{ $t('menu.notification_center') }}</template>
-          </el-menu-item>
-          <el-menu-item index="/monitor">
-            <el-icon><Monitor /></el-icon>
-            <template #title>{{ $t('menu.service_monitor') }}</template>
-          </el-menu-item>
-        </template>
+        <MenuItem
+          v-for="menu in menuTree"
+          :key="menu.id"
+          :menu="menu"
+        />
       </el-menu>
     </el-aside>
     
@@ -374,78 +238,11 @@
             <el-icon><Odometer /></el-icon>
             <template #title>{{ $t('menu.dashboard') }}</template>
           </el-menu-item>
-          <template v-if="menuTree.length > 0">
-            <MenuItem
-              v-for="menu in menuTree"
-              :key="menu.id"
-              :menu="menu"
-            />
-          </template>
-          <template v-else>
-            <el-sub-menu index="system">
-              <template #title>
-                <el-icon><Setting /></el-icon>
-                <span>{{ $t('menu.system') }}</span>
-              </template>
-              <el-menu-item index="/admins">
-                <el-icon><User /></el-icon>
-                <template #title>{{ $t('menu.admin') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/roles">
-                <el-icon><Avatar /></el-icon>
-                <template #title>{{ $t('menu.role') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/permissions">
-                <el-icon><Key /></el-icon>
-                <template #title>{{ $t('menu.permission') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/menus">
-                <el-icon><Menu /></el-icon>
-                <template #title>{{ $t('menu.menu') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/departments">
-                <el-icon><OfficeBuilding /></el-icon>
-                <template #title>{{ $t('menu.department') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/dictionaries">
-                <el-icon><Document /></el-icon>
-                <template #title>{{ $t('menu.dictionary') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/configs">
-                <el-icon><Setting /></el-icon>
-                <template #title>{{ $t('menu.config') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/blacklists">
-                <el-icon><Warning /></el-icon>
-                <template #title>{{ $t('menu.blacklist') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/online-admins">
-                <el-icon><User /></el-icon>
-                <template #title>{{ $t('menu.online_admin') }}</template>
-              </el-menu-item>
-              <el-menu-item index="/exports">
-                <el-icon><Document /></el-icon>
-                <template #title>{{ $t('menu.export') }}</template>
-              </el-menu-item>
-            </el-sub-menu>
-            <el-sub-menu index="logs">
-              <template #title>
-                <el-icon><Document /></el-icon>
-                <span>{{ $t('menu.log') }}</span>
-              </template>
-              <el-menu-item index="/operation-logs">{{ $t('menu.operation_log') }}</el-menu-item>
-              <el-menu-item index="/login-logs">{{ $t('menu.login_log') }}</el-menu-item>
-              <el-menu-item index="/system-logs">{{ $t('menu.system_log') }}</el-menu-item>
-            </el-sub-menu>
-            <el-menu-item index="/notifications">
-              <el-icon><Bell /></el-icon>
-              <template #title>{{ $t('menu.notification_center') }}</template>
-            </el-menu-item>
-            <el-menu-item index="/monitor">
-              <el-icon><Monitor /></el-icon>
-              <template #title>{{ $t('menu.service_monitor') }}</template>
-            </el-menu-item>
-          </template>
+          <MenuItem
+            v-for="menu in menuTree"
+            :key="menu.id"
+            :menu="menu"
+          />
         </el-menu>
       </div>
 
@@ -586,14 +383,7 @@ import {
   FullScreen,
   Aim,
   Odometer,
-  Avatar,
-  Key,
   Menu,
-  OfficeBuilding,
-  Document,
-  Bell,
-  Monitor,
-  Warning,
   Grid,
   Check,
   Tools,

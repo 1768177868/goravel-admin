@@ -294,6 +294,8 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"phone":          admin.Phone,
 			"department_id":  admin.DepartmentID,
 			"department":     admin.Department,
+			"position_id":    admin.PositionID,
+			"position":       admin.Position,
 			"roles":          admin.Roles,
 			"permissions":    permissions,
 			"menus":          menuTreeData, // 返回树形结构
@@ -359,7 +361,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 
 	// 重新加载关联数据（确保部门和角色被正确加载）
 	var adminWithRelations models.Admin
-	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).FirstOrFail(&adminWithRelations); err != nil {
+	if err := facades.Orm().Query().With("Department").With("Position").With("Roles").Where("id", admin.ID).FirstOrFail(&adminWithRelations); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -376,6 +378,8 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 			"phone":         admin.Phone,
 			"department_id": admin.DepartmentID,
 			"department":    admin.Department,
+			"position_id":   admin.PositionID,
+			"position":      admin.Position,
 			"roles":         admin.Roles,
 		},
 	})

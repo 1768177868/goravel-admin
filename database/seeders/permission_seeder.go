@@ -15,7 +15,7 @@ func (s *PermissionSeeder) Signature() string {
 
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
-	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu, userBalanceLogMenu models.Menu
+	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, positionMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu, userBalanceLogMenu models.Menu
 	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 	var paymentMethodMenu, paymentRecordMenu models.Menu
 
@@ -30,6 +30,7 @@ func (s *PermissionSeeder) Run() error {
 	findMenu("permission", &permissionMenu)
 	findMenu("menu", &menuMenu)
 	findMenu("department", &departmentMenu)
+	findMenu("position", &positionMenu)
 	findMenu("dictionary", &dictionaryMenu)
 	findMenu("config", &configMenu)
 	findMenu("blacklist", &blacklistMenu)
@@ -91,6 +92,12 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "部门创建", Slug: "department.store", Method: "POST", Path: "/api/admin/departments", Description: "创建部门", Status: 1, Sort: 3, MenuID: departmentMenu.ID},
 		{Name: "部门更新", Slug: "department.update", Method: "PUT", Path: "/api/admin/departments/*", Description: "更新部门", Status: 1, Sort: 4, MenuID: departmentMenu.ID},
 		{Name: "部门删除", Slug: "department.destroy", Method: "DELETE", Path: "/api/admin/departments/*", Description: "删除部门", Status: 1, Sort: 5, MenuID: departmentMenu.ID},
+		// 岗位管理
+		{Name: "岗位列表", Slug: "position.index", Method: "GET", Path: "/api/admin/positions", Description: "查看岗位列表", Status: 1, Sort: 1, MenuID: positionMenu.ID},
+		{Name: "岗位详情", Slug: "position.show", Method: "GET", Path: "/api/admin/positions/*", Description: "查看岗位详情", Status: 1, Sort: 2, MenuID: positionMenu.ID},
+		{Name: "岗位创建", Slug: "position.store", Method: "POST", Path: "/api/admin/positions", Description: "创建岗位", Status: 1, Sort: 3, MenuID: positionMenu.ID},
+		{Name: "岗位更新", Slug: "position.update", Method: "PUT", Path: "/api/admin/positions/*", Description: "更新岗位", Status: 1, Sort: 4, MenuID: positionMenu.ID},
+		{Name: "岗位删除", Slug: "position.destroy", Method: "DELETE", Path: "/api/admin/positions/*", Description: "删除岗位", Status: 1, Sort: 5, MenuID: positionMenu.ID},
 		// 字典管理
 		{Name: "字典列表", Slug: "dictionary.index", Method: "GET", Path: "/api/admin/dictionaries", Description: "查看字典列表", Status: 1, Sort: 1, MenuID: dictionaryMenu.ID},
 		{Name: "字典详情", Slug: "dictionary.show", Method: "GET", Path: "/api/admin/dictionaries/*", Description: "查看字典详情", Status: 1, Sort: 2, MenuID: dictionaryMenu.ID},

@@ -160,7 +160,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 
 	// 重新查询admin并加载关联（避免使用已存在的admin对象，可能导致关联加载问题）
 	var adminWithRelations models.Admin
-	if err := facades.Orm().Query().With("Department").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
+	if err := facades.Orm().Query().With("Department").With("Position").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
 		errorlog.RecordHTTP(ctx, "auth", "Failed to load admin with relations", map[string]any{
 			"error":    err.Error(),
 			"admin_id": admin.ID,
