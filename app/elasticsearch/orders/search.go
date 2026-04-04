@@ -38,7 +38,8 @@ type esSearchResponse struct {
 }
 
 // SearchMyOrders 在 ES 中限定 user_id，按关键词多字段检索；keyword 为空时仅列出该用户订单（按 created_at 降序）。
-func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, pageSize int) (total int64, items []MyOrderSearchHit, err error) {
+// createdAtGTE、createdAtLTE 为可选的 created_at 字符串边界（与 OrderDocument 中格式一致），用于 range 过滤。
+func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, pageSize int, createdAtGTE, createdAtLTE *string) (total int64, items []MyOrderSearchHit, err error) {
 	raw, err := facades.App().Make(binding.ElasticsearchClient)
 	if err != nil {
 		return 0, nil, err
@@ -51,10 +52,25 @@ func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, page
 	short := facades.Config().GetString("elasticsearch.orders_index", "orders")
 	index := clients.ElasticsearchIndexName(facades.Config(), short)
 
+	filters := []any{
+		map[string]any{"term": map[string]any{"user_id": userID}},
+	}
+	if createdAtGTE != nil || createdAtLTE != nil {
+		rng := map[string]any{}
+		if createdAtGTE != nil {
+			rng["gte"] = *createdAtGTE
+		}
+		if createdAtLTE != nil {
+			rng["lte"] = *createdAtLTE
+		}
+		// 动态映射下多为 text + keyword；按字符串序比较需用 .keyword
+		filters = append(filters, map[string]any{
+			"range": map[string]any{"created_at.keyword": rng},
+		})
+	}
+
 	boolQ := map[string]any{
-		"filter": []any{
-			map[string]any{"term": map[string]any{"user_id": userID}},
-		},
+		"filter": filters,
 	}
 	if kw := strings.TrimSpace(keyword); kw != "" {
 		boolQ["must"] = []any{
@@ -73,7 +89,7 @@ func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, page
 		"from":  (page - 1) * pageSize,
 		"size":  pageSize,
 		"sort": []any{
-			map[string]any{"created_at": map[string]any{"order": "desc"}},
+			map[string]any{"created_at.keyword": map[string]any{"order": "desc"}},
 		},
 	}
 	payload, err := json.Marshal(body)

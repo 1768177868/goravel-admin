@@ -7,10 +7,11 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	esorders "goravel/app/elasticsearch/orders"
+	"goravel/app/http/helpers"
 	apirequests "goravel/app/http/requests/api"
 	"goravel/app/http/response"
-	"goravel/app/http/helpers"
-	esorders "goravel/app/elasticsearch/orders"
+	"goravel/app/http/trans"
 )
 
 type OrderSearchController struct{}
@@ -19,8 +20,8 @@ func NewOrderSearchController() *OrderSearchController {
 	return &OrderSearchController{}
 }
 
-// DemoSearchMyOrders GET demo：当前登录用户在 ES 中按关键词检索自己的订单（需 ELASTICSEARCH_ENABLED）。
-func (c *OrderSearchController) DemoSearchMyOrders(ctx http.Context) http.Response {
+// SearchMyOrders GET ：当前登录用户在 ES 中按关键词检索自己的订单（需 ELASTICSEARCH_ENABLED）。
+func (c *OrderSearchController) SearchMyOrders(ctx http.Context) http.Response {
 	if !facades.Config().GetBool("elasticsearch.enabled", false) {
 		return response.Error(ctx, http.StatusServiceUnavailable, "elasticsearch_unavailable")
 	}
@@ -39,31 +40,24 @@ func (c *OrderSearchController) DemoSearchMyOrders(ctx http.Context) http.Respon
 		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
 	}
 
-	page := req.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := req.PageSize
-	if pageSize < 1 {
-		pageSize = 10
-	}
-	if pageSize > 50 {
-		pageSize = 50
+	page, pageSize := helpers.ValidatePaginationEx(req.Page, req.PageSize, helpers.PaginationLimits{})
+
+	gte, lte, errField, errMsgKey := helpers.ParseOrderCreatedAtRangeForES(req.CreatedFrom, req.CreatedTo)
+	if errField != "" {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", map[string]map[string]string{
+			errField: {"time": trans.Get(ctx, errMsgKey)},
+		})
 	}
 
 	searchCtx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
-	total, list, err := esorders.SearchMyOrders(searchCtx, userID, req.Q, page, pageSize)
+	total, list, err := esorders.SearchMyOrders(searchCtx, userID, req.Q, page, pageSize, gte, lte)
 	if err != nil {
-		facades.Log().Errorf("demo order ES search: %v", err)
+		facades.Log().Errorf("order ES search: %v", err)
 		return response.Error(ctx, http.StatusBadGateway, "elasticsearch_search_failed")
 	}
 
-	return response.Success(ctx, http.Json{
-		"total":      total,
-		"page":       page,
-		"page_size":  pageSize,
-		"list":       list,
-	})
+	// 与后台 Paginate 一致：data.list / total / page / page_size / total_pages
+	return response.Paginate(ctx, "success", list, total, page, pageSize)
 }

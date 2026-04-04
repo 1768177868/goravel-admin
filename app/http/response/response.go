@@ -443,10 +443,11 @@ func Paginate(ctx http.Context, args ...any) http.Response {
 		"code":    200,
 		"message": message,
 		"data": http.Json{
-			"list":      convertedList,
-			"total":     total,
-			"page":      page,
-			"page_size": pageSize,
+			"list":        convertedList,
+			"total":       total,
+			"page":        page,
+			"page_size":   pageSize,
+			"total_pages": helpers.TotalPages(total, pageSize),
 		},
 	}
 

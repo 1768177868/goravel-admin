@@ -329,6 +329,13 @@
     "elasticsearch_unavailable": "搜索服务暂不可用",
     "elasticsearch_search_failed": "订单搜索失败",
     "validation_order_search_q_max": "搜索关键词不能超过 200 个字符",
-    "attribute_order_search_q": "关键词"
+    "validation_order_search_created_from_max": "开始时间参数过长",
+    "validation_order_search_created_to_max": "结束时间参数过长",
+    "validation_order_search_created_from_invalid": "开始时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
+    "validation_order_search_created_to_invalid": "结束时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
+    "validation_order_search_time_range_inverted": "开始时间不能晚于结束时间",
+    "attribute_order_search_q": "关键词",
+    "attribute_order_search_created_from": "开始时间",
+    "attribute_order_search_created_to": "结束时间"
   }
 }

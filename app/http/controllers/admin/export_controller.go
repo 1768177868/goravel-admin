@@ -29,10 +29,7 @@ func NewExportController() *ExportController {
 
 // Index 导出记录列表
 func (r *ExportController) Index(ctx http.Context) http.Response {
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
+	page, pageSize := helpers.PaginationFromQuery(ctx, helpers.PaginationLimits{})
 
 	filters := r.buildFilters(ctx)
 

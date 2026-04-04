@@ -326,6 +326,13 @@
     "elasticsearch_unavailable": "Search is temporarily unavailable",
     "elasticsearch_search_failed": "Order search failed",
     "validation_order_search_q_max": "Search keyword cannot exceed 200 characters",
-    "attribute_order_search_q": "keyword"
+    "validation_order_search_created_from_max": "Start time is too long",
+    "validation_order_search_created_to_max": "End time is too long",
+    "validation_order_search_created_from_invalid": "Invalid start time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+    "validation_order_search_created_to_invalid": "Invalid end time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+    "validation_order_search_time_range_inverted": "Start time cannot be after end time",
+    "attribute_order_search_q": "keyword",
+    "attribute_order_search_created_from": "start time",
+    "attribute_order_search_created_to": "end time"
   }
 }

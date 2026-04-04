@@ -29,7 +29,7 @@ func Api() {
 			// 登出
 			router.Post("logout", authController.Logout)
 			// ES 关键词搜「我的订单」演示（需开启 ELASTICSEARCH_ENABLED，索引需已有数据）
-			router.Get("demo/orders/search", orderSearchController.DemoSearchMyOrders)
+			router.Get("orders/search", orderSearchController.SearchMyOrders)
 		})
 
 	})

@@ -50,8 +50,7 @@ func (r *BlacklistController) buildFilters(ctx http.Context) services.BlacklistF
 
 // Index 黑名单列表
 func (r *BlacklistController) Index(ctx http.Context) http.Response {
-	page := helpers.GetIntQuery(ctx, "page", 1)
-	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
+	page, pageSize := helpers.PaginationFromQuery(ctx, helpers.PaginationLimits{})
 
 	filters := r.buildFilters(ctx)
 

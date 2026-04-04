@@ -59,11 +59,7 @@ func (r *OnlineAdminController) buildQuery(ctx http.Context) orm.Query {
 
 // 只显示最近15分钟内有活动的管理员（根据 OnlineAdminThreshold 常量判断）
 func (r *OnlineAdminController) Index(ctx http.Context) http.Response {
-	// 验证并规范化分页参数
-	page, pageSize := helpers.ValidatePagination(
-		helpers.GetIntQuery(ctx, "page", 1),
-		helpers.GetIntQuery(ctx, "page_size", 10),
-	)
+	page, pageSize := helpers.PaginationFromQuery(ctx, helpers.PaginationLimits{})
 
 	username := ctx.Request().Query("username", "")
 

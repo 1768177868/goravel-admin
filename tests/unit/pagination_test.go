@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"goravel/app/http/helpers"
 )
 
 // PaginationTestSuite 分页测试套件
@@ -40,21 +42,6 @@ func paginateSlice[T any](slice []T, page, pageSize int) ([]T, int64) {
 	}
 
 	return slice[start:end], total
-}
-
-// validatePagination 模拟分页参数验证
-func validatePagination(page, pageSize int) (int, int) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 10
-	}
-	const maxPageSize = 100
-	if pageSize > maxPageSize {
-		pageSize = maxPageSize
-	}
-	return page, pageSize
 }
 
 // TestPaginateSlice_EmptySlice 测试空切片
@@ -101,7 +88,7 @@ func (s *PaginationTestSuite) TestPaginateSlice_OutOfRange() {
 	s.Equal(int64(5), total)
 }
 
-// TestValidatePagination 测试分页参数验证
+// TestValidatePagination 测试分页参数验证（默认边界）
 func (s *PaginationTestSuite) TestValidatePagination() {
 	tests := []struct {
 		name         string
@@ -120,9 +107,27 @@ func (s *PaginationTestSuite) TestValidatePagination() {
 
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			gotPage, gotPageSize := validatePagination(tt.page, tt.pageSize)
+			gotPage, gotPageSize := helpers.ValidatePagination(tt.page, tt.pageSize)
 			s.Equal(tt.wantPage, gotPage)
 			s.Equal(tt.wantPageSize, gotPageSize)
 		})
 	}
+}
+
+func (s *PaginationTestSuite) TestValidatePaginationEx_CustomMax() {
+	p, ps := helpers.ValidatePaginationEx(1, 80, helpers.PaginationLimits{DefaultPageSize: 20, MaxPageSize: 50})
+	s.Equal(1, p)
+	s.Equal(50, ps)
+
+	p, ps = helpers.ValidatePaginationEx(1, 0, helpers.PaginationLimits{DefaultPageSize: 20, MaxPageSize: 50})
+	s.Equal(1, p)
+	s.Equal(20, ps)
+}
+
+func (s *PaginationTestSuite) TestTotalPages() {
+	s.Equal(0, helpers.TotalPages(0, 10))
+	s.Equal(0, helpers.TotalPages(5, 0))
+	s.Equal(1, helpers.TotalPages(1, 10))
+	s.Equal(2, helpers.TotalPages(11, 10))
+	s.Equal(3, helpers.TotalPages(21, 10))
 }
