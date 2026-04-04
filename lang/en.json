@@ -322,6 +322,10 @@
     "disabled": "Disabled",
     "directory": "Directory",
     "menu": "Menu",
-    "button": "Button"
+    "button": "Button",
+    "elasticsearch_unavailable": "Search is temporarily unavailable",
+    "elasticsearch_search_failed": "Order search failed",
+    "validation_order_search_q_max": "Search keyword cannot exceed 200 characters",
+    "attribute_order_search_q": "keyword"
   }
 }

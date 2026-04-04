@@ -11,6 +11,7 @@ import (
 
 func Api() {
 	authController := api.NewAuthController()
+	orderSearchController := api.NewOrderSearchController()
 
 	// C端用户路由组：统一前缀
 	facades.Route().Prefix("api/user").Group(func(router route.Router) {
@@ -27,6 +28,8 @@ func Api() {
 			router.Get("info", authController.Info)
 			// 登出
 			router.Post("logout", authController.Logout)
+			// ES 关键词搜「我的订单」演示（需开启 ELASTICSEARCH_ENABLED，索引需已有数据）
+			router.Get("demo/orders/search", orderSearchController.DemoSearchMyOrders)
 		})
 
 	})

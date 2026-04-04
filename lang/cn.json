@@ -325,6 +325,10 @@
     "disabled": "禁用",
     "directory": "目录",
     "menu": "菜单",
-    "button": "按钮"
+    "button": "按钮",
+    "elasticsearch_unavailable": "搜索服务暂不可用",
+    "elasticsearch_search_failed": "订单搜索失败",
+    "validation_order_search_q_max": "搜索关键词不能超过 200 个字符",
+    "attribute_order_search_q": "关键词"
   }
 }
