@@ -24,8 +24,33 @@ func (s *DictionarySeeder) Run() error {
 	}
 
 	for _, dict := range dictionaries {
-		// 使用 FirstOrCreate：如果不存在则创建，存在则跳过
-		facades.Orm().Query().Where("type", dict.Type).Where("value", dict.Value).FirstOrCreate(&dict, dict)
+		// 使用 type + label 作为幂等键：存在则更新，不存在才创建
+		query := facades.Orm().Query().Model(&models.Dictionary{}).Where("type", dict.Type).Where("label", dict.Label)
+		count, err := query.Count()
+		if err != nil {
+			return err
+		}
+
+		if count == 0 {
+			if err := facades.Orm().Query().Create(&dict); err != nil {
+				return err
+			}
+			continue
+		}
+
+		var existing models.Dictionary
+		if err := facades.Orm().Query().Model(&models.Dictionary{}).Where("type", dict.Type).Where("label", dict.Label).First(&existing); err != nil {
+			return err
+		}
+
+		existing.Value = dict.Value
+		existing.Description = dict.Description
+		existing.Status = dict.Status
+		existing.Sort = dict.Sort
+		existing.TranslationKey = dict.TranslationKey
+		if err := facades.Orm().Query().Save(&existing); err != nil {
+			return err
+		}
 	}
 
 	return nil
