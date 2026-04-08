@@ -35,16 +35,13 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.72
-	github.com/wangxuancheng-dev/goravel-nsq v0.0.0
-	github.com/wangxuancheng-dev/goravel-rabbitmq v0.0.0
+	github.com/wangxuancheng-dev/goravel-kafka v0.0.0-20260408114414-93d3f2ece499
+	github.com/wangxuancheng-dev/goravel-nsq v0.0.0-20260408103730-49a87eeceaf3
+	github.com/wangxuancheng-dev/goravel-rabbitmq v0.0.0-20260408092214-efb340e6a9ab
 	github.com/wangxuancheng-dev/goravel-redis-stream v0.0.0-20260408055907-00f3df1febc9
 	golang.org/x/sync v0.19.0
 	gorm.io/gorm v1.31.1
 )
-
-replace github.com/wangxuancheng-dev/goravel-nsq => ./driver/nsq
-
-replace github.com/wangxuancheng-dev/goravel-rabbitmq => ./driver/rabbitmq
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -166,6 +163,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pterm/pterm v0.12.82 // indirect
@@ -180,6 +178,7 @@ require (
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/samber/slog-common v0.19.0 // indirect
 	github.com/samber/slog-multi v1.7.0 // indirect
+	github.com/segmentio/kafka-go v0.4.49 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect

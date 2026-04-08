@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	redisfacades "github.com/goravel/redis/facades"
+	kafka "github.com/wangxuancheng-dev/goravel-kafka"
 	nsq "github.com/wangxuancheng-dev/goravel-nsq"
 	rabbitmq "github.com/wangxuancheng-dev/goravel-rabbitmq"
 	redisstream "github.com/wangxuancheng-dev/goravel-redis-stream"
@@ -81,6 +82,19 @@ func init() {
 				"max_in_flight":    config.Env("QUEUE_NSQ_MAX_IN_FLIGHT", 1),
 				"via": func() (queue.Driver, error) {
 					return nsq.New("nsq")
+				},
+			},
+			"kafka": map[string]any{
+				"driver":           "custom",
+				"queue":            config.Env("QUEUE_KAFKA_QUEUE", "default"),
+				"brokers":          config.Env("QUEUE_KAFKA_BROKERS", "127.0.0.1:9092"),
+				"group_id":         config.Env("QUEUE_KAFKA_GROUP_ID", "goravel"),
+				"dial_timeout_ms":  config.Env("QUEUE_KAFKA_DIAL_TIMEOUT_MS", 1000),
+				"write_timeout_ms": config.Env("QUEUE_KAFKA_WRITE_TIMEOUT_MS", 1000),
+				"read_timeout_ms":  config.Env("QUEUE_KAFKA_READ_TIMEOUT_MS", 1000),
+				"max_wait_ms":      config.Env("QUEUE_KAFKA_MAX_WAIT_MS", 1000),
+				"via": func() (queue.Driver, error) {
+					return kafka.New("kafka")
 				},
 			},
 		},
