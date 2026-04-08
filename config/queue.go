@@ -46,14 +46,14 @@ func init() {
 			},
 			"redis_stream": map[string]any{
 				"driver":         "custom",
-				"connection":     config.Env("QUEUE_REDIS_STREAM_CONNECTION", "default"),
-				"queue":          config.Env("QUEUE_REDIS_STREAM_QUEUE", "default"),
-				"group":          config.Env("QUEUE_REDIS_STREAM_GROUP", "goravel"),
-				"block_ms":       config.Env("QUEUE_REDIS_STREAM_BLOCK_MS", 1000),
-				"retry_after":    config.Env("QUEUE_REDIS_STREAM_RETRY_AFTER", 90),
-				"claim_count":    config.Env("QUEUE_REDIS_STREAM_CLAIM_COUNT", 10),
-				"delete_on_ack":  config.Env("QUEUE_REDIS_STREAM_DELETE_ON_ACK", false),
-				"stream_max_len": config.Env("QUEUE_REDIS_STREAM_MAX_LEN", 100000),
+				"connection":     "default",
+				"queue":          "default",
+				"group":          config.Env("QUEUE_REDIS_STREAM_GROUP", "goravel"),     // Redis Stream consumer group 名称
+				"block_ms":       config.Env("QUEUE_REDIS_STREAM_BLOCK_MS", 1000),       // XREADGROUP 阻塞等待毫秒数
+				"retry_after":    config.Env("QUEUE_REDIS_STREAM_RETRY_AFTER", 90),      // 超过该秒数未 ACK 的消息可被 XAUTOCLAIM 重领
+				"claim_count":    config.Env("QUEUE_REDIS_STREAM_CLAIM_COUNT", 10),      // 每轮 XAUTOCLAIM 最多认领消息数
+				"delete_on_ack":  config.Env("QUEUE_REDIS_STREAM_DELETE_ON_ACK", false), // true: ACK 后同时 XDEL 删除消息
+				"stream_max_len": config.Env("QUEUE_REDIS_STREAM_MAX_LEN", 100000),      // Stream 近似最大长度（0 表示不限制）
 				"via": func() (queue.Driver, error) {
 					return redisstream.New("redis_stream")
 				},

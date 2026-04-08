@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
+	contractsCache "github.com/goravel/framework/contracts/cache"
 	"github.com/goravel/framework/facades"
 	supportcarbon "github.com/goravel/framework/support/carbon"
 
@@ -22,6 +25,8 @@ import (
 
 // ErrExportRecordMissing 导出记录被删除时的哨兵错误
 var ErrExportRecordMissing = errors.New("export record missing (deleted)")
+
+const defaultExportExecutionLockTTLSeconds = 7200
 
 // ExportArgs 通用导出任务参数
 type ExportArgs struct {
@@ -71,6 +76,11 @@ type BaseExporter struct {
 	config ExportConfig
 }
 
+type ExportExecutionLock struct {
+	lock     contractsCache.Lock
+	acquired bool
+}
+
 // NewBaseExporter 创建通用导出器
 func NewBaseExporter(config ExportConfig) *BaseExporter {
 	return &BaseExporter{config: config}
@@ -118,6 +128,42 @@ func ParseArgs(args ...any) (ExportArgs, error) {
 	return exportArgs, nil
 }
 
+func AcquireExportExecutionLock(exportID uint) (*ExportExecutionLock, error) {
+	lockKey := fmt.Sprintf("export:execution:%d", exportID)
+	lock := facades.Cache().Lock(lockKey, getExportExecutionLockTTL())
+	if !lock.Get() {
+		return nil, nil
+	}
+
+	return &ExportExecutionLock{
+		lock:     lock,
+		acquired: true,
+	}, nil
+}
+
+func getExportExecutionLockTTL() time.Duration {
+	raw := os.Getenv("QUEUE_EXPORT_EXECUTION_LOCK_TTL_SECONDS")
+	if raw == "" {
+		return defaultExportExecutionLockTTLSeconds * time.Second
+	}
+
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return defaultExportExecutionLockTTLSeconds * time.Second
+	}
+
+	return time.Duration(seconds) * time.Second
+}
+
+func (l *ExportExecutionLock) Release() {
+	if l == nil || !l.acquired {
+		return
+	}
+
+	l.lock.Release()
+	l.acquired = false
+}
+
 // MarkExportFailed 标记导出失败
 func MarkExportFailed(exportID uint, errorMsg string) {
 	if exportID == 0 {
@@ -163,6 +209,10 @@ func CheckAndUpdateExportStatus(exportID uint) (*models.Export, error) {
 	}
 
 	exportRecord := &exportRecords[0]
+	if exportRecord.Status == models.ExportStatusSuccess {
+		facades.Log().Infof("导出记录已成功，跳过重复执行: export_id=%d", exportID)
+		return nil, nil
+	}
 	exportRecord.Status = models.ExportStatusProcessing
 	exportRecord.ErrorMsg = ""
 	if err := facades.Orm().Query().Save(exportRecord); err != nil {

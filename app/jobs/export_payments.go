@@ -44,6 +44,16 @@ func (r *ExportPayments) Handle(args ...any) (retErr error) {
 	}
 	exportID = exportArgs.ExportID
 
+	lock, err := AcquireExportExecutionLock(exportID)
+	if err != nil {
+		return err
+	}
+	if lock == nil {
+		facades.Log().Infof("导出任务已在执行中，跳过重复投递: export_id=%d", exportID)
+		return nil
+	}
+	defer lock.Release()
+
 	// 检查并更新导出状态
 	exportRecord, err := CheckAndUpdateExportStatus(exportID)
 	if err != nil {

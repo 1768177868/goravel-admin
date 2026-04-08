@@ -12,6 +12,7 @@ import (
 func Api() {
 	authController := api.NewAuthController()
 	orderSearchController := api.NewOrderController()
+	queueTestController := api.NewQueueTestController()
 
 	// C端用户路由组：统一前缀
 	facades.Route().Prefix("api/user").Group(func(router route.Router) {
@@ -32,5 +33,18 @@ func Api() {
 			router.Get("orders/search", orderSearchController.SearchMyOrders)
 		})
 
+	})
+
+	// 队列驱动测试路由（开发调试使用）
+	facades.Route().Prefix("api/queue-test").Group(func(router route.Router) {
+		router.Post("all-in-one", queueTestController.AllInOne)
+		router.Post("all-special", queueTestController.AllSpecial)
+		router.Post("reclaim", queueTestController.Reclaim)
+		router.Post("dispatch", queueTestController.Dispatch)
+		router.Post("delay", queueTestController.Delay)
+		router.Post("long-running", queueTestController.LongRunning)
+		router.Post("fail", queueTestController.Fail)
+		router.Get("result", queueTestController.Result)
+		router.Post("reset", queueTestController.Reset)
 	})
 }
