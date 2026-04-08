@@ -23,6 +23,7 @@ func (r *QueueClear) Signature() string {
 }
 
 // Description The console command description.
+// go run . artisan queue:clear --connection=redis_stream --queue=default --force
 func (r *QueueClear) Description() string {
 	return "清理队列中的任务（仅支持 Redis 驱动）"
 }
@@ -135,6 +136,34 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	ctxRedis := context.Background()
 	clearedCount := int64(0)
 
+	// Redis Stream 驱动：pending 在 stream，delayed 在 zset
+	if r.isRedisStreamDriver(connectionName) {
+		streamKey := r.redisStreamKey(connectionName, queueName)
+		streamLen, _ := redisClient.XLen(ctxRedis, streamKey).Result()
+		if streamLen > 0 {
+			if err := redisClient.Del(ctxRedis, streamKey).Err(); err != nil {
+				ctx.Error(fmt.Sprintf("清理 Stream 队列失败: %v", err))
+			} else {
+				clearedCount += streamLen
+				ctx.Info(fmt.Sprintf("已清理 Stream 队列: %d 条消息", streamLen))
+			}
+		}
+
+		delayedKey := r.redisDelayedKey(connectionName, queueName)
+		delayedLen, _ := redisClient.ZCard(ctxRedis, delayedKey).Result()
+		if delayedLen > 0 {
+			if err := redisClient.Del(ctxRedis, delayedKey).Err(); err != nil {
+				ctx.Error(fmt.Sprintf("清理延迟队列失败: %v", err))
+			} else {
+				clearedCount += delayedLen
+				ctx.Info(fmt.Sprintf("已清理延迟队列: %d 个任务", delayedLen))
+			}
+		}
+
+		ctx.Info(fmt.Sprintf("队列清理完成！共清理 %d 个任务/消息", clearedCount))
+		return nil
+	}
+
 	// 清理待执行队列
 	pendingKey := r.redisQueueKey(connectionName, queueName)
 	pendingLen, _ := redisClient.LLen(ctxRedis, pendingKey).Result()
@@ -210,6 +239,63 @@ func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueConnectionName
 	ctx := context.Background()
 	stats := &RedisQueueStatsInfo{}
 
+	if r.isRedisStreamDriver(queueConnectionName) {
+		streamKey := r.redisStreamKey(queueConnectionName, queueName)
+		group := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.group", queueConnectionName), "goravel")
+
+		streamLen, err := redisClient.XLen(ctx, streamKey).Result()
+		if err != nil {
+			errorlog.Record(context.Background(), "queue", "查询 stream 长度失败", map[string]any{
+				"queue_name": queueName,
+				"key":        streamKey,
+				"error":      err.Error(),
+			}, "查询 stream 长度失败: %v", err)
+			return nil, fmt.Errorf("查询 stream 长度失败: %v", err)
+		}
+
+		pendingInfo, err := redisClient.XPending(ctx, streamKey, group).Result()
+		if err != nil {
+			pendingInfo = nil
+		}
+
+		if pendingInfo != nil {
+			stats.Reserved = pendingInfo.Count
+			if streamLen >= stats.Reserved {
+				stats.Pending = streamLen - stats.Reserved
+			}
+		} else {
+			stats.Pending = streamLen
+			stats.Reserved = 0
+		}
+
+		delayedKey := r.redisDelayedKey(queueConnectionName, queueName)
+		delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
+		if err != nil {
+			errorlog.Record(context.Background(), "queue", "查询延迟队列失败", map[string]any{
+				"queue_name": queueName,
+				"key":        delayedKey,
+				"error":      err.Error(),
+			}, "查询延迟队列失败: %v", err)
+			return nil, fmt.Errorf("查询延迟队列失败: %v", err)
+		}
+		stats.Delayed = delayedLen
+
+		var failedCount int64
+		if queueName != "" {
+			failedCount, err = facades.Orm().Query().Table("failed_jobs").
+				Where("queue = ?", queueName).
+				Count()
+		} else {
+			failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
+		}
+		if err == nil {
+			stats.Failed = failedCount
+		}
+
+		stats.Total = stats.Pending + stats.Reserved
+		return stats, nil
+	}
+
 	pendingKey := r.redisQueueKey(queueConnectionName, queueName)
 	pendingLen, err := redisClient.LLen(ctx, pendingKey).Result()
 	if err != nil {
@@ -279,6 +365,17 @@ func (r *QueueClear) redisReservedKey(queueConnectionName, queueName string) str
 
 func (r *QueueClear) redisDelayedKey(queueConnectionName, queueName string) string {
 	return fmt.Sprintf("%s:delayed", r.redisQueueKey(queueConnectionName, queueName))
+}
+
+func (r *QueueClear) redisStreamKey(queueConnectionName, queueName string) string {
+	return fmt.Sprintf("%s:stream", r.redisQueueKey(queueConnectionName, queueName))
+}
+
+func (r *QueueClear) isRedisStreamDriver(connectionName string) bool {
+	if strings.Contains(strings.ToLower(connectionName), "stream") {
+		return true
+	}
+	return facades.Config().Get(fmt.Sprintf("queue.connections.%s.stream_max_len", connectionName)) != nil
 }
 
 // hasForceFlag 检查命令行参数中是否包含 --force 标志

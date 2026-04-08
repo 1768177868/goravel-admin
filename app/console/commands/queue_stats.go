@@ -9,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
+	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 
 	"goravel/app/clients"
@@ -24,6 +25,7 @@ func (r *QueueStats) Signature() string {
 }
 
 // ./main artisan queue:stats --connection=redis --queue=long-running
+// go run . artisan queue:peek --connection=redis_stream --queue=long-running --state=all --limit=5
 func (r *QueueStats) Description() string {
 	return "查询队列统计信息，显示待执行、正在执行和失败任务数量"
 }
@@ -123,8 +125,12 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 			appName := facades.Config().GetString("app.name", "goravel")
 			baseKey := r.redisQueueKey(connectionName, queueNameForStats)
 			ctx.Info(fmt.Sprintf("    # app.name=%s, queue.connection=%s, queue=%s", appName, connectionName, queueNameForStats))
-			ctx.Info(fmt.Sprintf("    redis-cli DEL %s", baseKey))
-			ctx.Info(fmt.Sprintf("    redis-cli DEL %s:reserved", baseKey))
+			if r.isRedisStreamDriver(connectionName) {
+				ctx.Info(fmt.Sprintf("    redis-cli DEL %s:stream", baseKey))
+			} else {
+				ctx.Info(fmt.Sprintf("    redis-cli DEL %s", baseKey))
+				ctx.Info(fmt.Sprintf("    redis-cli DEL %s:reserved", baseKey))
+			}
 			ctx.Info(fmt.Sprintf("    redis-cli DEL %s:delayed", baseKey))
 			ctx.Info("  或者使用命令：go run . artisan queue:clear --queue=" + queueNameForStats)
 		}
@@ -358,6 +364,60 @@ func (r *QueueStats) getRedisQueueStats(redisConnectionName, queueConnectionName
 	ctx := context.Background()
 	stats := &RedisQueueStatsInfo{}
 
+	if r.isRedisStreamDriver(queueConnectionName) {
+		streamKey := r.redisStreamKey(queueConnectionName, queueName)
+		group := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.group", queueConnectionName), "goravel")
+
+		streamLen, err := redisClient.XLen(ctx, streamKey).Result()
+		if err != nil {
+			errorlog.Record(context.Background(), "queue", "查询 stream 长度失败", map[string]any{
+				"queue_name": queueName,
+				"key":        streamKey,
+				"error":      err.Error(),
+			}, "查询 stream 长度失败: %v", err)
+			return nil, fmt.Errorf("查询 stream 长度失败: %v", err)
+		}
+
+		pendingInfo, err := redisClient.XPending(ctx, streamKey, group).Result()
+		if err != nil {
+			// group 未创建时按 0 处理，避免影响统计
+			pendingInfo = &redis.XPending{}
+		}
+
+		// stream 里可能保留已 ACK 消息（delete_on_ack=false），这里优先展示“待消费 + 正在处理”
+		stats.Reserved = pendingInfo.Count
+		if streamLen >= stats.Reserved {
+			stats.Pending = streamLen - stats.Reserved
+		}
+
+		delayedKey := fmt.Sprintf("%s:delayed", r.redisQueueKey(queueConnectionName, queueName))
+		delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
+		if err != nil {
+			errorlog.Record(context.Background(), "queue", "查询延迟队列失败", map[string]any{
+				"queue_name": queueName,
+				"key":        delayedKey,
+				"error":      err.Error(),
+			}, "查询延迟队列失败: %v", err)
+			return nil, fmt.Errorf("查询延迟队列失败: %v", err)
+		}
+		stats.Delayed = delayedLen
+
+		var failedCount int64
+		if queueName != "" {
+			failedCount, err = facades.Orm().Query().Table("failed_jobs").
+				Where("queue = ?", queueName).
+				Count()
+		} else {
+			failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
+		}
+		if err == nil {
+			stats.Failed = failedCount
+		}
+
+		stats.Total = stats.Pending + stats.Reserved
+		return stats, nil
+	}
+
 	// Goravel Redis driver:
 	// pending:  {app}_queues:{queueConnection}_{queue} (List)
 	// reserved: {app}_queues:{queueConnection}_{queue}:reserved (ZSET)
@@ -465,7 +525,7 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName, queueConnectionNa
 		return nil, fmt.Errorf("查找队列键失败: %v", err)
 	}
 
-	// 提取队列名称（排除 reserved 和 delayed 键）
+	// 提取队列名称（排除 reserved 和 delayed 键，stream 键需去掉 :stream 后缀）
 	queueNames := lo.FilterMap(keys, func(key string, _ int) (string, bool) {
 		// 跳过 reserved 和 delayed 键（ZSET）
 		if strings.HasSuffix(key, ":reserved") || strings.HasSuffix(key, ":delayed") {
@@ -476,6 +536,10 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName, queueConnectionNa
 			return "", false
 		}
 		after := strings.TrimPrefix(key, prefix)
+		if after == "" {
+			return "", false
+		}
+		after = strings.TrimSuffix(after, ":stream")
 		if after == "" {
 			return "", false
 		}
@@ -521,4 +585,15 @@ func (r *QueueStats) getRedisStatsByQueue(redisConnectionName, queueConnectionNa
 func (r *QueueStats) redisQueueKey(queueConnectionName, queueName string) string {
 	appName := facades.Config().GetString("app.name", "goravel")
 	return fmt.Sprintf("%s_queues:%s_%s", appName, queueConnectionName, queueName)
+}
+
+func (r *QueueStats) redisStreamKey(queueConnectionName, queueName string) string {
+	return fmt.Sprintf("%s:stream", r.redisQueueKey(queueConnectionName, queueName))
+}
+
+func (r *QueueStats) isRedisStreamDriver(connectionName string) bool {
+	if strings.Contains(strings.ToLower(connectionName), "stream") {
+		return true
+	}
+	return facades.Config().Get(fmt.Sprintf("queue.connections.%s.stream_max_len", connectionName)) != nil
 }
