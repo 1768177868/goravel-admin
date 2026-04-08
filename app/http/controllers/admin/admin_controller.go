@@ -130,7 +130,7 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 
 // Index 管理员列表
 // @Summary      获取管理员列表
-// @Description  分页获取管理员列表，支持按用户名、状态、角色、部门等条件筛选
+// @Description  分页获取管理员列表
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
@@ -138,15 +138,7 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 // @Param        page_size     query     int     false  "每页数量" default(10)
 // @Param        username      query     string  false  "用户名（模糊搜索）"
 // @Param        status        query     string  false  "状态：1-启用，0-禁用"
-// @Param        role_id       query     string  false  "角色ID"
-// @Param        department_id query     string  false  "部门ID"
-// @Param        start_time    query     string  false  "开始时间（格式：YYYY-MM-DD HH:mm:ss）"
-// @Param        end_time      query     string  false  "结束时间（格式：YYYY-MM-DD HH:mm:ss）"
-// @Param        order_by      query     string  false  "排序（格式：字段:asc/desc，如：created_at:desc）"
 // @Success      200           {object}  PaginatedAdminResponse
-// @Failure      400           {object}  map[string]any "参数错误"
-// @Failure      401           {object}  map[string]any "未登录"
-// @Failure      403           {object}  map[string]any "无权限"
 // @Failure      500           {object}  map[string]any "服务器错误"
 // @Router       /api/admin/admins [get]
 // @Security     BearerAuth
@@ -198,17 +190,13 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 
 // Show 管理员详情
 // @Summary      获取管理员详情
-// @Description  根据ID获取管理员详细信息，包括部门、角色等关联信息
+// @Description  根据ID获取管理员详细信息
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
 // @Success      200  {object} AdminDetailResponse
-// @Failure      400  {object} map[string]any "参数错误"
-// @Failure      401  {object} map[string]any "未登录"
-// @Failure      403  {object} map[string]any "无权限"
 // @Failure      404  {object} map[string]any "管理员不存在"
-// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id} [get]
 // @Security     BearerAuth
 func (r *AdminController) Show(ctx http.Context) http.Response {
@@ -244,22 +232,12 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 
 // Store 创建管理员
 // @Summary      创建管理员
-// @Description  创建新的管理员账号，支持设置部门、角色等信息
+// @Description  创建新的管理员账号
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        username      body     string  true  "用户名（必填）" example(admin)
-// @Param        password      body     string  true  "密码（必填）" example(123456)
-// @Param        nickname      body     string  false "昵称" example(管理员)
-// @Param        email         body     string  false "邮箱" example(admin@example.com)
-// @Param        phone         body     string  false "手机号" example(13800138000)
-// @Param        department_id body     int     false "部门ID" example(1)
-// @Param        status        body     int     false "状态：1-启用，0-禁用" example(1)
-// @Param        role_ids      body     []int   false "角色ID列表" example([1,2])
+// @Param        request       body     adminrequests.AdminCreate  true  "创建参数"
 // @Success      200           {object} AdminDetailResponse
-// @Failure      400           {object} map[string]any "参数错误或用户名已存在"
-// @Failure      401           {object} map[string]any "未登录"
-// @Failure      403           {object} map[string]any "无权限"
 // @Failure      500           {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins [post]
 // @Security     BearerAuth
@@ -333,24 +311,15 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 
 // Update 更新管理员
 // @Summary      更新管理员信息
-// @Description  更新管理员的基本信息，包括昵称、邮箱、手机号、部门、状态、角色等。受保护的管理员不能禁用。
+// @Description  更新管理员的基本信息
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        id            path     int     true  "管理员ID" example(1)
-// @Param        nickname      body     string  false "昵称" example(管理员)
-// @Param        email         body     string  false "邮箱" example(admin@example.com)
-// @Param        phone         body     string  false "手机号" example(13800138000)
-// @Param        department_id body     int     false "部门ID" example(1)
-// @Param        status        body     string  false "状态：1-启用，0-禁用" example(1)
-// @Param        password      body     string  false "密码（可选，不传则不更新）" example(123456)
-// @Param        role_ids      body     []int   false "角色ID列表" example([1,2])
+// @Param        id            path     int                       true  "管理员ID"
+// @Param        request       body     adminrequests.AdminUpdate true  "更新参数"
 // @Success      200           {object} AdminDetailResponse
-// @Failure      400           {object} map[string]any "参数错误"
-// @Failure      401           {object} map[string]any "未登录"
 // @Failure      403           {object} map[string]any "无权限或受保护管理员不能禁用"
 // @Failure      404           {object} map[string]any "管理员不存在"
-// @Failure      500           {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id} [put]
 // @Security     BearerAuth
 func (r *AdminController) Update(ctx http.Context) http.Response {
@@ -483,17 +452,14 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 
 // Destroy 删除管理员
 // @Summary      删除管理员
-// @Description  删除指定的管理员账号。受保护的管理员和当前登录的管理员不能删除。
+// @Description  删除指定的管理员账号
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
 // @Success      200  {object} map[string]any "删除成功"
-// @Failure      400  {object} map[string]any "参数错误"
-// @Failure      401  {object} map[string]any "未登录"
 // @Failure      403  {object} map[string]any "无权限、受保护管理员不能删除或不能删除自己"
 // @Failure      404  {object} map[string]any "管理员不存在"
-// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id} [delete]
 // @Security     BearerAuth
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
@@ -533,18 +499,14 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 
 // UnbindGoogleAuthenticator 管理员解绑其他管理员的谷歌验证码
 // @Summary      解绑管理员的谷歌验证码
-// @Description  管理员可以解绑其他管理员的谷歌验证码，需要当前管理员已绑定谷歌验证码并输入验证码确认
+// @Description  管理员解绑其他管理员的谷歌验证码
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int  true  "要解绑的管理员ID"
 // @Param        code body     string true "当前管理员的谷歌验证码"
 // @Success      200  {object} map[string]any "解绑成功"
-// @Failure      400  {object} map[string]any "参数错误或验证码错误"
-// @Failure      401  {object} map[string]any "未登录"
-// @Failure      403  {object} map[string]any "无权限或当前管理员未绑定谷歌验证码"
 // @Failure      404  {object} map[string]any "管理员不存在"
-// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id}/unbind-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
@@ -635,17 +597,14 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 
 // ResetGoogleAuthenticator 重置管理员的谷歌验证码（强制清除绑定，无需验证码，用于管理员丢失手机等场景）
 // @Summary      重置管理员的谷歌验证码
-// @Description  由有权限的管理员强制清除指定管理员的谷歌验证码绑定，无需输入验证码。被重置的管理员可重新绑定。
+// @Description  强制清除指定管理员的谷歌验证码绑定
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int true "要重置的管理员ID"
 // @Success      200  {object} map[string]any "重置成功"
-// @Failure      400  {object} map[string]any "参数错误或该管理员未绑定谷歌验证码"
-// @Failure      401  {object} map[string]any "未登录"
 // @Failure      403  {object} map[string]any "无权限或不可操作受保护管理员"
 // @Failure      404  {object} map[string]any "管理员不存在"
-// @Failure      500  {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/{id}/reset-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Response {
@@ -690,15 +649,12 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 
 // Export 导出管理员列表
 // @Summary      导出管理员列表
-// @Description  根据筛选条件导出管理员列表为CSV文件，支持与列表查询相同的筛选条件
+// @Description  根据筛选条件导出管理员列表为CSV文件
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        request body     AdminExportRequest false "导出筛选条件（可选）"
+// @Param        request body     AdminExportRequest false "导出筛选条件"
 // @Success      200     {object} map[string]any "导出成功，返回文件下载信息"
-// @Failure      400     {object} map[string]any "参数错误"
-// @Failure      401     {object} map[string]any "未登录"
-// @Failure      403     {object} map[string]any "无权限"
 // @Failure      500     {object} map[string]any "服务器错误"
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth

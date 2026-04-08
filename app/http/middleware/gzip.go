@@ -35,6 +35,11 @@ func (w *gzipResponseWriter) WriteHeader(code int) {
 
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	w.once.Do(func() {
+		h := w.ResponseWriter.Header()
+		h.Set("Content-Encoding", gzipEncoding)
+		h.Del("Content-Length")
+		h.Add("Vary", "Accept-Encoding")
+
 		w.gz = gzip.NewWriter(w.ResponseWriter)
 		if w.code != 0 {
 			w.ResponseWriter.WriteHeader(w.code)

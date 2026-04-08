@@ -31,7 +31,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "分页获取管理员列表，支持按用户名、状态、角色、部门等条件筛选",
+                "description": "分页获取管理员列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -68,36 +68,6 @@ const docTemplate = `{
                         "description": "状态：1-启用，0-禁用",
                         "name": "status",
                         "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "角色ID",
-                        "name": "role_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "部门ID",
-                        "name": "department_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "开始时间（格式：YYYY-MM-DD HH:mm:ss）",
-                        "name": "start_time",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式：YYYY-MM-DD HH:mm:ss）",
-                        "name": "end_time",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "排序（格式：字段:asc/desc，如：created_at:desc）",
-                        "name": "order_by",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -105,27 +75,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/admin.PaginatedAdminResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "无权限",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     },
                     "500": {
@@ -143,7 +92,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "创建新的管理员账号，支持设置部门、角色等信息",
+                "description": "创建新的管理员账号",
                 "consumes": [
                     "application/json"
                 ],
@@ -156,79 +105,12 @@ const docTemplate = `{
                 "summary": "创建管理员",
                 "parameters": [
                     {
-                        "example": "admin",
-                        "description": "用户名（必填）",
-                        "name": "username",
+                        "description": "创建参数",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "123456",
-                        "description": "密码（必填）",
-                        "name": "password",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "管理员",
-                        "description": "昵称",
-                        "name": "nickname",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "admin@example.com",
-                        "description": "邮箱",
-                        "name": "email",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "13800138000",
-                        "description": "手机号",
-                        "name": "phone",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": 1,
-                        "description": "部门ID",
-                        "name": "department_id",
-                        "in": "body",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "example": 1,
-                        "description": "状态：1-启用，0-禁用",
-                        "name": "status",
-                        "in": "body",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "description": "角色ID列表",
-                        "name": "role_ids",
-                        "in": "body",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
+                            "$ref": "#/definitions/admin.AdminCreate"
                         }
                     }
                 ],
@@ -237,27 +119,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/admin.AdminDetailResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误或用户名已存在",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "无权限",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     },
                     "500": {
@@ -277,7 +138,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "根据筛选条件导出管理员列表为CSV文件，支持与列表查询相同的筛选条件",
+                "description": "根据筛选条件导出管理员列表为CSV文件",
                 "consumes": [
                     "application/json"
                 ],
@@ -290,7 +151,7 @@ const docTemplate = `{
                 "summary": "导出管理员列表",
                 "parameters": [
                     {
-                        "description": "导出筛选条件（可选）",
+                        "description": "导出筛选条件",
                         "name": "request",
                         "in": "body",
                         "schema": {
@@ -301,27 +162,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "导出成功，返回文件下载信息",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "无权限",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -344,7 +184,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "根据ID获取管理员详细信息，包括部门、角色等关联信息",
+                "description": "根据ID获取管理员详细信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -371,36 +211,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/admin.AdminDetailResponse"
                         }
                     },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "无权限",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
                     "404": {
                         "description": "管理员不存在",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "服务器错误",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -414,7 +226,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "更新管理员的基本信息，包括昵称、邮箱、手机号、部门、状态、角色等。受保护的管理员不能禁用。",
+                "description": "更新管理员的基本信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -428,75 +240,18 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "example": 1,
                         "description": "管理员ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "example": "管理员",
-                        "description": "昵称",
-                        "name": "nickname",
+                        "description": "更新参数",
+                        "name": "request",
                         "in": "body",
+                        "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "admin@example.com",
-                        "description": "邮箱",
-                        "name": "email",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "13800138000",
-                        "description": "手机号",
-                        "name": "phone",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": 1,
-                        "description": "部门ID",
-                        "name": "department_id",
-                        "in": "body",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "example": "1",
-                        "description": "状态：1-启用，0-禁用",
-                        "name": "status",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "example": "123456",
-                        "description": "密码（可选，不传则不更新）",
-                        "name": "password",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "角色ID列表",
-                        "name": "role_ids",
-                        "in": "body",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
+                            "$ref": "#/definitions/admin.AdminUpdate"
                         }
                     }
                 ],
@@ -505,20 +260,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/admin.AdminDetailResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     },
                     "403": {
@@ -534,13 +275,6 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "500": {
-                        "description": "服务器错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             },
@@ -550,7 +284,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "删除指定的管理员账号。受保护的管理员和当前登录的管理员不能删除。",
+                "description": "删除指定的管理员账号",
                 "consumes": [
                     "application/json"
                 ],
@@ -578,20 +312,6 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
                     "403": {
                         "description": "无权限、受保护管理员不能删除或不能删除自己",
                         "schema": {
@@ -605,9 +325,54 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    }
+                }
+            }
+        },
+        "/api/admin/admins/{id}/reset-google-auth": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "强制清除指定管理员的谷歌验证码绑定",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理员管理"
+                ],
+                "summary": "重置管理员的谷歌验证码",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "要重置的管理员ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "重置成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     },
-                    "500": {
-                        "description": "服务器错误",
+                    "403": {
+                        "description": "无权限或不可操作受保护管理员",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "管理员不存在",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -623,7 +388,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "管理员可以解绑其他管理员的谷歌验证码，需要当前管理员已绑定谷歌验证码并输入验证码确认",
+                "description": "管理员解绑其他管理员的谷歌验证码",
                 "consumes": [
                     "application/json"
                 ],
@@ -660,36 +425,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "参数错误或验证码错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "未登录",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "无权限或当前管理员未绑定谷歌验证码",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
                     "404": {
                         "description": "管理员不存在",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "服务器错误",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1132,7 +869,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "根据ID或订单号获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询",
+                "description": "根据订单号或订单ID获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询",
                 "consumes": [
                     "application/json"
                 ],
@@ -1145,7 +882,7 @@ const docTemplate = `{
                 "summary": "获取订单详情",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "订单ID（如果提供了订单号，此参数可选）",
                         "name": "id",
                         "in": "path"
@@ -1194,7 +931,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "更新订单信息（主要是状态）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询",
+                "description": "更新订单信息（主要是状态）。使用订单号查询（可直接定位分表）",
                 "consumes": [
                     "application/json"
                 ],
@@ -1207,16 +944,11 @@ const docTemplate = `{
                 "summary": "更新订单",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "订单ID（如果提供了订单号，此参数可选）",
-                        "name": "id",
-                        "in": "path"
-                    },
-                    {
                         "type": "string",
-                        "description": "订单号（优先使用，可直接定位分表）",
-                        "name": "order_no",
-                        "in": "query"
+                        "description": "订单号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "description": "订单状态",
@@ -1258,7 +990,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "删除订单及其详情。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询",
+                "description": "删除订单及其详情。使用订单号查询（可直接定位分表）",
                 "consumes": [
                     "application/json"
                 ],
@@ -1271,16 +1003,11 @@ const docTemplate = `{
                 "summary": "删除订单",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "订单ID（如果提供了订单号，此参数可选）",
-                        "name": "id",
-                        "in": "path"
-                    },
-                    {
                         "type": "string",
-                        "description": "订单号（优先使用，可直接定位分表）",
-                        "name": "order_no",
-                        "in": "query"
+                        "description": "订单号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -1807,6 +1534,159 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/admin/payments/export": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "异步导出支付记录为CSV文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "支付管理"
+                ],
+                "summary": "导出支付记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "支付单号",
+                        "name": "payment_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单号",
+                        "name": "order_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "支付方式ID",
+                        "name": "payment_method_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "支付状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始时间",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束时间",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "导出任务正在进行中",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/payments/export/status/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据导出记录ID查询导出任务的状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "支付管理"
+                ],
+                "summary": "查询支付记录导出状态",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "导出记录ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "导出记录不存在",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/admin/payments/{id}": {
             "get": {
                 "security": [
@@ -1814,7 +1694,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "根据ID获取支付记录详细信息",
+                "description": "根据支付单号获取支付记录详细信息（分表后ID可能重复，使用支付单号查询）",
                 "consumes": [
                     "application/json"
                 ],
@@ -1827,8 +1707,8 @@ const docTemplate = `{
                 "summary": "获取支付记录详情",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "支付记录ID",
+                        "type": "string",
+                        "description": "支付单号",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1888,6 +1768,41 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "admin.AdminCreate": {
+            "type": "object",
+            "properties": {
+                "department_id": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "position_id": {
+                    "type": "integer"
+                },
+                "role_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "admin.AdminDetailResponse": {
             "type": "object",
             "properties": {
@@ -1938,6 +1853,11 @@ const docTemplate = `{
                     "description": "排序",
                     "type": "string",
                     "example": "created_at:desc"
+                },
+                "position_id": {
+                    "description": "岗位ID",
+                    "type": "string",
+                    "example": "1"
                 },
                 "role_id": {
                     "description": "角色ID",
@@ -2009,6 +1929,16 @@ const docTemplate = `{
                     "type": "string",
                     "example": "13800138000"
                 },
+                "position": {
+                    "description": "岗位信息",
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "position_id": {
+                    "description": "岗位ID",
+                    "type": "integer",
+                    "example": 1
+                },
                 "roles": {
                     "description": "角色列表",
                     "type": "array",
@@ -2031,6 +1961,38 @@ const docTemplate = `{
                     "description": "用户名",
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "admin.AdminUpdate": {
+            "type": "object",
+            "properties": {
+                "department_id": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "position_id": {
+                    "type": "integer"
+                },
+                "role_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "integer"
                 }
             }
         },

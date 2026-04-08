@@ -1,5 +1,28 @@
 basePath: /api/admin
 definitions:
+  admin.AdminCreate:
+    properties:
+      department_id:
+        type: integer
+      email:
+        type: string
+      nickname:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      position_id:
+        type: integer
+      role_ids:
+        items:
+          type: integer
+        type: array
+      status:
+        type: integer
+      username:
+        type: string
+    type: object
   admin.AdminDetailResponse:
     properties:
       code:
@@ -36,6 +59,10 @@ definitions:
       order_by:
         description: 排序
         example: created_at:desc
+        type: string
+      position_id:
+        description: 岗位ID
+        example: "1"
         type: string
       role_id:
         description: 角色ID
@@ -92,6 +119,14 @@ definitions:
         description: 手机号
         example: "13800138000"
         type: string
+      position:
+        additionalProperties: {}
+        description: 岗位信息
+        type: object
+      position_id:
+        description: 岗位ID
+        example: 1
+        type: integer
       roles:
         description: 角色列表
         items:
@@ -110,6 +145,27 @@ definitions:
         description: 用户名
         example: admin
         type: string
+    type: object
+  admin.AdminUpdate:
+    properties:
+      department_id:
+        type: integer
+      email:
+        type: string
+      nickname:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      position_id:
+        type: integer
+      role_ids:
+        items:
+          type: integer
+        type: array
+      status:
+        type: integer
     type: object
   admin.OrderProductItem:
     properties:
@@ -185,7 +241,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 分页获取管理员列表，支持按用户名、状态、角色、部门等条件筛选
+      description: 分页获取管理员列表
       parameters:
       - default: 1
         description: 页码
@@ -205,26 +261,6 @@ paths:
         in: query
         name: status
         type: string
-      - description: 角色ID
-        in: query
-        name: role_id
-        type: string
-      - description: 部门ID
-        in: query
-        name: department_id
-        type: string
-      - description: 开始时间（格式：YYYY-MM-DD HH:mm:ss）
-        in: query
-        name: start_time
-        type: string
-      - description: 结束时间（格式：YYYY-MM-DD HH:mm:ss）
-        in: query
-        name: end_time
-        type: string
-      - description: 排序（格式：字段:asc/desc，如：created_at:desc）
-        in: query
-        name: order_by
-        type: string
       produces:
       - application/json
       responses:
@@ -232,21 +268,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/admin.PaginatedAdminResponse'
-        "400":
-          description: 参数错误
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: 无权限
-          schema:
-            additionalProperties: true
-            type: object
         "500":
           description: 服务器错误
           schema:
@@ -260,59 +281,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: 创建新的管理员账号，支持设置部门、角色等信息
+      description: 创建新的管理员账号
       parameters:
-      - description: 用户名（必填）
-        example: admin
+      - description: 创建参数
         in: body
-        name: username
+        name: request
         required: true
         schema:
-          type: string
-      - description: 密码（必填）
-        example: "123456"
-        in: body
-        name: password
-        required: true
-        schema:
-          type: string
-      - description: 昵称
-        example: 管理员
-        in: body
-        name: nickname
-        schema:
-          type: string
-      - description: 邮箱
-        example: admin@example.com
-        in: body
-        name: email
-        schema:
-          type: string
-      - description: 手机号
-        example: "13800138000"
-        in: body
-        name: phone
-        schema:
-          type: string
-      - description: 部门ID
-        example: 1
-        in: body
-        name: department_id
-        schema:
-          type: integer
-      - description: 状态：1-启用，0-禁用
-        example: 1
-        in: body
-        name: status
-        schema:
-          type: integer
-      - description: 角色ID列表
-        in: body
-        name: role_ids
-        schema:
-          items:
-            type: integer
-          type: array
+          $ref: '#/definitions/admin.AdminCreate'
       produces:
       - application/json
       responses:
@@ -320,21 +296,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/admin.AdminDetailResponse'
-        "400":
-          description: 参数错误或用户名已存在
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: 无权限
-          schema:
-            additionalProperties: true
-            type: object
         "500":
           description: 服务器错误
           schema:
@@ -349,7 +310,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: 删除指定的管理员账号。受保护的管理员和当前登录的管理员不能删除。
+      description: 删除指定的管理员账号
       parameters:
       - description: 管理员ID
         in: path
@@ -364,16 +325,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: 参数错误
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
         "403":
           description: 无权限、受保护管理员不能删除或不能删除自己
           schema:
@@ -381,11 +332,6 @@ paths:
             type: object
         "404":
           description: 管理员不存在
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: 服务器错误
           schema:
             additionalProperties: true
             type: object
@@ -397,7 +343,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 根据ID获取管理员详细信息，包括部门、角色等关联信息
+      description: 根据ID获取管理员详细信息
       parameters:
       - description: 管理员ID
         in: path
@@ -411,28 +357,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/admin.AdminDetailResponse'
-        "400":
-          description: 参数错误
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: 无权限
-          schema:
-            additionalProperties: true
-            type: object
         "404":
           description: 管理员不存在
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: 服务器错误
           schema:
             additionalProperties: true
             type: object
@@ -444,57 +370,19 @@ paths:
     put:
       consumes:
       - application/json
-      description: 更新管理员的基本信息，包括昵称、邮箱、手机号、部门、状态、角色等。受保护的管理员不能禁用。
+      description: 更新管理员的基本信息
       parameters:
       - description: 管理员ID
-        example: 1
         in: path
         name: id
         required: true
         type: integer
-      - description: 昵称
-        example: 管理员
+      - description: 更新参数
         in: body
-        name: nickname
+        name: request
+        required: true
         schema:
-          type: string
-      - description: 邮箱
-        example: admin@example.com
-        in: body
-        name: email
-        schema:
-          type: string
-      - description: 手机号
-        example: "13800138000"
-        in: body
-        name: phone
-        schema:
-          type: string
-      - description: 部门ID
-        example: 1
-        in: body
-        name: department_id
-        schema:
-          type: integer
-      - description: 状态：1-启用，0-禁用
-        example: "1"
-        in: body
-        name: status
-        schema:
-          type: string
-      - description: 密码（可选，不传则不更新）
-        example: "123456"
-        in: body
-        name: password
-        schema:
-          type: string
-      - description: 角色ID列表
-        in: body
-        name: role_ids
-        schema:
-          items:
-            type: integer
-          type: array
+          $ref: '#/definitions/admin.AdminUpdate'
       produces:
       - application/json
       responses:
@@ -502,16 +390,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/admin.AdminDetailResponse'
-        "400":
-          description: 参数错误
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
         "403":
           description: 无权限或受保护管理员不能禁用
           schema:
@@ -522,21 +400,50 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: 服务器错误
+      security:
+      - BearerAuth: []
+      summary: 更新管理员信息
+      tags:
+      - 管理员管理
+  /api/admin/admins/{id}/reset-google-auth:
+    post:
+      consumes:
+      - application/json
+      description: 强制清除指定管理员的谷歌验证码绑定
+      parameters:
+      - description: 要重置的管理员ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重置成功
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 无权限或不可操作受保护管理员
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 管理员不存在
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: 更新管理员信息
+      summary: 重置管理员的谷歌验证码
       tags:
       - 管理员管理
   /api/admin/admins/{id}/unbind-google-auth:
     post:
       consumes:
       - application/json
-      description: 管理员可以解绑其他管理员的谷歌验证码，需要当前管理员已绑定谷歌验证码并输入验证码确认
+      description: 管理员解绑其他管理员的谷歌验证码
       parameters:
       - description: 要解绑的管理员ID
         in: path
@@ -557,28 +464,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: 参数错误或验证码错误
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: 无权限或当前管理员未绑定谷歌验证码
-          schema:
-            additionalProperties: true
-            type: object
         "404":
           description: 管理员不存在
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: 服务器错误
           schema:
             additionalProperties: true
             type: object
@@ -591,9 +478,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 根据筛选条件导出管理员列表为CSV文件，支持与列表查询相同的筛选条件
+      description: 根据筛选条件导出管理员列表为CSV文件
       parameters:
-      - description: 导出筛选条件（可选）
+      - description: 导出筛选条件
         in: body
         name: request
         schema:
@@ -603,21 +490,6 @@ paths:
       responses:
         "200":
           description: 导出成功，返回文件下载信息
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: 参数错误
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未登录
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: 无权限
           schema:
             additionalProperties: true
             type: object
@@ -759,15 +631,12 @@ paths:
     delete:
       consumes:
       - application/json
-      description: 删除订单及其详情。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
+      description: 删除订单及其详情。使用订单号查询（可直接定位分表）
       parameters:
-      - description: 订单ID（如果提供了订单号，此参数可选）
+      - description: 订单号
         in: path
         name: id
-        type: integer
-      - description: 订单号（优先使用，可直接定位分表）
-        in: query
-        name: order_no
+        required: true
         type: string
       produces:
       - application/json
@@ -795,12 +664,12 @@ paths:
     get:
       consumes:
       - application/json
-      description: 根据ID或订单号获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
+      description: 根据订单号或订单ID获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
       parameters:
       - description: 订单ID（如果提供了订单号，此参数可选）
         in: path
         name: id
-        type: integer
+        type: string
       - description: 订单号（优先使用，可直接定位分表）
         in: query
         name: order_no
@@ -836,15 +705,12 @@ paths:
     put:
       consumes:
       - application/json
-      description: 更新订单信息（主要是状态）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
+      description: 更新订单信息（主要是状态）。使用订单号查询（可直接定位分表）
       parameters:
-      - description: 订单ID（如果提供了订单号，此参数可选）
+      - description: 订单号
         in: path
         name: id
-        type: integer
-      - description: 订单号（优先使用，可直接定位分表）
-        in: query
-        name: order_no
+        required: true
         type: string
       - description: 订单状态
         in: body
@@ -1366,13 +1232,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: 根据ID获取支付记录详细信息
+      description: 根据支付单号获取支付记录详细信息（分表后ID可能重复，使用支付单号查询）
       parameters:
-      - description: 支付记录ID
+      - description: 支付单号
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -1399,6 +1265,107 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取支付记录详情
+      tags:
+      - 支付管理
+  /api/admin/payments/export:
+    post:
+      consumes:
+      - application/json
+      description: 异步导出支付记录为CSV文件
+      parameters:
+      - description: 支付单号
+        in: query
+        name: payment_no
+        type: string
+      - description: 订单号
+        in: query
+        name: order_no
+        type: string
+      - description: 支付方式ID
+        in: query
+        name: payment_method_id
+        type: integer
+      - description: 用户ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 支付状态
+        in: query
+        name: status
+        type: string
+      - description: 开始时间
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: 导出任务正在进行中
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 导出支付记录
+      tags:
+      - 支付管理
+  /api/admin/payments/export/status/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据导出记录ID查询导出任务的状态
+      parameters:
+      - description: 导出记录ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 导出记录不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 查询支付记录导出状态
       tags:
       - 支付管理
   /swagger:
