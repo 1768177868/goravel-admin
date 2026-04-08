@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
 
+	apperrors "goravel/app/errors"
 	"goravel/app/http/trans"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -61,8 +63,12 @@ func Jwt() http.Middleware {
 		tokenService := services.NewTokenServiceImpl()
 		accessToken, err := tokenService.FindToken(token)
 		if err != nil {
-			// token查找失败或已过期
-			logger.ErrorfHTTP(ctx, "JWT middleware: FindToken error: %v, token prefix: %s", err, token[:min(20, len(token))])
+			tokenPrefix := token[:min(20, len(token))]
+			if isExpectedUnauthorizedErr(err) {
+				logger.WarnfHTTP(ctx, "JWT middleware: unauthorized token: %v, token prefix: %s", err, tokenPrefix)
+			} else {
+				logger.ErrorfHTTP(ctx, "JWT middleware: FindToken error: %v, token prefix: %s", err, tokenPrefix)
+			}
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "invalid_token"),
@@ -70,7 +76,7 @@ func Jwt() http.Middleware {
 			return
 		}
 		if accessToken == nil {
-			logger.ErrorfHTTP(ctx, "JWT middleware: accessToken is nil, token prefix: %s", token[:min(20, len(token))])
+			logger.WarnfHTTP(ctx, "JWT middleware: accessToken is nil, token prefix: %s", token[:min(20, len(token))])
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "invalid_token"),
@@ -121,4 +127,21 @@ func Jwt() http.Middleware {
 
 		ctx.Request().Next()
 	}
+}
+
+func isExpectedUnauthorizedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 业务错误（如 token expired / invalid argument）属于预期内 401
+	if businessErr, ok := apperrors.GetBusinessError(err); ok {
+		if businessErr.Code == apperrors.ErrInvalidArgument.Code {
+			return true
+		}
+	}
+
+	// ORM 未找到 token 也属于预期内 401
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "record not found")
 }
