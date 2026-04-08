@@ -3,6 +3,7 @@ package console
 import (
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/schedule"
+	frameworkfacades "github.com/goravel/framework/facades"
 
 	"goravel/app/console/commands"
 	"goravel/app/facades"
@@ -12,6 +13,8 @@ type Kernel struct {
 }
 
 func (kernel *Kernel) Schedule() []schedule.Event {
+	testCron := frameworkfacades.Config().GetString("schedule.test_cron", "*/5 * * * * *")
+
 	return []schedule.Event{
 		// 每天凌晨2点执行（北京时间），清理6个月前的日志
 		// 北京时间 02:00 = UTC 18:00（前一天）
@@ -25,6 +28,8 @@ func (kernel *Kernel) Schedule() []schedule.Event {
 		facades.Schedule().Command("order:create-sharding-tables").Monthly().OnOneServer(),
 		// 每月1号凌晨1点30分执行（UTC时间），创建下个月的支付记录分表
 		facades.Schedule().Command("payment:create-sharding-tables").Monthly().OnOneServer(),
+		// 测试任务：支持通过 SCHEDULE_TEST_CRON 自定义频率（默认每5秒）
+		facades.Schedule().Command("app:schedule-test-log").Cron(testCron).OnOneServer(),
 	}
 }
 
@@ -36,6 +41,7 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.QueueStats{},
 		&commands.QueueClear{},
 		&commands.QueuePeek{},
+		&commands.ScheduleTestLog{},
 		commands.NewCreateOrderShardingTables(),
 		commands.NewCreatePaymentShardingTables(),
 		&commands.GenerateTestOrders{},
