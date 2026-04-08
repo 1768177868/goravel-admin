@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/goravel/framework/facades"
 )
 
 var (
@@ -35,11 +37,15 @@ func (r *TestBackoff) Handle(args ...any) error {
 	})
 	testBackoffMu.Unlock()
 
+	facades.Log().Infof("[queue-test/backoff] handle marker=%s attempt=%d", marker, attempt)
+
 	// 前 3 次故意失败，触发 ShouldRetry 的 5/10/20 秒退避。
 	if attempt <= 3 {
+		facades.Log().Warningf("[queue-test/backoff] simulated failure marker=%s attempt=%d", marker, attempt)
 		return fmt.Errorf("backoff test failure: marker=%s attempt=%d", marker, attempt)
 	}
 
+	facades.Log().Infof("[queue-test/backoff] success marker=%s attempt=%d", marker, attempt)
 	return nil
 }
 
@@ -47,10 +53,11 @@ func (r *TestBackoff) ShouldRetry(err error, attempt int) (bool, time.Duration) 
 	delays := []time.Duration{
 		5 * time.Second,
 		10 * time.Second,
-		15 * time.Second,
+		20 * time.Second,
 	}
 
 	if attempt <= 0 || attempt > len(delays) {
+		facades.Log().Warningf("[queue-test/backoff] should_retry=false attempt=%d reason=out_of_range", attempt)
 		return false, 0
 	}
 
@@ -64,6 +71,8 @@ func (r *TestBackoff) ShouldRetry(err error, attempt int) (bool, time.Duration) 
 		"at":            time.Now().Format(time.RFC3339),
 	})
 	testBackoffMu.Unlock()
+
+	facades.Log().Infof("[queue-test/backoff] should_retry=true attempt=%d delay=%s err=%v", attempt, delay, err)
 
 	return true, delay
 }
