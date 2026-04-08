@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	redisfacades "github.com/goravel/redis/facades"
+	nsq "github.com/wangxuancheng-dev/goravel-nsq"
 	rabbitmq "github.com/wangxuancheng-dev/goravel-rabbitmq"
 	redisstream "github.com/wangxuancheng-dev/goravel-redis-stream"
 )
@@ -69,6 +70,17 @@ func init() {
 				"routing_key":   config.Env("QUEUE_RABBITMQ_ROUTING_KEY", ""),
 				"via": func() (queue.Driver, error) {
 					return rabbitmq.New("rabbitmq")
+				},
+			},
+			"nsq": map[string]any{
+				"driver":           "custom",
+				"queue":            config.Env("QUEUE_NSQ_QUEUE", "default"),
+				"nsqd_tcp_address": config.Env("QUEUE_NSQ_NSQD_TCP_ADDRESS", "127.0.0.1:4150"),
+				"channel":          config.Env("QUEUE_NSQ_CHANNEL", "goravel"),
+				"timeout_ms":       config.Env("QUEUE_NSQ_TIMEOUT_MS", 1000),
+				"max_in_flight":    config.Env("QUEUE_NSQ_MAX_IN_FLIGHT", 1),
+				"via": func() (queue.Driver, error) {
+					return nsq.New("nsq")
 				},
 			},
 		},

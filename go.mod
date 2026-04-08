@@ -35,11 +35,14 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.72
+	github.com/wangxuancheng-dev/goravel-nsq v0.0.0
 	github.com/wangxuancheng-dev/goravel-rabbitmq v0.0.0
 	github.com/wangxuancheng-dev/goravel-redis-stream v0.0.0-20260408055907-00f3df1febc9
 	golang.org/x/sync v0.19.0
 	gorm.io/gorm v1.31.1
 )
+
+replace github.com/wangxuancheng-dev/goravel-nsq => ./driver/nsq
 
 replace github.com/wangxuancheng-dev/goravel-rabbitmq => ./driver/rabbitmq
 
@@ -120,6 +123,7 @@ require (
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/goforj/godump v1.9.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.6.0 // indirect
@@ -158,6 +162,7 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
+	github.com/nsqio/go-nsq v1.1.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
