@@ -35,10 +35,13 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.72
+	github.com/wangxuancheng-dev/goravel-rabbitmq v0.0.0
 	github.com/wangxuancheng-dev/goravel-redis-stream v0.0.0-20260408055907-00f3df1febc9
 	golang.org/x/sync v0.19.0
 	gorm.io/gorm v1.31.1
 )
+
+replace github.com/wangxuancheng-dev/goravel-rabbitmq => ./driver/rabbitmq
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -163,6 +166,7 @@ require (
 	github.com/pterm/pterm v0.12.82 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.0 // indirect
+	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rotisserie/eris v0.5.4 // indirect

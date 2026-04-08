@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	redisfacades "github.com/goravel/redis/facades"
+	rabbitmq "github.com/wangxuancheng-dev/goravel-rabbitmq"
 	redisstream "github.com/wangxuancheng-dev/goravel-redis-stream"
 )
 
@@ -56,6 +57,18 @@ func init() {
 				"stream_max_len": config.Env("QUEUE_REDIS_STREAM_MAX_LEN", 100000),      // Stream 近似最大长度（0 表示不限制）
 				"via": func() (queue.Driver, error) {
 					return redisstream.New("redis_stream")
+				},
+			},
+			"rabbitmq": map[string]any{
+				"driver":        "custom",
+				"queue":         config.Env("QUEUE_RABBITMQ_QUEUE", "default"),
+				"url":           config.Env("QUEUE_RABBITMQ_URL", "amqp://guest:guest@127.0.0.1:5672/"),
+				"exchange":      config.Env("QUEUE_RABBITMQ_EXCHANGE", "goravel.exchange"),
+				"exchange_type": config.Env("QUEUE_RABBITMQ_EXCHANGE_TYPE", "direct"),
+				"queue_prefix":  config.Env("QUEUE_RABBITMQ_QUEUE_PREFIX", config.GetString("app.name", "goravel")),
+				"routing_key":   config.Env("QUEUE_RABBITMQ_ROUTING_KEY", ""),
+				"via": func() (queue.Driver, error) {
+					return rabbitmq.New("rabbitmq")
 				},
 			},
 		},
