@@ -35,7 +35,7 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.72
-	github.com/wangxuancheng-dev/goravel-redis-stream v0.0.0-20260407131350-d73824a1fc0c
+	github.com/wangxuancheng-dev/goravel-redis-stream v0.0.0-20260408055907-00f3df1febc9
 	golang.org/x/sync v0.19.0
 	gorm.io/gorm v1.31.1
 )
