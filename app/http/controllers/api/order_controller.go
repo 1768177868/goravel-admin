@@ -17,18 +17,18 @@ import (
 	"goravel/app/utils"
 )
 
-type OrderSearchController struct {
+type OrderController struct {
 	orderService services.OrderService
 }
 
-func NewOrderSearchController() *OrderSearchController {
-	return &OrderSearchController{
+func NewOrderController() *OrderController {
+	return &OrderController{
 		orderService: services.NewOrderService(),
 	}
 }
 
 // SearchMyOrders GET：当前登录用户检索自己的订单。开启 ELASTICSEARCH_ENABLED 时走 ES（可多字段含商品名）；否则走分表数据库（关键词仅订单号、备注；无时间参数时默认近 3 个月）。
-func (c *OrderSearchController) SearchMyOrders(ctx http.Context) http.Response {
+func (c *OrderController) SearchMyOrders(ctx http.Context) http.Response {
 	var req apirequests.OrderSearch
 	errors, err := ctx.Request().ValidateRequest(&req)
 	if err != nil {

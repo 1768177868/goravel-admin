@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 	redisfacades "github.com/goravel/redis/facades"
+	redisstream "github.com/wangxuancheng-dev/goravel-redis-stream"
 )
 
 func init() {
@@ -40,7 +41,21 @@ func init() {
 				"connection": "default",
 				"queue":      "default",
 				"via": func() (queue.Driver, error) {
-					return redisfacades.Queue("redis") // The `redis` value is the key of `connections`
+					return redisfacades.Queue("redis")
+				},
+			},
+			"redis_stream": map[string]any{
+				"driver":         "custom",
+				"connection":     config.Env("QUEUE_REDIS_STREAM_CONNECTION", "default"),
+				"queue":          config.Env("QUEUE_REDIS_STREAM_QUEUE", "default"),
+				"group":          config.Env("QUEUE_REDIS_STREAM_GROUP", "goravel"),
+				"block_ms":       config.Env("QUEUE_REDIS_STREAM_BLOCK_MS", 1000),
+				"retry_after":    config.Env("QUEUE_REDIS_STREAM_RETRY_AFTER", 90),
+				"claim_count":    config.Env("QUEUE_REDIS_STREAM_CLAIM_COUNT", 10),
+				"delete_on_ack":  config.Env("QUEUE_REDIS_STREAM_DELETE_ON_ACK", false),
+				"stream_max_len": config.Env("QUEUE_REDIS_STREAM_MAX_LEN", 100000),
+				"via": func() (queue.Driver, error) {
+					return redisstream.New("redis_stream")
 				},
 			},
 		},
@@ -58,7 +73,6 @@ func init() {
 		// 可以通过环境变量 QUEUE_TRIES 设置，默认值为 10
 		// 注意：这个值是上限，实际重试次数由每个 Job 的 ShouldRetry 方法决定
 		"tries": config.Env("QUEUE_TRIES", 10), // 最大重试次数上限（建议设置较大值，如 10）
-
 		// Concurrent Configuration
 		//
 		// 并发数 = 同一队列上同时执行的任务个数（不是进程数）。以下为经验示例，按机器 CPU、任务是否占满 CPU/IO 再调。

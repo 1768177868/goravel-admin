@@ -11,7 +11,7 @@ import (
 
 func Api() {
 	authController := api.NewAuthController()
-	orderSearchController := api.NewOrderSearchController()
+	orderSearchController := api.NewOrderController()
 
 	// C端用户路由组：统一前缀
 	facades.Route().Prefix("api/user").Group(func(router route.Router) {
