@@ -51,6 +51,8 @@ func Api() {
 		router.Post("long-running", queueTestController.LongRunning)
 		// 投递一个必失败任务，用于失败重试链路验证。
 		router.Post("fail", queueTestController.Fail)
+		// 分段重试测试：5s -> 10s -> 20s。
+		router.Post("backoff", queueTestController.Backoff)
 		// 查看各测试 Job 的执行结果缓存。
 		router.Get("result", queueTestController.Result)
 		// 清空测试结果缓存，便于下一轮测试对比。

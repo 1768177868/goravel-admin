@@ -93,6 +93,26 @@ func (c *QueueTestController) Fail(ctx http.Context) http.Response {
 	})
 }
 
+func (c *QueueTestController) Backoff(ctx http.Context) http.Response {
+	marker := "backoff-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	args := []contractsqueue.Arg{
+		{Type: "string", Value: marker},
+	}
+	if err := facades.Queue().Job(&jobs.TestBackoff{}, args).Dispatch(); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err)
+	}
+
+	return response.Success(ctx, "success", http.Json{
+		"queued":      true,
+		"type":        "backoff",
+		"connection":  facades.Config().GetString("queue.default", "sync"),
+		"queue":       "default",
+		"marker":      marker,
+		"retry_plan":  []int{5, 10, 20},
+		"description": "fail first 3 attempts, then succeed on next run",
+	})
+}
+
 func (c *QueueTestController) AllInOne(ctx http.Context) http.Response {
 	delaySeconds, _ := strconv.Atoi(ctx.Request().Query("seconds", "5"))
 	if delaySeconds <= 0 {
@@ -225,6 +245,7 @@ func (c *QueueTestController) Result(ctx http.Context) http.Response {
 		"test_result":       jobs.TestResult,
 		"test_err_result":   jobs.TestErrResult,
 		"test_claim_result": jobs.TestClaimResult,
+		"test_backoff_result": jobs.TestBackoffResult,
 	})
 }
 
@@ -232,6 +253,7 @@ func (c *QueueTestController) Reset(ctx http.Context) http.Response {
 	jobs.TestResult = nil
 	jobs.TestErrResult = nil
 	jobs.TestClaimResult = nil
+	jobs.ResetTestBackoff()
 
 	return response.Success(ctx, "success", http.Json{
 		"reset": true,

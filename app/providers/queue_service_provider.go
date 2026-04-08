@@ -25,6 +25,7 @@ func (receiver *QueueServiceProvider) Jobs() []queue.Job {
 		&jobs.Test{},
 		&jobs.TestErr{},
 		&jobs.TestClaim{},
+		&jobs.TestBackoff{},
 		// 实际场景的Job
 		&jobs.SendEmail{},
 		&jobs.ProcessImage{},

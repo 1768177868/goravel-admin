@@ -20,6 +20,7 @@ In `config/queue.go`:
 
 ```go
 import (
+	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/contracts/queue"
 	redisstream "github.com/wangxuancheng-dev/goravel-redis-stream"
 )
@@ -28,15 +29,15 @@ import (
 "connections": map[string]any{
 	"redis_stream": map[string]any{
 		"driver":         "custom",
-		"connection":     "default", // database.redis.default
-		"queue":          "default",
-		"group":          "goravel",
-		"consumer":       "",    // default: {hostname}-{pid}
-		"block_ms":       1000,  // XREADGROUP block milliseconds
-		"retry_after":    90,    // XAUTOCLAIM min idle seconds
-		"claim_count":    10,    // max entries per XAUTOCLAIM round
-		"delete_on_ack":  false, // true => XACK + XDEL
-		"stream_max_len": 0,     // 0 disables trimming, >0 uses approximate MAXLEN
+		"connection":     facades.Config().Env("QUEUE_REDIS_STREAM_CONNECTION", "default"), // database.redis.{connection}
+		"queue":          facades.Config().Env("QUEUE_REDIS_STREAM_QUEUE", "default"),
+		"group":          facades.Config().Env("QUEUE_REDIS_STREAM_GROUP", "goravel"),
+		"consumer":       facades.Config().Env("QUEUE_REDIS_STREAM_CONSUMER", ""), // default: {hostname}-{pid}
+		"block_ms":       facades.Config().Env("QUEUE_REDIS_STREAM_BLOCK_MS", 1000),
+		"retry_after":    facades.Config().Env("QUEUE_REDIS_STREAM_RETRY_AFTER", 90),
+		"claim_count":    facades.Config().Env("QUEUE_REDIS_STREAM_CLAIM_COUNT", 10),
+		"delete_on_ack":  facades.Config().Env("QUEUE_REDIS_STREAM_DELETE_ON_ACK", false), // true => XACK + XDEL
+		"stream_max_len": facades.Config().Env("QUEUE_REDIS_STREAM_MAX_LEN", 100000),       // 0 disables trimming, >0 uses approximate MAXLEN
 		"via": func() (queue.Driver, error) {
 			return redisstream.New("redis_stream")
 		},
@@ -51,6 +52,7 @@ QUEUE_CONNECTION=redis_stream
 QUEUE_REDIS_STREAM_CONNECTION=default
 QUEUE_REDIS_STREAM_QUEUE=default
 QUEUE_REDIS_STREAM_GROUP=goravel
+QUEUE_REDIS_STREAM_CONSUMER=
 QUEUE_REDIS_STREAM_BLOCK_MS=1000
 QUEUE_REDIS_STREAM_RETRY_AFTER=90
 QUEUE_REDIS_STREAM_CLAIM_COUNT=10
