@@ -162,6 +162,8 @@ For detailed API documentation, see [routes/admin.go](./routes/admin.go)
 
 The project includes Swagger API documentation for interactive API exploration.
 
+Error code overview for frontend integration: [docs/ERROR_CODES.md](./docs/ERROR_CODES.md)
+
 **Access Swagger Documentation:**
 
 The Swagger JSON document is available at:

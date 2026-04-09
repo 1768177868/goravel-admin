@@ -162,6 +162,8 @@ git clone https://github.com/1768177868/goravel-admin.git
 
 项目包含 Swagger API 文档，支持交互式 API 探索。
 
+错误码总览（前端联调建议必读）：[docs/ERROR_CODES.md](./docs/ERROR_CODES.md)
+
 **访问 Swagger 文档：**
 
 Swagger JSON 文档访问地址：
