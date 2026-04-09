@@ -8,7 +8,6 @@ import (
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
-	"github.com/goravel/framework/facades"
 )
 
 type ScheduleTestLog struct{}
@@ -44,7 +43,6 @@ func (r *ScheduleTestLog) Handle(ctx console.Context) error {
 		return err
 	}
 
-	facades.Log().Infof("[schedule-test] heartbeat written to %s", logPath)
 	ctx.Info("schedule test log written: " + logPath)
 	return nil
 }
