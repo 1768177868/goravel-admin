@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/apidoc"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -14,6 +15,34 @@ import (
 
 type PaymentMethodController struct {
 	paymentService services.PaymentService
+}
+
+type PaymentMethodResponse struct {
+	ID          uint           `json:"id" example:"1"`                // 支付方式ID
+	Name        string         `json:"name" example:"微信支付"`          // 名称
+	Code        string         `json:"code" example:"wechat"`        // 代码
+	Type        string         `json:"type" example:"wechat"`        // 类型
+	Config      map[string]any `json:"config,omitempty"`             // 配置（详情接口返回）
+	IsActive    bool           `json:"is_active" example:"true"`     // 是否启用
+	Sort        int            `json:"sort" example:"10"`            // 排序
+	Description string         `json:"description" example:"默认支付方式"` // 描述
+	CreatedAt   string         `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt   string         `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+}
+
+type PaymentMethodListData struct {
+	Data []PaymentMethodResponse `json:"data"` // 列表数据
+	apidoc.Pagination
+}
+
+type PaymentMethodListResponse struct {
+	apidoc.Success
+	Data PaymentMethodListData `json:"data"`
+}
+
+type PaymentMethodDetailResponse struct {
+	apidoc.Success
+	Data PaymentMethodResponse `json:"data"`
 }
 
 func NewPaymentMethodController() *PaymentMethodController {
@@ -35,9 +64,9 @@ func NewPaymentMethodController() *PaymentMethodController {
 // @Param        type       query    string  false "支付类型"
 // @Param        is_active  query    string  false "是否启用：1-启用，0-禁用"
 // @Param        order_by   query    string  false "排序（格式：字段:asc/desc，如：created_at:desc）"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} PaymentMethodListResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payment-methods [get]
 // @Security     BearerAuth
 func (r *PaymentMethodController) Index(ctx http.Context) http.Response {
@@ -91,10 +120,10 @@ func (r *PaymentMethodController) Index(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id         path     int     true  "支付方式ID"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      404        {object} map[string]any "支付方式不存在"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} PaymentMethodDetailResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      404        {object} apidoc.Error "支付方式不存在"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payment-methods/{id} [get]
 // @Security     BearerAuth
 func (r *PaymentMethodController) Show(ctx http.Context) http.Response {
@@ -141,9 +170,9 @@ func (r *PaymentMethodController) Show(ctx http.Context) http.Response {
 // @Param        is_active   body     bool    false "是否启用"
 // @Param        sort        body     int     false "排序"
 // @Param        description body     string  false "描述"
-// @Success      200      {object} map[string]any
-// @Failure      400      {object} map[string]any "参数错误"
-// @Failure      500      {object} map[string]any "服务器错误"
+// @Success      200      {object} PaymentMethodDetailResponse
+// @Failure      400      {object} apidoc.Error "参数错误"
+// @Failure      500      {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payment-methods [post]
 // @Security     BearerAuth
 func (r *PaymentMethodController) Store(ctx http.Context) http.Response {
@@ -200,9 +229,9 @@ func (r *PaymentMethodController) Store(ctx http.Context) http.Response {
 // @Param        is_active   body     bool    false "是否启用"
 // @Param        sort        body     int     false "排序"
 // @Param        description body     string  false "描述"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} PaymentMethodDetailResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payment-methods/{id} [put]
 // @Security     BearerAuth
 func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
@@ -267,9 +296,9 @@ func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id         path     int     true  "支付方式ID"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} apidoc.Success
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payment-methods/{id} [delete]
 // @Security     BearerAuth
 func (r *PaymentMethodController) Destroy(ctx http.Context) http.Response {

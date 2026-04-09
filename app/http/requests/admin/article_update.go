@@ -7,10 +7,10 @@ import (
 )
 
 type ArticleUpdate struct {
-	Title   *string `form:"title" json:"title"`
-	Content *string `form:"content" json:"content"`
-	Status  *uint8  `form:"status" json:"status"`
-	AdminId *int    `form:"admin_id" json:"admin_id"`
+	Title   *string `form:"title" json:"title" example:"文章标题"`                    // 文章标题（可选）
+	Content *string `form:"content" json:"content" example:"这里是文章内容"`              // 文章内容（可选）
+	Status  *uint8  `form:"status" json:"status" enums:"0,1" example:"1"`          // 发布状态（1-发布，0-未发布）
+	AdminId *int    `form:"admin_id" json:"admin_id" example:"1"`                   // 发布管理员ID（可选）
 }
 
 func (r *ArticleUpdate) Authorize(ctx http.Context) error {

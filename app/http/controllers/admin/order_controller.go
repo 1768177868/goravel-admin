@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/apidoc"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
@@ -24,6 +25,111 @@ import (
 
 type OrderController struct {
 	orderService services.OrderService
+}
+
+// OrderResponse 订单主信息
+type OrderResponse struct {
+	ID        uint    `json:"id" example:"1"`                           // 订单ID
+	OrderNo   string  `json:"order_no" example:"ORD202604090001"`       // 订单号
+	UserID    uint    `json:"user_id" example:"1001"`                   // 用户ID
+	Amount    float64 `json:"amount" example:"199.98"`                  // 订单金额
+	Status    string  `json:"status" example:"pending"`                 // 订单状态
+	Remark    string  `json:"remark" example:"备注信息"`                    // 备注
+	CreatedAt string  `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt string  `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+}
+
+// OrderDetailResponse 订单详情项
+type OrderDetailResponse struct {
+	ID          uint    `json:"id" example:"1"`                           // 详情ID
+	OrderID     uint    `json:"order_id" example:"1"`                     // 订单ID
+	ProductID   uint    `json:"product_id" example:"101"`                 // 商品ID
+	ProductName string  `json:"product_name" example:"商品名称"`              // 商品名称
+	Price       float64 `json:"price" example:"99.99"`                    // 单价
+	Quantity    int     `json:"quantity" example:"2"`                     // 数量
+	Subtotal    float64 `json:"subtotal" example:"199.98"`                // 小计
+	CreatedAt   string  `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt   string  `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+}
+
+// OrderWithDetailsResponse 订单及详情
+type OrderWithDetailsResponse struct {
+	Order   OrderResponse         `json:"order"`   // 订单主信息
+	Details []OrderDetailResponse `json:"details"` // 订单详情列表
+}
+
+// OrderListData 订单列表响应 data
+type OrderListData struct {
+	Data []OrderWithDetailsResponse `json:"data"` // 订单列表
+	apidoc.Pagination
+}
+
+type OrderListResponse struct {
+	apidoc.Success
+	Data OrderListData `json:"data"`
+}
+
+type OrderDetailData struct {
+	Order   OrderResponse         `json:"order"`   // 订单主信息
+	Details []OrderDetailResponse `json:"details"` // 订单详情
+}
+
+type OrderDetailResponseWrapper struct {
+	apidoc.Success
+	Data OrderDetailData `json:"data"`
+}
+
+type OrderCreateRequest struct {
+	UserID    uint             `json:"user_id" example:"1001"`                  // 用户ID（必填）
+	Amount    float64          `json:"amount" example:"199.98"`                 // 订单金额（必填）
+	Products  []OrderProductItem `json:"products"`                               // 商品列表（必填）
+	RequestID string           `json:"request_id" example:"req_20260409_001"`   // 幂等请求ID（可选）
+	Remark    string           `json:"remark" example:"备注信息"`                  // 备注（可选）
+}
+
+type OrderUpdateRequest struct {
+	Status string `json:"status" example:"paid"` // 订单状态（必填）
+	Remark string `json:"remark" example:"已完成支付"` // 备注（可选）
+}
+
+type ExportTaskData struct {
+	ExportID uint   `json:"export_id" example:"1"`              // 导出记录ID
+	Message  string `json:"message" example:"导出任务已提交"`        // 提示信息
+}
+
+type ExportTaskResponse struct {
+	apidoc.Success
+	Data ExportTaskData `json:"data"`
+}
+
+type ExportStatusData struct {
+	ID         uint   `json:"id" example:"1"`                           // 导出记录ID
+	Status     uint8  `json:"status" example:"1"`                       // 状态码
+	StatusText string `json:"status_text" example:"处理中"`               // 状态文本
+	FileURL    string `json:"file_url" example:"/api/admin/exports/1/download"` // 下载地址
+	Filename   string `json:"filename" example:"orders_20260409.csv"`   // 文件名
+	Size       int64  `json:"size" example:"1024"`                       // 文件大小（字节）
+	ErrorMsg   string `json:"error_msg" example:""`                      // 错误信息
+	CreatedAt  string `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt  string `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+}
+
+type ExportStatusResponse struct {
+	apidoc.Success
+	Data ExportStatusData `json:"data"`
+}
+
+type ImportResultData struct {
+	TotalRows    int      `json:"total_rows" example:"10"`    // 总行数
+	SuccessCount int      `json:"success_count" example:"8"`  // 成功数量
+	FailedCount  int      `json:"failed_count" example:"2"`   // 失败数量
+	Errors       []string `json:"errors"`                     // 失败原因列表
+	Message      string   `json:"message" example:"导入成功"`    // 提示信息
+}
+
+type ImportResultResponse struct {
+	apidoc.Success
+	Data ImportResultData `json:"data"`
 }
 
 // OrderProductItem 订单商品项（用于 Swagger 文档）
@@ -213,9 +319,9 @@ func (r *OrderController) convertOrderToJson(order models.Order) http.Json {
 // @Param        start_time query    string  false "开始时间（格式：2006-01-02 15:04:05）"
 // @Param        end_time   query    string  false "结束时间（格式：2006-01-02 15:04:05）"
 // @Param        order_by   query    string  false "排序（格式：字段:asc/desc，如：created_at:desc）"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} OrderListResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders [get]
 // @Security     BearerAuth
 func (r *OrderController) Index(ctx http.Context) http.Response {
@@ -275,10 +381,10 @@ func (r *OrderController) Index(ctx http.Context) http.Response {
 // @Produce      json
 // @Param        id         path     string  false "订单ID（如果提供了订单号，此参数可选）"
 // @Param        order_no   query    string  false "订单号（优先使用，可直接定位分表）"
-// @Success      200        {object} map[string]any "返回数据包含 order（订单主表）和 details（订单详情表数组）"
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      404        {object} map[string]any "订单不存在"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} OrderDetailResponseWrapper "返回数据包含 order（订单主表）和 details（订单详情表数组）"
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      404        {object} apidoc.Error "订单不存在"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders/{id} [get]
 // @Security     BearerAuth
 func (r *OrderController) Show(ctx http.Context) http.Response {
@@ -341,13 +447,10 @@ func (r *OrderController) buildOrderDetailResponse(ctx http.Context, order *mode
 // @Tags         订单管理
 // @Accept       json
 // @Produce      json
-// @Param        user_id  body     int                true  "用户ID"
-// @Param        amount   body     float64            true  "订单金额"
-// @Param        products body     []OrderProductItem true "商品列表"
-// @Param        request_id body   string             false "请求ID（用于防重复提交，不传则自动生成）"
-// @Success      200      {object} map[string]any
-// @Failure      400      {object} map[string]any "参数错误或重复提交"
-// @Failure      500      {object} map[string]any "服务器错误"
+// @Param        request body     OrderCreateRequest true "创建参数"
+// @Success      200      {object} OrderDetailResponseWrapper
+// @Failure      400      {object} apidoc.Error "参数错误或重复提交"
+// @Failure      500      {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders [post]
 // @Security     BearerAuth
 func (r *OrderController) Store(ctx http.Context) http.Response {
@@ -405,10 +508,10 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id         path     string  true "订单号"
-// @Param        status     body     string  true  "订单状态"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Param        request    body     OrderUpdateRequest true  "更新参数"
+// @Success      200        {object} apidoc.Success
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders/{id} [put]
 // @Security     BearerAuth
 func (r *OrderController) Update(ctx http.Context) http.Response {
@@ -445,9 +548,9 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id         path     string  true "订单号"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} apidoc.Success
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders/{id} [delete]
 // @Security     BearerAuth
 func (r *OrderController) Destroy(ctx http.Context) http.Response {
@@ -477,11 +580,11 @@ func (r *OrderController) Destroy(ctx http.Context) http.Response {
 // @Param        start_time query    string  false "开始时间（格式：2006-01-02 15:04:05）"
 // @Param        end_time   query    string  false "结束时间（格式：2006-01-02 15:04:05）"
 // @Param        order_by   query    string  false "排序（格式：字段:asc/desc，如：created_at:desc）"
-// @Success      200        {object} map[string]any "导出成功，返回文件下载信息"
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      401        {object} map[string]any "未登录"
-// @Failure      403        {object} map[string]any "无权限"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} ExportTaskResponse "导出任务已提交，返回导出记录ID"
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      401        {object} apidoc.Error "未登录"
+// @Failure      403        {object} apidoc.Error "无权限"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders/export [post]
 // @Security     BearerAuth
 func (r *OrderController) Export(ctx http.Context) http.Response {
@@ -606,11 +709,11 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      int  true  "导出记录ID"
-// @Success      200  {object}  map[string]any
-// @Failure      400  {object}  map[string]any  "参数错误"
-// @Failure      401  {object}  map[string]any  "未登录"
-// @Failure      403  {object}  map[string]any  "无权限"
-// @Failure      500  {object}  map[string]any  "服务器错误"
+// @Success      200  {object}  ExportStatusResponse
+// @Failure      400  {object}  apidoc.Error  "参数错误"
+// @Failure      401  {object}  apidoc.Error  "未登录"
+// @Failure      403  {object}  apidoc.Error  "无权限"
+// @Failure      500  {object}  apidoc.Error  "服务器错误"
 // @Router       /api/admin/orders/export/status/{id} [get]
 // @Security     BearerAuth
 func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
@@ -683,11 +786,11 @@ func (r *OrderController) getCurrentLanguage(ctx http.Context) string {
 // @Accept       multipart/form-data
 // @Produce      json
 // @Param        file formData file true "CSV文件"
-// @Success      200  {object} map[string]any "导入成功，返回导入结果"
-// @Failure      400  {object} map[string]any "参数错误"
-// @Failure      401  {object} map[string]any "未登录"
-// @Failure      403  {object} map[string]any "无权限"
-// @Failure      500  {object} map[string]any "服务器错误"
+// @Success      200  {object} ImportResultResponse "导入成功，返回导入结果"
+// @Failure      400  {object} apidoc.Error "参数错误"
+// @Failure      401  {object} apidoc.Error "未登录"
+// @Failure      403  {object} apidoc.Error "无权限"
+// @Failure      500  {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/orders/import [post]
 // @Security     BearerAuth
 func (r *OrderController) Import(ctx http.Context) http.Response {

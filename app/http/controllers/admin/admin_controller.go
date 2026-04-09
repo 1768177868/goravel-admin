@@ -26,22 +26,22 @@ type AdminController struct {
 
 // AdminResponse 管理员 JSON 字段（列表项含 2FA/超管；详情/写接口可能不含 is_2fa_bound）
 type AdminResponse struct {
-	ID           uint             `json:"id" example:"1"`                                // 管理员ID
-	Username     string           `json:"username" example:"admin"`                      // 登录用户名
-	Nickname     string           `json:"nickname" example:"管理员"`                        // 显示昵称
-	Avatar       string           `json:"avatar" example:""`                             // 头像URL
-	Email        string           `json:"email" example:"admin@example.com"`             // 联系邮箱
-	Phone        string           `json:"phone" example:"13800138000"`                   // 联系手机号
-	Status       uint8            `json:"status" enums:"0,1" example:"1"`                // 账号状态（1启用，0禁用）
-	Is2FABound   bool             `json:"is_2fa_bound,omitempty" example:"true"`         // 是否已绑定2FA
-	IsSuperAdmin bool             `json:"is_super_admin,omitempty" example:"false"`       // 是否为超级管理员
-	DepartmentID uint             `json:"department_id" example:"1"`                      // 所属部门ID
-	Department   map[string]any   `json:"department"`                                     // 部门信息对象
-	PositionID   uint             `json:"position_id" example:"1"`                        // 所属岗位ID
-	Position     map[string]any   `json:"position"`                                       // 岗位信息对象
-	Roles        []map[string]any `json:"roles"`                                          // 角色信息数组
-	CreatedAt    string           `json:"created_at" example:"2024-01-01 00:00:00"`      // 创建时间
-	UpdatedAt    string           `json:"updated_at" example:"2024-01-01 00:00:00"`      // 更新时间
+	ID           uint             `json:"id" example:"1"`                           // 管理员ID
+	Username     string           `json:"username" example:"admin"`                 // 登录用户名
+	Nickname     string           `json:"nickname" example:"管理员"`                   // 显示昵称
+	Avatar       string           `json:"avatar" example:""`                        // 头像URL
+	Email        string           `json:"email" example:"admin@example.com"`        // 联系邮箱
+	Phone        string           `json:"phone" example:"13800138000"`              // 联系手机号
+	Status       uint8            `json:"status" enums:"0,1" example:"1"`           // 账号状态（1启用，0禁用）
+	Is2FABound   bool             `json:"is_2fa_bound,omitempty" example:"true"`    // 是否已绑定2FA
+	IsSuperAdmin bool             `json:"is_super_admin,omitempty" example:"false"` // 是否为超级管理员
+	DepartmentID uint             `json:"department_id" example:"1"`                // 所属部门ID
+	Department   map[string]any   `json:"department"`                               // 部门信息对象
+	PositionID   uint             `json:"position_id" example:"1"`                  // 所属岗位ID
+	Position     map[string]any   `json:"position"`                                 // 岗位信息对象
+	Roles        []map[string]any `json:"roles"`                                    // 角色信息数组
+	CreatedAt    string           `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt    string           `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
 }
 
 // AdminListData 列表成功时 data 内层
@@ -65,6 +65,23 @@ type AdminDetailData struct {
 type AdminDetailResponse struct {
 	apidoc.Success
 	Data AdminDetailData `json:"data"`
+}
+
+// AdminExportData 导出成功时 data 内层
+type AdminExportData struct {
+	FilePath string `json:"file_path" example:"exports/admins_20260409_150000.csv"`         // 导出文件存储路径
+	FileURL  string `json:"file_url" example:"/storage/exports/admins_20260409_150000.csv"` // 导出文件访问地址
+}
+
+// AdminExportResponse 管理员导出响应
+type AdminExportResponse struct {
+	apidoc.Success
+	Data AdminExportData `json:"data"`
+}
+
+// UnbindGoogleAuthRequest 解绑管理员2FA请求
+type UnbindGoogleAuthRequest struct {
+	Code string `json:"code" example:"123456"` // 当前管理员的谷歌验证码（6位动态码）
 }
 
 func NewAdminController() *AdminController {
@@ -459,7 +476,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
-// @Success      200  {object} map[string]any "删除成功"
+// @Success      200  {object} apidoc.Success "删除成功"
 // @Failure      403  {object} apidoc.Error "无权限、受保护管理员不能删除或不能删除自己"
 // @Failure      404  {object} apidoc.Error "管理员不存在"
 // @Router       /api/admin/admins/{id} [delete]
@@ -505,10 +522,14 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        id   path     int  true  "要解绑的管理员ID"
-// @Param        code body     string true "当前管理员的谷歌验证码"
-// @Success      200  {object} map[string]any "解绑成功"
-// @Failure      404  {object} apidoc.Error "管理员不存在"
+// @Param        id       path     int                     true  "要解绑的管理员ID"
+// @Param        request  body     UnbindGoogleAuthRequest true  "验证码确认参数"
+// @Success      200      {object} apidoc.Success "解绑成功"
+// @Failure      400      {object} apidoc.Error "参数错误、验证码错误或目标管理员未绑定2FA"
+// @Failure      401      {object} apidoc.Error "未登录"
+// @Failure      403      {object} apidoc.Error "当前管理员未绑定2FA，禁止执行"
+// @Failure      404      {object} apidoc.Error "管理员不存在"
+// @Failure      500      {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/admins/{id}/unbind-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
@@ -604,9 +625,12 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int true "要重置的管理员ID"
-// @Success      200  {object} map[string]any "重置成功"
+// @Success      200  {object} apidoc.Success "重置成功"
+// @Failure      400  {object} apidoc.Error "参数错误或目标管理员未绑定2FA"
+// @Failure      401  {object} apidoc.Error "未登录"
 // @Failure      403  {object} apidoc.Error "无权限或不可操作受保护管理员"
 // @Failure      404  {object} apidoc.Error "管理员不存在"
+// @Failure      500  {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/admins/{id}/reset-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Response {
@@ -656,7 +680,7 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 // @Accept       json
 // @Produce      json
 // @Param        request body     adminrequests.AdminListFilter false "筛选（字段同列表 GET query）"
-// @Success      200     {object} map[string]any "导出成功，返回文件下载信息"
+// @Success      200     {object} AdminExportResponse "导出成功，返回文件下载信息"
 // @Failure      500     {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/apidoc"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
@@ -22,6 +23,45 @@ import (
 
 type PaymentController struct {
 	paymentService services.PaymentService
+}
+
+type PaymentMethodSimple struct {
+	ID   uint   `json:"id" example:"1"`     // 支付方式ID
+	Name string `json:"name" example:"微信支付"` // 支付方式名称
+	Code string `json:"code" example:"wechat"` // 支付方式代码
+	Type string `json:"type" example:"wechat"` // 支付类型
+}
+
+type PaymentResponse struct {
+	ID              uint              `json:"id" example:"1"`                           // 支付记录ID
+	PaymentNo       string            `json:"payment_no" example:"PAY202604090001"`     // 支付单号
+	OrderNo         string            `json:"order_no" example:"ORD202604090001"`       // 订单号
+	PaymentMethodID uint              `json:"payment_method_id" example:"1"`             // 支付方式ID
+	UserID          uint              `json:"user_id" example:"1001"`                    // 用户ID
+	Amount          float64           `json:"amount" example:"99.99"`                    // 支付金额
+	Status          string            `json:"status" example:"paid"`                     // 支付状态
+	ThirdPartyNo    string            `json:"third_party_no" example:"WX202604090001"`   // 第三方单号
+	PayTime         string            `json:"pay_time" example:"2024-01-01 00:00:00"`    // 支付时间
+	FailReason      string            `json:"fail_reason" example:""`                     // 失败原因
+	Remark          string            `json:"remark" example:"备注信息"`                    // 备注
+	CreatedAt       string            `json:"created_at" example:"2024-01-01 00:00:00"`  // 创建时间
+	UpdatedAt       string            `json:"updated_at" example:"2024-01-01 00:00:00"`  // 更新时间
+	PaymentMethod   PaymentMethodSimple `json:"payment_method,omitempty"`                 // 支付方式信息
+}
+
+type PaymentListData struct {
+	Data []PaymentResponse `json:"data"` // 支付记录列表
+	apidoc.Pagination
+}
+
+type PaymentListResponse struct {
+	apidoc.Success
+	Data PaymentListData `json:"data"`
+}
+
+type PaymentDetailResponse struct {
+	apidoc.Success
+	Data PaymentResponse `json:"data"`
 }
 
 func NewPaymentController() *PaymentController {
@@ -118,9 +158,9 @@ func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilt
 // @Param        start_time       query    string  false "开始时间（格式：2006-01-02 15:04:05）"
 // @Param        end_time         query    string  false "结束时间（格式：2006-01-02 15:04:05）"
 // @Param        order_by         query    string  false "排序（格式：字段:asc/desc，如：created_at:desc）"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} PaymentListResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payments [get]
 // @Security     BearerAuth
 func (r *PaymentController) Index(ctx http.Context) http.Response {
@@ -186,10 +226,10 @@ func (r *PaymentController) Index(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id         path     string  true  "支付单号"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      404        {object} map[string]any "支付记录不存在"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} PaymentDetailResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      404        {object} apidoc.Error "支付记录不存在"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payments/{id} [get]
 // @Security     BearerAuth
 func (r *PaymentController) Show(ctx http.Context) http.Response {
@@ -249,10 +289,10 @@ func (r *PaymentController) formatPayTime(t *time.Time) string {
 // @Param        status            query    string  false "支付状态"
 // @Param        start_time        query    string  false "开始时间"
 // @Param        end_time          query    string  false "结束时间"
-// @Success      200        {object} map[string]any
-// @Failure      400        {object} map[string]any "参数错误"
-// @Failure      429        {object} map[string]any "导出任务正在进行中"
-// @Failure      500        {object} map[string]any "服务器错误"
+// @Success      200        {object} ExportTaskResponse
+// @Failure      400        {object} apidoc.Error "参数错误"
+// @Failure      429        {object} apidoc.Error "导出任务正在进行中"
+// @Failure      500        {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/payments/export [post]
 // @Security     BearerAuth
 func (r *PaymentController) Export(ctx http.Context) http.Response {
@@ -365,10 +405,10 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      int  true  "导出记录ID"
-// @Success      200  {object}  map[string]any
-// @Failure      400  {object}  map[string]any  "参数错误"
-// @Failure      404  {object}  map[string]any  "导出记录不存在"
-// @Failure      500  {object}  map[string]any  "服务器错误"
+// @Success      200  {object}  ExportStatusResponse
+// @Failure      400  {object}  apidoc.Error  "参数错误"
+// @Failure      404  {object}  apidoc.Error  "导出记录不存在"
+// @Failure      500  {object}  apidoc.Error  "服务器错误"
 // @Router       /api/admin/payments/export/status/{id} [get]
 // @Security     BearerAuth
 func (r *PaymentController) GetExportStatus(ctx http.Context) http.Response {

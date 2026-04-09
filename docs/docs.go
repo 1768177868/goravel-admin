@@ -211,8 +211,7 @@ const docTemplate = `{
                     "200": {
                         "description": "导出成功，返回文件下载信息",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.AdminExportResponse"
                         }
                     },
                     "500": {
@@ -352,8 +351,7 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Success"
                         }
                     },
                     "403": {
@@ -402,8 +400,19 @@ const docTemplate = `{
                     "200": {
                         "description": "重置成功",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误或目标管理员未绑定2FA",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "403": {
@@ -414,6 +423,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "管理员不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
                         "schema": {
                             "$ref": "#/definitions/apidoc.Error"
                         }
@@ -448,12 +463,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "当前管理员的谷歌验证码",
-                        "name": "code",
+                        "description": "验证码确认参数",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/admin.UnbindGoogleAuthRequest"
                         }
                     }
                 ],
@@ -461,12 +476,973 @@ const docTemplate = `{
                     "200": {
                         "description": "解绑成功",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误、验证码错误或目标管理员未绑定2FA",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "当前管理员未绑定2FA，禁止执行",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "管理员不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/articles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取文章列表，支持按标题、状态、管理员等筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "内容管理"
+                ],
+                "summary": "获取文章列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码（从1开始）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量（建议 10-100）",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "标题（模糊匹配）",
+                        "name": "title",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "内容（精确匹配）",
+                        "name": "content",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "0",
+                            "1"
+                        ],
+                        "type": "string",
+                        "description": "状态（0-未发布，1-发布）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "管理员ID（精确匹配）",
+                        "name": "admin_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "创建时间（精确匹配）",
+                        "name": "created_at",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "更新时间（精确匹配）",
+                        "name": "updated_at",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的文章记录\n字段说明：title-文章标题（必填）；content-文章内容；status-发布状态（1发布/0未发布）；admin_id-发布管理员ID（必填）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "内容管理"
+                ],
+                "summary": "创建文章",
+                "parameters": [
+                    {
+                        "description": "创建参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/articles/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID获取文章详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "内容管理"
+                ],
+                "summary": "获取文章详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "文章ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleDetailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "记录不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID更新文章信息\n字段说明：title-文章标题；content-文章内容；status-发布状态（1发布/0未发布）；admin_id-发布管理员ID（均为可选）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "内容管理"
+                ],
+                "summary": "更新文章",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "文章ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID删除文章",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "内容管理"
+                ],
+                "summary": "删除文章",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "文章ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ArticleDeleteResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "记录不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/blacklists": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取黑名单，支持按IP、状态、时间区间筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "风控管理"
+                ],
+                "summary": "获取黑名单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码（从1开始）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量（建议 10-100）",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP地址或IP段（模糊匹配）",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "0",
+                            "1"
+                        ],
+                        "type": "string",
+                        "description": "状态（1-启用，0-禁用）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始时间（格式：YYYY-MM-DD HH:mm:ss）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束时间（格式：YYYY-MM-DD HH:mm:ss）",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "排序（格式：字段:asc/desc，例如：created_at:desc）",
+                        "name": "order_by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.BlacklistListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建黑名单记录，支持单个IP、CIDR、IP范围等格式\n字段说明：ip-IP地址/IP段（必填）；remark-备注；status-状态（1启用/0禁用）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "风控管理"
+                ],
+                "summary": "创建黑名单",
+                "parameters": [
+                    {
+                        "description": "创建参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.BlacklistCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.BlacklistDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误或IP格式错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/blacklists/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID获取黑名单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "风控管理"
+                ],
+                "summary": "获取黑名单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "黑名单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.BlacklistDetailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "黑名单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID更新黑名单信息\n字段说明：ip-IP地址/IP段；remark-备注；status-状态（1启用/0禁用）（均可选）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "风控管理"
+                ],
+                "summary": "更新黑名单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "黑名单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.BlacklistUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.BlacklistDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误或IP格式错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "黑名单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID删除黑名单记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "风控管理"
+                ],
+                "summary": "删除黑名单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "黑名单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Success"
+                        }
+                    },
+                    "404": {
+                        "description": "黑名单不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/dictionaries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取字典列表，支持按类型、状态、时间范围筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "获取字典列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码（从1开始）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量（建议 10-100）",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "字典类型（精确匹配）",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "0",
+                            "1"
+                        ],
+                        "type": "string",
+                        "description": "状态（1-启用，0-禁用）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始时间（格式：YYYY-MM-DD HH:mm:ss）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束时间（格式：YYYY-MM-DD HH:mm:ss）",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "排序（格式：字段:asc/desc，例如：created_at:desc）",
+                        "name": "order_by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的字典项\n字段说明：type-字典类型（必填）；label-字典标签（必填）；value-字典值（必填）；translation_key-多语言Key；description-描述；status-状态（1启用/0禁用）；sort-排序值；remark-备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "创建字典",
+                "parameters": [
+                    {
+                        "description": "创建参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/dictionaries/type/{type}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据字典类型获取启用状态的字典列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "按类型获取字典项",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字典类型",
+                        "name": "type",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryByTypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "字典类型不能为空",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/dictionaries/types": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取系统中已配置的全部字典类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "获取全部字典类型",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryTypesResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/dictionaries/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID获取字典详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "获取字典详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "字典ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryDetailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "字典不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID更新字典信息\n字段说明：type-字典类型；label-字典标签；value-字典值；translation_key-多语言Key；description-描述；status-状态（1启用/0禁用）；sort-排序值；remark-备注（均可选）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "更新字典",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "字典ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.DictionaryDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "字典不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据ID删除字典项",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "字典管理"
+                ],
+                "summary": "删除字典",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "字典ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Success"
+                        }
+                    },
+                    "404": {
+                        "description": "字典不存在",
+                        "schema": {
+                            "$ref": "#/definitions/apidoc.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
                         "schema": {
                             "$ref": "#/definitions/apidoc.Error"
                         }
@@ -560,22 +1536,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.OrderListResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -599,41 +1572,12 @@ const docTemplate = `{
                 "summary": "创建订单",
                 "parameters": [
                     {
-                        "description": "用户ID",
-                        "name": "user_id",
+                        "description": "创建参数",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "description": "订单金额",
-                        "name": "amount",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "number"
-                        }
-                    },
-                    {
-                        "description": "商品列表",
-                        "name": "products",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/admin.OrderProductItem"
-                            }
-                        }
-                    },
-                    {
-                        "description": "请求ID（用于防重复提交，不传则自动生成）",
-                        "name": "request_id",
-                        "in": "body",
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/admin.OrderCreateRequest"
                         }
                     }
                 ],
@@ -641,22 +1585,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.OrderDetailResponseWrapper"
                         }
                     },
                     "400": {
                         "description": "参数错误或重复提交",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -732,38 +1673,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "导出成功，返回文件下载信息",
+                        "description": "导出任务已提交，返回导出记录ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.ExportTaskResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "401": {
                         "description": "未登录",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "403": {
                         "description": "无权限",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -800,36 +1736,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.ExportStatusResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "401": {
                         "description": "未登录",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "403": {
                         "description": "无权限",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -866,36 +1797,31 @@ const docTemplate = `{
                     "200": {
                         "description": "导入成功，返回导入结果",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.ImportResultResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "401": {
                         "description": "未登录",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "403": {
                         "description": "无权限",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -937,29 +1863,25 @@ const docTemplate = `{
                     "200": {
                         "description": "返回数据包含 order（订单主表）和 details（订单详情表数组）",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.OrderDetailResponseWrapper"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "订单不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -990,12 +1912,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "订单状态",
-                        "name": "status",
+                        "description": "更新参数",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/admin.OrderUpdateRequest"
                         }
                     }
                 ],
@@ -1003,22 +1925,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Success"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1053,22 +1972,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Success"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1142,22 +2058,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.PaymentMethodListResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1245,22 +2158,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.PaymentMethodDetailResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1297,29 +2207,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.PaymentMethodDetailResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "支付方式不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1395,22 +2301,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.PaymentMethodDetailResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1445,22 +2348,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Success"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1552,22 +2452,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.PaymentListResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1639,29 +2536,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.ExportTaskResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "429": {
                         "description": "导出任务正在进行中",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1698,29 +2591,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.ExportStatusResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "导出记录不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1757,29 +2646,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/admin.PaymentDetailResponse"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "支付记录不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1888,6 +2773,39 @@ const docTemplate = `{
                 },
                 "data": {
                     "$ref": "#/definitions/admin.AdminDetailData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.AdminExportData": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "description": "导出文件存储路径",
+                    "type": "string",
+                    "example": "exports/admins_20260409_150000.csv"
+                },
+                "file_url": {
+                    "description": "导出文件访问地址",
+                    "type": "string",
+                    "example": "/storage/exports/admins_20260409_150000.csv"
+                }
+            }
+        },
+        "admin.AdminExportResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.AdminExportData"
                 },
                 "message": {
                     "type": "string"
@@ -2140,6 +3058,938 @@ const docTemplate = `{
                 }
             }
         },
+        "admin.ArticleCreate": {
+            "type": "object",
+            "properties": {
+                "admin_id": {
+                    "description": "发布管理员ID（必填）",
+                    "type": "integer",
+                    "example": 1
+                },
+                "content": {
+                    "description": "文章内容（可选）",
+                    "type": "string",
+                    "example": "这里是文章内容"
+                },
+                "status": {
+                    "description": "发布状态（1-发布，0-未发布）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "title": {
+                    "description": "文章标题（必填）",
+                    "type": "string",
+                    "example": "文章标题"
+                }
+            }
+        },
+        "admin.ArticleDeleteData": {
+            "type": "object"
+        },
+        "admin.ArticleDeleteResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.ArticleDeleteData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.ArticleDetailData": {
+            "type": "object",
+            "properties": {
+                "article": {
+                    "$ref": "#/definitions/admin.ArticleResponse"
+                }
+            }
+        },
+        "admin.ArticleDetailResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.ArticleDetailData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.ArticleListData": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.ArticleResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.ArticleListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.ArticleListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.ArticleResponse": {
+            "type": "object",
+            "properties": {
+                "admin_id": {
+                    "description": "发布管理员ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "content": {
+                    "description": "文章内容",
+                    "type": "string",
+                    "example": "示例内容"
+                },
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "description": "文章ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "description": "发布状态（1-发布，0-未发布）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "title": {
+                    "description": "文章标题",
+                    "type": "string",
+                    "example": "示例标题"
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "admin.ArticleUpdate": {
+            "type": "object",
+            "properties": {
+                "admin_id": {
+                    "description": "发布管理员ID（可选）",
+                    "type": "integer",
+                    "example": 1
+                },
+                "content": {
+                    "description": "文章内容（可选）",
+                    "type": "string",
+                    "example": "这里是文章内容"
+                },
+                "status": {
+                    "description": "发布状态（1-发布，0-未发布）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "title": {
+                    "description": "文章标题（可选）",
+                    "type": "string",
+                    "example": "文章标题"
+                }
+            }
+        },
+        "admin.BlacklistCreate": {
+            "type": "object",
+            "properties": {
+                "ip": {
+                    "description": "IP地址/IP段（支持单IP、CIDR、范围）",
+                    "type": "string",
+                    "example": "192.168.1.1"
+                },
+                "remark": {
+                    "description": "备注说明（可选）",
+                    "type": "string",
+                    "example": "测试IP"
+                },
+                "status": {
+                    "description": "状态（1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                }
+            }
+        },
+        "admin.BlacklistDetailData": {
+            "type": "object",
+            "properties": {
+                "blacklist": {
+                    "$ref": "#/definitions/admin.BlacklistResponse"
+                }
+            }
+        },
+        "admin.BlacklistDetailResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.BlacklistDetailData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.BlacklistListData": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.BlacklistResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.BlacklistListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.BlacklistListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.BlacklistResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "description": "黑名单ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "ip": {
+                    "description": "IP地址/IP段",
+                    "type": "string",
+                    "example": "192.168.1.1"
+                },
+                "remark": {
+                    "description": "备注说明",
+                    "type": "string",
+                    "example": "测试IP"
+                },
+                "status": {
+                    "description": "状态（1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "admin.BlacklistUpdate": {
+            "type": "object",
+            "properties": {
+                "ip": {
+                    "description": "IP地址/IP段（支持单IP、CIDR、范围）",
+                    "type": "string",
+                    "example": "192.168.1.1"
+                },
+                "remark": {
+                    "description": "备注说明（可选）",
+                    "type": "string",
+                    "example": "测试IP"
+                },
+                "status": {
+                    "description": "状态（1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                }
+            }
+        },
+        "admin.DictionaryByTypeData": {
+            "type": "object",
+            "properties": {
+                "dictionaries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.DictionaryResponse"
+                    }
+                }
+            }
+        },
+        "admin.DictionaryByTypeResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.DictionaryByTypeData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.DictionaryCreate": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "description": "字典描述（可选）",
+                    "type": "string",
+                    "example": "订单支付成功状态"
+                },
+                "label": {
+                    "description": "字典标签（必填）",
+                    "type": "string",
+                    "example": "已支付"
+                },
+                "remark": {
+                    "description": "备注（可选）",
+                    "type": "string",
+                    "example": "系统默认值"
+                },
+                "sort": {
+                    "description": "排序值（越小越靠前）",
+                    "type": "integer",
+                    "example": 10
+                },
+                "status": {
+                    "description": "状态（1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "translation_key": {
+                    "description": "多语言翻译Key（可选）",
+                    "type": "string",
+                    "example": "order.status.paid"
+                },
+                "type": {
+                    "description": "字典类型（必填）",
+                    "type": "string",
+                    "example": "order_status"
+                },
+                "value": {
+                    "description": "字典值（必填）",
+                    "type": "string",
+                    "example": "paid"
+                }
+            }
+        },
+        "admin.DictionaryDetailData": {
+            "type": "object",
+            "properties": {
+                "dictionary": {
+                    "$ref": "#/definitions/admin.DictionaryResponse"
+                }
+            }
+        },
+        "admin.DictionaryDetailResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.DictionaryDetailData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.DictionaryListData": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.DictionaryResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.DictionaryListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.DictionaryListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.DictionaryResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "description": {
+                    "description": "字典描述",
+                    "type": "string",
+                    "example": "订单支付成功状态"
+                },
+                "id": {
+                    "description": "字典ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "label": {
+                    "description": "字典标签",
+                    "type": "string",
+                    "example": "已支付"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string",
+                    "example": "系统默认值"
+                },
+                "sort": {
+                    "description": "排序值",
+                    "type": "integer",
+                    "example": 10
+                },
+                "status": {
+                    "description": "状态（1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "translation_key": {
+                    "description": "多语言翻译Key",
+                    "type": "string",
+                    "example": "order.status.paid"
+                },
+                "type": {
+                    "description": "字典类型",
+                    "type": "string",
+                    "example": "order_status"
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "value": {
+                    "description": "字典值",
+                    "type": "string",
+                    "example": "paid"
+                }
+            }
+        },
+        "admin.DictionaryTypesData": {
+            "type": "object",
+            "properties": {
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "admin.DictionaryTypesResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.DictionaryTypesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.DictionaryUpdate": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "description": "字典描述（可选）",
+                    "type": "string",
+                    "example": "订单支付成功状态"
+                },
+                "label": {
+                    "description": "字典标签（可选）",
+                    "type": "string",
+                    "example": "已支付"
+                },
+                "remark": {
+                    "description": "备注（可选）",
+                    "type": "string",
+                    "example": "系统默认值"
+                },
+                "sort": {
+                    "description": "排序值（越小越靠前）",
+                    "type": "integer",
+                    "example": 10
+                },
+                "status": {
+                    "description": "状态（1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                },
+                "translation_key": {
+                    "description": "多语言翻译Key（可选）",
+                    "type": "string",
+                    "example": "order.status.paid"
+                },
+                "type": {
+                    "description": "字典类型（可选）",
+                    "type": "string",
+                    "example": "order_status"
+                },
+                "value": {
+                    "description": "字典值（可选）",
+                    "type": "string",
+                    "example": "paid"
+                }
+            }
+        },
+        "admin.ExportStatusData": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "error_msg": {
+                    "description": "错误信息",
+                    "type": "string",
+                    "example": ""
+                },
+                "file_url": {
+                    "description": "下载地址",
+                    "type": "string",
+                    "example": "/api/admin/exports/1/download"
+                },
+                "filename": {
+                    "description": "文件名",
+                    "type": "string",
+                    "example": "orders_20260409.csv"
+                },
+                "id": {
+                    "description": "导出记录ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "size": {
+                    "description": "文件大小（字节）",
+                    "type": "integer",
+                    "example": 1024
+                },
+                "status": {
+                    "description": "状态码",
+                    "type": "integer",
+                    "example": 1
+                },
+                "status_text": {
+                    "description": "状态文本",
+                    "type": "string",
+                    "example": "处理中"
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "admin.ExportStatusResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.ExportStatusData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.ExportTaskData": {
+            "type": "object",
+            "properties": {
+                "export_id": {
+                    "description": "导出记录ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "message": {
+                    "description": "提示信息",
+                    "type": "string",
+                    "example": "导出任务已提交"
+                }
+            }
+        },
+        "admin.ExportTaskResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.ExportTaskData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.ImportResultData": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "description": "失败原因列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "failed_count": {
+                    "description": "失败数量",
+                    "type": "integer",
+                    "example": 2
+                },
+                "message": {
+                    "description": "提示信息",
+                    "type": "string",
+                    "example": "导入成功"
+                },
+                "success_count": {
+                    "description": "成功数量",
+                    "type": "integer",
+                    "example": 8
+                },
+                "total_rows": {
+                    "description": "总行数",
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "admin.ImportResultResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.ImportResultData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.OrderCreateRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单金额（必填）",
+                    "type": "number",
+                    "example": 199.98
+                },
+                "products": {
+                    "description": "商品列表（必填）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.OrderProductItem"
+                    }
+                },
+                "remark": {
+                    "description": "备注（可选）",
+                    "type": "string",
+                    "example": "备注信息"
+                },
+                "request_id": {
+                    "description": "幂等请求ID（可选）",
+                    "type": "string",
+                    "example": "req_20260409_001"
+                },
+                "user_id": {
+                    "description": "用户ID（必填）",
+                    "type": "integer",
+                    "example": 1001
+                }
+            }
+        },
+        "admin.OrderDetailData": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "订单详情",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.OrderDetailResponse"
+                    }
+                },
+                "order": {
+                    "description": "订单主信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/admin.OrderResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "admin.OrderDetailResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "description": "详情ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "order_id": {
+                    "description": "订单ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "price": {
+                    "description": "单价",
+                    "type": "number",
+                    "example": 99.99
+                },
+                "product_id": {
+                    "description": "商品ID",
+                    "type": "integer",
+                    "example": 101
+                },
+                "product_name": {
+                    "description": "商品名称",
+                    "type": "string",
+                    "example": "商品名称"
+                },
+                "quantity": {
+                    "description": "数量",
+                    "type": "integer",
+                    "example": 2
+                },
+                "subtotal": {
+                    "description": "小计",
+                    "type": "number",
+                    "example": 199.98
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "admin.OrderDetailResponseWrapper": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.OrderDetailData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.OrderListData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.OrderWithDetailsResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.OrderListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.OrderListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
         "admin.OrderProductItem": {
             "type": "object",
             "required": [
@@ -2171,6 +4021,368 @@ const docTemplate = `{
                 }
             }
         },
+        "admin.OrderResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单金额",
+                    "type": "number",
+                    "example": 199.98
+                },
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "description": "订单ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "order_no": {
+                    "description": "订单号",
+                    "type": "string",
+                    "example": "ORD202604090001"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string",
+                    "example": "备注信息"
+                },
+                "status": {
+                    "description": "订单状态",
+                    "type": "string",
+                    "example": "pending"
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "user_id": {
+                    "description": "用户ID",
+                    "type": "integer",
+                    "example": 1001
+                }
+            }
+        },
+        "admin.OrderUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "remark": {
+                    "description": "备注（可选）",
+                    "type": "string",
+                    "example": "已完成支付"
+                },
+                "status": {
+                    "description": "订单状态（必填）",
+                    "type": "string",
+                    "example": "paid"
+                }
+            }
+        },
+        "admin.OrderWithDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "订单详情列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.OrderDetailResponse"
+                    }
+                },
+                "order": {
+                    "description": "订单主信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/admin.OrderResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "admin.PaymentDetailResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.PaymentResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.PaymentListData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "支付记录列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.PaymentResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.PaymentListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.PaymentListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.PaymentMethodDetailResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.PaymentMethodResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.PaymentMethodListData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "列表数据",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.PaymentMethodResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.PaymentMethodListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.PaymentMethodListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.PaymentMethodResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "代码",
+                    "type": "string",
+                    "example": "wechat"
+                },
+                "config": {
+                    "description": "配置（详情接口返回）",
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "description": {
+                    "description": "描述",
+                    "type": "string",
+                    "example": "默认支付方式"
+                },
+                "id": {
+                    "description": "支付方式ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "description": "是否启用",
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string",
+                    "example": "微信支付"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer",
+                    "example": 10
+                },
+                "type": {
+                    "description": "类型",
+                    "type": "string",
+                    "example": "wechat"
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "admin.PaymentMethodSimple": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "支付方式代码",
+                    "type": "string",
+                    "example": "wechat"
+                },
+                "id": {
+                    "description": "支付方式ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string",
+                    "example": "微信支付"
+                },
+                "type": {
+                    "description": "支付类型",
+                    "type": "string",
+                    "example": "wechat"
+                }
+            }
+        },
+        "admin.PaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "支付金额",
+                    "type": "number",
+                    "example": 99.99
+                },
+                "created_at": {
+                    "description": "创建时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "fail_reason": {
+                    "description": "失败原因",
+                    "type": "string",
+                    "example": ""
+                },
+                "id": {
+                    "description": "支付记录ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "order_no": {
+                    "description": "订单号",
+                    "type": "string",
+                    "example": "ORD202604090001"
+                },
+                "pay_time": {
+                    "description": "支付时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "payment_method": {
+                    "description": "支付方式信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/admin.PaymentMethodSimple"
+                        }
+                    ]
+                },
+                "payment_method_id": {
+                    "description": "支付方式ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "payment_no": {
+                    "description": "支付单号",
+                    "type": "string",
+                    "example": "PAY202604090001"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string",
+                    "example": "备注信息"
+                },
+                "status": {
+                    "description": "支付状态",
+                    "type": "string",
+                    "example": "paid"
+                },
+                "third_party_no": {
+                    "description": "第三方单号",
+                    "type": "string",
+                    "example": "WX202604090001"
+                },
+                "updated_at": {
+                    "description": "更新时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "user_id": {
+                    "description": "用户ID",
+                    "type": "integer",
+                    "example": 1001
+                }
+            }
+        },
+        "admin.UnbindGoogleAuthRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "当前管理员的谷歌验证码（6位动态码）",
+                    "type": "string",
+                    "example": "123456"
+                }
+            }
+        },
         "apidoc.Error": {
             "type": "object",
             "properties": {
@@ -2189,6 +4401,21 @@ const docTemplate = `{
                 "trace_id": {
                     "type": "string",
                     "example": "01knrfw7dsrxc3dxbbzk6bkv3j"
+                }
+            }
+        },
+        "apidoc.Success": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
                 }
             }
         }

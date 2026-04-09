@@ -9,14 +9,14 @@ import (
 )
 
 type DictionaryUpdate struct {
-	Type           string `form:"type" json:"type"`
-	Label          string `form:"label" json:"label"`
-	Value          string `form:"value" json:"value"`
-	TranslationKey string `form:"translation_key" json:"translation_key"`
-	Description    string `form:"description" json:"description"`
-	Status         uint8  `form:"status" json:"status"`
-	Sort           int    `form:"sort" json:"sort"`
-	Remark         string `form:"remark" json:"remark"`
+	Type           string `form:"type" json:"type" example:"order_status"`                         // 字典类型（可选）
+	Label          string `form:"label" json:"label" example:"已支付"`                               // 字典标签（可选）
+	Value          string `form:"value" json:"value" example:"paid"`                               // 字典值（可选）
+	TranslationKey string `form:"translation_key" json:"translation_key" example:"order.status.paid"` // 多语言翻译Key（可选）
+	Description    string `form:"description" json:"description" example:"订单支付成功状态"`              // 字典描述（可选）
+	Status         uint8  `form:"status" json:"status" enums:"0,1" example:"1"`                    // 状态（1-启用，0-禁用）
+	Sort           int    `form:"sort" json:"sort" example:"10"`                                   // 排序值（越小越靠前）
+	Remark         string `form:"remark" json:"remark" example:"系统默认值"`                           // 备注（可选）
 }
 
 func (r *DictionaryUpdate) Authorize(ctx http.Context) error {

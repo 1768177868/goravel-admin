@@ -66,6 +66,29 @@ definitions:
       trace_id:
         type: string
     type: object
+  admin.AdminExportData:
+    properties:
+      file_path:
+        description: 导出文件存储路径
+        example: exports/admins_20260409_150000.csv
+        type: string
+      file_url:
+        description: 导出文件访问地址
+        example: /storage/exports/admins_20260409_150000.csv
+        type: string
+    type: object
+  admin.AdminExportResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.AdminExportData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
   admin.AdminListData:
     properties:
       list:
@@ -250,6 +273,677 @@ definitions:
         example: 1
         type: integer
     type: object
+  admin.ArticleCreate:
+    properties:
+      admin_id:
+        description: 发布管理员ID（必填）
+        example: 1
+        type: integer
+      content:
+        description: 文章内容（可选）
+        example: 这里是文章内容
+        type: string
+      status:
+        description: 发布状态（1-发布，0-未发布）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      title:
+        description: 文章标题（必填）
+        example: 文章标题
+        type: string
+    type: object
+  admin.ArticleDeleteData:
+    type: object
+  admin.ArticleDeleteResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.ArticleDeleteData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.ArticleDetailData:
+    properties:
+      article:
+        $ref: '#/definitions/admin.ArticleResponse'
+    type: object
+  admin.ArticleDetailResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.ArticleDetailData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.ArticleListData:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/admin.ArticleResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  admin.ArticleListResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.ArticleListData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.ArticleResponse:
+    properties:
+      admin_id:
+        description: 发布管理员ID
+        example: 1
+        type: integer
+      content:
+        description: 文章内容
+        example: 示例内容
+        type: string
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        description: 文章ID
+        example: 1
+        type: integer
+      status:
+        description: 发布状态（1-发布，0-未发布）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      title:
+        description: 文章标题
+        example: 示例标题
+        type: string
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  admin.ArticleUpdate:
+    properties:
+      admin_id:
+        description: 发布管理员ID（可选）
+        example: 1
+        type: integer
+      content:
+        description: 文章内容（可选）
+        example: 这里是文章内容
+        type: string
+      status:
+        description: 发布状态（1-发布，0-未发布）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      title:
+        description: 文章标题（可选）
+        example: 文章标题
+        type: string
+    type: object
+  admin.BlacklistCreate:
+    properties:
+      ip:
+        description: IP地址/IP段（支持单IP、CIDR、范围）
+        example: 192.168.1.1
+        type: string
+      remark:
+        description: 备注说明（可选）
+        example: 测试IP
+        type: string
+      status:
+        description: 状态（1-启用，0-禁用）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    type: object
+  admin.BlacklistDetailData:
+    properties:
+      blacklist:
+        $ref: '#/definitions/admin.BlacklistResponse'
+    type: object
+  admin.BlacklistDetailResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.BlacklistDetailData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.BlacklistListData:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/admin.BlacklistResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  admin.BlacklistListResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.BlacklistListData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.BlacklistResponse:
+    properties:
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        description: 黑名单ID
+        example: 1
+        type: integer
+      ip:
+        description: IP地址/IP段
+        example: 192.168.1.1
+        type: string
+      remark:
+        description: 备注说明
+        example: 测试IP
+        type: string
+      status:
+        description: 状态（1-启用，0-禁用）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  admin.BlacklistUpdate:
+    properties:
+      ip:
+        description: IP地址/IP段（支持单IP、CIDR、范围）
+        example: 192.168.1.1
+        type: string
+      remark:
+        description: 备注说明（可选）
+        example: 测试IP
+        type: string
+      status:
+        description: 状态（1-启用，0-禁用）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    type: object
+  admin.DictionaryByTypeData:
+    properties:
+      dictionaries:
+        items:
+          $ref: '#/definitions/admin.DictionaryResponse'
+        type: array
+    type: object
+  admin.DictionaryByTypeResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.DictionaryByTypeData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.DictionaryCreate:
+    properties:
+      description:
+        description: 字典描述（可选）
+        example: 订单支付成功状态
+        type: string
+      label:
+        description: 字典标签（必填）
+        example: 已支付
+        type: string
+      remark:
+        description: 备注（可选）
+        example: 系统默认值
+        type: string
+      sort:
+        description: 排序值（越小越靠前）
+        example: 10
+        type: integer
+      status:
+        description: 状态（1-启用，0-禁用）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      translation_key:
+        description: 多语言翻译Key（可选）
+        example: order.status.paid
+        type: string
+      type:
+        description: 字典类型（必填）
+        example: order_status
+        type: string
+      value:
+        description: 字典值（必填）
+        example: paid
+        type: string
+    type: object
+  admin.DictionaryDetailData:
+    properties:
+      dictionary:
+        $ref: '#/definitions/admin.DictionaryResponse'
+    type: object
+  admin.DictionaryDetailResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.DictionaryDetailData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.DictionaryListData:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/admin.DictionaryResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  admin.DictionaryListResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.DictionaryListData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.DictionaryResponse:
+    properties:
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        description: 字典描述
+        example: 订单支付成功状态
+        type: string
+      id:
+        description: 字典ID
+        example: 1
+        type: integer
+      label:
+        description: 字典标签
+        example: 已支付
+        type: string
+      remark:
+        description: 备注
+        example: 系统默认值
+        type: string
+      sort:
+        description: 排序值
+        example: 10
+        type: integer
+      status:
+        description: 状态（1-启用，0-禁用）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      translation_key:
+        description: 多语言翻译Key
+        example: order.status.paid
+        type: string
+      type:
+        description: 字典类型
+        example: order_status
+        type: string
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      value:
+        description: 字典值
+        example: paid
+        type: string
+    type: object
+  admin.DictionaryTypesData:
+    properties:
+      types:
+        items:
+          type: string
+        type: array
+    type: object
+  admin.DictionaryTypesResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.DictionaryTypesData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.DictionaryUpdate:
+    properties:
+      description:
+        description: 字典描述（可选）
+        example: 订单支付成功状态
+        type: string
+      label:
+        description: 字典标签（可选）
+        example: 已支付
+        type: string
+      remark:
+        description: 备注（可选）
+        example: 系统默认值
+        type: string
+      sort:
+        description: 排序值（越小越靠前）
+        example: 10
+        type: integer
+      status:
+        description: 状态（1-启用，0-禁用）
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+      translation_key:
+        description: 多语言翻译Key（可选）
+        example: order.status.paid
+        type: string
+      type:
+        description: 字典类型（可选）
+        example: order_status
+        type: string
+      value:
+        description: 字典值（可选）
+        example: paid
+        type: string
+    type: object
+  admin.ExportStatusData:
+    properties:
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      error_msg:
+        description: 错误信息
+        example: ""
+        type: string
+      file_url:
+        description: 下载地址
+        example: /api/admin/exports/1/download
+        type: string
+      filename:
+        description: 文件名
+        example: orders_20260409.csv
+        type: string
+      id:
+        description: 导出记录ID
+        example: 1
+        type: integer
+      size:
+        description: 文件大小（字节）
+        example: 1024
+        type: integer
+      status:
+        description: 状态码
+        example: 1
+        type: integer
+      status_text:
+        description: 状态文本
+        example: 处理中
+        type: string
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  admin.ExportStatusResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.ExportStatusData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.ExportTaskData:
+    properties:
+      export_id:
+        description: 导出记录ID
+        example: 1
+        type: integer
+      message:
+        description: 提示信息
+        example: 导出任务已提交
+        type: string
+    type: object
+  admin.ExportTaskResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.ExportTaskData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.ImportResultData:
+    properties:
+      errors:
+        description: 失败原因列表
+        items:
+          type: string
+        type: array
+      failed_count:
+        description: 失败数量
+        example: 2
+        type: integer
+      message:
+        description: 提示信息
+        example: 导入成功
+        type: string
+      success_count:
+        description: 成功数量
+        example: 8
+        type: integer
+      total_rows:
+        description: 总行数
+        example: 10
+        type: integer
+    type: object
+  admin.ImportResultResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.ImportResultData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.OrderCreateRequest:
+    properties:
+      amount:
+        description: 订单金额（必填）
+        example: 199.98
+        type: number
+      products:
+        description: 商品列表（必填）
+        items:
+          $ref: '#/definitions/admin.OrderProductItem'
+        type: array
+      remark:
+        description: 备注（可选）
+        example: 备注信息
+        type: string
+      request_id:
+        description: 幂等请求ID（可选）
+        example: req_20260409_001
+        type: string
+      user_id:
+        description: 用户ID（必填）
+        example: 1001
+        type: integer
+    type: object
+  admin.OrderDetailData:
+    properties:
+      details:
+        description: 订单详情
+        items:
+          $ref: '#/definitions/admin.OrderDetailResponse'
+        type: array
+      order:
+        allOf:
+        - $ref: '#/definitions/admin.OrderResponse'
+        description: 订单主信息
+    type: object
+  admin.OrderDetailResponse:
+    properties:
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        description: 详情ID
+        example: 1
+        type: integer
+      order_id:
+        description: 订单ID
+        example: 1
+        type: integer
+      price:
+        description: 单价
+        example: 99.99
+        type: number
+      product_id:
+        description: 商品ID
+        example: 101
+        type: integer
+      product_name:
+        description: 商品名称
+        example: 商品名称
+        type: string
+      quantity:
+        description: 数量
+        example: 2
+        type: integer
+      subtotal:
+        description: 小计
+        example: 199.98
+        type: number
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  admin.OrderDetailResponseWrapper:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.OrderDetailData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.OrderListData:
+    properties:
+      data:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/admin.OrderWithDetailsResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  admin.OrderListResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.OrderListData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
   admin.OrderProductItem:
     properties:
       price:
@@ -274,6 +968,268 @@ definitions:
     - product_name
     - quantity
     type: object
+  admin.OrderResponse:
+    properties:
+      amount:
+        description: 订单金额
+        example: 199.98
+        type: number
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        description: 订单ID
+        example: 1
+        type: integer
+      order_no:
+        description: 订单号
+        example: ORD202604090001
+        type: string
+      remark:
+        description: 备注
+        example: 备注信息
+        type: string
+      status:
+        description: 订单状态
+        example: pending
+        type: string
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      user_id:
+        description: 用户ID
+        example: 1001
+        type: integer
+    type: object
+  admin.OrderUpdateRequest:
+    properties:
+      remark:
+        description: 备注（可选）
+        example: 已完成支付
+        type: string
+      status:
+        description: 订单状态（必填）
+        example: paid
+        type: string
+    type: object
+  admin.OrderWithDetailsResponse:
+    properties:
+      details:
+        description: 订单详情列表
+        items:
+          $ref: '#/definitions/admin.OrderDetailResponse'
+        type: array
+      order:
+        allOf:
+        - $ref: '#/definitions/admin.OrderResponse'
+        description: 订单主信息
+    type: object
+  admin.PaymentDetailResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.PaymentResponse'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.PaymentListData:
+    properties:
+      data:
+        description: 支付记录列表
+        items:
+          $ref: '#/definitions/admin.PaymentResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  admin.PaymentListResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.PaymentListData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.PaymentMethodDetailResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.PaymentMethodResponse'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.PaymentMethodListData:
+    properties:
+      data:
+        description: 列表数据
+        items:
+          $ref: '#/definitions/admin.PaymentMethodResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  admin.PaymentMethodListResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/admin.PaymentMethodListData'
+      message:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  admin.PaymentMethodResponse:
+    properties:
+      code:
+        description: 代码
+        example: wechat
+        type: string
+      config:
+        additionalProperties: {}
+        description: 配置（详情接口返回）
+        type: object
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        description: 描述
+        example: 默认支付方式
+        type: string
+      id:
+        description: 支付方式ID
+        example: 1
+        type: integer
+      is_active:
+        description: 是否启用
+        example: true
+        type: boolean
+      name:
+        description: 名称
+        example: 微信支付
+        type: string
+      sort:
+        description: 排序
+        example: 10
+        type: integer
+      type:
+        description: 类型
+        example: wechat
+        type: string
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  admin.PaymentMethodSimple:
+    properties:
+      code:
+        description: 支付方式代码
+        example: wechat
+        type: string
+      id:
+        description: 支付方式ID
+        example: 1
+        type: integer
+      name:
+        description: 支付方式名称
+        example: 微信支付
+        type: string
+      type:
+        description: 支付类型
+        example: wechat
+        type: string
+    type: object
+  admin.PaymentResponse:
+    properties:
+      amount:
+        description: 支付金额
+        example: 99.99
+        type: number
+      created_at:
+        description: 创建时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      fail_reason:
+        description: 失败原因
+        example: ""
+        type: string
+      id:
+        description: 支付记录ID
+        example: 1
+        type: integer
+      order_no:
+        description: 订单号
+        example: ORD202604090001
+        type: string
+      pay_time:
+        description: 支付时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      payment_method:
+        allOf:
+        - $ref: '#/definitions/admin.PaymentMethodSimple'
+        description: 支付方式信息
+      payment_method_id:
+        description: 支付方式ID
+        example: 1
+        type: integer
+      payment_no:
+        description: 支付单号
+        example: PAY202604090001
+        type: string
+      remark:
+        description: 备注
+        example: 备注信息
+        type: string
+      status:
+        description: 支付状态
+        example: paid
+        type: string
+      third_party_no:
+        description: 第三方单号
+        example: WX202604090001
+        type: string
+      updated_at:
+        description: 更新时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      user_id:
+        description: 用户ID
+        example: 1001
+        type: integer
+    type: object
+  admin.UnbindGoogleAuthRequest:
+    properties:
+      code:
+        description: 当前管理员的谷歌验证码（6位动态码）
+        example: "123456"
+        type: string
+    type: object
   apidoc.Error:
     properties:
       code:
@@ -287,6 +1243,16 @@ definitions:
         type: string
       trace_id:
         example: 01knrfw7dsrxc3dxbbzk6bkv3j
+        type: string
+    type: object
+  apidoc.Success:
+    properties:
+      code:
+        example: 200
+        type: integer
+      message:
+        type: string
+      trace_id:
         type: string
     type: object
 host: localhost:3000
@@ -423,8 +1389,7 @@ paths:
         "200":
           description: 删除成功
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Success'
         "403":
           description: 无权限、受保护管理员不能删除或不能删除自己
           schema:
@@ -519,14 +1484,25 @@ paths:
         "200":
           description: 重置成功
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Success'
+        "400":
+          description: 参数错误或目标管理员未绑定2FA
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/apidoc.Error'
         "403":
           description: 无权限或不可操作受保护管理员
           schema:
             $ref: '#/definitions/apidoc.Error'
         "404":
           description: 管理员不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
           schema:
             $ref: '#/definitions/apidoc.Error'
       security:
@@ -545,22 +1521,37 @@ paths:
         name: id
         required: true
         type: integer
-      - description: 当前管理员的谷歌验证码
+      - description: 验证码确认参数
         in: body
-        name: code
+        name: request
         required: true
         schema:
-          type: string
+          $ref: '#/definitions/admin.UnbindGoogleAuthRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 解绑成功
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Success'
+        "400":
+          description: 参数错误、验证码错误或目标管理员未绑定2FA
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "403":
+          description: 当前管理员未绑定2FA，禁止执行
+          schema:
+            $ref: '#/definitions/apidoc.Error'
         "404":
           description: 管理员不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
           schema:
             $ref: '#/definitions/apidoc.Error'
       security:
@@ -585,8 +1576,7 @@ paths:
         "200":
           description: 导出成功，返回文件下载信息
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.AdminExportResponse'
         "500":
           description: 服务器错误
           schema:
@@ -596,6 +1586,619 @@ paths:
       summary: 导出管理员列表
       tags:
       - 管理员管理
+  /api/admin/articles:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取文章列表，支持按标题、状态、管理员等筛选
+      parameters:
+      - default: 1
+        description: 页码（从1开始）
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量（建议 10-100）
+        in: query
+        name: page_size
+        type: integer
+      - description: 标题（模糊匹配）
+        in: query
+        name: title
+        type: string
+      - description: 内容（精确匹配）
+        in: query
+        name: content
+        type: string
+      - description: 状态（0-未发布，1-发布）
+        enum:
+        - "0"
+        - "1"
+        in: query
+        name: status
+        type: string
+      - description: 管理员ID（精确匹配）
+        in: query
+        name: admin_id
+        type: string
+      - description: 创建时间（精确匹配）
+        in: query
+        name: created_at
+        type: string
+      - description: 更新时间（精确匹配）
+        in: query
+        name: updated_at
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.ArticleListResponse'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取文章列表
+      tags:
+      - 内容管理
+    post:
+      consumes:
+      - application/json
+      description: |-
+        创建新的文章记录
+        字段说明：title-文章标题（必填）；content-文章内容；status-发布状态（1发布/0未发布）；admin_id-发布管理员ID（必填）
+      parameters:
+      - description: 创建参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.ArticleCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.ArticleDetailResponse'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 创建文章
+      tags:
+      - 内容管理
+  /api/admin/articles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除文章
+      parameters:
+      - description: 文章ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.ArticleDeleteResponse'
+        "404":
+          description: 记录不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 删除文章
+      tags:
+      - 内容管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取文章详情
+      parameters:
+      - description: 文章ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.ArticleDetailResponse'
+        "404":
+          description: 记录不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取文章详情
+      tags:
+      - 内容管理
+    put:
+      consumes:
+      - application/json
+      description: |-
+        根据ID更新文章信息
+        字段说明：title-文章标题；content-文章内容；status-发布状态（1发布/0未发布）；admin_id-发布管理员ID（均为可选）
+      parameters:
+      - description: 文章ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.ArticleUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.ArticleDetailResponse'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 更新文章
+      tags:
+      - 内容管理
+  /api/admin/blacklists:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取黑名单，支持按IP、状态、时间区间筛选
+      parameters:
+      - default: 1
+        description: 页码（从1开始）
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量（建议 10-100）
+        in: query
+        name: page_size
+        type: integer
+      - description: IP地址或IP段（模糊匹配）
+        in: query
+        name: ip
+        type: string
+      - description: 状态（1-启用，0-禁用）
+        enum:
+        - "0"
+        - "1"
+        in: query
+        name: status
+        type: string
+      - description: 开始时间（格式：YYYY-MM-DD HH:mm:ss）
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间（格式：YYYY-MM-DD HH:mm:ss）
+        in: query
+        name: end_time
+        type: string
+      - description: 排序（格式：字段:asc/desc，例如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.BlacklistListResponse'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取黑名单列表
+      tags:
+      - 风控管理
+    post:
+      consumes:
+      - application/json
+      description: |-
+        创建黑名单记录，支持单个IP、CIDR、IP范围等格式
+        字段说明：ip-IP地址/IP段（必填）；remark-备注；status-状态（1启用/0禁用）
+      parameters:
+      - description: 创建参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.BlacklistCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.BlacklistDetailResponse'
+        "400":
+          description: 参数错误或IP格式错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 创建黑名单
+      tags:
+      - 风控管理
+  /api/admin/blacklists/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除黑名单记录
+      parameters:
+      - description: 黑名单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apidoc.Success'
+        "404":
+          description: 黑名单不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 删除黑名单
+      tags:
+      - 风控管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取黑名单详情
+      parameters:
+      - description: 黑名单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.BlacklistDetailResponse'
+        "404":
+          description: 黑名单不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取黑名单详情
+      tags:
+      - 风控管理
+    put:
+      consumes:
+      - application/json
+      description: |-
+        根据ID更新黑名单信息
+        字段说明：ip-IP地址/IP段；remark-备注；status-状态（1启用/0禁用）（均可选）
+      parameters:
+      - description: 黑名单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.BlacklistUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.BlacklistDetailResponse'
+        "400":
+          description: 参数错误或IP格式错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "404":
+          description: 黑名单不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 更新黑名单
+      tags:
+      - 风控管理
+  /api/admin/dictionaries:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取字典列表，支持按类型、状态、时间范围筛选
+      parameters:
+      - default: 1
+        description: 页码（从1开始）
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量（建议 10-100）
+        in: query
+        name: page_size
+        type: integer
+      - description: 字典类型（精确匹配）
+        in: query
+        name: type
+        type: string
+      - description: 状态（1-启用，0-禁用）
+        enum:
+        - "0"
+        - "1"
+        in: query
+        name: status
+        type: string
+      - description: 开始时间（格式：YYYY-MM-DD HH:mm:ss）
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间（格式：YYYY-MM-DD HH:mm:ss）
+        in: query
+        name: end_time
+        type: string
+      - description: 排序（格式：字段:asc/desc，例如：created_at:desc）
+        in: query
+        name: order_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.DictionaryListResponse'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取字典列表
+      tags:
+      - 字典管理
+    post:
+      consumes:
+      - application/json
+      description: |-
+        创建新的字典项
+        字段说明：type-字典类型（必填）；label-字典标签（必填）；value-字典值（必填）；translation_key-多语言Key；description-描述；status-状态（1启用/0禁用）；sort-排序值；remark-备注
+      parameters:
+      - description: 创建参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DictionaryCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.DictionaryDetailResponse'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 创建字典
+      tags:
+      - 字典管理
+  /api/admin/dictionaries/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除字典项
+      parameters:
+      - description: 字典ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apidoc.Success'
+        "404":
+          description: 字典不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 删除字典
+      tags:
+      - 字典管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取字典详情
+      parameters:
+      - description: 字典ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.DictionaryDetailResponse'
+        "404":
+          description: 字典不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取字典详情
+      tags:
+      - 字典管理
+    put:
+      consumes:
+      - application/json
+      description: |-
+        根据ID更新字典信息
+        字段说明：type-字典类型；label-字典标签；value-字典值；translation_key-多语言Key；description-描述；status-状态（1启用/0禁用）；sort-排序值；remark-备注（均可选）
+      parameters:
+      - description: 字典ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DictionaryUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.DictionaryDetailResponse'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "404":
+          description: 字典不存在
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 更新字典
+      tags:
+      - 字典管理
+  /api/admin/dictionaries/type/{type}:
+    get:
+      consumes:
+      - application/json
+      description: 根据字典类型获取启用状态的字典列表
+      parameters:
+      - description: 字典类型
+        in: path
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.DictionaryByTypeResponse'
+        "400":
+          description: 字典类型不能为空
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 按类型获取字典项
+      tags:
+      - 字典管理
+  /api/admin/dictionaries/types:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统中已配置的全部字典类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.DictionaryTypesResponse'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/apidoc.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取全部字典类型
+      tags:
+      - 字典管理
   /api/admin/orders:
     get:
       consumes:
@@ -650,18 +2253,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.OrderListResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 获取订单列表
@@ -672,49 +2272,27 @@ paths:
       - application/json
       description: 创建新订单，自动防止重复提交
       parameters:
-      - description: 用户ID
+      - description: 创建参数
         in: body
-        name: user_id
+        name: request
         required: true
         schema:
-          type: integer
-      - description: 订单金额
-        in: body
-        name: amount
-        required: true
-        schema:
-          type: number
-      - description: 商品列表
-        in: body
-        name: products
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/admin.OrderProductItem'
-          type: array
-      - description: 请求ID（用于防重复提交，不传则自动生成）
-        in: body
-        name: request_id
-        schema:
-          type: string
+          $ref: '#/definitions/admin.OrderCreateRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.OrderDetailResponseWrapper'
         "400":
           description: 参数错误或重复提交
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 创建订单
@@ -737,18 +2315,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Success'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 删除订单
@@ -773,23 +2348,19 @@ paths:
         "200":
           description: 返回数据包含 order（订单主表）和 details（订单详情表数组）
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.OrderDetailResponseWrapper'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "404":
           description: 订单不存在
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 获取订单详情
@@ -805,30 +2376,27 @@ paths:
         name: id
         required: true
         type: string
-      - description: 订单状态
+      - description: 更新参数
         in: body
-        name: status
+        name: request
         required: true
         schema:
-          type: string
+          $ref: '#/definitions/admin.OrderUpdateRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Success'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 更新订单
@@ -876,30 +2444,25 @@ paths:
       - application/json
       responses:
         "200":
-          description: 导出成功，返回文件下载信息
+          description: 导出任务已提交，返回导出记录ID
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.ExportTaskResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "401":
           description: 未登录
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "403":
           description: 无权限
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 导出订单列表
@@ -922,28 +2485,23 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.ExportStatusResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "401":
           description: 未登录
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "403":
           description: 无权限
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 查询导出状态
@@ -966,28 +2524,23 @@ paths:
         "200":
           description: 导入成功，返回导入结果
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.ImportResultResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "401":
           description: 未登录
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "403":
           description: 无权限
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 导入订单
@@ -1035,18 +2588,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.PaymentMethodListResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 获取支付方式列表
@@ -1102,18 +2652,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.PaymentMethodDetailResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 创建支付方式
@@ -1136,18 +2683,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Success'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 删除支付方式
@@ -1169,23 +2713,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.PaymentMethodDetailResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "404":
           description: 支付方式不存在
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 获取支付方式详情
@@ -1233,18 +2773,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.PaymentMethodDetailResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 更新支付方式
@@ -1304,18 +2841,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.PaymentListResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 获取支付记录列表
@@ -1338,23 +2872,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.PaymentDetailResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "404":
           description: 支付记录不存在
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 获取支付记录详情
@@ -1400,23 +2930,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.ExportTaskResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "429":
           description: 导出任务正在进行中
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 导出支付记录
@@ -1439,23 +2965,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/admin.ExportStatusResponse'
         "400":
           description: 参数错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "404":
           description: 导出记录不存在
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
         "500":
           description: 服务器错误
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/apidoc.Error'
       security:
       - BearerAuth: []
       summary: 查询支付记录导出状态
