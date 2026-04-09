@@ -73,6 +73,11 @@ func (s *AdminServiceImpl) GetByID(id uint, withDepartment bool, withRoles bool)
 	if err := query.First(&admin); err != nil {
 		return nil, apperrors.ErrAdminNotFound.WithError(err)
 	}
+	// 某些 ORM 配置下 First 在未命中时可能不返回错误，此时主键仍为零值。
+	// 显式兜底，避免上层继续执行删除并触发 "WHERE conditions required"。
+	if admin.ID == 0 {
+		return nil, apperrors.ErrAdminNotFound
+	}
 
 	return &admin, nil
 }

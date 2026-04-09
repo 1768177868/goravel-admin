@@ -9,15 +9,15 @@ import (
 )
 
 type AdminCreate struct {
-	Username     string `form:"username" json:"username"`
-	Password     string `form:"password" json:"password"`
-	Nickname     string `form:"nickname" json:"nickname"`
-	Email        string `form:"email" json:"email"`
-	Phone        string `form:"phone" json:"phone"`
-	DepartmentID uint   `form:"department_id" json:"department_id"`
-	PositionID   uint   `form:"position_id" json:"position_id"`
-	Status       uint8  `form:"status" json:"status"`
-	RoleIDs      []uint `form:"role_ids" json:"role_ids"`
+	Username     string `form:"username" json:"username" binding:"required" example:"admin"`  // 登录用户名（必填，3-50字符，系统内唯一）
+	Password     string `form:"password" json:"password" binding:"required" example:"123456"` // 登录密码（必填，6-50字符）
+	Nickname     string `form:"nickname" json:"nickname" example:"管理员"`                  // 显示昵称（可选，最大50字符）
+	Email        string `form:"email" json:"email" example:"admin@example.com"`          // 联系邮箱（可选，需符合邮箱格式）
+	Phone        string `form:"phone" json:"phone" example:"13800138000"`                // 联系手机号（可选，最大20字符）
+	DepartmentID uint   `form:"department_id" json:"department_id" example:"1"`          // 所属部门ID（可选，关联部门表主键）
+	PositionID   uint   `form:"position_id" json:"position_id" example:"1"`              // 所属岗位ID（可选，关联岗位表主键）
+	Status       uint8  `form:"status" json:"status" enums:"0,1" example:"1"`             // 账号状态（可选，1-启用，0-禁用）
+	RoleIDs      []uint `form:"role_ids" json:"role_ids" swaggertype:"array,integer" example:"1,2"` // 角色ID数组（可选，关联角色表主键）
 }
 
 func (r *AdminCreate) Authorize(ctx http.Context) error {

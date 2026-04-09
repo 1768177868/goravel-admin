@@ -46,27 +46,77 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "页码",
+                        "description": "页码（从1开始）",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "每页数量",
+                        "description": "每页数量（建议 10-100）",
                         "name": "page_size",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "用户名（模糊搜索）",
+                        "description": "登录用户名（模糊匹配）",
                         "name": "username",
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "0",
+                            "1"
+                        ],
                         "type": "string",
-                        "description": "状态：1-启用，0-禁用",
+                        "description": "账号状态（1-启用，0-禁用）",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "角色ID（精确匹配）",
+                        "name": "role_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "部门ID（精确匹配）",
+                        "name": "department_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "岗位ID（精确匹配）",
+                        "name": "position_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "0",
+                            "1"
+                        ],
+                        "type": "string",
+                        "description": "是否已绑定2FA（1-已绑定，0-未绑定）",
+                        "name": "is_2fa_bound",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "创建时间开始（格式：YYYY-MM-DD HH:mm:ss）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "创建时间结束（格式：YYYY-MM-DD HH:mm:ss）",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "排序字段（格式：字段:asc/desc，例如：created_at:desc）",
+                        "name": "order_by",
                         "in": "query"
                     }
                 ],
@@ -74,14 +124,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/admin.PaginatedAdminResponse"
+                            "$ref": "#/definitions/admin.AdminListResponse"
                         }
                     },
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -92,7 +141,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "创建新的管理员账号",
+                "description": "创建新的管理员账号（status：1-启用，0-禁用）\n字段说明：username-登录用户名（必填）；password-登录密码（必填）；nickname-显示昵称；email-联系邮箱；phone-联系手机号；department_id-所属部门ID；position_id-所属岗位ID；role_ids-角色ID数组；status-账号状态（1启用/0禁用）",
                 "consumes": [
                     "application/json"
                 ],
@@ -105,7 +154,7 @@ const docTemplate = `{
                 "summary": "创建管理员",
                 "parameters": [
                     {
-                        "description": "创建参数",
+                        "description": "创建参数（必填：username、password；可选：nickname、email、phone、department_id、position_id、status、role_ids）",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -124,8 +173,7 @@ const docTemplate = `{
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -151,11 +199,11 @@ const docTemplate = `{
                 "summary": "导出管理员列表",
                 "parameters": [
                     {
-                        "description": "导出筛选条件",
+                        "description": "筛选（字段同列表 GET query）",
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/admin.AdminExportRequest"
+                            "$ref": "#/definitions/admin.AdminListFilter"
                         }
                     }
                 ],
@@ -170,8 +218,7 @@ const docTemplate = `{
                     "500": {
                         "description": "服务器错误",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -214,8 +261,7 @@ const docTemplate = `{
                     "404": {
                         "description": "管理员不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -226,7 +272,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "更新管理员的基本信息",
+                "description": "更新管理员的基本信息（status：1-启用，0-禁用）\n字段说明：nickname-显示昵称；email-联系邮箱；phone-联系手机号；password-登录密码；department_id-所属部门ID；position_id-所属岗位ID；role_ids-角色ID数组；status-账号状态（1启用/0禁用）",
                 "consumes": [
                     "application/json"
                 ],
@@ -246,7 +292,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "更新参数",
+                        "description": "更新参数（可按需提交任意字段）",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -265,15 +311,13 @@ const docTemplate = `{
                     "403": {
                         "description": "无权限或受保护管理员不能禁用",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "管理员不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -315,15 +359,13 @@ const docTemplate = `{
                     "403": {
                         "description": "无权限、受保护管理员不能删除或不能删除自己",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "管理员不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -367,15 +409,13 @@ const docTemplate = `{
                     "403": {
                         "description": "无权限或不可操作受保护管理员",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     },
                     "404": {
                         "description": "管理员不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -428,8 +468,7 @@ const docTemplate = `{
                     "404": {
                         "description": "管理员不存在",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/apidoc.Error"
                         }
                     }
                 }
@@ -1770,36 +1809,73 @@ const docTemplate = `{
     "definitions": {
         "admin.AdminCreate": {
             "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
             "properties": {
                 "department_id": {
-                    "type": "integer"
+                    "description": "所属部门ID（可选，关联部门表主键）",
+                    "type": "integer",
+                    "example": 1
                 },
                 "email": {
-                    "type": "string"
+                    "description": "联系邮箱（可选，需符合邮箱格式）",
+                    "type": "string",
+                    "example": "admin@example.com"
                 },
                 "nickname": {
-                    "type": "string"
+                    "description": "显示昵称（可选，最大50字符）",
+                    "type": "string",
+                    "example": "管理员"
                 },
                 "password": {
-                    "type": "string"
+                    "description": "登录密码（必填，6-50字符）",
+                    "type": "string",
+                    "example": "123456"
                 },
                 "phone": {
-                    "type": "string"
+                    "description": "联系手机号（可选，最大20字符）",
+                    "type": "string",
+                    "example": "13800138000"
                 },
                 "position_id": {
-                    "type": "integer"
+                    "description": "所属岗位ID（可选，关联岗位表主键）",
+                    "type": "integer",
+                    "example": 1
                 },
                 "role_ids": {
+                    "description": "角色ID数组（可选，关联角色表主键）",
                     "type": "array",
                     "items": {
                         "type": "integer"
-                    }
+                    },
+                    "example": [
+                        1,
+                        2
+                    ]
                 },
                 "status": {
-                    "type": "integer"
+                    "description": "账号状态（可选，1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
                 },
                 "username": {
-                    "type": "string"
+                    "description": "登录用户名（必填，3-50字符，系统内唯一）",
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "admin.AdminDetailData": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "$ref": "#/definitions/admin.AdminResponse"
                 }
             }
         },
@@ -1807,77 +1883,113 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "description": "状态码",
                     "type": "integer",
                     "example": 200
                 },
                 "data": {
-                    "description": "管理员数据",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/admin.AdminResponse"
-                        }
-                    ]
+                    "$ref": "#/definitions/admin.AdminDetailData"
                 },
                 "message": {
-                    "description": "消息",
-                    "type": "string",
-                    "example": "获取成功"
+                    "type": "string"
                 },
                 "trace_id": {
-                    "description": "追踪ID",
-                    "type": "string",
-                    "example": "abc123"
+                    "type": "string"
                 }
             }
         },
-        "admin.AdminExportRequest": {
+        "admin.AdminListData": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.AdminResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.AdminListFilter": {
             "type": "object",
             "properties": {
                 "department_id": {
-                    "description": "部门ID",
+                    "description": "部门ID（精确匹配）",
                     "type": "string",
                     "example": "1"
                 },
                 "end_time": {
-                    "description": "结束时间",
+                    "description": "创建时间结束（格式：YYYY-MM-DD HH:mm:ss）",
                     "type": "string",
                     "example": "2024-12-31 23:59:59"
                 },
                 "is_2fa_bound": {
-                    "description": "是否绑定2FA：1-已绑定，0-未绑定",
+                    "description": "是否已绑定2FA（1-已绑定，0-未绑定）",
                     "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ],
                     "example": "1"
                 },
                 "order_by": {
-                    "description": "排序",
+                    "description": "排序字段（格式：字段:asc/desc）",
                     "type": "string",
                     "example": "created_at:desc"
                 },
                 "position_id": {
-                    "description": "岗位ID",
+                    "description": "岗位ID（精确匹配）",
                     "type": "string",
-                    "example": "1"
+                    "example": "3"
                 },
                 "role_id": {
-                    "description": "角色ID",
+                    "description": "角色ID（精确匹配）",
                     "type": "string",
-                    "example": "1"
+                    "example": "2"
                 },
                 "start_time": {
-                    "description": "开始时间",
+                    "description": "创建时间开始（格式：YYYY-MM-DD HH:mm:ss）",
                     "type": "string",
                     "example": "2024-01-01 00:00:00"
                 },
                 "status": {
-                    "description": "状态：1-启用，0-禁用",
+                    "description": "账号状态（1-启用，0-禁用）",
                     "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ],
                     "example": "1"
                 },
                 "username": {
-                    "description": "用户名（模糊搜索）",
+                    "description": "登录用户名（模糊匹配）",
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "admin.AdminListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/admin.AdminListData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
                 }
             }
         },
@@ -1885,7 +1997,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "avatar": {
-                    "description": "头像",
+                    "description": "头像URL",
                     "type": "string",
                     "example": ""
                 },
@@ -1895,17 +2007,17 @@ const docTemplate = `{
                     "example": "2024-01-01 00:00:00"
                 },
                 "department": {
-                    "description": "部门信息",
+                    "description": "部门信息对象",
                     "type": "object",
                     "additionalProperties": {}
                 },
                 "department_id": {
-                    "description": "部门ID",
+                    "description": "所属部门ID",
                     "type": "integer",
                     "example": 1
                 },
                 "email": {
-                    "description": "邮箱",
+                    "description": "联系邮箱",
                     "type": "string",
                     "example": "admin@example.com"
                 },
@@ -1915,32 +2027,37 @@ const docTemplate = `{
                     "example": 1
                 },
                 "is_2fa_bound": {
-                    "description": "是否绑定2FA",
+                    "description": "是否已绑定2FA",
                     "type": "boolean",
                     "example": true
                 },
+                "is_super_admin": {
+                    "description": "是否为超级管理员",
+                    "type": "boolean",
+                    "example": false
+                },
                 "nickname": {
-                    "description": "昵称",
+                    "description": "显示昵称",
                     "type": "string",
                     "example": "管理员"
                 },
                 "phone": {
-                    "description": "手机号",
+                    "description": "联系手机号",
                     "type": "string",
                     "example": "13800138000"
                 },
                 "position": {
-                    "description": "岗位信息",
+                    "description": "岗位信息对象",
                     "type": "object",
                     "additionalProperties": {}
                 },
                 "position_id": {
-                    "description": "岗位ID",
+                    "description": "所属岗位ID",
                     "type": "integer",
                     "example": 1
                 },
                 "roles": {
-                    "description": "角色列表",
+                    "description": "角色信息数组",
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -1948,8 +2065,12 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "description": "状态：1-启用，0-禁用",
+                    "description": "账号状态（1启用，0禁用）",
                     "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
                     "example": 1
                 },
                 "updated_at": {
@@ -1958,7 +2079,7 @@ const docTemplate = `{
                     "example": "2024-01-01 00:00:00"
                 },
                 "username": {
-                    "description": "用户名",
+                    "description": "登录用户名",
                     "type": "string",
                     "example": "admin"
                 }
@@ -1968,31 +2089,54 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "department_id": {
-                    "type": "integer"
+                    "description": "所属部门ID（可选，关联部门表主键）",
+                    "type": "integer",
+                    "example": 1
                 },
                 "email": {
-                    "type": "string"
+                    "description": "联系邮箱（可选，需符合邮箱格式）",
+                    "type": "string",
+                    "example": "admin@example.com"
                 },
                 "nickname": {
-                    "type": "string"
+                    "description": "显示昵称（可选，最大50字符）",
+                    "type": "string",
+                    "example": "管理员"
                 },
                 "password": {
-                    "type": "string"
+                    "description": "登录密码（可选，6-50字符，不传则不修改）",
+                    "type": "string",
+                    "example": "123456"
                 },
                 "phone": {
-                    "type": "string"
+                    "description": "联系手机号（可选，最大20字符）",
+                    "type": "string",
+                    "example": "13800138000"
                 },
                 "position_id": {
-                    "type": "integer"
+                    "description": "所属岗位ID（可选，关联岗位表主键）",
+                    "type": "integer",
+                    "example": 1
                 },
                 "role_ids": {
+                    "description": "角色ID数组（可选，关联角色表主键）",
                     "type": "array",
                     "items": {
                         "type": "integer"
-                    }
+                    },
+                    "example": [
+                        1,
+                        2
+                    ]
                 },
                 "status": {
-                    "type": "integer"
+                    "description": "账号状态（可选，1-启用，0-禁用）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
                 }
             }
         },
@@ -2027,45 +2171,24 @@ const docTemplate = `{
                 }
             }
         },
-        "admin.PaginatedAdminResponse": {
+        "apidoc.Error": {
             "type": "object",
             "properties": {
                 "code": {
-                    "description": "状态码",
                     "type": "integer",
-                    "example": 200
+                    "example": 404
                 },
-                "data": {
-                    "description": "数据列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/admin.AdminResponse"
-                    }
+                "error_code": {
+                    "type": "string",
+                    "example": "record_not_found"
                 },
                 "message": {
-                    "description": "消息",
                     "type": "string",
-                    "example": "获取成功"
-                },
-                "page": {
-                    "description": "当前页码",
-                    "type": "integer",
-                    "example": 1
-                },
-                "page_size": {
-                    "description": "每页数量",
-                    "type": "integer",
-                    "example": 10
-                },
-                "total": {
-                    "description": "总数",
-                    "type": "integer",
-                    "example": 100
+                    "example": "记录不存在"
                 },
                 "trace_id": {
-                    "description": "追踪ID",
                     "type": "string",
-                    "example": "abc123"
+                    "example": "01knrfw7dsrxc3dxbbzk6bkv3j"
                 }
             }
         }

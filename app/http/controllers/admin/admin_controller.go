@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/apidoc"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
@@ -23,55 +24,47 @@ type AdminController struct {
 	googleAuthenticatorService services.GoogleAuthenticatorService
 }
 
-// AdminExportRequest 导出管理员请求参数
-type AdminExportRequest struct {
-	Username     string `json:"username" form:"username" example:"admin"`                   // 用户名（模糊搜索）
-	Status       string `json:"status" form:"status" example:"1"`                           // 状态：1-启用，0-禁用
-	RoleID       string `json:"role_id" form:"role_id" example:"1"`                         // 角色ID
-	DepartmentID string `json:"department_id" form:"department_id" example:"1"`             // 部门ID
-	PositionID   string `json:"position_id" form:"position_id" example:"1"`                 // 岗位ID
-	Is2FABound   string `json:"is_2fa_bound" form:"is_2fa_bound" example:"1"`               // 是否绑定2FA：1-已绑定，0-未绑定
-	StartTime    string `json:"start_time" form:"start_time" example:"2024-01-01 00:00:00"` // 开始时间
-	EndTime      string `json:"end_time" form:"end_time" example:"2024-12-31 23:59:59"`     // 结束时间
-	OrderBy      string `json:"order_by" form:"order_by" example:"created_at:desc"`         // 排序
-}
-
-// AdminResponse 管理员响应数据
+// AdminResponse 管理员 JSON 字段（列表项含 2FA/超管；详情/写接口可能不含 is_2fa_bound）
 type AdminResponse struct {
-	ID           uint             `json:"id" example:"1"`                           // 管理员ID
-	Username     string           `json:"username" example:"admin"`                 // 用户名
-	Nickname     string           `json:"nickname" example:"管理员"`                   // 昵称
-	Avatar       string           `json:"avatar" example:""`                        // 头像
-	Email        string           `json:"email" example:"admin@example.com"`        // 邮箱
-	Phone        string           `json:"phone" example:"13800138000"`              // 手机号
-	Status       uint8            `json:"status" example:"1"`                       // 状态：1-启用，0-禁用
-	Is2FABound   bool             `json:"is_2fa_bound" example:"true"`              // 是否绑定2FA
-	DepartmentID uint             `json:"department_id" example:"1"`                // 部门ID
-	Department   map[string]any   `json:"department"`                               // 部门信息
-	PositionID   uint             `json:"position_id" example:"1"`                // 岗位ID
-	Position     map[string]any   `json:"position"`                               // 岗位信息
-	Roles        []map[string]any `json:"roles"`                                    // 角色列表
-	CreatedAt    string           `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
-	UpdatedAt    string           `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+	ID           uint             `json:"id" example:"1"`                                // 管理员ID
+	Username     string           `json:"username" example:"admin"`                      // 登录用户名
+	Nickname     string           `json:"nickname" example:"管理员"`                        // 显示昵称
+	Avatar       string           `json:"avatar" example:""`                             // 头像URL
+	Email        string           `json:"email" example:"admin@example.com"`             // 联系邮箱
+	Phone        string           `json:"phone" example:"13800138000"`                   // 联系手机号
+	Status       uint8            `json:"status" enums:"0,1" example:"1"`                // 账号状态（1启用，0禁用）
+	Is2FABound   bool             `json:"is_2fa_bound,omitempty" example:"true"`         // 是否已绑定2FA
+	IsSuperAdmin bool             `json:"is_super_admin,omitempty" example:"false"`       // 是否为超级管理员
+	DepartmentID uint             `json:"department_id" example:"1"`                      // 所属部门ID
+	Department   map[string]any   `json:"department"`                                     // 部门信息对象
+	PositionID   uint             `json:"position_id" example:"1"`                        // 所属岗位ID
+	Position     map[string]any   `json:"position"`                                       // 岗位信息对象
+	Roles        []map[string]any `json:"roles"`                                          // 角色信息数组
+	CreatedAt    string           `json:"created_at" example:"2024-01-01 00:00:00"`      // 创建时间
+	UpdatedAt    string           `json:"updated_at" example:"2024-01-01 00:00:00"`      // 更新时间
 }
 
-// PaginatedAdminResponse 分页管理员响应
-type PaginatedAdminResponse struct {
-	Code     int             `json:"code" example:"200"`                  // 状态码
-	Message  string          `json:"message" example:"获取成功"`              // 消息
-	Data     []AdminResponse `json:"data"`                                // 数据列表
-	Total    int64           `json:"total" example:"100"`                 // 总数
-	Page     int             `json:"page" example:"1"`                    // 当前页码
-	PageSize int             `json:"page_size" example:"10"`              // 每页数量
-	TraceID  string          `json:"trace_id,omitempty" example:"abc123"` // 追踪ID
+// AdminListData 列表成功时 data 内层
+type AdminListData struct {
+	List []AdminResponse `json:"list"`
+	apidoc.Pagination
 }
 
-// AdminDetailResponse 管理员详情响应
+// AdminListResponse 管理员分页列表（命名约定：XxxListResponse = apidoc.Success + XxxListData）
+type AdminListResponse struct {
+	apidoc.Success
+	Data AdminListData `json:"data"`
+}
+
+// AdminDetailData 详情/创建/更新时 data 内层
+type AdminDetailData struct {
+	Admin AdminResponse `json:"admin"`
+}
+
+// AdminDetailResponse 单条管理员（apidoc.Success + 业务 Data）
 type AdminDetailResponse struct {
-	Code    int           `json:"code" example:"200"`                  // 状态码
-	Message string        `json:"message" example:"获取成功"`              // 消息
-	Data    AdminResponse `json:"data"`                                // 管理员数据
-	TraceID string        `json:"trace_id,omitempty" example:"abc123"` // 追踪ID
+	apidoc.Success
+	Data AdminDetailData `json:"data"`
 }
 
 func NewAdminController() *AdminController {
@@ -134,12 +127,19 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        page          query     int     false  "页码" default(1)
-// @Param        page_size     query     int     false  "每页数量" default(10)
-// @Param        username      query     string  false  "用户名（模糊搜索）"
-// @Param        status        query     string  false  "状态：1-启用，0-禁用"
-// @Success      200           {object}  PaginatedAdminResponse
-// @Failure      500           {object}  map[string]any "服务器错误"
+// @Param        page          query     int     false  "页码（从1开始）" default(1)
+// @Param        page_size     query     int     false  "每页数量（建议 10-100）" default(10)
+// @Param        username      query     string  false  "登录用户名（模糊匹配）"
+// @Param        status        query     string  false  "账号状态（1-启用，0-禁用）" Enums(0,1)
+// @Param        role_id       query     string  false  "角色ID（精确匹配）"
+// @Param        department_id query     string  false  "部门ID（精确匹配）"
+// @Param        position_id   query     string  false  "岗位ID（精确匹配）"
+// @Param        is_2fa_bound  query     string  false  "是否已绑定2FA（1-已绑定，0-未绑定）" Enums(0,1)
+// @Param        start_time    query     string  false  "创建时间开始（格式：YYYY-MM-DD HH:mm:ss）"
+// @Param        end_time      query     string  false  "创建时间结束（格式：YYYY-MM-DD HH:mm:ss）"
+// @Param        order_by      query     string  false  "排序字段（格式：字段:asc/desc，例如：created_at:desc）"
+// @Success      200           {object}  AdminListResponse
+// @Failure      500           {object}  apidoc.Error "服务器错误"
 // @Router       /api/admin/admins [get]
 // @Security     BearerAuth
 func (r *AdminController) Index(ctx http.Context) http.Response {
@@ -196,7 +196,7 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
 // @Success      200  {object} AdminDetailResponse
-// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      404  {object} apidoc.Error "管理员不存在"
 // @Router       /api/admin/admins/{id} [get]
 // @Security     BearerAuth
 func (r *AdminController) Show(ctx http.Context) http.Response {
@@ -232,13 +232,14 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 
 // Store 创建管理员
 // @Summary      创建管理员
-// @Description  创建新的管理员账号
+// @Description  创建新的管理员账号（status：1-启用，0-禁用）
+// @Description  字段说明：username-登录用户名（必填）；password-登录密码（必填）；nickname-显示昵称；email-联系邮箱；phone-联系手机号；department_id-所属部门ID；position_id-所属岗位ID；role_ids-角色ID数组；status-账号状态（1启用/0禁用）
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        request       body     adminrequests.AdminCreate  true  "创建参数"
+// @Param        request       body     adminrequests.AdminCreate  true  "创建参数（必填：username、password；可选：nickname、email、phone、department_id、position_id、status、role_ids）"
 // @Success      200           {object} AdminDetailResponse
-// @Failure      500           {object} map[string]any "服务器错误"
+// @Failure      500           {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/admins [post]
 // @Security     BearerAuth
 func (r *AdminController) Store(ctx http.Context) http.Response {
@@ -311,15 +312,16 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 
 // Update 更新管理员
 // @Summary      更新管理员信息
-// @Description  更新管理员的基本信息
+// @Description  更新管理员的基本信息（status：1-启用，0-禁用）
+// @Description  字段说明：nickname-显示昵称；email-联系邮箱；phone-联系手机号；password-登录密码；department_id-所属部门ID；position_id-所属岗位ID；role_ids-角色ID数组；status-账号状态（1启用/0禁用）
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
 // @Param        id            path     int                       true  "管理员ID"
-// @Param        request       body     adminrequests.AdminUpdate true  "更新参数"
+// @Param        request       body     adminrequests.AdminUpdate true  "更新参数（可按需提交任意字段）"
 // @Success      200           {object} AdminDetailResponse
-// @Failure      403           {object} map[string]any "无权限或受保护管理员不能禁用"
-// @Failure      404           {object} map[string]any "管理员不存在"
+// @Failure      403           {object} apidoc.Error "无权限或受保护管理员不能禁用"
+// @Failure      404           {object} apidoc.Error "管理员不存在"
 // @Router       /api/admin/admins/{id} [put]
 // @Security     BearerAuth
 func (r *AdminController) Update(ctx http.Context) http.Response {
@@ -458,8 +460,8 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 // @Produce      json
 // @Param        id   path     int  true  "管理员ID"
 // @Success      200  {object} map[string]any "删除成功"
-// @Failure      403  {object} map[string]any "无权限、受保护管理员不能删除或不能删除自己"
-// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      403  {object} apidoc.Error "无权限、受保护管理员不能删除或不能删除自己"
+// @Failure      404  {object} apidoc.Error "管理员不存在"
 // @Router       /api/admin/admins/{id} [delete]
 // @Security     BearerAuth
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
@@ -506,7 +508,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 // @Param        id   path     int  true  "要解绑的管理员ID"
 // @Param        code body     string true "当前管理员的谷歌验证码"
 // @Success      200  {object} map[string]any "解绑成功"
-// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      404  {object} apidoc.Error "管理员不存在"
 // @Router       /api/admin/admins/{id}/unbind-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
@@ -603,8 +605,8 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 // @Produce      json
 // @Param        id   path     int true "要重置的管理员ID"
 // @Success      200  {object} map[string]any "重置成功"
-// @Failure      403  {object} map[string]any "无权限或不可操作受保护管理员"
-// @Failure      404  {object} map[string]any "管理员不存在"
+// @Failure      403  {object} apidoc.Error "无权限或不可操作受保护管理员"
+// @Failure      404  {object} apidoc.Error "管理员不存在"
 // @Router       /api/admin/admins/{id}/reset-google-auth [post]
 // @Security     BearerAuth
 func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Response {
@@ -653,9 +655,9 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 // @Tags         管理员管理
 // @Accept       json
 // @Produce      json
-// @Param        request body     AdminExportRequest false "导出筛选条件"
+// @Param        request body     adminrequests.AdminListFilter false "筛选（字段同列表 GET query）"
 // @Success      200     {object} map[string]any "导出成功，返回文件下载信息"
-// @Failure      500     {object} map[string]any "服务器错误"
+// @Failure      500     {object} apidoc.Error "服务器错误"
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth
 func (r *AdminController) Export(ctx http.Context) http.Response {

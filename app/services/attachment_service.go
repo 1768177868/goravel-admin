@@ -528,7 +528,7 @@ func (s *AttachmentServiceImpl) GetFileType(mimeType string) string {
 // GetByID 根据ID获取附件
 func (s *AttachmentServiceImpl) GetByID(id uint) (*models.Attachment, error) {
 	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&attachment); err != nil {
 		return nil, apperrors.ErrAttachmentNotFound.WithError(err)
 	}
 	return &attachment, nil
@@ -595,7 +595,7 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 // UpdateDisplayName 更新显示名称
 func (s *AttachmentServiceImpl) UpdateDisplayName(id uint, displayName string) error {
 	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).First(&attachment); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&attachment); err != nil {
 		return fmt.Errorf("附件不存在: %v", err)
 	}
 

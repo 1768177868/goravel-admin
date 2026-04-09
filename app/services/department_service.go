@@ -46,7 +46,7 @@ func NewDepartmentServiceImpl(treeService TreeService) *DepartmentServiceImpl {
 // GetByID 根据ID获取部门
 func (s *DepartmentServiceImpl) GetByID(id uint) (*models.Department, error) {
 	var department models.Department
-	if err := facades.Orm().Query().Where("id", id).First(&department); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&department); err != nil {
 		return nil, apperrors.ErrDepartmentNotFound.WithError(err)
 	}
 	return &department, nil

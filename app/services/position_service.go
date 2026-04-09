@@ -34,7 +34,7 @@ func NewPositionService() PositionService {
 
 func (s *PositionServiceImpl) GetByID(id uint) (*models.Position, error) {
 	var position models.Position
-	if err := facades.Orm().Query().Where("id", id).First(&position); err != nil {
+	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&position); err != nil {
 		return nil, apperrors.ErrPositionNotFound.WithError(err)
 	}
 	return &position, nil
