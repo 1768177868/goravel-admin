@@ -5,6 +5,7 @@ import (
 	"github.com/goravel/framework/facades"
 	mysqlfacades "github.com/goravel/mysql/facades"
 	postgresfacades "github.com/goravel/postgres/facades"
+	dmfacades "goravel/driver/dm/facades"
 )
 
 func init() {
@@ -61,6 +62,21 @@ func init() {
 				"singular":  false,
 				"via": func() (driver.Driver, error) {
 					return mysqlfacades.Mysql("mysql")
+				},
+			},
+			"dm": map[string]any{
+				"host":      config.Env("DB_HOST", "127.0.0.1"),
+				"port":      config.Env("DB_PORT", 5236),
+				"database":  config.Env("DB_DATABASE", "SYSDBA"),
+				"username":  config.Env("DB_USERNAME", "SYSDBA"),
+				"password":  config.Env("DB_PASSWORD", "SYSDBA"),
+				"schema":    config.Env("DB_SCHEMA", "SYSDBA"),
+				"dsn":       config.Env("DB_DSN", ""),
+				"gorm_mode": config.Env("DB_GORM_MODE", 0), // dm兼容=0; mysql兼容=1
+				"prefix":    "",
+				"singular":  false,
+				"via": func() (driver.Driver, error) {
+					return dmfacades.Dm("dm")
 				},
 			},
 		},

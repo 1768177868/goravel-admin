@@ -31,6 +31,7 @@ import (
 	"github.com/goravel/redis"
 	"github.com/goravel/s3"
 	"goravel/app/providers"
+	"goravel/driver/dm"
 )
 
 func Providers() []foundation.ServiceProvider {
@@ -65,6 +66,7 @@ func Providers() []foundation.ServiceProvider {
 		&providers.EventServiceProvider{},
 		&providers.ValidationServiceProvider{},
 		&providers.DatabaseServiceProvider{},
+		&dm.ServiceProvider{},
 		&postgres.ServiceProvider{},
 		&mysql.ServiceProvider{},
 		&s3.ServiceProvider{},
