@@ -178,27 +178,14 @@ func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, er
 func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 	var tableNames []string
 
-	// 获取当前数据库名
-	dbName := facades.Config().GetString("database.connections.mysql.database")
-	if dbName == "" {
-		dbName = facades.Config().GetString("database.connections.postgresql.database")
-	}
-
 	// 构建表名匹配模式：orders_YYYYMM 或 order_details_YYYYMM
 	pattern := fmt.Sprintf("%s_%%", baseTableName)
 
-	// 查询所有匹配的表名
-	query := `
-		SELECT table_name 
-		FROM information_schema.tables 
-		WHERE table_schema = ? 
-		AND table_name LIKE ?
-		ORDER BY table_name
-	`
+	query, args := buildShardingTableQuery(pattern)
 
 	// 执行查询，使用 Scan 获取结果
 	var rows []map[string]any
-	if err := facades.Orm().Query().Raw(query, dbName, pattern).Scan(&rows); err != nil {
+	if err := facades.Orm().Query().Raw(query, args...).Scan(&rows); err != nil {
 		errorlog.Record(context.Background(), "sharding", "查询分表失败", map[string]any{
 			"pattern": pattern,
 			"error":   err.Error(),
@@ -220,13 +207,18 @@ func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 		if tableName, ok = row["table_name"].(string); !ok {
 			// 尝试 TABLE_NAME (大写)
 			if tableName, ok = row["TABLE_NAME"].(string); !ok {
-				// 尝试遍历所有键
-				for key, value := range row {
-					if (key == "table_name" || key == "TABLE_NAME" || key == "Table_Name") && value != nil {
-						if str, ok := value.(string); ok {
-							tableName = str
-							ok = true
-							break
+				// 尝试 name / NAME（DM 查询中统一别名为 name）
+				if tableName, ok = row["name"].(string); !ok {
+					if tableName, ok = row["NAME"].(string); !ok {
+						// 尝试遍历所有键
+						for key, value := range row {
+							if (key == "table_name" || key == "TABLE_NAME" || key == "Table_Name" || key == "name" || key == "NAME") && value != nil {
+								if str, ok := value.(string); ok {
+									tableName = str
+									ok = true
+									break
+								}
+							}
 						}
 					}
 				}
@@ -249,25 +241,11 @@ func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 // pattern: 表名匹配模式，如 "orders_%" 或 "order_details_%"
 func GetAllExistingShardingTablesByPattern(pattern string) ([]string, error) {
 	var tableNames []string
-
-	// 获取当前数据库名
-	dbName := facades.Config().GetString("database.connections.mysql.database")
-	if dbName == "" {
-		dbName = facades.Config().GetString("database.connections.postgresql.database")
-	}
-
-	// 查询所有匹配的表名
-	query := `
-		SELECT table_name 
-		FROM information_schema.tables 
-		WHERE table_schema = ? 
-		AND table_name LIKE ?
-		ORDER BY table_name
-	`
+	query, args := buildShardingTableQuery(pattern)
 
 	// 执行查询，使用 Scan 获取结果
 	var rows []map[string]any
-	if err := facades.Orm().Query().Raw(query, dbName, pattern).Scan(&rows); err != nil {
+	if err := facades.Orm().Query().Raw(query, args...).Scan(&rows); err != nil {
 		errorlog.Record(context.Background(), "sharding", "查询分表失败", map[string]any{
 			"pattern": pattern,
 			"error":   err.Error(),
@@ -278,8 +256,45 @@ func GetAllExistingShardingTablesByPattern(pattern string) ([]string, error) {
 	for _, row := range rows {
 		if tableName, ok := row["table_name"].(string); ok {
 			tableNames = append(tableNames, tableName)
+			continue
+		}
+		if tableName, ok := row["TABLE_NAME"].(string); ok {
+			tableNames = append(tableNames, tableName)
+			continue
+		}
+		if tableName, ok := row["name"].(string); ok {
+			tableNames = append(tableNames, tableName)
+			continue
+		}
+		if tableName, ok := row["NAME"].(string); ok {
+			tableNames = append(tableNames, tableName)
 		}
 	}
 
 	return tableNames, nil
+}
+
+func buildShardingTableQuery(pattern string) (string, []any) {
+	if facades.Config().GetString("database.default") == "dm" {
+		return `
+		SELECT TABLE_NAME AS name
+		FROM ALL_TABLES
+		WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+		AND TABLE_NAME LIKE UPPER(?)
+		ORDER BY TABLE_NAME
+	`, []any{pattern}
+	}
+
+	dbName := facades.Config().GetString("database.connections.mysql.database")
+	if dbName == "" {
+		dbName = facades.Config().GetString("database.connections.postgresql.database")
+	}
+
+	return `
+		SELECT table_name
+		FROM information_schema.tables
+		WHERE table_schema = ?
+		AND table_name LIKE ?
+		ORDER BY table_name
+	`, []any{dbName, pattern}
 }

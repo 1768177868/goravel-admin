@@ -73,7 +73,6 @@ func init() {
 				"password": config.Env("DB_PASSWORD", "SYSDBA"),
 				// 仅当需要把模式名写进自动 DSN（dm://...@host:port/模式）时设置；留空则不拼路径，用登录用户默认模式。勿填服务/实例名。
 				"schema":    config.Env("DB_SCHEMA", ""),
-				"gorm_mode": config.Env("DB_GORM_MODE", 0), // dm兼容=0; mysql兼容=1
 				"prefix":    "",
 				"singular":  false,
 				"via": func() (driver.Driver, error) {

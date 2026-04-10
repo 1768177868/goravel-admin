@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -38,6 +39,18 @@ type SystemLogFilters struct {
 type SystemLogServiceImpl struct {
 }
 
+var (
+	systemLogsTraceIDColumnOnce sync.Once
+	systemLogsHasTraceIDColumn  bool
+)
+
+func hasSystemLogsTraceIDColumn() bool {
+	systemLogsTraceIDColumnOnce.Do(func() {
+		systemLogsHasTraceIDColumn = facades.Schema().HasTable("system_logs") && facades.Schema().HasColumn("system_logs", "trace_id")
+	})
+	return systemLogsHasTraceIDColumn
+}
+
 func NewSystemLogService() SystemLogService {
 	return &SystemLogServiceImpl{}
 }
@@ -63,7 +76,9 @@ func (s *SystemLogServiceImpl) GetList(filters SystemLogFilters, page, pageSize 
 		query = query.Where("module LIKE ?", "%"+filters.Module+"%")
 	}
 	if filters.TraceID != "" {
-		query = query.Where("trace_id LIKE ?", "%"+filters.TraceID+"%")
+		if hasSystemLogsTraceIDColumn() {
+			query = query.Where("trace_id LIKE ?", "%"+filters.TraceID+"%")
+		}
 	}
 	if filters.Message != "" {
 		query = query.Where("message LIKE ?", "%"+filters.Message+"%")
@@ -113,17 +128,19 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 		traceID = traceid.EnsureHTTPContext(ctx, "")
 	}
 
-	log := models.SystemLog{
-		Level:     level,
-		Module:    module,
-		TraceID:   traceID,
-		Message:   message,
-		Context:   contextJSON,
-		IP:        ctx.Request().Ip(),
-		UserAgent: ctx.Request().Header("User-Agent", ""),
+	payload := map[string]any{
+		"level":      level,
+		"module":     module,
+		"message":    message,
+		"context":    contextJSON,
+		"ip":         ctx.Request().Ip(),
+		"user_agent": ctx.Request().Header("User-Agent", ""),
+	}
+	if hasSystemLogsTraceIDColumn() {
+		payload["trace_id"] = traceID
 	}
 
-	if err := orm.Query().Create(&log); err != nil {
+	if err := orm.Query().Table("system_logs").Create(payload); err != nil {
 		return err
 	}
 	return nil
@@ -152,15 +169,17 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 		ctx = newCtx
 	}
 
-	log := models.SystemLog{
-		Level:   level,
-		Module:  module,
-		TraceID: traceID,
-		Message: message,
-		Context: contextJSON,
+	payload := map[string]any{
+		"level":   level,
+		"module":  module,
+		"message": message,
+		"context": contextJSON,
+	}
+	if hasSystemLogsTraceIDColumn() {
+		payload["trace_id"] = traceID
 	}
 
-	if err := orm.Query().Create(&log); err != nil {
+	if err := orm.Query().Table("system_logs").Create(payload); err != nil {
 		return err
 	}
 	return nil

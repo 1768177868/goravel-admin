@@ -18,6 +18,10 @@ func (r *M20251227063517AddFulltextIndexToOperationLogsRequest) Up() error {
 	if !facades.Schema().HasTable("operation_logs") {
 		return nil
 	}
+	if facades.Config().GetString("database.default") == "dm" {
+		// DM currently does not support this MySQL/PostgreSQL fulltext strategy.
+		return nil
+	}
 
 	// 检查索引是否已存在
 	indexes, err := facades.Schema().GetIndexes("operation_logs")
@@ -81,6 +85,9 @@ func (r *M20251227063517AddFulltextIndexToOperationLogsRequest) Up() error {
 // Down Reverse the migrations.
 func (r *M20251227063517AddFulltextIndexToOperationLogsRequest) Down() error {
 	if !facades.Schema().HasTable("operation_logs") {
+		return nil
+	}
+	if facades.Config().GetString("database.default") == "dm" {
 		return nil
 	}
 

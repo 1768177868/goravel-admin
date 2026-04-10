@@ -14,6 +14,24 @@ func (s *DictionarySeeder) Signature() string {
 }
 
 func (s *DictionarySeeder) Run() error {
+	hasTranslationKey := facades.Schema().HasColumn("dictionaries", "translation_key")
+
+	dictionaryToMap := func(dict models.Dictionary) map[string]any {
+		data := map[string]any{
+			"type":        dict.Type,
+			"label":       dict.Label,
+			"value":       dict.Value,
+			"description": dict.Description,
+			"status":      dict.Status,
+			"sort":        dict.Sort,
+			"remark":      dict.Remark,
+		}
+		if hasTranslationKey {
+			data["translation_key"] = dict.TranslationKey
+		}
+		return data
+	}
+
 	// 创建字典数据
 	dictionaries := []models.Dictionary{
 		{Type: "status", Label: "启用", Value: "1", Description: "启用状态", Status: 1, Sort: 1, TranslationKey: "enabled"},
@@ -32,7 +50,7 @@ func (s *DictionarySeeder) Run() error {
 		}
 
 		if count == 0 {
-			if err := facades.Orm().Query().Create(&dict); err != nil {
+			if err := facades.Orm().Query().Table("dictionaries").Create(dictionaryToMap(dict)); err != nil {
 				return err
 			}
 			continue
@@ -43,12 +61,16 @@ func (s *DictionarySeeder) Run() error {
 			return err
 		}
 
-		existing.Value = dict.Value
-		existing.Description = dict.Description
-		existing.Status = dict.Status
-		existing.Sort = dict.Sort
-		existing.TranslationKey = dict.TranslationKey
-		if err := facades.Orm().Query().Save(&existing); err != nil {
+		updateData := map[string]any{
+			"value":       dict.Value,
+			"description": dict.Description,
+			"status":      dict.Status,
+			"sort":        dict.Sort,
+		}
+		if hasTranslationKey {
+			updateData["translation_key"] = dict.TranslationKey
+		}
+		if _, err := facades.Orm().Query().Model(&models.Dictionary{}).Where("id", existing.ID).Update(updateData); err != nil {
 			return err
 		}
 	}

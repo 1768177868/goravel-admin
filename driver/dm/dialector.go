@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"unicode"
 
 	_ "dm" // 引入dm数据库驱动包
 	"gorm.io/gorm"
@@ -142,7 +143,7 @@ func (d Dialector) QuoteTo(writer clause.Writer, str string) {
 				writer.WriteString(`""`)
 			}
 
-			writer.WriteByte(v)
+			writer.WriteByte(byte(unicode.ToUpper(rune(v))))
 		}
 		shiftDelimiter++
 	}

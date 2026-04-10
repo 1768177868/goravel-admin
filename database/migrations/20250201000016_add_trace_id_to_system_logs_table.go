@@ -17,22 +17,8 @@ func (r *M20250201000016AddTraceIdToSystemLogsTable) Up() error {
 		return nil
 	}
 
-	// 检查列是否已存在
-	columns, err := facades.Schema().GetColumns("system_logs")
-	if err != nil {
-		return err
-	}
-
-	hasTraceID := false
-	for _, column := range columns {
-		if column.Name == "trace_id" {
-			hasTraceID = true
-			break
-		}
-	}
-
 	// 如果列不存在，则添加
-	if !hasTraceID {
+	if !facades.Schema().HasColumn("system_logs", "trace_id") {
 		return facades.Schema().Table("system_logs", func(table schema.Blueprint) {
 			table.String("trace_id").Nullable().Comment("链路ID")
 		})

@@ -17,18 +17,6 @@ func (r *M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens) Up() error {
 		return nil
 	}
 
-	// 检查列是否已存在
-	columns, err := facades.Schema().GetColumns("personal_access_tokens")
-	if err != nil {
-		return err
-	}
-
-	// 检查哪些列需要添加
-	columnMap := make(map[string]bool)
-	for _, column := range columns {
-		columnMap[column.Name] = true
-	}
-
 	// 构建需要添加的列（用于在线管理员监控）
 	columnsToAdd := []struct {
 		name    string
@@ -43,7 +31,7 @@ func (r *M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens) Up() error {
 
 	hasNewColumns := false
 	for _, col := range columnsToAdd {
-		if !columnMap[col.name] {
+		if !facades.Schema().HasColumn("personal_access_tokens", col.name) {
 			hasNewColumns = true
 			break
 		}
@@ -53,7 +41,7 @@ func (r *M20250101000017AddOnlineAdminFieldsToPersonalAccessTokens) Up() error {
 	if hasNewColumns {
 		return facades.Schema().Table("personal_access_tokens", func(table schema.Blueprint) {
 			for _, col := range columnsToAdd {
-				if !columnMap[col.name] {
+				if !facades.Schema().HasColumn("personal_access_tokens", col.name) {
 					table.String(col.name, col.length).Nullable().Comment(col.comment)
 				}
 			}

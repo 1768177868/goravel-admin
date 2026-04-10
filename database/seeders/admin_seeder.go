@@ -14,6 +14,25 @@ func (s *AdminSeeder) Signature() string {
 }
 
 func (s *AdminSeeder) Run() error {
+	hasGoogleSecret := facades.Schema().HasColumn("admins", "google_secret")
+	hasPositionID := facades.Schema().HasColumn("admins", "position_id")
+
+	adminToMap := func(username, password, nickname string) map[string]any {
+		data := map[string]any{
+			"username": username,
+			"password": password,
+			"nickname": nickname,
+			"status":   1,
+		}
+		if hasGoogleSecret {
+			data["google_secret"] = ""
+		}
+		if hasPositionID {
+			data["position_id"] = 0
+		}
+		return data
+	}
+
 	// 创建超级管理员
 	var superAdmin models.Admin
 	exists, _ := facades.Orm().Query().Model(&models.Admin{}).Where("username", "admin").Exists()
@@ -25,9 +44,10 @@ func (s *AdminSeeder) Run() error {
 			Nickname: "超级管理员",
 			Status:   1,
 		}
-		facades.Orm().Query().Create(&superAdmin)
+		_ = facades.Orm().Query().Table("admins").Create(adminToMap(superAdmin.Username, superAdmin.Password, superAdmin.Nickname))
+		_ = facades.Orm().Query().Where("username", "admin").First(&superAdmin)
 	} else {
-		facades.Orm().Query().Where("username", "admin").First(&superAdmin)
+		_ = facades.Orm().Query().Where("username", "admin").First(&superAdmin)
 	}
 
 	// 创建开发者管理员（受保护，不显示在列表中）
@@ -41,9 +61,10 @@ func (s *AdminSeeder) Run() error {
 			Nickname: "开发者管理员",
 			Status:   1,
 		}
-		facades.Orm().Query().Create(&developerAdmin)
+		_ = facades.Orm().Query().Table("admins").Create(adminToMap(developerAdmin.Username, developerAdmin.Password, developerAdmin.Nickname))
+		_ = facades.Orm().Query().Where("username", "developer").First(&developerAdmin)
 	} else {
-		facades.Orm().Query().Where("username", "developer").First(&developerAdmin)
+		_ = facades.Orm().Query().Where("username", "developer").First(&developerAdmin)
 	}
 
 	// 创建部门
@@ -108,41 +129,25 @@ func (s *AdminSeeder) Run() error {
 	}
 
 	// 关联超级管理员和超级角色（增量添加，不覆盖已有角色）
-	var existingRoles []models.Role
-	facades.Orm().Query().Model(&superAdmin).Association("Roles").Find(&existingRoles)
-	hasSuperRole := false
-	for _, r := range existingRoles {
-		if r.Slug == "super-admin" {
-			hasSuperRole = true
-			break
+	assignRole := func(adminID, roleID uint) {
+		count, err := facades.Orm().Query().Table("admin_role").Where("admin_id", adminID).Where("role_id", roleID).Count()
+		if err == nil && count == 0 {
+			_ = facades.Orm().Query().Table("admin_role").Create(map[string]any{"admin_id": adminID, "role_id": roleID})
 		}
 	}
-	if !hasSuperRole {
-		facades.Orm().Query().Model(&superAdmin).Association("Roles").Append([]models.Role{superRole})
-	}
-
-	// 给开发者管理员分配 super-admin 角色（增量添加）
-	existingRoles = []models.Role{}
-	facades.Orm().Query().Model(&developerAdmin).Association("Roles").Find(&existingRoles)
-	hasSuperRole = false
-	for _, r := range existingRoles {
-		if r.Slug == "super-admin" {
-			hasSuperRole = true
-			break
-		}
-	}
-	if !hasSuperRole {
-		facades.Orm().Query().Model(&developerAdmin).Association("Roles").Append([]models.Role{superRole})
-	}
+	assignRole(superAdmin.ID, superRole.ID)
+	assignRole(developerAdmin.ID, superRole.ID)
 
 	// super-admin 角色不需要分配权限和菜单，因为它在权限中间件中会跳过权限检查
 	// 在获取用户信息时，会特殊处理 super-admin 角色，返回所有菜单用于前端显示
 
 	// 关联默认岗位（若已存在岗位数据）
 	var gmPosition models.Position
-	if err := facades.Orm().Query().Where("code", "GM").First(&gmPosition); err == nil && gmPosition.ID > 0 {
+	if hasPositionID && facades.Schema().HasTable("positions") {
+		if err := facades.Orm().Query().Where("code", "GM").First(&gmPosition); err == nil && gmPosition.ID > 0 {
 		_, _ = facades.Orm().Query().Model(&superAdmin).Update("position_id", gmPosition.ID)
 		_, _ = facades.Orm().Query().Model(&developerAdmin).Update("position_id", gmPosition.ID)
+		}
 	}
 
 	return nil

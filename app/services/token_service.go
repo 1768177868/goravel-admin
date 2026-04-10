@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"sync"
 	"time"
 
 	"github.com/goravel/framework/facades"
@@ -33,8 +34,28 @@ type TokenService interface {
 type TokenServiceImpl struct {
 }
 
+var (
+	personalAccessTokensColumnsOnce sync.Once
+	hasPATBrowserColumn             bool
+	hasPATIPColumn                  bool
+	hasPATOSColumn                  bool
+	hasPATSessionIDColumn           bool
+)
+
 func NewTokenServiceImpl() *TokenServiceImpl {
 	return &TokenServiceImpl{}
+}
+
+func loadPersonalAccessTokenColumns() {
+	personalAccessTokensColumnsOnce.Do(func() {
+		if !facades.Schema().HasTable("personal_access_tokens") {
+			return
+		}
+		hasPATBrowserColumn = facades.Schema().HasColumn("personal_access_tokens", "browser")
+		hasPATIPColumn = facades.Schema().HasColumn("personal_access_tokens", "ip")
+		hasPATOSColumn = facades.Schema().HasColumn("personal_access_tokens", "os")
+		hasPATSessionIDColumn = facades.Schema().HasColumn("personal_access_tokens", "session_id")
+	})
 }
 
 // CreateToken 创建token并存入数据库
@@ -54,24 +75,38 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 
 	// 创建token记录，立即设置last_used_at为当前时间
 	now := time.Now()
-	accessToken := &models.PersonalAccessToken{
-		TokenableType: tokenableType,
-		TokenableID:   tokenableID,
-		Name:          name,
-		Token:         tokenHash,
-		ExpiresAt:     expiresAt,
-		LastUsedAt:    &now, // 登录时立即设置最后使用时间
-		Browser:       browser,
-		IP:            ip,
-		OS:            os,
-		SessionID:     sessionID,
+	loadPersonalAccessTokenColumns()
+	payload := map[string]any{
+		"tokenable_type": tokenableType,
+		"tokenable_id":   tokenableID,
+		"name":           name,
+		"token":          tokenHash,
+		"expires_at":     expiresAt,
+		"last_used_at":   &now,
+	}
+	if hasPATBrowserColumn {
+		payload["browser"] = browser
+	}
+	if hasPATIPColumn {
+		payload["ip"] = ip
+	}
+	if hasPATOSColumn {
+		payload["os"] = os
+	}
+	if hasPATSessionIDColumn {
+		payload["session_id"] = sessionID
 	}
 
-	if err := facades.Orm().Query().Create(accessToken); err != nil {
+	if err := facades.Orm().Query().Table("personal_access_tokens").Create(payload); err != nil {
 		return "", nil, err
 	}
 
-	return plainToken, accessToken, nil
+	var accessToken models.PersonalAccessToken
+	if err := facades.Orm().Query().Where("token", tokenHash).First(&accessToken); err != nil {
+		return plainToken, nil, nil
+	}
+
+	return plainToken, &accessToken, nil
 }
 
 // FindToken 根据token值查找token记录

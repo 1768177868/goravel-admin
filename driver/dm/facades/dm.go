@@ -5,7 +5,7 @@ import (
 
 	"github.com/goravel/framework/contracts/database/driver"
 
-	"goravel/driver/dm"
+	dm "goravel/driver/dm"
 )
 
 func Dm(connection string) (driver.Driver, error) {

@@ -28,7 +28,7 @@ func (m Migrator) AutoMigrate(dst ...interface{}) error {
 
 func (m Migrator) CurrentDatabase() (name string) {
 	m.DB.Raw("SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');").Row().Scan(&name)
-	return
+	return strings.ToUpper(name)
 }
 
 func (m Migrator) FullDataTypeOf(field *schema.Field) clause.Expr {
@@ -103,17 +103,14 @@ func (m Migrator) DropTable(values ...interface{}) error {
 }
 
 func (m Migrator) HasTable(value interface{}) bool {
-	tableSql := `SELECT /*+ MAX_OPT_N_TABLES(5) */ COUNT(TABS.NAME) FROM
-(SELECT ID, PID FROM SYS.SYSOBJECTS WHERE TYPE$ = 'SCH' AND NAME = ?) SCHEMAS,
-(SELECT ID, SCHID, NAME FROM SYS.SYSOBJECTS WHERE
-NAME = ? AND TYPE$ = 'SCHOBJ' AND SUBTYPE$ IN ('UTAB', 'STAB', 'VIEW', 'SYNOM')
-AND ((SUBTYPE$ ='UTAB' AND CAST((INFO3 & 0x00FF & 0x003F) AS INT) not in (9, 27, 29, 25, 12, 7, 21, 23, 18, 5))
-OR SUBTYPE$ in ('STAB', 'VIEW', 'SYNOM'))) TABS
-WHERE TABS.SCHID = SCHEMAS.ID AND SF_CHECK_PRIV_OPT(UID(), CURRENT_USERTYPE(), TABS.ID, SCHEMAS.PID, -1, TABS.ID) = 1;`
+	tableSQL := `SELECT COUNT(1)
+FROM ALL_TABLES
+WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+  AND TABLE_NAME = ?`
 
 	var count int64
 	m.RunWithValue(value, func(stmt *gorm.Statement) error {
-		return m.DB.Raw(tableSql, m.CurrentDatabase(), stmt.Table).Row().Scan(&count)
+		return m.DB.Raw(tableSQL, normalizeIdentifier(stmt.Table)).Row().Scan(&count)
 	})
 	return count > 0
 }
@@ -318,17 +315,23 @@ func (m Migrator) MigrateColumn(dst interface{}, field *schema.Field, columnType
 }
 
 func (m Migrator) HasColumn(value interface{}, field string) bool {
-	columnSql := `SELECT /*+ MAX_OPT_N_TABLES(5) */ COUNT(DISTINCT COLS.NAME) FROM
-(SELECT ID FROM SYS.SYSOBJECTS WHERE TYPE$ = 'SCH' AND NAME = ?) SCHS,
-(SELECT ID, SCHID FROM SYS.SYSOBJECTS WHERE TYPE$ = 'SCHOBJ' AND SUBTYPE$ IN ('UTAB', 'STAB', 'VIEW') AND NAME = ?) TABS,
-(SELECT NAME, ID FROM SYS.SYSCOLUMNS WHERE NAME = ?) COLS
-WHERE TABS.ID = COLS.ID AND SCHS.ID = TABS.SCHID;`
+	columnSQL := `SELECT COUNT(1)
+FROM ALL_TAB_COLUMNS
+WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+  AND TABLE_NAME = ?
+  AND COLUMN_NAME = ?`
 
 	var count int64
 	m.RunWithValue(value, func(stmt *gorm.Statement) error {
-		return m.DB.Raw(columnSql, m.CurrentDatabase(), stmt.Table, field).Row().Scan(&count)
+		return m.DB.Raw(columnSQL, normalizeIdentifier(stmt.Table), normalizeIdentifier(field)).Row().Scan(&count)
 	})
 	return count > 0
+}
+
+func normalizeIdentifier(name string) string {
+	name = strings.TrimSpace(name)
+	name = strings.Trim(name, `"'`)
+	return strings.ToUpper(name)
 }
 
 func (m Migrator) RenameColumn(value interface{}, oldName, newName string) error {

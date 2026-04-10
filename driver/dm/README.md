@@ -61,7 +61,6 @@ go get github.com/wangxuancheng-dev/goravel-dm@latest
   "schema":    config.Env("DB_SCHEMA", ""),
   // 可选。留空时由 host/port/username/password 与可选 schema 自动拼成 dm://... DSN
   "dsn":       config.Env("DB_DSN", ""),
-  "gorm_mode": config.Env("DB_GORM_MODE", 0), // dm兼容=0; mysql兼容=1
   "prefix":    "",
   "singular":  false,
   "via": func() (driver.Driver, error) {

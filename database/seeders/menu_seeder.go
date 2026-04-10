@@ -14,6 +14,36 @@ func (s *MenuSeeder) Signature() string {
 }
 
 func (s *MenuSeeder) Run() error {
+	hasLinkType := facades.Schema().HasColumn("menus", "link_type")
+	hasOpenType := facades.Schema().HasColumn("menus", "open_type")
+	hasNoCache := facades.Schema().HasColumn("menus", "no_cache")
+
+	menuToMap := func(menuData models.Menu) map[string]any {
+		data := map[string]any{
+			"parent_id":  menuData.ParentID,
+			"title":      menuData.Title,
+			"slug":       menuData.Slug,
+			"icon":       menuData.Icon,
+			"path":       menuData.Path,
+			"component":  menuData.Component,
+			"permission": menuData.Permission,
+			"type":       menuData.Type,
+			"status":     menuData.Status,
+			"sort":       menuData.Sort,
+			"is_hidden":  menuData.IsHidden,
+		}
+		if hasLinkType {
+			data["link_type"] = menuData.LinkType
+		}
+		if hasOpenType {
+			data["open_type"] = menuData.OpenType
+		}
+		if hasNoCache {
+			data["no_cache"] = menuData.NoCache
+		}
+		return data
+	}
+
 	// 根据Slug查找或创建菜单，如果存在则只更新 Component 字段，不存在则创建
 	createOrUpdateMenu := func(menuData models.Menu) models.Menu {
 		if menuData.Slug == "" {
@@ -58,14 +88,22 @@ func (s *MenuSeeder) Run() error {
 			// }
 
 			if hasUpdates {
-				facades.Orm().Query().Save(&existingMenu)
+				_, _ = facades.Orm().Query().Model(&models.Menu{}).Where("id", existingMenu.ID).Update(map[string]any{
+					"component": existingMenu.Component,
+					"path":      existingMenu.Path,
+				})
 			}
 
 			return existingMenu
 		}
 
 		// 菜单不存在，创建新菜单
-		facades.Orm().Query().Create(&menuData)
+		_ = facades.Orm().Query().Table("menus").Create(menuToMap(menuData))
+		var createdMenu models.Menu
+		_ = facades.Orm().Query().Where("slug", menuData.Slug).First(&createdMenu)
+		if createdMenu.ID > 0 {
+			return createdMenu
+		}
 		return menuData
 	}
 

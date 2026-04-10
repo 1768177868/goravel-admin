@@ -101,6 +101,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s WHERE %s", tableName, whereClause)
 		default:
 			// 其他数据库不支持估算，直接使用实际 count
+			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s WHERE %s", tableName, whereClause)
 			var result struct {
 				Cnt int64
 			}
@@ -117,6 +118,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s", tableName)
 		default:
 			// 其他数据库不支持估算，直接使用实际 count
+			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s", tableName)
 			var result struct {
 				Cnt int64
 			}
@@ -129,19 +131,26 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 
 	// 构建 EXPLAIN SQL
 	var explainSQL string
-	if driver == "mysql" {
+	switch driver {
+	case "mysql":
 		if whereClause != "" {
 			explainSQL = fmt.Sprintf("EXPLAIN SELECT COUNT(*) FROM `%s` WHERE %s", tableName, whereClause)
 		} else {
 			explainSQL = fmt.Sprintf("EXPLAIN SELECT COUNT(*) FROM `%s`", tableName)
 		}
-	} else if driver == "postgresql" {
+	case "dm":
+		if whereClause != "" {
+			explainSQL = fmt.Sprintf("EXPLAIN SELECT COUNT(*) FROM %s WHERE %s", tableName, whereClause)
+		} else {
+			explainSQL = fmt.Sprintf("EXPLAIN SELECT COUNT(*) FROM %s", tableName)
+		}
+	case "postgresql":
 		if whereClause != "" {
 			explainSQL = fmt.Sprintf("EXPLAIN (FORMAT JSON) SELECT COUNT(*) FROM %s WHERE %s", tableName, whereClause)
 		} else {
 			explainSQL = fmt.Sprintf("EXPLAIN (FORMAT JSON) SELECT COUNT(*) FROM %s", tableName)
 		}
-	} else {
+	default:
 		// 其他数据库不支持估算，直接使用实际 count
 		var result struct {
 			Cnt int64
@@ -245,7 +254,68 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 		}
 
 		return 0, fmt.Errorf("cannot extract rows from explain result")
+	case "dm":
+		// DM EXPLAIN 返回表格格式，字段名可能因版本存在差异，做宽松解析
+		var explainResult []map[string]any
+		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
+			return 0, err
+		}
+		if len(explainResult) == 0 {
+			return 0, fmt.Errorf("explain result is empty")
+		}
+
+		candidateKeys := []string{
+			"rows", "ROWS",
+			"cardinality", "CARDINALITY",
+			"card", "CARD",
+			"est_rows", "EST_ROWS",
+			"records", "RECORDS",
+		}
+
+		for _, row := range explainResult {
+			for _, key := range candidateKeys {
+				if raw, ok := row[key]; ok {
+					if parsed, ok := parseExplainRowsValue(raw); ok {
+						return parsed, nil
+					}
+				}
+			}
+			// 兜底：遍历当前行所有字段，找到第一个可解析的数值
+			for _, raw := range row {
+				if parsed, ok := parseExplainRowsValue(raw); ok {
+					return parsed, nil
+				}
+			}
+		}
+
+		return 0, fmt.Errorf("cannot extract rows from dm explain result")
 	}
 
 	return 0, fmt.Errorf("unsupported database driver: %v", driver)
+}
+
+func parseExplainRowsValue(v any) (int64, bool) {
+	switch x := v.(type) {
+	case int64:
+		if x >= 0 {
+			return x, true
+		}
+	case int:
+		if x >= 0 {
+			return int64(x), true
+		}
+	case float64:
+		if x >= 0 {
+			return int64(x), true
+		}
+	case string:
+		trimmed := strings.TrimSpace(x)
+		if trimmed == "" {
+			return 0, false
+		}
+		if parsed, err := strconv.ParseInt(trimmed, 10, 64); err == nil && parsed >= 0 {
+			return parsed, true
+		}
+	}
+	return 0, false
 }

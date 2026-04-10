@@ -18,6 +18,7 @@ func (r *M20250101000012CreateSystemLogsTable) Up() error {
 			table.BigIncrements("id")
 			table.String("level").Nullable()
 			table.String("module").Nullable()
+			// table.String("trace_id", 120).Nullable().Comment("链路ID")
 			table.Text("message").Nullable()
 			table.Text("context").Nullable()
 			table.String("ip").Nullable()
