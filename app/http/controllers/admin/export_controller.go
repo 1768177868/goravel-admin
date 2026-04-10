@@ -73,8 +73,8 @@ func (r *ExportController) buildFilters(ctx http.Context) services.ExportRecordF
 	filename := ctx.Request().Query("filename", "")
 	disk := ctx.Request().Query("disk", "")
 	status := ctx.Request().Query("status", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.ExportRecordFilters{

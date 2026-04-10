@@ -10,7 +10,6 @@ import (
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/services"
-	"goravel/app/utils"
 )
 
 type UserBalanceLogController struct {
@@ -24,24 +23,14 @@ func NewUserBalanceLogController() *UserBalanceLogController {
 }
 
 func (r *UserBalanceLogController) parseTimeRangeFromQuery(ctx http.Context) (time.Time, time.Time, http.Response) {
-	var startTime, endTime time.Time
-	var err error
-
-	startTimeStr := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTimeStr := helpers.GetTimeQueryParam(ctx, "end_time")
-
-	if startTimeStr != "" {
-		startTime, err = utils.ParseDateTime(startTimeStr)
-		if err != nil {
-			return time.Time{}, time.Time{}, response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
-		}
+	startTime, resp := parseOptionalTimeFromQuery(ctx, "start_time", "invalid_start_time")
+	if resp != nil {
+		return time.Time{}, time.Time{}, resp
 	}
 
-	if endTimeStr != "" {
-		endTime, err = utils.ParseDateTime(endTimeStr)
-		if err != nil {
-			return time.Time{}, time.Time{}, response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
-		}
+	endTime, resp := parseOptionalTimeFromQuery(ctx, "end_time", "invalid_end_time")
+	if resp != nil {
+		return time.Time{}, time.Time{}, resp
 	}
 
 	return startTime, endTime, nil

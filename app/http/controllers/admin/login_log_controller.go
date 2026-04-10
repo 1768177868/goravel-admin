@@ -40,8 +40,8 @@ func (r *LoginLogController) buildFilters(ctx http.Context) services.LoginLogFil
 	username := ctx.Request().Query("username", "")
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.LoginLogFilters{

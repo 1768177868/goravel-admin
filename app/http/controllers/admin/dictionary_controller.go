@@ -86,8 +86,8 @@ func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*m
 func (r *DictionaryController) buildFilters(ctx http.Context) services.DictionaryFilters {
 	dictType := ctx.Request().Query("type", "")
 	status := ctx.Request().Query("status", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.DictionaryFilters{

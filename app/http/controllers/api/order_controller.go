@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -14,7 +12,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/http/trans"
 	"goravel/app/services"
-	"goravel/app/utils"
 )
 
 type OrderController struct {
@@ -57,15 +54,8 @@ func (c *OrderController) SearchMyOrders(ctx http.Context) http.Response {
 
 	list, total, err := c.orderService.SearchMyOrdersForUser(searchCtx, userID, req.Q, page, pageSize, timeRange)
 	if err != nil {
-		if timeRangeErr, ok := err.(*utils.TimeRangeError); ok {
-			message := trans.Get(ctx, timeRangeErr.Key)
-			if timeRangeErr.Params != nil {
-				for key, value := range timeRangeErr.Params {
-					placeholder := fmt.Sprintf("{%s}", key)
-					message = strings.ReplaceAll(message, placeholder, fmt.Sprintf("%v", value))
-				}
-			}
-			return response.Error(ctx, http.StatusBadRequest, message)
+		if resp := timeRangeErrorResponse(ctx, err); resp != nil {
+			return resp
 		}
 		if facades.Config().GetBool("elasticsearch.enabled", false) {
 			facades.Log().Errorf("order ES search: %v", err)

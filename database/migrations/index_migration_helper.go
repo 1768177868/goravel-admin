@@ -52,6 +52,10 @@ func createCompatibleTextIndex(tableName, columnName, indexName string) error {
 	isDM := facades.Config().GetString("database.default") == "dm"
 	if isDM {
 		attempts := []string{
+			// DM: 优先尝试带中文词法器的全文索引（不同版本/配置语法存在差异）
+			fmt.Sprintf("CREATE CONTEXT INDEX %s ON %s(%s) LEXER chinese_lexer", indexName, tableName, columnName),
+			fmt.Sprintf("CREATE CONTEXT INDEX %s ON %s(%s) LEXER CHINESE_LEXER", indexName, tableName, columnName),
+			fmt.Sprintf("CREATE CONTEXT INDEX %s ON %s(%s) LEXER 'chinese_lexer'", indexName, tableName, columnName),
 			fmt.Sprintf("CREATE CONTEXT INDEX %s ON %s(%s)", indexName, tableName, columnName),
 			fmt.Sprintf("CREATE FULLTEXT INDEX %s ON %s(%s)", indexName, tableName, columnName),
 			fmt.Sprintf("CREATE INDEX %s ON %s(%s)", indexName, tableName, columnName),

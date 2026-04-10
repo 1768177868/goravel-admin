@@ -38,8 +38,8 @@ func (r *RoleController) buildFilters(ctx http.Context) services.RoleFilters {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
 	// 使用辅助函数自动转换时区
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.RoleFilters{

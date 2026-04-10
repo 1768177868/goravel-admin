@@ -42,8 +42,8 @@ func (r *PermissionController) buildFilters(ctx http.Context) services.Permissio
 	path := ctx.Request().Query("path", "")
 	status := ctx.Request().Query("status", "")
 	menuID := ctx.Request().Query("menu_id", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.PermissionFilters{

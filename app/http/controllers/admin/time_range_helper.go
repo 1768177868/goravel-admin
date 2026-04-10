@@ -27,9 +27,33 @@ func getTimeInputOrQueryUTC(ctx http.Context, paramName string) string {
 	return helpers.ConvertTimeToUTC(ctx, timeStr)
 }
 
+// getTimeQueryUTC 仅从 query 读取时间并转换为 UTC
+func getTimeQueryUTC(ctx http.Context, paramName string) string {
+	timeStr := ctx.Request().Query(paramName, "")
+	if timeStr == "" {
+		return ""
+	}
+	return helpers.ConvertTimeToUTC(ctx, timeStr)
+}
+
 // parseOptionalTimeFromInputOrQuery 读取并解析可选时间参数，失败返回统一错误响应
 func parseOptionalTimeFromInputOrQuery(ctx http.Context, paramName, invalidKey string) (time.Time, http.Response) {
 	timeStr := getTimeInputOrQueryUTC(ctx, paramName)
+	if timeStr == "" {
+		return time.Time{}, nil
+	}
+
+	parsedTime, err := utils.ParseDateTime(timeStr)
+	if err != nil {
+		return time.Time{}, response.Error(ctx, nethttp.StatusBadRequest, invalidKey)
+	}
+
+	return parsedTime, nil
+}
+
+// parseOptionalTimeFromQuery 仅从 query 读取并解析可选时间参数
+func parseOptionalTimeFromQuery(ctx http.Context, paramName, invalidKey string) (time.Time, http.Response) {
+	timeStr := getTimeQueryUTC(ctx, paramName)
 	if timeStr == "" {
 		return time.Time{}, nil
 	}

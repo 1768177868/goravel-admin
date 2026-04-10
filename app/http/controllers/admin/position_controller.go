@@ -33,8 +33,8 @@ func (r *PositionController) buildFilters(ctx http.Context) services.PositionFil
 	return services.PositionFilters{
 		Name:      ctx.Request().Query("name", ""),
 		Status:    ctx.Request().Query("status", ""),
-		StartTime: helpers.GetTimeQueryParam(ctx, "start_time"),
-		EndTime:   helpers.GetTimeQueryParam(ctx, "end_time"),
+		StartTime: getTimeQueryUTC(ctx, "start_time"),
+		EndTime:   getTimeQueryUTC(ctx, "end_time"),
 		OrderBy:   ctx.Request().Query("order_by", ""),
 	}
 }

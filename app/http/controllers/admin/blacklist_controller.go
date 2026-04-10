@@ -64,8 +64,8 @@ func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*mod
 func (r *BlacklistController) buildFilters(ctx http.Context) services.BlacklistFilters {
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.BlacklistFilters{

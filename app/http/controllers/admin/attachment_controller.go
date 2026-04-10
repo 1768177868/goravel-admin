@@ -68,8 +68,8 @@ func (r *AttachmentController) buildFilters(ctx http.Context) services.Attachmen
 	displayName := ctx.Request().Query("display_name", "")
 	fileType := ctx.Request().Query("file_type", "")
 	extension := ctx.Request().Query("extension", "")
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.AttachmentFilters{

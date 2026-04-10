@@ -15,7 +15,6 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils"
 )
 
 type OperationLogController struct {
@@ -48,8 +47,8 @@ func (r *OperationLogController) buildFilters(ctx http.Context) services.Operati
 	ip := ctx.Request().Query("ip", "")
 	status := ctx.Request().Query("status", "")
 	request := ctx.Request().Query("request", "")
-	startTimeStr := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTimeStr := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTimeStr := getTimeQueryUTC(ctx, "start_time")
+	endTimeStr := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.OperationLogFilters{
@@ -70,32 +69,23 @@ func (r *OperationLogController) buildFilters(ctx http.Context) services.Operati
 // Index 获取操作日志列表
 func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	// 验证时间范围（操作日志查询限制为3个月，可通过配置修改）
-	startTimeStr := ctx.Request().Query("start_time", "")
-	endTimeStr := ctx.Request().Query("end_time", "")
+	startTimeStr := getTimeQueryUTC(ctx, "start_time")
+	endTimeStr := getTimeQueryUTC(ctx, "end_time")
 
 	// 如果只填了开始时间，结束时间默认为当前时间
 	if startTimeStr != "" {
-		startTimeUTC := helpers.GetTimeQueryParam(ctx, "start_time")
-		if startTimeUTC == "" {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
-		}
-
-		startTime, err := utils.ParseDateTime(startTimeUTC)
-		if err != nil {
-			return response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
+		startTime, resp := parseOptionalTimeFromQuery(ctx, "start_time", "invalid_start_time")
+		if resp != nil {
+			return resp
 		}
 
 		endTime := time.Now().UTC()
 		if endTimeStr != "" {
-			endTimeUTC := helpers.GetTimeQueryParam(ctx, "end_time")
-			if endTimeUTC == "" {
-				return response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
+			parsedEndTime, endResp := parseOptionalTimeFromQuery(ctx, "end_time", "invalid_end_time")
+			if endResp != nil {
+				return endResp
 			}
-
-			endTime, err = utils.ParseDateTime(endTimeUTC)
-			if err != nil {
-				return response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
-			}
+			endTime = parsedEndTime
 		}
 
 		if resp := validateTimeRangeResponse(ctx, startTime, endTime, 3); resp != nil {

@@ -39,8 +39,8 @@ func (r *DepartmentController) buildFilters(ctx http.Context) services.Departmen
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
 	// 使用辅助函数自动转换时区
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 	orderBy := ctx.Request().Query("order_by", "")
 
 	return services.DepartmentFilters{
@@ -57,8 +57,8 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	name := ctx.Request().Query("name", "")
 	status := ctx.Request().Query("status", "")
 	// 使用辅助函数自动转换时区
-	startTime := helpers.GetTimeQueryParam(ctx, "start_time")
-	endTime := helpers.GetTimeQueryParam(ctx, "end_time")
+	startTime := getTimeQueryUTC(ctx, "start_time")
+	endTime := getTimeQueryUTC(ctx, "end_time")
 
 	// 如果有搜索条件，返回扁平列表；否则返回树形结构
 	if name != "" || status != "" || startTime != "" || endTime != "" {
