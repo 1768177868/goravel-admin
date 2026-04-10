@@ -107,19 +107,9 @@ func convertTimeString(timeStr string, timezone string) any {
 		return timeStr
 	}
 
-	// 无时区时间字符串按“存储时区”解释：
-	// - dm 默认按 Asia/Shanghai（历史兼容）
-	// - 其他数据库默认按 UTC
-	// 也支持用 app.display_source_timezone 显式覆盖。
-	sourceTimezone := facades.Config().GetString("app.display_source_timezone", "")
-	if sourceTimezone == "" {
-		driver := strings.ToLower(facades.Orm().Query().Driver())
-		if driver == "dm" {
-			sourceTimezone = "Asia/Shanghai"
-		} else {
-			sourceTimezone = carbon.UTC
-		}
-	}
+	// 无时区时间字符串统一按 UTC 作为源时区解释。
+	// 若需兼容历史非 UTC 数据，可通过 app.display_source_timezone 覆盖。
+	sourceTimezone := facades.Config().GetString("app.display_source_timezone", carbon.UTC)
 	sourceTimezone = NormalizeTimezone(sourceTimezone)
 	sourceLoc, sourceErr := time.LoadLocation(sourceTimezone)
 	if sourceErr != nil {

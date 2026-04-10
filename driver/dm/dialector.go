@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 
 	_ "dm" // 引入dm数据库驱动包
@@ -24,6 +25,7 @@ type Config struct {
 	Conn              gorm.ConnPool
 	DefaultStringSize uint
 	GormMode          int //dm兼容 = 0; mysql兼容 = 1
+	SessionTimezone   string
 }
 
 type Dialector struct {
@@ -66,6 +68,27 @@ func (d Dialector) Initialize(db *gorm.DB) (err error) {
 		db.ConnPool, err = sql.Open(d.DriverName, d.DSN)
 		if err != nil {
 			return
+		}
+	}
+
+	// 设置 DM 会话时区（可选，best-effort）
+	if tz := strings.TrimSpace(d.SessionTimezone); tz != "" {
+		if sqlDB, dbErr := db.DB(); dbErr == nil {
+			dmTimezone := formatDMSessionTimezone(tz)
+			if dmTimezone != "" {
+				escapedTimezone := strings.ReplaceAll(dmTimezone, "'", "''")
+				// DM 对 TIME_ZONE 的兼容格式因版本有差异，按顺序尝试，不阻断启动。
+				attempts := []string{
+					"ALTER SESSION SET TIME_ZONE='" + escapedTimezone + "'",
+					"ALTER SESSION SET TIME_ZONE = '" + escapedTimezone + "'",
+					"SET TIME ZONE '" + escapedTimezone + "'",
+				}
+				for _, sql := range attempts {
+					if _, execErr := sqlDB.Exec(sql); execErr == nil {
+						break
+					}
+				}
+			}
 		}
 	}
 
@@ -277,4 +300,38 @@ func (d Dialector) SavePoint(tx *gorm.DB, name string) error {
 
 func (d Dialector) RollbackTo(tx *gorm.DB, name string) error {
 	return tx.Exec("ROLLBACK TO SAVEPOINT " + name).Error
+}
+
+// formatDMSessionTimezone 将常见时区配置转成 DM 更容易接受的偏移格式（如 +08:00）
+func formatDMSessionTimezone(tz string) string {
+	tz = strings.TrimSpace(tz)
+	if tz == "" {
+		return ""
+	}
+
+	upper := strings.ToUpper(tz)
+	if upper == "UTC" || upper == "GMT" {
+		return "+00:00"
+	}
+
+	// 已是偏移格式则直接使用
+	if strings.HasPrefix(tz, "+") || strings.HasPrefix(tz, "-") {
+		return tz
+	}
+
+	// IANA 时区（如 Asia/Shanghai）转换为当前偏移
+	if loc, err := time.LoadLocation(tz); err == nil {
+		_, offset := time.Now().In(loc).Zone()
+		sign := "+"
+		if offset < 0 {
+			sign = "-"
+			offset = -offset
+		}
+		hour := offset / 3600
+		min := (offset % 3600) / 60
+		return fmt.Sprintf("%s%02d:%02d", sign, hour, min)
+	}
+
+	// 无法识别时，原样返回（交给上层 SQL 尝试）
+	return tz
 }

@@ -128,7 +128,8 @@ func fullConfigToDialector(fullConfig contracts.FullConfig) gorm.Dialector {
 	// Matches the official DM dialector fields:
 	// GormMode: dm-compatible=0; mysql-compatible=1
 	return New(Config{
-		DSN:      dsn,
-		GormMode: fullConfig.GormMode,
+		DSN:             dsn,
+		GormMode:        fullConfig.GormMode,
+		SessionTimezone: fullConfig.SessionTimezone,
 	})
 }

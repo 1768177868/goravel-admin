@@ -17,6 +17,7 @@ type Config struct {
 	Conn              gorm.ConnPool
 	DefaultStringSize uint
 	GormMode          int
+	SessionTimezone   string
 }
 
 type unavailableDialector struct {

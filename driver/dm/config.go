@@ -88,6 +88,9 @@ func (r *ConfigBuilder) fillDefault(configs []contracts.Config) []contracts.Full
 		if fullConfig.Schema == "" {
 			fullConfig.Schema = r.config.GetString(fmt.Sprintf("database.connections.%s.schema", r.connection))
 		}
+		if fullConfig.SessionTimezone == "" {
+			fullConfig.SessionTimezone = r.config.GetString(fmt.Sprintf("database.connections.%s.session_timezone", r.connection))
+		}
 		fullConfigs = append(fullConfigs, fullConfig)
 	}
 

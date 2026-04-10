@@ -23,6 +23,7 @@ type Config struct {
 	Username string
 	Password string
 	Schema   string
+	SessionTimezone string
 	GormMode int
 }
 
