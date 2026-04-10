@@ -79,40 +79,16 @@ func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilt
 	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
 
-	// 解析时间参数
-	startTimeStr := ctx.Request().Query("start_time", "")
-	if startTimeStr == "" {
-		startTimeStr = ctx.Request().Input("start_time", "")
-	}
-
-	endTimeStr := ctx.Request().Query("end_time", "")
-	if endTimeStr == "" {
-		endTimeStr = ctx.Request().Input("end_time", "")
-	}
-
 	var startTime, endTime time.Time
-	var err error
-
-	if startTimeStr != "" {
-		utcTimeStr := helpers.ConvertTimeToUTC(ctx, startTimeStr)
-		if utcTimeStr == "" {
-			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
-		}
-		startTime, err = utils.ParseDateTime(utcTimeStr)
-		if err != nil {
-			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
-		}
+	if parsedStartTime, resp := parseOptionalTimeFromInputOrQuery(ctx, "start_time", "invalid_start_time"); resp != nil {
+		return services.PaymentFilters{}, resp
+	} else {
+		startTime = parsedStartTime
 	}
-
-	if endTimeStr != "" {
-		utcTimeStr := helpers.ConvertTimeToUTC(ctx, endTimeStr)
-		if utcTimeStr == "" {
-			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
-		}
-		endTime, err = utils.ParseDateTime(utcTimeStr)
-		if err != nil {
-			return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
-		}
+	if parsedEndTime, resp := parseOptionalTimeFromInputOrQuery(ctx, "end_time", "invalid_end_time"); resp != nil {
+		return services.PaymentFilters{}, resp
+	} else {
+		endTime = parsedEndTime
 	}
 
 	// 与列表保持一致：未传 start_time 时默认最近 7 天；未传 end_time 时默认当前时间
@@ -125,9 +101,8 @@ func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilt
 	}
 
 	// 校验时间范围不超过 3 个月（与列表/导出一致）
-	if valid, err := utils.ValidateTimeRange(startTime, endTime); !valid {
-		// ValidateTimeRange 返回的是可翻译错误键，这里直接返回 key 交给前端处理
-		return services.PaymentFilters{}, response.Error(ctx, http.StatusBadRequest, err.Error())
+	if resp := validateTimeRangeResponse(ctx, startTime, endTime); resp != nil {
+		return services.PaymentFilters{}, resp
 	}
 
 	return services.PaymentFilters{

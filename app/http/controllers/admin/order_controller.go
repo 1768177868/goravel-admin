@@ -157,40 +157,18 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 	maxAmount := cast.ToFloat64(ctx.Request().Input("max_amount", ctx.Request().Query("max_amount", "0")))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
 
-	// 解析时间参数（使用 GetTimeQueryParam 处理时区转换）
-	// GetTimeQueryParam 会自动从查询参数读取并转换为 UTC 时间字符串
-	// 如果查询参数不存在，尝试从请求体读取
-	startTimeStr := ctx.Request().Query("start_time", "")
-	if startTimeStr == "" {
-		startTimeStr = ctx.Request().Input("start_time", "")
-	}
+	// 解析时间参数（query 优先，input 兜底），并统一转换为 UTC 时间字符串
+	startTimeStr := getTimeInputOrQueryUTC(ctx, "start_time")
+	endTimeStr := getTimeInputOrQueryUTC(ctx, "end_time")
 
-	endTimeStr := ctx.Request().Query("end_time", "")
-	if endTimeStr == "" {
-		endTimeStr = ctx.Request().Input("end_time", "")
-	}
-
-	startTime, endTime, err := r.parseTimeRange(ctx, startTimeStr, endTimeStr)
+	startTime, endTime, err := r.parseTimeRange(startTimeStr, endTimeStr)
 	if err != nil {
 		return services.OrderFilters{}, response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
 
 	// 验证时间范围（订单查询限制为3个月，可通过配置修改）
-	valid, err := utils.ValidateTimeRange(startTime, endTime, 3)
-	if !valid {
-		// 如果是 TimeRangeError，使用翻译键和参数进行翻译
-		if timeRangeErr, ok := err.(*utils.TimeRangeError); ok {
-			message := trans.Get(ctx, timeRangeErr.Key)
-			// 如果有参数，替换占位符 {key}
-			if timeRangeErr.Params != nil {
-				for key, value := range timeRangeErr.Params {
-					placeholder := fmt.Sprintf("{%s}", key)
-					message = strings.ReplaceAll(message, placeholder, fmt.Sprintf("%v", value))
-				}
-			}
-			return services.OrderFilters{}, response.Error(ctx, http.StatusBadRequest, message)
-		}
-		return services.OrderFilters{}, response.Error(ctx, http.StatusBadRequest, err.Error())
+	if resp := validateTimeRangeResponse(ctx, startTime, endTime, 3); resp != nil {
+		return services.OrderFilters{}, resp
 	}
 
 	return services.OrderFilters{
@@ -206,7 +184,7 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 }
 
 // parseTimeRange 解析时间范围（默认最近1周）
-func (r *OrderController) parseTimeRange(ctx http.Context, startTimeStr, endTimeStr string) (time.Time, time.Time, error) {
+func (r *OrderController) parseTimeRange(startTimeStr, endTimeStr string) (time.Time, time.Time, error) {
 	var startTime, endTime time.Time
 	var err error
 
@@ -214,13 +192,8 @@ func (r *OrderController) parseTimeRange(ctx http.Context, startTimeStr, endTime
 		// 默认查询最近1周（UTC 时间）
 		startTime = time.Now().UTC().AddDate(0, 0, -7)
 	} else {
-		// 使用 ConvertTimeToUTC 处理时区转换（将本地时区转换为 UTC）
-		utcTimeStr := helpers.ConvertTimeToUTC(ctx, startTimeStr)
-		if utcTimeStr == "" {
-			return time.Time{}, time.Time{}, fmt.Errorf("invalid_start_time")
-		}
 		// 解析 UTC 时间字符串
-		startTime, err = utils.ParseDateTime(utcTimeStr)
+		startTime, err = utils.ParseDateTime(startTimeStr)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_start_time")
 		}
@@ -230,13 +203,8 @@ func (r *OrderController) parseTimeRange(ctx http.Context, startTimeStr, endTime
 		// 不传结束时间则不限制，返回零值（WHERE 条件中会跳过）
 		endTime = time.Time{}
 	} else {
-		// 使用 ConvertTimeToUTC 处理时区转换（将本地时区转换为 UTC）
-		utcTimeStr := helpers.ConvertTimeToUTC(ctx, endTimeStr)
-		if utcTimeStr == "" {
-			return time.Time{}, time.Time{}, fmt.Errorf("invalid_end_time")
-		}
 		// 解析 UTC 时间字符串
-		endTime, err = utils.ParseDateTime(utcTimeStr)
+		endTime, err = utils.ParseDateTime(endTimeStr)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_end_time")
 		}

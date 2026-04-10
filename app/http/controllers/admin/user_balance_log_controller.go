@@ -23,6 +23,30 @@ func NewUserBalanceLogController() *UserBalanceLogController {
 	}
 }
 
+func (r *UserBalanceLogController) parseTimeRangeFromQuery(ctx http.Context) (time.Time, time.Time, http.Response) {
+	var startTime, endTime time.Time
+	var err error
+
+	startTimeStr := helpers.GetTimeQueryParam(ctx, "start_time")
+	endTimeStr := helpers.GetTimeQueryParam(ctx, "end_time")
+
+	if startTimeStr != "" {
+		startTime, err = utils.ParseDateTime(startTimeStr)
+		if err != nil {
+			return time.Time{}, time.Time{}, response.Error(ctx, http.StatusBadRequest, "invalid_start_time")
+		}
+	}
+
+	if endTimeStr != "" {
+		endTime, err = utils.ParseDateTime(endTimeStr)
+		if err != nil {
+			return time.Time{}, time.Time{}, response.Error(ctx, http.StatusBadRequest, "invalid_end_time")
+		}
+	}
+
+	return startTime, endTime, nil
+}
+
 // Index 余额变动记录列表
 func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 	userID := cast.ToUint(ctx.Request().Query("user_id", "0"))
@@ -33,16 +57,9 @@ func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
-	// 解析时间
-	startTimeStr := ctx.Request().Query("start_time", "")
-	endTimeStr := ctx.Request().Query("end_time", "")
-
-	var startTime, endTime time.Time
-	if startTimeStr != "" {
-		startTime, _ = utils.ParseDateTime(startTimeStr)
-	}
-	if endTimeStr != "" {
-		endTime, _ = utils.ParseDateTime(endTimeStr)
+	startTime, endTime, resp := r.parseTimeRangeFromQuery(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	var operatorID *uint
@@ -84,15 +101,9 @@ func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "user_id_required")
 	}
 
-	startTimeStr := ctx.Request().Query("start_time", "")
-	endTimeStr := ctx.Request().Query("end_time", "")
-
-	var startTime, endTime time.Time
-	if startTimeStr != "" {
-		startTime, _ = utils.ParseDateTime(startTimeStr)
-	}
-	if endTimeStr != "" {
-		endTime, _ = utils.ParseDateTime(endTimeStr)
+	startTime, endTime, resp := r.parseTimeRangeFromQuery(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	stats, err := r.balanceLogService.GetUserStatistics(userID, startTime, endTime)

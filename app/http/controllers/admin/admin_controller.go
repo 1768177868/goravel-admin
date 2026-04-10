@@ -113,17 +113,9 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 	positionID := ctx.Request().Input("position_id", ctx.Request().Query("position_id", ""))
 	is2FABound := ctx.Request().Input("is_2fa_bound", ctx.Request().Query("is_2fa_bound", ""))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
-	// 时间参数同时支持从请求体和查询参数读取，并转换为 UTC
-	startTimeStr := ctx.Request().Input("start_time", ctx.Request().Query("start_time", ""))
-	endTimeStr := ctx.Request().Input("end_time", ctx.Request().Query("end_time", ""))
-	startTime := ""
-	endTime := ""
-	if startTimeStr != "" {
-		startTime = helpers.ConvertTimeToUTC(ctx, startTimeStr)
-	}
-	if endTimeStr != "" {
-		endTime = helpers.ConvertTimeToUTC(ctx, endTimeStr)
-	}
+	// 时间参数同时支持从查询参数和请求体读取，并统一转换为 UTC
+	startTime := getTimeInputOrQueryUTC(ctx, "start_time")
+	endTime := getTimeInputOrQueryUTC(ctx, "end_time")
 
 	return services.AdminFilters{
 		Username:     username,

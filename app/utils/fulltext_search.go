@@ -21,6 +21,7 @@ func ApplyFulltextSearch(query orm.Query, column, keyword string) orm.Query {
 	driver := strings.ToLower(facades.Orm().Query().Driver())
 
 	isPostgreSQL := driver == "postgresql"
+	isMySQLFamily := driver == "mysql" || driver == "mariadb"
 
 	// 判断是否应该使用全文索引
 	// 对于短词（少于3个字符）或包含特殊字符的搜索，使用 LIKE/ILIKE
@@ -41,10 +42,13 @@ func ApplyFulltextSearch(query orm.Query, column, keyword string) orm.Query {
 			// PostgreSQL: 使用 pg_trgm 相似度搜索（需要已创建 GIN 索引）
 			// 使用 % 操作符进行相似度匹配，阈值默认 0.3
 			return query.Where(column+" % ?", keyword)
-		} else {
+		} else if isMySQLFamily {
 			// MySQL: 使用 ngram 全文索引
 			// 注意：需要确保字段已创建全文索引，索引名格式为 ft_{column}
 			return query.Where("MATCH("+column+") AGAINST(? IN BOOLEAN MODE)", keyword)
+		} else {
+			// DM / other drivers: avoid MySQL-only AGAINST syntax.
+			return query.Where(column+" LIKE ?", "%"+keyword+"%")
 		}
 	} else {
 		// 短词或包含特殊字符：使用 LIKE/ILIKE
@@ -52,7 +56,7 @@ func ApplyFulltextSearch(query orm.Query, column, keyword string) orm.Query {
 			// PostgreSQL: 使用 ILIKE（不区分大小写）
 			return query.Where(column+" ILIKE ?", "%"+keyword+"%")
 		} else {
-			// MySQL: 使用 LIKE
+			// MySQL / DM / others: 使用 LIKE
 			return query.Where(column+" LIKE ?", "%"+keyword+"%")
 		}
 	}
