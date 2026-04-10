@@ -3,6 +3,8 @@ package dm
 import (
 	"fmt"
 	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/goravel/framework/contracts/config"
 	"github.com/goravel/framework/contracts/database"
@@ -92,9 +94,29 @@ func dsn(fullConfig contracts.FullConfig) string {
 		return ""
 	}
 
-	escapedPassword := url.QueryEscape(fullConfig.Password)
-	return fmt.Sprintf("%s:%s@%s:%d",
-		fullConfig.Username, escapedPassword, fullConfig.Host, fullConfig.Port)
+	// Official dm driver requires DSN to start with dm:// (see dm.DmConnector.parseDSN).
+	var b strings.Builder
+	b.WriteString("dm://")
+	if fullConfig.Username != "" {
+		b.WriteString(url.QueryEscape(fullConfig.Username))
+		if fullConfig.Password != "" {
+			b.WriteByte(':')
+			b.WriteString(url.QueryEscape(fullConfig.Password))
+		}
+		b.WriteByte('@')
+	}
+	b.WriteString(fullConfig.Host)
+	if fullConfig.Port > 0 {
+		b.WriteByte(':')
+		b.WriteString(strconv.Itoa(fullConfig.Port))
+	}
+	// Optional path segment: DM *schema* (driver "catalog"). Instance/service names (e.g. DAMENG) are not valid here (-2103).
+	// Only append when DB_SCHEMA is set; otherwise omit the path and use the login user's default schema.
+	if fullConfig.Schema != "" {
+		b.WriteByte('/')
+		b.WriteString(fullConfig.Schema)
+	}
+	return b.String()
 }
 
 func fullConfigToDialector(fullConfig contracts.FullConfig) gorm.Dialector {
