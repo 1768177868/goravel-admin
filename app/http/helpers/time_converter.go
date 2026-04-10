@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 )
 
@@ -65,12 +66,7 @@ func convertTimesInMap(data any, timezone string) any {
 			if isTimeField(key) {
 				// 尝试解析时间字符串并转换
 				if timeStr, ok := value.(string); ok && timeStr != "" {
-					// 如果时区是 UTC，直接返回原时间字符串（不做转换）
-					if timezone == carbon.UTC || timezone == "UTC" {
-						result[key] = timeStr
-						continue
-					}
-					// 否则进行时区转换
+					// 统一走转换逻辑（包括目标时区为 UTC 的场景）
 					converted := convertTimeString(timeStr, timezone)
 					if converted != nil && converted != "" {
 						result[key] = converted
@@ -99,41 +95,51 @@ func convertTimesInMap(data any, timezone string) any {
 }
 
 // convertTimeString 转换时间字符串到指定时区
-// 假设数据库存储的时间是 UTC 时区（如：2025-11-22 06:21:25）
+// 对于无时区信息的字符串（如 2025-11-22 06:21:25），
+// 先按“存储时区”解释，再转换到目标时区。
 func convertTimeString(timeStr string, timezone string) any {
 	if timeStr == "" || timeStr == "null" {
 		return nil
 	}
 
-	// 如果目标时区是 UTC，直接返回原时间字符串
-	if timezone == carbon.UTC || timezone == "UTC" {
-		return timeStr
-	}
-
-	// 加载时区
-	utcLoc, _ := time.LoadLocation("UTC")
 	targetLoc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return timeStr
 	}
 
-	// 解析时间字符串为 UTC（数据库存储格式）
-	t, err := time.ParseInLocation(utils.DateTimeFormat, timeStr, utcLoc)
-	if err != nil {
-		// 如果标准格式失败，尝试其他格式
-		t, err = time.Parse(time.RFC3339, timeStr)
-		if err != nil {
-			return timeStr
+	// 无时区时间字符串按“存储时区”解释：
+	// - dm 默认按 Asia/Shanghai（历史兼容）
+	// - 其他数据库默认按 UTC
+	// 也支持用 app.display_source_timezone 显式覆盖。
+	sourceTimezone := facades.Config().GetString("app.display_source_timezone", "")
+	if sourceTimezone == "" {
+		driver := strings.ToLower(facades.Orm().Query().Driver())
+		if driver == "dm" {
+			sourceTimezone = "Asia/Shanghai"
+		} else {
+			sourceTimezone = carbon.UTC
 		}
-		// RFC3339 格式可能带时区，转换为 UTC
-		t = time.Unix(t.Unix(), 0).In(utcLoc)
+	}
+	sourceTimezone = NormalizeTimezone(sourceTimezone)
+	sourceLoc, sourceErr := time.LoadLocation(sourceTimezone)
+	if sourceErr != nil {
+		sourceLoc, _ = time.LoadLocation("Asia/Shanghai")
 	}
 
-	// 转换到目标时区并格式化
+	if t, parseErr := time.ParseInLocation(utils.DateTimeFormat, timeStr, sourceLoc); parseErr == nil {
+		return t.In(targetLoc).Format(utils.DateTimeFormat)
+	}
+
+	// 带时区信息（RFC3339）按其自身时区转换
+	t, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		return timeStr
+	}
+
 	return t.In(targetLoc).Format(utils.DateTimeFormat)
 }
 
-// convertTimesInValue 使用反射方法处理值（作为备用方案）
+// convertTimesInValue 使用反射方法处理值
 func convertTimesInValue(v reflect.Value, timezone string) any {
 	if !v.IsValid() {
 		return nil

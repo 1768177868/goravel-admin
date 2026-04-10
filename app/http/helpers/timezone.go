@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"goravel/app/utils"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -14,15 +15,17 @@ import (
 // 优先从请求头 X-Timezone 或 Timezone 获取
 // 如果请求头没有或时区无效，使用配置的默认时区
 func GetCurrentTimezone(ctx http.Context) string {
+	// 先从显式参数获取（允许单次请求覆盖全局请求头时区）
+	// 支持查询参数和请求体字段 timezone
+	if requestTimezone := ctx.Request().Input("timezone"); requestTimezone != "" {
+		return NormalizeTimezone(requestTimezone)
+	}
+
 	// 优先从 X-Timezone 请求头获取
 	timezone := ctx.Request().Header("X-Timezone", "")
 	if timezone == "" {
 		// 尝试从 Timezone 请求头获取
 		timezone = ctx.Request().Header("Timezone", "")
-	}
-	if timezone == "" {
-		// 尝试从查询参数获取
-		timezone = ctx.Request().Input("timezone")
 	}
 
 	// 如果从请求中获取到了时区，规范化并返回
@@ -127,6 +130,17 @@ func ConvertTimeByContext(ctx http.Context, timeStr string) string {
 func ConvertTimeToUTC(ctx http.Context, timeStr string) string {
 	if timeStr == "" {
 		return ""
+	}
+
+	// 如果时间字符串本身带时区信息（如 2026-04-10T12:00:00Z / +08:00），
+	// 则按字符串自身的时区解析，避免再次套用请求头时区导致二次偏移。
+	if strings.HasSuffix(strings.ToUpper(timeStr), "Z") || strings.Contains(timeStr, "+") {
+		if t, err := time.Parse(time.RFC3339, timeStr); err == nil {
+			return t.UTC().Format(utils.DateTimeFormat)
+		}
+		if t, err := time.Parse(utils.DateTimeFormatTZ, timeStr); err == nil {
+			return t.UTC().Format(utils.DateTimeFormat)
+		}
 	}
 
 	// 获取当前请求的时区
