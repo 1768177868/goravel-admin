@@ -57,8 +57,28 @@ func (r *M20250301000023AddDisplayNameToAttachments) Up() error {
 }
 
 func (r *M20250301000023AddDisplayNameToAttachments) Down() error {
+	if !facades.Schema().HasTable("attachments") {
+		return nil
+	}
+	if !facades.Schema().HasColumn("attachments", "display_name") {
+		return nil
+	}
+
+	hasIndex := false
+	indexes, err := facades.Schema().GetIndexes("attachments")
+	if err == nil {
+		for _, index := range indexes {
+			if index.Name == "display_name" {
+				hasIndex = true
+				break
+			}
+		}
+	}
+
 	return facades.Schema().Table("attachments", func(table schema.Blueprint) {
-		table.DropIndex("display_name")
+		if hasIndex {
+			table.DropIndex("display_name")
+		}
 		table.DropColumn("display_name")
 	})
 }

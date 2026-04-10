@@ -35,6 +35,9 @@ func (r *M20260404000002AddPositionIdToAdminsTable) Down() error {
 	if !facades.Schema().HasTable("admins") {
 		return nil
 	}
+	if !facades.Schema().HasColumn("admins", "position_id") {
+		return nil
+	}
 	return facades.Schema().Table("admins", func(table schema.Blueprint) {
 		table.DropColumn("position_id")
 	})

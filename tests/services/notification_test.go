@@ -85,7 +85,7 @@ func (s *NotificationServiceTestSuite) TestCreate_BroadcastToAllAdmins() {
 // TestCreate_NoAdminsFound 测试没有管理员时的错误处理
 func (s *NotificationServiceTestSuite) TestCreate_NoAdminsFound() {
 	// 删除所有管理员
-	_, err := facades.Orm().Query().Delete(&models.Admin{})
+	_, err := facades.Orm().Query().Where("id > 0").Delete(&models.Admin{})
 	s.Require().NoError(err)
 
 	// 尝试创建通知给所有管理员
@@ -249,8 +249,15 @@ func (s *NotificationServiceTestSuite) TestMarkRead_NotFound() {
 	err := facades.Orm().Query().First(&admin)
 	s.Require().NoError(err)
 
-	// 尝试标记不存在的通知为已读
-	err = s.service.MarkRead(admin.ID, 99999)
+	// 计算一个当前库内不存在的通知 ID，避免序列增长导致固定 ID 偶发存在
+	var latest models.Notification
+	err = facades.Orm().Query().Order("id desc").First(&latest)
+	if err != nil {
+		// 空表时直接使用一个较大的 ID
+		err = s.service.MarkRead(admin.ID, 99999)
+	} else {
+		err = s.service.MarkRead(admin.ID, latest.ID+1)
+	}
 	s.Error(err)
 
 	// 验证返回的是业务错误

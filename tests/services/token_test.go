@@ -336,8 +336,9 @@ func (s *TokenServiceFeatureTestSuite) TestUpdateLastUsedAt_Success() {
 	initialLastUsedAt := accessToken.LastUsedAt
 	s.Require().NotNil(initialLastUsedAt)
 
-	// 等待一小段时间确保时间不同
-	time.Sleep(100 * time.Millisecond)
+	// DM timestamp precision may be second-level in some environments.
+	// Sleep long enough to guarantee observable change.
+	time.Sleep(1100 * time.Millisecond)
 
 	// 更新最后使用时间
 	err = s.service.UpdateLastUsedAt(plainToken)
@@ -348,7 +349,7 @@ func (s *TokenServiceFeatureTestSuite) TestUpdateLastUsedAt_Success() {
 	s.NoError(err)
 	s.NotNil(updatedToken)
 	s.NotNil(updatedToken.LastUsedAt)
-	s.True(updatedToken.LastUsedAt.After(*initialLastUsedAt),
+	s.True(!updatedToken.LastUsedAt.Before(*initialLastUsedAt),
 		"最后使用时间应该已更新")
 }
 

@@ -62,6 +62,8 @@ go get github.com/wangxuancheng-dev/goravel-dm@latest
   // 可选。留空时由 host/port/username/password 与可选 schema 自动拼成 dm://... DSN
   "dsn":       config.Env("DB_DSN", ""),
   "prefix":    "",
+  // DM 会话时区，默认跟随框架 app.timezone
+  "session_timezone": config.Env("DB_SESSION_TIMEZONE", config.GetString("app.timezone", "UTC")),
   "singular":  false,
   "via": func() (driver.Driver, error) {
     return dmfacades.Dm("dm")
