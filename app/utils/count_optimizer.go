@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
@@ -97,6 +98,8 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 		switch driver {
 		case "mysql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM `%s` WHERE %s", tableName, whereClause)
+		case "dm":
+			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s WHERE %s", tableName, whereClause)
 		case "postgresql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s WHERE %s", tableName, whereClause)
 		default:
@@ -114,6 +117,8 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 		switch driver {
 		case "mysql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM `%s`", tableName)
+		case "dm":
+			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s", tableName)
 		case "postgresql":
 			countSQL = fmt.Sprintf("SELECT COUNT(*) as cnt FROM %s", tableName)
 		default:
@@ -255,40 +260,34 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 
 		return 0, fmt.Errorf("cannot extract rows from explain result")
 	case "dm":
-		// DM EXPLAIN 返回表格格式，字段名可能因版本存在差异，做宽松解析
-		var explainResult []map[string]any
-		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
-			return 0, err
-		}
-		if len(explainResult) == 0 {
-			return 0, fmt.Errorf("explain result is empty")
+		// DM 使用 EXPLAIN SELECT 执行计划（通过 Exec 执行更稳定）
+		resolvedSQL := renderSQLWithArgs(explainSQL, args...)
+		if _, execErr := facades.Orm().Query().Exec(resolvedSQL); execErr != nil {
+			return 0, execErr
 		}
 
-		candidateKeys := []string{
-			"rows", "ROWS",
-			"cardinality", "CARDINALITY",
-			"card", "CARD",
-			"est_rows", "EST_ROWS",
-			"records", "RECORDS",
+		// 执行 EXPLAIN 后，从当前 schema 统计信息读取估算行数（NUM_ROWS）
+		// 注：这不是精确过滤后行数，但作为大数据量阈值判定已足够。
+		var planRows []map[string]any
+		if scanErr := facades.Orm().Query().
+			Raw("SELECT NUM_ROWS AS CARDINALITY FROM ALL_TABLES WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AND TABLE_NAME = UPPER(?)", extractMainTableNameFromSQL(resolvedSQL)).
+			Get(&planRows); scanErr != nil {
+			return 0, scanErr
 		}
-
-		for _, row := range explainResult {
-			for _, key := range candidateKeys {
-				if raw, ok := row[key]; ok {
-					if parsed, ok := parseExplainRowsValue(raw); ok {
-						return parsed, nil
-					}
-				}
-			}
-			// 兜底：遍历当前行所有字段，找到第一个可解析的数值
-			for _, raw := range row {
-				if parsed, ok := parseExplainRowsValue(raw); ok {
-					return parsed, nil
-				}
+		if len(planRows) == 0 {
+			return 0, fmt.Errorf("table stats result is empty")
+		}
+		if raw, ok := planRows[0]["CARDINALITY"]; ok {
+			if parsed, ok := parseExplainRowsValue(raw); ok {
+				return parsed, nil
 			}
 		}
-
-		return 0, fmt.Errorf("cannot extract rows from dm explain result")
+		if raw, ok := planRows[0]["cardinality"]; ok {
+			if parsed, ok := parseExplainRowsValue(raw); ok {
+				return parsed, nil
+			}
+		}
+		return 0, fmt.Errorf("cannot extract cardinality from table stats")
 	}
 
 	return 0, fmt.Errorf("unsupported database driver: %v", driver)
@@ -318,4 +317,57 @@ func parseExplainRowsValue(v any) (int64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func renderSQLWithArgs(sql string, args ...any) string {
+	if len(args) == 0 || !strings.Contains(sql, "?") {
+		return sql
+	}
+	var b strings.Builder
+	argIdx := 0
+	for i := 0; i < len(sql); i++ {
+		if sql[i] == '?' && argIdx < len(args) {
+			b.WriteString(sqlLiteral(args[argIdx]))
+			argIdx++
+			continue
+		}
+		b.WriteByte(sql[i])
+	}
+	return b.String()
+}
+
+func sqlLiteral(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return "NULL"
+	case string:
+		return "'" + strings.ReplaceAll(x, "'", "''") + "'"
+	case time.Time:
+		return "'" + x.Format("2006-01-02 15:04:05") + "'"
+	case *time.Time:
+		if x == nil {
+			return "NULL"
+		}
+		return "'" + x.Format("2006-01-02 15:04:05") + "'"
+	default:
+		return fmt.Sprintf("%v", x)
+	}
+}
+
+func extractMainTableNameFromSQL(sql string) string {
+	lower := strings.ToLower(sql)
+	fromIdx := strings.Index(lower, " from ")
+	if fromIdx < 0 {
+		return ""
+	}
+	rest := strings.TrimSpace(sql[fromIdx+6:])
+	if rest == "" {
+		return ""
+	}
+	parts := strings.Fields(rest)
+	if len(parts) == 0 {
+		return ""
+	}
+	table := strings.Trim(parts[0], "`\"")
+	return table
 }

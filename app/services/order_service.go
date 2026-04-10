@@ -12,11 +12,11 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/oklog/ulid/v2"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/dto"
 	esorders "goravel/app/elasticsearch/orders"
+	apperrors "goravel/app/errors"
 	"goravel/app/models"
-	"goravel/app/repositories"
+	orderrepo "goravel/app/repositories"
 	"goravel/app/support"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
@@ -123,9 +123,6 @@ type OrderFilters struct {
 	EndTime   time.Time // 结束时间
 	OrderBy   string    // 排序字段（格式：字段:asc/desc，如：created_at:desc）
 }
-
-// 订单分页统计优化阈值（超过此值使用执行计划估算）
-const Order int64 = 100000
 
 type OrderServiceImpl struct {
 	shardingService      ShardingService
