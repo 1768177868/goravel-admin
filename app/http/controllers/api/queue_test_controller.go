@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	contractsqueue "github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/contracts/http"
+	contractsqueue "github.com/goravel/framework/contracts/queue"
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/http/response"
@@ -16,6 +16,14 @@ type QueueTestController struct{}
 
 func NewQueueTestController() *QueueTestController {
 	return &QueueTestController{}
+}
+
+func uniqueQueueCacheKey(uniqueKey string) string {
+	if uniqueKey == "" {
+		uniqueKey = "default"
+	}
+
+	return "queue-test:unique:" + uniqueKey
 }
 
 func (c *QueueTestController) Dispatch(ctx http.Context) http.Response {
@@ -51,11 +59,11 @@ func (c *QueueTestController) Delay(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "success", http.Json{
-		"queued":      true,
-		"type":        "delay",
+		"queued":       true,
+		"type":         "delay",
 		"delay_second": delaySeconds,
-		"connection":  facades.Config().GetString("queue.default", "sync"),
-		"queue":       "default",
+		"connection":   facades.Config().GetString("queue.default", "sync"),
+		"queue":        "default",
 	})
 }
 
@@ -110,6 +118,70 @@ func (c *QueueTestController) Backoff(ctx http.Context) http.Response {
 		"marker":      marker,
 		"retry_plan":  []int{5, 10, 20},
 		"description": "fail first 3 attempts, then succeed on next run",
+	})
+}
+
+func (c *QueueTestController) Unique(ctx http.Context) http.Response {
+	windowSeconds, _ := strconv.Atoi(ctx.Request().Query("window_seconds", "30"))
+	if windowSeconds <= 0 {
+		windowSeconds = 30
+	}
+
+	uniqueKey := ctx.Request().Query("key", "default")
+	if uniqueKey == "" {
+		uniqueKey = "default"
+	}
+	cacheKey := uniqueQueueCacheKey(uniqueKey)
+	exists := facades.Cache().GetString(cacheKey, "")
+	if exists != "" {
+		return response.Success(ctx, "success", http.Json{
+			"queued":         false,
+			"skipped":        true,
+			"type":           "unique",
+			"key":            uniqueKey,
+			"window_seconds": windowSeconds,
+			"message":        "already queued within current unique window",
+		})
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	args := []contractsqueue.Arg{
+		{Type: "string", Value: "queue-test-unique-" + uniqueKey},
+		{Type: "string", Value: now},
+	}
+	if err := facades.Queue().Job(&jobs.Test{}, args).Dispatch(); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err)
+	}
+
+	if err := facades.Cache().Put(cacheKey, now, time.Duration(windowSeconds)*time.Second); err != nil {
+		return response.Error(ctx, http.StatusInternalServerError, err)
+	}
+
+	return response.Success(ctx, "success", http.Json{
+		"queued":         true,
+		"skipped":        false,
+		"type":           "unique",
+		"key":            uniqueKey,
+		"window_seconds": windowSeconds,
+		"connection":     facades.Config().GetString("queue.default", "sync"),
+		"queue":          "default",
+	})
+}
+
+func (c *QueueTestController) UniqueStatus(ctx http.Context) http.Response {
+	uniqueKey := ctx.Request().Query("key", "default")
+	if uniqueKey == "" {
+		uniqueKey = "default"
+	}
+	cacheKey := uniqueQueueCacheKey(uniqueKey)
+
+	startedAt := facades.Cache().GetString(cacheKey, "")
+
+	return response.Success(ctx, "success", http.Json{
+		"type":       "unique-status",
+		"key":        uniqueKey,
+		"active":     startedAt != "",
+		"started_at": startedAt,
 	})
 }
 
@@ -228,23 +300,23 @@ func (c *QueueTestController) AllSpecial(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "success", http.Json{
-		"queued":          true,
-		"type":            "all-special",
-		"connection":      facades.Config().GetString("queue.default", "sync"),
-		"delay_second":    delaySeconds,
-		"reclaim_sleep":   reclaimSleep,
-		"reclaim_queue":   reclaimQueue,
-		"reclaim_marker":  reclaimMarker,
-		"contains":        []string{"delay", "fail", "reclaim"},
+		"queued":           true,
+		"type":             "all-special",
+		"connection":       facades.Config().GetString("queue.default", "sync"),
+		"delay_second":     delaySeconds,
+		"reclaim_sleep":    reclaimSleep,
+		"reclaim_queue":    reclaimQueue,
+		"reclaim_marker":   reclaimMarker,
+		"contains":         []string{"delay", "fail", "reclaim"},
 		"reclaim_test_tip": "kill worker before ack, wait retry_after, then start another worker",
 	})
 }
 
 func (c *QueueTestController) Result(ctx http.Context) http.Response {
 	return response.Success(ctx, "success", http.Json{
-		"test_result":       jobs.TestResult,
-		"test_err_result":   jobs.TestErrResult,
-		"test_claim_result": jobs.TestClaimResult,
+		"test_result":         jobs.TestResult,
+		"test_err_result":     jobs.TestErrResult,
+		"test_claim_result":   jobs.TestClaimResult,
 		"test_backoff_result": jobs.TestBackoffResult,
 	})
 }

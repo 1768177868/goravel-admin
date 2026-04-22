@@ -53,6 +53,10 @@ func Api() {
 		router.Post("fail", queueTestController.Fail)
 		// 分段重试测试：5s -> 10s -> 20s。
 		router.Post("backoff", queueTestController.Backoff)
+		// 唯一队列测试：窗口期内同 key 只投递一次（默认 30s）。
+		router.Post("unique", queueTestController.Unique)
+		// 唯一队列状态：查看某个 key 是否在窗口期内。
+		router.Get("unique/status", queueTestController.UniqueStatus)
 		// 查看各测试 Job 的执行结果缓存。
 		router.Get("result", queueTestController.Result)
 		// 清空测试结果缓存，便于下一轮测试对比。
