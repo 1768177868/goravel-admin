@@ -210,7 +210,7 @@ func Admin() {
 			router.Resource("orders", orderController)
 			router.Post("orders/export", orderController.Export)
 			router.Post("orders/import", orderController.Import)
-			router.Get("orders/export/status/:id", orderController.GetExportStatus)
+			router.Get("orders/export/status/{id}", orderController.GetExportStatus)
 
 			// 用户管理
 			router.Resource("users", userController)

@@ -25,30 +25,6 @@ export function logout() {
   })
 }
 
-// 获取 token 列表
-export function getTokens() {
-  return request({
-    url: '/tokens',
-    method: 'get'
-  })
-}
-
-// 删除指定 token
-export function revokeToken(id) {
-  return request({
-    url: `/tokens/${id}`,
-    method: 'delete'
-  })
-}
-
-// 删除所有 token
-export function revokeAllTokens() {
-  return request({
-    url: '/tokens',
-    method: 'delete'
-  })
-}
-
 // 获取登录验证码
 export function getLoginCaptcha() {
   return request({

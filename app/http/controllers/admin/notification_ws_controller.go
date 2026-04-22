@@ -2,6 +2,8 @@ package admin
 
 import (
 	"net/http"
+	"net/url"
+	"strings"
 
 	apphttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -63,9 +65,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	_ = r.tokenService.UpdateLastUsedAt(token)
 
 	upgrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
+		CheckOrigin: r.isOriginAllowed,
 		ReadBufferSize:  1024, // 读缓冲区大小
 		WriteBufferSize: 1024, // 写缓冲区大小
 	}
@@ -80,4 +80,80 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	wsnotifications.Hub().RegisterConnection(conn, admin.ID)
 
 	return nil
+}
+
+func (r *NotificationWsController) isOriginAllowed(req *http.Request) bool {
+	origin := strings.TrimSpace(req.Header.Get("Origin"))
+	if origin == "" {
+		return false
+	}
+
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+
+	originHost := strings.ToLower(parsed.Hostname())
+	allowedAdminDomains := getConfigStringSlice("domains.admin")
+	if len(allowedAdminDomains) > 0 && !matchDomain(originHost, allowedAdminDomains) {
+		return false
+	}
+
+	allowedOrigins := getConfigStringSlice("cors.allowed_origins")
+	if len(allowedOrigins) == 0 {
+		return true
+	}
+
+	normalizedOrigin := strings.TrimRight(strings.ToLower(origin), "/")
+	for _, allowed := range allowedOrigins {
+		normalizedAllowed := strings.TrimSpace(strings.ToLower(allowed))
+		if normalizedAllowed == "" {
+			continue
+		}
+		if normalizedAllowed == "*" {
+			return true
+		}
+		if strings.TrimRight(normalizedAllowed, "/") == normalizedOrigin {
+			return true
+		}
+	}
+
+	return false
+}
+
+func matchDomain(host string, patterns []string) bool {
+	for _, pattern := range patterns {
+		p := strings.TrimSpace(strings.ToLower(pattern))
+		if p == "" {
+			continue
+		}
+		if p == host {
+			return true
+		}
+		if strings.HasPrefix(p, "*.") {
+			suffix := strings.TrimPrefix(p, "*.")
+			if strings.HasSuffix(host, "."+suffix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func getConfigStringSlice(key string) []string {
+	value := facades.Config().Get(key)
+	switch v := value.(type) {
+	case []string:
+		return v
+	case []any:
+		result := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return result
+	default:
+		return []string{}
+	}
 }

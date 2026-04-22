@@ -35,8 +35,8 @@ func Api() {
 
 	})
 
-	// 队列驱动测试路由（开发调试使用）
-	facades.Route().Prefix("api/queue-test").Group(func(router route.Router) {
+	// 队列驱动测试路由（开发调试使用，仅允许开发环境）
+	facades.Route().Prefix("api/queue-test").Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {
 		// 一次性覆盖 dispatch + delay + long-running + fail。
 		router.Post("all-in-one", queueTestController.AllInOne)
 		// 一次性覆盖 delay + fail + reclaim（偏异常/边界场景）。
