@@ -28,6 +28,10 @@ func init() {
 		"debug": config.Env("APP_DEBUG", false),
 		// Enable Development Tool
 		"enable_dev_tool": config.Env("APP_ENABLE_DEV_TOOL", false),
+		// WebSocket query token compatibility switch.
+		// true: allow ?token=... for browser compatibility
+		// false: require Authorization header
+		"ws_allow_query_token": config.Env("WS_ALLOW_QUERY_TOKEN", true),
 		// Application Timezone
 		//
 		// Here you may specify the default timezone for your application.

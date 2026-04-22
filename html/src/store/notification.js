@@ -6,6 +6,7 @@ import {
   fetchNotifications,
   fetchUnreadCount,
   fetchRecentNotifications,
+  createNotificationWsTicket,
   markNotificationRead,
   markAllNotificationsRead
 } from '../api/notification'
@@ -20,9 +21,11 @@ export const useNotificationStore = defineStore('notification', {
     loading: false,
     ws: null,
     wsConnected: false,
+    lastWsCloseCode: null,
     initializing: false,
     retryCount: 0,
     retryTimer: null,
+    wsAuthErrorNotified: false,
     soundDebounceTimer: null // 声音防抖定时器
   }),
   actions: {
@@ -78,12 +81,16 @@ export const useNotificationStore = defineStore('notification', {
         console.error('Mark all notifications read failed:', error)
       }
     },
-    connect() {
+    async connect() {
       if (this.ws || this.wsConnected) {
         return
       }
       const token = Storage.getItem('token', '')
       if (!token || typeof token !== 'string') {
+        return
+      }
+      const authQuery = await this.resolveWsAuthQuery(token)
+      if (!authQuery) {
         return
       }
       
@@ -99,39 +106,41 @@ export const useNotificationStore = defineStore('notification', {
         const base = wsBaseURL.replace(/\/+$/, '')
         if (base.startsWith('wss://') || base.startsWith('ws://')) {
           // 如果已经包含协议，直接使用
-          wsUrl = base + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+          wsUrl = `${base}/ws/admin/notifications?${authQuery}`
         } else if (base.startsWith('https://')) {
-          wsUrl = base.replace('https://', 'wss://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+          wsUrl = base.replace('https://', 'wss://') + `/ws/admin/notifications?${authQuery}`
         } else if (base.startsWith('http://')) {
-          wsUrl = base.replace('http://', 'ws://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+          wsUrl = base.replace('http://', 'ws://') + `/ws/admin/notifications?${authQuery}`
         } else {
           // 如果没有协议，根据当前页面协议判断
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-          wsUrl = `${protocol}//${base}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+          wsUrl = `${protocol}//${base}/ws/admin/notifications?${authQuery}`
         }
       } else if (apiBaseURL) {
         // 如果没有配置 WebSocket 域名，使用 API 基础 URL
         const base = apiBaseURL.replace(/\/+$/, '')
         if (base.startsWith('https://')) {
-          wsUrl = base.replace('https://', 'wss://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+          wsUrl = base.replace('https://', 'wss://') + `/ws/admin/notifications?${authQuery}`
         } else if (base.startsWith('http://')) {
-          wsUrl = base.replace('http://', 'ws://') + '/ws/admin/notifications?token=' + encodeURIComponent(token.trim())
+          wsUrl = base.replace('http://', 'ws://') + `/ws/admin/notifications?${authQuery}`
         } else {
           // 如果没有协议，根据当前页面协议判断
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-          wsUrl = `${protocol}//${base}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+          wsUrl = `${protocol}//${base}/ws/admin/notifications?${authQuery}`
         }
       } else {
         // 如果都没有配置，使用当前页面的协议和主机（开发环境）
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
         const host = window.location.host
-        wsUrl = `${protocol}//${host}/ws/admin/notifications?token=${encodeURIComponent(token.trim())}`
+        wsUrl = `${protocol}//${host}/ws/admin/notifications?${authQuery}`
       }
 
       this.ws = new WebSocket(wsUrl)
       this.ws.onopen = () => {
         this.wsConnected = true
         this.retryCount = 0
+        this.lastWsCloseCode = null
+        this.wsAuthErrorNotified = false
       }
       this.ws.onmessage = (event) => {
         try {
@@ -141,14 +150,34 @@ export const useNotificationStore = defineStore('notification', {
           console.error('Invalid notification payload:', error)
         }
       }
-      this.ws.onclose = () => {
+      this.ws.onclose = (event) => {
         this.wsConnected = false
         this.ws = null
+        this.lastWsCloseCode = event?.code || null
         this.scheduleReconnect()
       }
       this.ws.onerror = () => {
         this.wsConnected = false
       }
+    },
+    async resolveWsAuthQuery(token) {
+      const allowQueryTokenFallback = String(import.meta.env.VITE_WS_QUERY_TOKEN_FALLBACK || 'false').toLowerCase() === 'true'
+      try {
+        const { data } = await createNotificationWsTicket()
+        if (data?.ticket) {
+          return `ticket=${encodeURIComponent(data.ticket)}`
+        }
+      } catch (error) {
+        if (allowQueryTokenFallback) {
+          console.warn('Create notification ws ticket failed, fallback to query token:', error)
+        } else {
+          console.warn('Create notification ws ticket failed and query token fallback is disabled:', error)
+        }
+      }
+      if (!allowQueryTokenFallback) {
+        return ''
+      }
+      return `token=${encodeURIComponent(token.trim())}`
     },
     scheduleReconnect() {
       if (!this.retryCount) {
@@ -165,6 +194,12 @@ export const useNotificationStore = defineStore('notification', {
           return
         }
         this.connect()
+        // Browser WebSocket handshake failure usually closes with code 1006.
+        if (!this.wsConnected && this.lastWsCloseCode === 1006 && !this.wsAuthErrorNotified) {
+          this.wsAuthErrorNotified = true
+          ElMessage.error(t('notification.ws_auth_error'))
+          return
+        }
         if (!this.wsConnected && this.retryCount === 3) {
           ElMessage.error(t('notification.ws_error'))
         }
@@ -177,6 +212,8 @@ export const useNotificationStore = defineStore('notification', {
       }
       this.wsConnected = false
       this.initializing = false
+      this.lastWsCloseCode = null
+      this.wsAuthErrorNotified = false
       this.items = []
       this.unreadCount = 0
       if (this.retryTimer) {

@@ -37,6 +37,13 @@ export function markAllNotificationsRead() {
   })
 }
 
+export function createNotificationWsTicket() {
+  return request({
+    url: '/notifications/ws-ticket',
+    method: 'post'
+  })
+}
+
 export function createNotification(data) {
   return request({
     url: '/notifications',

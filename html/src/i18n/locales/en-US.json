@@ -106,6 +106,7 @@
     "unread": "Unread",
     "empty": "No notifications yet",
     "ws_error": "Notification channel connection failed",
+    "ws_auth_error": "Notification channel authentication failed. Check WS_ALLOW_QUERY_TOKEN on backend or upgrade frontend connection mode.",
     "view_all": "View all",
     "read": "Read",
     "create": "Create Notification",

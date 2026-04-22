@@ -1,15 +1,20 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	apphttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/oklog/ulid/v2"
 	"github.com/goravel/framework/support/str"
 	"github.com/gorilla/websocket"
 
+	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils/logger"
@@ -20,10 +25,41 @@ type NotificationWsController struct {
 	tokenService services.TokenService
 }
 
+const (
+	wsTicketCachePrefix = "ws:ticket:"
+	wsTicketTTL         = 60 * time.Second
+)
+
 func NewNotificationWsController() *NotificationWsController {
 	return &NotificationWsController{
 		tokenService: services.NewTokenServiceImpl(),
 	}
+}
+
+func (r *NotificationWsController) Ticket(ctx apphttp.Context) apphttp.Response {
+	admin := r.currentAdmin(ctx)
+	if admin == nil {
+		return response.Error(ctx, http.StatusUnauthorized, "not_logged_in")
+	}
+
+	token := str.Of(ctx.Request().Header("Authorization", "")).ChopStart("Bearer ").Trim().String()
+	if token == "" {
+		return response.Error(ctx, http.StatusUnauthorized, "token_required")
+	}
+
+	ticket := strings.ToLower(ulid.Make().String())
+	cacheKey := wsTicketCachePrefix + ticket
+	cacheValue := fmt.Sprintf("%d|%s", admin.ID, token)
+	if err := facades.Cache().Put(cacheKey, cacheValue, wsTicketTTL); err != nil {
+		return response.ErrorWithLog(ctx, "notification", err, map[string]any{
+			"admin_id": admin.ID,
+		})
+	}
+
+	return response.Success(ctx, apphttp.Json{
+		"ticket":     ticket,
+		"expires_in": int(wsTicketTTL / time.Second),
+	})
 }
 
 func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response {
@@ -34,32 +70,26 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 		ctx.Request().Header("Upgrade", ""),
 		ctx.Request().Header("Connection", ""))
 
-	token := ctx.Request().Query("token")
+	token := r.extractToken(ctx)
 	if token == "" {
 		logger.WarnfHTTP(ctx, "WebSocket connection rejected: token required")
-		_ = ctx.Response().Json(http.StatusUnauthorized, apphttp.Json{
-			"code":    http.StatusUnauthorized,
-			"message": "token_required",
-		}).Abort()
+		response.Error(ctx, http.StatusUnauthorized, "token_required")
+		ctx.Request().Abort()
 		return nil
 	}
 
 	token = str.Of(token).ChopStart("Bearer ").Trim().String()
 	accessToken, err := r.tokenService.FindToken(token)
 	if err != nil || accessToken == nil || accessToken.TokenableType != "admin" {
-		_ = ctx.Response().Json(http.StatusUnauthorized, apphttp.Json{
-			"code":    http.StatusUnauthorized,
-			"message": "invalid_token",
-		}).Abort()
+		response.Error(ctx, http.StatusUnauthorized, "invalid_token")
+		ctx.Request().Abort()
 		return nil
 	}
 
 	var admin models.Admin
 	if err := facades.Orm().Query().Where("id", accessToken.TokenableID).FirstOrFail(&admin); err != nil {
-		_ = ctx.Response().Json(http.StatusUnauthorized, apphttp.Json{
-			"code":    http.StatusUnauthorized,
-			"message": "user_not_found",
-		}).Abort()
+		response.Error(ctx, http.StatusUnauthorized, "user_not_found")
+		ctx.Request().Abort()
 		return nil
 	}
 	_ = r.tokenService.UpdateLastUsedAt(token)
@@ -79,6 +109,66 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	// logger.InfofHTTP(ctx, "WebSocket connection established for admin ID: %d", admin.ID)
 	wsnotifications.Hub().RegisterConnection(conn, admin.ID)
 
+	return nil
+}
+
+func (r *NotificationWsController) extractToken(ctx apphttp.Context) string {
+	ticket := str.Of(ctx.Request().Query("ticket")).Trim().String()
+	if ticket != "" {
+		token, ok := r.consumeTicket(ticket)
+		if ok {
+			return token
+		}
+		logger.WarnfHTTP(ctx, "WebSocket ticket invalid or expired")
+	}
+
+	authorization := str.Of(ctx.Request().Header("Authorization", "")).Trim().String()
+	if authorization != "" {
+		return authorization
+	}
+
+	allowQueryToken := facades.Config().GetBool("app.ws_allow_query_token", true)
+	if !allowQueryToken {
+		return ""
+	}
+
+	queryToken := str.Of(ctx.Request().Query("token")).Trim().String()
+	if queryToken != "" {
+		// Browser WebSocket currently relies on query token, keep compatible during migration.
+		logger.WarnfHTTP(ctx, "WebSocket token from query parameter is deprecated, prefer Authorization header")
+		return queryToken
+	}
+
+	return ""
+}
+
+func (r *NotificationWsController) consumeTicket(ticket string) (string, bool) {
+	cacheKey := wsTicketCachePrefix + ticket
+	value := facades.Cache().GetString(cacheKey, "")
+	if value == "" {
+		return "", false
+	}
+	_ = facades.Cache().Forget(cacheKey)
+
+	parts := strings.SplitN(value, "|", 2)
+	if len(parts) != 2 {
+		return "", false
+	}
+	if _, err := strconv.ParseUint(parts[0], 10, 32); err != nil {
+		return "", false
+	}
+	return parts[1], parts[1] != ""
+}
+
+func (r *NotificationWsController) currentAdmin(ctx apphttp.Context) *models.Admin {
+	if adminValue := ctx.Value("admin"); adminValue != nil {
+		if admin, ok := adminValue.(models.Admin); ok {
+			return &admin
+		}
+		if adminPtr, ok := adminValue.(*models.Admin); ok {
+			return adminPtr
+		}
+	}
 	return nil
 }
 
