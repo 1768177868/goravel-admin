@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/dromara/carbon/v2"
 	"github.com/goravel/framework/contracts/database/orm"
@@ -106,13 +108,32 @@ func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]mo
 		return nil, 0, err
 	}
 
-	// 加载货币信息并格式化每个用户的余额
+	// 批量加载货币信息，避免 N+1 查询
+	currencyMap := make(map[uint]*models.Currency)
+	currencyIDs := make([]uint, 0, len(users))
+	seenCurrencyIDs := make(map[uint]struct{})
 	for i := range users {
-		if users[i].CurrencyID > 0 {
-			var currency models.Currency
-			if err := facades.Orm().Query().Where("id", users[i].CurrencyID).First(&currency); err == nil {
-				users[i].Currency = &currency
+		if users[i].CurrencyID == 0 {
+			continue
+		}
+		if _, exists := seenCurrencyIDs[users[i].CurrencyID]; exists {
+			continue
+		}
+		seenCurrencyIDs[users[i].CurrencyID] = struct{}{}
+		currencyIDs = append(currencyIDs, users[i].CurrencyID)
+	}
+	if len(currencyIDs) > 0 {
+		var currencies []models.Currency
+		if err := facades.Orm().Query().Where("id IN ?", currencyIDs).Find(&currencies); err == nil {
+			for i := range currencies {
+				c := currencies[i]
+				currencyMap[c.ID] = &c
 			}
+		}
+	}
+	for i := range users {
+		if currency, exists := currencyMap[users[i].CurrencyID]; exists {
+			users[i].Currency = currency
 		}
 		users[i].Balance = utils.FormatBalance(users[i].Balance, users[i].Currency)
 	}
@@ -197,6 +218,13 @@ func (s *UserServiceImpl) Delete(id uint) error {
 
 // UpdateBalance 更新用户余额（同时创建余额变动记录）
 func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType string, source string, sourceID *uint, description string, operatorID *uint, remark string) error {
+	lockKey := fmt.Sprintf("user:balance:lock:%d", userID)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
+	if !lock.Get() {
+		return apperrors.NewBusinessError("too_many_requests", "请求过于频繁，请稍后再试")
+	}
+	defer lock.Release()
+
 	// 获取当前用户
 	user, err := s.GetByID(userID)
 	if err != nil {

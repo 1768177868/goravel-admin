@@ -9,6 +9,107 @@
 - **请求格式**: JSON
 - **响应格式**: JSON
 
+## 契约同步说明（2026-04）
+
+为避免文档与实现漂移，当前以 `routes/admin.go` 和 Swagger 产物为准。以下是已对齐的关键接口：
+
+- 认证与会话：
+  - `POST /login`
+  - `GET /login/captcha`
+  - `GET /info`
+  - `POST /logout`
+  - `GET /heartbeat`
+- 通知中心：
+  - `GET /notifications`
+  - `GET /notifications/unread-count`
+  - `GET /notifications/recent`
+  - `POST /notifications/ws-ticket`（获取一次性 WS ticket）
+  - `POST /notifications/{id}/read`
+  - `POST /notifications/read-all`
+- WebSocket：
+  - `GET /ws/admin/notifications`（非 `/api/admin/*` 前缀）
+  - 仅支持 `ticket` 参数进行鉴权，不再支持 `token` query
+- 日志：
+  - `GET /operation-logs`
+  - `GET /login-logs`
+  - `GET /system-logs`
+- 监控：
+  - `GET /monitor/system-info`
+  - `GET /monitor/system-info/stream`
+
+> 说明：本文后续部分若与上述不一致，请以上述“契约同步说明”和实际路由为准。
+
+## 接口速查表（联调用）
+
+### 认证与会话
+
+- `POST /login`
+- `GET /login/captcha`
+- `GET /info`
+- `POST /logout`
+- `GET /heartbeat`
+- `PUT /profile`
+- `PUT /password`
+
+### 通知与实时
+
+- `GET /notifications`
+- `GET /notifications/unread-count`
+- `GET /notifications/recent`
+- `POST /notifications/ws-ticket`
+- `POST /notifications/{id}/read`
+- `POST /notifications/read-all`
+- `POST /notifications`
+- `GET /ws/admin/notifications?ticket={ticket}`
+
+### 日志与监控
+
+- `GET /operation-logs`
+- `GET /login-logs`
+- `GET /system-logs`
+- `GET /dashboard/count`
+- `GET /dashboard/user-access-source`
+- `GET /dashboard/weekly-user-activity`
+- `GET /dashboard/monthly-sales`
+- `GET /dashboard/recent-activities`
+- `GET /dashboard/stream`
+- `GET /monitor/system-info`
+- `GET /monitor/system-info/stream`
+
+### 用户与订单支付
+
+- `GET /users`
+- `POST /users/{id}/update-balance`
+- `PUT /users/{id}/password`
+- `POST /users/export`
+- `GET /user-balance-logs`
+- `POST /user-balance-logs`
+- `GET /user-balance-logs/statistics`
+- `GET /orders`
+- `POST /orders/export`
+- `POST /orders/import`
+- `GET /orders/export/status/{id}`
+- `GET /payments`
+- `GET /payments/{id}`
+- `POST /payments/export`
+- `GET /payments/export/status/{id}`
+
+### 附件与导出
+
+- `GET /attachments`
+- `POST /attachments/upload`
+- `POST /attachments/chunk`（`action=init|upload|merge`）
+- `GET /attachments/chunk`（`action=progress`）
+- `GET /attachments/{id}/preview`
+- `GET /attachments/{id}/download`
+- `PUT /attachments/{id}/display-name`
+- `DELETE /attachments/{id}`
+- `POST /attachments/batch-delete`
+- `GET /exports`
+- `GET /exports/{id}/download`
+- `DELETE /exports/{id}`
+- `POST /exports/batch-delete`
+
 ## 通用响应格式
 
 ### 成功响应
@@ -116,17 +217,10 @@ Authorization: Bearer {token}
 }
 ```
 
-### 刷新 Token
-
-```http
-POST /refresh-token
-Authorization: Bearer {token}
-```
-
 ### 获取验证码
 
 ```http
-GET /captcha
+GET /login/captcha
 ```
 
 **响应示例：**
@@ -293,7 +387,7 @@ Authorization: Bearer {token}
 ### 重置密码
 
 ```http
-PUT /admins/{id}/reset-password
+PUT /admins/{id}/password
 Authorization: Bearer {token}
 ```
 
@@ -651,7 +745,7 @@ Authorization: Bearer {token}
 ### 操作日志
 
 ```http
-GET /logs/operation
+GET /operation-logs
 Authorization: Bearer {token}
 ```
 
@@ -668,7 +762,7 @@ Authorization: Bearer {token}
 ### 登录日志
 
 ```http
-GET /logs/login
+GET /login-logs
 Authorization: Bearer {token}
 ```
 
@@ -685,7 +779,7 @@ Authorization: Bearer {token}
 ### 系统日志
 
 ```http
-GET /logs/system
+GET /system-logs
 Authorization: Bearer {token}
 ```
 
@@ -705,7 +799,7 @@ Authorization: Bearer {token}
 ### 获取统计数据
 
 ```http
-GET /dashboard/stats
+GET /dashboard/count
 Authorization: Bearer {token}
 ```
 
@@ -740,7 +834,7 @@ Authorization: Bearer {token}
 ### 强制下线
 
 ```http
-DELETE /online-admins/{token_id}
+DELETE /online-admins/{id}
 Authorization: Bearer {token}
 ```
 
@@ -755,7 +849,7 @@ Authorization: Bearer {token}
 
 ```json
 {
-  "token_ids": [1, 2, 3]
+  "token_ids": "1,2,3"
 }
 ```
 
@@ -766,7 +860,14 @@ Authorization: Bearer {token}
 ### 获取系统信息
 
 ```http
-GET /monitor/system
+GET /monitor/system-info
+Authorization: Bearer {token}
+```
+
+### 实时系统信息（SSE）
+
+```http
+GET /monitor/system-info/stream
 Authorization: Bearer {token}
 ```
 
@@ -826,6 +927,12 @@ Authorization: Bearer {token}
 Content-Type: multipart/form-data
 ```
 
+> 说明：当前分片上传采用统一接口，通过 `action` 参数区分：
+> - `action=init`：初始化
+> - `action=upload`：上传分片
+> - `action=merge`：合并分片
+> - `action=progress`：查询进度（通常 GET）
+
 **请求参数：**
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -839,8 +946,9 @@ Content-Type: multipart/form-data
 ### 合并分片
 
 ```http
-POST /attachments/merge
+POST /attachments/chunk
 Authorization: Bearer {token}
+Content-Type: multipart/form-data
 ```
 
 **请求参数：**
@@ -857,11 +965,30 @@ Authorization: Bearer {token}
 
 ## 通知中心
 
+### 获取 WebSocket Ticket
+
+```http
+POST /notifications/ws-ticket
+Authorization: Bearer {token}
+```
+
+**响应示例：**
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "ticket": "01jvxxxxxxxxxxxxxxxxxxxxxx",
+    "expires_in": 60
+  }
+}
+```
+
 ### WebSocket 连接
 
 ```
-ws://localhost:3000/api/admin/ws/notifications
-Authorization: Bearer {token}
+ws://localhost:3000/ws/admin/notifications?ticket={ticket}
 ```
 
 **消息格式：**
@@ -888,14 +1015,14 @@ Authorization: Bearer {token}
 ### 标记已读
 
 ```http
-PUT /notifications/{id}/read
+POST /notifications/{id}/read
 Authorization: Bearer {token}
 ```
 
 ### 全部标记已读
 
 ```http
-PUT /notifications/read-all
+POST /notifications/read-all
 Authorization: Bearer {token}
 ```
 

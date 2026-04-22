@@ -89,7 +89,7 @@ export const useNotificationStore = defineStore('notification', {
       if (!token || typeof token !== 'string') {
         return
       }
-      const authQuery = await this.resolveWsAuthQuery(token)
+      const authQuery = await this.resolveWsAuthQuery()
       if (!authQuery) {
         return
       }
@@ -160,24 +160,16 @@ export const useNotificationStore = defineStore('notification', {
         this.wsConnected = false
       }
     },
-    async resolveWsAuthQuery(token) {
-      const allowQueryTokenFallback = String(import.meta.env.VITE_WS_QUERY_TOKEN_FALLBACK || 'false').toLowerCase() === 'true'
+    async resolveWsAuthQuery() {
       try {
         const { data } = await createNotificationWsTicket()
         if (data?.ticket) {
           return `ticket=${encodeURIComponent(data.ticket)}`
         }
       } catch (error) {
-        if (allowQueryTokenFallback) {
-          console.warn('Create notification ws ticket failed, fallback to query token:', error)
-        } else {
-          console.warn('Create notification ws ticket failed and query token fallback is disabled:', error)
-        }
+        console.warn('Create notification ws ticket failed:', error)
       }
-      if (!allowQueryTokenFallback) {
-        return ''
-      }
-      return `token=${encodeURIComponent(token.trim())}`
+      return ''
     },
     scheduleReconnect() {
       if (!this.retryCount) {

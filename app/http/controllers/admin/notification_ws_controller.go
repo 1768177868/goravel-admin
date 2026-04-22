@@ -122,21 +122,10 @@ func (r *NotificationWsController) extractToken(ctx apphttp.Context) string {
 		logger.WarnfHTTP(ctx, "WebSocket ticket invalid or expired")
 	}
 
+	// Keep header parsing only for non-browser clients.
 	authorization := str.Of(ctx.Request().Header("Authorization", "")).Trim().String()
 	if authorization != "" {
 		return authorization
-	}
-
-	allowQueryToken := facades.Config().GetBool("app.ws_allow_query_token", true)
-	if !allowQueryToken {
-		return ""
-	}
-
-	queryToken := str.Of(ctx.Request().Query("token")).Trim().String()
-	if queryToken != "" {
-		// Browser WebSocket currently relies on query token, keep compatible during migration.
-		logger.WarnfHTTP(ctx, "WebSocket token from query parameter is deprecated, prefer Authorization header")
-		return queryToken
 	}
 
 	return ""

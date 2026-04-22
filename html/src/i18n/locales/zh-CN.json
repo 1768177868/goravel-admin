@@ -112,7 +112,7 @@
     "unread": "未读",
     "empty": "暂无通知",
     "ws_error": "通知通道连接失败",
-    "ws_auth_error": "通知通道认证失败，请联系管理员检查 WS_ALLOW_QUERY_TOKEN 配置或升级前端连接方式",
+    "ws_auth_error": "通知通道认证失败，请联系管理员检查通知服务配置",
     "view_all": "查看全部",
     "read": "已读",
     "create": "创建通知",
