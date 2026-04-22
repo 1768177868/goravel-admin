@@ -34,6 +34,12 @@ func init() {
 		// Example: UTC, Asia/Shanghai
 		// More: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 		"timezone": carbon.UTC,
+		// Display source timezone for datetime strings without timezone offset.
+		// Used by response time conversion to interpret stored datetime strings.
+		"display_source_timezone": config.Env("APP_DISPLAY_SOURCE_TIMEZONE", carbon.UTC),
+		// Comma-separated response time field whitelist.
+		// Example: created_at,updated_at,deleted_at
+		"response_time_fields": config.Env("APP_RESPONSE_TIME_FIELDS", "created_at,updated_at,deleted_at"),
 		// Application Locale Configuration
 		//
 		// The application locale determines the default locale that will be used

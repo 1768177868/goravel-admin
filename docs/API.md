@@ -1108,6 +1108,15 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 所有时间字段使用 ISO 8601 格式：`2024-01-01T12:00:00Z`
 
+### 时区请求头（响应时间字段转换）
+
+- 后端审计时间（如 `created_at` / `updated_at`）以统一基准存储与返回。
+- 仅当请求显式携带时区信息时，后端才会对响应中的时间字段做展示层转换。
+- 支持以下时区输入（优先级从高到低）：`timezone` 参数、`X-Timezone` 请求头、`Timezone` 请求头。
+- 未携带时区时，不执行响应时间字段转换，返回后端原值。
+- 默认转换字段白名单：`created_at`、`updated_at`、`deleted_at`（兼容驼峰命名）。
+- 可通过配置 `app.response_time_fields`（逗号分隔）扩展需要转换的字段。
+
 ### 多语言支持
 
 通过请求头指定语言：
