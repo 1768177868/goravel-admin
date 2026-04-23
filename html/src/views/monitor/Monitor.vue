@@ -2015,8 +2015,8 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .monitor-page {
-  padding: 20px;
-  background: #f5f7fa;
+  padding: var(--space-md);
+  background: var(--bg-color-tertiary);
   min-height: calc(100vh - 60px);
   transition: background 0.3s ease;
 }
@@ -2027,8 +2027,8 @@ html.dark .monitor-page {
 }
 
 .monitor-card {
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-light);
   transition: all 0.3s ease;
   overflow: hidden;
   
@@ -2039,14 +2039,14 @@ html.dark .monitor-page {
 
   :deep(.el-card__header) {
     background: var(--el-color-primary);
-    color: white;
-    padding: 16px 20px;
+    color: #fff;
+    padding: var(--space-md) 20px;
     border-bottom: none;
   }
 
   :deep(.el-card__body) {
-    padding: 20px;
-    background: white;
+    padding: var(--space-md);
+    background: var(--card-bg);
     transition: background-color 0.3s ease;
   }
 }
@@ -2112,8 +2112,8 @@ html.dark .monitor-card :deep(.el-card__body) {
 .process-top-subtitle {
   font-size: 13px;
   font-weight: 600;
-  color: #606266;
-  margin-bottom: 10px;
+  color: var(--text-color-regular);
+  margin-bottom: var(--space-sm);
 }
 
 html.dark .process-top-subtitle {
@@ -2135,15 +2135,15 @@ html.dark .process-top-subtitle {
 }
 
 .process-card {
-  padding: 16px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  padding: var(--space-md);
+  background: var(--card-bg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-light);
   height: 100%;
   transition: all 0.3s ease;
   
   &:hover {
-    background: #f5f7fa;
+    background: var(--bg-color-tertiary);
     border-color: var(--el-color-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
@@ -2165,9 +2165,9 @@ html.dark .process-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e4e7ed;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 2px solid var(--border-color-light);
 }
 
 /* 暗黑模式样式 */
@@ -2178,25 +2178,25 @@ html.dark .process-header {
 .process-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .process-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: var(--space-xs) 0;
 }
 
 .process-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--text-color-secondary);
   font-weight: 500;
 }
 
 .process-value {
   font-size: 14px;
-  color: #303133;
+  color: var(--text-color-primary);
   font-weight: 600;
   
   &.highlight {
@@ -2224,7 +2224,7 @@ html.dark .process-value {
 
 .connections-info {
   font-size: 13px;
-  color: #909399;
+  color: var(--text-color-secondary);
   font-weight: 500;
   margin-left: 4px;
 }
@@ -2269,7 +2269,7 @@ html.dark .connections-info {
 .card-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 .card-icon {
@@ -2291,9 +2291,9 @@ html.dark .monitor-content > div {
 }
 
 .usage-item {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
   padding-bottom: 20px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--border-color-extra-light);
 }
 
 /* 暗黑模式样式 */
@@ -2305,11 +2305,11 @@ html.dark .usage-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-sm);
   
   .label {
     font-weight: 600;
-    color: #303133;
+    color: var(--text-color-primary);
     font-size: 14px;
   }
   
@@ -2340,7 +2340,7 @@ html.dark .usage-header .label {
 .info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: var(--space-md);
   
   .full-width {
     grid-column: 1 / -1;
@@ -2351,14 +2351,14 @@ html.dark .usage-header .label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  padding: var(--space-sm);
+  background: var(--card-bg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-light);
   transition: all 0.3s ease;
   
   &:hover {
-    background: #f5f7fa;
+    background: var(--bg-color-tertiary);
     border-color: var(--el-color-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
@@ -2378,7 +2378,7 @@ html.dark .info-item {
 
 .info-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-color-secondary);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2386,7 +2386,7 @@ html.dark .info-item {
 
 .info-value {
   font-size: 15px;
-  color: #303133;
+  color: var(--text-color-primary);
   font-weight: 600;
   word-break: break-all;
   
@@ -2412,9 +2412,9 @@ html.dark .info-value {
 .load-display {
   text-align: center;
   padding: 30px 20px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  background: var(--card-bg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-light);
 }
 
 /* 暗黑模式样式 */
@@ -2437,13 +2437,13 @@ html.dark .load-display {
 
 .load-percent {
   font-size: 20px;
-  color: #909399;
+  color: var(--text-color-secondary);
   font-weight: 500;
 }
 
 .load-label {
   font-size: 14px;
-  color: #606266;
+  color: var(--text-color-regular);
   font-weight: 500;
 }
 
@@ -2459,10 +2459,10 @@ html.dark .load-percent {
 .interfaces-table {
   :deep(.el-table__header) {
     th {
-      background: #f5f7fa;
-      color: #303133;
+      background: var(--bg-color-tertiary);
+      color: var(--text-color-primary);
       font-weight: 600;
-      border-bottom: 1px solid #e4e7ed;
+      border-bottom: 1px solid var(--border-color-light);
     }
   }
   
@@ -2498,11 +2498,11 @@ html.dark .interfaces-table :deep(.el-table__row:hover) {
 
 @media (max-width: 768px) {
   .monitor-page {
-    padding: 12px;
+    padding: var(--space-sm);
   }
   
   .monitor-card {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-md);
   }
   
   .load-number {

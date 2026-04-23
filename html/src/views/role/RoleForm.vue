@@ -908,9 +908,9 @@ defineExpose({
 
 <style scoped>
 .menu-permission-container {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  background: #fafafa;
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius-lg);
+  background: var(--bg-color-tertiary);
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
@@ -929,14 +929,14 @@ defineExpose({
 }
 
 .tree-wrapper::-webkit-scrollbar-track {
-  background: var(--bg-color-tertiary, #f1f1f1);
-  border-radius: 4px;
+  background: var(--bg-color-tertiary);
+  border-radius: var(--border-radius-sm);
   transition: background-color 0.3s ease;
 }
 
 .tree-wrapper::-webkit-scrollbar-thumb {
-  background: var(--border-color-base, #c1c1c1);
-  border-radius: 4px;
+  background: var(--border-color-base);
+  border-radius: var(--border-radius-sm);
   transition: background-color 0.3s ease;
 }
 
@@ -955,20 +955,20 @@ defineExpose({
 .menu-permission-tree :deep(.el-tree-node__content) {
   height: 32px;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   margin-bottom: 2px;
   transition: all 0.2s ease;
   border: 1px solid transparent;
 }
 
 .menu-permission-tree :deep(.el-tree-node__content:hover) {
-  background-color: var(--bg-color-tertiary, #f0f9ff) !important;
-  border-color: var(--border-color-light, #b3d8ff) !important;
+  background-color: var(--el-color-primary-light-9) !important;
+  border-color: var(--el-color-primary-light-5) !important;
   transition: all 0.2s ease;
 }
 
 .menu-permission-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background-color: var(--bg-color-tertiary, #e1f3ff);
+  background-color: var(--el-color-primary-light-9);
   border-color: var(--sidebar-active, var(--el-color-primary));
 }
 
@@ -1006,7 +1006,7 @@ defineExpose({
 }
 
 .permission-icon {
-  color: #67c23a;
+  color: var(--el-color-success);
 }
 
 .permission-name,
@@ -1068,7 +1068,7 @@ defineExpose({
 }
 
 .permission-path-icon {
-  color: #909399;
+  color: var(--text-color-secondary);
   font-size: 12px;
   cursor: help;
   margin-left: 2px;
@@ -1086,10 +1086,10 @@ defineExpose({
   gap: 6px;
   margin-top: 8px;
   padding: 8px 12px;
-  background: #fff7e6;
-  border: 1px solid #ffe58f;
-  border-radius: 4px;
-  color: #d48806;
+  background: var(--el-color-warning-light-9);
+  border: 1px solid var(--el-color-warning-light-5);
+  border-radius: var(--border-radius-sm);
+  color: var(--el-color-warning-dark-2);
   font-size: 12px;
 }
 
@@ -1102,9 +1102,9 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: #f0f9ff;
-  border: 1px solid #b3d8ff;
-  border-radius: 4px;
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-5);
+  border-radius: var(--border-radius-sm);
   color: var(--el-color-primary);
   font-size: 13px;
 }

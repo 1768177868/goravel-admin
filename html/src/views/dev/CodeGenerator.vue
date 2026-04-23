@@ -999,9 +999,9 @@ onMounted(() => {
 }
 
 .code-preview pre {
-  background: #f5f5f5;
+  background: var(--bg-color-tertiary);
   padding: 15px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   max-height: 500px;
   overflow: auto;
   font-family: 'Courier New', Courier, monospace;
@@ -1010,7 +1010,7 @@ onMounted(() => {
 }
 
 .code-preview code {
-  color: #333;
+  color: var(--text-color-primary);
 }
 
 /* 暗黑模式样式 */

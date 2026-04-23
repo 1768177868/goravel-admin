@@ -300,7 +300,7 @@ onMounted(() => {
 
 .menu-icon-name {
   font-size: 12px;
-  color: #666;
+  color: var(--text-color-regular);
 }
 </style>
 

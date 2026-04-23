@@ -1013,9 +1013,9 @@ onMounted(() => {
 
 pre {
   margin: 0;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 4px;
+  padding: var(--space-sm);
+  background: var(--bg-color-tertiary);
+  border-radius: var(--border-radius-sm);
   overflow-x: auto;
 }
 
@@ -1032,7 +1032,7 @@ pre {
 
 .preview-text {
   font-size: 12px;
-  color: #606266;
+  color: var(--text-color-regular);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1041,7 +1041,7 @@ pre {
 }
 
 .text-muted {
-  color: #909399;
+  color: var(--text-color-secondary);
 }
 
 .request-params-popover {
@@ -1052,16 +1052,16 @@ pre {
 .request-params-header {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #ebeef5;
+  margin-bottom: var(--space-xs);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--border-color-lighter);
 }
 
 .request-params-content {
   margin: 0;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 4px;
+  padding: var(--space-sm);
+  background: var(--bg-color-tertiary);
+  border-radius: var(--border-radius-sm);
   overflow-x: auto;
   font-size: 12px;
   line-height: 1.6;
@@ -1079,14 +1079,14 @@ pre {
 .request-params-header {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-xs);
 }
 
 .request-params-content {
   margin: 0;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 4px;
+  padding: var(--space-sm);
+  background: var(--bg-color-tertiary);
+  border-radius: var(--border-radius-sm);
   overflow-x: auto;
   font-size: 13px;
   line-height: 1.6;
@@ -1112,11 +1112,11 @@ pre {
 }
 
 .changes-old {
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 
 .changes-new {
-  color: #67c23a;
+  color: var(--el-color-success);
 }
 
 /* 暗黑模式样式 */

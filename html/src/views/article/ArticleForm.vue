@@ -165,10 +165,7 @@ const loadData = async () => {
     const res = await getArticleDetail(props.editId);
     if (res.data && res.data.article) {
       const data = res.data.article;
-      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
       const mapped = mapFields(data, getFormInitialValue());
-      // 对于使用字典的字段（radio、select、checkbox），需要将值转换为字符串以匹配选项值
-      // 因为字典选项的值都是字符串类型
       const normalizeRules = {};
 
       normalizeRules["status"] = "string";

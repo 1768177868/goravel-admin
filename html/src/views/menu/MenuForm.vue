@@ -490,19 +490,19 @@ const handleDialogClose = () => {
 .icon-picker {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .icon-picker-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .icon-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: var(--space-xs);
   max-height: 220px;
   overflow-y: auto;
 }
@@ -519,7 +519,7 @@ const handleDialogClose = () => {
 
 .form-item-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-color-secondary);
   margin-top: 4px;
   line-height: 1.4;
 }

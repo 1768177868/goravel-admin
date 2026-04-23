@@ -1253,17 +1253,17 @@ onMounted(() => {
 }
 
 .preview-image img {
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .preview-video video {
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .preview-document iframe {
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -1280,9 +1280,9 @@ onMounted(() => {
 }
 
 .upload-status {
-  margin-top: 10px;
+  margin-top: var(--space-sm);
   text-align: center;
-  color: #666;
+  color: var(--text-color-regular);
 }
 
 .upload-actions {
@@ -1292,16 +1292,16 @@ onMounted(() => {
 .filename-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .filename-thumbnail {
   width: 50px;
   height: 50px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   flex-shrink: 0;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--border-color-light);
 }
 
 .image-placeholder {
@@ -1310,14 +1310,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  border: 1px solid #e4e7ed;
+  background-color: var(--bg-color-tertiary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color-light);
 }
 
 .image-placeholder .el-icon {
   font-size: 20px;
-  color: #909399;
+  color: var(--text-color-secondary);
 }
 
 .image-error {
@@ -1327,7 +1327,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background-color: #fef0f0;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   border: 1px solid #fde2e2;
 }
 

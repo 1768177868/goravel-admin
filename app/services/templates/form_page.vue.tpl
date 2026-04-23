@@ -237,10 +237,7 @@ const loadData = async () => {
     const res = await get<<.ModelName>>Detail(props.editId)
     if (res.data && res.data.<<.ModuleName>>) {
       const data = res.data.<<.ModuleName>>
-      // 使用工具函数映射字段，自动处理 snake_case 和 PascalCase
       const mapped = mapFields(data, getFormInitialValue())
-      // 对于使用字典的字段（radio、select、checkbox），需要将值转换为字符串以匹配选项值
-      // 因为字典选项的值都是字符串类型
       const normalizeRules = {}
 <<range .FormFields>>
 <<- if and (or (eq .FormType "radio") (eq .FormType "select") (eq .FormType "checkbox")) .Dictionary>>

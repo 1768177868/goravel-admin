@@ -504,9 +504,9 @@ onMounted(() => {
   word-wrap: break-word;
   max-height: 300px;
   overflow-y: auto;
-  background: #f5f5f5;
-  padding: 10px;
-  border-radius: 4px;
+  background: var(--bg-color-tertiary);
+  padding: var(--space-sm);
+  border-radius: var(--border-radius-sm);
   margin: 0;
 }
 

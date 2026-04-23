@@ -534,9 +534,9 @@ onMounted(() => {
   
 pre {
   margin: 0;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 4px;
+  padding: var(--space-sm);
+  background: var(--bg-color-tertiary);
+  border-radius: var(--border-radius-sm);
   overflow-x: auto;
   max-height: 400px;
   overflow-y: auto;

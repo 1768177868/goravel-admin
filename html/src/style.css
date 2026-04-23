@@ -4,54 +4,6 @@
   box-sizing: border-box;
 }
 
-/* CSS变量定义 - 浅色模式（默认） */
-:root {
-  --bg-color: #ffffff;
-  --bg-color-secondary: #f0f2f5;
-  --bg-color-tertiary: #f5f7fa;
-  --text-color-primary: #303133;
-  --text-color-regular: #606266;
-  --text-color-secondary: #909399;
-  --text-color-placeholder: #c0c4cc;
-  --border-color-base: #dcdfe6;
-  --border-color-light: #e4e7ed;
-  --border-color-lighter: #ebeef5;
-  --border-color-extra-light: #f2f6fc;
-  --header-bg: #ffffff;
-  --sidebar-bg: #1f2937;
-  --sidebar-text: #bfcbd9;
-  --sidebar-active: #409EFF;
-  --card-bg: #ffffff;
-  --card-border: #e4e7ed;
-  --shadow-base: rgba(0, 0, 0, 0.1);
-  --shadow-light: rgba(0, 0, 0, 0.05);
-
-}
-
-/* 暗黑模式 CSS 变量 */
-html.dark {
-  --bg-color: #141414;
-  --bg-color-secondary: #0d1117;
-  --bg-color-tertiary: #161b22;
-  --text-color-primary: #e5eaf3;
-  --text-color-regular: #cfd3dc;
-  --text-color-secondary: #a3a6ad;
-  --text-color-placeholder: #6d7175;
-  --border-color-base: #3d3e40;
-  --border-color-light: #3d3e40;
-  --border-color-lighter: #2d2d30;
-  --border-color-extra-light: #1e1e1e;
-  --header-bg: #1d1e1f;
-  --sidebar-bg: #1f2937;
-  --sidebar-text: #bfcbd9;
-  --sidebar-active: #409EFF;
-  --card-bg: #1d1e1f;
-  --card-border: #3d3e40;
-  --shadow-base: rgba(0, 0, 0, 0.3);
-  --shadow-light: rgba(0, 0, 0, 0.2);
-}
-
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -69,7 +21,7 @@ body {
 /* 列表页公共样式 */
 .list-page {
   background: var(--card-bg);
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
 }
 
 .card-header {
@@ -80,7 +32,7 @@ body {
 
 .header-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 /* 移动端：列表页内 Element 表格可横向滚动，避免多列/右侧固定列不可见 */
@@ -100,10 +52,10 @@ body {
    * 适用于所有 el-dialog（MessageBox 使用独立结构，不受影响）
    */
   .el-dialog {
-    width: calc(100vw - 24px) !important;
+    width: calc(100vw - var(--space-lg)) !important;
     max-width: 100%;
-    margin: 12px auto !important;
-    max-height: calc(100vh - 24px);
+    margin: var(--space-sm) auto !important;
+    max-height: calc(100vh - var(--space-lg));
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -119,14 +71,14 @@ body {
   }
 
   .el-dialog .el-dialog__header {
-    padding: 14px 16px;
+    padding: calc(var(--space-sm) + 2px) var(--space-md);
     flex-shrink: 0;
   }
 
   .el-dialog .el-dialog__title {
     word-break: break-word;
     line-height: 1.4;
-    padding-right: 8px;
+    padding-right: var(--space-xs);
   }
 
   .el-dialog .el-dialog__body {
@@ -135,16 +87,16 @@ body {
     overflow-x: auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px 16px;
+    padding: var(--space-sm) var(--space-md);
   }
 
   .el-dialog .el-dialog__footer {
     flex-shrink: 0;
-    padding: 12px 16px;
+    padding: var(--space-sm) var(--space-md);
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 10px;
+    gap: var(--space-sm);
   }
 
   .el-dialog .el-dialog__footer .el-button {
@@ -162,7 +114,7 @@ body {
     line-height: 1.4 !important;
     text-align: left !important;
     justify-content: flex-start !important;
-    padding: 0 0 8px 0 !important;
+    padding: 0 0 var(--space-xs) 0 !important;
     margin: 0 !important;
     box-sizing: border-box;
   }
@@ -192,7 +144,7 @@ body {
   .el-dialog__body .el-checkbox-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 16px;
+    gap: var(--space-xs) var(--space-md);
   }
 }
 

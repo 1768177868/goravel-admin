@@ -961,7 +961,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-md);
   padding: 0 4px;
 }
 
@@ -973,7 +973,7 @@ onBeforeUnmount(() => {
 }
 
 .stats-row {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-md);
 }
 
 .stat-card {
@@ -999,8 +999,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  margin-right: 16px;
+  color: #fff;
+  margin-right: var(--space-md);
   flex-shrink: 0;
 }
 
@@ -1032,19 +1032,19 @@ onBeforeUnmount(() => {
 }
 
 .trend-up {
-  color: #67C23A;
+  color: var(--el-color-success);
 }
 
 .trend-down {
-  color: #F56C6C;
+  color: var(--el-color-danger);
 }
 
 .charts-row {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-md);
 }
 
 .bottom-row {
-  margin-top: 20px;
+  margin-top: var(--space-md);
 }
 
 .card-header {
@@ -1056,7 +1056,7 @@ onBeforeUnmount(() => {
 
 :deep(.el-card__header) {
   padding: 18px 20px;
-  border-bottom: 1px solid #EBEEF5;
+  border-bottom: 1px solid var(--border-color-lighter);
 }
 
 :deep(.el-card__body) {
@@ -1071,24 +1071,24 @@ onBeforeUnmount(() => {
 
 .activity-text {
   font-size: 14px;
-  color: #606266;
+  color: var(--text-color-regular);
 }
 
 .activity-user {
   font-weight: 600;
-  color: #303133;
+  color: var(--text-color-primary);
   margin-right: 6px;
 }
 
 .activity-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-color-secondary);
 }
 
 .quick-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .quick-action-btn {

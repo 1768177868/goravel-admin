@@ -36,7 +36,7 @@
               <el-option label="qiniu" value="qiniu" />
               <el-option label="minio" value="minio" />
             </el-select>
-            <div style="margin-top: 8px; color: #909399; font-size: 12px;">
+            <div style="margin-top: 8px; color: var(--text-color-secondary); font-size: 12px;">
               {{ $t('config.storage_config_default_tip') }}
             </div>
           </el-form-item>

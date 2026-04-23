@@ -1,0 +1,65 @@
+:root {
+  /* Brand */
+  --color-primary: #409eff;
+
+  /* Surface */
+  --bg-color: #ffffff;
+  --bg-color-secondary: #f0f2f5;
+  --bg-color-tertiary: #f5f7fa;
+  --header-bg: #ffffff;
+  --sidebar-bg: #1f2937;
+  --sidebar-text: #bfcbd9;
+  --sidebar-active: var(--color-primary);
+  --card-bg: #ffffff;
+  --card-border: #e4e7ed;
+
+  /* Text */
+  --text-color-primary: #303133;
+  --text-color-regular: #606266;
+  --text-color-secondary: #909399;
+  --text-color-placeholder: #c0c4cc;
+
+  /* Border */
+  --border-color-base: #dcdfe6;
+  --border-color-light: #e4e7ed;
+  --border-color-lighter: #ebeef5;
+  --border-color-extra-light: #f2f6fc;
+
+  /* Radius */
+  --border-radius-sm: 4px;
+  --border-radius: 6px;
+  --border-radius-lg: 8px;
+
+  /* Spacing */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --card-padding: var(--space-md);
+
+  /* Shadow */
+  --shadow-base: rgba(0, 0, 0, 0.1);
+  --shadow-light: rgba(0, 0, 0, 0.05);
+}
+
+html.dark {
+  --bg-color: #141414;
+  --bg-color-secondary: #0d1117;
+  --bg-color-tertiary: #161b22;
+  --text-color-primary: #e5eaf3;
+  --text-color-regular: #cfd3dc;
+  --text-color-secondary: #a3a6ad;
+  --text-color-placeholder: #6d7175;
+  --border-color-base: #3d3e40;
+  --border-color-light: #3d3e40;
+  --border-color-lighter: #2d2d30;
+  --border-color-extra-light: #1e1e1e;
+  --header-bg: #1d1e1f;
+  --sidebar-bg: #1f2937;
+  --sidebar-text: #bfcbd9;
+  --sidebar-active: var(--color-primary);
+  --card-bg: #1d1e1f;
+  --card-border: #3d3e40;
+  --shadow-base: rgba(0, 0, 0, 0.3);
+  --shadow-light: rgba(0, 0, 0, 0.2);
+}

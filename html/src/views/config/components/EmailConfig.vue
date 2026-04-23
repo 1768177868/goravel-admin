@@ -59,7 +59,7 @@
         <el-col :span="12">
           <el-form-item :label="$t('config.email_timeout')" prop="email_timeout">
             <el-input-number v-model="formData.email_timeout" :min="1" :max="300" :placeholder="$t('config.email_timeout_placeholder')" />
-            <span style="margin-left: 10px; color: #909399;">{{ $t('config.email_timeout_unit') }}</span>
+            <span style="margin-left: 10px; color: var(--text-color-secondary);">{{ $t('config.email_timeout_unit') }}</span>
           </el-form-item>
         </el-col>
       </el-row>

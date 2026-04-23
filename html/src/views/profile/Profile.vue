@@ -838,8 +838,8 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   padding: 8px;
-  border: 2px solid #e4e7ed;
-  border-radius: 8px;
+  border: 2px solid var(--border-color-light);
+  border-radius: var(--border-radius-lg);
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -851,7 +851,7 @@ onMounted(() => {
 
 .avatar-item.active {
   border-color: var(--el-color-primary);
-  background-color: #ecf5ff;
+  background-color: var(--el-color-primary-light-9);
 }
 
 .google-authenticator-section {
@@ -886,16 +886,16 @@ onMounted(() => {
   align-items: center;
   gap: 20px;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--border-radius-lg);
   margin-bottom: 20px;
 }
 
 .qr-code-image {
   width: 200px;
   height: 200px;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  background: white;
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius-lg);
+  background: var(--card-bg);
   padding: 10px;
 }
 
@@ -911,7 +911,7 @@ onMounted(() => {
 }
 
 .tip-text {
-  color: #909399;
+  color: var(--text-color-secondary);
   font-size: 12px;
   margin-top: 10px !important;
 }

@@ -65,7 +65,7 @@
         </template>
 
         <template #amount="{ row }">
-          <span :style="{ color: row.type === 'expense' ? '#f56c6c' : '#67c23a' }">
+          <span :style="{ color: row.type === 'expense' ? 'var(--el-color-danger)' : 'var(--el-color-success)' }">
             {{ row.type === 'expense' ? '-' : '+' }}¥{{ formatMoney(row.amount) }}
           </span>
         </template>
@@ -283,7 +283,7 @@ onMounted(() => {
 
 .user-id-display {
   margin-left: 10px;
-  color: #909399;
+  color: var(--text-color-secondary);
   font-size: 14px;
 }
 
@@ -317,15 +317,15 @@ onMounted(() => {
 }
 
 .stat-item .value.income {
-  color: #67c23a;
+  color: var(--el-color-success);
 }
 
 .stat-item .value.expense {
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 
 .stat-item .value.refund {
-  color: #e6a23c;
+  color: var(--el-color-warning);
 }
 
 .stat-item .value.balance {

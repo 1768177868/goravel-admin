@@ -876,14 +876,14 @@ onMounted(async () => {
 
 <style scoped>
 .order-details-expand {
-  padding: 15px;
-  background-color: #f5f7fa;
+  padding: var(--space-sm);
+  background-color: var(--bg-color-tertiary);
 }
 
 .order-details-expand h4 {
-  margin: 10px 0;
+  margin: var(--space-sm) 0;
   font-weight: bold;
-  color: #303133;
+  color: var(--text-color-primary);
 }
 
 /* 暗黑模式样式 */

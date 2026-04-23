@@ -13,7 +13,7 @@
           :active-text="$t('common.enabled')"
           :inactive-text="$t('common.disabled')"
         />
-        <span style="margin-left: 10px; color: #909399;">{{ $t('config.captcha_enabled_tip') }}</span>
+        <span style="margin-left: 10px; color: var(--text-color-secondary);">{{ $t('config.captcha_enabled_tip') }}</span>
       </el-form-item>
 
       <el-form-item :label="$t('config.captcha_expire')" prop="captcha_expire">
@@ -23,7 +23,7 @@
           :max="600"
           :placeholder="$t('config.captcha_expire_placeholder')"
         />
-        <span style="margin-left: 10px; color: #909399;">{{ $t('config.captcha_expire_unit') }}</span>
+        <span style="margin-left: 10px; color: var(--text-color-secondary);">{{ $t('config.captcha_expire_unit') }}</span>
       </el-form-item>
 
       <el-form-item>

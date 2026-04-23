@@ -138,7 +138,6 @@ const searchFields = computed(() => [
     label: t("article.admin_id"),
     type: "input",
     clearable: true,
-
     width: "200px",
     advanced: false,
   },
@@ -147,7 +146,6 @@ const searchFields = computed(() => [
     label: t("article.title"),
     type: "input",
     clearable: true,
-
     width: "200px",
     advanced: false,
   },
@@ -156,7 +154,6 @@ const searchFields = computed(() => [
     label: t("article.content"),
     type: "input",
     clearable: true,
-
     width: "200px",
     advanced: false,
   },
@@ -165,9 +162,7 @@ const searchFields = computed(() => [
     label: t("article.status"),
     type: "select",
     clearable: true,
-
     apiUrl: "/options?type=dictionary&dictionary_type=status",
-
     width: "200px",
     advanced: false,
   },
@@ -180,7 +175,6 @@ const tableColumns = computed(() => [
     width: 80,
     sortable: true,
   },
-
   {
     field: "admin_id",
     title: t("article.admin_id"),
@@ -244,7 +238,6 @@ const getPrimaryActions = (row) => {
       permission: "article.update",
       handler: handleEdit,
     },
-
     {
       key: "delete",
       label: t("common.delete"),

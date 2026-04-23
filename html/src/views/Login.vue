@@ -468,7 +468,7 @@ const handleLogin = async () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-color-tertiary, #f5f7fa);
+  background: var(--bg-color-tertiary);
 }
 
 .login-page__toolbar {
@@ -504,7 +504,7 @@ const handleLogin = async () => {
 
 .login-theme-swatch.active {
   border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 1px var(--card-bg, #fff);
+  box-shadow: 0 0 0 1px var(--card-bg);
 }
 
 .login-toolbar-dark :deep(.dark-mode-switch) {
@@ -515,9 +515,9 @@ const handleLogin = async () => {
 
 .login-toolbar-switch :deep(.language-switch) {
   padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color-light, #e4e7ed);
-  background: var(--card-bg, #fff);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-light);
+  background: var(--card-bg);
   transition: all 0.2s ease;
 }
 
@@ -538,7 +538,7 @@ const handleLogin = async () => {
   width: 100%;
   max-width: 400px;
   padding: 48px 44px;
-  background: var(--card-bg, #fff);
+  background: var(--card-bg);
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   animation: formSlideIn 0.5s ease-out;
@@ -558,7 +558,7 @@ const handleLogin = async () => {
 .login-form-title {
   font-size: 24px;
   font-weight: 600;
-  color: var(--text-color-primary, #303133);
+  color: var(--text-color-primary);
   margin: 0 0 32px;
   text-align: center;
   letter-spacing: -0.3px;
@@ -577,15 +577,15 @@ const handleLogin = async () => {
 }
 
 .login-input :deep(.el-input__wrapper) {
-  border-radius: 8px;
-  box-shadow: 0 0 0 1px var(--border-color-light, #e4e7ed) inset;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0 0 1px var(--border-color-light) inset;
   transition: all 0.2s ease;
-  background: var(--card-bg, #fff);
+  background: var(--card-bg);
   padding: 0 14px;
 }
 
 .login-input :deep(.el-input__wrapper):hover {
-  box-shadow: 0 0 0 1px #c0c4cc inset;
+  box-shadow: 0 0 0 1px var(--text-color-placeholder) inset;
 }
 
 .login-input :deep(.el-input__wrapper.is-focus) {
@@ -594,13 +594,13 @@ const handleLogin = async () => {
 
 .login-input :deep(.el-input__inner) {
   font-size: 15px;
-  color: var(--text-color-primary, #303133);
+  color: var(--text-color-primary);
   height: 44px;
   line-height: 44px;
 }
 
 .login-input :deep(.el-input__inner::placeholder) {
-  color: #909399;
+  color: var(--text-color-secondary);
 }
 
 .login-button {
@@ -608,7 +608,7 @@ const handleLogin = async () => {
   height: 46px;
   font-size: 16px;
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: var(--border-radius-lg);
   background: var(--el-color-primary);
   border: none;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
@@ -639,8 +639,8 @@ const handleLogin = async () => {
   width: 170px;
   object-fit: cover;
   cursor: pointer;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-light);
   transition: all 0.2s ease;
 }
 

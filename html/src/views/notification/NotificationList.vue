@@ -407,7 +407,7 @@ onMounted(() => {
 
 <style scoped>
 .notification-page {
-  padding: 16px;
+  padding: var(--card-padding);
 }
 
 .notification-card {
@@ -423,7 +423,7 @@ onMounted(() => {
 
 .header-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 .text-truncate {
@@ -431,7 +431,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
-  color: #606266;
+  color: var(--text-color-regular);
 }
 
 /* 暗黑模式样式 */
@@ -444,9 +444,9 @@ html.dark .text-truncate {
   max-height: 60vh;
   overflow-y: auto;
   white-space: normal;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  padding: var(--space-sm);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius-sm);
 }
 
 /* 暗黑模式样式 */
@@ -457,18 +457,18 @@ html.dark .rich-text-content-view {
 }
 
 .rich-text-content-view :deep(p) {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-sm);
 }
 
 .rich-text-content-view :deep(img) {
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 10px 0;
+  margin: var(--space-sm) 0;
 }
 
 .markdown-content :deep(p) {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-sm);
   line-height: 1.6;
 }
 
@@ -478,13 +478,13 @@ html.dark .rich-text-content-view {
 .markdown-content :deep(h4),
 .markdown-content :deep(h5),
 .markdown-content :deep(h6) {
-  margin: 16px 0 8px;
+  margin: var(--space-md) 0 var(--space-xs);
   font-weight: 600;
 }
 
 .markdown-content :deep(ul),
 .markdown-content :deep(ol) {
-  margin: 10px 0;
+  margin: var(--space-sm) 0;
   padding-left: 30px;
 }
 
@@ -493,15 +493,15 @@ html.dark .rich-text-content-view {
 }
 
 .markdown-content :deep(blockquote) {
-  margin: 10px 0;
-  padding: 10px 15px;
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) 15px;
   border-left: 4px solid var(--el-color-primary);
-  background-color: #f5f7fa;
-  color: #606266;
+  background-color: var(--bg-color-tertiary);
+  color: var(--text-color-regular);
 }
 
 .markdown-content :deep(code) {
-  background-color: #f5f7fa;
+  background-color: var(--bg-color-tertiary);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
@@ -509,11 +509,11 @@ html.dark .rich-text-content-view {
 }
 
 .markdown-content :deep(pre) {
-  background-color: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
+  background-color: var(--bg-color-tertiary);
+  padding: var(--space-sm);
+  border-radius: var(--border-radius-sm);
   overflow-x: auto;
-  margin: 10px 0;
+  margin: var(--space-sm) 0;
 }
 
 .markdown-content :deep(pre code) {
@@ -524,18 +524,18 @@ html.dark .rich-text-content-view {
 .markdown-content :deep(table) {
   width: 100%;
   border-collapse: collapse;
-  margin: 10px 0;
+  margin: var(--space-sm) 0;
 }
 
 .markdown-content :deep(th),
 .markdown-content :deep(td) {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--border-color-lighter);
   padding: 8px 12px;
   text-align: left;
 }
 
 .markdown-content :deep(th) {
-  background-color: #f5f7fa;
+  background-color: var(--bg-color-tertiary);
   font-weight: 600;
 }
 </style>

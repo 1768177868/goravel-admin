@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
@@ -118,6 +119,28 @@ func normalizeGeneratedContent(content string) string {
 	return strings.Join(normalized, "\n")
 }
 
+func normalizeFrontendWhitespace(content string) string {
+	content = normalizeGeneratedContent(content)
+
+	// Remove template-artifact blank lines commonly left inside objects/arrays.
+	replacements := []struct {
+		pattern string
+		replace string
+	}{
+		{`(\{\n)([ \t]*\n)+`, `$1`},            // blank lines after "{"
+		{`(\[\n)([ \t]*\n)+`, `$1`},            // blank lines after "["
+		{`([ \t]*,\n)([ \t]*\n)+`, `$1`},       // blank lines after commas
+		{`\n([ \t]*\n)+([ \t]*[}\]])`, `\n$2`}, // blank lines before "}" or "]"
+	}
+
+	for _, item := range replacements {
+		re := regexp.MustCompile(item.pattern)
+		content = re.ReplaceAllString(content, item.replace)
+	}
+
+	return content
+}
+
 func isFrontendGeneratedFile(path string) bool {
 	if !strings.HasPrefix(filepath.ToSlash(path), "html/") {
 		return false
@@ -145,6 +168,8 @@ func formatFrontendContentWithPrettier(path, content string) string {
 		return content
 	}
 
+	content = normalizeFrontendWhitespace(content)
+
 	prettierPath := prettierExecutablePath()
 	if _, err := os.Stat(prettierPath); err != nil {
 		return content
@@ -155,10 +180,10 @@ func formatFrontendContentWithPrettier(path, content string) string {
 	cmd.Dir = "."
 	output, err := cmd.Output()
 	if err != nil {
-		return content
+		return normalizeFrontendWhitespace(content)
 	}
 
-	return string(output)
+	return normalizeFrontendWhitespace(string(output))
 }
 
 func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error) {

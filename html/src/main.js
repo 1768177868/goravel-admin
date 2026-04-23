@@ -19,6 +19,7 @@ import Storage from './utils/storage'
 import { setupTabsStorageSync } from './store/tabs'
 import { validateEnv } from './utils/env'
 import logger from './utils/logger'
+import './assets/css/var.css'
 import './style.css'
 
 // 验证环境变量
