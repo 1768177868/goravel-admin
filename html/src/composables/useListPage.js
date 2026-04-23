@@ -32,11 +32,16 @@ export function useListPage(options = {}) {
     onLoadSuccess = null,
     buildParams = null,
     onSearch = null,
-    onReset = null
+    onReset = null,
+    selectionIdKey = 'id'
   } = options
 
   // 搜索表单
   const searchForm = reactive({ ...initialSearchForm })
+  
+  // 批量选择
+  const selectedRows = ref([])
+  const selectedIds = ref([])
 
   // 使用表格数据 composable
   const { pagination, tableData, loading, loadData: baseLoadData, resetAndLoad: baseResetAndLoad } = useTableData({
@@ -96,6 +101,13 @@ export function useListPage(options = {}) {
     pagination.page = 1
     await enhancedLoadData()
   }
+  
+  /**
+   * 刷新当前页数据（保留当前分页和筛选）
+   */
+  const refresh = async () => {
+    await enhancedLoadData()
+  }
 
   /**
    * 搜索处理（自动重置到第一页并加载）
@@ -119,6 +131,13 @@ export function useListPage(options = {}) {
     // 重置排序
     resetSort()
   }
+  
+  /**
+   * 重置查询条件（不刷新数据）
+   */
+  const resetQuery = () => {
+    clearSearchForm()
+  }
 
   /**
    * 重置搜索条件
@@ -138,6 +157,25 @@ export function useListPage(options = {}) {
       enhancedResetAndLoad()
     }
   }
+  
+  /**
+   * 统一处理表格选中项变更
+   * @param {Array} rows 当前选中行
+   */
+  const handleSelectionChange = (rows = []) => {
+    selectedRows.value = Array.isArray(rows) ? rows : []
+    selectedIds.value = selectedRows.value
+      .map((row) => row?.[selectionIdKey])
+      .filter((id) => id !== undefined && id !== null && id !== '')
+  }
+  
+  /**
+   * 清空选中状态
+   */
+  const clearSelection = () => {
+    selectedRows.value = []
+    selectedIds.value = []
+  }
 
   return {
     // 响应式数据
@@ -145,13 +183,19 @@ export function useListPage(options = {}) {
     tableData,
     loading,
     searchForm,
+    selectedRows,
+    selectedIds,
     
     // 方法
     loadData: enhancedLoadData,
     resetAndLoad: enhancedResetAndLoad,
+    refresh,
     handleSearch,
     handleReset,
     clearSearchForm, // 只清空表单，不刷新数据
+    resetQuery,
+    handleSelectionChange,
+    clearSelection,
     
     // 排序相关
     buildOrderBy,

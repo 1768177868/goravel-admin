@@ -60,6 +60,7 @@
                 <el-checkbox label="has_edit">{{ $t('code_generator.has_edit') }}</el-checkbox>
                 <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
                 <el-checkbox label="has_export">{{ $t('code_generator.has_export') }}</el-checkbox>
+                <el-checkbox label="enable_batch_actions">{{ $t('code_generator.enable_batch_actions') }}</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
 
@@ -483,6 +484,14 @@ const rules = {
   ]
 }
 
+const buildGeneratorOptions = () => ({
+  has_create: form.options.includes('has_create'),
+  has_edit: form.options.includes('has_edit'),
+  has_delete: form.options.includes('has_delete'),
+  has_export: form.options.includes('has_export'),
+  enable_batch_actions: form.options.includes('enable_batch_actions')
+})
+
 const fileTypes = [
   { value: 'model', label: t('code_generator.file_model') },
   { value: 'controller', label: t('code_generator.file_controller') },
@@ -709,12 +718,7 @@ const handlePreview = async (fileType) => {
       table_name: form.table_name,
       fields: form.fields,
       file_type: fileType,
-      options: {
-        has_create: form.options.includes('has_create'),
-        has_edit: form.options.includes('has_edit'),
-        has_delete: form.options.includes('has_delete'),
-        has_export: form.options.includes('has_export')
-      }
+      options: buildGeneratorOptions()
     })
     previewCode[fileType] = response.data.code || ''
   } catch (error) {
@@ -752,12 +756,7 @@ const handleGenerate = async () => {
       fields: form.fields,
       files: form.files,
       force: false,
-      options: {
-        has_create: form.options.includes('has_create'),
-        has_edit: form.options.includes('has_edit'),
-        has_delete: form.options.includes('has_delete'),
-        has_export: form.options.includes('has_export')
-      }
+      options: buildGeneratorOptions()
     })
 
     const savedFiles = response.data.saved_files || []
@@ -787,11 +786,7 @@ const handleGenerate = async () => {
             fields: form.fields,
             files: form.files,
             force: true,
-            options: {
-              has_create: true,
-              has_edit: true,
-              has_delete: true
-            }
+            options: buildGeneratorOptions()
           })
 
           const savedFiles = response.data.saved_files || []

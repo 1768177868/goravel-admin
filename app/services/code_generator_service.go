@@ -308,6 +308,16 @@ func (s *CodeGeneratorServiceImpl) Save(moduleName, tableName string, fields []F
 		savedFiles = append(savedFiles, file.Path)
 	}
 
+	if s.containsGeneratedAdminController(files) {
+		updated, err := s.syncAdminRoute(moduleName, options)
+		if err != nil {
+			return nil, err
+		}
+		if updated {
+			savedFiles = append(savedFiles, "routes/admin.go")
+		}
+	}
+
 	return savedFiles, nil
 }
 
@@ -331,7 +341,90 @@ func (s *CodeGeneratorServiceImpl) ForceSave(moduleName, tableName string, field
 		savedFiles = append(savedFiles, file.Path)
 	}
 
+	if s.containsGeneratedAdminController(files) {
+		updated, err := s.syncAdminRoute(moduleName, options)
+		if err != nil {
+			return nil, err
+		}
+		if updated {
+			savedFiles = append(savedFiles, "routes/admin.go")
+		}
+	}
+
 	return savedFiles, nil
+}
+
+func (s *CodeGeneratorServiceImpl) containsGeneratedAdminController(files []GeneratedFile) bool {
+	for _, file := range files {
+		if strings.HasPrefix(filepath.ToSlash(file.Path), "app/http/controllers/admin/") {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *CodeGeneratorServiceImpl) syncAdminRoute(moduleName string, options map[string]bool) (bool, error) {
+	const adminRoutePath = "routes/admin.go"
+	content, err := os.ReadFile(adminRoutePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read %s: %w", adminRoutePath, err)
+	}
+
+	routeContent := string(content)
+	modelName := toPascalCase(moduleName)
+	controllerVar := strings.ToLower(modelName[:1]) + modelName[1:] + "Controller"
+	controllerDecl := fmt.Sprintf("\t%s := admin.New%sController()", controllerVar, modelName)
+	resourceRoute := fmt.Sprintf("\t\t\trouter.Resource(\"%ss\", %s)", moduleName, controllerVar)
+
+	hasExport := false
+	if options != nil {
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
+		}
+	}
+	exportRoute := fmt.Sprintf("\t\t\trouter.Post(\"%ss/export\", %s.Export)", moduleName, controllerVar)
+
+	updated := false
+
+	// 注入控制器实例声明
+	if !strings.Contains(routeContent, controllerDecl) {
+		marker := "\n\n\t// Admin 路由组"
+		if strings.Contains(routeContent, marker) {
+			routeContent = strings.Replace(routeContent, marker, "\n"+controllerDecl+marker, 1)
+		} else {
+			routeContent += "\n" + controllerDecl + "\n"
+		}
+		updated = true
+	}
+
+	// 注入 Resource 路由
+	if !strings.Contains(routeContent, resourceRoute) {
+		marker := "\n\t\t\t// 代码生成器（仅在开发环境可用）"
+		insertBlock := "\n" + resourceRoute
+		if hasExport {
+			insertBlock += "\n" + exportRoute
+		}
+
+		if strings.Contains(routeContent, marker) {
+			routeContent = strings.Replace(routeContent, marker, insertBlock+marker, 1)
+		} else {
+			routeContent += insertBlock + "\n"
+		}
+		updated = true
+	} else if hasExport && !strings.Contains(routeContent, exportRoute) {
+		routeContent = strings.Replace(routeContent, resourceRoute, resourceRoute+"\n"+exportRoute, 1)
+		updated = true
+	}
+
+	if !updated {
+		return false, nil
+	}
+
+	if err := os.WriteFile(adminRoutePath, []byte(routeContent), 0644); err != nil {
+		return false, fmt.Errorf("failed to write %s: %w", adminRoutePath, err)
+	}
+
+	return true, nil
 }
 
 func (s *CodeGeneratorServiceImpl) getGormDB() (*gorm.DB, error) {
@@ -728,6 +821,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 	hasEdit := true
 	hasDelete := true
 	hasExport := false
+	enableBatchActions := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -741,6 +835,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 		}
 		if val, ok := options["has_export"]; ok {
 			hasExport = val
+		}
+		if val, ok := options["enable_batch_actions"]; ok {
+			enableBatchActions = val
 		}
 	}
 
@@ -777,6 +874,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate         bool
 			HasEdit           bool
 			HasDelete         bool
+			HasExport         bool
 		}{
 			ControllerName:    toPascalCase(moduleName) + "Controller",
 			ServiceName:       toPascalCase(moduleName) + "Service",
@@ -788,6 +886,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate:         hasCreate,
 			HasEdit:           hasEdit,
 			HasDelete:         hasDelete,
+			HasExport:         hasExport,
 		}
 	case "service":
 		var searchableFields []TemplateFieldConfig
@@ -807,6 +906,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate         bool
 			HasEdit           bool
 			HasDelete         bool
+			HasExport         bool
 		}{
 			ServiceName:       toPascalCase(moduleName) + "Service",
 			ModelName:         toPascalCase(moduleName),
@@ -818,6 +918,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasCreate:         hasCreate,
 			HasEdit:           hasEdit,
 			HasDelete:         hasDelete,
+			HasExport:         hasExport,
 		}
 	case "request_create":
 		return struct {
@@ -888,27 +989,29 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			}
 		}
 		return struct {
-			ModelName        string
-			ModuleName       string
-			ModuleNameK      string
-			SearchableFields []TemplateFieldConfig
-			ListFields       []TemplateFieldConfig
-			FormFields       []TemplateFieldConfig
-			HasCreate        bool
-			HasEdit          bool
-			HasDelete        bool
-			HasExport        bool
+			ModelName          string
+			ModuleName         string
+			ModuleNameK        string
+			SearchableFields   []TemplateFieldConfig
+			ListFields         []TemplateFieldConfig
+			FormFields         []TemplateFieldConfig
+			HasCreate          bool
+			HasEdit            bool
+			HasDelete          bool
+			HasExport          bool
+			EnableBatchActions bool
 		}{
-			ModelName:        toPascalCase(moduleName),
-			ModuleName:       moduleName,
-			ModuleNameK:      toKebabCase(moduleName),
-			SearchableFields: searchableFields,
-			ListFields:       listFields,
-			FormFields:       templateFields,
-			HasCreate:        hasCreate,
-			HasEdit:          hasEdit,
-			HasDelete:        hasDelete,
-			HasExport:        hasExport,
+			ModelName:          toPascalCase(moduleName),
+			ModuleName:         moduleName,
+			ModuleNameK:        toKebabCase(moduleName),
+			SearchableFields:   searchableFields,
+			ListFields:         listFields,
+			FormFields:         templateFields,
+			HasCreate:          hasCreate,
+			HasEdit:            hasEdit,
+			HasDelete:          hasDelete,
+			HasExport:          hasExport,
+			EnableBatchActions: enableBatchActions,
 		}
 	case "form_page":
 		// 检查是否有 editor 类型的字段
@@ -1136,6 +1239,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 	hasCreate := true
 	hasEdit := true
 	hasDelete := true
+	hasExport := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1146,6 +1250,9 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		}
 		if val, ok := options["has_delete"]; ok {
 			hasDelete = val
+		}
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
 		}
 	}
 
@@ -1161,6 +1268,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		HasCreate         bool
 		HasEdit           bool
 		HasDelete         bool
+		HasExport         bool
 	}{
 		ControllerName:    toPascalCase(moduleName) + "Controller",
 		ServiceName:       toPascalCase(moduleName) + "Service",
@@ -1172,6 +1280,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		HasCreate:         hasCreate,
 		HasEdit:           hasEdit,
 		HasDelete:         hasDelete,
+		HasExport:         hasExport,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1195,6 +1304,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 	hasCreate := true
 	hasEdit := true
 	hasDelete := true
+	hasExport := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1205,6 +1315,9 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		}
 		if val, ok := options["has_delete"]; ok {
 			hasDelete = val
+		}
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
 		}
 	}
 
@@ -1220,6 +1333,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		HasCreate         bool
 		HasEdit           bool
 		HasDelete         bool
+		HasExport         bool
 	}{
 		ServiceName:       toPascalCase(moduleName) + "Service",
 		ModelName:         toPascalCase(moduleName),
@@ -1231,6 +1345,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		HasCreate:         hasCreate,
 		HasEdit:           hasEdit,
 		HasDelete:         hasDelete,
+		HasExport:         hasExport,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1409,6 +1524,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 	hasEdit := true
 	hasDelete := true
 	hasExport := false
+	enableBatchActions := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1423,31 +1539,36 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		if val, ok := options["has_export"]; ok {
 			hasExport = val
 		}
+		if val, ok := options["enable_batch_actions"]; ok {
+			enableBatchActions = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
 	data := struct {
-		ModelName        string
-		ModuleName       string
-		ModuleNameK      string
-		SearchableFields []TemplateFieldConfig
-		ListFields       []TemplateFieldConfig
-		FormFields       []TemplateFieldConfig
-		HasCreate        bool
-		HasEdit          bool
-		HasDelete        bool
-		HasExport        bool
+		ModelName          string
+		ModuleName         string
+		ModuleNameK        string
+		SearchableFields   []TemplateFieldConfig
+		ListFields         []TemplateFieldConfig
+		FormFields         []TemplateFieldConfig
+		HasCreate          bool
+		HasEdit            bool
+		HasDelete          bool
+		HasExport          bool
+		EnableBatchActions bool
 	}{
-		ModelName:        toPascalCase(moduleName),
-		ModuleName:       moduleName,
-		ModuleNameK:      toKebabCase(moduleName),
-		SearchableFields: templateFields,
-		ListFields:       templateFields,
-		FormFields:       templateFields,
-		HasCreate:        hasCreate,
-		HasEdit:          hasEdit,
-		HasDelete:        hasDelete,
-		HasExport:        hasExport,
+		ModelName:          toPascalCase(moduleName),
+		ModuleName:         moduleName,
+		ModuleNameK:        toKebabCase(moduleName),
+		SearchableFields:   templateFields,
+		ListFields:         templateFields,
+		FormFields:         templateFields,
+		HasCreate:          hasCreate,
+		HasEdit:            hasEdit,
+		HasDelete:          hasDelete,
+		HasExport:          hasExport,
+		EnableBatchActions: enableBatchActions,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)

@@ -18,13 +18,16 @@ type ArticleService interface {
 	Update(id uint, req *admin.ArticleUpdate) (*models.Article, error)
 
 	Delete(id uint) error
+
+	Export(filters ArticleFilters) error
 }
 
 type ArticleFilters struct {
-	AdminId string
-	Title   string
-	Content string
-	Status  string
+	AdminId   string
+	Title     string
+	Content   string
+	Status    string
+	CreatedAt string
 }
 
 type ArticleServiceImpl struct{}
@@ -51,6 +54,9 @@ func (s *ArticleServiceImpl) buildArticleQuery(filters ArticleFilters) orm.Query
 	}
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)
+	}
+	if filters.CreatedAt != "" {
+		query = query.Where("created_at = ?", filters.CreatedAt)
 	}
 
 	return query
@@ -121,5 +127,11 @@ func (s *ArticleServiceImpl) Delete(id uint) error {
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
+	return nil
+}
+
+func (s *ArticleServiceImpl) Export(filters ArticleFilters) error {
+	_ = filters
+	// TODO: implement export business logic (task dispatch / file generation).
 	return nil
 }

@@ -24,6 +24,32 @@
         @search="handleSearch"
         @reset="handleReset"
       >
+        <template #extra-buttons>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            type="danger"
+            :disabled="getButtonState('article.destroy').disabled"
+            @click="handleBatchDelete"
+          >
+            {{ `${$t("common.batch_delete")} (${selectedIds.length})` }}
+          </el-button>
+
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            @click="handleClearSelection"
+          >
+            {{ $t("common.reset") }}
+          </el-button>
+
+          <el-button
+            type="success"
+            :disabled="getButtonState('article.export').disabled || isExporting"
+            :loading="isExporting"
+            @click="handleExport"
+          >
+            {{ $t("common.export") }}
+          </el-button>
+        </template>
       </SearchForm>
 
       <VxeTable
@@ -33,6 +59,8 @@
         :columns="tableColumns"
         :height="600"
         @sort-change="handleSortChange"
+        @checkbox-change="handleTableCheckboxChange"
+        @checkbox-all="handleTableCheckboxAll"
       >
         <template #admin_id="{ row }">
           {{ getadminDisplayName(row.admin || row.admin_id) }}
@@ -68,6 +96,8 @@
 import { ref, reactive, onMounted, computed, markRaw } from "vue";
 import { useI18n } from "vue-i18n";
 
+import { useRouter } from "vue-router";
+
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import SearchForm from "../../components/SearchForm.vue";
@@ -75,7 +105,7 @@ import Pagination from "../../components/Pagination.vue";
 import VxeTable from "../../components/VxeTable.vue";
 import TableActionButtons from "../../components/TableActionButtons.vue";
 import ArticleForm from "./ArticleForm.vue";
-import { useListPage } from "../../composables/useListPage";
+import { useTable } from "../../composables/useTable";
 import { usePermission } from "../../composables/usePermission";
 import { useCrud } from "../../composables/useCrud";
 
@@ -83,6 +113,7 @@ import {
   getArticleList,
   deleteArticle,
   updateArticle,
+  exportArticle,
 } from "../../api/article";
 import logger from "../../utils/logger";
 import ErrorHandler from "../../utils/errorHandler";
@@ -94,8 +125,12 @@ const { getButtonState } = usePermission();
 
 const { t } = useI18n();
 
+const router = useRouter();
+
 const tableRef = ref(null);
 const formRef = ref(null);
+
+const isExporting = ref(false);
 
 const {
   dialogVisible,
@@ -112,6 +147,7 @@ const initialSearchForm = {
   title: "",
   content: "",
   status: "",
+  created_at: "",
 };
 
 const {
@@ -119,18 +155,25 @@ const {
   tableData,
   loading,
   searchForm,
+  selectedIds,
   loadData,
+  refresh,
   handleSearch,
   handleReset,
+  handleSelectionChange,
+  clearSelection,
   handleSortChange,
   initDefaultSort,
-} = useListPage({
+} = useTable({
   fetchApi: getArticleList,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: "id:desc",
   tableRef: computed(() => tableRef.value?.tableRef),
 });
+
+const enableBatchActions = true;
+const hasSelection = computed(() => selectedIds.value.length > 0);
 
 const searchFields = computed(() => [
   {
@@ -166,54 +209,82 @@ const searchFields = computed(() => [
     width: "200px",
     advanced: false,
   },
+  {
+    prop: "created_at",
+    label: t("article.created_at"),
+    type: "datetime",
+    clearable: true,
+    width: "200px",
+    advanced: false,
+  },
 ]);
 
-const tableColumns = computed(() => [
-  {
-    field: "id",
-    title: t("table.id"),
-    width: 80,
-    sortable: true,
-  },
-  {
-    field: "admin_id",
-    title: t("article.admin_id"),
-    slot: "admin_id",
-    sortable: false,
-  },
-  {
-    field: "title",
-    title: t("article.title"),
-    sortable: false,
-  },
-  {
-    field: "content",
-    title: t("article.content"),
-    sortable: false,
-  },
-  {
-    field: "status",
-    title: t("article.status"),
-    sortable: false,
-  },
-  {
-    field: "created_at",
-    title: t("table.created_at"),
-    width: 180,
-    sortable: true,
-  },
-  {
-    field: "operation",
-    title: t("table.operation"),
-    width: 220,
-    fixed: "right",
-    slot: "operation",
-  },
-]);
+const tableColumns = computed(() => {
+  const baseColumns = [
+    {
+      field: "id",
+      title: t("table.id"),
+      width: 80,
+      sortable: true,
+    },
+    {
+      field: "admin_id",
+      title: t("article.admin_id"),
+      slot: "admin_id",
+      sortable: false,
+    },
+    {
+      field: "title",
+      title: t("article.title"),
+      sortable: false,
+    },
+    {
+      field: "content",
+      title: t("article.content"),
+      sortable: false,
+    },
+    {
+      field: "status",
+      title: t("article.status"),
+      sortable: false,
+    },
+    {
+      field: "created_at",
+      title: t("article.created_at"),
+      sortable: false,
+    },
+    {
+      field: "created_at",
+      title: t("table.created_at"),
+      width: 180,
+      sortable: true,
+    },
+    {
+      field: "operation",
+      title: t("table.operation"),
+      width: 220,
+      fixed: "right",
+      slot: "operation",
+    },
+  ];
+
+  if (!enableBatchActions) {
+    return baseColumns;
+  }
+
+  return [
+    {
+      type: "checkbox",
+      width: 52,
+      fixed: "left",
+    },
+    ...baseColumns,
+  ];
+});
 
 const getadminDisplayName = (admin_id) => {
   if (!admin_id) return "-";
-  return admin_id.nickname || admin_id.admin || "-";
+  return admin_id.name || admin_id.admin || "-";
 };
 
 const handleEdit = (row) => {
@@ -225,7 +296,50 @@ const handleDelete = (row) => handleDeleteCrud(row, loadData);
 
 const handleFormSuccess = () => {
   handleClose();
-  loadData();
+  clearSelection();
+  refresh();
+};
+
+const handleTableCheckboxChange = ({ records }) => {
+  handleSelectionChange(records);
+};
+
+const handleTableCheckboxAll = ({ records }) => {
+  handleSelectionChange(records);
+};
+
+const handleClearSelection = () => {
+  clearSelection();
+  tableRef.value?.tableRef?.clearCheckboxRow?.();
+};
+
+const handleBatchDelete = async () => {
+  if (!selectedIds.value.length) return;
+
+  try {
+    await ElMessageBox.confirm(
+      t("common.batch_delete_confirm", { count: selectedIds.value.length }),
+      t("common.warning"),
+      {
+        type: "warning",
+        confirmButtonText: t("common.confirm"),
+        cancelButtonText: t("common.cancel"),
+      },
+    );
+
+    await Promise.all(selectedIds.value.map((id) => deleteArticle(id)));
+    ElMessage.success(t("common.operation_success"));
+    handleClearSelection();
+    await refresh();
+  } catch (error) {
+    if (error === "cancel" || error === "close") {
+      return;
+    }
+    logger.error("Batch delete error:", error);
+    if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true });
+    }
+  }
 };
 
 // 获取主要操作按钮配置
@@ -262,6 +376,29 @@ const handleAction = (command, row) => {
     case "delete":
       handleDelete(row);
       break;
+  }
+};
+
+const handleExport = async () => {
+  if (isExporting.value) {
+    return;
+  }
+
+  isExporting.value = true;
+
+  try {
+    await exportArticle(searchForm);
+    ElMessage.success(t("common.export_task_submitted"));
+    router.push("/exports");
+  } catch (error) {
+    logger.error("Export error:", error);
+    if (error.response?.status === 429) {
+      ElMessage.warning(t("common.export_in_progress"));
+    } else if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true });
+    }
+  } finally {
+    isExporting.value = false;
   }
 };
 

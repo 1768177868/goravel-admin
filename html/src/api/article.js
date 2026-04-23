@@ -37,3 +37,11 @@ export function deleteArticle(id) {
     method: "delete",
   });
 }
+
+export function exportArticle(params) {
+  return request({
+    url: "/articles/export",
+    method: "post",
+    data: params,
+  });
+}

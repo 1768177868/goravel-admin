@@ -136,3 +136,17 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 	return response.Error(ctx, http.StatusForbidden, "delete_not_allowed")
 <<end>>
 }
+
+// Export 导出<<.ModelName>>
+func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
+<<- if .HasExport>>
+	filters := c.build<<.ModelName>>Filters(ctx)
+	if err := c.<<.ServiceName>>.Export(filters); err != nil {
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+	}
+
+	return response.Success(ctx, "export_task_submitted", http.Json{})
+<<- else>>
+	return response.Error(ctx, http.StatusForbidden, "export_not_allowed")
+<<end>>
+}

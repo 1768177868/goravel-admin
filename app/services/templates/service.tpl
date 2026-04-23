@@ -21,6 +21,9 @@ type <<.ServiceName>> interface {
 <<if .HasDelete>>
 	Delete(id uint) error
 <<end>>
+<<if .HasExport>>
+	Export(filters <<.ModelName>>Filters) error
+<<end>>
 }
 
 type <<.ModelName>>Filters struct {
@@ -148,6 +151,14 @@ func (s *<<.ServiceName>>Impl) Delete(id uint) error {
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.<<.ModelName>>{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
+	return nil
+}
+<<end>>
+
+<<if .HasExport>>
+func (s *<<.ServiceName>>Impl) Export(filters <<.ModelName>>Filters) error {
+	_ = filters
+	// TODO: implement export business logic (task dispatch / file generation).
 	return nil
 }
 <<end>>

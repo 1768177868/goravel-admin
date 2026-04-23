@@ -239,6 +239,7 @@ func Admin() {
 			router.Get("payments/export/status/{id}", paymentController.GetExportStatus)
 
 			router.Resource("articles", articleController)
+			router.Post("articles/export", articleController.Export)
 
 			// 代码生成器（仅在开发环境可用）
 			router.Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {

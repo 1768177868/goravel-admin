@@ -34,10 +34,11 @@ func validateGeneratedRequest(ctx http.Context, req http.FormRequest) http.Respo
 
 func (c *ArticleController) buildArticleFilters(ctx http.Context) services.ArticleFilters {
 	return services.ArticleFilters{
-		AdminId: ctx.Request().Query("admin_id", ""),
-		Title:   ctx.Request().Query("title", ""),
-		Content: ctx.Request().Query("content", ""),
-		Status:  ctx.Request().Query("status", ""),
+		AdminId:   ctx.Request().Query("admin_id", ""),
+		Title:     ctx.Request().Query("title", ""),
+		Content:   ctx.Request().Query("content", ""),
+		Status:    ctx.Request().Query("status", ""),
+		CreatedAt: ctx.Request().Query("created_at", ""),
 	}
 }
 
@@ -124,4 +125,14 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})
+}
+
+// Export 导出Article
+func (c *ArticleController) Export(ctx http.Context) http.Response {
+	filters := c.buildArticleFilters(ctx)
+	if err := c.ArticleService.Export(filters); err != nil {
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+	}
+
+	return response.Success(ctx, "export_task_submitted", http.Json{})
 }

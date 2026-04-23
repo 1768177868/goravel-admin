@@ -25,8 +25,32 @@
         @search="handleSearch"
         @reset="handleReset"
       >
-        <<if .HasExport>>
         <template #extra-buttons>
+          <<if .HasDelete>>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            type="danger"
+            :disabled="getButtonState('<<.ModuleName>>.destroy').disabled"
+            @click="handleBatchDelete"
+          >
+            {{ `${$t('common.batch_delete')} (${selectedIds.length})` }}
+          </el-button>
+          <<else>>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            type="warning"
+            @click="handleBatchAction"
+          >
+            {{ `${$t('common.batch_action')} (${selectedIds.length})` }}
+          </el-button>
+          <<end>>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            @click="handleClearSelection"
+          >
+            {{ $t('common.reset') }}
+          </el-button>
+          <<if .HasExport>>
           <el-button 
             type="success" 
             :disabled="getButtonState('<<.ModuleName>>.export').disabled || isExporting"
@@ -35,8 +59,8 @@
           >
             {{ $t('common.export') }}
           </el-button>
+          <<end>>
         </template>
-        <<end>>
       </SearchForm>
 
       <VxeTable
@@ -46,6 +70,8 @@
         :columns="tableColumns"
         :height="600"
         @sort-change="handleSortChange"
+        @checkbox-change="handleTableCheckboxChange"
+        @checkbox-all="handleTableCheckboxAll"
       >
         <<range .ListFields>>
         <<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
@@ -114,7 +140,7 @@ import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import <<.ModelName>>Form from './<<.ModelName>>Form.vue'
-import { useListPage } from '../../composables/useListPage'
+import { useTable } from '../../composables/useTable'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 <<range .ListFields>>
@@ -167,18 +193,25 @@ const {
   tableData,
   loading,
   searchForm,
+  selectedIds,
   loadData,
+  refresh,
   handleSearch,
   handleReset,
+  handleSelectionChange,
+  clearSelection,
   handleSortChange,
   initDefaultSort
-} = useListPage({
+} = useTable({
   fetchApi: get<<.ModelName>>List,
   initialSearchForm,
   fieldMapping: {},
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
 })
+
+const enableBatchActions = <<.EnableBatchActions>>
+const hasSelection = computed(() => selectedIds.value.length > 0)
 
 const searchFields = computed(() => [
 <<range .SearchableFields>>
@@ -219,7 +252,8 @@ const searchFields = computed(() => [
 <<- end>>
 ])
 
-const tableColumns = computed(() => [
+const tableColumns = computed(() => {
+  const baseColumns = [
   {
     field: 'id',
     title: t('table.id'),
@@ -273,7 +307,21 @@ const tableColumns = computed(() => [
     fixed: 'right',
     slot: 'operation'
   }
-])
+  ]
+
+  if (!enableBatchActions) {
+    return baseColumns
+  }
+
+  return [
+    {
+      type: 'checkbox',
+      width: 52,
+      fixed: 'left'
+    },
+    ...baseColumns
+  ]
+})
 
 <<range .ListFields>>
 <<- if and .ShowInList .Relation>>
@@ -322,8 +370,59 @@ const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleFormSuccess = () => {
   handleClose()
-  loadData()
+  clearSelection()
+  refresh()
 }
+
+const handleTableCheckboxChange = ({ records }) => {
+  handleSelectionChange(records)
+}
+
+const handleTableCheckboxAll = ({ records }) => {
+  handleSelectionChange(records)
+}
+
+const handleClearSelection = () => {
+  clearSelection()
+  tableRef.value?.tableRef?.clearCheckboxRow?.()
+}
+
+<<if not .HasDelete>>
+const handleBatchAction = () => {
+  ElMessage.info(t('common.batch_action_todo', { count: selectedIds.value.length }))
+}
+<<end>>
+
+<<if .HasDelete>>
+const handleBatchDelete = async () => {
+  if (!selectedIds.value.length) return
+
+  try {
+    await ElMessageBox.confirm(
+      t('common.batch_delete_confirm', { count: selectedIds.value.length }),
+      t('common.warning'),
+      {
+        type: 'warning',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel')
+      }
+    )
+
+    await Promise.all(selectedIds.value.map((id) => delete<<.ModelName>>(id)))
+    ElMessage.success(t('common.operation_success'))
+    handleClearSelection()
+    await refresh()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+    logger.error('Batch delete error:', error)
+    if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true })
+    }
+  }
+}
+<<end>>
 
 // 获取主要操作按钮配置
 const getPrimaryActions = (row) => {
