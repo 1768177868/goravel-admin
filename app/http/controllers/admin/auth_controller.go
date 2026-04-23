@@ -57,6 +57,41 @@ func (r *AuthController) getLoginRequestData(ctx http.Context) string {
 	return ""
 }
 
+func (r *AuthController) currentAdminFromContextRequired(ctx http.Context) (*models.Admin, http.Response) {
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	}
+
+	if admin, ok := adminValue.(models.Admin); ok {
+		return &admin, nil
+	}
+	if adminPtr, ok := adminValue.(*models.Admin); ok {
+		if adminPtr == nil {
+			return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+		}
+		return adminPtr, nil
+	}
+
+	return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+}
+
+func (r *AuthController) currentAdminFromContextOptional(ctx http.Context) *models.Admin {
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return nil
+	}
+
+	if admin, ok := adminValue.(models.Admin); ok {
+		return &admin
+	}
+	if adminPtr, ok := adminValue.(*models.Admin); ok {
+		return adminPtr
+	}
+
+	return nil
+}
+
 // Login 管理员登录
 func (r *AuthController) Login(ctx http.Context) http.Response {
 	var loginRequest admin.Login
@@ -310,25 +345,11 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 
 // UpdateProfile 更新个人信息
 func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	currentAdmin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
-
-	var admin models.Admin
-	// 尝试值类型
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		admin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		// 尝试指针类型
-		if adminPtr == nil {
-			return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-		}
-		admin = *adminPtr
-	} else {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
+	admin := *currentAdmin
 
 	// 重新查询admin以确保获取最新数据
 	if err := facades.Orm().Query().Where("id", admin.ID).FirstOrFail(&admin); err != nil {
@@ -432,33 +453,20 @@ func (r *AuthController) Heartbeat(ctx http.Context) http.Response {
 
 // Logout 退出登录
 func (r *AuthController) Logout(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue != nil {
-		var admin models.Admin
-		if adminVal, ok := adminValue.(models.Admin); ok {
-			admin = adminVal
-		} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-			if adminPtr != nil {
-				admin = *adminPtr
-			}
+	if admin := r.currentAdminFromContextOptional(ctx); admin != nil && admin.ID > 0 {
+		// 获取token
+		token := ctx.Request().Header("Authorization", "")
+		token = str.Of(token).ChopStart("Bearer ").Trim().String()
+
+		if token != "" {
+			// 删除token
+			tokenService := services.NewTokenServiceImpl()
+			_ = tokenService.DeleteToken(token)
 		}
 
-		if admin.ID > 0 {
-			// 获取token
-			token := ctx.Request().Header("Authorization", "")
-			token = str.Of(token).ChopStart("Bearer ").Trim().String()
-
-			if token != "" {
-				// 删除token
-				tokenService := services.NewTokenServiceImpl()
-				_ = tokenService.DeleteToken(token)
-			}
-
-			// 记录退出日志
-			logoutRequestData := r.getLoginRequestData(ctx)
-			r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success", logoutRequestData)
-		}
+		// 记录退出日志
+		logoutRequestData := r.getLoginRequestData(ctx)
+		r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success", logoutRequestData)
 	}
 
 	return response.Success(ctx, "logout_success")
@@ -466,15 +474,9 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 
 // Tokens 获取当前用户的所有token列表
 func (r *AuthController) Tokens(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	admin, ok := adminValue.(models.Admin)
-	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 获取用户的所有token
@@ -520,15 +522,9 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 
 // RevokeToken 删除指定的token（踢出指定设备）
 func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	admin, ok := adminValue.(models.Admin)
-	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 获取要删除的token ID
@@ -566,15 +562,9 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 
 // RevokeAllTokens 删除当前用户的所有token（踢出所有设备）
 func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	admin, ok := adminValue.(models.Admin)
-	if !ok {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 删除用户的所有token
@@ -590,19 +580,9 @@ func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
 
 // KickOutUser 踢出指定用户的所有token（管理员操作）
 func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	var admin models.Admin
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		admin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		admin = *adminPtr
-	} else {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 获取要踢出的用户ID
@@ -636,19 +616,9 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 
 // GetGoogleAuthenticatorQRCode 获取谷歌验证码二维码（用于绑定）
 func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	var admin models.Admin
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		admin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		admin = *adminPtr
-	} else {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 检查是否已经绑定
@@ -692,19 +662,9 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 
 // BindGoogleAuthenticator 绑定谷歌验证码
 func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	var admin models.Admin
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		admin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		admin = *adminPtr
-	} else {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	secret := ctx.Request().Input("secret")
@@ -729,19 +689,9 @@ func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response
 
 // UnbindGoogleAuthenticator 解绑谷歌验证码
 func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	var admin models.Admin
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		admin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		admin = *adminPtr
-	} else {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 需要验证码确认
@@ -779,19 +729,9 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 
 // GetGoogleAuthenticatorStatus 获取谷歌验证码绑定状态
 func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Response {
-	// 从context中获取admin信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-	}
-
-	var admin models.Admin
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		admin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		admin = *adminPtr
-	} else {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	admin, resp := r.currentAdminFromContextRequired(ctx)
+	if resp != nil {
+		return resp
 	}
 
 	// 检查是否绑定

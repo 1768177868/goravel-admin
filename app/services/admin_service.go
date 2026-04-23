@@ -35,6 +35,20 @@ type AdminService interface {
 	GetDepartmentAndChildrenIDs(departmentID uint) []uint
 	// Update 更新管理员
 	Update(admin *models.Admin) error
+	// NormalizeRoleIDs 去重并保持顺序
+	NormalizeRoleIDs(roleIDs []uint) []uint
+	// RoleIDsChanged 判断角色集合是否发生变化（忽略顺序）
+	RoleIDsChanged(currentRoles []models.Role, newRoleIDs []uint) bool
+	// CreateAdmin 创建管理员并同步角色
+	CreateAdmin(input CreateAdminInput) (*models.Admin, error)
+	// IsProtectedAdmin 判断是否受保护管理员
+	IsProtectedAdmin(adminID uint) bool
+	// IsSuperAdmin 判断是否超级管理员
+	IsSuperAdmin(adminID uint) bool
+	// ValidateStatusChange 校验状态变更是否合法
+	ValidateStatusChange(adminID uint, newStatus uint8) error
+	// ValidateRoleChange 校验角色变更是否合法
+	ValidateRoleChange(adminID uint, currentRoles []models.Role, newRoleIDs []uint) error
 }
 
 // AdminFilters 管理员查询过滤器
@@ -48,6 +62,18 @@ type AdminFilters struct {
 	StartTime    string
 	EndTime      string
 	OrderBy      string
+}
+
+type CreateAdminInput struct {
+	Username     string
+	Password     string
+	Nickname     string
+	Email        string
+	Phone        string
+	DepartmentID uint
+	PositionID   uint
+	Status       uint8
+	RoleIDs      []uint
 }
 
 type AdminServiceImpl struct {
@@ -197,6 +223,72 @@ func (s *AdminServiceImpl) GetAllAdminsForExport(filters AdminFilters) ([]models
 func (s *AdminServiceImpl) Update(admin *models.Admin) error {
 	if err := facades.Orm().Query().Save(admin); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// CreateAdmin 创建管理员并同步角色
+func (s *AdminServiceImpl) CreateAdmin(input CreateAdminInput) (*models.Admin, error) {
+	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", input.Username).Exists()
+	if err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+	if exists {
+		return nil, apperrors.ErrUsernameExists
+	}
+
+	hashedPassword, err := facades.Hash().Make(input.Password)
+	if err != nil {
+		return nil, apperrors.ErrPasswordEncryptFailed.WithError(err)
+	}
+
+	admin := &models.Admin{
+		Username:     input.Username,
+		Password:     hashedPassword,
+		Nickname:     input.Nickname,
+		Avatar:       "",
+		Email:        input.Email,
+		Phone:        input.Phone,
+		DepartmentID: input.DepartmentID,
+		PositionID:   input.PositionID,
+		Status:       input.Status,
+	}
+	if err := facades.Orm().Query().Create(admin); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	if len(input.RoleIDs) > 0 {
+		if err := s.SyncRoles(admin, input.RoleIDs); err != nil {
+			return nil, apperrors.ErrUpdateFailed.WithError(err)
+		}
+	}
+
+	return admin, nil
+}
+
+// IsProtectedAdmin 判断是否受保护管理员
+func (s *AdminServiceImpl) IsProtectedAdmin(adminID uint) bool {
+	return s.GetProtectedAdminIDs()[adminID]
+}
+
+// IsSuperAdmin 判断是否超级管理员
+func (s *AdminServiceImpl) IsSuperAdmin(adminID uint) bool {
+	superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
+	return adminID == superAdminID
+}
+
+// ValidateStatusChange 校验状态变更是否合法
+func (s *AdminServiceImpl) ValidateStatusChange(adminID uint, newStatus uint8) error {
+	if newStatus == 0 && (s.IsProtectedAdmin(adminID) || s.IsSuperAdmin(adminID)) {
+		return apperrors.ErrAdminProtectedCannotDisable
+	}
+	return nil
+}
+
+// ValidateRoleChange 校验角色变更是否合法
+func (s *AdminServiceImpl) ValidateRoleChange(adminID uint, currentRoles []models.Role, newRoleIDs []uint) error {
+	if s.IsSuperAdmin(adminID) && s.RoleIDsChanged(currentRoles, newRoleIDs) {
+		return apperrors.ErrAdminCannotModifyRoles
 	}
 	return nil
 }
@@ -542,7 +634,7 @@ func contains(slice []uint, val uint) bool {
 // SyncRoles 同步管理员角色关联
 func (s *AdminServiceImpl) SyncRoles(admin *models.Admin, roleIDs []uint) error {
 	// 去重角色ID，避免重复数据
-	deduplicatedRoleIDs := lo.Uniq(roleIDs)
+	deduplicatedRoleIDs := s.NormalizeRoleIDs(roleIDs)
 
 	// 先清空该管理员的所有角色关联（包括重复的），确保彻底清理重复数据
 	if err := facades.Orm().Query().Model(admin).Association("Roles").Clear(); err != nil {
@@ -571,4 +663,30 @@ func (s *AdminServiceImpl) SyncRoles(admin *models.Admin, roleIDs []uint) error 
 	}
 
 	return nil
+}
+
+// NormalizeRoleIDs 去重并保持顺序
+func (s *AdminServiceImpl) NormalizeRoleIDs(roleIDs []uint) []uint {
+	return lo.Uniq(roleIDs)
+}
+
+// RoleIDsChanged 判断角色集合是否发生变化（忽略顺序）
+func (s *AdminServiceImpl) RoleIDsChanged(currentRoles []models.Role, newRoleIDs []uint) bool {
+	currentRoleIDSet := make(map[uint]struct{}, len(currentRoles))
+	for _, role := range currentRoles {
+		currentRoleIDSet[role.ID] = struct{}{}
+	}
+
+	deduplicatedRoleIDs := s.NormalizeRoleIDs(newRoleIDs)
+	if len(currentRoleIDSet) != len(deduplicatedRoleIDs) {
+		return true
+	}
+
+	for _, roleID := range deduplicatedRoleIDs {
+		if _, exists := currentRoleIDSet[roleID]; !exists {
+			return true
+		}
+	}
+
+	return false
 }

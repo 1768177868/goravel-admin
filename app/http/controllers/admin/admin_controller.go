@@ -1,12 +1,13 @@
 package admin
 
 import (
+	stderrors "errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -130,6 +131,29 @@ func (r *AdminController) buildFilters(ctx http.Context) services.AdminFilters {
 	}
 }
 
+func hasInput(allInputs map[string]any, key string) bool {
+	_, exists := allInputs[key]
+	return exists
+}
+
+func (r *AdminController) applyAdminUpdatableFields(admin *models.Admin, adminUpdate adminrequests.AdminUpdate, allInputs map[string]any) {
+	if hasInput(allInputs, "nickname") {
+		admin.Nickname = adminUpdate.Nickname
+	}
+	if hasInput(allInputs, "email") {
+		admin.Email = adminUpdate.Email
+	}
+	if hasInput(allInputs, "phone") {
+		admin.Phone = adminUpdate.Phone
+	}
+	if hasInput(allInputs, "department_id") {
+		admin.DepartmentID = adminUpdate.DepartmentID
+	}
+	if hasInput(allInputs, "position_id") {
+		admin.PositionID = adminUpdate.PositionID
+	}
+}
+
 // Index 管理员列表
 // @Summary      获取管理员列表
 // @Description  分页获取管理员列表
@@ -159,7 +183,9 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 
 	admins, total, err := r.adminService.GetList(filters, page, pageSize)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
+			"action": "list_admins",
+		})
 	}
 
 	// 获取超级管理员ID
@@ -254,64 +280,34 @@ func (r *AdminController) Show(ctx http.Context) http.Response {
 func (r *AdminController) Store(ctx http.Context) http.Response {
 	// 使用请求验证
 	var adminCreate adminrequests.AdminCreate
-	errors, err := ctx.Request().ValidateRequest(&adminCreate)
+	validationErrors, err := ctx.Request().ValidateRequest(&adminCreate)
 	if err != nil {
 		return response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	if validationErrors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", validationErrors.All())
 	}
 
-	// 检查用户名是否已存在
-	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", adminCreate.Username).Exists()
+	admin, err := r.adminService.CreateAdmin(services.CreateAdminInput{
+		Username:     adminCreate.Username,
+		Password:     adminCreate.Password,
+		Nickname:     adminCreate.Nickname,
+		Email:        adminCreate.Email,
+		Phone:        adminCreate.Phone,
+		DepartmentID: adminCreate.DepartmentID,
+		PositionID:   adminCreate.PositionID,
+		Status:       adminCreate.Status,
+		RoleIDs:      adminCreate.RoleIDs,
+	})
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUsernameExists.Code)
-	}
-
-	// 加密密码
-	hashedPassword, err := facades.Hash().Make(adminCreate.Password)
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
-	}
-
-	now := carbon.Now()
-	adminData := map[string]any{
-		"username":      adminCreate.Username,
-		"password":      hashedPassword,
-		"nickname":      adminCreate.Nickname,
-		"avatar":        "",
-		"email":         adminCreate.Email,
-		"phone":         adminCreate.Phone,
-		"department_id": adminCreate.DepartmentID,
-		"position_id":   adminCreate.PositionID,
-		"status":        adminCreate.Status,
-		"created_at":    now,
-		"updated_at":    now,
-	}
-
-	if err := facades.Orm().Query().Table("admins").Create(adminData); err != nil {
-		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
-			"username": adminCreate.Username,
-		})
-	}
-
-	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", adminCreate.Username).FirstOrFail(&admin); err != nil {
-		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
-			"username": adminCreate.Username,
-		})
-	}
-
-	if len(adminCreate.RoleIDs) > 0 {
-		if err := r.adminService.SyncRoles(&admin, adminCreate.RoleIDs); err != nil {
-			return response.ErrorWithLog(ctx, "admin", err, map[string]any{
-				"admin_id": admin.ID,
-				"role_ids": adminCreate.RoleIDs,
-			})
+		var businessErr *apperrors.BusinessError
+		if stderrors.As(err, &businessErr) && businessErr.Code == apperrors.ErrUsernameExists.Code {
+			return response.Error(ctx, http.StatusBadRequest, businessErr)
 		}
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
+			"action":   "create_admin",
+			"username": adminCreate.Username,
+		})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -339,8 +335,6 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	if resp != nil {
 		return resp
 	}
-	allProtectedIDs := r.getAllProtectedAdminIDs()
-	isProtected := allProtectedIDs[id]
 
 	// 使用请求验证
 	var adminUpdate adminrequests.AdminUpdate
@@ -355,28 +349,11 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	// 使用 All() 方法检查字段是否存在
 	allInputs := ctx.Request().All()
 
-	if _, exists := allInputs["nickname"]; exists {
-		admin.Nickname = adminUpdate.Nickname
-	}
-	if _, exists := allInputs["email"]; exists {
-		admin.Email = adminUpdate.Email
-	}
-	if _, exists := allInputs["phone"]; exists {
-		admin.Phone = adminUpdate.Phone
-	}
-	if _, exists := allInputs["department_id"]; exists {
-		admin.DepartmentID = adminUpdate.DepartmentID
-	}
-	if _, exists := allInputs["position_id"]; exists {
-		admin.PositionID = adminUpdate.PositionID
-	}
-	if _, exists := allInputs["status"]; exists {
-		// 请求中提供了 status 字段，使用验证后的值
-		// 检查是否是超级管理员或受保护的管理员
-		superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
-		isSuperAdmin := admin.ID == superAdminID
-		if (isProtected || isSuperAdmin) && adminUpdate.Status == 0 {
-			return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminProtectedCannotDisable.Code)
+	r.applyAdminUpdatableFields(admin, adminUpdate, allInputs)
+
+	if hasInput(allInputs, "status") {
+		if err := r.adminService.ValidateStatusChange(admin.ID, adminUpdate.Status); err != nil {
+			return response.Error(ctx, http.StatusForbidden, err)
 		}
 		admin.Status = adminUpdate.Status
 	}
@@ -384,7 +361,10 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	if adminUpdate.Password != "" {
 		hashedPassword, err := facades.Hash().Make(adminUpdate.Password)
 		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrPasswordEncryptFailed.Code)
+			return response.ErrorWithLog(ctx, "admin", err, map[string]any{
+				"action":   "encrypt_password",
+				"admin_id": admin.ID,
+			})
 		}
 		admin.Password = hashedPassword
 	}
@@ -396,54 +376,10 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	}
 
 	// 检查是否尝试修改 admin 用户的角色
-	if _, exists := allInputs["role_ids"]; exists {
-		// 获取当前管理员的角色ID列表（去重）
-		currentRoleIDSet := make(map[uint]bool)
-		var currentRoleIDs []uint
-		for _, role := range admin.Roles {
-			if !currentRoleIDSet[role.ID] {
-				currentRoleIDSet[role.ID] = true
-				currentRoleIDs = append(currentRoleIDs, role.ID)
-			}
-		}
-
-		// 对传入的角色ID进行去重
-		newRoleIDSet := make(map[uint]bool)
-		var deduplicatedRoleIDs []uint
-		for _, roleID := range adminUpdate.RoleIDs {
-			if !newRoleIDSet[roleID] {
-				newRoleIDSet[roleID] = true
-				deduplicatedRoleIDs = append(deduplicatedRoleIDs, roleID)
-			}
-		}
-
-		// 比较新的角色ID列表和当前的角色ID列表
-		// 只有当角色ID真正改变时才阻止修改
-		roleIDsChanged := false
-
-		// 如果长度不同，肯定改变了
-		if len(deduplicatedRoleIDs) != len(currentRoleIDs) {
-			roleIDsChanged = true
-		} else {
-			// 长度相同，需要检查内容是否完全一致（忽略顺序）
-			// 检查新的角色ID是否都在当前角色ID中
-			for _, newRoleID := range deduplicatedRoleIDs {
-				if !currentRoleIDSet[newRoleID] {
-					roleIDsChanged = true
-					break
-				}
-			}
-			// 如果所有新角色ID都在当前角色ID中，且长度相同，说明没有改变
-		}
-
-		// 检查是否是超级管理员（通过配置的ID判断，不依赖用户名）
-		superAdminID := cast.ToUint(facades.Config().GetInt("admin.super_admin_id", 1))
-		isSuperAdmin := admin.ID == superAdminID
-
-		// 只有当角色ID真正改变时才阻止修改
-		// 如果角色ID没有改变，允许调用 SyncRoles 来清理重复数据
-		if roleIDsChanged && isSuperAdmin {
-			return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminCannotModifyRoles.Code)
+	if hasInput(allInputs, "role_ids") {
+		deduplicatedRoleIDs := r.adminService.NormalizeRoleIDs(adminUpdate.RoleIDs)
+		if err := r.adminService.ValidateRoleChange(admin.ID, admin.Roles, deduplicatedRoleIDs); err != nil {
+			return response.Error(ctx, http.StatusForbidden, err)
 		}
 
 		// 即使角色ID没有改变，也调用 SyncRoles 来清理重复数据
@@ -481,18 +417,12 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminProtectedCannotDelete.Code)
 	}
 
-	adminValue := ctx.Value("admin")
-	if adminValue != nil {
-		var currentAdmin models.Admin
-		if admin, ok := adminValue.(models.Admin); ok {
-			currentAdmin = admin
-		} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-			currentAdmin = *adminPtr
-		}
-
-		if currentAdmin.ID > 0 && currentAdmin.ID == id {
-			return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminCannotDeleteSelf.Code)
-		}
+	currentAdmin, resp := r.currentAdminFromContext(ctx)
+	if resp != nil {
+		return resp
+	}
+	if currentAdmin != nil && currentAdmin.ID == id {
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminCannotDeleteSelf.Code)
 	}
 
 	admin, resp := r.findAdminByID(ctx, id, false, false)
@@ -537,18 +467,12 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
-	// 从context中获取当前管理员信息（由JWT中间件设置）
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	// 从 context 中获取当前管理员信息（由 JWT 中间件设置）
+	currentAdmin, resp := r.currentAdminFromContext(ctx)
+	if resp != nil {
+		return resp
 	}
-
-	var currentAdmin models.Admin
-	if adminVal, ok := adminValue.(models.Admin); ok {
-		currentAdmin = adminVal
-	} else if adminPtr, ok := adminValue.(*models.Admin); ok {
-		currentAdmin = *adminPtr
-	} else {
+	if currentAdmin == nil {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
@@ -665,6 +589,24 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 	return r.adminService.GetProtectedAdminIDs()
 }
 
+// currentAdminFromContext 从 context 读取当前管理员
+// 若 context 中 admin 字段类型非法，按未登录处理
+func (r *AdminController) currentAdminFromContext(ctx http.Context) (*models.Admin, http.Response) {
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return nil, nil
+	}
+
+	if admin, ok := adminValue.(models.Admin); ok {
+		return &admin, nil
+	}
+	if adminPtr, ok := adminValue.(*models.Admin); ok {
+		return adminPtr, nil
+	}
+
+	return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+}
+
 // Export 导出管理员列表
 // @Summary      导出管理员列表
 // @Description  根据筛选条件导出管理员列表为CSV文件
@@ -679,7 +621,7 @@ func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
 func (r *AdminController) Export(ctx http.Context) http.Response {
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
 	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
 
 	// 防重复点击：使用框架自带的原子锁（锁会在10秒后自动过期，防止短时间内重复请求）
@@ -688,7 +630,7 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 
 	// 尝试获取锁，如果获取失败则返回错误
 	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
 	// 同步导出：锁会在 Redis 中自动过期（10秒），不需要手动释放
 
@@ -697,7 +639,10 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 	// 导出时获取所有数据，不分页
 	admins, err := r.adminService.GetAllAdminsForExport(filters)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
+			"action":   "export_admins",
+			"admin_id": adminID,
+		})
 	}
 
 	headers := []string{
@@ -734,15 +679,11 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 		}
 
 		// 角色名称（多个角色用逗号分隔）
-		roleNames := ""
-		if len(admin.Roles) > 0 {
-			for i, role := range admin.Roles {
-				if i > 0 {
-					roleNames += ", "
-				}
-				roleNames += role.Name
-			}
+		roleNameParts := make([]string, 0, len(admin.Roles))
+		for _, role := range admin.Roles {
+			roleNameParts = append(roleNameParts, role.Name)
 		}
+		roleNames := strings.Join(roleNameParts, ", ")
 
 		// 时间格式化
 		createdAt := helpers.FormatCarbonWithTimezone(admin.CreatedAt, timezone)
