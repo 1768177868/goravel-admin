@@ -1636,12 +1636,20 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 	// 生成系统告警提示（根据当前语言动态生成）
 	alerts := r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDescriptors)
 
+	physicalCores := 0
+	for _, info := range cpuInfo {
+		if info.Cores > 0 {
+			physicalCores += int(info.Cores)
+		}
+	}
+
 	return response.Success(ctx, http.Json{
 		"os": runtime.GOOS, // 操作系统类型
 		"cpu": map[string]any{
-			"percent": cpuPercent[0],
-			"model":   cpuModel,
-			"cores":   len(cpuInfo),
+			"percent":        cpuPercent[0],
+			"model":          cpuModel,
+			"cores":          runtime.NumCPU(), // 逻辑核心数（与 runtime.num_cpu 一致）
+			"physical_cores": physicalCores,
 		},
 		"memory": map[string]any{
 			"total":     memInfo.Total,
@@ -2208,12 +2216,20 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 
 	// 注意：告警消息不在 doCollectSystemInfo 中生成，而是在 collectSystemInfo 返回时根据当前语言动态生成
 
+	physicalCores := 0
+	for _, info := range cpuInfo {
+		if info.Cores > 0 {
+			physicalCores += int(info.Cores)
+		}
+	}
+
 	result := map[string]any{
 		"os": runtime.GOOS,
 		"cpu": map[string]any{
-			"percent": cpuPercent[0],
-			"model":   cpuModel,
-			"cores":   len(cpuInfo),
+			"percent":        cpuPercent[0],
+			"model":          cpuModel,
+			"cores":          runtime.NumCPU(), // 逻辑核心数（与 runtime.num_cpu 一致）
+			"physical_cores": physicalCores,
 		},
 		"memory": map[string]any{
 			"total":     memInfo.Total,

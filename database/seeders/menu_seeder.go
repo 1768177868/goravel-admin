@@ -413,7 +413,7 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	// 创建服务监控菜单
+	// 服务监控（一级菜单）
 	createOrUpdateMenu(models.Menu{
 		ParentID:  0,
 		Title:     "服务监控",
@@ -423,7 +423,7 @@ func (s *MenuSeeder) Run() error {
 		Component: "monitor/Monitor",
 		Type:      2,
 		Status:    1,
-		Sort:      3,
+		Sort:      1,
 		IsHidden:  0,
 	})
 
@@ -455,48 +455,45 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
-	// 创建代码生成器菜单（仅在配置开启时显示）
-	enableDevTool := facades.Config().GetBool("app.enable_dev_tool")
-	if enableDevTool {
-		devMenu := createOrUpdateMenu(models.Menu{
-			ParentID:  0,
-			Title:     "开发工具",
-			Slug:      "dev",
-			Icon:      "Tools",
-			Path:      "/dev",
-			Component: "Layout",
-			Type:      1,
-			Status:    1,
-			Sort:      99,
-			IsHidden:  0,
-		})
+	// 创建开发工具菜单（是否展示由运行时过滤控制：开发模式/开发者管理员）
+	devMenu := createOrUpdateMenu(models.Menu{
+		ParentID:  0,
+		Title:     "开发工具",
+		Slug:      "dev",
+		Icon:      "Tools",
+		Path:      "/dev",
+		Component: "Layout",
+		Type:      1,
+		Status:    1,
+		Sort:      99,
+		IsHidden:  0,
+	})
 
-		createOrUpdateMenu(models.Menu{
-			ParentID:  devMenu.ID,
-			Title:     "代码生成器",
-			Slug:      "code-generator",
-			Icon:      "MagicStick",
-			Path:      "/code-generator",
-			Component: "dev/CodeGenerator",
-			Type:      2,
-			Status:    1,
-			Sort:      1,
-			IsHidden:  0,
-		})
+	createOrUpdateMenu(models.Menu{
+		ParentID:  devMenu.ID,
+		Title:     "代码生成器",
+		Slug:      "code-generator",
+		Icon:      "MagicStick",
+		Path:      "/code-generator",
+		Component: "dev/CodeGenerator",
+		Type:      2,
+		Status:    1,
+		Sort:      1,
+		IsHidden:  0,
+	})
 
-		createOrUpdateMenu(models.Menu{
-			ParentID:  devMenu.ID,
-			Title:     "表单组件演示",
-			Slug:      "form_demo",
-			Icon:      "EditPen",
-			Path:      "/dev/form-demo",
-			Component: "dev/FormDemo",
-			Type:      2,
-			Status:    1,
-			Sort:      2,
-			IsHidden:  0,
-		})
-	}
+	createOrUpdateMenu(models.Menu{
+		ParentID:  devMenu.ID,
+		Title:     "表单组件演示",
+		Slug:      "form_demo",
+		Icon:      "EditPen",
+		Path:      "/dev/form-demo",
+		Component: "dev/FormDemo",
+		Type:      2,
+		Status:    1,
+		Sort:      2,
+		IsHidden:  0,
+	})
 
 	return nil
 }

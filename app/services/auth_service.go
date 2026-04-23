@@ -295,11 +295,41 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 		isDeveloperAdmin := s.isDeveloperAdmin(admin.ID, developerIDsStr)
 
-		// 如果不是开发者管理员，则过滤掉服务监控菜单
+		// 如果不是开发者管理员，则过滤掉监控中心及其子菜单
 		if !isDeveloperAdmin {
+			hiddenIDs := make(map[uint]bool)
+			for _, menu := range menus {
+				if menu.Slug == "monitor-center" || menu.Slug == "monitor" {
+					hiddenIDs[menu.ID] = true
+				}
+			}
+			changed := true
+			for changed {
+				changed = false
+				for _, menu := range menus {
+					if hiddenIDs[menu.ParentID] && !hiddenIDs[menu.ID] {
+						hiddenIDs[menu.ID] = true
+						changed = true
+					}
+				}
+			}
+
 			var filteredMenus []models.Menu
 			for _, menu := range menus {
-				if menu.Slug != "monitor" {
+				if !hiddenIDs[menu.ID] {
+					filteredMenus = append(filteredMenus, menu)
+				}
+			}
+			menus = filteredMenus
+		}
+	}
+
+	if !facades.Config().GetBool("app.enable_dev_tool") {
+		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+		if !s.isDeveloperAdmin(admin.ID, developerIDsStr) {
+			var filteredMenus []models.Menu
+			for _, menu := range menus {
+				if menu.Slug != "dev" {
 					filteredMenus = append(filteredMenus, menu)
 				}
 			}

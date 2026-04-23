@@ -157,3 +157,16 @@ func (h *NotificationHub) Stop() {
 	close(h.stop)
 }
 
+func (h *NotificationHub) Stats() (int, int) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	admins := len(h.clients)
+	connections := 0
+	for _, adminClients := range h.clients {
+		connections += len(adminClients)
+	}
+
+	return admins, connections
+}
+

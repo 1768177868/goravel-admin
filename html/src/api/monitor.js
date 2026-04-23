@@ -14,3 +14,10 @@ export function createSystemInfoSSE(options = {}) {
   return url
 }
 
+export function getObservabilityLite() {
+  return request({
+    url: '/observability/lite',
+    method: 'get'
+  })
+}
+

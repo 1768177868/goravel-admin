@@ -46,8 +46,12 @@
                 <span class="info-value" style="font-size: 12px">{{ systemInfo.cpu?.model || '-' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('monitor.cpu_cores') }}</span>
+                <span class="info-label">{{ $t('monitor.cpu_logical_cores') }}</span>
                 <span class="info-value highlight">{{ systemInfo.cpu?.cores || 0 }}</span>
+              </div>
+              <div class="info-item" v-if="systemInfo.cpu?.physical_cores">
+                <span class="info-label">{{ $t('monitor.cpu_physical_cores') }}</span>
+                <span class="info-value">{{ systemInfo.cpu?.physical_cores || 0 }}</span>
               </div>
             </div>
             <!-- CPU使用率走势图 -->
@@ -191,77 +195,10 @@
       </el-col>
     </el-row>
 
-    <!-- 网络和系统负载 -->
-    <el-row :gutter="20" style="margin-top: 20px">
-      <!-- 网络信息汇总 -->
-      <el-col :span="isLinux ? 8 : 12">
-        <el-card class="monitor-card network-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <div class="card-title">
-                <el-icon class="card-icon network-icon"><Connection /></el-icon>
-                <span>{{ $t('monitor.network') }}</span>
-              </div>
-              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
-            </div>
-          </template>
-          <div class="monitor-content">
-            <!-- 带宽速度 -->
-            <div v-if="systemInfo.net?.speed_total_mbps !== undefined" class="monitor-item" style="margin-bottom: 15px; padding: 12px; background: #f5f7fa; border-radius: 8px">
-              <div style="font-size: 13px; color: #606266; margin-bottom: 8px; font-weight: 600">{{ $t('monitor.bandwidth_speed') }}</div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
-                <span style="font-size: 12px; color: #909399">{{ $t('monitor.current_speed') }}:</span>
-                <span style="font-size: 16px; font-weight: 600; color: var(--el-color-primary)">
-                  {{ formatNumber(systemInfo.net?.speed_total_mbps || 0, 2) }} Mbps
-                </span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
-                <span style="font-size: 12px; color: #909399">{{ $t('monitor.peak_speed') }}:</span>
-                <span style="font-size: 16px; font-weight: 600; color: #e6a23c">
-                  {{ formatNumber(systemInfo.net?.peak_total_mbps || 0, 2) }} Mbps
-                </span>
-              </div>
-              <div style="font-size: 11px; color: #909399; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e4e7ed">
-                <span>↑{{ formatNumber(systemInfo.net?.speed_sent_mbps || 0, 2) }} Mbps</span>
-                <span style="margin: 0 8px">|</span>
-                <span>↓{{ formatNumber(systemInfo.net?.speed_recv_mbps || 0, 2) }} Mbps</span>
-                <span style="margin-left: 12px; color: #c0c4cc">
-                  (峰值: ↑{{ formatNumber(systemInfo.net?.peak_sent_mbps || 0, 2) }} ↓{{ formatNumber(systemInfo.net?.peak_recv_mbps || 0, 2) }})
-                </span>
-              </div>
-            </div>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_bytes_sent') }}</span>
-                <span class="info-value highlight">{{ formatBytes(systemInfo.net?.bytes_sent || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_bytes_recv') }}</span>
-                <span class="info-value highlight">{{ formatBytes(systemInfo.net?.bytes_recv || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_packets_sent') }}</span>
-                <span class="info-value">{{ formatNumber(systemInfo.net?.packets_sent || 0) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">{{ $t('monitor.net_packets_recv') }}</span>
-                <span class="info-value">{{ formatNumber(systemInfo.net?.packets_recv || 0) }}</span>
-              </div>
-              <div class="info-item" v-if="(systemInfo.net?.errin || 0) > 0 || (systemInfo.net?.errout || 0) > 0 || (systemInfo.net?.dropin || 0) > 0 || (systemInfo.net?.dropout || 0) > 0">
-                <span class="info-label" style="color: #f56c6c">{{ $t('monitor.net_errin') }}</span>
-                <span class="info-value error">{{ formatNumber(systemInfo.net?.errin || 0) }}</span>
-              </div>
-              <div class="info-item" v-if="(systemInfo.net?.errin || 0) > 0 || (systemInfo.net?.errout || 0) > 0 || (systemInfo.net?.dropin || 0) > 0 || (systemInfo.net?.dropout || 0) > 0">
-                <span class="info-label" style="color: #f56c6c">{{ $t('monitor.net_dropin') }}</span>
-                <span class="info-value error">{{ formatNumber(systemInfo.net?.dropin || 0) }}</span>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
+    <!-- 系统负载与FD（仅 Linux） -->
+    <el-row v-if="isLinux" :gutter="20" style="margin-top: 20px">
       <!-- 系统负载（仅Linux） -->
-      <el-col :span="8" v-if="isLinux">
+      <el-col :span="12">
         <el-card class="monitor-card load-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -285,7 +222,7 @@
       </el-col>
 
       <!-- 文件描述符信息（仅Linux） -->
-      <el-col :span="8" v-if="isLinux">
+      <el-col :span="12">
         <el-card class="monitor-card fd-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -433,7 +370,52 @@
                 <span class="info-label">{{ $t('monitor.go_version') }}</span>
                 <span class="info-value">{{ systemInfo.system?.go_version || '-' }}</span>
               </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.health_status') }}</span>
+                <span class="info-value highlight">{{ runtimeObservability.health?.status || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.alert_count') }}</span>
+                <span class="info-value">{{ formatNumber(runtimeObservability.health?.alert_count || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.app_env') }}</span>
+                <span class="info-value highlight">{{ runtimeObservability.app?.env || runtimeObservability.app_env || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.app_debug') }}</span>
+                <span class="info-value">{{ formatBool(runtimeObservability.app?.debug ?? runtimeObservability.app_debug) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.queue_connection') }}</span>
+                <span class="info-value">{{ runtimeObservability.app?.queue_connection || runtimeObservability.queue_connection || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.cache_store') }}</span>
+                <span class="info-value">{{ runtimeObservability.app?.cache_store || runtimeObservability.cache_store || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.ws_online_admins') }}</span>
+                <span class="info-value highlight">{{ runtimeObservability.websocket?.online_admins ?? runtimeObservability.ws?.online_admins ?? 0 }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.ws_connections') }}</span>
+                <span class="info-value highlight">{{ runtimeObservability.websocket?.connections ?? runtimeObservability.ws?.connections ?? 0 }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.mem_alloc') }}</span>
+                <span class="info-value">{{ formatBytes(runtimeObservability.runtime?.memory?.alloc || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('observability_lite.mem_heap_alloc') }}</span>
+                <span class="info-value highlight">{{ formatBytes(runtimeObservability.runtime?.memory?.heap_alloc || 0) }}</span>
+              </div>
             </div>
+            <el-collapse style="margin-top: 16px">
+              <el-collapse-item name="runtime-observability-json" :title="$t('observability_lite.raw_snapshot')">
+                <pre class="json-pre">{{ runtimeObservabilityRaw }}</pre>
+              </el-collapse-item>
+            </el-collapse>
           </div>
         </el-card>
       </el-col>
@@ -837,9 +819,9 @@
     </el-row>
 
     <!-- 详细监控信息：TCP连接、磁盘IO、磁盘分区、网卡详情 -->
-    <el-row v-if="systemInfo.tcp_connections || (systemInfo.disk_io && systemInfo.disk_io.total_read_bytes > 0) || (systemInfo.disk_partitions && systemInfo.disk_partitions.length > 0)" :gutter="20" style="margin-top: 20px">
+    <el-row v-if="showDetailedStatsRow" :gutter="20" style="margin-top: 20px">
       <!-- TCP连接统计 -->
-      <el-col :span="8" v-if="systemInfo.tcp_connections">
+      <el-col :span="detailStatsColSpan" v-if="hasTcpStats">
         <el-card class="monitor-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -882,7 +864,7 @@
       </el-col>
 
       <!-- 磁盘IO统计 -->
-      <el-col :span="8" v-if="systemInfo.disk_io && systemInfo.disk_io.total_read_bytes > 0">
+      <el-col :span="detailStatsColSpan" v-if="hasDiskIOStats">
         <el-card class="monitor-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -916,7 +898,7 @@
       </el-col>
 
       <!-- 磁盘分区信息（如果分区数量较少，显示在卡片中） -->
-      <el-col :span="8" v-if="systemInfo.disk_partitions && systemInfo.disk_partitions.length > 0 && systemInfo.disk_partitions.length <= 3">
+      <el-col :span="detailStatsColSpan" v-if="hasSmallDiskPartitions">
         <el-card class="monitor-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -993,6 +975,74 @@
                 </template>
               </el-table-column>
             </el-table>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 网络汇总（与网卡流量放在同一块） -->
+    <el-row :gutter="20" style="margin-top: 20px">
+      <el-col :span="24">
+        <el-card class="monitor-card network-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon class="card-icon network-icon"><Connection /></el-icon>
+                <span>{{ $t('monitor.network') }}</span>
+              </div>
+              <el-button size="small" :icon="Refresh" circle :disabled="refreshing" :loading="refreshing" @click="loadData" />
+            </div>
+          </template>
+          <div class="monitor-content">
+            <div v-if="systemInfo.net?.speed_total_mbps !== undefined" class="monitor-item" style="margin-bottom: 15px; padding: 12px; background: #f5f7fa; border-radius: 8px">
+              <div style="font-size: 13px; color: #606266; margin-bottom: 8px; font-weight: 600">{{ $t('monitor.bandwidth_speed') }}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
+                <span style="font-size: 12px; color: #909399">{{ $t('monitor.current_speed') }}:</span>
+                <span style="font-size: 16px; font-weight: 600; color: var(--el-color-primary)">
+                  {{ formatNumber(systemInfo.net?.speed_total_mbps || 0, 2) }} Mbps
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
+                <span style="font-size: 12px; color: #909399">{{ $t('monitor.peak_speed') }}:</span>
+                <span style="font-size: 16px; font-weight: 600; color: #e6a23c">
+                  {{ formatNumber(systemInfo.net?.peak_total_mbps || 0, 2) }} Mbps
+                </span>
+              </div>
+              <div style="font-size: 11px; color: #909399; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e4e7ed">
+                <span>↑{{ formatNumber(systemInfo.net?.speed_sent_mbps || 0, 2) }} Mbps</span>
+                <span style="margin: 0 8px">|</span>
+                <span>↓{{ formatNumber(systemInfo.net?.speed_recv_mbps || 0, 2) }} Mbps</span>
+                <span style="margin-left: 12px; color: #c0c4cc">
+                  (峰值: ↑{{ formatNumber(systemInfo.net?.peak_sent_mbps || 0, 2) }} ↓{{ formatNumber(systemInfo.net?.peak_recv_mbps || 0, 2) }})
+                </span>
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.net_bytes_sent') }}</span>
+                <span class="info-value highlight">{{ formatBytes(systemInfo.net?.bytes_sent || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.net_bytes_recv') }}</span>
+                <span class="info-value highlight">{{ formatBytes(systemInfo.net?.bytes_recv || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.net_packets_sent') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.net?.packets_sent || 0) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ $t('monitor.net_packets_recv') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.net?.packets_recv || 0) }}</span>
+              </div>
+              <div class="info-item" v-if="(systemInfo.net?.errin || 0) > 0 || (systemInfo.net?.errout || 0) > 0 || (systemInfo.net?.dropin || 0) > 0 || (systemInfo.net?.dropout || 0) > 0">
+                <span class="info-label" style="color: #f56c6c">{{ $t('monitor.net_errin') }}</span>
+                <span class="info-value error">{{ formatNumber(systemInfo.net?.errin || 0) }}</span>
+              </div>
+              <div class="info-item" v-if="(systemInfo.net?.errin || 0) > 0 || (systemInfo.net?.errout || 0) > 0 || (systemInfo.net?.dropin || 0) > 0 || (systemInfo.net?.dropout || 0) > 0">
+                <span class="info-label" style="color: #f56c6c">{{ $t('monitor.net_dropin') }}</span>
+                <span class="info-value error">{{ formatNumber(systemInfo.net?.dropin || 0) }}</span>
+              </div>
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -1086,7 +1136,7 @@ import {
   Refresh,
   Operation
 } from '@element-plus/icons-vue'
-import { getSystemInfo, createSystemInfoSSE } from '../../api/monitor'
+import { getSystemInfo, createSystemInfoSSE, getObservabilityLite } from '../../api/monitor'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 
 const { t } = useI18n()
@@ -1122,10 +1172,32 @@ const systemInfo = ref({
     limit: 20
   }
 })
+const runtimeObservability = ref({})
+const runtimeObservabilityRaw = computed(() => JSON.stringify(runtimeObservability.value, null, 2))
 
 // 判断是否为Linux系统
 const isLinux = computed(() => {
   return systemInfo.value.os === 'linux'
+})
+
+const hasTcpStats = computed(() => !!systemInfo.value.tcp_connections)
+const hasDiskIOStats = computed(() => (systemInfo.value.disk_io?.total_read_bytes || 0) > 0)
+const hasSmallDiskPartitions = computed(() => {
+  const partitions = systemInfo.value.disk_partitions || []
+  return partitions.length > 0 && partitions.length <= 3
+})
+const showDetailedStatsRow = computed(() => hasTcpStats.value || hasDiskIOStats.value || hasSmallDiskPartitions.value)
+const detailStatsCardCount = computed(() => {
+  let count = 0
+  if (hasTcpStats.value) count++
+  if (hasDiskIOStats.value) count++
+  if (hasSmallDiskPartitions.value) count++
+  return count
+})
+const detailStatsColSpan = computed(() => {
+  if (detailStatsCardCount.value <= 1) return 24
+  if (detailStatsCardCount.value === 2) return 12
+  return 8
 })
 
 const loading = ref(false)
@@ -1242,6 +1314,7 @@ const startSSEStream = () => {
         lastErrorTime = 0
         console.log('SSE connected for system info')
         loading.value = false
+        loadRuntimeObservability()
       }
     })
   } catch (error) {
@@ -1249,6 +1322,16 @@ const startSSEStream = () => {
     ElMessage.warning(t('monitor.sse_init_failed') || '无法启动实时推送，已切换到定时刷新模式')
     // 降级到定时刷新
     startPolling()
+  }
+}
+
+const loadRuntimeObservability = async () => {
+  try {
+    const { data } = await getObservabilityLite()
+    runtimeObservability.value = data || {}
+  } catch (error) {
+    // 运行观测数据仅作为增强信息，不阻塞服务监控主流程
+    console.warn('Load runtime observability error:', error)
   }
 }
 
@@ -1672,6 +1755,7 @@ const loadData = async () => {
   try {
     const { data } = await getSystemInfo()
     systemInfo.value = data || {}
+    await loadRuntimeObservability()
     updateHistoryData()
     updateCharts()
   } catch (error) {
@@ -1735,6 +1819,8 @@ const formatNumber = (num, decimals = 0) => {
   // 没有指定小数位数，使用默认格式化
   return value.toLocaleString()
 }
+
+const formatBool = (value) => (value ? 'true' : 'false')
 
 // 格式化百分比：根据值的大小决定保留的小数位数
 // 优化显示：避免过多小数位
@@ -2421,6 +2507,17 @@ html.dark .load-percent {
 /* 暗黑模式样式 - Element Plus Table会自动适配，这里只需要确保hover效果 */
 html.dark .interfaces-table :deep(.el-table__row:hover) {
   background-color: var(--el-fill-color-light) !important;
+}
+
+.json-pre {
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--el-fill-color-light);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 // 响应式设计

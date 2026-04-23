@@ -55,26 +55,36 @@ func (r *MenuController) Tree(ctx http.Context) http.Response {
 
 // applyMenuTreeFilters 应用监控/开发工具等过滤
 func (r *MenuController) applyMenuTreeFilters(ctx http.Context, menus []models.Menu) []models.Menu {
+	adminID := r.extractAdminID(ctx)
+	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+	isDeveloper := r.isDeveloperAdmin(adminID, developerIDsStr)
+
 	monitorHidden := facades.Config().GetString("admin.monitor_hidden", "")
 	if monitorHidden != "" && monitorHidden != "0" {
-		adminValue := ctx.Value("admin")
-		var adminID uint
-		if adminValue != nil {
-			if admin, ok := adminValue.(models.Admin); ok {
-				adminID = admin.ID
-			} else if adminPtr, ok := adminValue.(*models.Admin); ok && adminPtr != nil {
-				adminID = adminPtr.ID
-			}
-		}
-		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
-		if !r.isDeveloperAdmin(adminID, developerIDsStr) {
+		if !isDeveloper {
 			menus = r.filterMonitorMenu(menus)
 		}
 	}
-	if !facades.Config().GetBool("app.enable_dev_tool") {
+	if !facades.Config().GetBool("app.enable_dev_tool") && !isDeveloper {
 		menus = r.filterDevMenu(menus)
 	}
 	return menus
+}
+
+func (r *MenuController) extractAdminID(ctx http.Context) uint {
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return 0
+	}
+
+	if admin, ok := adminValue.(models.Admin); ok {
+		return admin.ID
+	}
+	if adminPtr, ok := adminValue.(*models.Admin); ok && adminPtr != nil {
+		return adminPtr.ID
+	}
+
+	return 0
 }
 
 // Index 菜单列表（树形结构，需要菜单权限）
@@ -281,8 +291,8 @@ func (r *MenuController) isDeveloperAdmin(adminID uint, developerIDsStr string) 
 func (r *MenuController) filterMonitorMenu(menus []models.Menu) []models.Menu {
 	var filteredMenus []models.Menu
 	for _, menu := range menus {
-		// 如果当前菜单不是服务监控菜单，则保留
-		if menu.Slug != "monitor" {
+		// 监控中心及其子菜单整体隐藏
+		if menu.Slug != "monitor" && menu.Slug != "monitor-center" {
 			// 递归过滤子菜单
 			if len(menu.Children) > 0 {
 				menu.Children = r.filterMonitorMenu(menu.Children)
