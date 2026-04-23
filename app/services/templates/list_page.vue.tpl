@@ -224,14 +224,6 @@ const buildListParams = (form, baseParams) => {
     delete params[fieldName]
   })
 
-  // 兼容旧接口：created_at 范围透传 start_time/end_time
-  if (params.created_at_start) {
-    params.start_time = params.created_at_start
-  }
-  if (params.created_at_end) {
-    params.end_time = params.created_at_end
-  }
-
   return params
 }
 
