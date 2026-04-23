@@ -415,7 +415,7 @@ func (s *MenuSeeder) Run() error {
 
 	createOrUpdateMenu(models.Menu{
 		ParentID:  logMenu.ID,
-		Title:     "观测与调试",
+		Title:     "日志与观测",
 		Slug:      "observability",
 		Icon:      "DataAnalysis",
 		Path:      "/observability",
