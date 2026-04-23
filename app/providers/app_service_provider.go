@@ -36,6 +36,10 @@ func (receiver *AppServiceProvider) syncStorageDiskFromDatabase() {
 	if orm == nil {
 		return
 	}
+	// 首次迁移前 configs 表不存在，直接跳过，避免启动阶段打印 SQL 错误
+	if !facades.Schema().HasTable("configs") {
+		return
+	}
 
 	// 获取 storage 分组的 file_disk 配置
 	// 优先使用 file_disk，如果没有则使用 storage_disk（向后兼容）
