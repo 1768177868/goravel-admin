@@ -37,22 +37,18 @@ func Api() {
 
 	// 队列驱动测试路由（开发调试使用，仅允许开发环境）
 	facades.Route().Prefix("api/queue-test").Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {
-		// 一次性覆盖 dispatch + delay + long-running + fail。
-		router.Post("all-in-one", queueTestController.AllInOne)
-		// 一次性覆盖 delay + fail + reclaim（偏异常/边界场景）。
-		router.Post("all-special", queueTestController.AllSpecial)
-		// reclaim 测试：在 redis_stream 下可验证 claim
-		router.Post("reclaim", queueTestController.Reclaim)
+		// 以下高噪音/异常链路测试接口先注释，避免开发环境持续写失败日志与 failed_jobs。
+		// router.Post("all-in-one", queueTestController.AllInOne)
+		// router.Post("all-special", queueTestController.AllSpecial)
+		// router.Post("reclaim", queueTestController.Reclaim)
 		// 默认队列立即投递。
 		router.Post("dispatch", queueTestController.Dispatch)
 		// 默认队列延迟投递（rabbitmq 需 delayed-message 插件才能严格延迟）。
 		router.Post("delay", queueTestController.Delay)
 		// 投递到 long-running 逻辑队列。
 		router.Post("long-running", queueTestController.LongRunning)
-		// 投递一个必失败任务，用于失败重试链路验证。
-		router.Post("fail", queueTestController.Fail)
-		// 分段重试测试：5s -> 10s -> 20s。
-		router.Post("backoff", queueTestController.Backoff)
+		// router.Post("fail", queueTestController.Fail)
+		// router.Post("backoff", queueTestController.Backoff)
 		// 唯一队列测试：窗口期内同 key 只投递一次（默认 30s）。
 		router.Post("unique", queueTestController.Unique)
 		// 唯一队列状态：查看某个 key 是否在窗口期内。

@@ -25,6 +25,6 @@ func init() {
 		// - 每天 02:30：30 2 * * *
 		// - 每周一凌晨1点：0 1 * * 1
 		// - 每月1号凌晨1点：0 1 1 * *
-		"test_cron": config.Env("SCHEDULE_TEST_CRON", "*/5 * * * * *"),
+		// "test_cron": config.Env("SCHEDULE_TEST_CRON", "*/5 * * * * *"),
 	})
 }
