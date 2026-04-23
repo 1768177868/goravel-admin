@@ -659,7 +659,7 @@ func (s *CodeGeneratorServiceImpl) GetTableColumns(tableName string) ([]FieldCon
 			ShowInForm:   showInForm,
 			ShowInDetail: true,
 			SearchType:   searchType,
-			SearchUIType: getSearchUIType("", jsonDBType),
+			SearchUIType: getSearchUIType("", jsonDBType, name),
 			Dictionary:   "",
 			ApiUrl:       "",
 			Precision:    int(precision),
@@ -1183,7 +1183,7 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			Comment:      field.Label, // Use Label as Comment
 			FormType:     field.FormType,
 			SearchType:   getSearchType(field.SearchType),
-			SearchUIType: getSearchUIType(field.SearchUIType, field.DBType),
+			SearchUIType: getSearchUIType(field.SearchUIType, field.DBType, field.Name),
 			Dictionary:   field.Dictionary,
 			ApiUrl:       getApiUrl(field.Dictionary, field.ApiUrl),
 			Sortable:     field.Sortable,
@@ -1765,10 +1765,19 @@ func getSearchType(searchType string) string {
 	return searchType
 }
 
-func getSearchUIType(searchUIType string, dbType string) string {
+func getSearchUIType(searchUIType string, dbType string, fieldName string) string {
 	if searchUIType != "" {
 		return searchUIType
 	}
+
+	// 时间后缀字段默认走范围搜索（created_at / updated_at / *_at）
+	if fieldName == "created_at" || fieldName == "updated_at" || strings.HasSuffix(fieldName, "_at") {
+		if dbType == "date" {
+			return "daterange"
+		}
+		return "datetimerange"
+	}
+
 	switch dbType {
 	case "date":
 		return "date"
@@ -1940,15 +1949,7 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 			}
 		}
 		if field.SearchUIType == "" {
-			if field.DBType == "date" {
-				field.SearchUIType = "date"
-			} else if field.DBType == "datetime" {
-				field.SearchUIType = "datetime"
-			} else if field.DBType == "boolean" {
-				field.SearchUIType = "select"
-			} else {
-				field.SearchUIType = "input"
-			}
+			field.SearchUIType = getSearchUIType("", field.DBType, field.Name)
 		}
 		if field.FormType == "" {
 			field.FormType = getFormType(field.DBType)

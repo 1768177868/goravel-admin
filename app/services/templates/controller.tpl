@@ -36,6 +36,10 @@ func (c *<<.ControllerName>>) build<<.ModelName>>Filters(ctx http.Context) servi
 	return services.<<.ModelName>>Filters{
 <<- range .SearchableFields>>
 		<<.PascalName>>: ctx.Request().Query("<<.Name>>", ""),
+		<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+		<<.PascalName>>Start: ctx.Request().Query("<<.Name>>_start", <<if eq .Name "created_at">>ctx.Request().Query("start_time", "")<<else>>""<<end>>),
+		<<.PascalName>>End: ctx.Request().Query("<<.Name>>_end", <<if eq .Name "created_at">>ctx.Request().Query("end_time", "")<<else>>""<<end>>),
+		<<- end>>
 <<- end>>
 	}
 }

@@ -40,15 +40,6 @@
           >
             {{ $t("common.reset") }}
           </el-button>
-
-          <el-button
-            type="success"
-            :disabled="getButtonState('article.export').disabled || isExporting"
-            :loading="isExporting"
-            @click="handleExport"
-          >
-            {{ $t("common.export") }}
-          </el-button>
         </template>
       </SearchForm>
 
@@ -96,8 +87,6 @@
 import { ref, reactive, onMounted, computed, markRaw } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { useRouter } from "vue-router";
-
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import SearchForm from "../../components/SearchForm.vue";
@@ -108,12 +97,13 @@ import ArticleForm from "./ArticleForm.vue";
 import { useTable } from "../../composables/useTable";
 import { usePermission } from "../../composables/usePermission";
 import { useCrud } from "../../composables/useCrud";
+import { buildSearchParams } from "../../utils/buildSearchParams";
 
+import { getStatusOptions } from "../../utils/fieldOptions";
 import {
   getArticleList,
   deleteArticle,
   updateArticle,
-  exportArticle,
 } from "../../api/article";
 import logger from "../../utils/logger";
 import ErrorHandler from "../../utils/errorHandler";
@@ -125,12 +115,8 @@ const { getButtonState } = usePermission();
 
 const { t } = useI18n();
 
-const router = useRouter();
-
 const tableRef = ref(null);
 const formRef = ref(null);
-
-const isExporting = ref(false);
 
 const {
   dialogVisible,
@@ -147,7 +133,48 @@ const initialSearchForm = {
   title: "",
   content: "",
   status: "",
-  created_at: "",
+  created_at: [],
+  updated_at: [],
+};
+
+const rangeSearchFields = ["created_at", "updated_at"];
+
+const buildListParams = (form, baseParams) => {
+  const params = buildSearchParams(form, baseParams);
+
+  rangeSearchFields.forEach((fieldName) => {
+    const rangeValue = form[fieldName];
+    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
+      delete params[`${fieldName}_start`];
+      delete params[`${fieldName}_end`];
+      return;
+    }
+
+    const [start, end] = rangeValue;
+    if (start) {
+      params[`${fieldName}_start`] = start;
+    } else {
+      delete params[`${fieldName}_start`];
+    }
+    if (end) {
+      params[`${fieldName}_end`] = end;
+    } else {
+      delete params[`${fieldName}_end`];
+    }
+
+    // 避免将范围字段原始数组直接作为查询参数提交
+    delete params[fieldName];
+  });
+
+  // 兼容旧接口：created_at 范围透传 start_time/end_time
+  if (params.created_at_start) {
+    params.start_time = params.created_at_start;
+  }
+  if (params.created_at_end) {
+    params.end_time = params.created_at_end;
+  }
+
+  return params;
 };
 
 const {
@@ -167,12 +194,13 @@ const {
 } = useTable({
   fetchApi: getArticleList,
   initialSearchForm,
+  buildParams: buildListParams,
   fieldMapping: {},
   defaultSort: "id:desc",
   tableRef: computed(() => tableRef.value?.tableRef),
 });
 
-const enableBatchActions = true;
+const enableBatchActions = false;
 const hasSelection = computed(() => selectedIds.value.length > 0);
 
 const searchFields = computed(() => [
@@ -203,16 +231,23 @@ const searchFields = computed(() => [
   {
     prop: "status",
     label: t("article.status"),
-    type: "select",
+    type: "input",
     clearable: true,
-    apiUrl: "/options?type=dictionary&dictionary_type=status",
     width: "200px",
     advanced: false,
   },
   {
     prop: "created_at",
     label: t("article.created_at"),
-    type: "datetime",
+    type: "datetimerange",
+    clearable: true,
+    width: "200px",
+    advanced: false,
+  },
+  {
+    prop: "updated_at",
+    label: t("article.updated_at"),
+    type: "datetimerange",
     clearable: true,
     width: "200px",
     advanced: false,
@@ -249,8 +284,8 @@ const tableColumns = computed(() => {
       sortable: false,
     },
     {
-      field: "created_at",
-      title: t("article.created_at"),
+      field: "updated_at",
+      title: t("article.updated_at"),
       sortable: false,
     },
     {
@@ -376,29 +411,6 @@ const handleAction = (command, row) => {
     case "delete":
       handleDelete(row);
       break;
-  }
-};
-
-const handleExport = async () => {
-  if (isExporting.value) {
-    return;
-  }
-
-  isExporting.value = true;
-
-  try {
-    await exportArticle(searchForm);
-    ElMessage.success(t("common.export_task_submitted"));
-    router.push("/exports");
-  } catch (error) {
-    logger.error("Export error:", error);
-    if (error.response?.status === 429) {
-      ElMessage.warning(t("common.export_in_progress"));
-    } else if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true });
-    }
-  } finally {
-    isExporting.value = false;
   }
 };
 

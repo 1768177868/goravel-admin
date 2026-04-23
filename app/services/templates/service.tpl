@@ -29,6 +29,10 @@ type <<.ServiceName>> interface {
 type <<.ModelName>>Filters struct {
 <<range .SearchableFields>>
 	<<.PascalName>> string
+	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+	<<.PascalName>>Start string
+	<<.PascalName>>End   string
+	<<- end>>
 <<- end>>
 }
 
@@ -50,6 +54,14 @@ func (s *<<.ServiceName>>Impl) withRelations(query orm.Query) orm.Query {
 func (s *<<.ServiceName>>Impl) build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 	query := facades.Orm().Query().Model(&models.<<.ModelName>>{})
 <<- range .SearchableFields>>
+	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+	if filters.<<.PascalName>>Start != "" {
+		query = query.Where("<<.Name>> >= ?", filters.<<.PascalName>>Start)
+	}
+	if filters.<<.PascalName>>End != "" {
+		query = query.Where("<<.Name>> <= ?", filters.<<.PascalName>>End)
+	}
+	<<- end>>
 	if filters.<<.PascalName>> != "" {
 		<<- if eq .SearchType "like">>
 		query = query.Where("<<.Name>> LIKE ?", "%"+filters.<<.PascalName>>+"%")

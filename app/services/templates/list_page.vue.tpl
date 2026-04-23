@@ -143,6 +143,7 @@ import <<.ModelName>>Form from './<<.ModelName>>Form.vue'
 import { useTable } from '../../composables/useTable'
 import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
+import { buildSearchParams } from '../../utils/buildSearchParams'
 <<range .ListFields>>
 <<- if and .ShowInList (eq .Name "status") (not .Dictionary)>>
 import { getStatusOptions } from '../../utils/fieldOptions'
@@ -184,8 +185,54 @@ const {
 
 const initialSearchForm = {
 <<range .SearchableFields>>
-  <<.Name>>: '',
+  <<.Name>>: <<if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>[]<<else>>''<<end>>,
 <<- end>>
+}
+
+const rangeSearchFields = [
+<<range .SearchableFields>>
+<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+  '<<.Name>>',
+<<- end>>
+<<- end>>
+]
+
+const buildListParams = (form, baseParams) => {
+  const params = buildSearchParams(form, baseParams)
+
+  rangeSearchFields.forEach((fieldName) => {
+    const rangeValue = form[fieldName]
+    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
+      delete params[`${fieldName}_start`]
+      delete params[`${fieldName}_end`]
+      return
+    }
+
+    const [start, end] = rangeValue
+    if (start) {
+      params[`${fieldName}_start`] = start
+    } else {
+      delete params[`${fieldName}_start`]
+    }
+    if (end) {
+      params[`${fieldName}_end`] = end
+    } else {
+      delete params[`${fieldName}_end`]
+    }
+
+    // 避免将范围字段原始数组直接作为查询参数提交
+    delete params[fieldName]
+  })
+
+  // 兼容旧接口：created_at 范围透传 start_time/end_time
+  if (params.created_at_start) {
+    params.start_time = params.created_at_start
+  }
+  if (params.created_at_end) {
+    params.end_time = params.created_at_end
+  }
+
+  return params
 }
 
 const {
@@ -205,6 +252,7 @@ const {
 } = useTable({
   fetchApi: get<<.ModelName>>List,
   initialSearchForm,
+  buildParams: buildListParams,
   fieldMapping: {},
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef)
@@ -261,7 +309,7 @@ const tableColumns = computed(() => {
     sortable: true
   },
 <<range .ListFields>>
-<<- if .ShowInList>>
+<<- if and .ShowInList (ne .Name "created_at") (ne .Name "operation")>>
   <<- if and (eq .Name "status") (eq .FormType "switch")>>
   {
     field: 'status',

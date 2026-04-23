@@ -892,7 +892,10 @@ const handleApplyAIConfig = () => {
     // 智能推断 search_ui_type
     let searchUIType = field.search_ui_type
     if (!searchUIType) {
-      if (dbType === 'date') {
+      const isAtSuffixField = field.name && (field.name === 'created_at' || field.name === 'updated_at' || field.name.endsWith('_at'))
+      if (isAtSuffixField) {
+        searchUIType = dbType === 'date' ? 'daterange' : 'datetimerange'
+      } else if (dbType === 'date') {
         searchUIType = 'date'
       } else if (dbType === 'datetime' || dbType === 'timestamp') {
         searchUIType = 'datetime'
