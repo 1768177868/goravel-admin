@@ -30,6 +30,7 @@ import (
 
 	"goravel/app/http/response"
 	"goravel/app/utils/errorlog"
+	wsnotifications "goravel/app/websocket/notifications"
 )
 
 // cloneJSONSafeForSSE 深拷贝监控数据并将 NaN/Inf 转为 0。
@@ -1635,6 +1636,11 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 
 	// 生成系统告警提示（根据当前语言动态生成）
 	alerts := r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDescriptors)
+	healthStatus := "ok"
+	if len(alerts) > 0 {
+		healthStatus = "warning"
+	}
+	wsAdmins, wsConnections := wsnotifications.Hub().Stats()
 
 	physicalCores := 0
 	for _, info := range cpuInfo {
@@ -1676,6 +1682,8 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 		"file_descriptors": fileDescriptors,
 		"runtime": map[string]any{
 			"goroutines": runtime.NumGoroutine(),
+			"num_cpu":    runtime.NumCPU(),
+			"gomaxprocs": runtime.GOMAXPROCS(0),
 			"total_processes": func() int {
 				processes, err := process.Processes()
 				if err != nil {
@@ -1686,6 +1694,43 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 				}
 				return len(processes)
 			}(),
+			"memory": func() map[string]any {
+				memStats := runtime.MemStats{}
+				runtime.ReadMemStats(&memStats)
+				return map[string]any{
+					"alloc":          memStats.Alloc,
+					"total_alloc":    memStats.TotalAlloc,
+					"sys":            memStats.Sys,
+					"lookups":        memStats.Lookups,
+					"mallocs":        memStats.Mallocs,
+					"frees":          memStats.Frees,
+					"heap_alloc":     memStats.HeapAlloc,
+					"heap_sys":       memStats.HeapSys,
+					"heap_idle":      memStats.HeapIdle,
+					"heap_inuse":     memStats.HeapInuse,
+					"heap_objects":   memStats.HeapObjects,
+					"stack_inuse":    memStats.StackInuse,
+					"stack_sys":      memStats.StackSys,
+					"num_gc":         memStats.NumGC,
+					"pause_total_ns": memStats.PauseTotalNs,
+					"last_gc":        memStats.LastGC,
+				}
+			}(),
+		},
+		"app": map[string]any{
+			"env":              facades.Config().GetString("app.env", "production"),
+			"debug":            facades.Config().GetBool("app.debug", false),
+			"timezone":         facades.Config().GetString("app.timezone", "UTC"),
+			"queue_connection": facades.Config().GetString("queue.default", "sync"),
+			"cache_store":      facades.Config().GetString("cache.default", "file"),
+		},
+		"websocket": map[string]any{
+			"online_admins": wsAdmins,
+			"connections":   wsConnections,
+		},
+		"health": map[string]any{
+			"status":      healthStatus,
+			"alert_count": len(alerts),
 		},
 		"system": map[string]any{
 			"hostname": func() string {
@@ -1866,7 +1911,12 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 						if cpuPercentVal, ok5 := cpuInfoMap["percent"].(float64); ok5 {
 							cpuPercent = []float64{cpuPercentVal}
 						}
-						result["alerts"] = r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDesc)
+						alerts := r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDesc)
+						result["alerts"] = alerts
+						result["health"] = map[string]any{
+							"status":      map[bool]string{true: "warning", false: "ok"}[len(alerts) > 0],
+							"alert_count": len(alerts),
+						}
 					}
 				}
 			}
@@ -1908,7 +1958,12 @@ func (r *MonitorController) collectSystemInfo(ctx http.Context) map[string]any {
 						if cpuPercentVal, ok5 := cpuInfoMap["percent"].(float64); ok5 {
 							cpuPercent = []float64{cpuPercentVal}
 						}
-						data["alerts"] = r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDesc)
+						alerts := r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDesc)
+						data["alerts"] = alerts
+						data["health"] = map[string]any{
+							"status":      map[bool]string{true: "warning", false: "ok"}[len(alerts) > 0],
+							"alert_count": len(alerts),
+						}
 					}
 				}
 			}
@@ -2222,6 +2277,7 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 			physicalCores += int(info.Cores)
 		}
 	}
+	wsAdmins, wsConnections := wsnotifications.Hub().Stats()
 
 	result := map[string]any{
 		"os": runtime.GOOS,
@@ -2289,6 +2345,17 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 				},
 			}
 		}(),
+		"app": map[string]any{
+			"env":              facades.Config().GetString("app.env", "production"),
+			"debug":            facades.Config().GetBool("app.debug", false),
+			"timezone":         facades.Config().GetString("app.timezone", "UTC"),
+			"queue_connection": facades.Config().GetString("queue.default", "sync"),
+			"cache_store":      facades.Config().GetString("cache.default", "file"),
+		},
+		"websocket": map[string]any{
+			"online_admins": wsAdmins,
+			"connections":   wsConnections,
+		},
 		"system": map[string]any{
 			"hostname": func() string {
 				hostname, err := os.Hostname()
@@ -2314,7 +2381,12 @@ func (r *MonitorController) doCollectSystemInfo(ctx http.Context) map[string]any
 	monitorCacheLock.Unlock()
 
 	// 在返回前，根据当前语言动态生成告警消息
-	result["alerts"] = r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDescriptors)
+	alerts := r.generateAlerts(ctx, memInfo, diskInfo, cpuPercent, fileDescriptors)
+	result["alerts"] = alerts
+	result["health"] = map[string]any{
+		"status":      map[bool]string{true: "warning", false: "ok"}[len(alerts) > 0],
+		"alert_count": len(alerts),
+	}
 
 	return result
 }

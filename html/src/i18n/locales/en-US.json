@@ -177,7 +177,7 @@
     "form_demo": "Form Demo",
     "observability-lite": "Runtime Observability"
   },
-  "observability_lite": {
+  "monitor_runtime": {
     "title": "Runtime Observability",
     "tip": "Runtime observability panel with app summary and full system snapshot for troubleshooting.",
     "timestamp": "Collected At",
@@ -196,7 +196,6 @@
     "net_speed": "Network Total Speed",
     "system_os": "Operating System",
     "system_host": "Hostname",
-    "raw_snapshot": "Full System Snapshot (JSON)",
     "health_status": "Health Status",
     "alert_count": "Alert Count",
     "mem_alloc": "Runtime Memory Alloc",

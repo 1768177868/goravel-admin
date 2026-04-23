@@ -183,7 +183,7 @@
     "form_demo": "表单组件演示",
     "observability-lite": "运行观测"
   },
-  "observability_lite": {
+  "monitor_runtime": {
     "title": "运行观测",
     "tip": "运行观测面板：提供应用摘要与完整系统快照，便于快速排查。",
     "timestamp": "采集时间",
@@ -202,7 +202,6 @@
     "net_speed": "网络总速率",
     "system_os": "操作系统",
     "system_host": "主机名",
-    "raw_snapshot": "完整系统快照（JSON）",
     "health_status": "健康状态",
     "alert_count": "告警数量",
     "mem_alloc": "运行内存分配",

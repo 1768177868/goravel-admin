@@ -13,11 +13,3 @@ export function createSystemInfoSSE(options = {}) {
   const url = `/monitor/system-info/stream?interval=${interval}`
   return url
 }
-
-export function getObservabilityLite() {
-  return request({
-    url: '/observability/lite',
-    method: 'get'
-  })
-}
-

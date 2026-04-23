@@ -27,7 +27,6 @@ func Admin() {
 	dashboardController := admin.NewDashboardController()
 	// debugController := admin.NewDebugController()
 	monitorController := admin.NewMonitorController()
-	observabilityLiteController := admin.NewObservabilityLiteController()
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
 	optionController := admin.NewOptionController()
@@ -79,7 +78,6 @@ func Admin() {
 			// 统一的下拉选项接口（不需要权限验证）
 			router.Get("options", optionController.Index)
 			router.Get("form-demo/data", formDemoController.GetData)
-			router.Middleware(middleware.DevelopmentOrDeveloperOnly()).Get("observability/lite", observabilityLiteController.Summary)
 
 			// 菜单树（仅登录即可，不校验菜单权限；用于角色/权限表单、刷新后展示等）
 			router.Get("menus/tree", menuController.Tree)

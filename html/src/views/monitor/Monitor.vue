@@ -371,51 +371,46 @@
                 <span class="info-value">{{ systemInfo.system?.go_version || '-' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.health_status') }}</span>
-                <span class="info-value highlight">{{ runtimeObservability.health?.status || '-' }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.health_status') }}</span>
+                <span class="info-value highlight">{{ systemInfo.health?.status || '-' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.alert_count') }}</span>
-                <span class="info-value">{{ formatNumber(runtimeObservability.health?.alert_count || 0) }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.alert_count') }}</span>
+                <span class="info-value">{{ formatNumber(systemInfo.health?.alert_count || 0) }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.app_env') }}</span>
-                <span class="info-value highlight">{{ runtimeObservability.app?.env || runtimeObservability.app_env || '-' }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.app_env') }}</span>
+                <span class="info-value highlight">{{ systemInfo.app?.env || '-' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.app_debug') }}</span>
-                <span class="info-value">{{ formatBool(runtimeObservability.app?.debug ?? runtimeObservability.app_debug) }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.app_debug') }}</span>
+                <span class="info-value">{{ formatBool(systemInfo.app?.debug) }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.queue_connection') }}</span>
-                <span class="info-value">{{ runtimeObservability.app?.queue_connection || runtimeObservability.queue_connection || '-' }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.queue_connection') }}</span>
+                <span class="info-value">{{ systemInfo.app?.queue_connection || '-' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.cache_store') }}</span>
-                <span class="info-value">{{ runtimeObservability.app?.cache_store || runtimeObservability.cache_store || '-' }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.cache_store') }}</span>
+                <span class="info-value">{{ systemInfo.app?.cache_store || '-' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.ws_online_admins') }}</span>
-                <span class="info-value highlight">{{ runtimeObservability.websocket?.online_admins ?? runtimeObservability.ws?.online_admins ?? 0 }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.ws_online_admins') }}</span>
+                <span class="info-value highlight">{{ systemInfo.websocket?.online_admins ?? 0 }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.ws_connections') }}</span>
-                <span class="info-value highlight">{{ runtimeObservability.websocket?.connections ?? runtimeObservability.ws?.connections ?? 0 }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.ws_connections') }}</span>
+                <span class="info-value highlight">{{ systemInfo.websocket?.connections ?? 0 }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.mem_alloc') }}</span>
-                <span class="info-value">{{ formatBytes(runtimeObservability.runtime?.memory?.alloc || 0) }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.mem_alloc') }}</span>
+                <span class="info-value">{{ formatBytes(systemInfo.runtime?.memory?.alloc || 0) }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">{{ $t('observability_lite.mem_heap_alloc') }}</span>
-                <span class="info-value highlight">{{ formatBytes(runtimeObservability.runtime?.memory?.heap_alloc || 0) }}</span>
+                <span class="info-label">{{ $t('monitor_runtime.mem_heap_alloc') }}</span>
+                <span class="info-value highlight">{{ formatBytes(systemInfo.runtime?.memory?.heap_alloc || 0) }}</span>
               </div>
             </div>
-            <el-collapse style="margin-top: 16px">
-              <el-collapse-item name="runtime-observability-json" :title="$t('observability_lite.raw_snapshot')">
-                <pre class="json-pre">{{ runtimeObservabilityRaw }}</pre>
-              </el-collapse-item>
-            </el-collapse>
           </div>
         </el-card>
       </el-col>
@@ -1136,7 +1131,7 @@ import {
   Refresh,
   Operation
 } from '@element-plus/icons-vue'
-import { getSystemInfo, createSystemInfoSSE, getObservabilityLite } from '../../api/monitor'
+import { getSystemInfo, createSystemInfoSSE } from '../../api/monitor'
 import { createSSEConnection, closeSSEConnection } from '../../utils/sse'
 
 const { t } = useI18n()
@@ -1172,9 +1167,6 @@ const systemInfo = ref({
     limit: 20
   }
 })
-const runtimeObservability = ref({})
-const runtimeObservabilityRaw = computed(() => JSON.stringify(runtimeObservability.value, null, 2))
-
 // 判断是否为Linux系统
 const isLinux = computed(() => {
   return systemInfo.value.os === 'linux'
@@ -1314,7 +1306,6 @@ const startSSEStream = () => {
         lastErrorTime = 0
         console.log('SSE connected for system info')
         loading.value = false
-        loadRuntimeObservability()
       }
     })
   } catch (error) {
@@ -1322,16 +1313,6 @@ const startSSEStream = () => {
     ElMessage.warning(t('monitor.sse_init_failed') || '无法启动实时推送，已切换到定时刷新模式')
     // 降级到定时刷新
     startPolling()
-  }
-}
-
-const loadRuntimeObservability = async () => {
-  try {
-    const { data } = await getObservabilityLite()
-    runtimeObservability.value = data || {}
-  } catch (error) {
-    // 运行观测数据仅作为增强信息，不阻塞服务监控主流程
-    console.warn('Load runtime observability error:', error)
   }
 }
 
@@ -1755,7 +1736,6 @@ const loadData = async () => {
   try {
     const { data } = await getSystemInfo()
     systemInfo.value = data || {}
-    await loadRuntimeObservability()
     updateHistoryData()
     updateCharts()
   } catch (error) {
@@ -2507,17 +2487,6 @@ html.dark .load-percent {
 /* 暗黑模式样式 - Element Plus Table会自动适配，这里只需要确保hover效果 */
 html.dark .interfaces-table :deep(.el-table__row:hover) {
   background-color: var(--el-fill-color-light) !important;
-}
-
-.json-pre {
-  margin: 0;
-  max-height: 360px;
-  overflow: auto;
-  padding: 12px;
-  border-radius: 6px;
-  background: var(--el-fill-color-light);
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 // 响应式设计
