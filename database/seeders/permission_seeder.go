@@ -16,7 +16,7 @@ func (s *PermissionSeeder) Signature() string {
 func (s *PermissionSeeder) Run() error {
 	// 获取菜单（权限需要关联菜单）
 	var adminMenu, roleMenu, permissionMenu, menuMenu, departmentMenu, positionMenu, dictionaryMenu, configMenu, blacklistMenu, onlineAdminMenu, orderMenu, userMenu, userBalanceLogMenu models.Menu
-	var operationLogMenu, loginLogMenu, systemLogMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
+	var operationLogMenu, loginLogMenu, systemLogMenu, observabilityMenu, monitorMenu, profileMenu, exportMenu, attachmentMenu, dashboardMenu, notificationMenu models.Menu
 	var paymentMethodMenu, paymentRecordMenu models.Menu
 
 	// 辅助函数：查找菜单
@@ -38,6 +38,7 @@ func (s *PermissionSeeder) Run() error {
 	findMenu("operation-log", &operationLogMenu)
 	findMenu("login-log", &loginLogMenu)
 	findMenu("system-log", &systemLogMenu)
+	findMenu("observability", &observabilityMenu)
 	findMenu("monitor", &monitorMenu)
 	findMenu("profile", &profileMenu)
 	findMenu("export", &exportMenu)
@@ -138,6 +139,10 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "系统日志删除", Slug: "system_log.destroy", Method: "DELETE", Path: "/api/admin/system-logs/*", Description: "删除系统日志", Status: 1, Sort: 3, MenuID: systemLogMenu.ID},
 		{Name: "系统日志批量删除", Slug: "system_log.batch_delete", Method: "POST", Path: "/api/admin/system-logs/batch-delete", Description: "批量删除系统日志", Status: 1, Sort: 4, MenuID: systemLogMenu.ID},
 		// {Name: "系统日志清理", Slug: "system_log.clean", Method: "POST", Path: "/api/admin/system-logs/clean", Description: "清理系统日志", Status: 1, Sort: 5, MenuID: systemLogMenu.ID},
+		// 观测与调试
+		{Name: "追踪聚合查询", Slug: "observability.trace", Method: "GET", Path: "/api/admin/observability/trace", Description: "按 trace_id 聚合请求链路", Status: 1, Sort: 1, MenuID: observabilityMenu.ID},
+		{Name: "慢SQL TopN", Slug: "observability.slow_sql_top", Method: "GET", Path: "/api/admin/observability/slow-sql/top", Description: "查询慢 SQL TopN 统计", Status: 1, Sort: 2, MenuID: observabilityMenu.ID},
+		{Name: "审计时间线", Slug: "observability.audit_timeline", Method: "GET", Path: "/api/admin/observability/audit-timeline", Description: "查询统一审计时间线", Status: 1, Sort: 3, MenuID: observabilityMenu.ID},
 		// 服务监控
 		{Name: "系统监控", Slug: "monitor.system_info", Method: "GET", Path: "/api/admin/monitor/system-info", Description: "查看系统监控信息", Status: 1, Sort: 1, MenuID: monitorMenu.ID},
 		{Name: "系统监控实时流", Slug: "monitor.system_info_stream", Method: "GET", Path: "/api/admin/monitor/system-info/stream", Description: "系统监控实时数据流", Status: 1, Sort: 2, MenuID: monitorMenu.ID},

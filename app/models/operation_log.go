@@ -8,6 +8,7 @@ type OperationLog struct {
 	orm.Model
 	AdminID   uint   `gorm:"index;comment:管理员ID"`
 	Admin     Admin  `gorm:"foreignKey:AdminID"`
+	TraceID   string `gorm:"size:120;index;comment:链路ID" json:"trace_id"`
 	Method    string `gorm:"size:10;comment:请求方法"`
 	Path      string `gorm:"size:255;comment:请求路径"`
 	Title     string `gorm:"size:255;comment:操作标题"`

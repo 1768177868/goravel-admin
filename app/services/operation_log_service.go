@@ -19,6 +19,7 @@ type OperationLogService interface {
 // OperationLogFilters 操作日志查询过滤器
 type OperationLogFilters struct {
 	AdminID   string
+	TraceID   string
 	Username  string
 	Method    string
 	Path      string
@@ -62,6 +63,9 @@ func (s *OperationLogServiceImpl) GetList(filters OperationLogFilters, page, pag
 	// 应用筛选条件
 	if filters.AdminID != "" {
 		query = query.Where("admin_id", filters.AdminID)
+	}
+	if filters.TraceID != "" {
+		query = query.Where("trace_id LIKE ?", "%"+filters.TraceID+"%")
 	}
 	if filters.Username != "" {
 		// 通过用户名查找管理员ID

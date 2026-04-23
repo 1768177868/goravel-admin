@@ -40,6 +40,7 @@ func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint,
 // buildFilters 构建查询过滤器
 func (r *OperationLogController) buildFilters(ctx http.Context) services.OperationLogFilters {
 	adminID := ctx.Request().Query("admin_id", "")
+	traceID := ctx.Request().Query("trace_id", "")
 	username := ctx.Request().Query("username", "")
 	method := ctx.Request().Query("method", "")
 	path := ctx.Request().Query("path", "")
@@ -53,6 +54,7 @@ func (r *OperationLogController) buildFilters(ctx http.Context) services.Operati
 
 	return services.OperationLogFilters{
 		AdminID:   adminID,
+		TraceID:   traceID,
 		Username:  username,
 		Method:    method,
 		Path:      path,

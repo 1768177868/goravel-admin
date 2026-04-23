@@ -168,6 +168,7 @@
     "operation_log": "Operation Log",
     "login_log": "Login Log",
     "system_log": "System Log",
+    "observability": "Observability",
     "external_link": "External Link",
     "type_directory": "Directory",
     "type_menu": "Menu",
@@ -200,6 +201,23 @@
     "alert_count": "Alert Count",
     "mem_alloc": "Runtime Memory Alloc",
     "mem_heap_alloc": "Heap Memory Alloc"
+  },
+  "observability": {
+    "trace_tab": "Request Trace",
+    "slow_sql_tab": "Slow SQL TopN",
+    "audit_tab": "Audit Timeline",
+    "trace_id_placeholder": "Enter trace_id",
+    "keyword_placeholder": "Keyword (path/message/context)",
+    "trace_empty": "Enter trace_id to query",
+    "trace_request": "Entry Request",
+    "trace_operations": "Operation Logs",
+    "trace_exceptions": "Exception Logs",
+    "duration_ms": "Duration (ms)",
+    "max_ms": "Max (ms)",
+    "avg_ms": "Avg (ms)",
+    "normalized_sql": "Normalized SQL",
+    "last_seen": "Last Seen",
+    "event_type": "Event Type"
   },
   "admin": {
     "add_admin": "Add Admin",

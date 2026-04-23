@@ -27,6 +27,7 @@ func Admin() {
 	dashboardController := admin.NewDashboardController()
 	// debugController := admin.NewDebugController()
 	monitorController := admin.NewMonitorController()
+	observabilityController := admin.NewObservabilityController()
 	notificationController := admin.NewNotificationController()
 	notificationWsController := admin.NewNotificationWsController()
 	optionController := admin.NewOptionController()
@@ -186,6 +187,9 @@ func Admin() {
 			router.Get("monitor/system-info", monitorController.GetSystemInfo)
 			// SSE 路由：实时推送系统监控数据（适合实时监控页面，自动更新）
 			router.Get("monitor/system-info/stream", monitorController.StreamSystemInfo)
+			router.Get("observability/trace", observabilityController.TraceAggregate)
+			router.Get("observability/slow-sql/top", observabilityController.SlowSQLTopN)
+			router.Get("observability/audit-timeline", observabilityController.AuditTimeline)
 
 			// 系统公告/通知
 			router.Post("notifications", notificationController.Store)

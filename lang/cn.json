@@ -268,6 +268,7 @@
     "time_range_exceeded": "查询时间范围不能超过{months}个月",
     "start_time_after_end_time": "开始时间不能晚于结束时间",
     "development_only": "该功能仅在开发环境可用",
+    "trace_id_required": "trace_id 不能为空",
     "operation_failed": "操作失败",
     "invalid_action": "无效的操作",
     "insufficient_balance": "余额不足，当前余额: {balance}",

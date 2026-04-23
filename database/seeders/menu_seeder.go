@@ -413,6 +413,19 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	createOrUpdateMenu(models.Menu{
+		ParentID:  logMenu.ID,
+		Title:     "观测与调试",
+		Slug:      "observability",
+		Icon:      "DataAnalysis",
+		Path:      "/observability",
+		Component: "log/ObservabilityHub",
+		Type:      2,
+		Status:    1,
+		Sort:      4,
+		IsHidden:  0,
+	})
+
 	// 服务监控（一级菜单）
 	createOrUpdateMenu(models.Menu{
 		ParentID:  0,

@@ -61,5 +61,7 @@ func Migrations() []schema.Migration {
 		&migrations.M20260328000001AddChangesToOperationLogs{},
 		&migrations.M20260404000001CreatePositionsTable{},
 		&migrations.M20260404000002AddPositionIdToAdminsTable{},
+		&migrations.M20260423000100AddTraceIdToOperationLogsTable{},
+		&migrations.M20260423000200CreateSlowQueryLogsTable{},
 	}
 }

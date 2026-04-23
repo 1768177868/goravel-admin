@@ -146,9 +146,11 @@ func OperationLog() http.Middleware {
 			if computeAuditChanges != nil {
 				changes = computeAuditChanges()
 			}
+			traceID := traceid.FromHTTPContext(ctx)
 
 			operationLog := models.OperationLog{
 				AdminID:   savedAdminID,
+				TraceID:   traceID,
 				Method:    savedMethod,
 				Path:      savedPath,
 				Title:     title,
