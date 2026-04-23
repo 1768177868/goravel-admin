@@ -23,3 +23,10 @@ export function getAuditTimeline(params) {
     params
   })
 }
+
+export function getQueueDashboard() {
+  return request({
+    url: '/observability/queue-dashboard',
+    method: 'get'
+  })
+}

@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/clients"
-	"goravel/app/utils/errorlog"
+	"goravel/app/services"
 )
 
 type QueueClear struct {
@@ -53,6 +52,7 @@ func (r *QueueClear) Extend() command.Extend {
 
 // Handle Execute the console command.
 func (r *QueueClear) Handle(ctx console.Context) error {
+	reader := services.NewQueueStatsReader()
 	queueName := ctx.Option("queue")
 	connectionName := ctx.Option("connection")
 	// 布尔标志：检查命令行参数中是否包含 --force
@@ -67,7 +67,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	driver := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.driver", connectionName), "")
 
 	// 检查是否是 Redis 驱动
-	isRedis := r.isRedisDriver(connectionName)
+	isRedis := reader.IsRedisDriver(connectionName)
 
 	if !isRedis {
 		if driver == "sync" {
@@ -89,14 +89,14 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 获取 Redis 连接名称
-	redisConnectionName := r.getRedisConnectionName(connectionName)
+	redisConnectionName := reader.GetRedisConnectionName(connectionName)
 	if redisConnectionName == "" {
 		ctx.Warning("无法确定 Redis 连接名称")
 		return nil
 	}
 
 	// 查询当前队列统计
-	stats, err := r.getRedisQueueStats(redisConnectionName, connectionName, queueName)
+	stats, err := reader.GetRedisQueueStats(redisConnectionName, connectionName, queueName)
 	if err != nil {
 		ctx.Error(fmt.Sprintf("查询队列统计失败: %v", err))
 		return err
@@ -137,8 +137,8 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	clearedCount := int64(0)
 
 	// Redis Stream 驱动：pending 在 stream，delayed 在 zset
-	if r.isRedisStreamDriver(connectionName) {
-		streamKey := r.redisStreamKey(connectionName, queueName)
+	if reader.IsRedisStreamDriver(connectionName) {
+		streamKey := reader.RedisStreamKey(connectionName, queueName)
 		streamLen, _ := redisClient.XLen(ctxRedis, streamKey).Result()
 		if streamLen > 0 {
 			if err := redisClient.Del(ctxRedis, streamKey).Err(); err != nil {
@@ -149,7 +149,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 			}
 		}
 
-		delayedKey := r.redisDelayedKey(connectionName, queueName)
+		delayedKey := reader.RedisDelayedKey(connectionName, queueName)
 		delayedLen, _ := redisClient.ZCard(ctxRedis, delayedKey).Result()
 		if delayedLen > 0 {
 			if err := redisClient.Del(ctxRedis, delayedKey).Err(); err != nil {
@@ -165,7 +165,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 清理待执行队列
-	pendingKey := r.redisQueueKey(connectionName, queueName)
+	pendingKey := reader.RedisQueueKey(connectionName, queueName)
 	pendingLen, _ := redisClient.LLen(ctxRedis, pendingKey).Result()
 	if pendingLen > 0 {
 		if err := redisClient.Del(ctxRedis, pendingKey).Err(); err != nil {
@@ -177,7 +177,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 清理正在执行队列
-	reservedKey := r.redisReservedKey(connectionName, queueName)
+	reservedKey := reader.RedisReservedKey(connectionName, queueName)
 	reservedLen, _ := redisClient.ZCard(ctxRedis, reservedKey).Result()
 	if reservedLen > 0 {
 		if err := redisClient.Del(ctxRedis, reservedKey).Err(); err != nil {
@@ -189,7 +189,7 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 	}
 
 	// 清理延迟队列
-	delayedKey := r.redisDelayedKey(connectionName, queueName)
+	delayedKey := reader.RedisDelayedKey(connectionName, queueName)
 	delayedLen, _ := redisClient.ZCard(ctxRedis, delayedKey).Result()
 	if delayedLen > 0 {
 		if err := redisClient.Del(ctxRedis, delayedKey).Err(); err != nil {
@@ -202,180 +202,6 @@ func (r *QueueClear) Handle(ctx console.Context) error {
 
 	ctx.Info(fmt.Sprintf("队列清理完成！共清理 %d 个任务", clearedCount))
 	return nil
-}
-
-// isRedisDriver 判断是否是 Redis 驱动
-func (r *QueueClear) isRedisDriver(connectionName string) bool {
-	via := facades.Config().Get(fmt.Sprintf("queue.connections.%s.via", connectionName))
-	return via != nil || strings.Contains(connectionName, "redis")
-}
-
-// getRedisConnectionName 从队列连接配置中获取 Redis 连接名称
-func (r *QueueClear) getRedisConnectionName(queueConnectionName string) string {
-	connection := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.connection", queueConnectionName), "default")
-
-	if strings.Contains(queueConnectionName, "redis") {
-		redisHost := facades.Config().GetString(fmt.Sprintf("database.redis.%s.host", queueConnectionName), "")
-		if redisHost != "" {
-			return queueConnectionName
-		}
-	}
-
-	return connection
-}
-
-// getRedisQueueStats 获取 Redis 队列统计信息
-func (r *QueueClear) getRedisQueueStats(redisConnectionName, queueConnectionName, queueName string) (*RedisQueueStatsInfo, error) {
-	redisClient, err := clients.GetRedisClient(redisConnectionName)
-	if err != nil {
-		errorlog.Record(context.Background(), "queue", "获取 Redis 客户端失败", map[string]any{
-			"connection": redisConnectionName,
-			"error":      err.Error(),
-		}, "获取 Redis 客户端失败: %v", err)
-		return nil, fmt.Errorf("获取 Redis 客户端失败: %v", err)
-	}
-	// 注意：使用公共 Redis 客户端池，不需要手动关闭
-
-	ctx := context.Background()
-	stats := &RedisQueueStatsInfo{}
-
-	if r.isRedisStreamDriver(queueConnectionName) {
-		streamKey := r.redisStreamKey(queueConnectionName, queueName)
-		group := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.group", queueConnectionName), "goravel")
-
-		streamLen, err := redisClient.XLen(ctx, streamKey).Result()
-		if err != nil {
-			errorlog.Record(context.Background(), "queue", "查询 stream 长度失败", map[string]any{
-				"queue_name": queueName,
-				"key":        streamKey,
-				"error":      err.Error(),
-			}, "查询 stream 长度失败: %v", err)
-			return nil, fmt.Errorf("查询 stream 长度失败: %v", err)
-		}
-
-		pendingInfo, err := redisClient.XPending(ctx, streamKey, group).Result()
-		if err != nil {
-			pendingInfo = nil
-		}
-
-		if pendingInfo != nil {
-			stats.Reserved = pendingInfo.Count
-			if streamLen >= stats.Reserved {
-				stats.Pending = streamLen - stats.Reserved
-			}
-		} else {
-			stats.Pending = streamLen
-			stats.Reserved = 0
-		}
-
-		delayedKey := r.redisDelayedKey(queueConnectionName, queueName)
-		delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
-		if err != nil {
-			errorlog.Record(context.Background(), "queue", "查询延迟队列失败", map[string]any{
-				"queue_name": queueName,
-				"key":        delayedKey,
-				"error":      err.Error(),
-			}, "查询延迟队列失败: %v", err)
-			return nil, fmt.Errorf("查询延迟队列失败: %v", err)
-		}
-		stats.Delayed = delayedLen
-
-		var failedCount int64
-		if queueName != "" {
-			failedCount, err = facades.Orm().Query().Table("failed_jobs").
-				Where("queue = ?", queueName).
-				Count()
-		} else {
-			failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
-		}
-		if err == nil {
-			stats.Failed = failedCount
-		}
-
-		stats.Total = stats.Pending + stats.Reserved
-		return stats, nil
-	}
-
-	pendingKey := r.redisQueueKey(queueConnectionName, queueName)
-	pendingLen, err := redisClient.LLen(ctx, pendingKey).Result()
-	if err != nil {
-		errorlog.Record(context.Background(), "queue", "查询待执行队列失败", map[string]any{
-			"queue_name": queueName,
-			"key":        pendingKey,
-			"error":      err.Error(),
-		}, "查询待执行队列失败: %v", err)
-		return nil, fmt.Errorf("查询待执行队列失败: %v", err)
-	}
-	stats.Pending = pendingLen
-
-	reservedKey := r.redisReservedKey(queueConnectionName, queueName)
-	reservedLen, err := redisClient.ZCard(ctx, reservedKey).Result()
-	if err != nil {
-		errorlog.Record(context.Background(), "queue", "查询正在执行队列失败", map[string]any{
-			"queue_name": queueName,
-			"key":        reservedKey,
-			"error":      err.Error(),
-		}, "查询正在执行队列失败: %v", err)
-		return nil, fmt.Errorf("查询正在执行队列失败: %v", err)
-	}
-	stats.Reserved = reservedLen
-
-	delayedKey := r.redisDelayedKey(queueConnectionName, queueName)
-	delayedLen, err := redisClient.ZCard(ctx, delayedKey).Result()
-	if err != nil {
-		errorlog.Record(context.Background(), "queue", "查询延迟队列失败", map[string]any{
-			"queue_name": queueName,
-			"key":        delayedKey,
-			"error":      err.Error(),
-		}, "查询延迟队列失败: %v", err)
-		return nil, fmt.Errorf("查询延迟队列失败: %v", err)
-	}
-	stats.Delayed = delayedLen
-
-	// 失败任务：从数据库 failed_jobs 表查询
-	var failedCount int64
-	if queueName != "" {
-		failedCount, err = facades.Orm().Query().Table("failed_jobs").
-			Where("queue = ?", queueName).
-			Count()
-	} else {
-		failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
-	}
-	if err != nil {
-		stats.Failed = 0
-	} else {
-		stats.Failed = failedCount
-	}
-
-	stats.Total = stats.Pending + stats.Reserved
-
-	return stats, nil
-}
-
-// redisQueueKey Goravel Redis queue key format:
-// {appName}_queues:{queueConnection}_{queue}
-func (r *QueueClear) redisQueueKey(queueConnectionName, queueName string) string {
-	appName := facades.Config().GetString("app.name", "goravel")
-	return fmt.Sprintf("%s_queues:%s_%s", appName, queueConnectionName, queueName)
-}
-
-func (r *QueueClear) redisReservedKey(queueConnectionName, queueName string) string {
-	return fmt.Sprintf("%s:reserved", r.redisQueueKey(queueConnectionName, queueName))
-}
-
-func (r *QueueClear) redisDelayedKey(queueConnectionName, queueName string) string {
-	return fmt.Sprintf("%s:delayed", r.redisQueueKey(queueConnectionName, queueName))
-}
-
-func (r *QueueClear) redisStreamKey(queueConnectionName, queueName string) string {
-	return fmt.Sprintf("%s:stream", r.redisQueueKey(queueConnectionName, queueName))
-}
-
-func (r *QueueClear) isRedisStreamDriver(connectionName string) bool {
-	if strings.Contains(strings.ToLower(connectionName), "stream") {
-		return true
-	}
-	return facades.Config().Get(fmt.Sprintf("queue.connections.%s.stream_max_len", connectionName)) != nil
 }
 
 // hasForceFlag 检查命令行参数中是否包含 --force 标志

@@ -154,6 +154,16 @@ func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Respons
 	})
 }
 
+// QueueDashboard 轻量队列看板（database / Redis 列表 / Redis Stream 三类可统计，其余标记不支持）
+func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Response {
+	reader := services.NewQueueStatsReader()
+	panels, defaultConn := reader.BuildQueueDashboard()
+	return response.Success(ctx, ghttp.Json{
+		"default_connection": defaultConn,
+		"connections":        panels,
+	})
+}
+
 func (r *ObservabilityController) collectAuditEvents(traceID, keyword string, adminID int, startTime, endTime string) ([]auditEvent, error) {
 	opQuery := facades.Orm().Query().Model(&models.OperationLog{}).With("Admin").Order("id desc").Limit(500)
 	if traceID != "" {

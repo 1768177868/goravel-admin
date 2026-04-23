@@ -190,6 +190,7 @@ func Admin() {
 			router.Get("observability/trace", observabilityController.TraceAggregate)
 			router.Get("observability/slow-sql/top", observabilityController.SlowSQLTopN)
 			router.Get("observability/audit-timeline", observabilityController.AuditTimeline)
+			router.Get("observability/queue-dashboard", observabilityController.QueueDashboard)
 
 			// 系统公告/通知
 			router.Post("notifications", notificationController.Store)

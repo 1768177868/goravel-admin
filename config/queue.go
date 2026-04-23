@@ -24,21 +24,22 @@ func init() {
 				"driver": "sync",
 			},
 			"database": map[string]any{
-				"driver":     "database",
-				"connection": "sqlite",
+				"driver": "database",
+				// 默认跟随 DB_CONNECTION，必要时可通过 QUEUE_DATABASE_CONNECTION 单独指定。
+				"connection": config.Env("QUEUE_DATABASE_CONNECTION", config.Env("DB_CONNECTION", "mysql")),
 				"queue":      "default",
 				"concurrent": 1,
 				// "tries": 3,        // 最大重试次数（可选，默认由队列工作进程设置）
 				// "retry_after": 90, // 重试延迟时间（秒，可选）
 			},
-			"redis1": map[string]any{
-				"driver":     "custom",
-				"connection": "default",
-				"queue":      "default",
-				"via": func() (queue.Driver, error) {
-					return redisfacades.Queue("redis1") // The `redis` value is the key of `connections`
-				},
-			},
+			// "redis1": map[string]any{
+			// 	"driver":     "custom",
+			// 	"connection": "default",
+			// 	"queue":      "default",
+			// 	"via": func() (queue.Driver, error) {
+			// 		return redisfacades.Queue("redis1") // The `redis` value is the key of `connections`
+			// 	},
+			// },
 			"redis": map[string]any{
 				"driver":     "custom",
 				"connection": "default",

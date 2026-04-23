@@ -86,15 +86,71 @@
             />
           </div>
         </el-tab-pane>
+
+        <el-tab-pane :label="$t('observability.queue_tab')" name="queue">
+          <el-alert type="info" :closable="false" class="queue-hint" :title="$t('observability.queue_dashboard_hint')" />
+          <div class="search-row queue-toolbar">
+            <span class="queue-default-label">{{ $t('observability.queue_default') }}: <code>{{ queueDashboard.default_connection || '-' }}</code></span>
+            <el-button type="primary" :loading="queueLoading" @click="loadQueue">{{ $t('common.refresh') }}</el-button>
+          </div>
+
+          <el-card v-if="currentQueuePanel" shadow="never" class="queue-panel-card">
+            <template #header>
+              <div class="queue-panel-header">
+                <div>
+                  <strong>{{ currentQueuePanel.connection }}</strong>
+                  <el-tag class="queue-panel-kind" size="small" :type="queueKindTag(currentQueuePanel.kind)">
+                    {{ $t(`observability.queue_kind_${currentQueuePanel.kind}`) }}
+                  </el-tag>
+                </div>
+              </div>
+            </template>
+
+            <el-descriptions :column="4" border size="small" class="queue-panel-desc">
+              <el-descriptions-item :label="$t('observability.queue_driver')">{{ currentQueuePanel.driver_raw || '-' }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('observability.queue_redis_client')">{{ currentQueuePanel.redis_client || '-' }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('observability.queue_consumer_group')">
+                {{ currentQueuePanel.kind === 'redis_stream' ? (currentQueuePanel.consumer_group || '-') : '-' }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('observability.queue_default_queue')">{{ currentQueuePanel.default_queue || '-' }}</el-descriptions-item>
+            </el-descriptions>
+
+            <el-table v-if="currentQueueRows.length" :data="currentQueueRows" size="small" border>
+              <el-table-column prop="name" :label="$t('observability.queue_name')" width="180">
+                <template #default="{ row: q }">
+                  <code>{{ q.name }}</code>
+                </template>
+              </el-table-column>
+              <el-table-column prop="pending" :label="$t('observability.metric_pending')" width="100" />
+              <el-table-column prop="reserved" :label="$t('observability.metric_reserved')" width="100" />
+              <el-table-column prop="delayed" :label="$t('observability.metric_delayed')" width="100" />
+              <el-table-column prop="failed" :label="$t('observability.metric_failed')" width="100" />
+              <el-table-column prop="total" :label="$t('observability.metric_total')" width="100" />
+              <el-table-column
+                v-if="currentQueuePanel.kind === 'redis_stream'"
+                prop="stream_total"
+                :label="$t('observability.metric_stream_total')"
+                width="150"
+              >
+                <template #default="{ row: q }">
+                  <span>{{ q.stream_total == null ? '—' : q.stream_total }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-empty v-else :description="$t('observability.queue_no_data')" />
+            <el-text v-if="currentQueuePanel.fetch_error" type="danger" class="queue-fetch-err">{{ currentQueuePanel.fetch_error }}</el-text>
+          </el-card>
+          <el-empty v-else :description="$t('observability.queue_panel_missing')" />
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAuditTimeline, getSlowSqlTop, getTraceAggregate } from '../../api/observability'
+import { getAuditTimeline, getQueueDashboard, getSlowSqlTop, getTraceAggregate } from '../../api/observability'
 
 const activeTab = ref('trace')
 
@@ -109,6 +165,52 @@ const slowSqlData = ref([])
 const auditLoading = ref(false)
 const auditQuery = reactive({ trace_id: '', keyword: '', page: 1, page_size: 20 })
 const auditData = reactive({ list: [], total: 0 })
+
+const queueLoading = ref(false)
+const queueDashboard = reactive({ default_connection: '', connections: [] })
+
+const currentQueuePanel = computed(() => {
+  const rows = queueDashboard.connections || []
+  if (!rows.length) return null
+  return rows.find(item => item?.is_default) || rows.find(item => item?.connection === queueDashboard.default_connection) || rows[0]
+})
+
+const queuesToRows = (queues) => {
+  if (!queues || typeof queues !== 'object') return []
+  return Object.keys(queues).map((name) => {
+    const s = queues[name] || {}
+    return {
+      name,
+      pending: s.pending ?? 0,
+      reserved: s.reserved ?? 0,
+      delayed: s.delayed != null ? s.delayed : 0,
+      failed: s.failed ?? 0,
+      total: s.total ?? 0,
+      stream_total: s.stream_total ?? null
+    }
+  })
+}
+
+const currentQueueRows = computed(() => {
+  if (!currentQueuePanel.value?.queues) return []
+  return queuesToRows(currentQueuePanel.value.queues)
+})
+
+const queueKindTag = (kind) => {
+  const m = { database: 'success', redis_list: 'primary', redis_stream: 'warning', sync: 'info', other: 'danger' }
+  return m[kind] || 'info'
+}
+
+const loadQueue = async () => {
+  queueLoading.value = true
+  try {
+    const res = await getQueueDashboard()
+    queueDashboard.default_connection = res.data?.default_connection || ''
+    queueDashboard.connections = res.data?.connections || []
+  } finally {
+    queueLoading.value = false
+  }
+}
 
 const loadTrace = async () => {
   if (!traceQuery.trace_id) {
@@ -149,6 +251,7 @@ const loadAudit = async () => {
 onMounted(() => {
   loadSlowSql()
   loadAudit()
+  loadQueue()
 })
 </script>
 
@@ -163,5 +266,40 @@ onMounted(() => {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+
+.queue-hint {
+  margin-bottom: 12px;
+}
+
+.queue-toolbar {
+  align-items: center;
+}
+
+.queue-default-label {
+  flex: 1;
+}
+
+.queue-panel-card {
+  border-radius: 8px;
+}
+
+.queue-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.queue-panel-kind {
+  margin-left: 8px;
+}
+
+.queue-panel-desc {
+  margin-bottom: 12px;
+}
+
+.queue-fetch-err {
+  display: block;
+  margin-top: 8px;
 }
 </style>
