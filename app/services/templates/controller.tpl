@@ -14,6 +14,32 @@ type <<.ControllerName>> struct {
 	<<.ServiceName>> services.<<.ServiceName>>
 }
 
+func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
+	if businessErr, ok := apperrors.GetBusinessError(err); ok {
+		return response.Error(ctx, status, businessErr.Code)
+	}
+	return response.Error(ctx, status, err.Error())
+}
+
+func validateGeneratedRequest(ctx http.Context, req http.FormRequest) http.Response {
+	validationErrors, err := ctx.Request().ValidateRequest(req)
+	if err != nil {
+		return response.Error(ctx, http.StatusBadRequest, err.Error())
+	}
+	if validationErrors != nil {
+		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", validationErrors.All())
+	}
+	return nil
+}
+
+func (c *<<.ControllerName>>) build<<.ModelName>>Filters(ctx http.Context) services.<<.ModelName>>Filters {
+	return services.<<.ModelName>>Filters{
+<<- range .SearchableFields>>
+		<<.PascalName>>: ctx.Request().Query("<<.Name>>", ""),
+<<- end>>
+	}
+}
+
 func New<<.ControllerName>>() *<<.ControllerName>> {
 	return &<<.ControllerName>>{
 		<<.ServiceName>>: services.New<<.ServiceName>>(),
@@ -25,22 +51,11 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page",1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
-<<range .SearchableFields>>
-	<<.Name>> := ctx.Request().Query("<<.Name>>", "")
-<<- end>>
-
-	filters := services.<<.ModelName>>Filters{
-<<range .SearchableFields>>
-		<<.PascalName>>: <<.Name>>,
-<<- end>>
-	}
+	filters := c.build<<.ModelName>>Filters(ctx)
 
 	list, total, err := c.<<.ServiceName>>.GetList(filters, page, pageSize)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -56,10 +71,7 @@ func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	item, err := c.<<.ServiceName>>.GetByID(id)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusNotFound, err.Error())
+		return handleGeneratedServiceError(ctx, http.StatusNotFound, err)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -69,75 +81,58 @@ func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 
 // Store 创建<<.ModelName>>
 func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
-<<if .HasCreate>>
+<<- if .HasCreate>>
 	var req adminrequests.<<.RequestCreateName>>
-	errors, err := ctx.Request().ValidateRequest(&req)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
+		return resp
 	}
 
 	item, err := c.<<.ServiceName>>.Create(&req)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
 
 	return response.Success(ctx, http.Json{
 		"<<.ModuleName>>": item,
 	})
-<<else>>
+<<- else>>
 	return response.Error(ctx, http.StatusForbidden, "create_not_allowed")
 <<end>>
 }
 
 // Update 更新<<.ModelName>>
 func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
-<<if .HasEdit>>
+<<- if .HasEdit>>
 	id := helpers.GetUintRoute(ctx, "id")
 
 	var req adminrequests.<<.RequestUpdateName>>
-	errors, err := ctx.Request().ValidateRequest(&req)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
+		return resp
 	}
 
 	item, err := c.<<.ServiceName>>.Update(id, &req)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
 
 	return response.Success(ctx, http.Json{
 		"<<.ModuleName>>": item,
 	})
-<<else>>
+<<- else>>
 	return response.Error(ctx, http.StatusForbidden, "update_not_allowed")
 <<end>>
 }
 
 // Destroy 删除<<.ModelName>>
 func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
-<<if .HasDelete>>
+<<- if .HasDelete>>
 	id := helpers.GetUintRoute(ctx, "id")
 	if err := c.<<.ServiceName>>.Delete(id); err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})
-<<else>>
+<<- else>>
 	return response.Error(ctx, http.StatusForbidden, "delete_not_allowed")
 <<end>>
 }

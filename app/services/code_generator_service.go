@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"go/format"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -95,6 +97,70 @@ func NewCodeGeneratorService() CodeGeneratorService {
 	return &CodeGeneratorServiceImpl{}
 }
 
+func normalizeGeneratedContent(content string) string {
+	lines := strings.Split(content, "\n")
+	normalized := make([]string, 0, len(lines))
+	blankCount := 0
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			blankCount++
+			if blankCount > 1 {
+				continue
+			}
+		} else {
+			blankCount = 0
+		}
+
+		normalized = append(normalized, line)
+	}
+
+	return strings.Join(normalized, "\n")
+}
+
+func isFrontendGeneratedFile(path string) bool {
+	if !strings.HasPrefix(filepath.ToSlash(path), "html/") {
+		return false
+	}
+
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".vue", ".js", ".ts", ".tsx", ".json", ".css", ".scss", ".less", ".md":
+		return true
+	default:
+		return false
+	}
+}
+
+func prettierExecutablePath() string {
+	executable := "prettier"
+	if runtime.GOOS == "windows" {
+		executable = "prettier.cmd"
+	}
+
+	return filepath.Join("html", "node_modules", ".bin", executable)
+}
+
+func formatFrontendContentWithPrettier(path, content string) string {
+	if !isFrontendGeneratedFile(path) {
+		return content
+	}
+
+	prettierPath := prettierExecutablePath()
+	if _, err := os.Stat(prettierPath); err != nil {
+		return content
+	}
+
+	cmd := exec.Command(prettierPath, "--stdin-filepath", path)
+	cmd.Stdin = strings.NewReader(content)
+	cmd.Dir = "."
+	output, err := cmd.Output()
+	if err != nil {
+		return content
+	}
+
+	return string(output)
+}
+
 func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
@@ -135,9 +201,14 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		if strings.HasSuffix(file.Path, ".go") {
 			formatted, err := format.Source([]byte(file.Content))
 			if err == nil {
-				file.Content = string(formatted)
+				file.Content = normalizeGeneratedContent(string(formatted))
+			} else {
+				file.Content = normalizeGeneratedContent(file.Content)
 			}
+		} else {
+			file.Content = normalizeGeneratedContent(file.Content)
 		}
+		file.Content = formatFrontendContentWithPrettier(file.Path, file.Content)
 
 		files = append(files, file)
 	}
@@ -171,11 +242,12 @@ func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields 
 	if strings.Contains(templateName, ".go") || fileType == "model" || fileType == "controller" || fileType == "service" || fileType == "request_create" || fileType == "request_update" || fileType == "migration" {
 		formatted, err := format.Source([]byte(content))
 		if err == nil {
-			return string(formatted), nil
+			return normalizeGeneratedContent(string(formatted)), nil
 		}
+		return normalizeGeneratedContent(content), nil
 	}
 
-	return content, nil
+	return normalizeGeneratedContent(content), nil
 }
 
 func (s *CodeGeneratorServiceImpl) Save(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]string, error) {
@@ -316,6 +388,7 @@ func (s *CodeGeneratorServiceImpl) GetTables() ([]string, error) {
 		"notifications":          true,
 		"operation_logs":         true,
 		"system_logs":            true,
+		"slow_query_logs":        true,
 		// "payment_methods":        true,
 		// "payments":               true,
 	}

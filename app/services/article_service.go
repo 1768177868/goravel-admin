@@ -21,12 +21,10 @@ type ArticleService interface {
 }
 
 type ArticleFilters struct {
-	Title     string
-	Content   string
-	Status    string
-	AdminId   string
-	CreatedAt string
-	UpdatedAt string
+	AdminId string
+	Title   string
+	Content string
+	Status  string
 }
 
 type ArticleServiceImpl struct{}
@@ -35,38 +33,24 @@ func NewArticleService() ArticleService {
 	return &ArticleServiceImpl{}
 }
 
-func (s *ArticleServiceImpl) BuildArticleQuery(filters ArticleFilters) orm.Query {
+func (s *ArticleServiceImpl) withRelations(query orm.Query) orm.Query {
+	query = query.With("Admin")
+	return query
+}
+
+func (s *ArticleServiceImpl) buildArticleQuery(filters ArticleFilters) orm.Query {
 	query := facades.Orm().Query().Model(&models.Article{})
-
+	if filters.AdminId != "" {
+		query = query.Where("admin_id = ?", filters.AdminId)
+	}
 	if filters.Title != "" {
-
 		query = query.Where("title LIKE ?", "%"+filters.Title+"%")
-
 	}
 	if filters.Content != "" {
-
-		query = query.Where("content = ?", filters.Content)
-
+		query = query.Where("content LIKE ?", "%"+filters.Content+"%")
 	}
 	if filters.Status != "" {
-
 		query = query.Where("status = ?", filters.Status)
-
-	}
-	if filters.AdminId != "" {
-
-		query = query.Where("admin_id = ?", filters.AdminId)
-
-	}
-	if filters.CreatedAt != "" {
-
-		query = query.Where("created_at = ?", filters.CreatedAt)
-
-	}
-	if filters.UpdatedAt != "" {
-
-		query = query.Where("updated_at = ?", filters.UpdatedAt)
-
 	}
 
 	return query
@@ -74,20 +58,15 @@ func (s *ArticleServiceImpl) BuildArticleQuery(filters ArticleFilters) orm.Query
 
 func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 	var item models.Article
-	query := facades.Orm().Query().Where("id", id)
-
-	query = query.With("Admin")
-
+	query := s.withRelations(facades.Orm().Query().Model(&models.Article{})).Where("id", id)
 	if err := query.FirstOrFail(&item); err != nil {
-		return nil, apperrors.NewBusinessError("article_not_found", "Article not found").WithError(err)
+		return nil, apperrors.ErrRecordNotFound.WithError(err)
 	}
 	return &item, nil
 }
 
 func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error) {
-	query := s.BuildArticleQuery(filters)
-
-	query = query.With("Admin")
+	query := s.withRelations(s.buildArticleQuery(filters))
 
 	var list []models.Article
 	var total int64
@@ -100,14 +79,10 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {
 	item := &models.Article{
-
-		Title: req.Title,
-
-		Content: req.Content,
-
-		Status: req.Status,
-
 		AdminId: uint(req.AdminId),
+		Title:   req.Title,
+		Content: req.Content,
+		Status:  req.Status,
 	}
 
 	if err := facades.Orm().Query().Create(item); err != nil {
@@ -122,26 +97,17 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 	if err != nil {
 		return nil, err
 	}
-
+	if req.AdminId != nil {
+		item.AdminId = uint(*req.AdminId)
+	}
 	if req.Title != nil {
-
 		item.Title = *req.Title
-
 	}
 	if req.Content != nil {
-
 		item.Content = *req.Content
-
 	}
 	if req.Status != nil {
-
 		item.Status = *req.Status
-
-	}
-	if req.AdminId != nil {
-
-		item.AdminId = uint(*req.AdminId)
-
 	}
 
 	if err := facades.Orm().Query().Save(item); err != nil {
@@ -153,7 +119,7 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 
 func (s *ArticleServiceImpl) Delete(id uint) error {
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
-		return err
+		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil
 }
