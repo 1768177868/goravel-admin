@@ -412,8 +412,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
-	allProtectedIDs := r.getAllProtectedAdminIDs()
-	if allProtectedIDs[id] {
+	if r.adminService.IsProtectedAdmin(id) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminProtectedCannotDelete.Code)
 	}
 
@@ -462,9 +461,8 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	// 检查目标管理员是否存在
-	var targetAdmin models.Admin
-	if err := facades.Orm().Query().Where("id", targetAdminID).FirstOrFail(&targetAdmin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
+	if _, resp := r.findAdminByID(ctx, targetAdminID, false, false); resp != nil {
+		return resp
 	}
 
 	// 从 context 中获取当前管理员信息（由 JWT 中间件设置）
@@ -555,13 +553,11 @@ func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Respon
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	var targetAdmin models.Admin
-	if err := facades.Orm().Query().Where("id", targetAdminID).FirstOrFail(&targetAdmin); err != nil {
-		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
+	if _, resp := r.findAdminByID(ctx, targetAdminID, false, false); resp != nil {
+		return resp
 	}
 
-	protected := r.getAllProtectedAdminIDs()
-	if protected[targetAdminID] {
+	if r.adminService.IsProtectedAdmin(targetAdminID) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrProtectedAdmin.Code)
 	}
 
@@ -582,11 +578,6 @@ func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Respon
 	}
 
 	return response.Success(ctx, "reset_success")
-}
-
-// getAllProtectedAdminIDs 获取所有受保护的管理员ID（用于删除等操作）
-func (r *AdminController) getAllProtectedAdminIDs() map[uint]bool {
-	return r.adminService.GetProtectedAdminIDs()
 }
 
 // currentAdminFromContext 从 context 读取当前管理员

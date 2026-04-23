@@ -57,39 +57,85 @@ func (r *AuthController) getLoginRequestData(ctx http.Context) string {
 	return ""
 }
 
-func (r *AuthController) currentAdminFromContextRequired(ctx http.Context) (*models.Admin, http.Response) {
+func parseAdminFromContext(ctx http.Context) (*models.Admin, bool) {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
+		return nil, false
+	}
+
+	if admin, ok := adminValue.(models.Admin); ok {
+		return &admin, true
+	}
+	if adminPtr, ok := adminValue.(*models.Admin); ok {
+		return adminPtr, adminPtr != nil
+	}
+
+	return nil, false
+}
+
+func (r *AuthController) currentAdminFromContextRequired(ctx http.Context) (*models.Admin, http.Response) {
+	admin, ok := parseAdminFromContext(ctx)
+	if !ok {
 		return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	if admin, ok := adminValue.(models.Admin); ok {
-		return &admin, nil
-	}
-	if adminPtr, ok := adminValue.(*models.Admin); ok {
-		if adminPtr == nil {
-			return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
-		}
-		return adminPtr, nil
-	}
-
-	return nil, response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
+	return admin, nil
 }
 
 func (r *AuthController) currentAdminFromContextOptional(ctx http.Context) *models.Admin {
-	adminValue := ctx.Value("admin")
-	if adminValue == nil {
+	admin, ok := parseAdminFromContext(ctx)
+	if !ok {
 		return nil
 	}
 
-	if admin, ok := adminValue.(models.Admin); ok {
-		return &admin
-	}
-	if adminPtr, ok := adminValue.(*models.Admin); ok {
-		return adminPtr
+	return admin
+}
+
+func getCurrentTokenIDFromContext(ctx http.Context) uint {
+	currentTokenValue := ctx.Value("token")
+	if currentTokenValue == nil {
+		return 0
 	}
 
-	return nil
+	if currentToken, ok := currentTokenValue.(models.PersonalAccessToken); ok {
+		return currentToken.ID
+	}
+	if currentTokenPtr, ok := currentTokenValue.(*models.PersonalAccessToken); ok && currentTokenPtr != nil {
+		return currentTokenPtr.ID
+	}
+
+	return 0
+}
+
+func routeUintID(ctx http.Context, key, requiredErrorCode, invalidErrorCode string) (uint, http.Response) {
+	idStr := ctx.Request().Route(key)
+	if idStr == "" {
+		return 0, response.Error(ctx, http.StatusBadRequest, requiredErrorCode)
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		return 0, response.Error(ctx, http.StatusBadRequest, invalidErrorCode)
+	}
+
+	return uint(id), nil
+}
+
+func requiredInput(ctx http.Context, key, requiredErrorCode string) (string, http.Response) {
+	value := ctx.Request().Input(key)
+	if value == "" {
+		return "", response.Error(ctx, http.StatusBadRequest, requiredErrorCode)
+	}
+
+	return value, nil
+}
+
+func (r *AuthController) tokenService() services.TokenService {
+	return services.NewTokenServiceImpl()
+}
+
+func bearerTokenFromHeader(ctx http.Context) string {
+	return str.Of(ctx.Request().Header("Authorization", "")).ChopStart("Bearer ").Trim().String()
 }
 
 // Login 管理员登录
@@ -207,8 +253,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		expiresAt = &exp
 	}
 
-	tokenService := services.NewTokenServiceImpl()
-	plainToken, _, err := tokenService.CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
+	plainToken, _, err := r.tokenService().CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -287,7 +332,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			menuIDSet[perm.MenuID] = true
 		}
 	}
-	var menuIDs []uint
+	menuIDs := make([]uint, 0, len(menuIDSet))
 	for id := range menuIDSet {
 		menuIDs = append(menuIDs, id)
 	}
@@ -411,13 +456,10 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 // 因为Refresh方法需要token过期但仍在刷新窗口内才能工作
 func (r *AuthController) Refresh(ctx http.Context) http.Response {
 	// 从请求头获取token
-	token := ctx.Request().Header("Authorization", "")
+	token := bearerTokenFromHeader(ctx)
 	if token == "" {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
-
-	// 移除Bearer前缀
-	token = str.Of(token).ChopStart("Bearer ").Trim().String()
 
 	// 先尝试解析token，如果token有效，直接重新生成（滑动过期）
 	if _, err := facades.Auth(ctx).Guard("admin").Parse(token); err == nil {
@@ -455,13 +497,11 @@ func (r *AuthController) Heartbeat(ctx http.Context) http.Response {
 func (r *AuthController) Logout(ctx http.Context) http.Response {
 	if admin := r.currentAdminFromContextOptional(ctx); admin != nil && admin.ID > 0 {
 		// 获取token
-		token := ctx.Request().Header("Authorization", "")
-		token = str.Of(token).ChopStart("Bearer ").Trim().String()
+		token := bearerTokenFromHeader(ctx)
 
 		if token != "" {
 			// 删除token
-			tokenService := services.NewTokenServiceImpl()
-			_ = tokenService.DeleteToken(token)
+			_ = r.tokenService().DeleteToken(token)
 		}
 
 		// 记录退出日志
@@ -480,8 +520,7 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	}
 
 	// 获取用户的所有token
-	tokenService := services.NewTokenServiceImpl()
-	tokens, err := tokenService.GetTokensByUser("admin", admin.ID)
+	tokens, err := r.tokenService().GetTokensByUser("admin", admin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -489,30 +528,19 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	}
 
 	// 获取当前使用的token
-	currentTokenValue := ctx.Value("token")
-	var currentTokenID uint
-	if currentTokenValue != nil {
-		if currentToken, ok := currentTokenValue.(models.PersonalAccessToken); ok {
-			currentTokenID = currentToken.ID
-		} else if currentTokenPtr, ok := currentTokenValue.(*models.PersonalAccessToken); ok {
-			if currentTokenPtr != nil {
-				currentTokenID = currentTokenPtr.ID
-			}
-		}
-	}
+	currentTokenID := getCurrentTokenIDFromContext(ctx)
 
 	// 格式化token列表
-	var tokenList []http.Json
+	tokenList := make([]http.Json, 0, len(tokens))
 	for _, token := range tokens {
-		tokenData := http.Json{
+		tokenList = append(tokenList, http.Json{
 			"id":           token.ID,
 			"name":         token.Name,
 			"last_used_at": token.LastUsedAt,
 			"expires_at":   token.ExpiresAt,
 			"created_at":   token.CreatedAt,
 			"is_current":   token.ID == currentTokenID,
-		}
-		tokenList = append(tokenList, tokenData)
+		})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -527,15 +555,9 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 		return resp
 	}
 
-	// 获取要删除的token ID
-	tokenIDStr := ctx.Request().Route("id")
-	if tokenIDStr == "" {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrTokenIDRequired.Code)
-	}
-
-	tokenID, err := strconv.ParseUint(tokenIDStr, 10, 32)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTokenID.Code)
+	tokenID, resp := routeUintID(ctx, "id", apperrors.ErrTokenIDRequired.Code, apperrors.ErrInvalidTokenID.Code)
+	if resp != nil {
+		return resp
 	}
 
 	// 查询token是否存在且属于当前用户
@@ -549,8 +571,7 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 	}
 
 	// 删除token（直接通过ID删除，因为数据库中存储的是hash值，无法获取原始token）
-	_, err = facades.Orm().Query().Delete(&token)
-	if err != nil {
+	if _, err := facades.Orm().Query().Delete(&token); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"token_id": token.ID,
 			"admin_id": admin.ID,
@@ -568,8 +589,7 @@ func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
 	}
 
 	// 删除用户的所有token
-	tokenService := services.NewTokenServiceImpl()
-	if err := tokenService.DeleteTokensByUser("admin", admin.ID); err != nil {
+	if err := r.tokenService().DeleteTokensByUser("admin", admin.ID); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -585,15 +605,9 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 		return resp
 	}
 
-	// 获取要踢出的用户ID
-	userIDStr := ctx.Request().Route("id")
-	if userIDStr == "" {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrUserIDRequired.Code)
-	}
-
-	userID, err := strconv.ParseUint(userIDStr, 10, 32)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID.Code)
+	userID, resp := routeUintID(ctx, "id", apperrors.ErrUserIDRequired.Code, apperrors.ErrInvalidUserID.Code)
+	if resp != nil {
+		return resp
 	}
 
 	// 查询用户是否存在
@@ -603,8 +617,7 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	}
 
 	// 删除用户的所有token
-	tokenService := services.NewTokenServiceImpl()
-	if err := tokenService.DeleteTokensByUser("admin", targetAdmin.ID); err != nil {
+	if err := r.tokenService().DeleteTokensByUser("admin", targetAdmin.ID); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"target_user_id": targetAdmin.ID,
 			"operator_id":    admin.ID,
@@ -667,11 +680,13 @@ func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response
 		return resp
 	}
 
-	secret := ctx.Request().Input("secret")
-	code := ctx.Request().Input("code")
-
-	if secret == "" || code == "" {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrSecretAndCodeRequired.Code)
+	secret, resp := requiredInput(ctx, "secret", apperrors.ErrSecretAndCodeRequired.Code)
+	if resp != nil {
+		return resp
+	}
+	code, resp := requiredInput(ctx, "code", apperrors.ErrSecretAndCodeRequired.Code)
+	if resp != nil {
+		return resp
 	}
 
 	// 绑定谷歌验证码
@@ -695,9 +710,9 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	}
 
 	// 需要验证码确认
-	code := ctx.Request().Input("code")
-	if code == "" {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrCodeRequired.Code)
+	code, resp := requiredInput(ctx, "code", apperrors.ErrCodeRequired.Code)
+	if resp != nil {
+		return resp
 	}
 
 	// 获取管理员的密钥
