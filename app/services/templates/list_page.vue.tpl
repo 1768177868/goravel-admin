@@ -257,7 +257,7 @@ const searchFields = computed(() => [
 <<range .SearchableFields>>
   {
     prop: '<<.Name>>',
-    label: t('<<$.ModuleName>>.<<.Name>>'),
+    label: <<if eq .Name "created_at">>t('common.created_at')<<else if eq .Name "updated_at">>t('common.updated_at')<<else>>t('<<.Name>>')<<end>>,
     type: <<if and .ApiUrl (or (and .Relation .Relation.IsTree) .IsTree)>>'tree-select'<<else>>'<<.SearchUIType>>'<<end>>,
     clearable: true,
 <<if or (eq .SearchUIType "select") (eq .SearchUIType "radio") (eq .SearchUIType "checkbox") (and .ApiUrl (and .Relation .Relation.IsTree))>>
@@ -286,7 +286,14 @@ const searchFields = computed(() => [
     options: getStatusOptions(t),
     <<- end>>
 <<end>>
-    width: '200px',
+<<if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+    props: {
+      startPlaceholder: t('common.start_time'),
+      endPlaceholder: t('common.end_time'),
+      rangeSeparator: t('common.range_separator')
+    },
+<<end>>
+    width: <<if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>'360px'<<else>>'200px'<<end>>,
     advanced: false
   },
 <<- end>>
@@ -313,7 +320,7 @@ const tableColumns = computed(() => {
   <<- else if eq .FormType "image-upload">>
   {
     field: '<<.Name>>',
-    title: t('<<$.ModuleName>>.<<.Name>>'),
+    title: <<if eq .Name "created_at">>t('table.created_at')<<else if eq .Name "updated_at">>t('table.updated_at')<<else>>t('<<.Name>>')<<end>>,
     slot: '<<.Name>>',
     sortable: false,
     width: 120
@@ -321,14 +328,14 @@ const tableColumns = computed(() => {
   <<- else if .Relation>>
   {
     field: '<<.Name>>',
-    title: t('<<$.ModuleName>>.<<.Name>>'),
+    title: <<if eq .Name "created_at">>t('table.created_at')<<else if eq .Name "updated_at">>t('table.updated_at')<<else>>t('<<.Name>>')<<end>>,
     slot: '<<.Name>>',
     sortable: false
   },
   <<- else>>
   {
     field: '<<.Name>>',
-    title: t('<<$.ModuleName>>.<<.Name>>'),
+    title: <<if eq .Name "created_at">>t('table.created_at')<<else if eq .Name "updated_at">>t('table.updated_at')<<else>>t('<<.Name>>')<<end>>,
     sortable: <<.Sortable>>
   },
   <<- end>>

@@ -73,7 +73,10 @@
     "export_check_manually": "Please check the export records page for export progress",
     "import_success": "Import successful",
     "import_no_data": "No data imported successfully",
-    "invalid_file_type": "Invalid file type, please upload CSV file"
+    "invalid_file_type": "Invalid file type, please upload CSV file",
+    "start_time": "Start Time",
+    "end_time": "End Time",
+    "range_separator": "To"
   },
   "login": {
     "title": "Admin Management System",

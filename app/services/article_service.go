@@ -18,6 +18,8 @@ type ArticleService interface {
 	Update(id uint, req *admin.ArticleUpdate) (*models.Article, error)
 
 	Delete(id uint) error
+
+	Export(filters ArticleFilters) error
 }
 
 type ArticleFilters struct {
@@ -145,5 +147,11 @@ func (s *ArticleServiceImpl) Delete(id uint) error {
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
+	return nil
+}
+
+func (s *ArticleServiceImpl) Export(filters ArticleFilters) error {
+	_ = filters
+	// TODO: implement export business logic (task dispatch / file generation).
 	return nil
 }

@@ -12,10 +12,10 @@
         :rules="formRules"
         label-width="120px"
       >
-        <el-form-item :label="$t('article.content')" prop="content">
-          <WangEditor
+        <el-form-item :label="$t('content')" prop="content">
+          <MarkdownEditor
             v-model="formData.content"
-            :placeholder="$t('article.content_placeholder')"
+            :placeholder="$t('content_placeholder')"
             :height="400"
           />
         </el-form-item>
@@ -42,7 +42,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import FormField from "../../components/Form/FormField.vue";
 
-import WangEditor from "../../components/WangEditor.vue";
+import MarkdownEditor from "../../components/MarkdownEditor.vue";
 
 import {
   createArticle,
@@ -75,7 +75,7 @@ const getFormInitialValue = () => ({
   admin_id: null,
   title: "",
   content: "",
-  status: "",
+  status: 0,
 });
 
 const dialogVisible = computed({
@@ -93,14 +93,10 @@ const formRules = computed(() => {
   const rules = {};
 
   rules["admin_id"] = [
-    {
-      required: true,
-      message: t("article.admin_id_required"),
-      trigger: "blur",
-    },
+    { required: true, message: t("admin_id_required"), trigger: "blur" },
   ];
   rules["status"] = [
-    { required: true, message: t("article.status_required"), trigger: "blur" },
+    { required: true, message: t("status_required"), trigger: "blur" },
   ];
   return rules;
 });
@@ -111,21 +107,25 @@ const formFields = computed(() => {
 
   fields.push({
     prop: "admin_id",
-    label: t("article.admin_id"),
+    label: t("admin_id"),
     type: "input",
     disabled: loading.value,
   });
   fields.push({
     prop: "title",
-    label: t("article.title"),
+    label: t("title"),
     type: "input",
     disabled: loading.value,
   });
   fields.push({
     prop: "status",
-    label: t("article.status"),
-    type: "input",
+    label: t("status"),
+    type: "switch",
     disabled: loading.value,
+    props: {
+      activeValue: 1,
+      inactiveValue: 0,
+    },
   });
   return fields;
 });

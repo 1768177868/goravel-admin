@@ -40,6 +40,15 @@
           >
             {{ $t("common.reset") }}
           </el-button>
+
+          <el-button
+            type="success"
+            :disabled="getButtonState('article.export').disabled || isExporting"
+            :loading="isExporting"
+            @click="handleExport"
+          >
+            {{ $t("common.export") }}
+          </el-button>
         </template>
       </SearchForm>
 
@@ -55,6 +64,13 @@
       >
         <template #admin_id="{ row }">
           {{ getadminDisplayName(row.admin || row.admin_id) }}
+        </template>
+        <template #status="{ row }">
+          <el-switch
+            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+            :disabled="getButtonState('article.update').disabled"
+            @change="(val) => handleStatusChange(row, val)"
+          />
         </template>
         <template #operation="{ row }">
           <TableActionButtons
@@ -87,6 +103,8 @@
 import { ref, reactive, onMounted, computed, markRaw } from "vue";
 import { useI18n } from "vue-i18n";
 
+import { useRouter } from "vue-router";
+
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import SearchForm from "../../components/SearchForm.vue";
@@ -99,11 +117,11 @@ import { usePermission } from "../../composables/usePermission";
 import { useCrud } from "../../composables/useCrud";
 import { buildSearchParams } from "../../utils/buildSearchParams";
 
-import { getStatusOptions } from "../../utils/fieldOptions";
 import {
   getArticleList,
   deleteArticle,
   updateArticle,
+  exportArticle,
 } from "../../api/article";
 import logger from "../../utils/logger";
 import ErrorHandler from "../../utils/errorHandler";
@@ -115,8 +133,12 @@ const { getButtonState } = usePermission();
 
 const { t } = useI18n();
 
+const router = useRouter();
+
 const tableRef = ref(null);
 const formRef = ref(null);
+
+const isExporting = ref(false);
 
 const {
   dialogVisible,
@@ -166,14 +188,6 @@ const buildListParams = (form, baseParams) => {
     delete params[fieldName];
   });
 
-  // 兼容旧接口：created_at 范围透传 start_time/end_time
-  if (params.created_at_start) {
-    params.start_time = params.created_at_start;
-  }
-  if (params.created_at_end) {
-    params.end_time = params.created_at_end;
-  }
-
   return params;
 };
 
@@ -200,13 +214,13 @@ const {
   tableRef: computed(() => tableRef.value?.tableRef),
 });
 
-const enableBatchActions = false;
+const enableBatchActions = true;
 const hasSelection = computed(() => selectedIds.value.length > 0);
 
 const searchFields = computed(() => [
   {
     prop: "admin_id",
-    label: t("article.admin_id"),
+    label: t("admin_id"),
     type: "input",
     clearable: true,
     width: "200px",
@@ -214,7 +228,7 @@ const searchFields = computed(() => [
   },
   {
     prop: "title",
-    label: t("article.title"),
+    label: t("title"),
     type: "input",
     clearable: true,
     width: "200px",
@@ -222,7 +236,7 @@ const searchFields = computed(() => [
   },
   {
     prop: "content",
-    label: t("article.content"),
+    label: t("content"),
     type: "input",
     clearable: true,
     width: "200px",
@@ -230,26 +244,37 @@ const searchFields = computed(() => [
   },
   {
     prop: "status",
-    label: t("article.status"),
-    type: "input",
+    label: t("status"),
+    type: "select",
     clearable: true,
+    apiUrl: "/options?type=dictionary&dictionary_type=status",
     width: "200px",
     advanced: false,
   },
   {
     prop: "created_at",
-    label: t("article.created_at"),
+    label: t("common.created_at"),
     type: "datetimerange",
     clearable: true,
-    width: "200px",
+    props: {
+      startPlaceholder: t("common.start_time"),
+      endPlaceholder: t("common.end_time"),
+      rangeSeparator: t("common.range_separator"),
+    },
+    width: "360px",
     advanced: false,
   },
   {
     prop: "updated_at",
-    label: t("article.updated_at"),
+    label: t("common.updated_at"),
     type: "datetimerange",
     clearable: true,
-    width: "200px",
+    props: {
+      startPlaceholder: t("common.start_time"),
+      endPlaceholder: t("common.end_time"),
+      rangeSeparator: t("common.range_separator"),
+    },
+    width: "360px",
     advanced: false,
   },
 ]);
@@ -264,28 +289,30 @@ const tableColumns = computed(() => {
     },
     {
       field: "admin_id",
-      title: t("article.admin_id"),
+      title: t("admin_id"),
       slot: "admin_id",
       sortable: false,
     },
     {
       field: "title",
-      title: t("article.title"),
+      title: t("title"),
       sortable: false,
     },
     {
       field: "content",
-      title: t("article.content"),
+      title: t("content"),
       sortable: false,
     },
     {
       field: "status",
-      title: t("article.status"),
+      title: t("table.status"),
+      width: 100,
       sortable: false,
+      slot: "status",
     },
     {
       field: "updated_at",
-      title: t("article.updated_at"),
+      title: t("table.updated_at"),
       sortable: false,
     },
     {
@@ -319,7 +346,33 @@ const tableColumns = computed(() => {
 
 const getadminDisplayName = (admin_id) => {
   if (!admin_id) return "-";
-  return admin_id.name || admin_id.admin || "-";
+  return admin_id.username || admin_id.admin || "-";
+};
+
+const handleStatusChange = async (row, newStatus) => {
+  try {
+    const statusValue = newStatus ? 1 : 0;
+    await updateArticle(row.id, {
+      status: statusValue,
+    });
+    ElMessage.success(newStatus ? t("common.enabled") : t("common.disabled"));
+    // 更新本地数据
+    const item = tableData.value.find((a) => a.id === row.id);
+    if (item) {
+      item.status = statusValue;
+      item.Status = statusValue;
+    }
+  } catch (error) {
+    logger.error("Status change error:", error);
+    loadData();
+    if (!error.__handled) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        t("common.operation_failed");
+      ElMessage.error(errorMessage);
+    }
+  }
 };
 
 const handleEdit = (row) => {
@@ -411,6 +464,29 @@ const handleAction = (command, row) => {
     case "delete":
       handleDelete(row);
       break;
+  }
+};
+
+const handleExport = async () => {
+  if (isExporting.value) {
+    return;
+  }
+
+  isExporting.value = true;
+
+  try {
+    await exportArticle(searchForm);
+    ElMessage.success(t("common.export_task_submitted"));
+    router.push("/exports");
+  } catch (error) {
+    logger.error("Export error:", error);
+    if (error.response?.status === 429) {
+      ElMessage.warning(t("common.export_in_progress"));
+    } else if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true });
+    }
+  } finally {
+    isExporting.value = false;
   }
 };
 

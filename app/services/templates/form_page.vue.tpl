@@ -16,7 +16,7 @@
         <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
         <<- if .ShowInForm>>
         <<- if or (eq .FormType "image-upload") (eq .FormType "file-upload") (eq .FormType "editor") (eq .FormType "markdown")>>
-        <el-form-item :label="$t('<<$.ModuleName>>.<<.Name>>')" prop="<<.Name>>">
+        <el-form-item :label="$t('<<.Name>>')" prop="<<.Name>>">
           <<- if eq .FormType "image-upload">>
           <ImageUpload
             v-model="formData.<<.Name>>"
@@ -35,13 +35,13 @@
           <<- else if eq .FormType "editor">>
           <WangEditor
             v-model="formData.<<.Name>>"
-            :placeholder="$t('<<$.ModuleName>>.<<.Name>>_placeholder')"
+            :placeholder="$t('<<.Name>>_placeholder')"
             :height="400"
           />
           <<- else if eq .FormType "markdown">>
           <MarkdownEditor
             v-model="formData.<<.Name>>"
-            :placeholder="$t('<<$.ModuleName>>.<<.Name>>_placeholder')"
+            :placeholder="$t('<<.Name>>_placeholder')"
             :height="400"
           />
           <<- end>>
@@ -138,7 +138,7 @@ const formRules = computed(() => {
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
   <<- if .Required>>
   rules['<<.Name>>'] = [
-    { required: true, message: t('<<$.ModuleName>>.<<.Name>>_required'), trigger: 'blur' }
+    { required: true, message: t('<<.Name>>_required'), trigger: 'blur' }
   ]
   <<- end>>
 <<- end>>
@@ -154,7 +154,7 @@ const formFields = computed(() => {
   <<- if and .ShowInForm (ne .FormType "image-upload") (ne .FormType "file-upload") (ne .FormType "editor") (ne .FormType "markdown")>>
   fields.push({
     prop: '<<.Name>>',
-    label: t('<<$.ModuleName>>.<<.Name>>'),
+    label: t('<<.Name>>'),
     type: <<if eq .FormType "input">>'input'<<else if eq .FormType "textarea">>'textarea'<<else if eq .FormType "select">><<- if and .ApiUrl (or (and .Relation .Relation.IsTree) .IsTree)>>'tree-select'<<else>>'select'<<- end>><<else if eq .FormType "radio">>'radio'<<else if eq .FormType "checkbox">>'checkbox'<<else if eq .FormType "switch">>'switch'<<else if eq .FormType "date-picker">>'date'<<else if eq .FormType "datetime-picker">>'datetime'<<else if eq .FormType "number">>'number'<<else>>'input'<<end>>,
     disabled: loading.value,
     <<- if eq .FormType "textarea">>

@@ -39,8 +39,8 @@ func (c *ArticleController) buildArticleFilters(ctx http.Context) services.Artic
 		Content:        ctx.Request().Query("content", ""),
 		Status:         ctx.Request().Query("status", ""),
 		CreatedAt:      ctx.Request().Query("created_at", ""),
-		CreatedAtStart: ctx.Request().Query("created_at_start", ctx.Request().Query("start_time", "")),
-		CreatedAtEnd:   ctx.Request().Query("created_at_end", ctx.Request().Query("end_time", "")),
+		CreatedAtStart: ctx.Request().Query("created_at_start", ""),
+		CreatedAtEnd:   ctx.Request().Query("created_at_end", ""),
 		UpdatedAt:      ctx.Request().Query("updated_at", ""),
 		UpdatedAtStart: ctx.Request().Query("updated_at_start", ""),
 		UpdatedAtEnd:   ctx.Request().Query("updated_at_end", ""),
@@ -134,6 +134,10 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 
 // Export 导出Article
 func (c *ArticleController) Export(ctx http.Context) http.Response {
-	return response.Error(ctx, http.StatusForbidden, "export_not_allowed")
+	filters := c.buildArticleFilters(ctx)
+	if err := c.ArticleService.Export(filters); err != nil {
+		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+	}
 
+	return response.Success(ctx, "export_task_submitted", http.Json{})
 }

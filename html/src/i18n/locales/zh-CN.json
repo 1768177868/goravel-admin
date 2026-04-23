@@ -77,7 +77,10 @@
     "export_check_manually": "请前往导出记录页面查看导出进度",
     "import_success": "导入成功",
     "import_no_data": "没有成功导入任何数据",
-    "invalid_file_type": "文件类型错误，请上传CSV文件"
+    "invalid_file_type": "文件类型错误，请上传CSV文件",
+    "start_time": "开始时间",
+    "end_time": "结束时间",
+    "range_separator": "至"
   },
   "login": {
     "title": "后台管理系统",
