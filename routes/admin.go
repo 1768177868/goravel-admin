@@ -258,4 +258,6 @@ func Admin() {
 
 	// 通知 WebSocket（不在域名限制范围内）
 	facades.Route().Get("/ws/admin/notifications", notificationWsController.Server)
+
+	registerRouteFallback()
 }
