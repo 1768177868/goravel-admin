@@ -9,13 +9,13 @@ import (
 )
 
 type AdminUpdate struct {
-	Nickname     string `form:"nickname" json:"nickname" example:"管理员"`                   // 显示昵称（可选，最大50字符）
-	Email        string `form:"email" json:"email" example:"admin@example.com"`           // 联系邮箱（可选，需符合邮箱格式）
-	Phone        string `form:"phone" json:"phone" example:"13800138000"`                 // 联系手机号（可选，最大20字符）
-	Password     string `form:"password" json:"password" example:"123456"`                // 登录密码（可选，6-50字符，不传则不修改）
-	DepartmentID uint   `form:"department_id" json:"department_id" example:"1"`           // 所属部门ID（可选，关联部门表主键）
-	PositionID   uint   `form:"position_id" json:"position_id" example:"1"`               // 所属岗位ID（可选，关联岗位表主键）
-	Status       uint8  `form:"status" json:"status" enums:"0,1" example:"1"`              // 账号状态（可选，1-启用，0-禁用）
+	Nickname     string `form:"nickname" json:"nickname" example:"管理员"`                             // 显示昵称（可选，最大50字符）
+	Email        string `form:"email" json:"email" example:"admin@example.com"`                     // 联系邮箱（可选，需符合邮箱格式）
+	Phone        string `form:"phone" json:"phone" example:"13800138000"`                           // 联系手机号（可选，最大20字符）
+	Password     string `form:"password" json:"password" example:"123456"`                          // 登录密码（可选，6-50字符，不传则不修改）
+	DepartmentID uint   `form:"department_id" json:"department_id" example:"1"`                     // 所属部门ID（可选，关联部门表主键）
+	PositionID   uint   `form:"position_id" json:"position_id" example:"1"`                         // 所属岗位ID（可选，关联岗位表主键）
+	Status       uint8  `form:"status" json:"status" enums:"0,1" example:"1"`                       // 账号状态（可选，1-启用，0-禁用）
 	RoleIDs      []uint `form:"role_ids" json:"role_ids" swaggertype:"array,integer" example:"1,2"` // 角色ID数组（可选，关联角色表主键）
 }
 
@@ -35,23 +35,23 @@ func (r *AdminUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *AdminUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"nickname.max_len": trans.Get(ctx, "validation_nickname_max"),
-		"email.email":      trans.Get(ctx, "validation_email_format"),
-		"email.max_len":    trans.Get(ctx, "validation_email_max"),
-		"phone.max_len":    trans.Get(ctx, "validation_phone_max"),
-		"password.min_len": trans.Get(ctx, "validation_password_min"),
-		"password.max_len": trans.Get(ctx, "validation_password_max"),
-		"status.in":        trans.Get(ctx, "validation_status_in"),
+		"nickname.max_len": trans.GetReplace(ctx, "validation.max.nickname", map[string]string{"max": "50"}),
+		"email.email":      trans.Get(ctx, "validation.email"),
+		"email.max_len":    trans.GetReplace(ctx, "validation.max.email", map[string]string{"max": "100"}),
+		"phone.max_len":    trans.GetReplace(ctx, "validation.max.phone", map[string]string{"max": "20"}),
+		"password.min_len": trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
+		"password.max_len": trans.GetReplace(ctx, "validation.max.password", map[string]string{"max": "50"}),
+		"status.in":        trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 
 func (r *AdminUpdate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"nickname": trans.Get(ctx, "validation_nickname"),
-		"email":    trans.Get(ctx, "validation_email"),
-		"phone":    trans.Get(ctx, "validation_phone"),
-		"password": trans.Get(ctx, "validation_password"),
-		"status":   trans.Get(ctx, "validation_status"),
+		"nickname": trans.Get(ctx, "validation.attributes.nickname"),
+		"email":    trans.Get(ctx, "validation.attributes.email"),
+		"phone":    trans.Get(ctx, "validation.attributes.phone"),
+		"password": trans.Get(ctx, "validation.attributes.password"),
+		"status":   trans.Get(ctx, "validation.attributes.status"),
 	}
 }
 

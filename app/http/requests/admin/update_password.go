@@ -26,19 +26,18 @@ func (r *UpdatePassword) Rules(ctx http.Context) map[string]string {
 
 func (r *UpdatePassword) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"old_password.required":     trans.Get(ctx, "validation_old_password_required"),
-		"new_password.required":     trans.Get(ctx, "validation_new_password_required"),
-		"new_password.min_len":      trans.Get(ctx, "validation_password_min"),
-		"confirm_password.required": trans.Get(ctx, "validation_confirm_password_required"),
-		"confirm_password.same":     trans.Get(ctx, "validation_password_not_match"),
+		"old_password.required":     trans.Get(ctx, "validation.required.old_password"),
+		"new_password.required":     trans.Get(ctx, "validation.required.new_password"),
+		"new_password.min_len":      trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
+		"confirm_password.required": trans.Get(ctx, "validation.required.confirm_password"),
+		"confirm_password.same":     trans.Get(ctx, "validation.same.confirm_password"),
 	}
 }
 
 func (r *UpdatePassword) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"old_password":     trans.Get(ctx, "validation_old_password"),
-		"new_password":     trans.Get(ctx, "validation_new_password"),
-		"confirm_password": trans.Get(ctx, "validation_confirm_password"),
+		"old_password":     trans.Get(ctx, "validation.attributes.old_password"),
+		"new_password":     trans.Get(ctx, "validation.attributes.new_password"),
+		"confirm_password": trans.Get(ctx, "validation.attributes.confirm_password"),
 	}
 }
-

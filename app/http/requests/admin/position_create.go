@@ -32,19 +32,19 @@ func (r *PositionCreate) Rules(ctx http.Context) map[string]string {
 func (r *PositionCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 		"name.required":  trans.Get(ctx, "position_name_required"),
-		"name.max_len":   trans.Get(ctx, "validation_name_max"),
-		"code.max_len":   trans.Get(ctx, "validation_code_max"),
-		"status.in":      trans.Get(ctx, "validation_status_in"),
-		"remark.max_len": trans.Get(ctx, "validation_remark_max"),
+		"name.max_len":   trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"code.max_len":   trans.GetReplace(ctx, "validation.max.code", map[string]string{"max": "50"}),
+		"status.in":      trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"remark.max_len": trans.GetReplace(ctx, "validation.max.remark", map[string]string{"max": "500"}),
 	}
 }
 
 func (r *PositionCreate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":   trans.Get(ctx, "validation_name"),
-		"code":   trans.Get(ctx, "validation_code"),
-		"status": trans.Get(ctx, "validation_status"),
-		"remark": trans.Get(ctx, "validation_remark"),
+		"name":   trans.Get(ctx, "validation.attributes.name"),
+		"code":   trans.Get(ctx, "validation.attributes.code"),
+		"status": trans.Get(ctx, "validation.attributes.status"),
+		"remark": trans.Get(ctx, "validation.attributes.remark"),
 	}
 }
 

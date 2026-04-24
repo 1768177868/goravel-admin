@@ -33,7 +33,7 @@ func (receiver *QueueServiceProvider) Jobs() []queue.Job {
 		&jobs.ExportOrders{},
 		&jobs.ExportPayments{},
 		&jobs.ExportUsers{},
-		&jobs.ExportGeneric{},
+		&jobs.ExportArticles{},
 		&queuejobs.SyncOrderToElasticsearch{},
 	}
 }

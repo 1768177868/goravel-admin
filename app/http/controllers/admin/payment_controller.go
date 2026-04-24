@@ -281,7 +281,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 	lock := facades.Cache().Lock(lockKey, 10*time.Second)
 
 	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
 	}
 
 	// 构建筛选条件
@@ -369,7 +369,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
-		"message":   trans.Get(ctx, "export_task_submitted"),
+		"message":   trans.Get(ctx, "queued"),
 	})
 }
 
@@ -389,12 +389,12 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 func (r *PaymentController) GetExportStatus(ctx http.Context) http.Response {
 	exportID := helpers.GetUintRoute(ctx, "id")
 	if exportID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "export_id_required")
+		return response.Error(ctx, http.StatusBadRequest, "file_job_id_required")
 	}
 
 	var exportRecord models.Export
 	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
-		return response.Error(ctx, http.StatusNotFound, "export_not_found")
+		return response.Error(ctx, http.StatusNotFound, "file_job_not_found")
 	}
 
 	result := http.Json{
@@ -425,12 +425,12 @@ func (r *PaymentController) getCurrentLanguage(ctx http.Context) string {
 func (r *PaymentController) getExportStatusText(ctx http.Context, status uint8) string {
 	switch status {
 	case models.ExportStatusProcessing:
-		return trans.Get(ctx, "export_task_status_processing")
+		return trans.Get(ctx, "job_processing")
 	case models.ExportStatusSuccess:
-		return trans.Get(ctx, "export_task_status_success")
+		return trans.Get(ctx, "job_success")
 	case models.ExportStatusFailed:
-		return trans.Get(ctx, "export_task_status_failed")
+		return trans.Get(ctx, "job_failed")
 	default:
-		return trans.Get(ctx, "export_task_status_unknown")
+		return trans.Get(ctx, "job_unknown")
 	}
 }

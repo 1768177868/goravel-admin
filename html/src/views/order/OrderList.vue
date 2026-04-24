@@ -747,13 +747,13 @@ const handleExport = async () => {
     const exportId = response.data?.export_id || response.data?.data?.export_id
     
     if (!exportId) {
-      ElMessage.error(t('common.export_failed'))
+      ElMessage.error(t('common.output_failed'))
       isExporting.value = false
       return
     }
 
     // 显示提交成功消息
-    ElMessage.success(t('common.export_task_submitted') || response.data?.message)
+    ElMessage.success(t('common.queued') || response.data?.message)
     
     // 立即跳转到导出记录页面
     router.push('/exports')
@@ -764,7 +764,7 @@ const handleExport = async () => {
     // 检查是否是重复提交错误
     if (error.response?.status === 429) {
       // 429 错误由业务代码处理，显示友好的提示
-      ElMessage.warning(t('common.export_in_progress'))
+      ElMessage.warning(t('common.already_queued'))
     } else if (!error.__handled) {
       // 其他错误，如果未处理则显示
       ErrorHandler.handle(error, { silent: true })

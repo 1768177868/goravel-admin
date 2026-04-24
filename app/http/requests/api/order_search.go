@@ -24,25 +24,25 @@ func (r *OrderSearch) Authorize(ctx http.Context) error {
 
 func (r *OrderSearch) Rules(ctx http.Context) map[string]string {
 	return map[string]string{
-		"q":             "max_len:200",
-		"created_from":  "max_len:32",
-		"created_to":    "max_len:32",
+		"q":            "max_len:200",
+		"created_from": "max_len:32",
+		"created_to":   "max_len:32",
 	}
 }
 
 func (r *OrderSearch) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"q.max_len":            trans.Get(ctx, "validation_order_search_q_max"),
-		"created_from.max_len": trans.Get(ctx, "validation_order_search_created_from_max"),
-		"created_to.max_len":   trans.Get(ctx, "validation_order_search_created_to_max"),
+		"q.max_len":            trans.GetReplace(ctx, "validation.max.keyword", map[string]string{"max": "200"}),
+		"created_from.max_len": trans.GetReplace(ctx, "validation.max.start_time", map[string]string{"max": "32"}),
+		"created_to.max_len":   trans.GetReplace(ctx, "validation.max.end_time", map[string]string{"max": "32"}),
 	}
 }
 
 func (r *OrderSearch) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"q":             trans.Get(ctx, "attribute_order_search_q"),
-		"created_from":  trans.Get(ctx, "attribute_order_search_created_from"),
-		"created_to":    trans.Get(ctx, "attribute_order_search_created_to"),
+		"q":            trans.Get(ctx, "keyword"),
+		"created_from": trans.Get(ctx, "start_time"),
+		"created_to":   trans.Get(ctx, "end_time"),
 	}
 }
 

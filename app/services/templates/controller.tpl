@@ -2,29 +2,23 @@ package admin
 
 import (
 <<if .HasExport>>
-	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
 <<end>>
 	"strings"
 
-<<if .HasExport>>
-	"github.com/goravel/framework/contracts/queue"
-	"github.com/goravel/framework/facades"
-<<end>>
 	"github.com/goravel/framework/contracts/http"
+<<if .HasExport>>
+	"github.com/goravel/framework/facades"
+	"github.com/spf13/cast"
+<<end>>
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-<<if .HasExport>>
-	"goravel/app/jobs"
-	"goravel/app/models"
-<<end>>
 	"goravel/app/services"
-<<if .HasExport>>
-	"goravel/app/utils"
-<<end>>
 )
 
 type <<.ControllerName>> struct {
@@ -56,15 +50,7 @@ func validateGeneratedRequest(ctx http.Context, req http.FormRequest) http.Respo
 }
 
 func (c *<<.ControllerName>>) build<<.ModelName>>Filters(ctx http.Context) services.<<.ModelName>>Filters {
-	return services.<<.ModelName>>Filters{
-<<- range .SearchableFields>>
-		<<.PascalName>>: ctx.Request().Query("<<.Name>>", ""),
-		<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
-		<<.PascalName>>Start: ctx.Request().Query("<<.Name>>_start", ""),
-		<<.PascalName>>End: ctx.Request().Query("<<.Name>>_end", ""),
-		<<- end>>
-<<- end>>
-	}
+	return services.Build<<.ModelName>>FiltersFromHTTP(ctx)
 }
 
 func New<<.ControllerName>>() *<<.ControllerName>> {
@@ -75,7 +61,7 @@ func New<<.ControllerName>>() *<<.ControllerName>> {
 
 // Index <<.ModelName>>列表
 func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
-	page := helpers.GetIntQuery(ctx, "page",1)
+	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
 	filters := c.build<<.ModelName>>Filters(ctx)
@@ -167,116 +153,76 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 // Export 导出<<.ModelName>>
 func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 <<- if .HasExport>>
-	filters := c.build<<.ModelName>>Filters(ctx)
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
 	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
 
 	lockKey := fmt.Sprintf("export:<<.ModuleName>>s:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
 	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
 
-	disk := utils.GetConfigValue("storage", "file_disk", "")
-	if disk == "" {
-		disk = utils.GetConfigValue("storage", "export_disk", "")
-	}
-	if disk == "" {
-		disk = "local"
-	}
+	filters := c.build<<.ModelName>>Filters(ctx)
 
-	exportRecord := models.Export{
-		AdminID: adminID,
-		Type:    "<<.ModuleName>>s",
-		Status:  models.ExportStatusProcessing,
-		Disk:    disk,
-		Path:    "",
-	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
-		lock.Release()
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	filtersMap := map[string]any{}
-	<<- range .SearchableFields>>
-	if filters.<<.PascalName>> != "" {
-		filtersMap["<<.Name>>"] = filters.<<.PascalName>>
-	}
-	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
-	if filters.<<.PascalName>>Start != "" {
-		filtersMap["<<.Name>>_start"] = filters.<<.PascalName>>Start
-	}
-	if filters.<<.PascalName>>End != "" {
-		filtersMap["<<.Name>>_end"] = filters.<<.PascalName>>End
-	}
-	<<- end>>
-	<<- end>>
-
-	exportArgsStruct := jobs.ExportGenericArgs{
-		ExportArgs: jobs.ExportArgs{
-			ExportID: exportRecord.ID,
-			AdminID:  adminID,
-			Filters:  filtersMap,
-			Type:     "<<.ModuleName>>s",
-			Language: utils.GetCurrentLanguage(ctx),
-			Timezone: helpers.GetCurrentTimezone(ctx),
-		},
-		Table:      "<<.TableName>>",
-		FilePrefix: "<<.ModuleName>>s",
-		HeaderKeys: []string{
-			<<- range .ListFields>>
-			<<- if and .ShowInList (ne .Name "operation")>>
-			"<<.Name>>",
-			<<- end>>
-			<<- end>>
-		},
-		Columns: []string{
-			<<- range .ListFields>>
-			<<- if and .ShowInList (ne .Name "operation")>>
-			"<<.Name>>",
-			<<- end>>
-			<<- end>>
-		},
-		SearchTypes: map[string]string{
-			<<- range .SearchableFields>>
-			"<<.Name>>": "<<.SearchType>>",
-			<<- end>>
-		},
-	}
-
-	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	list, err := c.<<.ServiceName>>.GetAll<<.ModelName>>ForExport(filters)
 	if err != nil {
-		lock.Release()
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		_ = facades.Orm().Query().Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
+		return response.ErrorWithLog(ctx, "<<.ModuleName>>", err, map[string]any{
+			"action":   "export_<<.ModuleName>>s",
+			"admin_id": adminID,
+		})
 	}
 
-	exportArgs := []queue.Arg{
-		{
-			Type:  "string",
-			Value: string(exportArgsJSON),
-		},
+	headers := []string{
+		<<- range .ListFields>>
+		<<- if and .ShowInList (ne .Name "operation")>>
+		"<<.Name>>",
+		<<- end>>
+		<<- end>>
 	}
 
-	if err := facades.Queue().Job(&jobs.ExportGeneric{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
-		lock.Release()
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		_ = facades.Orm().Query().Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
+	timezone := helpers.GetCurrentTimezone(ctx)
+	var data [][]string
+	for _, row := range list {
+		r := []string{
+			<<- range .ListFields>>
+			<<- if and .ShowInList (ne .Name "operation")>>
+			func() string {
+				<<- if eq .Name "created_at">>
+				return helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone)
+				<<- else if eq .Name "updated_at">>
+				return helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone)
+				<<- else if eq .GoType "time.Time">>
+				return helpers.FormatTimeWithTimezone(row.<<.FieldName>>, timezone)
+				<<- else if eq .GoType "bool">>
+				return strconv.FormatBool(row.<<.FieldName>>)
+				<<- else if eq .GoType "float64">>
+				return cast.ToString(row.<<.FieldName>>)
+				<<- else if eq .GoType "uint8">>
+				return cast.ToString(row.<<.FieldName>>)
+				<<- else if eq .GoType "uint64">>
+				return cast.ToString(row.<<.FieldName>>)
+				<<- else if eq .GoType "int64">>
+				return cast.ToString(row.<<.FieldName>>)
+				<<- else if eq .GoType "int">>
+				return cast.ToString(row.<<.FieldName>>)
+				<<- else if eq .GoType "string">>
+				return row.<<.FieldName>>
+				<<- else>>
+				return cast.ToString(row.<<.FieldName>>)
+				<<- end>>
+			}(),
+			<<- end>>
+			<<- end>>
+		}
+		data = append(data, r)
 	}
 
-	lock.Release()
-	exportID := exportRecord.ID
+	ctx.WithValue("export_type", "<<.ModuleName>>s")
 
-	return response.Success(ctx, "export_task_submitted", http.Json{
-		"export_id": exportID,
-	})
+	return response.Export(ctx, "exported", headers, data, "<<.ModuleName>>s")
 <<- else>>
-	return response.Error(ctx, http.StatusForbidden, "export_not_allowed")
+	return response.Error(ctx, http.StatusForbidden, "file_job_forbidden")
 <<end>>
 }

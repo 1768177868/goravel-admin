@@ -67,18 +67,18 @@ func (r *ExportPayments) Handle(args ...any) (retErr error) {
 	exporter := NewBaseExporter(ExportConfig{
 		FilePrefix: "payments",
 		HeaderKeys: []string{
-			"export_header_id",
-			"export_header_payment_no",
-			"export_header_order_no",
-			"export_header_payment_method",
-			"export_header_user_id",
-			"export_header_amount",
-			"export_header_status",
-			"export_header_third_party_no",
-			"export_header_pay_time",
-			"export_header_fail_reason",
-			"export_header_remark",
-			"export_header_created_at",
+			"id",
+			"payment_no",
+			"order_no",
+			"payment_method",
+			"user_id",
+			"amount",
+			"status",
+			"third_party_no",
+			"pay_time",
+			"fail_reason",
+			"remark",
+			"created_at",
 		},
 		WriteData: r.writePaymentsToCSV,
 	})
@@ -241,7 +241,7 @@ func (r *ExportPayments) formatPaymentRow(payment models.Payment, paymentMethodM
 
 	createdAt := FormatCarbonWithTimezone(payment.CreatedAt, timezone)
 
-	statusKey := fmt.Sprintf("export_payment_status_%s", payment.Status)
+	statusKey := fmt.Sprintf("payment_status_%s", payment.Status)
 
 	return []string{
 		cast.ToString(payment.ID),

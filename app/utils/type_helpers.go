@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // GetValue 从 map[string]any 中安全地获取指定类型的值
@@ -207,6 +208,67 @@ func FillFiltersFromMap(m map[string]any, filtersPtr any) {
 			}
 		}
 	}
+}
+
+// ExportFiltersToMap 将筛选结构体转为 map（仅包含“有效条件”），键规则与 FillFiltersFromMap 一致，
+// 便于列表/导出共用同一 Filters 类型：控制器 ExportFiltersToMap(filters) 入队，Job 内 FillFiltersFromMap 还原后走 BuildXxxQuery。
+func ExportFiltersToMap(filters any) map[string]any {
+	v := reflect.ValueOf(filters)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return map[string]any{}
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return map[string]any{}
+	}
+
+	t := v.Type()
+	out := make(map[string]any)
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		structField := t.Field(i)
+
+		key := structField.Tag.Get("json")
+		if key == "" || key == "-" {
+			key = toSnakeCase(structField.Name)
+		}
+
+		if !field.CanInterface() {
+			continue
+		}
+
+		switch field.Kind() {
+		case reflect.String:
+			s := field.String()
+			if strings.TrimSpace(s) != "" {
+				out[key] = s
+			}
+		case reflect.Bool:
+			// 仅导出 true；false 视为“未筛选”
+			if field.Bool() {
+				out[key] = true
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if field.Int() != 0 {
+				out[key] = field.Int()
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if field.Uint() != 0 {
+				out[key] = field.Uint()
+			}
+		case reflect.Float32, reflect.Float64:
+			if field.Float() != 0 {
+				out[key] = field.Float()
+			}
+		default:
+			// 其他类型（如 time.Time）在生成筛选器中少见；需要时可再扩展
+		}
+	}
+
+	return out
 }
 
 // toSnakeCase 将 PascalCase/camelCase 转换为 snake_case

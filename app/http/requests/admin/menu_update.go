@@ -61,30 +61,30 @@ func (r *MenuUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *MenuUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"title.max_len":      trans.Get(ctx, "validation_title_max"),
-		"slug.max_len":       trans.Get(ctx, "validation_slug_max"),
-		"icon.max_len":       trans.Get(ctx, "validation_icon_max"),
-		"path.max_len":       trans.Get(ctx, "validation_path_max"),
-		"path.full_url":      trans.Get(ctx, "validation_path_url_invalid"),
-		"component.max_len":  trans.Get(ctx, "validation_component_max"),
-		"permission.max_len": trans.Get(ctx, "validation_permission_max"),
-		"type.in":            trans.Get(ctx, "validation_menu_type_in"),
-		"status.in":          trans.Get(ctx, "validation_status_in"),
-		"is_hidden.in":       trans.Get(ctx, "validation_status_in"),
+		"title.max_len":      trans.GetReplace(ctx, "validation.max.title", map[string]string{"max": "50"}),
+		"slug.max_len":       trans.GetReplace(ctx, "validation.max.slug", map[string]string{"max": "50"}),
+		"icon.max_len":       trans.GetReplace(ctx, "validation.max.icon", map[string]string{"max": "50"}),
+		"path.max_len":       trans.GetReplace(ctx, "validation.max.path", map[string]string{"max": "0"}),
+		"path.full_url":      trans.Get(ctx, "validation.path.url_invalid"),
+		"component.max_len":  trans.GetReplace(ctx, "validation.max.component", map[string]string{"max": "255"}),
+		"permission.max_len": trans.GetReplace(ctx, "validation.max.permission", map[string]string{"max": "100"}),
+		"type.in":            trans.GetReplace(ctx, "validation.in.menu_type", map[string]string{"values": "1,2,3"}),
+		"status.in":          trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"is_hidden.in":       trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 
 func (r *MenuUpdate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"title":      trans.Get(ctx, "validation_title"),
-		"slug":       trans.Get(ctx, "validation_slug"),
-		"icon":       trans.Get(ctx, "validation_icon"),
-		"path":       trans.Get(ctx, "validation_path"),
-		"component":  trans.Get(ctx, "validation_component"),
-		"permission": trans.Get(ctx, "validation_permission"),
-		"type":       trans.Get(ctx, "validation_type"),
-		"status":     trans.Get(ctx, "validation_status"),
-		"is_hidden":  trans.Get(ctx, "validation_is_hidden"),
+		"title":      trans.Get(ctx, "validation.attributes.title"),
+		"slug":       trans.Get(ctx, "validation.attributes.slug"),
+		"icon":       trans.Get(ctx, "validation.attributes.icon"),
+		"path":       trans.Get(ctx, "validation.attributes.path"),
+		"component":  trans.Get(ctx, "validation.attributes.component"),
+		"permission": trans.Get(ctx, "validation.attributes.permission"),
+		"type":       trans.Get(ctx, "validation.attributes.type"),
+		"status":     trans.Get(ctx, "validation.attributes.status"),
+		"is_hidden":  trans.Get(ctx, "validation.attributes.is_hidden"),
 	}
 }
 

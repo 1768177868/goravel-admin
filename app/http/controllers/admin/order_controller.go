@@ -217,11 +217,11 @@ func (r *OrderController) parseTimeRange(startTimeStr, endTimeStr string) (time.
 func (r *OrderController) formatOrderStatus(ctx http.Context, status string) string {
 	switch status {
 	case "pending":
-		return trans.Get(ctx, "export_order_status_pending")
+		return trans.Get(ctx, "order_status_pending")
 	case "paid":
-		return trans.Get(ctx, "export_order_status_paid")
+		return trans.Get(ctx, "order_status_paid")
 	case "cancelled":
-		return trans.Get(ctx, "export_order_status_cancelled")
+		return trans.Get(ctx, "order_status_cancelled")
 	default:
 		return status
 	}
@@ -567,7 +567,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	// 尝试获取锁，如果获取失败则返回错误
 	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
 	}
 
 	// 构建筛选条件
@@ -666,7 +666,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
-		"message":   trans.Get(ctx, "export_task_submitted"),
+		"message":   trans.Get(ctx, "queued"),
 	})
 }
 
@@ -687,7 +687,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 	exportID := helpers.GetUintRoute(ctx, "id")
 	if exportID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "export_id_required")
+		return response.Error(ctx, http.StatusBadRequest, "file_job_id_required")
 	}
 
 	exportRecordService := services.NewExportRecordService()
@@ -732,13 +732,13 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 func (r *OrderController) getExportStatusText(ctx http.Context, status uint8) string {
 	switch status {
 	case models.ExportStatusProcessing:
-		return trans.Get(ctx, "export_task_status_processing")
+		return trans.Get(ctx, "job_processing")
 	case models.ExportStatusSuccess:
-		return trans.Get(ctx, "export_task_status_success")
+		return trans.Get(ctx, "job_success")
 	case models.ExportStatusFailed:
-		return trans.Get(ctx, "export_task_status_failed")
+		return trans.Get(ctx, "job_failed")
 	default:
-		return trans.Get(ctx, "export_task_status_unknown")
+		return trans.Get(ctx, "job_unknown")
 	}
 }
 

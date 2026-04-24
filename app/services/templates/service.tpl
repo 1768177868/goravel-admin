@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
@@ -12,6 +13,9 @@ import (
 type <<.ServiceName>> interface {
 	GetByID(id uint) (*models.<<.ModelName>>, error)
 	GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error)
+<<if .HasExport>>
+	GetAll<<.ModelName>>ForExport(filters <<.ModelName>>Filters) ([]models.<<.ModelName>>, error)
+<<end>>
 <<if .HasCreate>>
 	Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error)
 <<end>>
@@ -20,9 +24,6 @@ type <<.ServiceName>> interface {
 <<end>>
 <<if .HasDelete>>
 	Delete(id uint) error
-<<end>>
-<<if .HasExport>>
-	Export(filters <<.ModelName>>Filters) error
 <<end>>
 }
 
@@ -34,6 +35,19 @@ type <<.ModelName>>Filters struct {
 	<<.PascalName>>End   string
 	<<- end>>
 <<- end>>
+}
+
+// Build<<.ModelName>>FiltersFromHTTP 与列表/导出共用：从 GET query 或 POST body 读取筛选字段
+func Build<<.ModelName>>FiltersFromHTTP(ctx http.Context) <<.ModelName>>Filters {
+	return <<.ModelName>>Filters{
+<<- range .SearchableFields>>
+		<<.PascalName>>: ctx.Request().Input("<<.Name>>", ctx.Request().Query("<<.Name>>", "")),
+		<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+		<<.PascalName>>Start: ctx.Request().Input("<<.Name>>_start", ctx.Request().Query("<<.Name>>_start", "")),
+		<<.PascalName>>End: ctx.Request().Input("<<.Name>>_end", ctx.Request().Query("<<.Name>>_end", "")),
+		<<- end>>
+<<- end>>
+	}
 }
 
 type <<.ServiceName>>Impl struct{}
@@ -51,7 +65,8 @@ func (s *<<.ServiceName>>Impl) withRelations(query orm.Query) orm.Query {
 	return query
 }
 
-func (s *<<.ServiceName>>Impl) build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
+// Build<<.ModelName>>Query 构建<<.ModelName>>查询（列表与导出共用）
+func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 	query := facades.Orm().Query().Model(&models.<<.ModelName>>{})
 <<- range .SearchableFields>>
 	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
@@ -98,7 +113,7 @@ func (s *<<.ServiceName>>Impl) GetByID(id uint) (*models.<<.ModelName>>, error) 
 }
 
 func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error) {
-	query := s.withRelations(s.build<<.ModelName>>Query(filters))
+	query := s.withRelations(Build<<.ModelName>>Query(filters))
 
 	var list []models.<<.ModelName>>
 	var total int64
@@ -108,6 +123,19 @@ func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, page
 
 	return list, total, nil
 }
+
+<<if .HasExport>>
+func (s *<<.ServiceName>>Impl) GetAll<<.ModelName>>ForExport(filters <<.ModelName>>Filters) ([]models.<<.ModelName>>, error) {
+	query := s.withRelations(Build<<.ModelName>>Query(filters))
+
+	var list []models.<<.ModelName>>
+	if err := query.Order("id desc").Find(&list); err != nil {
+		return nil, apperrors.ErrQueryFailed.WithError(err)
+	}
+
+	return list, nil
+}
+<<end>>
 
 <<if .HasCreate>>
 func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*models.<<.ModelName>>, error) {
@@ -167,14 +195,6 @@ func (s *<<.ServiceName>>Impl) Delete(id uint) error {
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.<<.ModelName>>{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
-	return nil
-}
-<<end>>
-
-<<if .HasExport>>
-func (s *<<.ServiceName>>Impl) Export(filters <<.ModelName>>Filters) error {
-	_ = filters
-	// Export flow is handled in controller by generic export job dispatch.
 	return nil
 }
 <<end>>

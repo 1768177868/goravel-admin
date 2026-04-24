@@ -63,19 +63,19 @@ func (r *ExportOrders) Handle(args ...any) (retErr error) {
 	exporter := NewBaseExporter(ExportConfig{
 		FilePrefix: "orders",
 		HeaderKeys: []string{
-			"export_header_id",
-			"export_header_order_no",
-			"export_header_user_id",
-			"export_header_amount",
-			"export_header_status",
-			"export_header_item_index",
-			"export_header_product_id",
-			"export_header_product_name",
-			"export_header_price",
-			"export_header_quantity",
-			"export_header_subtotal",
-			"export_header_remark",
-			"export_header_created_at",
+			"id",
+			"order_no",
+			"user_id",
+			"amount",
+			"status",
+			"item_index",
+			"product_id",
+			"product_name",
+			"price",
+			"quantity",
+			"subtotal",
+			"remark",
+			"created_at",
 		},
 		WriteData: r.writeOrdersToCSV,
 	})
@@ -264,11 +264,11 @@ func (r *ExportOrders) writeOrderRows(w *csv.Writer, order models.Order, details
 func (r *ExportOrders) translateStatus(status, lang string) string {
 	switch status {
 	case "pending":
-		return utils.TranslateKey("export_order_status_pending", lang, "pending")
+		return utils.TranslateKey("order_status_pending", lang, "pending")
 	case "paid":
-		return utils.TranslateKey("export_order_status_paid", lang, "paid")
+		return utils.TranslateKey("order_status_paid", lang, "paid")
 	case "cancelled":
-		return utils.TranslateKey("export_order_status_cancelled", lang, "cancelled")
+		return utils.TranslateKey("order_status_cancelled", lang, "cancelled")
 	default:
 		return status
 	}

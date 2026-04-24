@@ -32,13 +32,13 @@ func (r *UserUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *UserUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"nickname.max_len": trans.Get(ctx, "validation_nickname_max"),
-		"email.email":      trans.Get(ctx, "validation_email_format"),
-		"email.max_len":    trans.Get(ctx, "validation_email_max"),
-		"phone.max_len":    trans.Get(ctx, "validation_phone_max"),
-		"password.min_len": trans.Get(ctx, "validation_password_min"),
-		"password.max_len": trans.Get(ctx, "validation_password_max"),
-		"status.in":        trans.Get(ctx, "validation_status_in"),
+		"nickname.max_len": trans.GetReplace(ctx, "validation.max.nickname", map[string]string{"max": "50"}),
+		"email.email":      trans.Get(ctx, "validation.email"),
+		"email.max_len":    trans.GetReplace(ctx, "validation.max.email", map[string]string{"max": "100"}),
+		"phone.max_len":    trans.GetReplace(ctx, "validation.max.phone", map[string]string{"max": "20"}),
+		"password.min_len": trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
+		"password.max_len": trans.GetReplace(ctx, "validation.max.password", map[string]string{"max": "50"}),
+		"status.in":        trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 
@@ -55,5 +55,3 @@ func (r *UserUpdate) Attributes(ctx http.Context) map[string]string {
 func (r *UserUpdate) PrepareForValidation(ctx http.Context, data validation.Data) error {
 	return helpers.PrepareNumericFieldForValidation(data, "status")
 }
-
-

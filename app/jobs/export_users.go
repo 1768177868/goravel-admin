@@ -62,16 +62,16 @@ func (r *ExportUsers) Handle(args ...any) (retErr error) {
 	exporter := NewBaseExporter(ExportConfig{
 		FilePrefix: "users",
 		HeaderKeys: []string{
-			"export_header_id",
-			"export_header_username",
-			"export_header_nickname",
-			"export_header_email",
-			"export_header_phone",
-			"export_header_balance",
-			"export_header_currency",
-			"export_header_status",
-			"export_header_last_login_at",
-			"export_header_created_at",
+			"id",
+			"username",
+			"nickname",
+			"email",
+			"phone",
+			"balance",
+			"currency",
+			"status",
+			"last_login_at",
+			"created_at",
 		},
 		WriteData: r.writeUsersToCSV,
 	})
@@ -159,9 +159,9 @@ func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lan
 // formatUserRow 格式化用户行数据
 func (r *ExportUsers) formatUserRow(user models.User, lang, timezone string) []string {
 	// 状态翻译
-	statusKey := "export_user_status_disabled"
+	statusKey := "disabled"
 	if user.Status == 1 {
-		statusKey = "export_user_status_enabled"
+		statusKey = "enabled"
 	}
 	statusText := utils.TranslateKey(statusKey, lang, cast.ToString(user.Status))
 

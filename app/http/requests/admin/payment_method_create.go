@@ -33,26 +33,26 @@ func (r *PaymentMethodCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *PaymentMethodCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.required":     trans.Get(ctx, "validation_name_required"),
-		"name.max_len":      trans.Get(ctx, "validation_name_max"),
-		"code.required":     trans.Get(ctx, "validation_code_required"),
-		"code.max_len":      trans.Get(ctx, "validation_code_max"),
-		"type.required":     trans.Get(ctx, "validation_type_required"),
-		"type.max_len":      trans.Get(ctx, "validation_type_max"),
-		"config.required":   trans.Get(ctx, "validation_config_required"),
-		"is_active.boolean": trans.Get(ctx, "validation_boolean"),
-		"sort.min":          trans.Get(ctx, "validation_min"),
+		"name.required":     trans.Get(ctx, "validation.required.name"),
+		"name.max_len":      trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"code.required":     trans.Get(ctx, "validation.required.code"),
+		"code.max_len":      trans.GetReplace(ctx, "validation.max.code", map[string]string{"max": "20"}),
+		"type.required":     trans.Get(ctx, "validation.required.type"),
+		"type.max_len":      trans.GetReplace(ctx, "validation.max.type", map[string]string{"max": "20"}),
+		"config.required":   trans.Get(ctx, "validation.required.config"),
+		"is_active.boolean": trans.Get(ctx, "validation.boolean"),
+		"sort.min":          trans.GetReplace(ctx, "validation.min_value", map[string]string{"min": "0"}),
 	}
 }
 
 func (r *PaymentMethodCreate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":      trans.Get(ctx, "validation_name"),
-		"code":      trans.Get(ctx, "validation_code"),
-		"type":      trans.Get(ctx, "validation_type"),
-		"config":    trans.Get(ctx, "validation_config"),
-		"is_active": trans.Get(ctx, "validation_is_active"),
-		"sort":      trans.Get(ctx, "validation_sort"),
+		"name":      trans.Get(ctx, "validation.attributes.name"),
+		"code":      trans.Get(ctx, "validation.attributes.code"),
+		"type":      trans.Get(ctx, "validation.attributes.type"),
+		"config":    trans.Get(ctx, "validation.attributes.config"),
+		"is_active": trans.Get(ctx, "validation.attributes.is_active"),
+		"sort":      trans.Get(ctx, "validation.attributes.sort"),
 	}
 }
 

@@ -59,7 +59,7 @@ func (c *OrderController) SearchMyOrders(ctx http.Context) http.Response {
 		}
 		if facades.Config().GetBool("elasticsearch.enabled", false) {
 			facades.Log().Errorf("order ES search: %v", err)
-			return response.Error(ctx, http.StatusBadGateway, "elasticsearch_search_failed")
+			return response.Error(ctx, http.StatusBadGateway, "search_failed")
 		}
 		facades.Log().Errorf("order DB search: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, "query_failed")

@@ -27,15 +27,15 @@ func (r *Login) Rules(ctx http.Context) map[string]string {
 
 func (r *Login) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"username.required": trans.Get(ctx, "validation_username_required"),
-		"password.required": trans.Get(ctx, "validation_password_required"),
-		"password.min_len":  trans.Get(ctx, "validation_password_min"),
+		"username.required": trans.Get(ctx, "validation.required.username"),
+		"password.required": trans.Get(ctx, "validation.required.password"),
+		"password.min_len":  trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
 	}
 }
 
 func (r *Login) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"username": trans.Get(ctx, "validation_username"),
-		"password": trans.Get(ctx, "validation_password"),
+		"username": trans.Get(ctx, "validation.attributes.username"),
+		"password": trans.Get(ctx, "validation.attributes.password"),
 	}
 }

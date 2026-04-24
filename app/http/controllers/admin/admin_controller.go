@@ -637,25 +637,25 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 	}
 
 	headers := []string{
-		"export_header_id",
-		"export_header_username",
-		"export_header_nickname",
-		"export_header_email",
-		"export_header_phone",
-		"export_header_status",
-		"export_header_department",
-		"export_header_position",
-		"export_header_roles",
-		"export_header_created_at",
-		"export_header_updated_at",
+		"id",
+		"username",
+		"nickname",
+		"email",
+		"phone",
+		"status",
+		"department",
+		"position",
+		"roles",
+		"created_at",
+		"updated_at",
 	}
 
 	timezone := helpers.GetCurrentTimezone(ctx)
 	var data [][]string
 	for _, admin := range admins {
-		statusText := trans.Get(ctx, "export_status_disabled")
+		statusText := trans.Get(ctx, "disabled")
 		if admin.Status == 1 {
-			statusText = trans.Get(ctx, "export_status_enabled")
+			statusText = trans.Get(ctx, "enabled")
 		}
 
 		// 部门名称
@@ -699,5 +699,5 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 	// 在 context 中设置导出类型，供 ExportService 使用
 	ctx.WithValue("export_type", models.ExportTypeAdmins)
 
-	return response.Export(ctx, "export_success", headers, data, "admins")
+	return response.Export(ctx, "exported", headers, data, "admins")
 }

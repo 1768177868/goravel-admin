@@ -14,6 +14,7 @@ import (
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
+	"goravel/app/http/trans"
 	"goravel/app/jobs"
 	"goravel/app/models"
 	"goravel/app/services"
@@ -251,7 +252,7 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 	lock := facades.Cache().Lock(lockKey, 10*time.Second)
 
 	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
 	}
 
 	// 获取存储驱动配置
@@ -327,6 +328,6 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
-		"message":   "export_task_submitted",
+		"message":   trans.Get(ctx, "queued"),
 	})
 }

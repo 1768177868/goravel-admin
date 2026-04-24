@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
@@ -12,14 +13,13 @@ import (
 type ArticleService interface {
 	GetByID(id uint) (*models.Article, error)
 	GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error)
+	GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error)
 
 	Create(req *admin.ArticleCreate) (*models.Article, error)
 
 	Update(id uint, req *admin.ArticleUpdate) (*models.Article, error)
 
 	Delete(id uint) error
-
-	Export(filters ArticleFilters) error
 }
 
 type ArticleFilters struct {
@@ -35,6 +35,22 @@ type ArticleFilters struct {
 	UpdatedAtEnd   string
 }
 
+// BuildArticleFiltersFromHTTP 与列表/导出共用：从 GET query 或 POST body 读取筛选字段（与 ArticleController 原 build 逻辑一致）
+func BuildArticleFiltersFromHTTP(ctx http.Context) ArticleFilters {
+	return ArticleFilters{
+		AdminId:        ctx.Request().Input("admin_id", ctx.Request().Query("admin_id", "")),
+		Title:          ctx.Request().Input("title", ctx.Request().Query("title", "")),
+		Content:        ctx.Request().Input("content", ctx.Request().Query("content", "")),
+		Status:         ctx.Request().Input("status", ctx.Request().Query("status", "")),
+		CreatedAt:      ctx.Request().Input("created_at", ctx.Request().Query("created_at", "")),
+		CreatedAtStart: ctx.Request().Input("created_at_start", ctx.Request().Query("created_at_start", "")),
+		CreatedAtEnd:   ctx.Request().Input("created_at_end", ctx.Request().Query("created_at_end", "")),
+		UpdatedAt:      ctx.Request().Input("updated_at", ctx.Request().Query("updated_at", "")),
+		UpdatedAtStart: ctx.Request().Input("updated_at_start", ctx.Request().Query("updated_at_start", "")),
+		UpdatedAtEnd:   ctx.Request().Input("updated_at_end", ctx.Request().Query("updated_at_end", "")),
+	}
+}
+
 type ArticleServiceImpl struct{}
 
 func NewArticleService() ArticleService {
@@ -46,7 +62,8 @@ func (s *ArticleServiceImpl) withRelations(query orm.Query) orm.Query {
 	return query
 }
 
-func (s *ArticleServiceImpl) buildArticleQuery(filters ArticleFilters) orm.Query {
+// BuildArticleQuery 构建文章查询（列表与异步导出 Job 共用）
+func BuildArticleQuery(filters ArticleFilters) orm.Query {
 	query := facades.Orm().Query().Model(&models.Article{})
 	if filters.AdminId != "" {
 		query = query.Where("admin_id = ?", filters.AdminId)
@@ -92,7 +109,7 @@ func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 }
 
 func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error) {
-	query := s.withRelations(s.buildArticleQuery(filters))
+	query := s.withRelations(BuildArticleQuery(filters))
 
 	var list []models.Article
 	var total int64
@@ -101,6 +118,17 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 	}
 
 	return list, total, nil
+}
+
+func (s *ArticleServiceImpl) GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error) {
+	query := s.withRelations(BuildArticleQuery(filters))
+
+	var list []models.Article
+	if err := query.Order("id desc").Find(&list); err != nil {
+		return nil, apperrors.ErrQueryFailed.WithError(err)
+	}
+
+	return list, nil
 }
 
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {
@@ -154,8 +182,3 @@ func (s *ArticleServiceImpl) Delete(id uint) error {
 	return nil
 }
 
-func (s *ArticleServiceImpl) Export(filters ArticleFilters) error {
-	_ = filters
-	// Export flow is handled in controller by generic export job dispatch.
-	return nil
-}

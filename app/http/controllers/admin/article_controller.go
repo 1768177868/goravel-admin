@@ -3,24 +3,21 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
-
 	"strings"
-
-	"github.com/goravel/framework/contracts/queue"
-	"github.com/goravel/framework/facades"
+	"time"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/queue"
+	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-
+	"goravel/app/http/trans"
 	"goravel/app/jobs"
 	"goravel/app/models"
-
 	"goravel/app/services"
-
 	"goravel/app/utils"
 )
 
@@ -53,18 +50,7 @@ func validateGeneratedRequest(ctx http.Context, req http.FormRequest) http.Respo
 }
 
 func (c *ArticleController) buildArticleFilters(ctx http.Context) services.ArticleFilters {
-	return services.ArticleFilters{
-		AdminId:        ctx.Request().Query("admin_id", ""),
-		Title:          ctx.Request().Query("title", ""),
-		Content:        ctx.Request().Query("content", ""),
-		Status:         ctx.Request().Query("status", ""),
-		CreatedAt:      ctx.Request().Query("created_at", ""),
-		CreatedAtStart: ctx.Request().Query("created_at_start", ""),
-		CreatedAtEnd:   ctx.Request().Query("created_at_end", ""),
-		UpdatedAt:      ctx.Request().Query("updated_at", ""),
-		UpdatedAtStart: ctx.Request().Query("updated_at_start", ""),
-		UpdatedAtEnd:   ctx.Request().Query("updated_at_end", ""),
-	}
+	return services.BuildArticleFiltersFromHTTP(ctx)
 }
 
 func NewArticleController() *ArticleController {
@@ -152,19 +138,20 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success", http.Json{})
 }
 
-// Export 导出Article
+// Export 导出Article（异步 ExportArticles Job；筛参与列表共用 BuildArticleFiltersFromHTTP + BuildArticleQuery）
 func (c *ArticleController) Export(ctx http.Context) http.Response {
-	filters := c.buildArticleFilters(ctx)
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
 	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
 
 	lockKey := fmt.Sprintf("export:articles:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10)
+	lock := facades.Cache().Lock(lockKey, 10*time.Second)
 	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
+
+	filtersMap := utils.ExportFiltersToMap(services.BuildArticleFiltersFromHTTP(ctx))
 
 	disk := utils.GetConfigValue("storage", "file_disk", "")
 	if disk == "" {
@@ -186,73 +173,13 @@ func (c *ArticleController) Export(ctx http.Context) http.Response {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	filtersMap := map[string]any{}
-	if filters.AdminId != "" {
-		filtersMap["admin_id"] = filters.AdminId
-	}
-	if filters.Title != "" {
-		filtersMap["title"] = filters.Title
-	}
-	if filters.Content != "" {
-		filtersMap["content"] = filters.Content
-	}
-	if filters.Status != "" {
-		filtersMap["status"] = filters.Status
-	}
-	if filters.CreatedAt != "" {
-		filtersMap["created_at"] = filters.CreatedAt
-	}
-	if filters.CreatedAtStart != "" {
-		filtersMap["created_at_start"] = filters.CreatedAtStart
-	}
-	if filters.CreatedAtEnd != "" {
-		filtersMap["created_at_end"] = filters.CreatedAtEnd
-	}
-	if filters.UpdatedAt != "" {
-		filtersMap["updated_at"] = filters.UpdatedAt
-	}
-	if filters.UpdatedAtStart != "" {
-		filtersMap["updated_at_start"] = filters.UpdatedAtStart
-	}
-	if filters.UpdatedAtEnd != "" {
-		filtersMap["updated_at_end"] = filters.UpdatedAtEnd
-	}
-
-	exportArgsStruct := jobs.ExportGenericArgs{
-		ExportArgs: jobs.ExportArgs{
-			ExportID: exportRecord.ID,
-			AdminID:  adminID,
-			Filters:  filtersMap,
-			Type:     "articles",
-			Language: utils.GetCurrentLanguage(ctx),
-			Timezone: helpers.GetCurrentTimezone(ctx),
-		},
-		Table:      "articles",
-		FilePrefix: "articles",
-		HeaderKeys: []string{
-			"admin_id",
-			"title",
-			"content",
-			"status",
-			"created_at",
-			"updated_at",
-		},
-		Columns: []string{
-			"admin_id",
-			"title",
-			"content",
-			"status",
-			"created_at",
-			"updated_at",
-		},
-		SearchTypes: map[string]string{
-			"admin_id":   "=",
-			"title":      "like",
-			"content":    "like",
-			"status":     "=",
-			"created_at": "=",
-			"updated_at": "=",
-		},
+	exportArgsStruct := jobs.ExportArgs{
+		ExportID: exportRecord.ID,
+		AdminID:  adminID,
+		Filters:  filtersMap,
+		Type:     "articles",
+		Language: utils.GetCurrentLanguage(ctx),
+		Timezone: helpers.GetCurrentTimezone(ctx),
 	}
 
 	exportArgsJSON, err := json.Marshal(exportArgsStruct)
@@ -271,7 +198,7 @@ func (c *ArticleController) Export(ctx http.Context) http.Response {
 		},
 	}
 
-	if err := facades.Queue().Job(&jobs.ExportGeneric{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
+	if err := facades.Queue().Job(&jobs.ExportArticles{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
 		lock.Release()
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
@@ -279,10 +206,8 @@ func (c *ArticleController) Export(ctx http.Context) http.Response {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	lock.Release()
-	exportID := exportRecord.ID
-
-	return response.Success(ctx, "export_task_submitted", http.Json{
-		"export_id": exportID,
+	return response.Success(ctx, http.Json{
+		"export_id": exportRecord.ID,
+		"message":   trans.Get(ctx, "queued"),
 	})
 }

@@ -544,7 +544,7 @@ const handleExport = async () => {
   } catch (error) {
     logger.error('Export users error:', error)
     if (error.response?.status === 429) {
-      ElMessage.warning(t('common.export_in_progress'))
+      ElMessage.warning(t('common.already_queued'))
     } else if (!error.__handled) {
       ErrorHandler.handle(error, { silent: true })
     }

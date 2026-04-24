@@ -37,28 +37,28 @@ func (r *AdminCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *AdminCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"username.required": trans.Get(ctx, "validation_username_required"),
-		"username.min_len":  trans.Get(ctx, "validation_username_min"),
-		"username.max_len":  trans.Get(ctx, "validation_username_max"),
-		"password.required": trans.Get(ctx, "validation_password_required"),
-		"password.min_len":  trans.Get(ctx, "validation_password_min"),
-		"password.max_len":  trans.Get(ctx, "validation_password_max"),
-		"nickname.max_len":  trans.Get(ctx, "validation_nickname_max"),
-		"email.email":       trans.Get(ctx, "validation_email_format"),
-		"email.max_len":     trans.Get(ctx, "validation_email_max"),
-		"phone.max_len":     trans.Get(ctx, "validation_phone_max"),
-		"status.in":         trans.Get(ctx, "validation_status_in"),
+		"username.required": trans.Get(ctx, "validation.required.username"),
+		"username.min_len":  trans.GetReplace(ctx, "validation.min.username", map[string]string{"min": "3"}),
+		"username.max_len":  trans.GetReplace(ctx, "validation.max.username", map[string]string{"max": "50"}),
+		"password.required": trans.Get(ctx, "validation.required.password"),
+		"password.min_len":  trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
+		"password.max_len":  trans.GetReplace(ctx, "validation.max.password", map[string]string{"max": "50"}),
+		"nickname.max_len":  trans.GetReplace(ctx, "validation.max.nickname", map[string]string{"max": "50"}),
+		"email.email":       trans.Get(ctx, "validation.email"),
+		"email.max_len":     trans.GetReplace(ctx, "validation.max.email", map[string]string{"max": "100"}),
+		"phone.max_len":     trans.GetReplace(ctx, "validation.max.phone", map[string]string{"max": "20"}),
+		"status.in":         trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 
 func (r *AdminCreate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"username": trans.Get(ctx, "validation_username"),
-		"password": trans.Get(ctx, "validation_password"),
-		"nickname": trans.Get(ctx, "validation_nickname"),
-		"email":    trans.Get(ctx, "validation_email"),
-		"phone":    trans.Get(ctx, "validation_phone"),
-		"status":   trans.Get(ctx, "validation_status"),
+		"username": trans.Get(ctx, "validation.attributes.username"),
+		"password": trans.Get(ctx, "validation.attributes.password"),
+		"nickname": trans.Get(ctx, "validation.attributes.nickname"),
+		"email":    trans.Get(ctx, "validation.attributes.email"),
+		"phone":    trans.Get(ctx, "validation.attributes.phone"),
+		"status":   trans.Get(ctx, "validation.attributes.status"),
 	}
 }
 

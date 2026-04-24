@@ -38,30 +38,29 @@ func (r *DepartmentUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *DepartmentUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.max_len":   trans.Get(ctx, "validation_name_max"),
-		"code.max_len":   trans.Get(ctx, "validation_code_max"),
-		"leader.max_len": trans.Get(ctx, "validation_leader_max"),
-		"phone.max_len":  trans.Get(ctx, "validation_phone_max"),
-		"email.email":    trans.Get(ctx, "validation_email_format"),
-		"email.max_len":  trans.Get(ctx, "validation_email_max"),
-		"status.in":      trans.Get(ctx, "validation_status_in"),
-		"remark.max_len": trans.Get(ctx, "validation_remark_max"),
+		"name.max_len":   trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"code.max_len":   trans.GetReplace(ctx, "validation.max.code", map[string]string{"max": "50"}),
+		"leader.max_len": trans.GetReplace(ctx, "validation.max.leader", map[string]string{"max": "50"}),
+		"phone.max_len":  trans.GetReplace(ctx, "validation.max.phone", map[string]string{"max": "20"}),
+		"email.email":    trans.Get(ctx, "validation.email"),
+		"email.max_len":  trans.GetReplace(ctx, "validation.max.email", map[string]string{"max": "100"}),
+		"status.in":      trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"remark.max_len": trans.GetReplace(ctx, "validation.max.remark", map[string]string{"max": "500"}),
 	}
 }
 
 func (r *DepartmentUpdate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":   trans.Get(ctx, "validation_name"),
-		"code":   trans.Get(ctx, "validation_code"),
-		"leader": trans.Get(ctx, "validation_leader"),
-		"phone":  trans.Get(ctx, "validation_phone"),
-		"email":  trans.Get(ctx, "validation_email"),
-		"status": trans.Get(ctx, "validation_status"),
-		"remark": trans.Get(ctx, "validation_remark"),
+		"name":   trans.Get(ctx, "validation.attributes.name"),
+		"code":   trans.Get(ctx, "validation.attributes.code"),
+		"leader": trans.Get(ctx, "validation.attributes.leader"),
+		"phone":  trans.Get(ctx, "validation.attributes.phone"),
+		"email":  trans.Get(ctx, "validation.attributes.email"),
+		"status": trans.Get(ctx, "validation.attributes.status"),
+		"remark": trans.Get(ctx, "validation.attributes.remark"),
 	}
 }
 
 func (r *DepartmentUpdate) PrepareForValidation(ctx http.Context, data validation.Data) error {
 	return helpers.PrepareNumericFieldForValidation(data, "status")
 }
-

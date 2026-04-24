@@ -33,7 +33,7 @@ func (r *<<.RequestUpdateName>>) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 <<- range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-		"<<.JsonName>>.required": trans.Get(ctx, "validation_<<.Name>>_required"),
+		"<<.JsonName>>.required": trans.Get(ctx, "validation.required.<<.Name>>"),
 <<- end>>
 <<- end>>
 	}
@@ -43,7 +43,7 @@ func (r *<<.RequestUpdateName>>) Attributes(ctx http.Context) map[string]string 
 	return map[string]string{
 <<- range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-		"<<.JsonName>>": trans.Get(ctx, "validation_<<.Name>>"),
+		"<<.JsonName>>": trans.Get(ctx, "validation.attributes.<<.Name>>"),
 <<- end>>
 <<- end>>
 	}

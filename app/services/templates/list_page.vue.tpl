@@ -130,9 +130,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
-<<if .HasExport>>
-import { useRouter } from 'vue-router'
-<<end>>
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
@@ -164,9 +161,6 @@ const PlusIcon = markRaw(Plus)
 const { getButtonState } = usePermission()
 
 const { t } = useI18n()
-<<if .HasExport>>
-const router = useRouter()
-<<end>>
 const tableRef = ref(null)
 const formRef = ref(null)
 <<if .HasExport>>
@@ -513,6 +507,22 @@ const handleAction = (command, row) => {
 }
 
 <<if .HasExport>>
+const resolveExportFileUrl = (fileUrl) => {
+  if (!fileUrl) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl
+  }
+
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || ''
+  if (apiBaseURL && fileUrl.startsWith('/')) {
+    return `${apiBaseURL.replace(/\/+$/, '')}${fileUrl}`
+  }
+
+  return fileUrl
+}
+
 const handleExport = async () => {
   if (isExporting.value) {
     return
@@ -521,13 +531,19 @@ const handleExport = async () => {
   isExporting.value = true
 
   try {
-    await export<<.ModelName>>(searchForm)
-    ElMessage.success(t('common.export_task_submitted'))
-    router.push('/exports')
+    const res = await export<<.ModelName>>(searchForm)
+    const payload = res?.data || {}
+    const fileUrl = resolveExportFileUrl(payload.file_url || payload.FileURL)
+
+    ElMessage.success(res?.message || t('common.success'))
+
+    if (fileUrl) {
+      window.open(fileUrl, '_blank', 'noopener,noreferrer')
+    }
   } catch (error) {
     logger.error('Export error:', error)
     if (error.response?.status === 429) {
-      ElMessage.warning(t('common.export_in_progress'))
+      ElMessage.warning(t('common.already_queued'))
     } else if (!error.__handled) {
       ErrorHandler.handle(error, { silent: true })
     }

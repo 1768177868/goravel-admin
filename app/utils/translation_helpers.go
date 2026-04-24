@@ -55,7 +55,7 @@ func loadLangMessages(langCode string) (map[string]any, bool) {
 // 这是一个通用函数，可以被任何需要翻译表头的 job 使用
 //
 // 参数:
-//   - headerKeys: 需要翻译的键列表（如 ["export_header_id", "export_header_order_no"]）
+//   - headerKeys: 需要翻译的键列表（如 ["id", "order_no"]，对应 lang messages 下的键名）
 //   - lang: 语言代码（如 "cn" 或 "en"）
 //
 // 返回:
@@ -63,7 +63,7 @@ func loadLangMessages(langCode string) (map[string]any, bool) {
 //
 // 示例:
 //
-//	headerKeys := []string{"export_header_id", "export_header_order_no"}
+//	headerKeys := []string{"id", "order_no"}
 //	headers := utils.TranslateHeaders(headerKeys, "cn")
 func TranslateHeaders(headerKeys []string, lang string) []string {
 	headers := make([]string, len(headerKeys))
@@ -95,7 +95,7 @@ func TranslateHeaders(headerKeys []string, lang string) []string {
 // 这是一个通用函数，可以被任何需要翻译单个键的地方使用（包括Job等无http.Context的场景）
 //
 // 参数:
-//   - key: 需要翻译的键（如 "export_order_status_pending"）
+//   - key: 需要翻译的键（如 "order_status_pending"）
 //   - lang: 语言代码（如 "cn" 或 "en"）
 //   - defaultValue: 如果翻译失败时返回的默认值（通常为原始键）
 //
@@ -104,7 +104,7 @@ func TranslateHeaders(headerKeys []string, lang string) []string {
 //
 // 示例:
 //
-//	statusText := utils.TranslateKey("export_order_status_pending", "cn", "pending")
+//	statusText := utils.TranslateKey("order_status_pending", "cn", "pending")
 func TranslateKey(key, lang, defaultValue string) string {
 	// 加载语言文件的 messages 对象（支持文件系统和embed FS）
 	messages, ok := loadLangMessages(lang)

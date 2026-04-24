@@ -29,18 +29,18 @@ func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *ArticleUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"admin_id.required": trans.Get(ctx, "validation_admin_id_required"),
-		"title.required":    trans.Get(ctx, "validation_title_required"),
-		"content.required":  trans.Get(ctx, "validation_content_required"),
-		"status.required":   trans.Get(ctx, "validation_status_required"),
+		"admin_id.required": trans.Get(ctx, "validation.required.admin_id"),
+		"title.required":    trans.Get(ctx, "validation.required.title"),
+		"content.required":  trans.Get(ctx, "validation.required.content"),
+		"status.required":   trans.Get(ctx, "validation.required.status"),
 	}
 }
 
 func (r *ArticleUpdate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"admin_id": trans.Get(ctx, "validation_admin_id"),
-		"title":    trans.Get(ctx, "validation_title"),
-		"content":  trans.Get(ctx, "validation_content"),
-		"status":   trans.Get(ctx, "validation_status"),
+		"admin_id": trans.Get(ctx, "validation.attributes.admin_id"),
+		"title":    trans.Get(ctx, "validation.attributes.title"),
+		"content":  trans.Get(ctx, "validation.attributes.content"),
+		"status":   trans.Get(ctx, "validation.attributes.status"),
 	}
 }

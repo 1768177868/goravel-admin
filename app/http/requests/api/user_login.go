@@ -25,8 +25,8 @@ func (r *UserLogin) Rules(ctx http.Context) map[string]string {
 
 func (r *UserLogin) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"username.required": trans.Get(ctx, "validation_username_required"),
-		"password.required": trans.Get(ctx, "validation_password_required"),
+		"username.required": trans.Get(ctx, "validation.required.username"),
+		"password.required": trans.Get(ctx, "validation.required.password"),
 	}
 }
 
@@ -40,4 +40,3 @@ func (r *UserLogin) Attributes(ctx http.Context) map[string]string {
 func (r *UserLogin) PrepareForValidation(ctx http.Context, data validation.Data) error {
 	return nil
 }
-

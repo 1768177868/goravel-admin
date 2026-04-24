@@ -57,19 +57,19 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 
 	// 准备表头（翻译键，需要翻译）
 	headerKeys := []string{
-		"export_header_id",
-		"export_header_order_no",
-		"export_header_user_id",
-		"export_header_amount",
-		"export_header_status",
-		"export_header_item_index",
-		"export_header_product_id",
-		"export_header_product_name",
-		"export_header_price",
-		"export_header_quantity",
-		"export_header_subtotal",
-		"export_header_remark",
-		"export_header_created_at",
+		"id",
+		"order_no",
+		"user_id",
+		"amount",
+		"status",
+		"item_index",
+		"product_id",
+		"product_name",
+		"price",
+		"quantity",
+		"subtotal",
+		"remark",
+		"created_at",
 	}
 
 	// 翻译表头
