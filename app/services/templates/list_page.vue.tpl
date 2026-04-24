@@ -524,12 +524,12 @@ const handleExport = async () => {
       response?.export_id ||
       response?.data?.id
 
-    if (!exportId) {
-      ElMessage.warning(t('common.operation_success'))
-    } else {
+    if (exportId) {
       ElMessage.success(t('export.task_submitted'))
-      router.push('/exports')
+    } else {
+      ElMessage.success(t('common.operation_success'))
     }
+    router.push('/exports')
   } catch (error) {
     logger.error('Export error:', error)
     if (error.response?.status === 429) {

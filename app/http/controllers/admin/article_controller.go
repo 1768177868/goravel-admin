@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"encoding/json"
-
 	"fmt"
 	"time"
 
@@ -10,13 +8,9 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 
-	"github.com/goravel/framework/contracts/queue"
-
 	"github.com/goravel/framework/facades"
 
-	"goravel/app/jobs"
-	"goravel/app/models"
-	"goravel/app/utils"
+	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -156,55 +150,51 @@ func (c *ArticleController) Export(ctx http.Context) http.Response {
 	}
 
 	filters := c.buildArticleFilters(ctx)
-	filtersMap := utils.ExportFiltersToMap(filters)
-	lang := utils.GetCurrentLanguage(ctx)
-	timezone := helpers.GetCurrentTimezone(ctx)
 
-	exportRecord := models.Export{
-		AdminID: adminID,
-		Type:    "articles",
-		Status:  models.ExportStatusProcessing,
-		Disk:    "local",
-		Path:    "",
-	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	exportArgsStruct := jobs.ExportArgs{
-		ExportID: exportRecord.ID,
-		AdminID:  adminID,
-		Filters:  filtersMap,
-		Type:     "articles",
-		Language: lang,
-		Timezone: timezone,
-	}
-
-	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	list, err := c.ArticleService.GetAllArticleForExport(filters)
 	if err != nil {
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
+		return response.ErrorWithLog(ctx, "article", err, map[string]any{
+			"action":   "export_articles",
+			"admin_id": adminID,
+		})
 	}
 
-	exportArgs := []queue.Arg{
-		{
-			Type:  "string",
-			Value: string(exportArgsJSON),
-		},
+	headers := []string{
+		"admin_id",
+		"title",
+		"content",
+		"status",
+		"created_at",
+		"updated_at",
 	}
 
-	if err := facades.Queue().Job(&jobs.ExportArticles{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
-		lock.Release()
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
+	timezone := helpers.GetCurrentTimezone(ctx)
+	var data [][]string
+	for _, row := range list {
+		r := []string{
+			func() string {
+				return cast.ToString(row.AdminId)
+			}(),
+			func() string {
+				return row.Title
+			}(),
+			func() string {
+				return row.Content
+			}(),
+			func() string {
+				return cast.ToString(row.Status)
+			}(),
+			func() string {
+				return helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone)
+			}(),
+			func() string {
+				return helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone)
+			}(),
+		}
+		data = append(data, r)
 	}
 
-	return response.Success(ctx, http.Json{
-		"export_id": exportRecord.ID,
-		"message":   "queued",
-	})
+	ctx.WithValue("export_type", "articles")
+
+	return response.Export(ctx, "exported", headers, data, "articles")
 }
