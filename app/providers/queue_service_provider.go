@@ -30,10 +30,12 @@ func (receiver *QueueServiceProvider) Jobs() []queue.Job {
 		&jobs.SendEmail{},
 		&jobs.ProcessImage{},
 		&jobs.GenerateReport{},
+		// 导出任务
 		&jobs.ExportOrders{},
 		&jobs.ExportPayments{},
 		&jobs.ExportUsers{},
 		&jobs.ExportArticles{},
+		// 同步任务
 		&queuejobs.SyncOrderToElasticsearch{},
 	}
 }

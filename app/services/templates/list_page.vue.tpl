@@ -129,6 +129,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -161,6 +162,7 @@ const PlusIcon = markRaw(Plus)
 const { getButtonState } = usePermission()
 
 const { t } = useI18n()
+const router = useRouter()
 const tableRef = ref(null)
 const formRef = ref(null)
 <<if .HasExport>>
@@ -507,22 +509,6 @@ const handleAction = (command, row) => {
 }
 
 <<if .HasExport>>
-const resolveExportFileUrl = (fileUrl) => {
-  if (!fileUrl) {
-    return ''
-  }
-  if (/^https?:\/\//i.test(fileUrl)) {
-    return fileUrl
-  }
-
-  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || ''
-  if (apiBaseURL && fileUrl.startsWith('/')) {
-    return `${apiBaseURL.replace(/\/+$/, '')}${fileUrl}`
-  }
-
-  return fileUrl
-}
-
 const handleExport = async () => {
   if (isExporting.value) {
     return
@@ -531,14 +517,18 @@ const handleExport = async () => {
   isExporting.value = true
 
   try {
-    const res = await export<<.ModelName>>(searchForm)
-    const payload = res?.data || {}
-    const fileUrl = resolveExportFileUrl(payload.file_url || payload.FileURL)
+    const response = await export<<.ModelName>>(searchForm)
+    const exportId =
+      response?.data?.export_id ||
+      response?.data?.data?.export_id ||
+      response?.export_id ||
+      response?.data?.id
 
-    ElMessage.success(res?.message || t('common.success'))
-
-    if (fileUrl) {
-      window.open(fileUrl, '_blank', 'noopener,noreferrer')
+    if (!exportId) {
+      ElMessage.warning(t('common.operation_success'))
+    } else {
+      ElMessage.success(t('export.task_submitted'))
+      router.push('/exports')
     }
   } catch (error) {
     logger.error('Export error:', error)

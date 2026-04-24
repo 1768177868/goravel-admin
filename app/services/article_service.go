@@ -70,10 +70,10 @@ func BuildArticleQuery(filters ArticleFilters) orm.Query {
 		query = query.Where("admin_id = ?", filters.AdminId)
 	}
 	if filters.Title != "" {
-		query = query.Where("title = ?", filters.Title)
+		query = query.Where("title LIKE ?", "%"+filters.Title+"%")
 	}
 	if filters.Content != "" {
-		query = query.Where("content = ?", filters.Content)
+		query = query.Where("content LIKE ?", "%"+filters.Content+"%")
 	}
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)

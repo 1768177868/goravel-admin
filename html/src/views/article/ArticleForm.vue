@@ -44,6 +44,7 @@ import FormField from "../../components/Form/FormField.vue";
 
 import WangEditor from "../../components/WangEditor.vue";
 
+// Relation field: admin_id -> admins
 import {
   createArticle,
   updateArticle,
@@ -70,12 +71,12 @@ const formRef = ref(null);
 const submitting = ref(false);
 const loading = ref(false);
 
-// 定义表单初始值的复用函数
+// Reusable function to build initial form values.
 const getFormInitialValue = () => ({
   admin_id: null,
   title: "",
   content: "",
-  status: null,
+  status: "",
 });
 
 const dialogVisible = computed({
@@ -95,23 +96,20 @@ const formRules = computed(() => {
   rules["admin_id"] = [
     { required: true, message: t("admin_id_required"), trigger: "blur" },
   ];
-  rules["content"] = [
-    { required: true, message: t("content_required"), trigger: "blur" },
-  ];
   rules["status"] = [
     { required: true, message: t("status_required"), trigger: "blur" },
   ];
   return rules;
 });
 
-// 配置式表单字段
+// Schema-driven form fields.
 const formFields = computed(() => {
   const fields = [];
 
   fields.push({
     prop: "admin_id",
     label: t("admin_id"),
-    type: "input",
+    type: "select",
     disabled: loading.value,
   });
   fields.push({
@@ -123,10 +121,8 @@ const formFields = computed(() => {
   fields.push({
     prop: "status",
     label: t("status"),
-    type: "select",
+    type: "input",
     disabled: loading.value,
-    apiUrl: "/options?type=dictionary&dictionary_type=status",
-    clearable: true,
   });
   return fields;
 });
@@ -167,7 +163,6 @@ const loadData = async () => {
       const mapped = mapFields(data, getFormInitialValue());
       const normalizeRules = {};
 
-      normalizeRules["status"] = "string";
       const normalized = normalizeFormData(mapped, normalizeRules);
       Object.assign(formData, normalized);
     }

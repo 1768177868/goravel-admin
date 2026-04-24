@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -242,11 +243,15 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 
 	// 翻译表头
 	headers := utils.TranslateHeaders(e.config.HeaderKeys, lang)
+	exportFormat := strings.ToLower(strings.TrimSpace(utils.GetConfigValue("storage", "export_format", "csv")))
+	if exportFormat != "xlsx" && exportFormat != "csv" {
+		exportFormat = "csv"
+	}
 
 	// 生成文件名和路径
 	exportService := services.NewExportService(nil)
 	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("%s_%d_%s.csv", e.config.FilePrefix, args.ExportID, timestamp)
+	filename := fmt.Sprintf("%s_%d_%s.%s", e.config.FilePrefix, args.ExportID, timestamp, exportFormat)
 	filePath := path.Join("exports", filename)
 
 	// 预写入文件信息
@@ -267,24 +272,46 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 		return !exists
 	}
 
-	// 执行流式导出
-	filePath, err := exportService.ExportToCSVStreamAtWithProgress(headers, filePath, func(w *csv.Writer) error {
-		return e.config.WriteData(w, args.Filters, lang, shouldStop)
-	}, func(writtenBytes int64) {
-		if shouldStop() {
-			return
+	var filePathResult string
+	var err error
+	if exportFormat == "xlsx" {
+		var csvBuf bytes.Buffer
+		cw := csv.NewWriter(&csvBuf)
+		if err := e.config.WriteData(cw, args.Filters, lang, shouldStop); err != nil {
+			return err
 		}
-		if time.Since(lastUpdateAt) < 3*time.Second {
-			return
+		cw.Flush()
+		if err := cw.Error(); err != nil {
+			return err
 		}
-		lastUpdateAt = time.Now()
-		result, _ := facades.Orm().Query().Model(&models.Export{}).Where("id", args.ExportID).Update(map[string]any{
-			"size": writtenBytes,
-		})
-		if result == nil || result.RowsAffected == 0 {
-			lastExistCheckAt = time.Now().Add(-10 * time.Second)
+
+		cr := csv.NewReader(strings.NewReader(csvBuf.String()))
+		rows, err := cr.ReadAll()
+		if err != nil {
+			return err
 		}
-	}, true)
+
+		filePathResult, err = exportService.ExportToXLSXAt(headers, rows, filePath, true)
+	} else {
+		// 执行流式导出
+		filePathResult, err = exportService.ExportToCSVStreamAtWithProgress(headers, filePath, func(w *csv.Writer) error {
+			return e.config.WriteData(w, args.Filters, lang, shouldStop)
+		}, func(writtenBytes int64) {
+			if shouldStop() {
+				return
+			}
+			if time.Since(lastUpdateAt) < 3*time.Second {
+				return
+			}
+			lastUpdateAt = time.Now()
+			result, _ := facades.Orm().Query().Model(&models.Export{}).Where("id", args.ExportID).Update(map[string]any{
+				"size": writtenBytes,
+			})
+			if result == nil || result.RowsAffected == 0 {
+				lastExistCheckAt = time.Now().Add(-10 * time.Second)
+			}
+		}, true)
+	}
 
 	if err != nil {
 		if shouldStop() {
@@ -299,7 +326,7 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 	}
 
 	// 更新导出记录为成功
-	return e.finalizeExport(args.ExportID, filePath)
+	return e.finalizeExport(args.ExportID, filePathResult)
 }
 
 // preWriteFileInfo 预写入文件信息
@@ -316,7 +343,11 @@ func (e *BaseExporter) preWriteFileInfo(exportID uint, filePath, filename string
 			changed = true
 		}
 		if exportRecord.Extension == "" {
-			exportRecord.Extension = "csv"
+			if ext := path.Ext(filePath); ext != "" {
+				exportRecord.Extension = strings.TrimPrefix(ext, ".")
+			} else {
+				exportRecord.Extension = "csv"
+			}
 			changed = true
 		}
 		if changed {

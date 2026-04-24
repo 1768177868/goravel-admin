@@ -59,9 +59,16 @@
                 <el-checkbox label="has_create">{{ $t('code_generator.has_create') }}</el-checkbox>
                 <el-checkbox label="has_edit">{{ $t('code_generator.has_edit') }}</el-checkbox>
                 <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
-                <el-checkbox label="has_export">{{ $t('code_generator.has_export') }}</el-checkbox>
                 <el-checkbox label="enable_batch_actions">{{ $t('code_generator.enable_batch_actions') }}</el-checkbox>
               </el-checkbox-group>
+            </el-form-item>
+
+            <el-form-item :label="$t('code_generator.export_mode')">
+              <el-radio-group v-model="form.export_mode">
+                <el-radio label="none">{{ $t('code_generator.export_mode_none') }}</el-radio>
+                <el-radio label="sync">{{ $t('code_generator.export_mode_sync') }}</el-radio>
+                <el-radio label="async">{{ $t('code_generator.export_mode_async') }}</el-radio>
+              </el-radio-group>
             </el-form-item>
 
             <el-button type="primary" @click="handleAddField">
@@ -433,6 +440,7 @@ const form = reactive({
   table_name: '',
   files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page', 'form_page'],
   options: ['has_create', 'has_edit', 'has_delete'],
+  export_mode: 'none',
   fields: [
     {
       name: 'name',
@@ -485,10 +493,12 @@ const rules = {
 }
 
 const buildGeneratorOptions = () => ({
+  // Keep backward-compatible option keys for backend generator service.
+  has_export: form.export_mode !== 'none',
+  export_async: form.export_mode === 'async',
   has_create: form.options.includes('has_create'),
   has_edit: form.options.includes('has_edit'),
   has_delete: form.options.includes('has_delete'),
-  has_export: form.options.includes('has_export'),
   enable_batch_actions: form.options.includes('enable_batch_actions')
 })
 
@@ -498,6 +508,7 @@ const fileTypes = [
   { value: 'service', label: t('code_generator.file_service') },
   { value: 'request_create', label: t('code_generator.file_request_create') },
   { value: 'request_update', label: t('code_generator.file_request_update') },
+  { value: 'export_job', label: t('code_generator.file_export_job') },
   { value: 'api', label: t('code_generator.file_api') },
   { value: 'list_page', label: t('code_generator.file_list_page') },
   { value: 'form_page', label: t('code_generator.file_form_page') }

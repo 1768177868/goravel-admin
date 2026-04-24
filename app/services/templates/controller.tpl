@@ -2,6 +2,9 @@
 
 import (
 <<if .HasExport>>
+<<if .ExportAsync>>
+	"encoding/json"
+<<end>>
 	"fmt"
 	"time"
 <<end>>
@@ -9,8 +12,18 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 <<if .HasExport>>
+<<if .ExportAsync>>
+	"github.com/goravel/framework/contracts/queue"
+<<end>>
 	"github.com/goravel/framework/facades"
+<<if .ExportAsync>>
+	"goravel/app/jobs"
+	"goravel/app/models"
+	"goravel/app/utils"
+<<end>>
+<<if not .ExportAsync>>
 	"github.com/spf13/cast"
+<<end>>
 <<end>>
 
 	apperrors "goravel/app/errors"
@@ -164,6 +177,59 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 	}
 
 	filters := c.build<<.ModelName>>Filters(ctx)
+<<- if .ExportAsync>>
+	filtersMap := utils.ExportFiltersToMap(filters)
+	lang := utils.GetCurrentLanguage(ctx)
+	timezone := helpers.GetCurrentTimezone(ctx)
+
+	exportRecord := models.Export{
+		AdminID: adminID,
+		Type:    "<<.ModuleName>>s",
+		Status:  models.ExportStatusProcessing,
+		Disk:    "local",
+		Path:    "",
+	}
+	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	exportArgsStruct := jobs.ExportArgs{
+		ExportID: exportRecord.ID,
+		AdminID:  adminID,
+		Filters:  filtersMap,
+		Type:     "<<.ModuleName>>s",
+		Language: lang,
+		Timezone: timezone,
+	}
+
+	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	if err != nil {
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	exportArgs := []queue.Arg{
+		{
+			Type:  "string",
+			Value: string(exportArgsJSON),
+		},
+	}
+
+	if err := facades.Queue().Job(&jobs.Export<<.ModelName>>s{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
+		lock.Release()
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	return response.Success(ctx, http.Json{
+		"export_id": exportRecord.ID,
+		"message":   "queued",
+	})
+<<- else>>
 
 	list, err := c.<<.ServiceName>>.GetAll<<.ModelName>>ForExport(filters)
 	if err != nil {
@@ -221,6 +287,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 	ctx.WithValue("export_type", "<<.ModuleName>>s")
 
 	return response.Export(ctx, "exported", headers, data, "<<.ModuleName>>s")
+<<- end>>
 <<- else>>
 	return response.Error(ctx, http.StatusForbidden, "forbidden")
 <<end>>

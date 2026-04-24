@@ -119,6 +119,20 @@ func normalizeGeneratedContent(content string) string {
 	return strings.Join(normalized, "\n")
 }
 
+func hasExportEnabled(options map[string]bool) bool {
+	if options == nil {
+		return false
+	}
+	return options["has_export"]
+}
+
+func isAsyncExportEnabled(options map[string]bool) bool {
+	if !hasExportEnabled(options) {
+		return false
+	}
+	return options["export_async"]
+}
+
 func normalizeFrontendWhitespace(content string) string {
 	content = normalizeGeneratedContent(content)
 
@@ -192,16 +206,18 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 	generators := []struct {
 		fileType string
 		generate func(string, string, []FieldConfig, map[string]bool) (GeneratedFile, error)
+		enabled  func(map[string]bool) bool
 	}{
-		{"model", s.generateModel},
-		{"controller", s.generateController},
-		{"service", s.generateService},
-		{"request_create", s.generateRequestCreate},
-		{"request_update", s.generateRequestUpdate},
-		{"migration", s.generateMigration},
-		{"api", s.generateFrontendAPI},
-		{"list_page", s.generateFrontendListPage},
-		{"form_page", s.generateFrontendFormPage},
+		{"model", s.generateModel, nil},
+		{"controller", s.generateController, nil},
+		{"service", s.generateService, nil},
+		{"request_create", s.generateRequestCreate, nil},
+		{"request_update", s.generateRequestUpdate, nil},
+		{"migration", s.generateMigration, nil},
+		{"export_job", s.generateExportJob, isAsyncExportEnabled},
+		{"api", s.generateFrontendAPI, nil},
+		{"list_page", s.generateFrontendListPage, nil},
+		{"form_page", s.generateFrontendFormPage, nil},
 	}
 
 	// Create a map for faster lookup of selected files
@@ -210,11 +226,17 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		for _, f := range selectedFiles {
 			selectedMap[f] = true
 		}
+		if isAsyncExportEnabled(options) {
+			selectedMap["export_job"] = true
+		}
 	}
 
 	for _, gen := range generators {
 		// If selectedFiles is provided, only generate selected files
 		if len(selectedFiles) > 0 && !selectedMap[gen.fileType] {
+			continue
+		}
+		if gen.enabled != nil && !gen.enabled(options) {
 			continue
 		}
 
@@ -802,6 +824,8 @@ func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string) (string, err
 		return "templates/request_update.tpl", nil
 	case "migration":
 		return "templates/migration.tpl", nil
+	case "export_job":
+		return "templates/export_job.tpl", nil
 	case "api":
 		return "templates/api.js.tpl", nil
 	case "list_page":
@@ -821,6 +845,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 	hasEdit := true
 	hasDelete := true
 	hasExport := false
+	exportAsync := false
 	enableBatchActions := false
 
 	if options != nil {
@@ -835,6 +860,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 		}
 		if val, ok := options["has_export"]; ok {
 			hasExport = val
+		}
+		if val, ok := options["export_async"]; ok {
+			exportAsync = val
 		}
 		if val, ok := options["enable_batch_actions"]; ok {
 			enableBatchActions = val
@@ -875,6 +903,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit           bool
 			HasDelete         bool
 			HasExport         bool
+			ExportAsync       bool
 		}{
 			ControllerName:    toPascalCase(moduleName) + "Controller",
 			ServiceName:       toPascalCase(moduleName) + "Service",
@@ -887,6 +916,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit:           hasEdit,
 			HasDelete:         hasDelete,
 			HasExport:         hasExport,
+			ExportAsync:       exportAsync,
 		}
 	case "service":
 		var searchableFields []TemplateFieldConfig
@@ -907,6 +937,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit           bool
 			HasDelete         bool
 			HasExport         bool
+			ExportAsync       bool
 		}{
 			ServiceName:       toPascalCase(moduleName) + "Service",
 			ModelName:         toPascalCase(moduleName),
@@ -919,6 +950,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit:           hasEdit,
 			HasDelete:         hasDelete,
 			HasExport:         hasExport,
+			ExportAsync:       exportAsync,
 		}
 	case "request_create":
 		return struct {
@@ -976,6 +1008,16 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasEdit:     hasEdit,
 			HasDelete:   hasDelete,
 			HasExport:   hasExport,
+		}
+	case "export_job":
+		return struct {
+			ModelName  string
+			ModuleName string
+			ListFields []TemplateFieldConfig
+		}{
+			ModelName:  toPascalCase(moduleName),
+			ModuleName: moduleName,
+			ListFields: templateFields,
 		}
 	case "list_page":
 		var searchableFields []TemplateFieldConfig
@@ -1240,6 +1282,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 	hasEdit := true
 	hasDelete := true
 	hasExport := false
+	exportAsync := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1253,6 +1296,9 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		}
 		if val, ok := options["has_export"]; ok {
 			hasExport = val
+		}
+		if val, ok := options["export_async"]; ok {
+			exportAsync = val
 		}
 	}
 
@@ -1271,6 +1317,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		HasEdit           bool
 		HasDelete         bool
 		HasExport         bool
+		ExportAsync       bool
 	}{
 		ControllerName:    toPascalCase(moduleName) + "Controller",
 		ServiceName:       toPascalCase(moduleName) + "Service",
@@ -1285,6 +1332,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		HasEdit:           hasEdit,
 		HasDelete:         hasDelete,
 		HasExport:         hasExport,
+		ExportAsync:       exportAsync,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1309,6 +1357,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 	hasEdit := true
 	hasDelete := true
 	hasExport := false
+	exportAsync := false
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1322,6 +1371,9 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		}
 		if val, ok := options["has_export"]; ok {
 			hasExport = val
+		}
+		if val, ok := options["export_async"]; ok {
+			exportAsync = val
 		}
 	}
 
@@ -1338,6 +1390,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		HasEdit           bool
 		HasDelete         bool
 		HasExport         bool
+		ExportAsync       bool
 	}{
 		ServiceName:       toPascalCase(moduleName) + "Service",
 		ModelName:         toPascalCase(moduleName),
@@ -1350,6 +1403,7 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		HasEdit:           hasEdit,
 		HasDelete:         hasDelete,
 		HasExport:         hasExport,
+		ExportAsync:       exportAsync,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1359,6 +1413,34 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 
 	return GeneratedFile{
 		Path:    fmt.Sprintf("app/services/%s_service.go", toSnakeCase(moduleName)),
+		Content: content,
+	}, nil
+}
+
+func (s *CodeGeneratorServiceImpl) generateExportJob(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
+	templateContent, err := templates.ReadFile("templates/export_job.tpl")
+	if err != nil {
+		return GeneratedFile{}, fmt.Errorf("failed to read export_job template: %w", err)
+	}
+
+	templateFields := s.convertFieldsToTemplateFields(fields)
+	data := struct {
+		ModelName  string
+		ModuleName string
+		ListFields []TemplateFieldConfig
+	}{
+		ModelName:  toPascalCase(moduleName),
+		ModuleName: moduleName,
+		ListFields: templateFields,
+	}
+
+	content, err := s.executeTemplate(string(templateContent), data)
+	if err != nil {
+		return GeneratedFile{}, err
+	}
+
+	return GeneratedFile{
+		Path:    fmt.Sprintf("app/jobs/export_%ss.go", toSnakeCase(moduleName)),
 		Content: content,
 	}, nil
 }

@@ -77,6 +77,7 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 			"file_disk":    true,
 			"storage_disk": true, // 向后兼容，保留但不推荐使用
 			"export_disk":  true, // 向后兼容
+			"export_format": true,
 		}
 		filteredConfigs := make(map[string]any)
 		for key, value := range configsMap {

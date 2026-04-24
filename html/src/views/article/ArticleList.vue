@@ -94,6 +94,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, markRaw } from "vue";
+import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
@@ -107,6 +108,7 @@ import { usePermission } from "../../composables/usePermission";
 import { useCrud } from "../../composables/useCrud";
 import { buildSearchParams } from "../../utils/buildSearchParams";
 
+import { getStatusOptions } from "../../utils/fieldOptions";
 import {
   getArticleList,
   deleteArticle,
@@ -118,10 +120,11 @@ import ErrorHandler from "../../utils/errorHandler";
 
 const PlusIcon = markRaw(Plus);
 
-// 权限控制
+// Permission checks
 const { getButtonState } = usePermission();
 
 const { t } = useI18n();
+const router = useRouter();
 const tableRef = ref(null);
 const formRef = ref(null);
 
@@ -171,7 +174,7 @@ const buildListParams = (form, baseParams) => {
       delete params[`${fieldName}_end`];
     }
 
-    // 避免将范围字段原始数组直接作为查询参数提交
+    // Avoid submitting raw range arrays as query params directly.
     delete params[fieldName];
   });
 
@@ -232,9 +235,8 @@ const searchFields = computed(() => [
   {
     prop: "status",
     label: t("status"),
-    type: "select",
+    type: "input",
     clearable: true,
-    apiUrl: "/options?type=dictionary&dictionary_type=status",
     width: "200px",
     advanced: false,
   },
@@ -331,7 +333,7 @@ const tableColumns = computed(() => {
 
 const getadminDisplayName = (admin_id) => {
   if (!admin_id) return "-";
-  return admin_id.nickname || admin_id.admin || "-";
+  return admin_id.name || admin_id.admin || "-";
 };
 
 const handleEdit = (row) => {
@@ -389,7 +391,7 @@ const handleBatchDelete = async () => {
   }
 };
 
-// 获取主要操作按钮配置
+// Get primary action button config.
 const getPrimaryActions = (row) => {
   return [
     {
@@ -409,12 +411,12 @@ const getPrimaryActions = (row) => {
   ];
 };
 
-// 获取更多操作按钮配置（可根据需要扩展）
+// Get secondary action button config (extend when needed).
 const getMoreActions = (row) => {
   return [];
 };
 
-// 处理操作事件
+// Handle action events.
 const handleAction = (command, row) => {
   switch (command) {
     case "edit":
@@ -426,22 +428,6 @@ const handleAction = (command, row) => {
   }
 };
 
-const resolveExportFileUrl = (fileUrl) => {
-  if (!fileUrl) {
-    return "";
-  }
-  if (/^https?:\/\//i.test(fileUrl)) {
-    return fileUrl;
-  }
-
-  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "";
-  if (apiBaseURL && fileUrl.startsWith("/")) {
-    return `${apiBaseURL.replace(/\/+$/, "")}${fileUrl}`;
-  }
-
-  return fileUrl;
-};
-
 const handleExport = async () => {
   if (isExporting.value) {
     return;
@@ -450,14 +436,18 @@ const handleExport = async () => {
   isExporting.value = true;
 
   try {
-    const res = await exportArticle(searchForm);
-    const payload = res?.data || {};
-    const fileUrl = resolveExportFileUrl(payload.file_url || payload.FileURL);
+    const response = await exportArticle(searchForm);
+    const exportId =
+      response?.data?.export_id ||
+      response?.data?.data?.export_id ||
+      response?.export_id ||
+      response?.data?.id;
 
-    ElMessage.success(res?.message || t("common.success"));
-
-    if (fileUrl) {
-      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    if (!exportId) {
+      ElMessage.warning(t("common.operation_success"));
+    } else {
+      ElMessage.success(t("export.task_submitted"));
+      router.push("/exports");
     }
   } catch (error) {
     logger.error("Export error:", error);

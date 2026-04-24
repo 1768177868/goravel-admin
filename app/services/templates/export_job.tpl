@@ -13,23 +13,23 @@ import (
 	"goravel/app/utils"
 )
 
-// ExportArticlesArgs export task args alias.
-type ExportArticlesArgs = ExportArgs
+// Export<<.ModelName>>sArgs export task args alias.
+type Export<<.ModelName>>sArgs = ExportArgs
 
-// ExportArticles exports Article records asynchronously.
-type ExportArticles struct{}
+// Export<<.ModelName>>s exports <<.ModelName>> records asynchronously.
+type Export<<.ModelName>>s struct{}
 
-func (r *ExportArticles) Signature() string {
-	return "export_articles"
+func (r *Export<<.ModelName>>s) Signature() string {
+	return "export_<<.ModuleName>>s"
 }
 
-func (r *ExportArticles) Handle(args ...any) (retErr error) {
+func (r *Export<<.ModelName>>s) Handle(args ...any) (retErr error) {
 	var exportID uint
 
 	defer func() {
 		if rec := recover(); rec != nil {
 			errorMsg := fmt.Sprintf("panic: %v", rec)
-			facades.Log().Errorf("ExportArticles Job panic: %v", rec)
+			facades.Log().Errorf("Export<<.ModelName>>s Job panic: %v", rec)
 			MarkExportFailed(exportID, errorMsg)
 			retErr = fmt.Errorf("%s", errorMsg)
 		}
@@ -59,14 +59,13 @@ func (r *ExportArticles) Handle(args ...any) (retErr error) {
 	}
 
 	exporter := NewBaseExporter(ExportConfig{
-		FilePrefix: "articles",
+		FilePrefix: "<<.ModuleName>>s",
 		HeaderKeys: []string{
-			"admin_id",
-			"title",
-			"content",
-			"status",
-			"created_at",
-			"updated_at",
+			<<- range .ListFields>>
+			<<- if and .ShowInList (ne .Name "operation")>>
+			"<<.Name>>",
+			<<- end>>
+			<<- end>>
 		},
 		WriteData: r.writeToCSV,
 	})
@@ -83,8 +82,8 @@ func (r *ExportArticles) Handle(args ...any) (retErr error) {
 	return nil
 }
 
-func (r *ExportArticles) writeToCSV(w *csv.Writer, filters map[string]any, lang string, shouldStop func() bool) error {
-	var modelFilters services.ArticleFilters
+func (r *Export<<.ModelName>>s) writeToCSV(w *csv.Writer, filters map[string]any, lang string, shouldStop func() bool) error {
+	var modelFilters services.<<.ModelName>>Filters
 	utils.FillFiltersFromMap(filters, &modelFilters)
 
 	timezone, _ := utils.GetString(filters, "_timezone")
@@ -97,15 +96,15 @@ func (r *ExportArticles) writeToCSV(w *csv.Writer, filters map[string]any, lang 
 			return ErrExportRecordMissing
 		}
 
-		q := services.BuildArticleQuery(modelFilters)
+		q := services.Build<<.ModelName>>Query(modelFilters)
 		if lastID > 0 {
 			q = q.Where("id < ?", lastID)
 		}
 		q = q.Order("id desc").Limit(chunkSize)
 
-		var rows []models.Article
+		var rows []models.<<.ModelName>>
 		if err := q.Get(&rows); err != nil {
-			return fmt.Errorf("query articles for export failed: %w", err)
+			return fmt.Errorf("query <<.ModuleName>>s for export failed: %w", err)
 		}
 		if len(rows) == 0 {
 			break
@@ -113,24 +112,23 @@ func (r *ExportArticles) writeToCSV(w *csv.Writer, filters map[string]any, lang 
 
 		for _, row := range rows {
 			record := []string{
+				<<- range .ListFields>>
+				<<- if and .ShowInList (ne .Name "operation")>>
 				func() string {
-					return cast.ToString(row.AdminId)
-				}(),
-				func() string {
-					return row.Title
-				}(),
-				func() string {
-					return row.Content
-				}(),
-				func() string {
-					return cast.ToString(row.Status)
-				}(),
-				func() string {
+					<<- if eq .Name "created_at">>
 					return FormatCarbonWithTimezone(row.CreatedAt, timezone)
-				}(),
-				func() string {
+					<<- else if eq .Name "updated_at">>
 					return FormatCarbonWithTimezone(row.UpdatedAt, timezone)
+					<<- else if eq .GoType "time.Time">>
+					return FormatTimeWithTimezone(row.<<.FieldName>>, timezone)
+					<<- else if eq .GoType "string">>
+					return row.<<.FieldName>>
+					<<- else>>
+					return cast.ToString(row.<<.FieldName>>)
+					<<- end>>
 				}(),
+				<<- end>>
+				<<- end>>
 			}
 			if err := w.Write(record); err != nil {
 				return fmt.Errorf("write csv row failed: %w", err)

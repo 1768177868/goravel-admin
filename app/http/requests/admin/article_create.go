@@ -21,7 +21,7 @@ func (r *ArticleCreate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 		"admin_id": "required",
 		"title":    "",
-		"content":  "required",
+		"content":  "",
 		"status":   "required",
 	}
 	return rules

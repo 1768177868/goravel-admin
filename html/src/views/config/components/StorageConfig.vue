@@ -41,6 +41,14 @@
             </div>
           </el-form-item>
         </el-col>
+        <el-col :span="12">
+          <el-form-item :label="$t('config.export_format')" prop="export_format">
+            <el-select v-model="formData.export_format" :placeholder="$t('config.export_format_placeholder')">
+              <el-option label="csv" value="csv" />
+              <el-option label="xlsx" value="xlsx" />
+            </el-select>
+          </el-form-item>
+        </el-col>
       </el-row>
 
       <el-form-item>
@@ -65,12 +73,16 @@ const formRef = ref(null)
 const submitting = ref(false)
 
 const formData = reactive({
-  file_disk: 'local'
+  file_disk: 'local',
+  export_format: 'csv'
 })
 
 const formRules = {
   file_disk: [
     { required: true, message: t('config.file_disk_required'), trigger: 'change' }
+  ],
+  export_format: [
+    { required: true, message: t('config.export_format_required'), trigger: 'change' }
   ]
 }
 
@@ -86,6 +98,9 @@ const loadData = async () => {
         // 兼容旧的字段名：export_disk 和 storage_disk
         if (key === 'file_disk' || key === 'export_disk' || key === 'storage_disk') {
           formData.file_disk = value
+        }
+        if (key === 'export_format') {
+          formData.export_format = value || 'csv'
         }
       })
     }
@@ -103,7 +118,8 @@ const handleSubmit = async () => {
       try {
         // 只保存驱动选择，不保存其他配置
         const configs = {
-          file_disk: formData.file_disk
+          file_disk: formData.file_disk,
+          export_format: formData.export_format
         }
 
         await saveConfig('storage', configs)

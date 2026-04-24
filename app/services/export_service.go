@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xuri/excelize/v2"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -40,6 +41,8 @@ type ExportService interface {
 	// skipAutoCreate: 是否跳过自动创建导出记录（用于异步任务）
 	// 返回: 文件路径和错误
 	ExportToCSV(headers []string, data [][]string, filename string, skipAutoCreate ...bool) (string, error)
+	ExportToXLSX(headers []string, data [][]string, filename string, skipAutoCreate ...bool) (string, error)
+	ExportToXLSXAt(headers []string, data [][]string, filePath string, skipAutoCreate ...bool) (string, error)
 
 	// ExportToCSVStream 流式导出到 CSV（只支持 local/public 磁盘，避免百万级导出把内存打爆）
 	// headers: CSV 表头
@@ -96,8 +99,10 @@ func NewExportService(ctx http.Context) ExportService {
 
 	// 文件路径默认使用 exports，不再从配置读取
 	path := "exports"
-	// 文件格式默认使用 csv，不再从配置读取
-	format := "csv"
+	format := strings.ToLower(strings.TrimSpace(utils.GetConfigValue("storage", "export_format", "csv")))
+	if format != "xlsx" && format != "csv" {
+		format = "csv"
+	}
 
 	return &ExportServiceImpl{
 		ctx:    ctx,
@@ -105,6 +110,19 @@ func NewExportService(ctx http.Context) ExportService {
 		path:   path,
 		format: format,
 	}
+}
+
+func (s *ExportServiceImpl) recordExportLogAsync(filePath string, absOrTmpPathForSize string) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
+			}
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.recordExportLogWithContext(ctx, filePath, absOrTmpPathForSize)
+	}()
 }
 
 // ExportToCSVStream 流式导出 CSV（仅 local/public）
@@ -228,17 +246,7 @@ func (s *ExportServiceImpl) ExportToCSVStreamAtWithProgress(headers []string, fi
 		// 记录导出日志到数据库（尽量避免影响主流程，错误仅记日志）
 		shouldSkip := len(skipAutoCreate) > 0 && skipAutoCreate[0]
 		if !shouldSkip {
-			// 复用 ExportToCSV 的异步记录逻辑：这里先简单沿用（不阻塞主流程）
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
-					}
-				}()
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				s.recordExportLogWithContext(ctx, filePath, absPath)
-			}()
+			s.recordExportLogAsync(filePath, absPath)
 		}
 
 		return filePath, nil
@@ -307,16 +315,7 @@ func (s *ExportServiceImpl) ExportToCSVStreamAtWithProgress(headers []string, fi
 
 	shouldSkip := len(skipAutoCreate) > 0 && skipAutoCreate[0]
 	if !shouldSkip {
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					facades.Log().Errorf("ExportService: panic while recording export log: %v", r)
-				}
-			}()
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			s.recordExportLogWithContext(ctx, filePath, tmpPath)
-		}()
+		s.recordExportLogAsync(filePath, tmpPath)
 	}
 
 	return filePath, nil
@@ -461,6 +460,67 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 	return filePath, nil
 }
 
+func (s *ExportServiceImpl) ExportToXLSX(headers []string, data [][]string, filename string, skipAutoCreate ...bool) (string, error) {
+	timestamp := time.Now().Format("20060102_150405")
+	filename = fmt.Sprintf("%s_%s.xlsx", filename, timestamp)
+	filePath := path.Join(s.path, filename)
+	return s.ExportToXLSXAt(headers, data, filePath, skipAutoCreate...)
+}
+
+func (s *ExportServiceImpl) ExportToXLSXAt(headers []string, data [][]string, filePath string, skipAutoCreate ...bool) (string, error) {
+	f := excelize.NewFile()
+	sheet := f.GetSheetName(0)
+
+	rowIdx := 1
+	if len(headers) > 0 {
+		headerValues := make([]any, len(headers))
+		for i, h := range headers {
+			headerValues[i] = h
+		}
+		cell, _ := excelize.CoordinatesToCellName(1, rowIdx)
+		if err := f.SetSheetRow(sheet, cell, &headerValues); err != nil {
+			return "", err
+		}
+		rowIdx++
+	}
+
+	for _, row := range data {
+		values := make([]any, len(row))
+		for i, v := range row {
+			values[i] = v
+		}
+		cell, _ := excelize.CoordinatesToCellName(1, rowIdx)
+		if err := f.SetSheetRow(sheet, cell, &values); err != nil {
+			return "", err
+		}
+		rowIdx++
+	}
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		return "", err
+	}
+
+	storage := facades.Storage().Disk(s.disk)
+	if err := storage.Put(filePath, buf.String()); err != nil {
+		return "", apperrors.ErrSaveFileFailed.WithError(err)
+	}
+
+	shouldSkip := len(skipAutoCreate) > 0 && skipAutoCreate[0]
+	if !shouldSkip {
+		tmp, err := os.CreateTemp(os.TempDir(), "export-*.xlsx")
+		if err == nil {
+			tmpPath := tmp.Name()
+			_, _ = tmp.Write(buf.Bytes())
+			_ = tmp.Close()
+			s.recordExportLogAsync(filePath, tmpPath)
+			defer os.Remove(tmpPath)
+		}
+	}
+
+	return filePath, nil
+}
+
 func (s *ExportServiceImpl) recordExportLog(filePath string, absOrTmpPathForSize string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -488,6 +548,9 @@ func (s *ExportServiceImpl) recordExportLogWithContext(ctx context.Context, file
 	}
 
 	ext := "csv"
+	if dot := strings.LastIndex(filePath, "."); dot != -1 && dot+1 < len(filePath) {
+		ext = strings.ToLower(filePath[dot+1:])
+	}
 	exportType := ""
 	if s.ctx != nil {
 		if typeValue := s.ctx.Value("export_type"); typeValue != nil {
@@ -669,7 +732,7 @@ func (s *ExportServiceImpl) ExportToFile(headers []string, data [][]string, file
 	case "csv":
 		return s.ExportToCSV(headers, data, filename)
 	case "xlsx":
-		return "", apperrors.ErrExcelNotImplemented
+		return s.ExportToXLSX(headers, data, filename)
 	default:
 		return s.ExportToCSV(headers, data, filename)
 	}
