@@ -264,6 +264,13 @@
     "keyword": "keyword",
     "start_time": "Start time",
     "end_time": "End time",
+    "validation_failed": "Validation failed",
+    "processing": "Processing",
+    "success": "Success",
+    "failed": "Failed",
+    "unknown": "Unknown",
+    "forbidden": "Forbidden",
+    "batch_delete_failed": "Batch delete failed",
     "validation": {
       "required": {
         "username": "Username cannot be empty",
@@ -369,13 +376,6 @@
       "email": "Invalid email format",
       "boolean": "Must be a boolean value",
       "min_value": "Must not be less than :min"
-    },
-    "validation_failed": "Validation failed",
-    "processing": "Processing",
-    "success": "Success",
-    "failed": "Failed",
-    "unknown": "Unknown",
-    "forbidden": "Forbidden",
-    "batch_delete_failed": "Batch delete failed"
+    }
   }
 }

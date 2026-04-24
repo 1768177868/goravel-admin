@@ -264,6 +264,13 @@
     "keyword": "关键词",
     "start_time": "开始时间",
     "end_time": "结束时间",
+    "validation_failed": "验证失败",
+    "processing": "处理中",
+    "success": "成功",
+    "failed": "失败",
+    "unknown": "未知",
+    "forbidden": "禁止访问",
+    "batch_delete_failed": "批量删除失败",
     "validation": {
       "required": {
         "username": "用户名不能为空",
@@ -369,13 +376,6 @@
       "email": "邮箱格式不正确",
       "boolean": "必须是布尔值",
       "min_value": "不能小于:min"
-    },
-    "validation_failed": "验证失败",
-    "processing": "处理中",
-    "success": "成功",
-    "failed": "失败",
-    "unknown": "未知",
-    "forbidden": "禁止访问",
-    "batch_delete_failed": "批量删除失败"
+    }
   }
 }
