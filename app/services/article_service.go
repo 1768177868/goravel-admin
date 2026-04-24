@@ -144,6 +144,10 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 }
 
 func (s *ArticleServiceImpl) Delete(id uint) error {
+	if _, err := s.GetByID(id); err != nil {
+		return err
+	}
+
 	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}

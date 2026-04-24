@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -16,6 +18,12 @@ type ArticleController struct {
 
 func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
 	if businessErr, ok := apperrors.GetBusinessError(err); ok {
+		if businessErr.Code == "params_error" || businessErr.Code == "invalid_argument" {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
+		if businessErr.Code == "record_not_found" || strings.HasSuffix(businessErr.Code, "_not_found") {
+			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
+		}
 		return response.Error(ctx, status, businessErr.Code)
 	}
 	return response.Error(ctx, status, err.Error())
