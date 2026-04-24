@@ -156,6 +156,6 @@ func (s *ArticleServiceImpl) Delete(id uint) error {
 
 func (s *ArticleServiceImpl) Export(filters ArticleFilters) error {
 	_ = filters
-	// TODO: implement export business logic (task dispatch / file generation).
+	// Export flow is handled in controller by generic export job dispatch.
 	return nil
 }

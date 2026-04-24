@@ -1262,6 +1262,8 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		ServiceName       string
 		ModelName         string
 		ModuleName        string
+		TableName         string
+		ListFields        []TemplateFieldConfig
 		SearchableFields  []TemplateFieldConfig
 		RequestCreateName string
 		RequestUpdateName string
@@ -1274,6 +1276,8 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		ServiceName:       toPascalCase(moduleName) + "Service",
 		ModelName:         toPascalCase(moduleName),
 		ModuleName:        moduleName,
+		TableName:         tableName,
+		ListFields:        templateFields,
 		SearchableFields:  templateFields,
 		RequestCreateName: toPascalCase(moduleName) + "Create",
 		RequestUpdateName: toPascalCase(moduleName) + "Update",

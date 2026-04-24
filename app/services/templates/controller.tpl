@@ -1,15 +1,30 @@
 package admin
 
 import (
+<<if .HasExport>>
+	"encoding/json"
+	"fmt"
+<<end>>
 	"strings"
 
+<<if .HasExport>>
+	"github.com/goravel/framework/contracts/queue"
+	"github.com/goravel/framework/facades"
+<<end>>
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
+<<if .HasExport>>
+	"goravel/app/jobs"
+	"goravel/app/models"
+<<end>>
 	"goravel/app/services"
+<<if .HasExport>>
+	"goravel/app/utils"
+<<end>>
 )
 
 type <<.ControllerName>> struct {
@@ -153,11 +168,114 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 <<- if .HasExport>>
 	filters := c.build<<.ModelName>>Filters(ctx)
-	if err := c.<<.ServiceName>>.Export(filters); err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	return response.Success(ctx, "export_task_submitted", http.Json{})
+	lockKey := fmt.Sprintf("export:<<.ModuleName>>s:lock:%d", adminID)
+	lock := facades.Cache().Lock(lockKey, 10)
+	if !lock.Get() {
+		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+	}
+
+	disk := utils.GetConfigValue("storage", "file_disk", "")
+	if disk == "" {
+		disk = utils.GetConfigValue("storage", "export_disk", "")
+	}
+	if disk == "" {
+		disk = "local"
+	}
+
+	exportRecord := models.Export{
+		AdminID: adminID,
+		Type:    "<<.ModuleName>>s",
+		Status:  models.ExportStatusProcessing,
+		Disk:    disk,
+		Path:    "",
+	}
+	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+		lock.Release()
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	filtersMap := map[string]any{}
+	<<- range .SearchableFields>>
+	if filters.<<.PascalName>> != "" {
+		filtersMap["<<.Name>>"] = filters.<<.PascalName>>
+	}
+	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+	if filters.<<.PascalName>>Start != "" {
+		filtersMap["<<.Name>>_start"] = filters.<<.PascalName>>Start
+	}
+	if filters.<<.PascalName>>End != "" {
+		filtersMap["<<.Name>>_end"] = filters.<<.PascalName>>End
+	}
+	<<- end>>
+	<<- end>>
+
+	exportArgsStruct := jobs.ExportGenericArgs{
+		ExportArgs: jobs.ExportArgs{
+			ExportID: exportRecord.ID,
+			AdminID:  adminID,
+			Filters:  filtersMap,
+			Type:     "<<.ModuleName>>s",
+			Language: utils.GetCurrentLanguage(ctx),
+			Timezone: helpers.GetCurrentTimezone(ctx),
+		},
+		Table:      "<<.TableName>>",
+		FilePrefix: "<<.ModuleName>>s",
+		HeaderKeys: []string{
+			<<- range .ListFields>>
+			<<- if and .ShowInList (ne .Name "operation")>>
+			"<<.Name>>",
+			<<- end>>
+			<<- end>>
+		},
+		Columns: []string{
+			<<- range .ListFields>>
+			<<- if and .ShowInList (ne .Name "operation")>>
+			"<<.Name>>",
+			<<- end>>
+			<<- end>>
+		},
+		SearchTypes: map[string]string{
+			<<- range .SearchableFields>>
+			"<<.Name>>": "<<.SearchType>>",
+			<<- end>>
+		},
+	}
+
+	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	if err != nil {
+		lock.Release()
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		_ = facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	exportArgs := []queue.Arg{
+		{
+			Type:  "string",
+			Value: string(exportArgsJSON),
+		},
+	}
+
+	if err := facades.Queue().Job(&jobs.ExportGeneric{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
+		lock.Release()
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		_ = facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	lock.Release()
+	exportID := exportRecord.ID
+
+	return response.Success(ctx, "export_task_submitted", http.Json{
+		"export_id": exportID,
+	})
 <<- else>>
 	return response.Error(ctx, http.StatusForbidden, "export_not_allowed")
 <<end>>

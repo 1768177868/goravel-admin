@@ -174,7 +174,7 @@ func (s *<<.ServiceName>>Impl) Delete(id uint) error {
 <<if .HasExport>>
 func (s *<<.ServiceName>>Impl) Export(filters <<.ModelName>>Filters) error {
 	_ = filters
-	// TODO: implement export business logic (task dispatch / file generation).
+	// Export flow is handled in controller by generic export job dispatch.
 	return nil
 }
 <<end>>

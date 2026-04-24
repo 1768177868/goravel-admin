@@ -1,7 +1,13 @@
 package admin
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"strings"
+
+	"github.com/goravel/framework/contracts/queue"
+	"github.com/goravel/framework/facades"
 
 	"github.com/goravel/framework/contracts/http"
 
@@ -9,7 +15,13 @@ import (
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
+
+	"goravel/app/jobs"
+	"goravel/app/models"
+
 	"goravel/app/services"
+
+	"goravel/app/utils"
 )
 
 type ArticleController struct {
@@ -143,9 +155,134 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 // Export 导出Article
 func (c *ArticleController) Export(ctx http.Context) http.Response {
 	filters := c.buildArticleFilters(ctx)
-	if err := c.ArticleService.Export(filters); err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+	adminID, err := helpers.GetAdminIDFromContext(ctx)
+	if err != nil {
+		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	return response.Success(ctx, "export_task_submitted", http.Json{})
+	lockKey := fmt.Sprintf("export:articles:lock:%d", adminID)
+	lock := facades.Cache().Lock(lockKey, 10)
+	if !lock.Get() {
+		return response.Error(ctx, http.StatusTooManyRequests, "export_in_progress")
+	}
+
+	disk := utils.GetConfigValue("storage", "file_disk", "")
+	if disk == "" {
+		disk = utils.GetConfigValue("storage", "export_disk", "")
+	}
+	if disk == "" {
+		disk = "local"
+	}
+
+	exportRecord := models.Export{
+		AdminID: adminID,
+		Type:    "articles",
+		Status:  models.ExportStatusProcessing,
+		Disk:    disk,
+		Path:    "",
+	}
+	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+		lock.Release()
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	filtersMap := map[string]any{}
+	if filters.AdminId != "" {
+		filtersMap["admin_id"] = filters.AdminId
+	}
+	if filters.Title != "" {
+		filtersMap["title"] = filters.Title
+	}
+	if filters.Content != "" {
+		filtersMap["content"] = filters.Content
+	}
+	if filters.Status != "" {
+		filtersMap["status"] = filters.Status
+	}
+	if filters.CreatedAt != "" {
+		filtersMap["created_at"] = filters.CreatedAt
+	}
+	if filters.CreatedAtStart != "" {
+		filtersMap["created_at_start"] = filters.CreatedAtStart
+	}
+	if filters.CreatedAtEnd != "" {
+		filtersMap["created_at_end"] = filters.CreatedAtEnd
+	}
+	if filters.UpdatedAt != "" {
+		filtersMap["updated_at"] = filters.UpdatedAt
+	}
+	if filters.UpdatedAtStart != "" {
+		filtersMap["updated_at_start"] = filters.UpdatedAtStart
+	}
+	if filters.UpdatedAtEnd != "" {
+		filtersMap["updated_at_end"] = filters.UpdatedAtEnd
+	}
+
+	exportArgsStruct := jobs.ExportGenericArgs{
+		ExportArgs: jobs.ExportArgs{
+			ExportID: exportRecord.ID,
+			AdminID:  adminID,
+			Filters:  filtersMap,
+			Type:     "articles",
+			Language: utils.GetCurrentLanguage(ctx),
+			Timezone: helpers.GetCurrentTimezone(ctx),
+		},
+		Table:      "articles",
+		FilePrefix: "articles",
+		HeaderKeys: []string{
+			"admin_id",
+			"title",
+			"content",
+			"status",
+			"created_at",
+			"updated_at",
+		},
+		Columns: []string{
+			"admin_id",
+			"title",
+			"content",
+			"status",
+			"created_at",
+			"updated_at",
+		},
+		SearchTypes: map[string]string{
+			"admin_id":   "=",
+			"title":      "like",
+			"content":    "like",
+			"status":     "=",
+			"created_at": "=",
+			"updated_at": "=",
+		},
+	}
+
+	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	if err != nil {
+		lock.Release()
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		_ = facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	exportArgs := []queue.Arg{
+		{
+			Type:  "string",
+			Value: string(exportArgsJSON),
+		},
+	}
+
+	if err := facades.Queue().Job(&jobs.ExportGeneric{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
+		lock.Release()
+		exportRecord.Status = models.ExportStatusFailed
+		exportRecord.ErrorMsg = err.Error()
+		_ = facades.Orm().Query().Save(&exportRecord)
+		return response.ErrorWithLog(ctx, "export", err)
+	}
+
+	lock.Release()
+	exportID := exportRecord.ID
+
+	return response.Success(ctx, "export_task_submitted", http.Json{
+		"export_id": exportID,
+	})
 }
