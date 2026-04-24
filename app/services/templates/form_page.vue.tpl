@@ -24,13 +24,13 @@
             :width="400"
           />
           <<- else if eq .FormType "file-upload">>
-          <!-- 文件上传组件，请根据实际需求实现 -->
+          <!-- File upload component, implement based on actual requirements. -->
           <el-upload
             v-model="formData.<<.Name>>"
             action="/api/upload/file"
             :show-file-list="false"
           >
-            <el-button type="primary">上传文件</el-button>
+            <el-button type="primary">Upload File</el-button>
           </el-upload>
           <<- else if eq .FormType "editor">>
           <WangEditor
@@ -82,7 +82,7 @@ import ImageUpload from '../../components/ImageUpload.vue'
 <<range .FormFields>>
 <<- if and (eq .FormType "select") (or .Relation .ApiUrl)>>
 <<- if .Relation>>
-// 关联字段: <<.Name>> -> <<.Relation.Table>>
+// Relation field: <<.Name>> -> <<.Relation.Table>>
 <<- end>>
 <<- end>>
 <<- end>>
@@ -112,7 +112,7 @@ const formRef = ref(null)
 const submitting = ref(false)
 const loading = ref(false)
 
-// 定义表单初始值的复用函数
+// Reusable function to build initial form values.
 const getFormInitialValue = () => ({
 <<range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
@@ -146,7 +146,7 @@ const formRules = computed(() => {
   return rules
 })
 
-// 配置式表单字段
+// Schema-driven form fields.
 const formFields = computed(() => {
   const fields = []
 <<range .FormFields>>

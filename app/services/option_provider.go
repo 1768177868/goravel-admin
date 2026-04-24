@@ -12,4 +12,3 @@ type OptionProvider interface {
 	// 可以包含其他额外的数据，如 "list" 等
 	GetOptions(ctx http.Context) (map[string]any, error)
 }
-

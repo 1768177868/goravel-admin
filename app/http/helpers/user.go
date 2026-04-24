@@ -55,4 +55,3 @@ func GetTokenFromHeader(ctx http.Context) string {
 
 	return token
 }
-

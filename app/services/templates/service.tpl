@@ -37,7 +37,7 @@ type <<.ModelName>>Filters struct {
 <<- end>>
 }
 
-// Build<<.ModelName>>FiltersFromHTTP 与列表/导出共用：从 GET query 或 POST body 读取筛选字段
+// Build<<.ModelName>>FiltersFromHTTP is shared by list/export and reads filters from GET query or POST body.
 func Build<<.ModelName>>FiltersFromHTTP(ctx http.Context) <<.ModelName>>Filters {
 	return <<.ModelName>>Filters{
 <<- range .SearchableFields>>
@@ -65,7 +65,7 @@ func (s *<<.ServiceName>>Impl) withRelations(query orm.Query) orm.Query {
 	return query
 }
 
-// Build<<.ModelName>>Query 构建<<.ModelName>>查询（列表与导出共用）
+// Build<<.ModelName>>Query builds the <<.ModelName>> query shared by list/export.
 func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 	query := facades.Orm().Query().Model(&models.<<.ModelName>>{})
 <<- range .SearchableFields>>

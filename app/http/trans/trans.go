@@ -7,17 +7,13 @@ import (
 )
 
 // Get 获取翻译文本（支持多语言）
-// 自动尝试 messages. 前缀的翻译键
-func Get(ctx http.Context, key string) string {
-	return resolve(ctx, key)
-}
-
-// GetReplace 获取翻译并替换占位符（Goravel 约定为 :name，Replace 的键为小写，如 max、min）。
-func GetReplace(ctx http.Context, key string, replace map[string]string) string {
-	if len(replace) == 0 {
-		return resolve(ctx, key)
+// 自动尝试 messages. 前缀的翻译键。
+// 可选 replace 参数用于占位符替换，如 :max/:min。
+func Get(ctx http.Context, key string, replace ...map[string]string) string {
+	if len(replace) > 0 && len(replace[0]) > 0 {
+		return resolve(ctx, key, translation.Option{Replace: replace[0]})
 	}
-	return resolve(ctx, key, translation.Option{Replace: replace})
+	return resolve(ctx, key)
 }
 
 func resolve(ctx http.Context, key string, opts ...translation.Option) string {

@@ -31,11 +31,11 @@ func (r *PositionCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *PositionCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.required":  trans.Get(ctx, "position_name_required"),
-		"name.max_len":   trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
-		"code.max_len":   trans.GetReplace(ctx, "validation.max.code", map[string]string{"max": "50"}),
-		"status.in":      trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"remark.max_len": trans.GetReplace(ctx, "validation.max.remark", map[string]string{"max": "500"}),
+		"name.required":  trans.Get(ctx, "validation.required.name"),
+		"name.max_len":   trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"code.max_len":   trans.Get(ctx, "validation.max.code", map[string]string{"max": "50"}),
+		"status.in":      trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"remark.max_len": trans.Get(ctx, "validation.max.remark", map[string]string{"max": "500"}),
 	}
 }
 

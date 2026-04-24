@@ -23,7 +23,7 @@ func (r *ResetPassword) Rules(ctx http.Context) map[string]string {
 func (r *ResetPassword) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 		"password.required": trans.Get(ctx, "validation.required.password"),
-		"password.min_len":  trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
+		"password.min_len":  trans.Get(ctx, "validation.min.password", map[string]string{"min": "6"}),
 	}
 }
 

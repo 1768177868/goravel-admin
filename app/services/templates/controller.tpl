@@ -1,9 +1,8 @@
-package admin
+﻿package admin
 
 import (
 <<if .HasExport>>
 	"fmt"
-	"strconv"
 	"time"
 <<end>>
 	"strings"
@@ -59,7 +58,7 @@ func New<<.ControllerName>>() *<<.ControllerName>> {
 	}
 }
 
-// Index <<.ModelName>>列表
+// Index lists <<.ModelName>> records.
 func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
@@ -79,7 +78,7 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 	})
 }
 
-// Show <<.ModelName>>详情
+// Show returns <<.ModelName>> details.
 func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	item, err := c.<<.ServiceName>>.GetByID(id)
@@ -92,7 +91,7 @@ func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 	})
 }
 
-// Store 创建<<.ModelName>>
+// Store creates a new <<.ModelName>>.
 func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
 <<- if .HasCreate>>
 	var req adminrequests.<<.RequestCreateName>>
@@ -113,7 +112,7 @@ func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
 <<end>>
 }
 
-// Update 更新<<.ModelName>>
+// Update modifies an existing <<.ModelName>>.
 func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
 <<- if .HasEdit>>
 	id := helpers.GetUintRoute(ctx, "id")
@@ -136,7 +135,7 @@ func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
 <<end>>
 }
 
-// Destroy 删除<<.ModelName>>
+// Destroy deletes a <<.ModelName>>.
 func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 <<- if .HasDelete>>
 	id := helpers.GetUintRoute(ctx, "id")
@@ -150,7 +149,7 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 <<end>>
 }
 
-// Export 导出<<.ModelName>>
+// Export exports <<.ModelName>> records.
 func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 <<- if .HasExport>>
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
@@ -196,7 +195,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 				<<- else if eq .GoType "time.Time">>
 				return helpers.FormatTimeWithTimezone(row.<<.FieldName>>, timezone)
 				<<- else if eq .GoType "bool">>
-				return strconv.FormatBool(row.<<.FieldName>>)
+				return cast.ToString(row.<<.FieldName>>)
 				<<- else if eq .GoType "float64">>
 				return cast.ToString(row.<<.FieldName>>)
 				<<- else if eq .GoType "uint8">>
@@ -223,6 +222,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 
 	return response.Export(ctx, "exported", headers, data, "<<.ModuleName>>s")
 <<- else>>
-	return response.Error(ctx, http.StatusForbidden, "file_job_forbidden")
+	return response.Error(ctx, http.StatusForbidden, "forbidden")
 <<end>>
 }
+

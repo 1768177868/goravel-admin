@@ -37,16 +37,16 @@ func (r *DictionaryCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *DictionaryCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"type.required":           trans.Get(ctx, "dictionary_type_required"),
-		"type.max_len":            trans.GetReplace(ctx, "validation.max.type", map[string]string{"max": "50"}),
+		"type.required":           trans.Get(ctx, "validation.required.type"),
+		"type.max_len":            trans.Get(ctx, "validation.max.type", map[string]string{"max": "50"}),
 		"label.required":          trans.Get(ctx, "validation.required.label"),
-		"label.max_len":           trans.GetReplace(ctx, "validation.max.label", map[string]string{"max": "50"}),
+		"label.max_len":           trans.Get(ctx, "validation.max.label", map[string]string{"max": "50"}),
 		"value.required":          trans.Get(ctx, "validation.required.value"),
-		"value.max_len":           trans.GetReplace(ctx, "validation.max.value", map[string]string{"max": "100"}),
-		"translation_key.max_len": trans.GetReplace(ctx, "validation.max.translation_key", map[string]string{"max": "255"}),
-		"description.max_len":     trans.GetReplace(ctx, "validation.max.description", map[string]string{"max": "255"}),
-		"status.in":               trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"remark.max_len":          trans.GetReplace(ctx, "validation.max.remark", map[string]string{"max": "500"}),
+		"value.max_len":           trans.Get(ctx, "validation.max.value", map[string]string{"max": "100"}),
+		"translation_key.max_len": trans.Get(ctx, "validation.max.translation_key", map[string]string{"max": "255"}),
+		"description.max_len":     trans.Get(ctx, "validation.max.description", map[string]string{"max": "255"}),
+		"status.in":               trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"remark.max_len":          trans.Get(ctx, "validation.max.remark", map[string]string{"max": "500"}),
 	}
 }
 

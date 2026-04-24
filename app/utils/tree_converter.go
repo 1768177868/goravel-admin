@@ -6,19 +6,19 @@ import (
 
 // DepartmentTreeItem 前端使用的部门树形结构
 type DepartmentTreeItem struct {
-	ID        uint                  `json:"id"`
-	ParentID  uint                  `json:"parent_id"`
-	Name      string                `json:"name"`
-	Code      string                `json:"code,omitempty"`
-	Leader    string                `json:"leader,omitempty"`
-	Phone     string                `json:"phone,omitempty"`
-	Email     string                `json:"email,omitempty"`
-	Status    uint8                 `json:"status"`
-	Sort      int                   `json:"sort"`
-	Remark    string                `json:"remark,omitempty"`
-	CreatedAt string                `json:"created_at,omitempty"`
-	UpdatedAt string                `json:"updated_at,omitempty"`
-	Children  []DepartmentTreeItem  `json:"children,omitempty"`
+	ID        uint                 `json:"id"`
+	ParentID  uint                 `json:"parent_id"`
+	Name      string               `json:"name"`
+	Code      string               `json:"code,omitempty"`
+	Leader    string               `json:"leader,omitempty"`
+	Phone     string               `json:"phone,omitempty"`
+	Email     string               `json:"email,omitempty"`
+	Status    uint8                `json:"status"`
+	Sort      int                  `json:"sort"`
+	Remark    string               `json:"remark,omitempty"`
+	CreatedAt string               `json:"created_at,omitempty"`
+	UpdatedAt string               `json:"updated_at,omitempty"`
+	Children  []DepartmentTreeItem `json:"children,omitempty"`
 }
 
 // MenuTreeItem 前端使用的菜单树形结构
@@ -60,15 +60,15 @@ func ConvertDepartmentTree(departments []models.Department) []DepartmentTreeItem
 			Sort:     dept.Sort,
 			Remark:   dept.Remark,
 		}
-		
+
 		// 处理时间字段（JSON 序列化会自动处理，这里只是确保字段存在）
 		// 实际的时间格式化由框架的 JSON 序列化处理
-		
+
 		// 递归转换子节点
 		if len(dept.Children) > 0 {
 			item.Children = ConvertDepartmentTree(dept.Children)
 		}
-		
+
 		result = append(result, item)
 	}
 	return result
@@ -96,12 +96,12 @@ func ConvertMenuTree(menus []models.Menu) []MenuTreeItem {
 			OpenType:   menu.OpenType,
 			NoCache:    menu.NoCache,
 		}
-		
+
 		// 递归转换子节点
 		if len(menu.Children) > 0 {
 			item.Children = ConvertMenuTree(menu.Children)
 		}
-		
+
 		result = append(result, item)
 	}
 	return result

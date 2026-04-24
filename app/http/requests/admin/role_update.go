@@ -31,10 +31,10 @@ func (r *RoleUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *RoleUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.max_len":        trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
-		"slug.max_len":        trans.GetReplace(ctx, "validation.max.slug", map[string]string{"max": "50"}),
-		"description.max_len": trans.GetReplace(ctx, "validation.max.description", map[string]string{"max": "255"}),
-		"status.in":           trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"name.max_len":        trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"slug.max_len":        trans.Get(ctx, "validation.max.slug", map[string]string{"max": "50"}),
+		"description.max_len": trans.Get(ctx, "validation.max.description", map[string]string{"max": "255"}),
+		"status.in":           trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 

@@ -24,7 +24,7 @@ func ApplySort(query orm.Query, orderBy string, defaultSort string) orm.Query {
 	// 解析多个排序字段（逗号分隔）
 	sortFields := str.Of(sortStr).Split(",")
 	var orderClauses []string
-	
+
 	for _, field := range sortFields {
 		field = str.Of(field).Trim().String()
 		if str.Of(field).IsEmpty() {
@@ -69,14 +69,14 @@ func ApplySort(query orm.Query, orderBy string, defaultSort string) orm.Query {
 // 返回: 排序字段和方向的映射
 func ParseSort(orderBy string) map[string]string {
 	result := make(map[string]string)
-	
+
 	if orderBy == "" {
 		return result
 	}
 
 	// 解析多个排序字段（逗号分隔）
 	sortFields := str.Of(orderBy).Split(",")
-	
+
 	for _, field := range sortFields {
 		field = str.Of(field).Trim().String()
 		if str.Of(field).IsEmpty() {
@@ -102,4 +102,3 @@ func ParseSort(orderBy string) map[string]string {
 
 	return result
 }
-

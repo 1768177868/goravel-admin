@@ -28,7 +28,7 @@ func (receiver *SendOrderNotification) Queue(args ...any) event.Queue {
 }
 
 // Handle 处理发送订单通知
-// 
+//
 // 参数:
 //   - args[0]: OrderCreatedArgs 结构体或 orderID (int/uint)
 //

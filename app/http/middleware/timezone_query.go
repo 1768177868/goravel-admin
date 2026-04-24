@@ -37,4 +37,3 @@ func TimezoneQuery() http.Middleware {
 		ctx.Request().Next()
 	}
 }
-

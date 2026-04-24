@@ -125,22 +125,22 @@ var (
 
 	// 支付相关错误
 	ErrPaymentMethodNotFound   = NewBusinessError("payment_method_not_found", "支付方式不存在")
-	ErrPaymentNotFound          = NewBusinessError("payment_not_found", "支付记录不存在")
+	ErrPaymentNotFound         = NewBusinessError("payment_not_found", "支付记录不存在")
 	ErrPaymentMethodDisabled   = NewBusinessError("payment_method_disabled", "支付方式已禁用")
 	ErrPaymentMethodCodeExists = NewBusinessError("payment_method_code_exists", "支付方式代码已存在")
 	ErrInvalidPaymentType      = NewBusinessError("invalid_payment_type", "无效的支付类型")
-	ErrPaymentConfigRequired    = NewBusinessError("payment_config_required", "支付配置不能为空")
+	ErrPaymentConfigRequired   = NewBusinessError("payment_config_required", "支付配置不能为空")
 	ErrCreatePaymentFailed     = NewBusinessError("create_payment_failed", "创建支付记录失败")
 	ErrPaymentAmountInvalid    = NewBusinessError("payment_amount_invalid", "支付金额无效")
 	ErrPaymentStatusInvalid    = NewBusinessError("payment_status_invalid", "支付状态无效")
 
 	// 导出相关错误
-	ErrExportRecordNotFound    = NewBusinessError("file_job_record_not_found", "导出记录不存在")
+	ErrExportRecordNotFound    = NewBusinessError("record_not_found", "导出记录不存在")
 	ErrWriteCSVHeaderFailed    = NewBusinessError("write_csv_header_failed", "写入CSV表头失败")
 	ErrWriteCSVDataFailed      = NewBusinessError("write_csv_data_failed", "写入CSV数据失败")
 	ErrCSVWriteFailed          = NewBusinessError("csv_write_failed", "CSV写入失败")
 	ErrExcelNotImplemented     = NewBusinessError("excel_not_implemented", "Excel导出功能暂未实现，请使用CSV格式")
-	ErrBatchDeleteExportFailed = NewBusinessError("batch_delete_file_jobs_failed", "批量删除导出记录失败")
+	ErrBatchDeleteExportFailed = NewBusinessError("batch_delete_failed", "批量删除导出记录失败")
 
 	// 导入相关错误
 	ErrInvalidCSVFormat = NewBusinessError("invalid_csv_format", "CSV格式无效")

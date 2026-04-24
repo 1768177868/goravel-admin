@@ -169,4 +169,3 @@ func (h *NotificationHub) Stats() (int, int) {
 
 	return admins, connections
 }
-

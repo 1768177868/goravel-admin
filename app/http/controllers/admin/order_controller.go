@@ -27,40 +27,40 @@ type OrderController struct {
 	orderService services.OrderService
 }
 
-// OrderResponse 订单主信息
+// OrderResponse 璁㈠崟涓讳俊鎭?
 type OrderResponse struct {
-	ID        uint    `json:"id" example:"1"`                           // 订单ID
-	OrderNo   string  `json:"order_no" example:"ORD202604090001"`       // 订单号
-	UserID    uint    `json:"user_id" example:"1001"`                   // 用户ID
-	Amount    float64 `json:"amount" example:"199.98"`                  // 订单金额
-	Status    string  `json:"status" example:"pending"`                 // 订单状态
-	Remark    string  `json:"remark" example:"备注信息"`                    // 备注
-	CreatedAt string  `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
-	UpdatedAt string  `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+	ID        uint    `json:"id" example:"1"`                           // 璁㈠崟ID
+	OrderNo   string  `json:"order_no" example:"ORD202604090001"`       // 璁㈠崟鍙?
+	UserID    uint    `json:"user_id" example:"1001"`                   // 鐢ㄦ埛ID
+	Amount    float64 `json:"amount" example:"199.98"`                  // 璁㈠崟閲戦
+	Status    string  `json:"status" example:"pending"`                 // 璁㈠崟鐘舵€?
+	Remark    string  `json:"remark" example:"澶囨敞淇℃伅"`                  // 澶囨敞
+	CreatedAt string  `json:"created_at" example:"2024-01-01 00:00:00"` // 鍒涘缓鏃堕棿
+	UpdatedAt string  `json:"updated_at" example:"2024-01-01 00:00:00"` // 鏇存柊鏃堕棿
 }
 
-// OrderDetailResponse 订单详情项
+// OrderDetailResponse 璁㈠崟璇︽儏椤?
 type OrderDetailResponse struct {
-	ID          uint    `json:"id" example:"1"`                           // 详情ID
-	OrderID     uint    `json:"order_id" example:"1"`                     // 订单ID
-	ProductID   uint    `json:"product_id" example:"101"`                 // 商品ID
-	ProductName string  `json:"product_name" example:"商品名称"`              // 商品名称
-	Price       float64 `json:"price" example:"99.99"`                    // 单价
-	Quantity    int     `json:"quantity" example:"2"`                     // 数量
-	Subtotal    float64 `json:"subtotal" example:"199.98"`                // 小计
-	CreatedAt   string  `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
-	UpdatedAt   string  `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+	ID          uint    `json:"id" example:"1"`                           // 璇︽儏ID
+	OrderID     uint    `json:"order_id" example:"1"`                     // 璁㈠崟ID
+	ProductID   uint    `json:"product_id" example:"101"`                 // 鍟嗗搧ID
+	ProductName string  `json:"product_name" example:"鍟嗗搧鍚嶇О"`            // 鍟嗗搧鍚嶇О
+	Price       float64 `json:"price" example:"99.99"`                    // 鍗曚环
+	Quantity    int     `json:"quantity" example:"2"`                     // 鏁伴噺
+	Subtotal    float64 `json:"subtotal" example:"199.98"`                // 灏忚
+	CreatedAt   string  `json:"created_at" example:"2024-01-01 00:00:00"` // 鍒涘缓鏃堕棿
+	UpdatedAt   string  `json:"updated_at" example:"2024-01-01 00:00:00"` // 鏇存柊鏃堕棿
 }
 
-// OrderWithDetailsResponse 订单及详情
+// OrderWithDetailsResponse 璁㈠崟鍙婅鎯?
 type OrderWithDetailsResponse struct {
-	Order   OrderResponse         `json:"order"`   // 订单主信息
-	Details []OrderDetailResponse `json:"details"` // 订单详情列表
+	Order   OrderResponse         `json:"order"`   // 璁㈠崟涓讳俊鎭?
+	Details []OrderDetailResponse `json:"details"` // 璁㈠崟璇︽儏鍒楄〃
 }
 
-// OrderListData 订单列表响应 data
+// OrderListData 璁㈠崟鍒楄〃鍝嶅簲 data
 type OrderListData struct {
-	Data []OrderWithDetailsResponse `json:"data"` // 订单列表
+	Data []OrderWithDetailsResponse `json:"data"` // 璁㈠崟鍒楄〃
 	apidoc.Pagination
 }
 
@@ -70,8 +70,8 @@ type OrderListResponse struct {
 }
 
 type OrderDetailData struct {
-	Order   OrderResponse         `json:"order"`   // 订单主信息
-	Details []OrderDetailResponse `json:"details"` // 订单详情
+	Order   OrderResponse         `json:"order"`   // 璁㈠崟涓讳俊鎭?
+	Details []OrderDetailResponse `json:"details"` // 璁㈠崟璇︽儏
 }
 
 type OrderDetailResponseWrapper struct {
@@ -80,21 +80,21 @@ type OrderDetailResponseWrapper struct {
 }
 
 type OrderCreateRequest struct {
-	UserID    uint             `json:"user_id" example:"1001"`                  // 用户ID（必填）
-	Amount    float64          `json:"amount" example:"199.98"`                 // 订单金额（必填）
-	Products  []OrderProductItem `json:"products"`                               // 商品列表（必填）
-	RequestID string           `json:"request_id" example:"req_20260409_001"`   // 幂等请求ID（可选）
-	Remark    string           `json:"remark" example:"备注信息"`                  // 备注（可选）
+	UserID    uint               `json:"user_id" example:"1001"`                // 鐢ㄦ埛ID锛堝繀濉級
+	Amount    float64            `json:"amount" example:"199.98"`               // 璁㈠崟閲戦锛堝繀濉級
+	Products  []OrderProductItem `json:"products"`                              // 鍟嗗搧鍒楄〃锛堝繀濉級
+	RequestID string             `json:"request_id" example:"req_20260409_001"` // 骞傜瓑璇锋眰ID锛堝彲閫夛級
+	Remark    string             `json:"remark" example:"澶囨敞淇℃伅"`               // 澶囨敞锛堝彲閫夛級
 }
 
 type OrderUpdateRequest struct {
-	Status string `json:"status" example:"paid"` // 订单状态（必填）
-	Remark string `json:"remark" example:"已完成支付"` // 备注（可选）
+	Status string `json:"status" example:"paid"`    // 璁㈠崟鐘舵€侊紙蹇呭～锛?
+	Remark string `json:"remark" example:"宸插畬鎴愭敮浠?` // 澶囨敞锛堝彲閫夛級
 }
 
 type ExportTaskData struct {
-	ExportID uint   `json:"export_id" example:"1"`              // 导出记录ID
-	Message  string `json:"message" example:"导出任务已提交"`        // 提示信息
+	ExportID uint   `json:"export_id" example:"1"`        // 瀵煎嚭璁板綍ID
+	Message  string `json:"message" example:"瀵煎嚭浠诲姟宸叉彁浜?` // 鎻愮ず淇℃伅
 }
 
 type ExportTaskResponse struct {
@@ -103,15 +103,15 @@ type ExportTaskResponse struct {
 }
 
 type ExportStatusData struct {
-	ID         uint   `json:"id" example:"1"`                           // 导出记录ID
-	Status     uint8  `json:"status" example:"1"`                       // 状态码
-	StatusText string `json:"status_text" example:"处理中"`               // 状态文本
-	FileURL    string `json:"file_url" example:"/api/admin/exports/1/download"` // 下载地址
-	Filename   string `json:"filename" example:"orders_20260409.csv"`   // 文件名
-	Size       int64  `json:"size" example:"1024"`                       // 文件大小（字节）
-	ErrorMsg   string `json:"error_msg" example:""`                      // 错误信息
-	CreatedAt  string `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
-	UpdatedAt  string `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+	ID         uint   `json:"id" example:"1"`                                   // 瀵煎嚭璁板綍ID
+	Status     uint8  `json:"status" example:"1"`                               // 鐘舵€佺爜
+	StatusText string `json:"status_text" example:"澶勭悊涓?`                       // 鐘舵€佹枃鏈?
+	FileURL    string `json:"file_url" example:"/api/admin/exports/1/download"` // 涓嬭浇鍦板潃
+	Filename   string `json:"filename" example:"orders_20260409.csv"`           // 鏂囦欢鍚?
+	Size       int64  `json:"size" example:"1024"`                              // 鏂囦欢澶у皬锛堝瓧鑺傦級
+	ErrorMsg   string `json:"error_msg" example:""`                             // 閿欒淇℃伅
+	CreatedAt  string `json:"created_at" example:"2024-01-01 00:00:00"`         // 鍒涘缓鏃堕棿
+	UpdatedAt  string `json:"updated_at" example:"2024-01-01 00:00:00"`         // 鏇存柊鏃堕棿
 }
 
 type ExportStatusResponse struct {
@@ -120,11 +120,11 @@ type ExportStatusResponse struct {
 }
 
 type ImportResultData struct {
-	TotalRows    int      `json:"total_rows" example:"10"`    // 总行数
-	SuccessCount int      `json:"success_count" example:"8"`  // 成功数量
-	FailedCount  int      `json:"failed_count" example:"2"`   // 失败数量
-	Errors       []string `json:"errors"`                     // 失败原因列表
-	Message      string   `json:"message" example:"导入成功"`    // 提示信息
+	TotalRows    int      `json:"total_rows" example:"10"`   // 鎬昏鏁?
+	SuccessCount int      `json:"success_count" example:"8"` // 鎴愬姛鏁伴噺
+	FailedCount  int      `json:"failed_count" example:"2"`  // 澶辫触鏁伴噺
+	Errors       []string `json:"errors"`                    // 澶辫触鍘熷洜鍒楄〃
+	Message      string   `json:"message" example:"瀵煎叆鎴愬姛"`  // 鎻愮ず淇℃伅
 }
 
 type ImportResultResponse struct {
@@ -132,12 +132,12 @@ type ImportResultResponse struct {
 	Data ImportResultData `json:"data"`
 }
 
-// OrderProductItem 订单商品项（用于 Swagger 文档）
+// OrderProductItem 璁㈠崟鍟嗗搧椤癸紙鐢ㄤ簬 Swagger 鏂囨。锛?
 type OrderProductItem struct {
-	ProductID   uint    `json:"product_id" example:"1" binding:"required"`      // 商品ID
-	ProductName string  `json:"product_name" example:"商品名称" binding:"required"` // 商品名称
-	Price       float64 `json:"price" example:"99.99" binding:"required"`       // 单价
-	Quantity    int     `json:"quantity" example:"2" binding:"required"`        // 数量
+	ProductID   uint    `json:"product_id" example:"1" binding:"required"`        // 鍟嗗搧ID
+	ProductName string  `json:"product_name" example:"鍟嗗搧鍚嶇О" binding:"required"` // 鍟嗗搧鍚嶇О
+	Price       float64 `json:"price" example:"99.99" binding:"required"`         // 鍗曚环
+	Quantity    int     `json:"quantity" example:"2" binding:"required"`          // 鏁伴噺
 }
 
 func NewOrderController() *OrderController {
@@ -146,10 +146,10 @@ func NewOrderController() *OrderController {
 	}
 }
 
-// buildFilters 构建筛选条件（列表和导出共用）
-// 同时支持查询参数（GET）和请求体参数（POST）
+// buildFilters 鏋勫缓绛涢€夋潯浠讹紙鍒楄〃鍜屽鍑哄叡鐢級
+// 鍚屾椂鏀寔鏌ヨ鍙傛暟锛圙ET锛夊拰璇锋眰浣撳弬鏁帮紙POST锛?
 func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters, http.Response) {
-	// 优先从请求体读取，如果没有则从查询参数读取（兼容 GET 和 POST）
+	// 浼樺厛浠庤姹備綋璇诲彇锛屽鏋滄病鏈夊垯浠庢煡璇㈠弬鏁拌鍙栵紙鍏煎 GET 鍜?POST锛?
 	userID := cast.ToUint(ctx.Request().Input("user_id", ctx.Request().Query("user_id", "0")))
 	orderNo := ctx.Request().Input("order_no", ctx.Request().Query("order_no", ""))
 	status := ctx.Request().Input("status", ctx.Request().Query("status", ""))
@@ -157,7 +157,7 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 	maxAmount := cast.ToFloat64(ctx.Request().Input("max_amount", ctx.Request().Query("max_amount", "0")))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
 
-	// 解析时间参数（query 优先，input 兜底），并统一转换为 UTC 时间字符串
+	// 瑙ｆ瀽鏃堕棿鍙傛暟锛坬uery 浼樺厛锛宨nput 鍏滃簳锛夛紝骞剁粺涓€杞崲涓?UTC 鏃堕棿瀛楃涓?
 	startTimeStr := getTimeInputOrQueryUTC(ctx, "start_time")
 	endTimeStr := getTimeInputOrQueryUTC(ctx, "end_time")
 
@@ -166,7 +166,7 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 		return services.OrderFilters{}, response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
 
-	// 验证时间范围（订单查询限制为3个月，可通过配置修改）
+	// 楠岃瘉鏃堕棿鑼冨洿锛堣鍗曟煡璇㈤檺鍒朵负3涓湀锛屽彲閫氳繃閰嶇疆淇敼锛?
 	if resp := validateTimeRangeResponse(ctx, startTime, endTime, 3); resp != nil {
 		return services.OrderFilters{}, resp
 	}
@@ -183,16 +183,16 @@ func (r *OrderController) buildFilters(ctx http.Context) (services.OrderFilters,
 	}, nil
 }
 
-// parseTimeRange 解析时间范围（默认最近1周）
+// parseTimeRange 瑙ｆ瀽鏃堕棿鑼冨洿锛堥粯璁ゆ渶杩?鍛級
 func (r *OrderController) parseTimeRange(startTimeStr, endTimeStr string) (time.Time, time.Time, error) {
 	var startTime, endTime time.Time
 	var err error
 
 	if startTimeStr == "" {
-		// 默认查询最近1周（UTC 时间）
+		// 榛樿鏌ヨ鏈€杩?鍛紙UTC 鏃堕棿锛?
 		startTime = time.Now().UTC().AddDate(0, 0, -7)
 	} else {
-		// 解析 UTC 时间字符串
+		// 瑙ｆ瀽 UTC 鏃堕棿瀛楃涓?
 		startTime, err = utils.ParseDateTime(startTimeStr)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_start_time")
@@ -200,10 +200,10 @@ func (r *OrderController) parseTimeRange(startTimeStr, endTimeStr string) (time.
 	}
 
 	if endTimeStr == "" {
-		// 不传结束时间则不限制，返回零值（WHERE 条件中会跳过）
+		// 涓嶄紶缁撴潫鏃堕棿鍒欎笉闄愬埗锛岃繑鍥為浂鍊硷紙WHERE 鏉′欢涓細璺宠繃锛?
 		endTime = time.Time{}
 	} else {
-		// 解析 UTC 时间字符串
+		// 瑙ｆ瀽 UTC 鏃堕棿瀛楃涓?
 		endTime, err = utils.ParseDateTime(endTimeStr)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid_end_time")
@@ -213,7 +213,7 @@ func (r *OrderController) parseTimeRange(startTimeStr, endTimeStr string) (time.
 	return startTime, endTime, nil
 }
 
-// formatOrderStatus 格式化订单状态文本
+// formatOrderStatus 鏍煎紡鍖栬鍗曠姸鎬佹枃鏈?
 func (r *OrderController) formatOrderStatus(ctx http.Context, status string) string {
 	switch status {
 	case "pending":
@@ -227,7 +227,7 @@ func (r *OrderController) formatOrderStatus(ctx http.Context, status string) str
 	}
 }
 
-// formatTime 格式化时间为字符串（支持 time.Time 和 carbon.DateTime）
+// formatTime 鏍煎紡鍖栨椂闂翠负瀛楃涓诧紙鏀寔 time.Time 鍜?carbon.DateTime锛?
 func (r *OrderController) formatTime(t any) string {
 	if t == nil {
 		return ""
@@ -249,7 +249,7 @@ func (r *OrderController) formatTime(t any) string {
 		}
 		return v.ToDateTimeString()
 	default:
-		// 尝试转换为字符串（其他类型）
+		// 灏濊瘯杞崲涓哄瓧绗︿覆锛堝叾浠栫被鍨嬶級
 		if str := fmt.Sprintf("%v", t); str != "" && str != "<nil>" {
 			return str
 		}
@@ -257,7 +257,7 @@ func (r *OrderController) formatTime(t any) string {
 	}
 }
 
-// convertOrderToJson 转换订单为响应格式
+// convertOrderToJson 杞崲璁㈠崟涓哄搷搴旀牸寮?
 func (r *OrderController) convertOrderToJson(order models.Order) http.Json {
 	return http.Json{
 		"id":         order.ID,
@@ -271,38 +271,38 @@ func (r *OrderController) convertOrderToJson(order models.Order) http.Json {
 	}
 }
 
-// Index 订单列表
-// @Summary      获取订单列表
-// @Description  分页获取订单列表，支持多条件筛选，查询时间范围不能超过3个月
-// @Tags         订单管理
+// Index 璁㈠崟鍒楄〃
+// @Summary      鑾峰彇璁㈠崟鍒楄〃
+// @Description  鍒嗛〉鑾峰彇璁㈠崟鍒楄〃锛屾敮鎸佸鏉′欢绛涢€夛紝鏌ヨ鏃堕棿鑼冨洿涓嶈兘瓒呰繃3涓湀
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        page       query    int     false "页码" default(1)
-// @Param        page_size  query    int     false "每页数量" default(10)
-// @Param        user_id    query    int     false "用户ID"
-// @Param        order_no   query    string  false "订单号（模糊搜索）"
-// @Param        status     query    string  false "订单状态（pending/paid/cancelled）"
-// @Param        min_amount query    float64 false "最小金额"
-// @Param        max_amount query    float64 false "最大金额"
-// @Param        start_time query    string  false "开始时间（格式：2006-01-02 15:04:05）"
-// @Param        end_time   query    string  false "结束时间（格式：2006-01-02 15:04:05）"
-// @Param        order_by   query    string  false "排序（格式：字段:asc/desc，如：created_at:desc）"
+// @Param        page       query    int     false "椤电爜" default(1)
+// @Param        page_size  query    int     false "姣忛〉鏁伴噺" default(10)
+// @Param        user_id    query    int     false "鐢ㄦ埛ID"
+// @Param        order_no   query    string  false "璁㈠崟鍙凤紙妯＄硦鎼滅储锛?
+// @Param        status     query    string  false "璁㈠崟鐘舵€侊紙pending/paid/cancelled锛?
+// @Param        min_amount query    float64 false "鏈€灏忛噾棰?
+// @Param        max_amount query    float64 false "鏈€澶ч噾棰?
+// @Param        start_time query    string  false "寮€濮嬫椂闂达紙鏍煎紡锛?006-01-02 15:04:05锛?
+// @Param        end_time   query    string  false "缁撴潫鏃堕棿锛堟牸寮忥細2006-01-02 15:04:05锛?
+// @Param        order_by   query    string  false "鎺掑簭锛堟牸寮忥細瀛楁:asc/desc锛屽锛歝reated_at:desc锛?
 // @Success      200        {object} OrderListResponse
-// @Failure      400        {object} apidoc.Error "参数错误"
-// @Failure      500        {object} apidoc.Error "服务器错误"
+// @Failure      400        {object} apidoc.Error "鍙傛暟閿欒"
+// @Failure      500        {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders [get]
 // @Security     BearerAuth
 func (r *OrderController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
-	// 构建筛选条件（列表和导出共用）
+	// 鏋勫缓绛涢€夋潯浠讹紙鍒楄〃鍜屽鍑哄叡鐢級
 	filters, resp := r.buildFilters(ctx)
 	if resp != nil {
 		return resp
 	}
 
-	// 查询订单（包含详情）
+	// 鏌ヨ璁㈠崟锛堝寘鍚鎯咃級
 	ordersWithDetails, total, err := r.orderService.GetOrdersWithDetails(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
@@ -310,11 +310,11 @@ func (r *OrderController) Index(ctx http.Context) http.Response {
 		})
 	}
 
-	// 转换响应数据
+	// 杞崲鍝嶅簲鏁版嵁
 	orderList := make([]http.Json, len(ordersWithDetails))
 	for i, orderWithDetails := range ordersWithDetails {
 		orderJson := r.convertOrderToJson(orderWithDetails.Order)
-		// 添加订单详情
+		// 娣诲姞璁㈠崟璇︽儏
 		detailsList := make([]http.Json, len(orderWithDetails.Details))
 		for j, detail := range orderWithDetails.Details {
 			detailsList[j] = http.Json{
@@ -341,22 +341,22 @@ func (r *OrderController) Index(ctx http.Context) http.Response {
 	})
 }
 
-// Show 订单详情
-// @Summary      获取订单详情
-// @Description  根据订单号或订单ID获取订单详细信息，返回订单主表数据和订单详情表数据（支持分表查询）。优先使用订单号查询（更高效），如果没有订单号则使用订单ID查询
-// @Tags         订单管理
+// Show 璁㈠崟璇︽儏
+// @Summary      鑾峰彇璁㈠崟璇︽儏
+// @Description  鏍规嵁璁㈠崟鍙锋垨璁㈠崟ID鑾峰彇璁㈠崟璇︾粏淇℃伅锛岃繑鍥炶鍗曚富琛ㄦ暟鎹拰璁㈠崟璇︽儏琛ㄦ暟鎹紙鏀寔鍒嗚〃鏌ヨ锛夈€備紭鍏堜娇鐢ㄨ鍗曞彿鏌ヨ锛堟洿楂樻晥锛夛紝濡傛灉娌℃湁璁㈠崟鍙峰垯浣跨敤璁㈠崟ID鏌ヨ
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        id         path     string  false "订单ID（如果提供了订单号，此参数可选）"
-// @Param        order_no   query    string  false "订单号（优先使用，可直接定位分表）"
-// @Success      200        {object} OrderDetailResponseWrapper "返回数据包含 order（订单主表）和 details（订单详情表数组）"
-// @Failure      400        {object} apidoc.Error "参数错误"
-// @Failure      404        {object} apidoc.Error "订单不存在"
-// @Failure      500        {object} apidoc.Error "服务器错误"
+// @Param        id         path     string  false "璁㈠崟ID锛堝鏋滄彁渚涗簡璁㈠崟鍙凤紝姝ゅ弬鏁板彲閫夛級"
+// @Param        order_no   query    string  false "璁㈠崟鍙凤紙浼樺厛浣跨敤锛屽彲鐩存帴瀹氫綅鍒嗚〃锛?
+// @Success      200        {object} OrderDetailResponseWrapper "杩斿洖鏁版嵁鍖呭惈 order锛堣鍗曚富琛級鍜?details锛堣鍗曡鎯呰〃鏁扮粍锛?
+// @Failure      400        {object} apidoc.Error "鍙傛暟閿欒"
+// @Failure      404        {object} apidoc.Error "璁㈠崟涓嶅瓨鍦?
+// @Failure      500        {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders/{id} [get]
 // @Security     BearerAuth
 func (r *OrderController) Show(ctx http.Context) http.Response {
-	// 优先从查询参数获取订单号
+	// 浼樺厛浠庢煡璇㈠弬鏁拌幏鍙栬鍗曞彿
 	orderNo := ctx.Request().Query("order_no", "")
 
 	if orderNo != "" {
@@ -364,10 +364,10 @@ func (r *OrderController) Show(ctx http.Context) http.Response {
 		if err == nil {
 			return r.buildOrderDetailResponse(ctx, order, details)
 		}
-		// 如果订单号查询失败，且路由参数是数字ID，尝试使用ID查询
+		// 濡傛灉璁㈠崟鍙锋煡璇㈠け璐ワ紝涓旇矾鐢卞弬鏁版槸鏁板瓧ID锛屽皾璇曚娇鐢↖D鏌ヨ
 		if routeID := ctx.Request().Route("id"); routeID != "" && orderNo == routeID {
 			if orderID := cast.ToUint(routeID); orderID > 0 {
-				// 使用订单ID查询（需要遍历分表）
+				// 浣跨敤璁㈠崟ID鏌ヨ锛堥渶瑕侀亶鍘嗗垎琛級
 				order, details, err := r.orderService.GetOrderByID(orderID, time.Time{})
 				if err == nil {
 					return r.buildOrderDetailResponse(ctx, order, details)
@@ -380,13 +380,13 @@ func (r *OrderController) Show(ctx http.Context) http.Response {
 	return response.Error(ctx, http.StatusBadRequest, "order_no_or_id_required")
 }
 
-// buildOrderDetailResponse 构建订单详情响应（提取公共逻辑）
+// buildOrderDetailResponse 鏋勫缓璁㈠崟璇︽儏鍝嶅簲锛堟彁鍙栧叕鍏遍€昏緫锛?
 func (r *OrderController) buildOrderDetailResponse(ctx http.Context, order *models.Order, details []models.OrderDetail) http.Response {
 
-	// 转换订单主表数据（使用统一的方法）
+	// 杞崲璁㈠崟涓昏〃鏁版嵁锛堜娇鐢ㄧ粺涓€鐨勬柟娉曪級
 	orderJson := r.convertOrderToJson(*order)
 
-	// 转换订单详情数据
+	// 杞崲璁㈠崟璇︽儏鏁版嵁
 	detailList := make([]http.Json, len(details))
 	for i, detail := range details {
 		detailList[i] = http.Json{
@@ -402,23 +402,23 @@ func (r *OrderController) buildOrderDetailResponse(ctx http.Context, order *mode
 		}
 	}
 
-	// 返回主表和详情表数据
+	// 杩斿洖涓昏〃鍜岃鎯呰〃鏁版嵁
 	return response.Success(ctx, http.Json{
 		"order":   orderJson,
 		"details": detailList,
 	})
 }
 
-// Store 创建订单
-// @Summary      创建订单
-// @Description  创建新订单，自动防止重复提交
-// @Tags         订单管理
+// Store 鍒涘缓璁㈠崟
+// @Summary      鍒涘缓璁㈠崟
+// @Description  鍒涘缓鏂拌鍗曪紝鑷姩闃叉閲嶅鎻愪氦
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        request body     OrderCreateRequest true "创建参数"
+// @Param        request body     OrderCreateRequest true "鍒涘缓鍙傛暟"
 // @Success      200      {object} OrderDetailResponseWrapper
-// @Failure      400      {object} apidoc.Error "参数错误或重复提交"
-// @Failure      500      {object} apidoc.Error "服务器错误"
+// @Failure      400      {object} apidoc.Error "鍙傛暟閿欒鎴栭噸澶嶆彁浜?
+// @Failure      500      {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders [post]
 // @Security     BearerAuth
 func (r *OrderController) Store(ctx http.Context) http.Response {
@@ -438,13 +438,13 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "empty_products")
 	}
 
-	// 创建订单
+	// 鍒涘缓璁㈠崟
 	order, details, err := r.orderService.CreateOrder(req.UserID, req.Amount, req.Products, req.RequestID, req.Remark)
 	if err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "create_failed")
 	}
 
-	// 转换订单详情
+	// 杞崲璁㈠崟璇︽儏
 	detailList := make([]http.Json, len(details))
 	for i, detail := range details {
 		detailList[i] = http.Json{
@@ -459,7 +459,7 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 	}
 
 	orderJson := r.convertOrderToJson(*order)
-	// 移除不需要的字段（创建订单时不需要返回 created_at 和 updated_at）
+	// 绉婚櫎涓嶉渶瑕佺殑瀛楁锛堝垱寤鸿鍗曟椂涓嶉渶瑕佽繑鍥?created_at 鍜?updated_at锛?
 	delete(orderJson, "created_at")
 	delete(orderJson, "updated_at")
 
@@ -469,21 +469,21 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 	})
 }
 
-// Update 更新订单
-// @Summary      更新订单
-// @Description  更新订单信息（主要是状态）。使用订单号查询（可直接定位分表）
-// @Tags         订单管理
+// Update 鏇存柊璁㈠崟
+// @Summary      鏇存柊璁㈠崟
+// @Description  鏇存柊璁㈠崟淇℃伅锛堜富瑕佹槸鐘舵€侊級銆備娇鐢ㄨ鍗曞彿鏌ヨ锛堝彲鐩存帴瀹氫綅鍒嗚〃锛?
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        id         path     string  true "订单号"
-// @Param        request    body     OrderUpdateRequest true  "更新参数"
+// @Param        id         path     string  true "璁㈠崟鍙?
+// @Param        request    body     OrderUpdateRequest true  "鏇存柊鍙傛暟"
 // @Success      200        {object} apidoc.Success
-// @Failure      400        {object} apidoc.Error "参数错误"
-// @Failure      500        {object} apidoc.Error "服务器错误"
+// @Failure      400        {object} apidoc.Error "鍙傛暟閿欒"
+// @Failure      500        {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders/{id} [put]
 // @Security     BearerAuth
 func (r *OrderController) Update(ctx http.Context) http.Response {
-	// 使用订单号查询（可直接定位分表）
+	// 浣跨敤璁㈠崟鍙锋煡璇紙鍙洿鎺ュ畾浣嶅垎琛級
 	orderNo := ctx.Request().Query("order_no", "")
 	if orderNo == "" {
 		return response.Error(ctx, http.StatusBadRequest, "order_no_required")
@@ -509,20 +509,20 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 	return response.Success(ctx)
 }
 
-// Destroy 删除订单
-// @Summary      删除订单
-// @Description  删除订单及其详情。使用订单号查询（可直接定位分表）
-// @Tags         订单管理
+// Destroy 鍒犻櫎璁㈠崟
+// @Summary      鍒犻櫎璁㈠崟
+// @Description  鍒犻櫎璁㈠崟鍙婂叾璇︽儏銆備娇鐢ㄨ鍗曞彿鏌ヨ锛堝彲鐩存帴瀹氫綅鍒嗚〃锛?
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        id         path     string  true "订单号"
+// @Param        id         path     string  true "璁㈠崟鍙?
 // @Success      200        {object} apidoc.Success
-// @Failure      400        {object} apidoc.Error "参数错误"
-// @Failure      500        {object} apidoc.Error "服务器错误"
+// @Failure      400        {object} apidoc.Error "鍙傛暟閿欒"
+// @Failure      500        {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders/{id} [delete]
 // @Security     BearerAuth
 func (r *OrderController) Destroy(ctx http.Context) http.Response {
-	// 使用订单号查询（可直接定位分表）
+	// 浣跨敤璁㈠崟鍙锋煡璇紙鍙洿鎺ュ畾浣嶅垎琛級
 	orderNo := ctx.Request().Query("order_no", "")
 
 	if err := r.orderService.DeleteOrderByOrderNo(orderNo); err != nil {
@@ -534,25 +534,25 @@ func (r *OrderController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx)
 }
 
-// Export 导出订单列表
-// @Summary      导出订单列表
-// @Description  根据筛选条件导出订单列表为CSV文件，支持与列表查询相同的筛选条件，查询时间范围不能超过3个月
-// @Tags         订单管理
+// Export 瀵煎嚭璁㈠崟鍒楄〃
+// @Summary      瀵煎嚭璁㈠崟鍒楄〃
+// @Description  鏍规嵁绛涢€夋潯浠跺鍑鸿鍗曞垪琛ㄤ负CSV鏂囦欢锛屾敮鎸佷笌鍒楄〃鏌ヨ鐩稿悓鐨勭瓫閫夋潯浠讹紝鏌ヨ鏃堕棿鑼冨洿涓嶈兘瓒呰繃3涓湀
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        user_id    query    int     false "用户ID"
-// @Param        order_no   query    string  false "订单号（模糊搜索）"
-// @Param        status     query    string  false "订单状态（pending/paid/cancelled）"
-// @Param        min_amount query    float64 false "最小金额"
-// @Param        max_amount query    float64 false "最大金额"
-// @Param        start_time query    string  false "开始时间（格式：2006-01-02 15:04:05）"
-// @Param        end_time   query    string  false "结束时间（格式：2006-01-02 15:04:05）"
-// @Param        order_by   query    string  false "排序（格式：字段:asc/desc，如：created_at:desc）"
-// @Success      200        {object} ExportTaskResponse "导出任务已提交，返回导出记录ID"
-// @Failure      400        {object} apidoc.Error "参数错误"
-// @Failure      401        {object} apidoc.Error "未登录"
-// @Failure      403        {object} apidoc.Error "无权限"
-// @Failure      500        {object} apidoc.Error "服务器错误"
+// @Param        user_id    query    int     false "鐢ㄦ埛ID"
+// @Param        order_no   query    string  false "璁㈠崟鍙凤紙妯＄硦鎼滅储锛?
+// @Param        status     query    string  false "璁㈠崟鐘舵€侊紙pending/paid/cancelled锛?
+// @Param        min_amount query    float64 false "鏈€灏忛噾棰?
+// @Param        max_amount query    float64 false "鏈€澶ч噾棰?
+// @Param        start_time query    string  false "寮€濮嬫椂闂达紙鏍煎紡锛?006-01-02 15:04:05锛?
+// @Param        end_time   query    string  false "缁撴潫鏃堕棿锛堟牸寮忥細2006-01-02 15:04:05锛?
+// @Param        order_by   query    string  false "鎺掑簭锛堟牸寮忥細瀛楁:asc/desc锛屽锛歝reated_at:desc锛?
+// @Success      200        {object} ExportTaskResponse "瀵煎嚭浠诲姟宸叉彁浜わ紝杩斿洖瀵煎嚭璁板綍ID"
+// @Failure      400        {object} apidoc.Error "鍙傛暟閿欒"
+// @Failure      401        {object} apidoc.Error "鏈櫥褰?
+// @Failure      403        {object} apidoc.Error "鏃犳潈闄?
+// @Failure      500        {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders/export [post]
 // @Security     BearerAuth
 func (r *OrderController) Export(ctx http.Context) http.Response {
@@ -561,23 +561,23 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	// 防重复点击：使用框架自带的原子锁（锁会在10秒后自动过期，防止短时间内重复请求）
+	// 闃查噸澶嶇偣鍑伙細浣跨敤妗嗘灦鑷甫鐨勫師瀛愰攣锛堥攣浼氬湪10绉掑悗鑷姩杩囨湡锛岄槻姝㈢煭鏃堕棿鍐呴噸澶嶈姹傦級
 	lockKey := fmt.Sprintf("export:orders:lock:%d", adminID)
 	lock := facades.Cache().Lock(lockKey, 10*time.Second)
 
-	// 尝试获取锁，如果获取失败则返回错误
+	// 灏濊瘯鑾峰彇閿侊紝濡傛灉鑾峰彇澶辫触鍒欒繑鍥為敊璇?
 	if !lock.Get() {
 		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
 	}
 
-	// 构建筛选条件
+	// 鏋勫缓绛涢€夋潯浠?
 	filters, resp := r.buildFilters(ctx)
 	if resp != nil {
 		return resp
 	}
 
-	// 创建导出记录（状态为处理中）
-	// 获取存储驱动配置
+	// 鍒涘缓瀵煎嚭璁板綍锛堢姸鎬佷负澶勭悊涓級
+	// 鑾峰彇瀛樺偍椹卞姩閰嶇疆
 	disk := utils.GetConfigValue("storage", "file_disk", "")
 	if disk == "" {
 		disk = utils.GetConfigValue("storage", "export_disk", "")
@@ -591,13 +591,13 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		Type:    models.ExportTypeOrders,
 		Status:  models.ExportStatusProcessing,
 		Disk:    disk,
-		Path:    "", // 处理完成后更新
+		Path:    "", // 澶勭悊瀹屾垚鍚庢洿鏂?
 	}
 	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 将筛选条件序列化为 JSON
+	// 灏嗙瓫閫夋潯浠跺簭鍒楀寲涓?JSON
 	filtersMap := map[string]any{
 		"user_id":    filters.UserID,
 		"order_no":   filters.OrderNo,
@@ -613,12 +613,12 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		filtersMap["end_time"] = utils.FormatDateTime(filters.EndTime)
 	}
 
-	// 获取当前语言（从请求头或查询参数，与 middleware 逻辑一致）
+	// 鑾峰彇褰撳墠璇█锛堜粠璇锋眰澶存垨鏌ヨ鍙傛暟锛屼笌 middleware 閫昏緫涓€鑷达級
 	lang := r.getCurrentLanguage(ctx)
 	timezone := helpers.GetCurrentTimezone(ctx)
 
-	// 异步执行导出任务（使用 Job）
-	// 将参数序列化为 JSON 字符串传递，避免框架对复杂类型的序列化问题
+	// 寮傛鎵ц瀵煎嚭浠诲姟锛堜娇鐢?Job锛?
+	// 灏嗗弬鏁板簭鍒楀寲涓?JSON 瀛楃涓蹭紶閫掞紝閬垮厤妗嗘灦瀵瑰鏉傜被鍨嬬殑搴忓垪鍖栭棶棰?
 	exportArgsStruct := jobs.ExportOrdersArgs{
 		ExportID: exportRecord.ID,
 		AdminID:  adminID,
@@ -628,21 +628,21 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		Timezone: timezone,
 	}
 
-	// 序列化为 JSON 字符串
+	// 搴忓垪鍖栦负 JSON 瀛楃涓?
 	exportArgsJSON, err := json.Marshal(exportArgsStruct)
 	if err != nil {
-		facades.Log().Errorf("序列化导出参数失败: export_id=%d, error=%v", exportRecord.ID, err)
+		facades.Log().Errorf("搴忓垪鍖栧鍑哄弬鏁板け璐? export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
 		facades.Orm().Query().Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 记录任务提交日志
-	facades.Log().Infof("提交导出任务到队列: export_id=%d, queue_driver=%s, args_json=%s",
+	// 璁板綍浠诲姟鎻愪氦鏃ュ織
+	facades.Log().Infof("鎻愪氦瀵煎嚭浠诲姟鍒伴槦鍒? export_id=%d, queue_driver=%s, args_json=%s",
 		exportRecord.ID, facades.Config().GetString("queue.default"), string(exportArgsJSON))
 
-	// 使用 queue.Arg 包装 JSON 字符串参数
+	// 浣跨敤 queue.Arg 鍖呰 JSON 瀛楃涓插弬鏁?
 	exportArgs := []queue.Arg{
 		{
 			Type:  "string",
@@ -650,19 +650,19 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		},
 	}
 
-	// 传递 JSON 字符串作为参数，使用 long-running 队列，避免长时间运行的导出任务影响其他队列任务
-	// 所有耗时任务（导出、报表生成、批量处理等）都应该使用 long-running 队列
+	// 浼犻€?JSON 瀛楃涓蹭綔涓哄弬鏁帮紝浣跨敤 long-running 闃熷垪锛岄伩鍏嶉暱鏃堕棿杩愯鐨勫鍑轰换鍔″奖鍝嶅叾浠栭槦鍒椾换鍔?
+	// 鎵€鏈夎€楁椂浠诲姟锛堝鍑恒€佹姤琛ㄧ敓鎴愩€佹壒閲忓鐞嗙瓑锛夐兘搴旇浣跨敤 long-running 闃熷垪
 	if err := facades.Queue().Job(&jobs.ExportOrders{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
-		// 如果任务提交失败，立即释放锁，让用户可以立即重试
+		// 濡傛灉浠诲姟鎻愪氦澶辫触锛岀珛鍗抽噴鏀鹃攣锛岃鐢ㄦ埛鍙互绔嬪嵆閲嶈瘯
 		lock.Release()
-		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
+		facades.Log().Errorf("鎻愪氦瀵煎嚭浠诲姟澶辫触: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
 		facades.Orm().Query().Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	facades.Log().Infof("导出任务已成功提交到队列: export_id=%d", exportRecord.ID)
+	facades.Log().Infof("瀵煎嚭浠诲姟宸叉垚鍔熸彁浜ゅ埌闃熷垪: export_id=%d", exportRecord.ID)
 
 	return response.Success(ctx, http.Json{
 		"export_id": exportRecord.ID,
@@ -670,24 +670,24 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 	})
 }
 
-// GetExportStatus 查询导出状态
-// @Summary      查询导出状态
-// @Description  根据导出记录ID查询导出任务的状态
-// @Tags         订单管理
+// GetExportStatus 鏌ヨ瀵煎嚭鐘舵€?
+// @Summary      鏌ヨ瀵煎嚭鐘舵€?
+// @Description  鏍规嵁瀵煎嚭璁板綍ID鏌ヨ瀵煎嚭浠诲姟鐨勭姸鎬?
+// @Tags         璁㈠崟绠＄悊
 // @Accept       json
 // @Produce      json
-// @Param        id   path      int  true  "导出记录ID"
+// @Param        id   path      int  true  "瀵煎嚭璁板綍ID"
 // @Success      200  {object}  ExportStatusResponse
-// @Failure      400  {object}  apidoc.Error  "参数错误"
-// @Failure      401  {object}  apidoc.Error  "未登录"
-// @Failure      403  {object}  apidoc.Error  "无权限"
-// @Failure      500  {object}  apidoc.Error  "服务器错误"
+// @Failure      400  {object}  apidoc.Error  "鍙傛暟閿欒"
+// @Failure      401  {object}  apidoc.Error  "鏈櫥褰?
+// @Failure      403  {object}  apidoc.Error  "鏃犳潈闄?
+// @Failure      500  {object}  apidoc.Error  "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders/export/status/{id} [get]
 // @Security     BearerAuth
 func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 	exportID := helpers.GetUintRoute(ctx, "id")
 	if exportID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "file_job_id_required")
+		return response.Error(ctx, http.StatusBadRequest, "id_required")
 	}
 
 	exportRecordService := services.NewExportRecordService()
@@ -696,7 +696,7 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 检查权限：只能查看自己的导出记录
+	// 妫€鏌ユ潈闄愶細鍙兘鏌ョ湅鑷繁鐨勫鍑鸿褰?
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
 	if err != nil {
 		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
@@ -705,7 +705,7 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusForbidden, "forbidden")
 	}
 
-	// 生成文件URL
+	// 鐢熸垚鏂囦欢URL
 	fileURL := ""
 	if exportRecord.Path != "" && exportRecord.Status == models.ExportStatusSuccess {
 		exportService := services.NewExportService(ctx)
@@ -732,33 +732,33 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 func (r *OrderController) getExportStatusText(ctx http.Context, status uint8) string {
 	switch status {
 	case models.ExportStatusProcessing:
-		return trans.Get(ctx, "job_processing")
+		return trans.Get(ctx, "processing")
 	case models.ExportStatusSuccess:
-		return trans.Get(ctx, "job_success")
+		return trans.Get(ctx, "success")
 	case models.ExportStatusFailed:
-		return trans.Get(ctx, "job_failed")
+		return trans.Get(ctx, "failed")
 	default:
-		return trans.Get(ctx, "job_unknown")
+		return trans.Get(ctx, "unknown")
 	}
 }
 
-// getCurrentLanguage 获取当前请求的语言（使用通用工具函数）
+// getCurrentLanguage 鑾峰彇褰撳墠璇锋眰鐨勮瑷€锛堜娇鐢ㄩ€氱敤宸ュ叿鍑芥暟锛?
 func (r *OrderController) getCurrentLanguage(ctx http.Context) string {
 	return utils.GetCurrentLanguage(ctx)
 }
 
-// Import 导入订单
-// @Summary      导入订单
-// @Description  从CSV文件导入订单数据，支持批量导入
-// @Tags         订单管理
+// Import 瀵煎叆璁㈠崟
+// @Summary      瀵煎叆璁㈠崟
+// @Description  浠嶤SV鏂囦欢瀵煎叆璁㈠崟鏁版嵁锛屾敮鎸佹壒閲忓鍏?
+// @Tags         璁㈠崟绠＄悊
 // @Accept       multipart/form-data
 // @Produce      json
-// @Param        file formData file true "CSV文件"
-// @Success      200  {object} ImportResultResponse "导入成功，返回导入结果"
-// @Failure      400  {object} apidoc.Error "参数错误"
-// @Failure      401  {object} apidoc.Error "未登录"
-// @Failure      403  {object} apidoc.Error "无权限"
-// @Failure      500  {object} apidoc.Error "服务器错误"
+// @Param        file formData file true "CSV鏂囦欢"
+// @Success      200  {object} ImportResultResponse "瀵煎叆鎴愬姛锛岃繑鍥炲鍏ョ粨鏋?
+// @Failure      400  {object} apidoc.Error "鍙傛暟閿欒"
+// @Failure      401  {object} apidoc.Error "鏈櫥褰?
+// @Failure      403  {object} apidoc.Error "鏃犳潈闄?
+// @Failure      500  {object} apidoc.Error "鏈嶅姟鍣ㄩ敊璇?
 // @Router       /api/admin/orders/import [post]
 // @Security     BearerAuth
 func (r *OrderController) Import(ctx http.Context) http.Response {
@@ -767,19 +767,19 @@ func (r *OrderController) Import(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
 	}
 
-	// 获取上传的文件
+	// 鑾峰彇涓婁紶鐨勬枃浠?
 	file, err := ctx.Request().File("file")
 	if err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "file_required")
 	}
 
-	// 验证文件类型（只允许CSV）
+	// 楠岃瘉鏂囦欢绫诲瀷锛堝彧鍏佽CSV锛?
 	filename := file.GetClientOriginalName()
 	if !strings.HasSuffix(strings.ToLower(filename), ".csv") {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidFileType.Code)
 	}
 
-	// 读取文件内容
+	// 璇诲彇鏂囦欢鍐呭
 	storage := facades.Storage().Disk("local")
 	savedPath, err := storage.PutFile("", file)
 	if err != nil {
@@ -788,7 +788,7 @@ func (r *OrderController) Import(ctx http.Context) http.Response {
 		})
 	}
 
-	// 读取文件内容
+	// 璇诲彇鏂囦欢鍐呭
 	csvContent, err := storage.Get(savedPath)
 	if err != nil {
 		_ = storage.Delete(savedPath)
@@ -797,12 +797,12 @@ func (r *OrderController) Import(ctx http.Context) http.Response {
 		})
 	}
 
-	// 清理临时文件
+	// 娓呯悊涓存椂鏂囦欢
 	defer func() {
 		_ = storage.Delete(savedPath)
 	}()
 
-	// 导入订单
+	// 瀵煎叆璁㈠崟
 	importService := services.NewImportOrderService(ctx)
 	result, err := importService.ImportOrders(csvContent)
 	if err != nil {

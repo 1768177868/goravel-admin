@@ -21,7 +21,7 @@ func (r *ProcessImage) Signature() string {
 }
 
 // Handle 处理图片任务
-// 
+//
 // 参数:
 //   - args[0]: ProcessImageArgs 结构体或 string (图片路径)
 //

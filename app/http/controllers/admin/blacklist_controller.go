@@ -18,16 +18,16 @@ type BlacklistController struct {
 }
 
 type BlacklistResponse struct {
-	ID        uint   `json:"id" example:"1"`                                // 黑名单ID
-	IP        string `json:"ip" example:"192.168.1.1"`                      // IP地址/IP段
-	Remark    string `json:"remark" example:"测试IP"`                         // 备注说明
-	Status    uint8  `json:"status" enums:"0,1" example:"1"`                // 状态（1-启用，0-禁用）
-	CreatedAt string `json:"created_at" example:"2024-01-01 00:00:00"`      // 创建时间
-	UpdatedAt string `json:"updated_at" example:"2024-01-01 00:00:00"`      // 更新时间
+	ID        uint   `json:"id" example:"1"`                           // 黑名单ID
+	IP        string `json:"ip" example:"192.168.1.1"`                 // IP地址/IP段
+	Remark    string `json:"remark" example:"测试IP"`                    // 备注说明
+	Status    uint8  `json:"status" enums:"0,1" example:"1"`           // 状态（1-启用，0-禁用）
+	CreatedAt string `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
+	UpdatedAt string `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
 }
 
 type BlacklistListData struct {
-	List     []BlacklistResponse `json:"list"`
+	List []BlacklistResponse `json:"list"`
 	apidoc.Pagination
 }
 

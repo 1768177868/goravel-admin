@@ -27,7 +27,7 @@ var auditModelFactories = map[string]func() any{
 	"menus":       func() any { return &models.Menu{} },
 	"departments": func() any { return &models.Department{} },
 	"positions":   func() any { return &models.Position{} },
-	"blacklists": func() any { return &models.Blacklist{} },
+	"blacklists":  func() any { return &models.Blacklist{} },
 }
 
 // ParseResourcePath 从 REST API 路径中提取资源表名和记录 ID。

@@ -26,7 +26,7 @@ func (r *BlacklistUpdate) Rules(ctx http.Context) map[string]string {
 
 func (r *BlacklistUpdate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"status.in": trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"status.in": trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 

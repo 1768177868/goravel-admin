@@ -65,13 +65,6 @@
         <template #admin_id="{ row }">
           {{ getadminDisplayName(row.admin || row.admin_id) }}
         </template>
-        <template #status="{ row }">
-          <el-switch
-            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-            :disabled="getButtonState('article.update').disabled"
-            @change="(val) => handleStatusChange(row, val)"
-          />
-        </template>
         <template #operation="{ row }">
           <TableActionButtons
             :row="row"
@@ -102,9 +95,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, markRaw } from "vue";
 import { useI18n } from "vue-i18n";
-
-import { useRouter } from "vue-router";
-
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import SearchForm from "../../components/SearchForm.vue";
@@ -132,9 +122,6 @@ const PlusIcon = markRaw(Plus);
 const { getButtonState } = usePermission();
 
 const { t } = useI18n();
-
-const router = useRouter();
-
 const tableRef = ref(null);
 const formRef = ref(null);
 
@@ -305,10 +292,8 @@ const tableColumns = computed(() => {
     },
     {
       field: "status",
-      title: t("table.status"),
-      width: 100,
+      title: t("status"),
       sortable: false,
-      slot: "status",
     },
     {
       field: "updated_at",
@@ -346,33 +331,7 @@ const tableColumns = computed(() => {
 
 const getadminDisplayName = (admin_id) => {
   if (!admin_id) return "-";
-  return admin_id.username || admin_id.admin || "-";
-};
-
-const handleStatusChange = async (row, newStatus) => {
-  try {
-    const statusValue = newStatus ? 1 : 0;
-    await updateArticle(row.id, {
-      status: statusValue,
-    });
-    ElMessage.success(newStatus ? t("common.enabled") : t("common.disabled"));
-    // 更新本地数据
-    const item = tableData.value.find((a) => a.id === row.id);
-    if (item) {
-      item.status = statusValue;
-      item.Status = statusValue;
-    }
-  } catch (error) {
-    logger.error("Status change error:", error);
-    loadData();
-    if (!error.__handled) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        t("common.operation_failed");
-      ElMessage.error(errorMessage);
-    }
-  }
+  return admin_id.nickname || admin_id.admin || "-";
 };
 
 const handleEdit = (row) => {
@@ -467,6 +426,22 @@ const handleAction = (command, row) => {
   }
 };
 
+const resolveExportFileUrl = (fileUrl) => {
+  if (!fileUrl) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl;
+  }
+
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "";
+  if (apiBaseURL && fileUrl.startsWith("/")) {
+    return `${apiBaseURL.replace(/\/+$/, "")}${fileUrl}`;
+  }
+
+  return fileUrl;
+};
+
 const handleExport = async () => {
   if (isExporting.value) {
     return;
@@ -475,9 +450,15 @@ const handleExport = async () => {
   isExporting.value = true;
 
   try {
-    await exportArticle(searchForm);
-    ElMessage.success(t("common.queued"));
-    router.push("/exports");
+    const res = await exportArticle(searchForm);
+    const payload = res?.data || {};
+    const fileUrl = resolveExportFileUrl(payload.file_url || payload.FileURL);
+
+    ElMessage.success(res?.message || t("common.success"));
+
+    if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    }
   } catch (error) {
     logger.error("Export error:", error);
     if (error.response?.status === 429) {

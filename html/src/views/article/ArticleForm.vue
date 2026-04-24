@@ -13,7 +13,7 @@
         label-width="120px"
       >
         <el-form-item :label="$t('content')" prop="content">
-          <MarkdownEditor
+          <WangEditor
             v-model="formData.content"
             :placeholder="$t('content_placeholder')"
             :height="400"
@@ -42,7 +42,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import FormField from "../../components/Form/FormField.vue";
 
-import MarkdownEditor from "../../components/MarkdownEditor.vue";
+import WangEditor from "../../components/WangEditor.vue";
 
 import {
   createArticle,
@@ -75,7 +75,7 @@ const getFormInitialValue = () => ({
   admin_id: null,
   title: "",
   content: "",
-  status: 0,
+  status: null,
 });
 
 const dialogVisible = computed({
@@ -94,6 +94,9 @@ const formRules = computed(() => {
 
   rules["admin_id"] = [
     { required: true, message: t("admin_id_required"), trigger: "blur" },
+  ];
+  rules["content"] = [
+    { required: true, message: t("content_required"), trigger: "blur" },
   ];
   rules["status"] = [
     { required: true, message: t("status_required"), trigger: "blur" },
@@ -120,12 +123,10 @@ const formFields = computed(() => {
   fields.push({
     prop: "status",
     label: t("status"),
-    type: "switch",
+    type: "select",
     disabled: loading.value,
-    props: {
-      activeValue: 1,
-      inactiveValue: 0,
-    },
+    apiUrl: "/options?type=dictionary&dictionary_type=status",
+    clearable: true,
   });
   return fields;
 });
@@ -166,6 +167,7 @@ const loadData = async () => {
       const mapped = mapFields(data, getFormInitialValue());
       const normalizeRules = {};
 
+      normalizeRules["status"] = "string";
       const normalized = normalizeFormData(mapped, normalizeRules);
       Object.assign(formData, normalized);
     }

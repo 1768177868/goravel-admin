@@ -17,17 +17,17 @@ type DictionaryController struct {
 }
 
 type DictionaryResponse struct {
-	ID             uint   `json:"id" example:"1"`                                 // 字典ID
-	Type           string `json:"type" example:"order_status"`                    // 字典类型
-	Label          string `json:"label" example:"已支付"`                            // 字典标签
-	Value          string `json:"value" example:"paid"`                            // 字典值
-	TranslationKey string `json:"translation_key" example:"order.status.paid"`     // 多语言翻译Key
-	Description    string `json:"description" example:"订单支付成功状态"`                // 字典描述
-	Status         uint8  `json:"status" enums:"0,1" example:"1"`                  // 状态（1-启用，0-禁用）
-	Sort           int    `json:"sort" example:"10"`                               // 排序值
-	Remark         string `json:"remark" example:"系统默认值"`                         // 备注
-	CreatedAt      string `json:"created_at" example:"2024-01-01 00:00:00"`        // 创建时间
-	UpdatedAt      string `json:"updated_at" example:"2024-01-01 00:00:00"`        // 更新时间
+	ID             uint   `json:"id" example:"1"`                              // 字典ID
+	Type           string `json:"type" example:"order_status"`                 // 字典类型
+	Label          string `json:"label" example:"已支付"`                         // 字典标签
+	Value          string `json:"value" example:"paid"`                        // 字典值
+	TranslationKey string `json:"translation_key" example:"order.status.paid"` // 多语言翻译Key
+	Description    string `json:"description" example:"订单支付成功状态"`              // 字典描述
+	Status         uint8  `json:"status" enums:"0,1" example:"1"`              // 状态（1-启用，0-禁用）
+	Sort           int    `json:"sort" example:"10"`                           // 排序值
+	Remark         string `json:"remark" example:"系统默认值"`                      // 备注
+	CreatedAt      string `json:"created_at" example:"2024-01-01 00:00:00"`    // 创建时间
+	UpdatedAt      string `json:"updated_at" example:"2024-01-01 00:00:00"`    // 更新时间
 }
 
 type DictionaryListData struct {

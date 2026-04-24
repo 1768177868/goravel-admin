@@ -27,14 +27,14 @@ var (
 )
 
 type SlowQueryTopItem struct {
-	SQLHash        string    `json:"sql_hash"`
-	NormalizedSQL  string    `json:"normalized_sql"`
-	Count          int       `json:"count"`
-	AvgDurationMS  float64   `json:"avg_duration_ms"`
-	MaxDurationMS  float64   `json:"max_duration_ms"`
-	LastSeenAt     string    `json:"last_seen_at"`
-	LatestSQL      string    `json:"latest_sql"`
-	LatestTraceID  string    `json:"latest_trace_id"`
+	SQLHash       string  `json:"sql_hash"`
+	NormalizedSQL string  `json:"normalized_sql"`
+	Count         int     `json:"count"`
+	AvgDurationMS float64 `json:"avg_duration_ms"`
+	MaxDurationMS float64 `json:"max_duration_ms"`
+	LastSeenAt    string  `json:"last_seen_at"`
+	LatestSQL     string  `json:"latest_sql"`
+	LatestTraceID string  `json:"latest_trace_id"`
 }
 
 type SlowQueryService interface {

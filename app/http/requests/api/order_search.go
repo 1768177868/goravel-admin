@@ -32,9 +32,9 @@ func (r *OrderSearch) Rules(ctx http.Context) map[string]string {
 
 func (r *OrderSearch) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"q.max_len":            trans.GetReplace(ctx, "validation.max.keyword", map[string]string{"max": "200"}),
-		"created_from.max_len": trans.GetReplace(ctx, "validation.max.start_time", map[string]string{"max": "32"}),
-		"created_to.max_len":   trans.GetReplace(ctx, "validation.max.end_time", map[string]string{"max": "32"}),
+		"q.max_len":            trans.Get(ctx, "validation.max.keyword", map[string]string{"max": "200"}),
+		"created_from.max_len": trans.Get(ctx, "validation.max.start_time", map[string]string{"max": "32"}),
+		"created_to.max_len":   trans.Get(ctx, "validation.max.end_time", map[string]string{"max": "32"}),
 	}
 }
 

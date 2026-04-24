@@ -58,4 +58,3 @@ func (receiver *Same) Passes(_ context.Context, data validation.Data, val any, o
 func (receiver *Same) Message(ctx context.Context) string {
 	return "The :attribute must match :other."
 }
-

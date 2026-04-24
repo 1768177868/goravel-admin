@@ -71,16 +71,16 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 
 	// 构建标准的otpauth URL（Google Authenticator标准格式）
 	// 格式：otpauth://totp/Issuer:AccountName?secret=SECRET&issuer=Issuer
-	otpURL := fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s", 
+	otpURL := fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s",
 		appName, accountName, secret, appName)
-	
+
 	// 从URL创建key对象（这样可以确保格式完全符合标准）
 	key, err := otp.NewKeyFromURL(otpURL)
 	if err != nil {
 		errorlog.Record(context.Background(), "google-authenticator", "创建密钥失败", map[string]any{
-			"app_name":    appName,
+			"app_name":     appName,
 			"account_name": accountName,
-			"error":       err.Error(),
+			"error":        err.Error(),
 		}, "failed to create key from URL: %w", err)
 		return "", fmt.Errorf("failed to create key from URL: %w", err)
 	}
@@ -90,9 +90,9 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 	img, err := key.Image(200, 200)
 	if err != nil {
 		errorlog.Record(context.Background(), "google-authenticator", "生成二维码图片失败", map[string]any{
-			"app_name":    appName,
+			"app_name":     appName,
 			"account_name": accountName,
-			"error":       err.Error(),
+			"error":        err.Error(),
 		}, "failed to generate QR code image: %w", err)
 		return "", fmt.Errorf("failed to generate QR code image: %w", err)
 	}
@@ -100,9 +100,9 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 	// 将图片编码为PNG
 	if err := png.Encode(&buf, img); err != nil {
 		errorlog.Record(context.Background(), "google-authenticator", "编码PNG失败", map[string]any{
-			"app_name":    appName,
+			"app_name":     appName,
 			"account_name": accountName,
-			"error":       err.Error(),
+			"error":        err.Error(),
 		}, "failed to encode PNG: %w", err)
 		return "", fmt.Errorf("failed to encode PNG: %w", err)
 	}
@@ -190,4 +190,3 @@ func (s *GoogleAuthenticatorServiceImpl) Unbind(adminID uint) error {
 		Update("google_secret", nil)
 	return err
 }
-

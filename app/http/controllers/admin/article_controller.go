@@ -1,24 +1,21 @@
 package admin
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/queue"
+
 	"github.com/goravel/framework/facades"
+	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-	"goravel/app/http/trans"
-	"goravel/app/jobs"
-	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils"
 )
 
 type ArticleController struct {
@@ -59,7 +56,7 @@ func NewArticleController() *ArticleController {
 	}
 }
 
-// Index Article列表
+// Index lists Article records.
 func (c *ArticleController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
@@ -79,7 +76,7 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 	})
 }
 
-// Show Article详情
+// Show returns Article details.
 func (c *ArticleController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	item, err := c.ArticleService.GetByID(id)
@@ -92,7 +89,7 @@ func (c *ArticleController) Show(ctx http.Context) http.Response {
 	})
 }
 
-// Store 创建Article
+// Store creates a new Article.
 func (c *ArticleController) Store(ctx http.Context) http.Response {
 	var req adminrequests.ArticleCreate
 	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
@@ -109,7 +106,7 @@ func (c *ArticleController) Store(ctx http.Context) http.Response {
 	})
 }
 
-// Update 更新Article
+// Update modifies an existing Article.
 func (c *ArticleController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
@@ -128,7 +125,7 @@ func (c *ArticleController) Update(ctx http.Context) http.Response {
 	})
 }
 
-// Destroy 删除Article
+// Destroy deletes a Article.
 func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if err := c.ArticleService.Delete(id); err != nil {
@@ -138,7 +135,7 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	return response.Success(ctx, "delete_success", http.Json{})
 }
 
-// Export 导出Article（异步 ExportArticles Job；筛参与列表共用 BuildArticleFiltersFromHTTP + BuildArticleQuery）
+// Export exports Article records.
 func (c *ArticleController) Export(ctx http.Context) http.Response {
 	adminID, err := helpers.GetAdminIDFromContext(ctx)
 	if err != nil {
@@ -151,63 +148,52 @@ func (c *ArticleController) Export(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
 
-	filtersMap := utils.ExportFiltersToMap(services.BuildArticleFiltersFromHTTP(ctx))
+	filters := c.buildArticleFilters(ctx)
 
-	disk := utils.GetConfigValue("storage", "file_disk", "")
-	if disk == "" {
-		disk = utils.GetConfigValue("storage", "export_disk", "")
-	}
-	if disk == "" {
-		disk = "local"
-	}
-
-	exportRecord := models.Export{
-		AdminID: adminID,
-		Type:    "articles",
-		Status:  models.ExportStatusProcessing,
-		Disk:    disk,
-		Path:    "",
-	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
-		lock.Release()
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	exportArgsStruct := jobs.ExportArgs{
-		ExportID: exportRecord.ID,
-		AdminID:  adminID,
-		Filters:  filtersMap,
-		Type:     "articles",
-		Language: utils.GetCurrentLanguage(ctx),
-		Timezone: helpers.GetCurrentTimezone(ctx),
-	}
-
-	exportArgsJSON, err := json.Marshal(exportArgsStruct)
+	list, err := c.ArticleService.GetAllArticleForExport(filters)
 	if err != nil {
-		lock.Release()
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		_ = facades.Orm().Query().Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
+		return response.ErrorWithLog(ctx, "article", err, map[string]any{
+			"action":   "export_articles",
+			"admin_id": adminID,
+		})
 	}
 
-	exportArgs := []queue.Arg{
-		{
-			Type:  "string",
-			Value: string(exportArgsJSON),
-		},
+	headers := []string{
+		"admin_id",
+		"title",
+		"content",
+		"status",
+		"created_at",
+		"updated_at",
 	}
 
-	if err := facades.Queue().Job(&jobs.ExportArticles{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
-		lock.Release()
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		_ = facades.Orm().Query().Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
+	timezone := helpers.GetCurrentTimezone(ctx)
+	var data [][]string
+	for _, row := range list {
+		r := []string{
+			func() string {
+				return cast.ToString(row.AdminId)
+			}(),
+			func() string {
+				return row.Title
+			}(),
+			func() string {
+				return row.Content
+			}(),
+			func() string {
+				return cast.ToString(row.Status)
+			}(),
+			func() string {
+				return helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone)
+			}(),
+			func() string {
+				return helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone)
+			}(),
+		}
+		data = append(data, r)
 	}
 
-	return response.Success(ctx, http.Json{
-		"export_id": exportRecord.ID,
-		"message":   trans.Get(ctx, "queued"),
-	})
+	ctx.WithValue("export_type", "articles")
+
+	return response.Export(ctx, "exported", headers, data, "articles")
 }

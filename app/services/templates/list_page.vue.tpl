@@ -157,7 +157,7 @@ import ErrorHandler from '../../utils/errorHandler'
 
 const PlusIcon = markRaw(Plus)
 
-// 权限控制
+// Permission checks
 const { getButtonState } = usePermission()
 
 const { t } = useI18n()
@@ -214,7 +214,7 @@ const buildListParams = (form, baseParams) => {
       delete params[`${fieldName}_end`]
     }
 
-    // 避免将范围字段原始数组直接作为查询参数提交
+    // Avoid submitting raw range arrays as query params directly.
     delete params[fieldName]
   })
 
@@ -383,7 +383,7 @@ const handleStatusChange = async (row, newStatus) => {
       status: statusValue
     })
     ElMessage.success(newStatus ? t('common.enabled') : t('common.disabled'))
-    // 更新本地数据
+    // Update local data.
     const item = tableData.value.find(a => a.id === row.id)
     if (item) {
       item.status = statusValue
@@ -465,7 +465,7 @@ const handleBatchDelete = async () => {
 }
 <<end>>
 
-// 获取主要操作按钮配置
+// Get primary action button config.
 const getPrimaryActions = (row) => {
   return [
     <<if .HasEdit>>
@@ -489,12 +489,12 @@ const getPrimaryActions = (row) => {
   ]
 }
 
-// 获取更多操作按钮配置（可根据需要扩展）
+// Get secondary action button config (extend when needed).
 const getMoreActions = (row) => {
   return []
 }
 
-// 处理操作事件
+// Handle action events.
 const handleAction = (command, row) => {
   switch (command) {
     case 'edit':

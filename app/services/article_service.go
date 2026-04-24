@@ -13,6 +13,7 @@ import (
 type ArticleService interface {
 	GetByID(id uint) (*models.Article, error)
 	GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error)
+
 	GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error)
 
 	Create(req *admin.ArticleCreate) (*models.Article, error)
@@ -35,7 +36,7 @@ type ArticleFilters struct {
 	UpdatedAtEnd   string
 }
 
-// BuildArticleFiltersFromHTTP 与列表/导出共用：从 GET query 或 POST body 读取筛选字段（与 ArticleController 原 build 逻辑一致）
+// BuildArticleFiltersFromHTTP is shared by list/export and reads filters from GET query or POST body.
 func BuildArticleFiltersFromHTTP(ctx http.Context) ArticleFilters {
 	return ArticleFilters{
 		AdminId:        ctx.Request().Input("admin_id", ctx.Request().Query("admin_id", "")),
@@ -62,17 +63,17 @@ func (s *ArticleServiceImpl) withRelations(query orm.Query) orm.Query {
 	return query
 }
 
-// BuildArticleQuery 构建文章查询（列表与异步导出 Job 共用）
+// BuildArticleQuery builds the Article query shared by list/export.
 func BuildArticleQuery(filters ArticleFilters) orm.Query {
 	query := facades.Orm().Query().Model(&models.Article{})
 	if filters.AdminId != "" {
 		query = query.Where("admin_id = ?", filters.AdminId)
 	}
 	if filters.Title != "" {
-		query = query.Where("title LIKE ?", "%"+filters.Title+"%")
+		query = query.Where("title = ?", filters.Title)
 	}
 	if filters.Content != "" {
-		query = query.Where("content LIKE ?", "%"+filters.Content+"%")
+		query = query.Where("content = ?", filters.Content)
 	}
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)
@@ -181,4 +182,3 @@ func (s *ArticleServiceImpl) Delete(id uint) error {
 	}
 	return nil
 }
-

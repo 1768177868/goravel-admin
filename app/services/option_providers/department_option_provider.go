@@ -44,4 +44,3 @@ func (p *DepartmentOptionProvider) buildDepartmentTree(departments []models.Depa
 	}
 	return tree
 }
-

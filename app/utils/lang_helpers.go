@@ -73,4 +73,3 @@ func NormalizeLanguage(lang string) string {
 	}
 	return lang
 }
-

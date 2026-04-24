@@ -40,4 +40,3 @@ func GeneratePermanentToken(userID uint) (string, error) {
 
 	return tokenString, nil
 }
-

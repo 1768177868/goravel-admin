@@ -18,14 +18,14 @@ type PaymentMethodController struct {
 }
 
 type PaymentMethodResponse struct {
-	ID          uint           `json:"id" example:"1"`                // 支付方式ID
-	Name        string         `json:"name" example:"微信支付"`          // 名称
-	Code        string         `json:"code" example:"wechat"`        // 代码
-	Type        string         `json:"type" example:"wechat"`        // 类型
-	Config      map[string]any `json:"config,omitempty"`             // 配置（详情接口返回）
-	IsActive    bool           `json:"is_active" example:"true"`     // 是否启用
-	Sort        int            `json:"sort" example:"10"`            // 排序
-	Description string         `json:"description" example:"默认支付方式"` // 描述
+	ID          uint           `json:"id" example:"1"`                           // 支付方式ID
+	Name        string         `json:"name" example:"微信支付"`                      // 名称
+	Code        string         `json:"code" example:"wechat"`                    // 代码
+	Type        string         `json:"type" example:"wechat"`                    // 类型
+	Config      map[string]any `json:"config,omitempty"`                         // 配置（详情接口返回）
+	IsActive    bool           `json:"is_active" example:"true"`                 // 是否启用
+	Sort        int            `json:"sort" example:"10"`                        // 排序
+	Description string         `json:"description" example:"默认支付方式"`             // 描述
 	CreatedAt   string         `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
 	UpdatedAt   string         `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
 }

@@ -36,7 +36,7 @@ func (receiver *SendShipmentNotification) Queue(args ...any) event.Queue {
 }
 
 // Handle 处理发送发货通知
-// 
+//
 // 参数:
 //   - args[0]: OrderShippedArgs 结构体或 orderID/remark (int/uint/string)
 //

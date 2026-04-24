@@ -54,4 +54,3 @@ func (p *MenuOptionProvider) buildMenuTree(menus []models.Menu) []map[string]any
 	}
 	return tree
 }
-

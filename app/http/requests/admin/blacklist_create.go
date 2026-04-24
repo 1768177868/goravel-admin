@@ -27,8 +27,8 @@ func (r *BlacklistCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *BlacklistCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"ip.required": trans.Get(ctx, "ip_address_required"),
-		"status.in":   trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"ip.required": trans.Get(ctx, "validation.required.ip"),
+		"status.in":   trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 

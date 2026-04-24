@@ -48,4 +48,3 @@ func Blacklist() http.Middleware {
 		ctx.Request().Next()
 	}
 }
-

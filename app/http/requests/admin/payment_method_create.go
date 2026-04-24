@@ -34,14 +34,14 @@ func (r *PaymentMethodCreate) Rules(ctx http.Context) map[string]string {
 func (r *PaymentMethodCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 		"name.required":     trans.Get(ctx, "validation.required.name"),
-		"name.max_len":      trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"name.max_len":      trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
 		"code.required":     trans.Get(ctx, "validation.required.code"),
-		"code.max_len":      trans.GetReplace(ctx, "validation.max.code", map[string]string{"max": "20"}),
+		"code.max_len":      trans.Get(ctx, "validation.max.code", map[string]string{"max": "20"}),
 		"type.required":     trans.Get(ctx, "validation.required.type"),
-		"type.max_len":      trans.GetReplace(ctx, "validation.max.type", map[string]string{"max": "20"}),
+		"type.max_len":      trans.Get(ctx, "validation.max.type", map[string]string{"max": "20"}),
 		"config.required":   trans.Get(ctx, "validation.required.config"),
 		"is_active.boolean": trans.Get(ctx, "validation.boolean"),
-		"sort.min":          trans.GetReplace(ctx, "validation.min_value", map[string]string{"min": "0"}),
+		"sort.min":          trans.Get(ctx, "validation.min_value", map[string]string{"min": "0"}),
 	}
 }
 

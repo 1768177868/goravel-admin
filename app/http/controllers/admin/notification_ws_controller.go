@@ -10,9 +10,9 @@ import (
 
 	apphttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/oklog/ulid/v2"
 	"github.com/goravel/framework/support/str"
 	"github.com/gorilla/websocket"
+	"github.com/oklog/ulid/v2"
 
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -95,7 +95,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	_ = r.tokenService.UpdateLastUsedAt(token)
 
 	upgrader := websocket.Upgrader{
-		CheckOrigin: r.isOriginAllowed,
+		CheckOrigin:     r.isOriginAllowed,
 		ReadBufferSize:  1024, // 读缓冲区大小
 		WriteBufferSize: 1024, // 写缓冲区大小
 	}

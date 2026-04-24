@@ -25,7 +25,6 @@
     "admin_protected_cannot_disable": "该管理员受保护，无法禁用",
     "admin_cannot_delete_self": "不能删除自己",
     "admin_cannot_modify_roles": "默认管理员不允许修改角色",
-    "username_and_password_required": "用户名和密码不能为空",
     "username_exists": "用户名已存在",
     "password_encrypt_failed": "密码加密失败",
     "password_update_success": "密码修改成功",
@@ -36,9 +35,7 @@
     "password_length_error": "密码长度不能少于6位",
     "password_not_match": "两次密码输入不一致",
     "params_required": "参数不能为空",
-    "new_password_required": "新密码不能为空",
     "role_not_found": "角色不存在",
-    "role_name_and_slug_required": "角色名称和标识不能为空",
     "role_name_or_slug_exists": "角色名称或标识已存在",
     "role_name_exists": "角色名称已存在",
     "role_slug_exists": "角色标识已存在",
@@ -259,15 +256,6 @@
     "payment_status_paid": "已支付",
     "payment_status_failed": "支付失败",
     "payment_status_cancelled": "已取消",
-    "job_processing": "处理中",
-    "job_success": "成功",
-    "job_failed": "失败",
-    "job_unknown": "未知",
-    "file_job_record_not_found": "导出记录不存在",
-    "batch_delete_file_jobs_failed": "批量删除导出记录失败",
-    "file_job_id_required": "导出记录ID不能为空",
-    "file_job_not_found": "导出记录不存在",
-    "file_job_forbidden": "不允许导出",
     "search_unavailable": "搜索服务暂不可用",
     "search_failed": "订单搜索失败",
     "keyword": "关键词",
@@ -284,13 +272,17 @@
         "old_password": "原密码不能为空",
         "new_password": "新密码不能为空",
         "confirm_password": "确认密码不能为空",
-        "admin_id": "admin_id",
-        "code": "code",
-        "config": "config",
-        "content": "content",
-        "status": "status",
-        "title": "title",
-        "type": "type"
+        "admin_id": "管理员ID不能为空",
+        "code": "编码不能为空",
+        "config": "配置不能为空",
+        "content": "内容不能为空",
+        "status": "状态不能为空",
+        "title": "标题不能为空",
+        "type": "类型不能为空",
+        "username_and_password": "用户名和密码不能为空",
+        "role_name_and_slug": "角色名称和标识不能为空",
+        "path": "请输入路径",
+        "ip": "IP地址不能为空"
       },
       "min": {
         "username": "用户名长度不能少于:min位",
@@ -351,15 +343,15 @@
         "old_password": "原密码",
         "new_password": "新密码",
         "confirm_password": "确认密码",
-        "admin_id": "admin_id",
-        "config": "config",
-        "content": "content",
-        "is_active": "is_active",
-        "sort": "sort",
-        "translation_key": "translation_key"
+        "admin_id": "管理员id",
+        "config": "配置",
+        "content": "内容",
+        "is_active": "是否开启",
+        "sort": "排序",
+        "translation_key": "多语言Key"
       },
       "path": {
-        "url_invalid": "外部链接必须是有效的URL地址"
+        "url_invalid": "链接必须是有效的URL地址"
       },
       "same": {
         "confirm_password": ""
@@ -375,6 +367,12 @@
       "boolean": "必须是布尔值",
       "min_value": "不能小于:min"
     },
-    "validation_failed": "验证失败"
+    "validation_failed": "验证失败",
+    "processing": "处理中",
+    "success": "成功",
+    "failed": "失败",
+    "unknown": "未知",
+    "forbidden": "禁止访问",
+    "batch_delete_failed": "批量删除失败"
   }
 }

@@ -72,4 +72,3 @@ func (h *NotificationHub) RegisterConnection(conn *websocket.Conn, adminID uint)
 	go client.writePump()
 	go client.readPump()
 }
-

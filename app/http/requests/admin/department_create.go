@@ -38,15 +38,15 @@ func (r *DepartmentCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *DepartmentCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.required":  trans.Get(ctx, "department_name_required"),
-		"name.max_len":   trans.GetReplace(ctx, "validation.max.name", map[string]string{"max": "50"}),
-		"code.max_len":   trans.GetReplace(ctx, "validation.max.code", map[string]string{"max": "50"}),
-		"leader.max_len": trans.GetReplace(ctx, "validation.max.leader", map[string]string{"max": "50"}),
-		"phone.max_len":  trans.GetReplace(ctx, "validation.max.phone", map[string]string{"max": "20"}),
+		"name.required":  trans.Get(ctx, "validation.required.name"),
+		"name.max_len":   trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
+		"code.max_len":   trans.Get(ctx, "validation.max.code", map[string]string{"max": "50"}),
+		"leader.max_len": trans.Get(ctx, "validation.max.leader", map[string]string{"max": "50"}),
+		"phone.max_len":  trans.Get(ctx, "validation.max.phone", map[string]string{"max": "20"}),
 		"email.email":    trans.Get(ctx, "validation.email"),
-		"email.max_len":  trans.GetReplace(ctx, "validation.max.email", map[string]string{"max": "100"}),
-		"status.in":      trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"remark.max_len": trans.GetReplace(ctx, "validation.max.remark", map[string]string{"max": "500"}),
+		"email.max_len":  trans.Get(ctx, "validation.max.email", map[string]string{"max": "100"}),
+		"status.in":      trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"remark.max_len": trans.Get(ctx, "validation.max.remark", map[string]string{"max": "500"}),
 	}
 }
 

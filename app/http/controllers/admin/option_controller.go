@@ -57,7 +57,7 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 		if dictType == "" {
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrOptionTypeRequired.Code)
 		}
-		
+
 		dictionaries, err := r.dictionaryService.GetByType(dictType)
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)

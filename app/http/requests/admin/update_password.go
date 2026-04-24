@@ -28,7 +28,7 @@ func (r *UpdatePassword) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
 		"old_password.required":     trans.Get(ctx, "validation.required.old_password"),
 		"new_password.required":     trans.Get(ctx, "validation.required.new_password"),
-		"new_password.min_len":      trans.GetReplace(ctx, "validation.min.password", map[string]string{"min": "6"}),
+		"new_password.min_len":      trans.Get(ctx, "validation.min.password", map[string]string{"min": "6"}),
 		"confirm_password.required": trans.Get(ctx, "validation.required.confirm_password"),
 		"confirm_password.same":     trans.Get(ctx, "validation.same.confirm_password"),
 	}

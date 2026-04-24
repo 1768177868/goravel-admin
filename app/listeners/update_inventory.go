@@ -34,7 +34,7 @@ func (receiver *UpdateInventory) Queue(args ...any) event.Queue {
 }
 
 // Handle 处理更新库存
-// 
+//
 // 参数:
 //   - args[0]: OrderCreatedArgs 结构体或 orderID (int/uint)
 //

@@ -14,4 +14,3 @@ func Trace() http.Middleware {
 		ctx.Request().Next()
 	}
 }
-

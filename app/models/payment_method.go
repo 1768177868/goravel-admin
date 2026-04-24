@@ -21,4 +21,3 @@ type PaymentMethod struct {
 func (PaymentMethod) TableName() string {
 	return "payment_methods"
 }
-

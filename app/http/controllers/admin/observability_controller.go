@@ -22,21 +22,21 @@ type ObservabilityController struct {
 }
 
 type auditEvent struct {
-	Time       string    `json:"time"`
-	SortAt     int64     `json:"-"`
-	Type       string    `json:"type"`
-	TraceID    string    `json:"trace_id"`
-	Level      string    `json:"level,omitempty"`
-	Module     string    `json:"module,omitempty"`
-	Title      string    `json:"title,omitempty"`
-	Method     string    `json:"method,omitempty"`
-	Path       string    `json:"path,omitempty"`
-	AdminID    uint      `json:"admin_id,omitempty"`
-	AdminName  string    `json:"admin_name,omitempty"`
-	Status     uint8     `json:"status,omitempty"`
-	Message    string    `json:"message,omitempty"`
-	Context    any       `json:"context,omitempty"`
-	DurationMS int       `json:"duration_ms,omitempty"`
+	Time       string `json:"time"`
+	SortAt     int64  `json:"-"`
+	Type       string `json:"type"`
+	TraceID    string `json:"trace_id"`
+	Level      string `json:"level,omitempty"`
+	Module     string `json:"module,omitempty"`
+	Title      string `json:"title,omitempty"`
+	Method     string `json:"method,omitempty"`
+	Path       string `json:"path,omitempty"`
+	AdminID    uint   `json:"admin_id,omitempty"`
+	AdminName  string `json:"admin_name,omitempty"`
+	Status     uint8  `json:"status,omitempty"`
+	Message    string `json:"message,omitempty"`
+	Context    any    `json:"context,omitempty"`
+	DurationMS int    `json:"duration_ms,omitempty"`
 }
 
 func NewObservabilityController() *ObservabilityController {
@@ -78,12 +78,12 @@ func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Respon
 	slowSQL, _ := r.slowQueryService.GetByTraceID(traceID, 100)
 
 	return response.Success(ctx, ghttp.Json{
-		"trace_id":   traceID,
-		"request":    firstOperationRequest(operations),
-		"operations": operations,
-		"exceptions": filterExceptionLogs(systemLogs),
+		"trace_id":    traceID,
+		"request":     firstOperationRequest(operations),
+		"operations":  operations,
+		"exceptions":  filterExceptionLogs(systemLogs),
 		"system_logs": systemLogs,
-		"slow_sql":   slowSQL,
+		"slow_sql":    slowSQL,
 	})
 }
 

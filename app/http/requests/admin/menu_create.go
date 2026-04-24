@@ -61,19 +61,19 @@ func (r *MenuCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *MenuCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"title.required":     trans.Get(ctx, "menu_title_required"),
-		"title.max_len":      trans.GetReplace(ctx, "validation.max.title", map[string]string{"max": "50"}),
-		"slug.required":      trans.Get(ctx, "menu_slug_required"),
-		"slug.max_len":       trans.GetReplace(ctx, "validation.max.slug", map[string]string{"max": "50"}),
-		"icon.max_len":       trans.GetReplace(ctx, "validation.max.icon", map[string]string{"max": "50"}),
-		"path.required":      trans.Get(ctx, "menu_path_required"),
-		"path.max_len":       trans.GetReplace(ctx, "validation.max.path", map[string]string{"max": "0"}),
+		"title.required":     trans.Get(ctx, "validation.required.title"),
+		"title.max_len":      trans.Get(ctx, "validation.max.title", map[string]string{"max": "50"}),
+		"slug.required":      trans.Get(ctx, "validation.required.slug"),
+		"slug.max_len":       trans.Get(ctx, "validation.max.slug", map[string]string{"max": "50"}),
+		"icon.max_len":       trans.Get(ctx, "validation.max.icon", map[string]string{"max": "50"}),
+		"path.required":      trans.Get(ctx, "validation.required.path"),
+		"path.max_len":       trans.Get(ctx, "validation.max.path", map[string]string{"max": "0"}),
 		"path.full_url":      trans.Get(ctx, "validation.path.url_invalid"),
-		"component.max_len":  trans.GetReplace(ctx, "validation.max.component", map[string]string{"max": "255"}),
-		"permission.max_len": trans.GetReplace(ctx, "validation.max.permission", map[string]string{"max": "100"}),
-		"type.in":            trans.GetReplace(ctx, "validation.in.menu_type", map[string]string{"values": "1,2,3"}),
-		"status.in":          trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"is_hidden.in":       trans.GetReplace(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"component.max_len":  trans.Get(ctx, "validation.max.component", map[string]string{"max": "255"}),
+		"permission.max_len": trans.Get(ctx, "validation.max.permission", map[string]string{"max": "100"}),
+		"type.in":            trans.Get(ctx, "validation.in.menu_type", map[string]string{"values": "1,2,3"}),
+		"status.in":          trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
+		"is_hidden.in":       trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
 	}
 }
 

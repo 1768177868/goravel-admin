@@ -446,7 +446,7 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 			go func() {
 				done <- facades.Orm().Query().Create(&exportRecord)
 			}()
-			
+
 			select {
 			case err := <-done:
 				if err != nil {
@@ -514,7 +514,7 @@ func (s *ExportServiceImpl) recordExportLogWithContext(ctx context.Context, file
 	go func() {
 		done <- facades.Orm().Query().Create(&exportRecord)
 	}()
-	
+
 	select {
 	case err := <-done:
 		if err != nil {

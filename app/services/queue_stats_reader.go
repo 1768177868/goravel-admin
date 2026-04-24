@@ -392,17 +392,17 @@ func (s *QueueStatsReader) ListQueueConnectionNames() []string {
 
 // QueueDashboardConnection 轻量看板中单条连接的可序列化视图。
 type QueueDashboardConnection struct {
-	Name           string                            `json:"connection"`
-	DriverRaw      string                            `json:"driver_raw"`
-	Kind           string                            `json:"kind"`
-	Supported      bool                              `json:"supported"`
-	IsDefault      bool                              `json:"is_default"`
-	RedisClient    string                            `json:"redis_client,omitempty"`
-	DefaultQueue   string                            `json:"default_queue,omitempty"`
-	ConsumerGroup  string                            `json:"consumer_group,omitempty"`
-	Queues         any                               `json:"queues,omitempty"`
-	MessageKey     string                            `json:"message_key,omitempty"`
-	FetchError     string                            `json:"fetch_error,omitempty"`
+	Name          string `json:"connection"`
+	DriverRaw     string `json:"driver_raw"`
+	Kind          string `json:"kind"`
+	Supported     bool   `json:"supported"`
+	IsDefault     bool   `json:"is_default"`
+	RedisClient   string `json:"redis_client,omitempty"`
+	DefaultQueue  string `json:"default_queue,omitempty"`
+	ConsumerGroup string `json:"consumer_group,omitempty"`
+	Queues        any    `json:"queues,omitempty"`
+	MessageKey    string `json:"message_key,omitempty"`
+	FetchError    string `json:"fetch_error,omitempty"`
 }
 
 // BuildQueueDashboard 汇总所有已配置队列连接；仅 database / redis_list / redis_stream 为 supported。
