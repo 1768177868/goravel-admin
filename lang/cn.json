@@ -228,6 +228,8 @@
     "updated_at": "更新时间",
     "order_no": "订单号",
     "user_id": "用户ID",
+    "admin_id": "管理员ID",
+    "title": "标题",
     "amount": "订单金额",
     "remark": "备注",
     "item_index": "商品序号",

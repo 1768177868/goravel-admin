@@ -49,6 +49,7 @@
     "permission_slug_exists": "Permission slug already exists",
     "menu_not_found": "Menu not found",
     "menu_title_required": "Menu title cannot be empty",
+    "menu_slug_required": "Menu slug cannot be empty",
     "menu_slug_exists": "Menu slug already exists",
     "menu_has_children": "This menu has child menus and cannot be deleted",
     "menu_disabled": "This menu is disabled and cannot be accessed",
