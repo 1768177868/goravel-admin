@@ -15,9 +15,12 @@ func (m *M20260115152848ArticleTable) Signature() string {
 func (m *M20260115152848ArticleTable) Up() error {
 	return facades.Schema().Create("articles", func(table schema.Blueprint) {
 		table.ID()
-
-		table.String("name").Comment("名称")
-		table.String("status").Comment("状态")
+		table.UnsignedBigInteger("admin_id").Comment("管理员ID")
+		table.String("title").Comment("标题")
+		table.Text("content").Nullable().Comment("内容")
+		table.UnsignedTinyInteger("status").Default(1).Comment("0:未发布 1:发布")
+		table.Index("admin_id")
+		table.Index("status")
 		table.Timestamps()
 		table.SoftDeletes()
 	})

@@ -1,9 +1,11 @@
 package admin
 
 import (
+	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/validation"
 )
 
 type ArticleCreate struct {
@@ -20,8 +22,8 @@ func (r *ArticleCreate) Authorize(ctx http.Context) error {
 func (r *ArticleCreate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 		"admin_id": "required",
-		"title":    "",
-		"content":  "",
+		"title":    "required",
+		"content":  "required",
 		"status":   "required",
 	}
 	return rules
@@ -43,4 +45,8 @@ func (r *ArticleCreate) Attributes(ctx http.Context) map[string]string {
 		"content":  trans.Get(ctx, "validation.attributes.content"),
 		"status":   trans.Get(ctx, "validation.attributes.status"),
 	}
+}
+
+func (r *ArticleCreate) PrepareForValidation(ctx http.Context, data validation.Data) error {
+	return helpers.PrepareRichTextFieldForValidation(data, "content")
 }

@@ -13,7 +13,7 @@
         label-width="120px"
       >
         <el-form-item :label="$t('content')" prop="content">
-          <WangEditor
+          <MarkdownEditor
             v-model="formData.content"
             :placeholder="$t('content_placeholder')"
             :height="400"
@@ -42,9 +42,8 @@ import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import FormField from "../../components/Form/FormField.vue";
 
-import WangEditor from "../../components/WangEditor.vue";
+import MarkdownEditor from "../../components/MarkdownEditor.vue";
 
-// Relation field: admin_id -> admins
 import {
   createArticle,
   updateArticle,
@@ -76,7 +75,7 @@ const getFormInitialValue = () => ({
   admin_id: null,
   title: "",
   content: "",
-  status: "",
+  status: 0,
 });
 
 const dialogVisible = computed({
@@ -96,6 +95,12 @@ const formRules = computed(() => {
   rules["admin_id"] = [
     { required: true, message: t("admin_id_required"), trigger: "blur" },
   ];
+  rules["title"] = [
+    { required: true, message: t("title_required"), trigger: "blur" },
+  ];
+  rules["content"] = [
+    { required: true, message: t("content_required"), trigger: "blur" },
+  ];
   rules["status"] = [
     { required: true, message: t("status_required"), trigger: "blur" },
   ];
@@ -109,7 +114,7 @@ const formFields = computed(() => {
   fields.push({
     prop: "admin_id",
     label: t("admin_id"),
-    type: "select",
+    type: "input",
     disabled: loading.value,
   });
   fields.push({
@@ -121,8 +126,12 @@ const formFields = computed(() => {
   fields.push({
     prop: "status",
     label: t("status"),
-    type: "input",
+    type: "switch",
     disabled: loading.value,
+    props: {
+      activeValue: 1,
+      inactiveValue: 0,
+    },
   });
   return fields;
 });

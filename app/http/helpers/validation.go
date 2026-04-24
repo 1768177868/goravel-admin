@@ -1,11 +1,16 @@
 package helpers
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 )
+
+var richTextTagRegexp = regexp.MustCompile(`<[^>]+>`)
 
 // GetIntQuery 获取并验证整数查询参数
 // 如果参数无效或不存在，返回默认值
@@ -94,4 +99,24 @@ func PrepareNumericFieldForValidation(data validation.Data, fieldName string) er
 		return data.Set(fieldName, cast.ToString(val))
 	}
 	return nil
+}
+
+// PrepareRichTextFieldForValidation strips html tags and normalizes rich text empty values.
+// For example: "<p><br></p>" -> "" so "required" can work as expected.
+func PrepareRichTextFieldForValidation(data validation.Data, fieldName string) error {
+	val, exist := data.Get(fieldName)
+	if !exist {
+		return nil
+	}
+
+	raw := cast.ToString(val)
+	normalized := strings.ReplaceAll(raw, "&nbsp;", " ")
+	normalized = richTextTagRegexp.ReplaceAllString(normalized, "")
+	normalized = strings.TrimSpace(normalized)
+	if normalized == "" {
+		return data.Set(fieldName, "")
+	}
+
+	// Keep original HTML when content is not logically empty.
+	return data.Set(fieldName, raw)
 }

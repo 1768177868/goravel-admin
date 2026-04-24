@@ -1,9 +1,21 @@
 package admin
 
 import (
+<<- $hasRichText := false>>
+<<- range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at") (or (eq .FormType "editor") (eq .FormType "markdown") (eq .FormType "richtext"))>>
+<<- $hasRichText = true>>
+<<- end>>
+<<- end>>
+<<- if $hasRichText>>
+	"goravel/app/http/helpers"
+<<- end>>
 	"goravel/app/http/trans"
 
 	"github.com/goravel/framework/contracts/http"
+<<- if $hasRichText>>
+	"github.com/goravel/framework/contracts/validation"
+<<- end>>
 )
 
 type <<.RequestCreateName>> struct {
@@ -48,3 +60,16 @@ func (r *<<.RequestCreateName>>) Attributes(ctx http.Context) map[string]string 
 <<- end>>
 	}
 }
+<<- if $hasRichText>>
+
+func (r *<<.RequestCreateName>>) PrepareForValidation(ctx http.Context, data validation.Data) error {
+<<- range .FormFields>>
+<<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at") (or (eq .FormType "editor") (eq .FormType "markdown") (eq .FormType "richtext"))>>
+	if err := helpers.PrepareRichTextFieldForValidation(data, "<<.JsonName>>"); err != nil {
+		return err
+	}
+<<- end>>
+<<- end>>
+	return nil
+}
+<<- end>>

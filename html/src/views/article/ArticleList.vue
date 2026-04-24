@@ -65,6 +65,13 @@
         <template #admin_id="{ row }">
           {{ getadminDisplayName(row.admin || row.admin_id) }}
         </template>
+        <template #status="{ row }">
+          <el-switch
+            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
+            :disabled="getButtonState('article.update').disabled"
+            @change="(val) => handleStatusChange(row, val)"
+          />
+        </template>
         <template #operation="{ row }">
           <TableActionButtons
             :row="row"
@@ -108,7 +115,6 @@ import { usePermission } from "../../composables/usePermission";
 import { useCrud } from "../../composables/useCrud";
 import { buildSearchParams } from "../../utils/buildSearchParams";
 
-import { getStatusOptions } from "../../utils/fieldOptions";
 import {
   getArticleList,
   deleteArticle,
@@ -235,8 +241,9 @@ const searchFields = computed(() => [
   {
     prop: "status",
     label: t("status"),
-    type: "input",
+    type: "select",
     clearable: true,
+    apiUrl: "/options?type=dictionary&dictionary_type=status",
     width: "200px",
     advanced: false,
   },
@@ -294,8 +301,10 @@ const tableColumns = computed(() => {
     },
     {
       field: "status",
-      title: t("status"),
+      title: t("table.status"),
+      width: 100,
       sortable: false,
+      slot: "status",
     },
     {
       field: "updated_at",
@@ -333,7 +342,33 @@ const tableColumns = computed(() => {
 
 const getadminDisplayName = (admin_id) => {
   if (!admin_id) return "-";
-  return admin_id.name || admin_id.admin || "-";
+  return admin_id.username || admin_id.admin || "-";
+};
+
+const handleStatusChange = async (row, newStatus) => {
+  try {
+    const statusValue = newStatus ? 1 : 0;
+    await updateArticle(row.id, {
+      status: statusValue,
+    });
+    ElMessage.success(newStatus ? t("common.enabled") : t("common.disabled"));
+    // Update local data.
+    const item = tableData.value.find((a) => a.id === row.id);
+    if (item) {
+      item.status = statusValue;
+      item.Status = statusValue;
+    }
+  } catch (error) {
+    logger.error("Status change error:", error);
+    loadData();
+    if (!error.__handled) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        t("common.operation_failed");
+      ElMessage.error(errorMessage);
+    }
+  }
 };
 
 const handleEdit = (row) => {
@@ -443,12 +478,12 @@ const handleExport = async () => {
       response?.export_id ||
       response?.data?.id;
 
-    if (!exportId) {
-      ElMessage.warning(t("common.operation_success"));
-    } else {
+    if (exportId) {
       ElMessage.success(t("export.task_submitted"));
-      router.push("/exports");
+    } else {
+      ElMessage.success(t("common.operation_success"));
     }
+    router.push("/exports");
   } catch (error) {
     logger.error("Export error:", error);
     if (error.response?.status === 429) {
