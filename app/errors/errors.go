@@ -18,7 +18,7 @@ var (
 	ErrNotLoggedIn           = NewBusinessError("not_logged_in", "未登录")
 	ErrUsernameOrPasswordErr = NewBusinessError("username_or_password_error", "用户名或密码错误")
 	ErrLoginFailed           = NewBusinessError("login_failed", "登录失败")
-	ErrLoginLocked           = NewBusinessError("login_locked", "登录失败次数过多，请稍后再试")
+	ErrLoginLocked           = NewBusinessError("login_locked", "登录失败次数过多，账号已被临时锁定 {minutes} 分钟，请稍后再试")
 
 	// 验证相关错误
 	ErrValidationFailed = NewBusinessError("validation_failed", "验证失败")
@@ -67,13 +67,13 @@ var (
 	ErrChunkFileRequired           = NewBusinessError("chunk_file_required", "分片文件不能为空")
 	ErrInvalidAction               = NewBusinessError("invalid_action", "无效的操作")
 	ErrAttachmentNotFound          = NewBusinessError("attachment_not_found", "附件不存在")
-	ErrChunkNotFound               = NewBusinessError("chunk_not_found", "分片不存在")
-	ErrChunkMissing                = NewBusinessError("chunk_missing", "分片缺失")
+	ErrChunkNotFound               = NewBusinessError("chunk_not_found", "分片 {chunk_index} 不存在")
+	ErrChunkMissing                = NewBusinessError("chunk_missing", "分片缺失: {missing_chunks} (共 {count} 个分片缺失)")
 	ErrNoChunkDataToMerge          = NewBusinessError("no_chunk_data_to_merge", "没有可合并的分片数据")
 	ErrSaveChunkFailed             = NewBusinessError("save_chunk_failed", "保存分片失败")
 	ErrCreateDirectoryFailed       = NewBusinessError("create_directory_failed", "创建目标目录失败")
 	ErrCreateFileFailed            = NewBusinessError("create_file_failed", "创建目标文件失败")
-	ErrWriteChunkFailed            = NewBusinessError("write_chunk_failed", "写入分片失败")
+	ErrWriteChunkFailed            = NewBusinessError("write_chunk_failed", "写入分片 {chunk_index} 失败")
 	ErrCloseFileFailed             = NewBusinessError("close_file_failed", "关闭目标文件失败")
 	ErrSaveFileFailed              = NewBusinessError("save_file_failed", "保存文件失败")
 	ErrDeleteFileFailed            = NewBusinessError("delete_file_failed", "删除文件失败")
@@ -110,8 +110,8 @@ var (
 	ErrInvalidOptionType               = NewBusinessError("invalid_option_type", "无效的选项类型")
 
 	// 余额相关错误
-	ErrInsufficientBalance = NewBusinessError("insufficient_balance", "余额不足")
-	ErrInvalidBalanceType  = NewBusinessError("invalid_balance_type", "无效的变动类型")
+	ErrInsufficientBalance = NewBusinessError("insufficient_balance", "余额不足，当前余额: {balance}")
+	ErrInvalidBalanceType  = NewBusinessError("invalid_balance_type", "无效的变动类型: {type}")
 
 	// 订单相关错误
 	ErrOrderNotFound           = NewBusinessError("order_not_found", "订单不存在")
@@ -147,8 +147,8 @@ var (
 	ErrInvalidFileType  = NewBusinessError("invalid_file_type", "文件类型无效")
 
 	// 分表相关错误
-	ErrBaseTableNotRegistered    = NewBusinessError("base_table_not_registered", "未注册的基础表名")
-	ErrCreateShardingTableFailed = NewBusinessError("create_sharding_table_failed", "创建分表失败")
+	ErrBaseTableNotRegistered    = NewBusinessError("base_table_not_registered", "未注册的基础表名: {base_table_name}")
+	ErrCreateShardingTableFailed = NewBusinessError("create_sharding_table_failed", "创建分表 {table_name} 失败")
 
 	// 操作相关错误
 	ErrCreateFailed          = NewBusinessError("create_failed", "创建失败")
