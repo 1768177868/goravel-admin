@@ -7,7 +7,7 @@ import (
 )
 
 type <<.RequestCreateName>> struct {
-<<range .FormFields>>
+<<- range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 	<<.FieldName>> <<.GoType>> `form:"<<.JsonName>>" json:"<<.JsonName>>"`
 <<- end>>
@@ -20,7 +20,7 @@ func (r *<<.RequestCreateName>>) Authorize(ctx http.Context) error {
 
 func (r *<<.RequestCreateName>>) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
-<<range .FormFields>>
+<<- range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 		"<<.JsonName>>": "<<if .Required>>required<<end>><<if and .Required .Validators>>|<<end>><<range $i, $v := .Validators>><<if $i>>|<<end>><<$v>><<end>>",
 <<- end>>
@@ -31,7 +31,7 @@ func (r *<<.RequestCreateName>>) Rules(ctx http.Context) map[string]string {
 
 func (r *<<.RequestCreateName>>) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-<<range .FormFields>>
+<<- range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 		"<<.JsonName>>.required": trans.Get(ctx, "validation_<<.Name>>_required"),
 <<- end>>
@@ -41,7 +41,7 @@ func (r *<<.RequestCreateName>>) Messages(ctx http.Context) map[string]string {
 
 func (r *<<.RequestCreateName>>) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-<<range .FormFields>>
+<<- range .FormFields>>
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
 		"<<.JsonName>>": trans.Get(ctx, "validation_<<.Name>>"),
 <<- end>>

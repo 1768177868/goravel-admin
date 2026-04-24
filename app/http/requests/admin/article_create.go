@@ -19,7 +19,6 @@ func (r *ArticleCreate) Authorize(ctx http.Context) error {
 
 func (r *ArticleCreate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
-
 		"admin_id": "required",
 		"title":    "",
 		"content":  "",
@@ -30,7 +29,6 @@ func (r *ArticleCreate) Rules(ctx http.Context) map[string]string {
 
 func (r *ArticleCreate) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-
 		"admin_id.required": trans.Get(ctx, "validation_admin_id_required"),
 		"title.required":    trans.Get(ctx, "validation_title_required"),
 		"content.required":  trans.Get(ctx, "validation_content_required"),
@@ -40,7 +38,6 @@ func (r *ArticleCreate) Messages(ctx http.Context) map[string]string {
 
 func (r *ArticleCreate) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-
 		"admin_id": trans.Get(ctx, "validation_admin_id"),
 		"title":    trans.Get(ctx, "validation_title"),
 		"content":  trans.Get(ctx, "validation_content"),
