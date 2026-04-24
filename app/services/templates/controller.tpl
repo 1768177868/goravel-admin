@@ -253,31 +253,17 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 		r := []string{
 			<<- range .ListFields>>
 			<<- if and .ShowInList (ne .Name "operation")>>
-			func() string {
-				<<- if eq .Name "created_at">>
-				return helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone)
-				<<- else if eq .Name "updated_at">>
-				return helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone)
-				<<- else if eq .GoType "time.Time">>
-				return helpers.FormatTimeWithTimezone(row.<<.FieldName>>, timezone)
-				<<- else if eq .GoType "bool">>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- else if eq .GoType "float64">>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- else if eq .GoType "uint8">>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- else if eq .GoType "uint64">>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- else if eq .GoType "int64">>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- else if eq .GoType "int">>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- else if eq .GoType "string">>
-				return row.<<.FieldName>>
-				<<- else>>
-				return cast.ToString(row.<<.FieldName>>)
-				<<- end>>
-			}(),
+			<<- if eq .Name "created_at">>
+			helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone),
+			<<- else if eq .Name "updated_at">>
+			helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone),
+			<<- else if eq .GoType "time.Time">>
+			helpers.FormatTimeWithTimezone(row.<<.FieldName>>, timezone),
+			<<- else if eq .GoType "string">>
+			row.<<.FieldName>>,
+			<<- else>>
+			cast.ToString(row.<<.FieldName>>),
+			<<- end>>
 			<<- end>>
 			<<- end>>
 		}

@@ -2,6 +2,7 @@
   "name": "Goravel 框架",
   "description": "Goravel 是一个基于 Go 语言的 Web 开发框架",
   "messages": {
+    "content": "内容",
     "login_success": "登录成功",
     "login_failed": "登录失败",
     "username_or_password_error": "用户名或密码错误",

@@ -114,19 +114,17 @@ func (r *Export<<.ModelName>>s) writeToCSV(w *csv.Writer, filters map[string]any
 			record := []string{
 				<<- range .ListFields>>
 				<<- if and .ShowInList (ne .Name "operation")>>
-				func() string {
-					<<- if eq .Name "created_at">>
-					return FormatCarbonWithTimezone(row.CreatedAt, timezone)
-					<<- else if eq .Name "updated_at">>
-					return FormatCarbonWithTimezone(row.UpdatedAt, timezone)
-					<<- else if eq .GoType "time.Time">>
-					return FormatTimeWithTimezone(row.<<.FieldName>>, timezone)
-					<<- else if eq .GoType "string">>
-					return row.<<.FieldName>>
-					<<- else>>
-					return cast.ToString(row.<<.FieldName>>)
-					<<- end>>
-				}(),
+				<<- if eq .Name "created_at">>
+				FormatCarbonWithTimezone(row.CreatedAt, timezone),
+				<<- else if eq .Name "updated_at">>
+				FormatCarbonWithTimezone(row.UpdatedAt, timezone),
+				<<- else if eq .GoType "time.Time">>
+				FormatTimeWithTimezone(row.<<.FieldName>>, timezone),
+				<<- else if eq .GoType "string">>
+				row.<<.FieldName>>,
+				<<- else>>
+				cast.ToString(row.<<.FieldName>>),
+				<<- end>>
 				<<- end>>
 				<<- end>>
 			}

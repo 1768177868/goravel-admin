@@ -113,24 +113,12 @@ func (r *ExportArticles) writeToCSV(w *csv.Writer, filters map[string]any, lang 
 
 		for _, row := range rows {
 			record := []string{
-				func() string {
-					return cast.ToString(row.AdminId)
-				}(),
-				func() string {
-					return row.Title
-				}(),
-				func() string {
-					return row.Content
-				}(),
-				func() string {
-					return cast.ToString(row.Status)
-				}(),
-				func() string {
-					return FormatCarbonWithTimezone(row.CreatedAt, timezone)
-				}(),
-				func() string {
-					return FormatCarbonWithTimezone(row.UpdatedAt, timezone)
-				}(),
+				cast.ToString(row.AdminId),
+				row.Title,
+				row.Content,
+				cast.ToString(row.Status),
+				FormatCarbonWithTimezone(row.CreatedAt, timezone),
+				FormatCarbonWithTimezone(row.UpdatedAt, timezone),
 			}
 			if err := w.Write(record); err != nil {
 				return fmt.Errorf("write csv row failed: %w", err)
