@@ -533,11 +533,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
+  border-radius: 12px;
 }
 
 .vxe-table-custom--panel-header {
-  padding: 8px 12px;
-  border-bottom: 1px solid #e4e7ed;
+  padding: 10px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
   margin-bottom: 8px;
 }
 
@@ -562,28 +563,30 @@ onBeforeUnmount(() => {
 .vxe-table-custom--option {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 9px 12px;
   margin-bottom: 2px;
-  border-radius: 4px;
-  transition: background-color 0.2s, opacity 0.2s;
+  border-radius: 8px;
+  transition: background-color 0.2s, opacity 0.2s, border-color 0.2s;
   cursor: move;
   width: 100%;
   box-sizing: border-box;
   position: relative;
+  border: 1px solid transparent;
 }
 
 .vxe-table-custom--option:hover {
-  background-color: #f5f7fa;
+  background-color: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--el-color-primary) 26%, transparent);
 }
 
 .vxe-table-custom--option.dragging {
   opacity: 0.5;
-  background-color: #f0f9ff;
+  background-color: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
 }
 
 .vxe-table-custom--option.drag-over {
   border-top: 2px solid var(--el-color-primary);
-  background-color: #ecf5ff;
+  background-color: color-mix(in srgb, var(--el-color-primary) 15%, transparent);
 }
 
 .vxe-table-custom--option[draggable="true"] {
@@ -636,9 +639,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   cursor: move;
   color: #909399;
-  font-size: 14px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .vxe-table-custom--sort-btn:hover {
@@ -647,9 +649,9 @@ onBeforeUnmount(() => {
 
 .vxe-table-icon-drag-handle {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23909399' d='M5 2h4v1H5V2zm0 3h4v1H5V5zm0 3h4v1H5V8zm0 3h4v1H5v-1z'/%3E%3C/svg%3E");
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23909399' d='M8 1l1.8 1.8h-1.2v3.4h3.4V5L13.8 6.8 12 8.6V7.4H8.6v3.4h1.2L8 12.6l-1.8-1.8h1.2V7.4H4V8.6L2.2 6.8 4 5v1.2h3.4V2.8H6.2z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   cursor: move;
@@ -714,19 +716,19 @@ onBeforeUnmount(() => {
 }
 
 .vxe-table-icon-fixed-left {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23909399' d='M2 2h2v10H2V2zm4 0h8v1H6V2zm0 2h8v1H6V4zm0 2h8v1H6V6zm0 2h8v1H6V8zm0 2h8v1H6v-1z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23909399' d='M2 2h2v10H2V2zm3 4.2h4.2V4.8L12 7 9.2 9.2V7.8H5V6.2z'/%3E%3C/svg%3E");
 }
 
 .vxe-table-icon-fixed-right {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23909399' d='M10 2h2v10h-2V2zM2 2h8v1H2V2zm0 2h8v1H2V4zm0 2h8v1H2V6zm0 2h8v1H2V8zm0 2h8v1H2v-1z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23909399' d='M10 2h2v10h-2V2zM9 7.8H4.8v1.4L2 7l2.8-2.2v1.4H9v1.6z'/%3E%3C/svg%3E");
 }
 
 .vxe-table-icon-fixed-left-fill {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23409eff' d='M2 2h2v10H2V2zm4 0h8v1H6V2zm0 2h8v1H6V4zm0 2h8v1H6V6zm0 2h8v1H6V8zm0 2h8v1H6v-1z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23409eff' d='M2 2h2v10H2V2zm3 4.2h4.2V4.8L12 7 9.2 9.2V7.8H5V6.2z'/%3E%3C/svg%3E");
 }
 
 .vxe-table-icon-fixed-right-fill {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23409eff' d='M10 2h2v10h-2V2zM2 2h8v1H2V2zm0 2h8v1H2V4zm0 2h8v1H2V6zm0 2h8v1H2V8zm0 2h8v1H2v-1z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23409eff' d='M10 2h2v10h-2V2zM9 7.8H4.8v1.4L2 7l2.8-2.2v1.4H9v1.6z'/%3E%3C/svg%3E");
 }
 
 .vxe-table-custom--panel-footer {
@@ -734,9 +736,9 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 8px 4px 0 4px;
+  padding: 10px 4px 2px 4px;
   margin-top: 8px;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
@@ -775,10 +777,21 @@ onBeforeUnmount(() => {
 .vxe-table-custom-popover {
   padding: 8px !important;
   overflow: visible !important;
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(8px);
 }
 
 .vxe-table-custom-popover .el-popover__content {
   overflow: visible !important;
+}
+
+html.dark .vxe-table-custom-popover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 </style>
 
