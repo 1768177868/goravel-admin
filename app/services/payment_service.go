@@ -992,6 +992,11 @@ func (s *PaymentServiceImpl) findPaymentByID(paymentID uint, paymentNo ...string
 
 // querySinglePaymentTable 查询单个分表
 func (s *PaymentServiceImpl) querySinglePaymentTable(tableName string, filters PaymentFilters, page, pageSize int) ([]models.Payment, int64, error) {
+	// 友好处理：目标分表不存在时返回空结果，而不是抛出 SQL 1146 错误。
+	if !facades.Schema().HasTable(tableName) {
+		return []models.Payment{}, 0, nil
+	}
+
 	// 应用排序
 	orderBy := filters.OrderBy
 	if orderBy == "" {

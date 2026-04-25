@@ -509,6 +509,11 @@ func (s *OrderServiceImpl) sortOrders(orders []models.Order, orderBy string) {
 
 // querySingleTable 查询单个分表
 func (s *OrderServiceImpl) querySingleTable(tableName string, filters OrderFilters, page, pageSize int) ([]models.Order, int64, error) {
+	// 友好处理：目标分表不存在时返回空结果，而不是抛出 SQL 1146 错误。
+	if !facades.Schema().HasTable(tableName) {
+		return []models.Order{}, 0, nil
+	}
+
 	// 应用排序
 	orderBy := filters.OrderBy
 	if orderBy == "" {
@@ -660,6 +665,11 @@ func (s *OrderServiceImpl) GetAllOrdersForExport(filters OrderFilters) ([]models
 
 	// 如果只有一个分表，直接查询
 	if len(tableNames) == 1 {
+		// 友好处理：单表导出时分表不存在，直接返回空数据。
+		if !facades.Schema().HasTable(tableNames[0]) {
+			return []models.Order{}, nil
+		}
+
 		query := s.buildShardingQuery(tableNames[0], filters)
 		orderBy := filters.OrderBy
 		if orderBy == "" {
