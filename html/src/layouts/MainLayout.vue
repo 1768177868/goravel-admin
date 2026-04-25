@@ -751,9 +751,10 @@ const goToLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 60px;
-  line-height: 60px;
+  padding: 0 18px;
+  height: 62px;
+  line-height: 62px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
@@ -779,13 +780,13 @@ const goToLogin = async () => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .header-btn {
   color: var(--text-color-regular);
   padding: 8px;
-  border-radius: 4px;
+  border-radius: 10px;
   transition: all 0.3s;
 }
 
@@ -797,7 +798,7 @@ const goToLogin = async () => {
 }
 
 .header-btn:hover {
-  background-color: var(--bg-color-tertiary);
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
 }
 
@@ -842,8 +843,9 @@ const goToLogin = async () => {
 }
 
 .tabs-wrapper {
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border-color-light);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--header-bg) 92%, var(--el-color-primary) 8%) 0%, var(--header-bg) 100%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent);
+  padding: 8px 12px 10px;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
@@ -951,25 +953,38 @@ const goToLogin = async () => {
 
 /* 顶部菜单栏 */
 .top-menu-bar {
-  background-color: var(--header-bg);
-  border-bottom: 1px solid var(--border-color-light);
-  padding: 0 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--header-bg) 94%, var(--el-color-primary) 6%) 0%, var(--header-bg) 100%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent);
+  padding: 8px 12px 10px;
   flex-shrink: 0;
 }
 .top-menu {
   border-bottom: none !important;
-  background: transparent !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent) !important;
+  border-radius: 12px;
+  padding: 0 8px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
 }
 .top-menu :deep(.el-menu-item),
 .top-menu :deep(.el-sub-menu__title) {
   height: 48px;
   line-height: 48px;
   border-bottom: 2px solid transparent;
+  border-radius: 10px;
+  margin: 6px 4px;
+  padding: 0 14px !important;
+  transition: all 0.2s ease;
+}
+.top-menu :deep(.el-menu-item:hover),
+.top-menu :deep(.el-sub-menu__title:hover) {
+  background-color: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
 }
 .top-menu :deep(.el-menu-item.is-active),
 .top-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-  border-bottom-color: var(--el-menu-active-color, var(--el-color-primary));
+  border-bottom-color: transparent;
   color: var(--el-menu-active-color, var(--el-color-primary));
+  background-color: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  font-weight: 600;
 }
 .top-menu :deep(.el-sub-menu .el-menu-item) {
   min-width: 120px;
@@ -1091,6 +1106,7 @@ const goToLogin = async () => {
     padding: 0 12px;
     height: 50px;
     line-height: 50px;
+    box-shadow: none;
   }
 
   .header-left {
@@ -1217,5 +1233,11 @@ html.dark .sidebar-menu .el-sub-menu__title:hover {
 html.dark .drawer-content .sidebar-menu .el-menu-item:hover,
 html.dark .drawer-content .sidebar-menu .el-sub-menu__title:hover {
   background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .header {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+html.dark .top-menu {
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
 }
 </style>

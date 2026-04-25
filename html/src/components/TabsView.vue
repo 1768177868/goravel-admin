@@ -295,8 +295,8 @@ onMounted(() => {
 
 <style scoped>
 .tabs-view {
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border-color-light);
+  background: transparent;
+  border-bottom: none;
   padding: 0;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -307,14 +307,17 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__header) {
   margin: 0;
-  border-bottom: 1px solid var(--border-color-light);
-  background: var(--header-bg);
+  border-bottom: none;
+  background: transparent;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .tabs-container :deep(.el-tabs__nav-wrap) {
   margin-bottom: 0;
-  /* padding: 0 12px; */
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 94%, transparent);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+  padding: 5px 8px;
 }
 
 .tabs-container :deep(.el-tabs__nav) {
@@ -322,17 +325,16 @@ onMounted(() => {
 }
 
 .tabs-container :deep(.el-tabs__item) {
-  height: 36px;
-  line-height: 36px;
+  height: 34px;
+  line-height: 34px;
   padding: 0 14px;
-  margin-right: 4px;
-  margin-top: 4px;
-  background: var(--bg-color-tertiary);
-  border: 1px solid var(--border-color-light);
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
+  margin-right: 6px;
+  margin-top: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
   color: var(--text-color-regular);
-  font-size: 12px;
+  font-size: 13px;
   user-select: none;
   transition: all 0.2s;
   position: relative;
@@ -340,16 +342,15 @@ onMounted(() => {
 
 .tabs-container :deep(.el-tabs__item:hover) {
   color: var(--el-color-primary);
-  background: var(--bg-color-tertiary);
+  background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
 }
 
 .tabs-container :deep(.el-tabs__item.is-active) {
-  background: var(--header-bg);
-  border: 1px solid var(--el-color-primary);
-  border-bottom: 2px solid var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 14%, var(--card-bg, #fff) 86%);
+  border: 1px solid color-mix(in srgb, var(--el-color-primary) 34%, transparent);
   color: var(--el-color-primary);
-  font-weight: 500;
-  margin-bottom: -1px;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(64, 158, 255, 0.18);
 }
 
 .tabs-container :deep(.el-tabs__item .el-icon-close) {
@@ -410,7 +411,7 @@ onMounted(() => {
 }
 
 .refresh-icon:hover {
-  background: var(--bg-color-tertiary);
+  background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
   color: #66B1FF;
   transform: rotate(180deg);
 }
@@ -461,7 +462,7 @@ onMounted(() => {
   background: transparent;
 }
 .el-tabs__nav-scroll{
-  margin-left: 10px;
+  margin-left: 0;
 }
 
 /* 移动端优化 */
@@ -471,6 +472,10 @@ onMounted(() => {
     font-size: 11px;
     height: 32px;
     line-height: 32px;
+  }
+  .tabs-container :deep(.el-tabs__nav-wrap) {
+    border-radius: 10px;
+    padding: 4px 6px;
   }
 
   .tab-label {
