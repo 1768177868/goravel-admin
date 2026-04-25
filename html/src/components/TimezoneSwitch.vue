@@ -1,16 +1,19 @@
 <template>
   <el-select
+    ref="timezoneSelectRef"
     class="timezone-switch"
     v-model="selectedTimezone"
     size="small"
     filterable
-    allow-create
-    default-first-option
     placement="bottom-end"
     :offset="8"
+    autocomplete="new-password"
+    name="timezone-input"
+    :aria-label="$t('header.timezone')"
     popper-class="timezone-select-popper"
     :teleported="true"
     :placeholder="$t('header.timezone')"
+    @visible-change="handleVisibleChange"
   >
     <el-option
       v-for="option in timezoneOptions"
@@ -22,10 +25,11 @@
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref, onMounted, nextTick } from 'vue'
 import { useAppStore } from '../store/app'
 
 const appStore = useAppStore()
+const timezoneSelectRef = ref(null)
 
 // 预设覆盖每个整点时区（UTC-12 ~ UTC+14）
 const presetTimezones = [
@@ -129,6 +133,40 @@ const selectedTimezone = computed({
     ensureTimezoneIncluded(val)
     appStore.setTimezone(val)
   }
+})
+
+const applyInputAntiAutofill = () => {
+  const inputEl = timezoneSelectRef.value?.$el?.querySelector?.('input.el-select__input')
+  if (!inputEl) return
+
+  // 防止浏览器/密码管理器将时区输入误识别为账号密码框
+  inputEl.setAttribute('autocomplete', 'off')
+  inputEl.setAttribute('autocorrect', 'off')
+  inputEl.setAttribute('autocapitalize', 'off')
+  inputEl.setAttribute('spellcheck', 'false')
+  inputEl.setAttribute('data-form-type', 'other')
+  inputEl.setAttribute('data-lpignore', 'true')
+  inputEl.setAttribute('data-1p-ignore', 'true')
+  inputEl.setAttribute('name', 'timezone-filter-input')
+
+  // 某些浏览器首次聚焦仍会触发自动填充，临时 readonly 可进一步规避
+  inputEl.setAttribute('readonly', 'readonly')
+  const unlockReadonly = () => {
+    inputEl.removeAttribute('readonly')
+    inputEl.removeEventListener('focus', unlockReadonly)
+    inputEl.removeEventListener('pointerdown', unlockReadonly)
+  }
+  inputEl.addEventListener('focus', unlockReadonly, { once: true })
+  inputEl.addEventListener('pointerdown', unlockReadonly, { once: true })
+}
+
+const handleVisibleChange = async () => {
+  await nextTick()
+  applyInputAntiAutofill()
+}
+
+onMounted(() => {
+  applyInputAntiAutofill()
 })
 </script>
 
