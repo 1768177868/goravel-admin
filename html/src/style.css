@@ -13,6 +13,51 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+:root {
+  --topbar-icon-hover-lift: -1px;
+  --topbar-icon-active-scale: 0.96;
+  --topbar-icon-hover-scale: 1.08;
+  --topbar-icon-rotate-deg: -8deg;
+  --topbar-icon-radius: 10px;
+  --topbar-icon-motion-duration: 0.25s;
+  --topbar-icon-size: 19px;
+  --topbar-icon-opacity: 0.9;
+}
+
+/* 顶部图标统一动效（可全局调参数） */
+.topbar-icon-btn {
+  border-radius: var(--topbar-icon-radius);
+  transition: all var(--topbar-icon-motion-duration) ease;
+}
+
+.topbar-icon-btn:hover {
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+  transform: translateY(var(--topbar-icon-hover-lift));
+}
+
+.topbar-icon-btn:active {
+  transform: scale(var(--topbar-icon-active-scale));
+}
+
+.topbar-icon {
+  font-size: var(--topbar-icon-size);
+  opacity: var(--topbar-icon-opacity);
+  transition: transform var(--topbar-icon-motion-duration) ease;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.topbar-icon-btn:hover .topbar-icon {
+  transform: rotate(var(--topbar-icon-rotate-deg)) scale(var(--topbar-icon-hover-scale));
+  opacity: 1;
+}
+
+/* 某些图标（如文字/自定义 SVG）旋转会出现视觉抖动，提供无旋转版本 */
+.topbar-icon-btn:hover .topbar-icon--no-rotate {
+  transform: scale(var(--topbar-icon-hover-scale));
+}
+
 #app {
   width: 100%;
   height: 100vh;

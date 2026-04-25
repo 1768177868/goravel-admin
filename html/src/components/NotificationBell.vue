@@ -12,8 +12,8 @@
         :hidden="notificationStore.unreadCount === 0"
         :offset="[-6, 10]"
       >
-        <el-button type="text" class="header-btn bell-btn">
-          <el-icon><Bell /></el-icon>
+        <el-button type="text" class="header-btn bell-btn topbar-icon-btn">
+          <el-icon class="topbar-icon"><Bell /></el-icon>
         </el-button>
       </el-badge>
     </template>
@@ -248,7 +248,6 @@ onBeforeUnmount(() => {
 }
 
 .bell-btn .el-icon {
-  font-size: 20px;
 }
 
 /* 确保 el-badge 不会影响按钮大小 */

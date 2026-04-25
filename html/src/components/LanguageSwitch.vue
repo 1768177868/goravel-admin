@@ -1,7 +1,7 @@
 <template>
   <el-dropdown @command="handleCommand" trigger="click">
-    <el-button type="text" class="language-switch">
-      <el-icon class="language-icon">
+    <el-button type="text" class="language-switch topbar-icon-btn">
+      <el-icon class="language-icon topbar-icon topbar-icon--no-rotate">
         <TextIcon />
       </el-icon>
     </el-button>
@@ -76,18 +76,10 @@ const handleCommand = (command) => {
   align-items: center;
   justify-content: center;
   padding: 8px;
-  border-radius: 4px;
-  transition: all 0.3s;
   margin: 0;
 }
 
-.language-switch:hover {
-  background-color: #f5f7fa;
-  color: var(--el-color-primary);
-}
-
 .language-icon {
-  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -107,7 +107,7 @@
             class="layout-size-dropdown"
           >
             <el-button type="text" class="header-btn" :title="$t('header.layout_size')">
-              <el-icon class="header-icon-fixed"><Grid /></el-icon>
+              <el-icon class="header-icon-fixed"><Operation /></el-icon>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -148,7 +148,7 @@
                 class="header-btn"
                 :title="$t('header.settings')"
               >
-                <el-icon class="header-icon-fixed"><Tools /></el-icon>
+                <el-icon class="header-icon-fixed"><Setting /></el-icon>
               </el-button>
             </template>
             <div class="settings-panel">
@@ -216,7 +216,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
-                  <el-icon><UserFilled /></el-icon>
+                  <el-icon><User /></el-icon>
                   {{ $t('header.profile') }}
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">{{ $t('header.logout') }}</el-dropdown-item>
@@ -378,15 +378,13 @@ import {
   Expand,
   Setting,
   User,
-  UserFilled,
   ArrowDown,
   FullScreen,
   Aim,
   Odometer,
   Menu,
-  Grid,
+  Operation,
   Check,
-  Tools,
   Lock
 } from '@element-plus/icons-vue'
 
@@ -770,25 +768,17 @@ const goToLogin = async () => {
   font-size: 18px;
   color: var(--text-color-regular);
   border-radius: 10px;
-  transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease;
-}
-
-.collapse-btn :deep(.el-icon) {
-  transition: transform 0.25s ease;
+  transition: all 0.25s ease;
 }
 
 .collapse-btn:hover {
-  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   transform: translateY(-1px);
 }
 
-.collapse-btn:hover :deep(.el-icon) {
-  transform: scale(1.08);
-}
-
 .collapse-btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.96);
 }
 
 .size-btn {
@@ -806,58 +796,30 @@ const goToLogin = async () => {
   color: var(--text-color-regular);
   padding: 8px;
   border-radius: 10px;
-  position: relative;
-  overflow: hidden;
-  transform: translateZ(0);
-  transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+  transition: all 0.25s ease;
 }
 
 .header-icon-fixed {
-  font-size: 20px;
+  font-size: var(--topbar-icon-size, 19px);
+  opacity: var(--topbar-icon-opacity, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.25s ease, color 0.25s ease;
+  transition: transform 0.25s ease;
 }
 
 .header-btn:hover {
   background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
   transform: translateY(-1px);
-  box-shadow: 0 6px 12px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
 }
 
 .header-btn:hover .header-icon-fixed {
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
 .header-btn:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: none;
-}
-
-.header-btn::after {
-  content: '';
-  position: absolute;
-  width: 90px;
-  height: 90px;
-  left: -120%;
-  top: 50%;
-  transform: translateY(-50%) rotate(25deg);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--el-color-primary) 22%, transparent) 48%,
-    transparent 100%
-  );
-  opacity: 0;
-  transition: left 0.55s ease, opacity 0.35s ease;
-  pointer-events: none;
-}
-
-.header-btn:hover::after {
-  left: 120%;
-  opacity: 0.55;
+  transform: scale(0.96);
 }
 
 .layout-size-dropdown {
@@ -885,19 +847,26 @@ const goToLogin = async () => {
   cursor: pointer;
   color: var(--text-color-regular);
   gap: 8px;
-  padding: 4px 8px;
   border-radius: 10px;
-  transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease;
+  padding: 4px 8px;
+  transition: all 0.25s ease;
 }
 
 .user-info:hover {
   color: var(--el-color-primary);
   background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
-  transform: translateY(-1px);
 }
 
 .user-info:active {
-  transform: translateY(0) scale(0.99);
+  transform: scale(0.98);
+}
+
+.user-info .el-icon--right {
+  transition: transform 0.25s ease;
+}
+
+.user-info:hover .el-icon--right {
+  transform: translateY(1px);
 }
 
 .user-avatar {
@@ -1309,8 +1278,5 @@ html.dark .header {
 }
 html.dark .top-menu {
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
-}
-html.dark .header-btn:hover {
-  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.24);
 }
 </style>

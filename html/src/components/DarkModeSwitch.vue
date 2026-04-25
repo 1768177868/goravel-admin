@@ -1,11 +1,11 @@
 <template>
   <el-button
     type="text"
-    class="dark-mode-switch"
+    class="dark-mode-switch topbar-icon-btn"
     @click="toggleDarkMode"
     :title="isDarkMode ? $t('header.switch_to_light') : $t('header.switch_to_dark')"
   >
-    <el-icon class="dark-mode-icon">
+    <el-icon class="dark-mode-icon topbar-icon">
       <Sunny v-if="isDarkMode" />
       <Moon v-else />
     </el-icon>
@@ -33,20 +33,12 @@ const toggleDarkMode = () => {
   align-items: center;
   justify-content: center;
   padding: 8px;
-  border-radius: 4px;
-  transition: all 0.3s;
   margin: 0;
   min-width: 44px;
   min-height: 44px;
 }
 
-.dark-mode-switch:hover {
-  background-color: var(--bg-color-tertiary, #f5f7fa);
-  color: var(--el-color-primary);
-}
-
 .dark-mode-icon {
-  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;

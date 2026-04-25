@@ -10,10 +10,10 @@
     <template #reference>
       <el-button 
         type="text" 
-        class="header-btn" 
+        class="header-btn topbar-icon-btn" 
         :title="$t('header.menu_search') || '搜索菜单'"
       >
-        <el-icon class="header-icon-fixed"><Search /></el-icon>
+        <el-icon class="header-icon-fixed topbar-icon"><Search /></el-icon>
       </el-button>
     </template>
       
@@ -239,6 +239,12 @@ watch(visible, (newVal) => {
 <style scoped>
 .menu-search-content {
   padding: 8px;
+}
+
+.header-icon-fixed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-search-results {
