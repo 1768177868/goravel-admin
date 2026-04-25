@@ -7,6 +7,16 @@
       label-width="120px"
       label-position="left"
     >
+      <el-form-item :label="$t('config.site_enabled')" prop="site_enabled">
+        <el-switch
+          v-model="formData.site_enabled"
+          active-value="1"
+          inactive-value="0"
+          :active-text="$t('common.enabled')"
+          :inactive-text="$t('common.disabled')"
+        />
+      </el-form-item>
+
       <el-row :gutter="20">
         <el-col :span="12">
           <el-form-item :label="$t('config.site_name')" prop="site_name">
@@ -73,6 +83,7 @@ const formRef = ref(null)
 const submitting = ref(false)
 
 const formData = reactive({
+  site_enabled: '1',
   site_name: '',
   site_url: '',
   site_logo: '',

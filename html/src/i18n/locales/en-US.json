@@ -693,6 +693,7 @@
     "email_config": "Email Configuration",
     "captcha_config": "Captcha Configuration",
     "storage_config": "Storage Configuration",
+    "site_enabled": "Site Status",
     "site_name": "Site Name",
     "site_name_placeholder": "Please enter site name",
     "site_name_required": "Please enter site name",

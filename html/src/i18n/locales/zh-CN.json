@@ -700,6 +700,7 @@
   "config": {
     "website_config": "网站配置",
     "email_config": "邮箱配置",
+    "site_enabled": "站点状态",
     "site_name": "网站名称",
     "site_name_placeholder": "请输入网站名称",
     "site_name_required": "请输入网站名称",
