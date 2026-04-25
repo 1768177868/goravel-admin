@@ -38,6 +38,7 @@
       <div class="login-page__form-wrap">
         <div class="login-form-card">
           <h2 class="login-form-title">{{ $t('login.login') }}</h2>
+          <p class="login-form-subtitle">{{ $t('login.page_description') }}</p>
           <el-form
             ref="loginFormRef"
             :model="loginForm"
@@ -351,7 +352,7 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   padding: 48px;
-  background: linear-gradient(160deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 50%, #1a1d24 100%);
+  background: linear-gradient(180deg, #2f3f57 0%, #243246 100%);
   overflow: hidden;
 }
 
@@ -365,101 +366,34 @@ const handleLogin = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 16px;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
   color: #fff;
-  margin-bottom: 32px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.brand-logo:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  margin-bottom: 22px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
 }
 
 .brand-title {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
   color: #fff;
-  margin: 0 0 16px;
-  letter-spacing: -0.5px;
+  margin: 0 0 10px;
+  letter-spacing: 0;
   line-height: 1.25;
 }
 
 .brand-desc {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.76);
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 /* 左侧装饰（几何图形） */
 .login-page__deco {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.deco-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.deco-circle--1 {
-  width: 400px;
-  height: 400px;
-  top: -120px;
-  right: -120px;
-  animation: decoFloat 18s ease-in-out infinite;
-}
-
-.deco-circle--2 {
-  width: 260px;
-  height: 260px;
-  bottom: 10%;
-  left: -80px;
-  animation: decoFloat 14s ease-in-out infinite reverse;
-  animation-delay: 2s;
-}
-
-.deco-circle--3 {
-  width: 120px;
-  height: 120px;
-  top: 40%;
-  left: 20%;
-  animation: decoFloat 12s ease-in-out infinite;
-  animation-delay: 4s;
-}
-
-.deco-line {
-  position: absolute;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
-  height: 1px;
-}
-
-.deco-line--1 {
-  width: 60%;
-  top: 25%;
-  left: 0;
-  transform: rotate(-15deg);
-}
-
-.deco-line--2 {
-  width: 40%;
-  bottom: 30%;
-  right: 0;
-  transform: rotate(10deg);
-}
-
-@keyframes decoFloat {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(20px, -15px); }
+  display: none;
 }
 
 /* ========== 右侧表单区 ========== */
@@ -468,7 +402,8 @@ const handleLogin = async () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-color-tertiary);
+  align-items: center;
+  background: color-mix(in srgb, var(--bg-color-tertiary) 90%, var(--card-bg) 10%);
 }
 
 .login-page__toolbar {
@@ -476,12 +411,12 @@ const handleLogin = async () => {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 18px 28px;
-  margin: 16px 16px 0;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  padding: 14px 22px 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  width: min(520px, calc(100% - 32px));
 }
 
 .login-toolbar__theme {
@@ -536,38 +471,35 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  width: min(560px, 100%);
+  padding: 20px 24px 32px;
 }
 
 .login-form-card {
   width: 100%;
-  max-width: 400px;
-  padding: 48px 44px;
+  max-width: 100%;
+  padding: 40px 34px;
   background: var(--card-bg);
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent);
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.09), 0 2px 8px rgba(15, 23, 42, 0.05);
-  animation: formSlideIn 0.5s ease-out;
-}
-
-@keyframes formSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 74%, transparent);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .login-form-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--text-color-primary);
-  margin: 0 0 32px;
+  margin: 0;
   text-align: center;
-  letter-spacing: -0.3px;
+  letter-spacing: 0;
+}
+
+.login-form-subtitle {
+  margin: 8px 0 24px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-color-secondary);
 }
 
 .login-form {
@@ -617,14 +549,14 @@ const handleLogin = async () => {
   border-radius: var(--border-radius-lg);
   background: var(--el-color-primary);
   border: none;
-  box-shadow: 0 8px 16px color-mix(in srgb, var(--el-color-primary) 28%, transparent);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--el-color-primary) 24%, transparent);
   transition: all 0.2s ease;
   margin-top: 8px;
 }
 
 .login-button:hover {
   background: var(--el-color-primary-light-3);
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--el-color-primary) 34%, transparent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
 }
 
 .login-button:active {
@@ -685,7 +617,7 @@ const handleLogin = async () => {
 
   .login-page__left {
     width: 100%;
-    min-height: 280px;
+    min-height: 230px;
     padding: 32px 24px;
   }
 
@@ -717,8 +649,8 @@ const handleLogin = async () => {
   }
 
   .login-page__toolbar {
-    margin: 12px 12px 0;
-    padding: 12px 14px;
+    padding: 12px 16px 0;
+    width: calc(100% - 24px);
   }
 
   .login-form-card {
