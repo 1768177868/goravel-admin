@@ -77,8 +77,17 @@
               <span v-else>-</span>
             </template>
             <template v-else-if="column.key === 'no_cache'">
-              <el-tag :type="row.no_cache === 1 ? 'warning' : 'success'">
-                {{ row.no_cache === 1 ? $t('menu_management.no_cache_no') : $t('menu_management.no_cache_yes') }}
+              <el-tooltip
+                v-if="row.no_cache === 1"
+                :content="$t('menu_management.no_cache_no')"
+                placement="top"
+              >
+                <el-tag type="warning">
+                  {{ $t('common.no') }}
+                </el-tag>
+              </el-tooltip>
+              <el-tag v-else type="success">
+                {{ $t('common.yes') }}
               </el-tag>
             </template>
             <template v-else-if="column.key === 'icon'">
