@@ -225,7 +225,13 @@
           </el-button>
           <!-- 移动端隐藏时区切换 -->
           <TimezoneSwitch :class="{ 'mobile-hidden': isMobile }" />
-          <el-dropdown @command="handleCommand" class="user-dropdown">
+          <el-dropdown
+            @command="handleCommand"
+            class="user-dropdown"
+            popper-class="user-account-popper"
+            placement="bottom-end"
+            :teleported="true"
+          >
             <span class="user-info">
               <el-avatar 
                 v-if="userStore.adminInfo?.avatar" 
@@ -244,13 +250,103 @@
               </el-icon>
             </span>
             <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">
-                  <el-icon><User /></el-icon>
-                  {{ $t('header.profile') }}
-                </el-dropdown-item>
-                <el-dropdown-item divided command="logout">{{ $t('header.logout') }}</el-dropdown-item>
-              </el-dropdown-menu>
+              <div class="user-account-panel">
+                <div class="user-account-header">
+                  <el-avatar
+                    v-if="userStore.adminInfo?.avatar"
+                    :size="48"
+                    :src="userStore.adminInfo.avatar"
+                    class="user-account-avatar"
+                  >
+                    <el-icon><User /></el-icon>
+                  </el-avatar>
+                  <el-avatar v-else :size="48" class="user-account-avatar user-account-avatar--placeholder">
+                    <el-icon><User /></el-icon>
+                  </el-avatar>
+                  <div class="user-account-meta">
+                    <div class="user-account-name-row">
+                      <span class="user-account-name">{{ userAccountDisplayName }}</span>
+                      <el-tag
+                        v-if="userStore.isSuperAdmin"
+                        size="small"
+                        type="warning"
+                        effect="plain"
+                        class="user-account-badge"
+                      >
+                        {{ $t('header.super_admin') }}
+                      </el-tag>
+                    </div>
+                    <div v-if="userAccountSubtitle" class="user-account-sub">{{ userAccountSubtitle }}</div>
+                    <div v-if="userAccountDepartment" class="user-account-dept">
+                      <el-icon class="user-account-dept-icon"><OfficeBuilding /></el-icon>
+                      <span>{{ userAccountDepartment }}</span>
+                    </div>
+                    <div
+                      v-if="userAccountRolePreview.visible.length || userAccountShowAllPermissionsHint"
+                      class="user-account-roles"
+                    >
+                      <span class="user-account-roles-label">{{ $t('header.account_roles') }}</span>
+                      <div class="user-account-roles-tags">
+                        <template v-if="userAccountRolePreview.visible.length">
+                          <el-tag
+                            v-for="(name, idx) in userAccountRolePreview.visible"
+                            :key="`role-${idx}-${name}`"
+                            size="small"
+                            effect="plain"
+                            type="info"
+                            class="user-account-role-tag"
+                          >
+                            {{ name }}
+                          </el-tag>
+                          <el-tag
+                            v-if="userAccountRolePreview.more > 0"
+                            size="small"
+                            effect="plain"
+                            type="info"
+                            class="user-account-role-tag user-account-role-tag--more"
+                          >
+                            +{{ userAccountRolePreview.more }}
+                          </el-tag>
+                        </template>
+                        <el-tag
+                          v-else-if="userAccountShowAllPermissionsHint"
+                          size="small"
+                          effect="plain"
+                          type="success"
+                          class="user-account-role-tag user-account-role-tag--all"
+                        >
+                          {{ $t('header.all_permissions_hint') }}
+                        </el-tag>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <el-dropdown-menu class="user-account-menu">
+                  <el-dropdown-item command="profile" class="user-account-item">
+                    <span class="user-account-item-inner">
+                      <span class="user-account-item-left">
+                        <el-icon class="user-account-item-icon"><User /></el-icon>
+                        <span class="user-account-item-text">
+                          <span class="user-account-item-title">{{ $t('header.profile') }}</span>
+                          <span class="user-account-item-desc">{{ $t('header.profile_desc') }}</span>
+                        </span>
+                      </span>
+                      <el-icon class="user-account-item-chevron"><ArrowRight /></el-icon>
+                    </span>
+                  </el-dropdown-item>
+                  <el-dropdown-item command="logout" class="user-account-item user-account-item--logout">
+                    <span class="user-account-item-inner">
+                      <span class="user-account-item-left">
+                        <el-icon class="user-account-item-icon user-account-item-icon--danger"><SwitchButton /></el-icon>
+                        <span class="user-account-item-text">
+                          <span class="user-account-item-title">{{ $t('header.logout') }}</span>
+                          <span class="user-account-item-desc user-account-item-desc--danger">{{ $t('header.logout_desc') }}</span>
+                        </span>
+                      </span>
+                    </span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </div>
             </template>
           </el-dropdown>
         </div>
@@ -262,6 +358,8 @@
           :default-active="activeMenu"
           mode="horizontal"
           class="top-menu"
+          popper-class="top-menu-submenu-popper"
+          :popper-offset="8"
           @select="handleMenuSelect"
         >
           <el-menu-item index="/dashboard">
@@ -409,11 +507,14 @@ import {
   Setting,
   User,
   ArrowDown,
+  ArrowRight,
   FullScreen,
   Aim,
   Odometer,
   Menu,
   Operation,
+  OfficeBuilding,
+  SwitchButton,
   Check,
   Lock
 } from '@element-plus/icons-vue'
@@ -445,6 +546,49 @@ const userStore = useUserStore()
 const tabsStore = useTabsStore()
 const appStore = useAppStore()
 const { t } = useI18n()
+
+const userAccountDisplayName = computed(() => {
+  const u = userStore.adminInfo
+  if (!u) return ''
+  return u.nickname || u.username || ''
+})
+
+const userAccountSubtitle = computed(() => {
+  const u = userStore.adminInfo
+  if (!u) return ''
+  if (u.email) return u.email
+  if (u.username) return `@${u.username}`
+  if (u.phone) return u.phone
+  return ''
+})
+
+const userAccountDepartment = computed(() => {
+  const u = userStore.adminInfo
+  if (!u) return ''
+  const d = u.department
+  return typeof d === 'string' ? d : d?.name || ''
+})
+
+const userAccountRoleNames = computed(() => {
+  const roles = userStore.adminInfo?.roles
+  if (!Array.isArray(roles) || roles.length === 0) return []
+  return roles
+    .map((r) => r.name || r.Name || r.slug || r.Slug || '')
+    .filter(Boolean)
+})
+
+const userAccountRolePreview = computed(() => {
+  const names = userAccountRoleNames.value
+  return {
+    visible: names.slice(0, 2),
+    more: Math.max(0, names.length - 2)
+  }
+})
+
+/** 超级管理员且未携带角色列表时，展示「全部权限」说明 */
+const userAccountShowAllPermissionsHint = computed(
+  () => userStore.isSuperAdmin && userAccountRoleNames.value.length === 0
+)
 
 const activeMenu = computed(() => route.path)
 const isScreenLocked = ref(false)
@@ -911,6 +1055,227 @@ const goToLogin = async () => {
   white-space: nowrap;
 }
 
+/* 账号下拉：内容区（与设置/布局弹层风格一致） */
+.user-account-panel {
+  min-width: 268px;
+  max-width: 320px;
+}
+
+.user-account-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 14px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--el-color-primary) 10%, transparent) 0%,
+    transparent 55%
+  );
+}
+
+.user-account-avatar {
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.user-account-avatar--placeholder {
+  background: color-mix(in srgb, var(--el-color-primary) 16%, var(--card-bg, #fff) 84%);
+  color: var(--el-color-primary);
+}
+
+.user-account-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.user-account-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-account-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text-color-primary);
+  line-height: 1.25;
+}
+
+.user-account-badge {
+  flex-shrink: 0;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.user-account-sub {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.user-account-dept {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-color-regular);
+  max-width: 100%;
+}
+
+.user-account-dept-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.user-account-dept span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-account-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.user-account-roles-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-color-placeholder);
+}
+
+.user-account-roles-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-account-role-tag {
+  max-width: 100%;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.user-account-role-tag :deep(.el-tag__content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 118px;
+}
+
+.user-account-role-tag--more {
+  font-weight: 700;
+}
+
+.user-account-menu {
+  padding: 8px 8px 10px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.user-account-menu :deep(.el-dropdown-menu__item) {
+  padding: 0 !important;
+  margin: 0;
+  border-radius: 10px;
+  background: transparent !important;
+}
+
+.user-account-menu :deep(.el-dropdown-menu__item + .el-dropdown-menu__item) {
+  margin-top: 6px;
+}
+
+.user-account-item-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.user-account-item-left {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.user-account-item-icon {
+  font-size: 18px;
+  margin-top: 1px;
+  color: var(--text-color-regular);
+  flex-shrink: 0;
+}
+
+.user-account-item-icon--danger {
+  color: var(--el-color-danger);
+}
+
+.user-account-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-account-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color-primary);
+  line-height: 1.3;
+}
+
+.user-account-item-desc {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  line-height: 1.35;
+}
+
+.user-account-item-desc--danger {
+  color: color-mix(in srgb, var(--el-color-danger) 75%, var(--text-color-secondary) 25%);
+}
+
+.user-account-item-chevron {
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--text-color-placeholder);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.user-account-menu :deep(.el-dropdown-menu__item:not(.is-disabled):hover) .user-account-item-inner {
+  background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--el-color-primary) 22%, transparent);
+}
+
+.user-account-menu :deep(.el-dropdown-menu__item:not(.is-disabled):hover) .user-account-item-chevron {
+  color: var(--el-color-primary);
+  transform: translateX(2px);
+}
+
+.user-account-menu :deep(.el-dropdown-menu__item.user-account-item--logout:not(.is-disabled):hover) .user-account-item-inner {
+  background: color-mix(in srgb, var(--el-color-danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--el-color-danger) 28%, transparent);
+}
+
 .tabs-wrapper {
   background: linear-gradient(180deg, color-mix(in srgb, var(--header-bg) 92%, var(--el-color-primary) 8%) 0%, var(--header-bg) 100%);
   border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent);
@@ -1129,6 +1494,31 @@ const goToLogin = async () => {
 }
 .top-menu :deep(.el-sub-menu .el-menu-item) {
   min-width: 120px;
+}
+
+/* 顶部菜单：子菜单标题与下拉箭头留出间距（避免与文字挤在一起） */
+.layout-container.layout-top-menu .top-menu :deep(.el-sub-menu__title) {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 0 14px !important;
+  box-sizing: border-box;
+}
+.layout-container.layout-top-menu .top-menu :deep(.el-sub-menu__title > .el-tooltip__trigger) {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.layout-container.layout-top-menu .top-menu :deep(.el-sub-menu__title .menu-title) {
+  margin-right: 2px;
+}
+.layout-container.layout-top-menu .top-menu :deep(.el-sub-menu__icon-arrow) {
+  position: static !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  right: auto !important;
+  top: auto !important;
+  flex-shrink: 0;
 }
 
 /* Element Plus 水印容器：占满主内容区 */
@@ -1492,5 +1882,91 @@ html.dark .header {
 }
 html.dark .top-menu {
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+}
+
+/* 顶部横向菜单：子菜单弹出层（卡片质感，与各下拉统一） */
+.el-popper.top-menu-submenu-popper {
+  padding: 6px !important;
+  border-radius: 12px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.el-popper.top-menu-submenu-popper .el-menu--popup-container {
+  background: transparent !important;
+  padding: 0 !important;
+}
+.el-popper.top-menu-submenu-popper .el-menu--popup {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 4px 2px;
+  min-width: 172px;
+}
+.el-popper.top-menu-submenu-popper .el-menu-item,
+.el-popper.top-menu-submenu-popper .el-sub-menu__title {
+  border-radius: 8px;
+  margin: 2px 6px;
+  height: 38px !important;
+  line-height: 38px !important;
+  padding: 0 12px !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.el-popper.top-menu-submenu-popper .el-menu-item:not(.is-disabled):hover,
+.el-popper.top-menu-submenu-popper .el-sub-menu__title:hover {
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent) !important;
+  color: var(--el-color-primary) !important;
+}
+.el-popper.top-menu-submenu-popper .el-menu-item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent) !important;
+  color: var(--el-color-primary) !important;
+  font-weight: 600;
+}
+.el-popper.top-menu-submenu-popper .el-icon {
+  margin-right: 8px;
+}
+.el-popper.top-menu-submenu-popper .el-sub-menu__icon-arrow {
+  margin-right: 0 !important;
+  margin-left: 6px !important;
+}
+html.dark .el-popper.top-menu-submenu-popper {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .el-popper.top-menu-submenu-popper .el-menu-item:not(.is-disabled):hover,
+html.dark .el-popper.top-menu-submenu-popper .el-sub-menu__title:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
+}
+html.dark .el-popper.top-menu-submenu-popper .el-menu-item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 20%, rgba(255, 255, 255, 0.06)) !important;
+}
+
+/* 账号下拉外层 popper（与设置/布局一致） */
+.user-account-popper.el-popper {
+  padding: 0 !important;
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+html.dark .user-account-popper.el-popper {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .user-account-popper .user-account-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+html.dark .user-account-popper .user-account-avatar--placeholder {
+  background: color-mix(in srgb, var(--el-color-primary) 22%, rgba(255, 255, 255, 0.06));
+}
+html.dark .user-account-popper .user-account-roles-label {
+  color: var(--el-text-color-placeholder, #6c6e72);
 }
 </style>
