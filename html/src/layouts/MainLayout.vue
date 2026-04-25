@@ -36,19 +36,17 @@
     <!-- 桌面端固定侧边栏（仅左侧菜单模式显示） -->
     <el-aside
       v-if="!isMobile && appStore.menuMode === 'sidebar'"
-      :width="appStore.sidebarCollapsed ? '64px' : '240px'"
+      :width="sidebarEffectiveCollapsed ? '64px' : '240px'"
       class="sidebar"
-      :class="{ 'is-collapse': appStore.sidebarCollapsed }"
     >
       <div class="logo">
         <h3 v-if="!appStore.sidebarCollapsed">{{ systemTitle }}</h3>
         <el-icon v-else><Setting /></el-icon>
       </div>
       <el-menu
-        v-if="!appStore.sidebarCollapsed"
         :default-active="activeMenu"
-        class="sidebar-menu sidebar-menu--expanded"
-        :collapse="false"
+        class="sidebar-menu"
+        :collapse="appStore.sidebarCollapsed"
         :collapse-transition="false"
         @select="handleMenuSelect"
       >
@@ -58,27 +56,9 @@
         </el-menu-item>
         <MenuItem
           v-for="menu in menuTree"
-          :key="`expanded-${menu.id}`"
+          :key="menu.id"
           :menu="menu"
-        />
-      </el-menu>
-      <el-menu
-        v-else
-        :default-active="activeMenu"
-        class="sidebar-menu sidebar-menu--collapsed"
-        :collapse="true"
-        :collapse-transition="false"
-        @select="handleMenuSelect"
-      >
-        <el-menu-item index="/dashboard">
-          <el-icon><Odometer /></el-icon>
-          <template #title>{{ $t('menu.dashboard') }}</template>
-        </el-menu-item>
-        <MenuItem
-          v-for="menu in collapsedMenuTree"
-          :key="`collapsed-${menu.id}`"
-          :menu="menu"
-          popper-class="sidebar-collapse-submenu-popper"
+          :popper-class="appStore.sidebarCollapsed ? 'sidebar-collapse-submenu-popper' : ''"
         />
       </el-menu>
     </el-aside>
@@ -400,15 +380,17 @@
       </div>
       
       <el-main
+        ref="mainContentRef"
         class="main-content"
         :class="{
           'main-content-iframe': isIframePage,
           'main-content--sidebar-narrowing': sidebarNarrowingLock
         }"
+        :style="mainContentInlineStyle"
       >
         <!-- 使用 Element Plus 水印：开启时包裹内容，水印浮在内容之上 -->
         <el-watermark
-          v-if="appStore.watermarkEnabled"
+          v-if="appStore.watermarkEnabled && !sidebarNarrowingLock"
           :content="watermarkText"
           :font="watermarkFont"
           :width="120"
@@ -628,6 +610,17 @@ const activeMenu = computed(() => route.path)
 const isScreenLocked = ref(false)
 /** 侧栏变窄瞬间：隔离主内容区布局，避免表格/图表随宽度突变触发巨量同步重排 */
 const sidebarNarrowingLock = ref(false)
+/** 收起时分离“菜单折叠”和“侧栏宽度收缩”，避免同一帧双重重排 */
+const sidebarShrinkDeferred = ref(false)
+const sidebarEffectiveCollapsed = computed(() => appStore.sidebarCollapsed && !sidebarShrinkDeferred.value)
+/** 主内容区宽度锁定：避免收起过程触发连续 resize 级联重算 */
+const mainContentRef = ref(null)
+const mainContentWidthLock = ref('')
+const mainContentInlineStyle = computed(() => (
+  mainContentWidthLock.value
+    ? { width: mainContentWidthLock.value, maxWidth: mainContentWidthLock.value }
+    : {}
+))
 let sidebarNarrowingTimer = null
 const lockPassword = ref('')
 const unlockPassword = ref('')
@@ -657,23 +650,6 @@ const menuTree = computed(() => {
   )
 })
 
-/** 收起态使用轻量菜单：仅保留一级图标项，避免渲染整棵子树导致卡顿 */
-const collapsedMenuTree = computed(() =>
-  menuTree.value.map((menu) => {
-    const hasChildren = Array.isArray(menu.children) && menu.children.length > 0
-    return {
-      ...menu,
-      // 收起态父级允许弹出子菜单，但父级本身不参与路由跳转，避免 404
-      path: hasChildren ? '' : (menu.path || ''),
-      status: menu.status,
-      // 保留一层 children 以支持收起态弹出子菜单；子级再向下裁剪，兼顾性能
-      children: hasChildren
-        ? menu.children.map((child) => ({ ...child, children: [] }))
-        : []
-    }
-  })
-)
-
 // 监听路由变化，自动添加标签页
 watch(
   () => route.path,
@@ -694,21 +670,36 @@ let heartbeatInterval = null
 
 const handleToggleSidebar = () => {
   const willCollapse = !appStore.sidebarCollapsed
-  appStore.toggleSidebar()
-  if (!willCollapse) return
+  const mainEl = mainContentRef.value?.$el || mainContentRef.value
+  if (mainEl && typeof mainEl.clientWidth === 'number' && mainEl.clientWidth > 0) {
+    mainContentWidthLock.value = `${mainEl.clientWidth}px`
+  }
 
   if (sidebarNarrowingTimer) {
     clearTimeout(sidebarNarrowingTimer)
     sidebarNarrowingTimer = null
   }
+
+  if (!willCollapse) {
+    appStore.toggleSidebar()
+    nextTick(() => {
+      mainContentWidthLock.value = ''
+    })
+    return
+  }
+
+  // 先折叠菜单（文字/层级收起），下一帧再真正收窄侧栏宽度，降低峰值卡顿。
+  sidebarShrinkDeferred.value = true
   sidebarNarrowingLock.value = true
-  // 等一帧让侧栏宽度与菜单折叠先落地，再解除隔离，减少“收起时整页卡死”
+  appStore.toggleSidebar()
   nextTick(() => {
     requestAnimationFrame(() => {
       sidebarNarrowingTimer = setTimeout(() => {
+        sidebarShrinkDeferred.value = false
         sidebarNarrowingLock.value = false
+        mainContentWidthLock.value = ''
         sidebarNarrowingTimer = null
-      }, 120)
+      }, 160)
     })
   })
 }
@@ -774,6 +765,9 @@ onMounted(() => {
       clearTimeout(sidebarNarrowingTimer)
       sidebarNarrowingTimer = null
     }
+    mainContentWidthLock.value = ''
+    sidebarShrinkDeferred.value = false
+    sidebarNarrowingLock.value = false
     document.removeEventListener('fullscreenchange', handleFullscreenChange)
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval)
@@ -1111,10 +1105,12 @@ const goToLogin = async () => {
   min-width: 18px;
   text-align: center;
   font-size: 16px;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: static !important;
+  transform: none !important;
+  line-height: 1;
   margin: 0 !important;
 }
 
@@ -1134,6 +1130,9 @@ const goToLogin = async () => {
 /* MenuItem 组件内的 menu-icon 在折叠态也强制居中 */
 .sidebar-menu :deep(.el-menu--collapse .menu-icon) {
   margin: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 折叠态移除左侧激活条，避免视觉中心偏左 */
@@ -1143,9 +1142,9 @@ const goToLogin = async () => {
 }
 
 /* 折叠态禁用菜单项过渡，避免折叠时卡顿 */
-.sidebar.is-collapse .sidebar-menu :deep(.el-menu-item),
-.sidebar.is-collapse .sidebar-menu :deep(.el-sub-menu__title),
-.sidebar.is-collapse .sidebar-menu :deep(.el-sub-menu__icon-arrow) {
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__icon-arrow) {
   transition: none !important;
 }
 
@@ -1525,8 +1524,8 @@ const goToLogin = async () => {
 
 /* 侧栏收起导致主区域变宽时，先隔离主内容布局，减轻表格/图表等同步重排 */
 .main-content.main-content--sidebar-narrowing {
-  contain: layout style paint;
-  content-visibility: auto;
+  contain: paint;
+  overflow: hidden;
 }
 
 /* iframe 外部链接页面：去掉内边距并让内容区占满高度 */
