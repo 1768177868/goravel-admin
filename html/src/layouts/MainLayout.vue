@@ -2210,7 +2210,7 @@ html.dark .el-popper.top-menu-submenu-popper .el-menu-item.is-active {
 .el-popper.sidebar-collapse-submenu-popper {
   padding: 6px !important;
   border-radius: 12px !important;
-  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  border: none !important;
   background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
   overflow: hidden;
@@ -2254,7 +2254,7 @@ html.dark .el-popper.top-menu-submenu-popper .el-menu-item.is-active {
   margin-left: 6px !important;
 }
 html.dark .el-popper.sidebar-collapse-submenu-popper {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border: none !important;
   background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
