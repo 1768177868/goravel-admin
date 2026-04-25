@@ -839,11 +839,7 @@ const goToLogin = async () => {
   justify-content: center;
   padding: 0 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--card-bg, #fff) 94%, var(--el-color-primary) 6%) 0%,
-    var(--card-bg, #fff) 100%
-  );
+  background: var(--card-bg, #fff);
 }
 
 .logo h3 {
@@ -901,7 +897,7 @@ const goToLogin = async () => {
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active),
-.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+.sidebar-menu :deep(.el-sub-menu__title.is-active) {
   color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
   font-weight: 600;
@@ -909,7 +905,7 @@ const goToLogin = async () => {
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active::before),
-.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title::before) {
+.sidebar-menu :deep(.el-sub-menu__title.is-active::before) {
   content: '';
   position: absolute;
   left: 4px;
@@ -1772,11 +1768,7 @@ const goToLogin = async () => {
   justify-content: center;
   border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
   padding: 0 14px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--card-bg, #fff) 94%, var(--el-color-primary) 6%) 0%,
-    var(--card-bg, #fff) 100%
-  );
+  background: var(--card-bg, #fff);
 }
 
 .drawer-content .logo h3 {
@@ -1830,22 +1822,18 @@ html.dark .drawer-content .sidebar-menu .el-sub-menu__title:hover {
   color: var(--el-color-primary) !important;
 }
 html.dark .sidebar-menu .el-menu-item.is-active,
-html.dark .sidebar-menu .el-sub-menu.is-active > .el-sub-menu__title {
+html.dark .sidebar-menu .el-sub-menu__title.is-active {
   background: color-mix(in srgb, var(--el-color-primary) 22%, rgba(255, 255, 255, 0.05)) !important;
 }
 html.dark .sidebar-menu .el-menu-item.is-active::before,
-html.dark .sidebar-menu .el-sub-menu.is-active > .el-sub-menu__title::before {
+html.dark .sidebar-menu .el-sub-menu__title.is-active::before {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 42%, transparent),
     0 0 10px color-mix(in srgb, var(--el-color-primary) 65%, transparent);
 }
 html.dark .logo,
 html.dark .drawer-content .logo {
   border-bottom-color: rgba(255, 255, 255, 0.1) !important;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--card-bg, #1d1e1f) 82%, rgba(255, 255, 255, 0.05) 18%) 0%,
-    color-mix(in srgb, var(--card-bg, #1d1e1f) 96%, transparent) 100%
-  ) !important;
+  background: var(--card-bg, #1d1e1f) !important;
 }
 /* 布局大小下拉：质感升级 */
 .layout-size-popper.el-popper {

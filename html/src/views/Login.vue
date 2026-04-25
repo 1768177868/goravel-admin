@@ -476,7 +476,12 @@ const handleLogin = async () => {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 20px 32px;
+  padding: 18px 28px;
+  margin: 16px 16px 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
 }
 
 .login-toolbar__theme {
@@ -539,8 +544,9 @@ const handleLogin = async () => {
   max-width: 400px;
   padding: 48px 44px;
   background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.09), 0 2px 8px rgba(15, 23, 42, 0.05);
   animation: formSlideIn 0.5s ease-out;
 }
 
@@ -611,14 +617,14 @@ const handleLogin = async () => {
   border-radius: var(--border-radius-lg);
   background: var(--el-color-primary);
   border: none;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
+  box-shadow: 0 8px 16px color-mix(in srgb, var(--el-color-primary) 28%, transparent);
   transition: all 0.2s ease;
   margin-top: 8px;
 }
 
 .login-button:hover {
   background: var(--el-color-primary-light-3);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--el-color-primary) 40%, transparent);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--el-color-primary) 34%, transparent);
 }
 
 .login-button:active {
@@ -708,6 +714,11 @@ const handleLogin = async () => {
 
   .login-page__form-wrap {
     padding: 32px 24px;
+  }
+
+  .login-page__toolbar {
+    margin: 12px 12px 0;
+    padding: 12px 14px;
   }
 
   .login-form-card {

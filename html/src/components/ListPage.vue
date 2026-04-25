@@ -254,12 +254,25 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+.card-header > span {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text-color-primary);
 }
 
 .header-actions {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.header-actions :deep(.el-button--primary) {
+  border-radius: 10px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
 }
 </style>
 

@@ -217,8 +217,12 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  padding: 0 4px;
+  margin-bottom: 14px;
+  padding: 4px 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
 .toolbar-left {
@@ -229,5 +233,23 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.toolbar-right :deep(.el-button-group) {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.toolbar-right :deep(.el-button-group > .el-button) {
+  border-radius: 10px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
+  background: color-mix(in srgb, var(--card-bg, #fff) 94%, transparent);
+  transition: all 0.2s ease;
+}
+
+.toolbar-right :deep(.el-button-group > .el-button:hover) {
+  color: var(--el-color-primary);
+  border-color: color-mix(in srgb, var(--el-color-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
 }
 </style>
