@@ -769,7 +769,26 @@ const goToLogin = async () => {
 .collapse-btn {
   font-size: 18px;
   color: var(--text-color-regular);
-  transition: color 0.3s ease;
+  border-radius: 10px;
+  transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease;
+}
+
+.collapse-btn :deep(.el-icon) {
+  transition: transform 0.25s ease;
+}
+
+.collapse-btn:hover {
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+  transform: translateY(-1px);
+}
+
+.collapse-btn:hover :deep(.el-icon) {
+  transform: scale(1.08);
+}
+
+.collapse-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .size-btn {
@@ -787,7 +806,10 @@ const goToLogin = async () => {
   color: var(--text-color-regular);
   padding: 8px;
   border-radius: 10px;
-  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
 }
 
 .header-icon-fixed {
@@ -795,11 +817,47 @@ const goToLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.25s ease, color 0.25s ease;
 }
 
 .header-btn:hover {
   background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+}
+
+.header-btn:hover .header-icon-fixed {
+  transform: scale(1.1);
+}
+
+.header-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.header-btn::after {
+  content: '';
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  left: -120%;
+  top: 50%;
+  transform: translateY(-50%) rotate(25deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--el-color-primary) 22%, transparent) 48%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: left 0.55s ease, opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.header-btn:hover::after {
+  left: 120%;
+  opacity: 0.55;
 }
 
 .layout-size-dropdown {
@@ -827,7 +885,19 @@ const goToLogin = async () => {
   cursor: pointer;
   color: var(--text-color-regular);
   gap: 8px;
-  transition: color 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 10px;
+  transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease;
+}
+
+.user-info:hover {
+  color: var(--el-color-primary);
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.user-info:active {
+  transform: translateY(0) scale(0.99);
 }
 
 .user-avatar {
@@ -1239,5 +1309,8 @@ html.dark .header {
 }
 html.dark .top-menu {
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+}
+html.dark .header-btn:hover {
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.24);
 }
 </style>
