@@ -237,6 +237,33 @@ watch(visible, (newVal) => {
 </script>
 
 <style scoped>
+.topbar-icon-btn {
+  color: var(--text-color-regular);
+  padding: 8px;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.topbar-icon {
+  color: currentColor;
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.topbar-icon-btn:hover,
+.topbar-icon-btn:focus-visible {
+  color: var(--el-color-primary);
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+}
+
+.topbar-icon-btn:hover .topbar-icon,
+.topbar-icon-btn:focus-visible .topbar-icon {
+  transform: scale(1.08);
+}
+
+.topbar-icon-btn:active {
+  transform: scale(0.96);
+}
+
 .menu-search-content {
   padding: 8px;
 }

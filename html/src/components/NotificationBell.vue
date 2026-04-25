@@ -241,13 +241,36 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .bell-btn {
-  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.bell-btn .el-icon {
+.topbar-icon-btn {
+  color: var(--text-color-regular);
+  padding: 8px;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.topbar-icon {
+  color: currentColor;
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.topbar-icon-btn:hover,
+.topbar-icon-btn:focus-visible {
+  color: var(--el-color-primary);
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+}
+
+.topbar-icon-btn:hover .topbar-icon,
+.topbar-icon-btn:focus-visible .topbar-icon {
+  transform: scale(1.08);
+}
+
+.topbar-icon-btn:active {
+  transform: scale(0.96);
 }
 
 /* 确保 el-badge 不会影响按钮大小 */
