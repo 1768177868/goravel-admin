@@ -45,9 +45,11 @@
         <el-icon v-else><Setting /></el-icon>
       </div>
       <el-menu
+        v-if="!appStore.sidebarCollapsed"
         :default-active="activeMenu"
-        class="sidebar-menu"
-        :collapse="appStore.sidebarCollapsed"
+        class="sidebar-menu sidebar-menu--expanded"
+        :collapse="false"
+        :collapse-transition="false"
         @select="handleMenuSelect"
       >
         <el-menu-item index="/dashboard">
@@ -56,7 +58,25 @@
         </el-menu-item>
         <MenuItem
           v-for="menu in menuTree"
-          :key="menu.id"
+          :key="`expanded-${menu.id}`"
+          :menu="menu"
+        />
+      </el-menu>
+      <el-menu
+        v-else
+        :default-active="activeMenu"
+        class="sidebar-menu sidebar-menu--collapsed"
+        :collapse="true"
+        :collapse-transition="false"
+        @select="handleMenuSelect"
+      >
+        <el-menu-item index="/dashboard">
+          <el-icon><Odometer /></el-icon>
+          <template #title>{{ $t('menu.dashboard') }}</template>
+        </el-menu-item>
+        <MenuItem
+          v-for="menu in collapsedMenuTree"
+          :key="`collapsed-${menu.id}`"
           :menu="menu"
         />
       </el-menu>
@@ -78,7 +98,7 @@
             v-else-if="appStore.menuMode === 'sidebar'"
             type="text"
             class="collapse-btn"
-            @click="appStore.toggleSidebar"
+            @click="handleToggleSidebar"
           >
             <el-icon><Fold v-if="!appStore.sidebarCollapsed" /><Expand v-else /></el-icon>
           </el-button>
@@ -378,7 +398,13 @@
         <TabsView />
       </div>
       
-      <el-main class="main-content" :class="{ 'main-content-iframe': isIframePage }">
+      <el-main
+        class="main-content"
+        :class="{
+          'main-content-iframe': isIframePage,
+          'main-content--sidebar-narrowing': sidebarNarrowingLock
+        }"
+      >
         <!-- 使用 Element Plus 水印：开启时包裹内容，水印浮在内容之上 -->
         <el-watermark
           v-if="appStore.watermarkEnabled"
@@ -483,7 +509,7 @@
 </template>
 
 <script setup>
-import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
+import { computed, watch, onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -599,6 +625,9 @@ const userAccountShowAllPermissionsHint = computed(
 
 const activeMenu = computed(() => route.path)
 const isScreenLocked = ref(false)
+/** 侧栏变窄瞬间：隔离主内容区布局，避免表格/图表随宽度突变触发巨量同步重排 */
+const sidebarNarrowingLock = ref(false)
+let sidebarNarrowingTimer = null
 const lockPassword = ref('')
 const unlockPassword = ref('')
 const unlockError = ref('')
@@ -627,6 +656,23 @@ const menuTree = computed(() => {
   )
 })
 
+/** 收起态使用轻量菜单：仅保留一级图标项，避免渲染整棵子树导致卡顿 */
+const collapsedMenuTree = computed(() =>
+  menuTree.value.map((menu) => {
+    const hasChildren = Array.isArray(menu.children) && menu.children.length > 0
+    return {
+      ...menu,
+      // 收起态父级允许弹出子菜单，但父级本身不参与路由跳转，避免 404
+      path: hasChildren ? '' : (menu.path || ''),
+      status: menu.status,
+      // 保留一层 children 以支持收起态弹出子菜单；子级再向下裁剪，兼顾性能
+      children: hasChildren
+        ? menu.children.map((child) => ({ ...child, children: [] }))
+        : []
+    }
+  })
+)
+
 // 监听路由变化，自动添加标签页
 watch(
   () => route.path,
@@ -644,6 +690,27 @@ watch(
 
 // 心跳机制：每2分钟发送一次心跳请求，更新用户的最后活跃时间
 let heartbeatInterval = null
+
+const handleToggleSidebar = () => {
+  const willCollapse = !appStore.sidebarCollapsed
+  appStore.toggleSidebar()
+  if (!willCollapse) return
+
+  if (sidebarNarrowingTimer) {
+    clearTimeout(sidebarNarrowingTimer)
+    sidebarNarrowingTimer = null
+  }
+  sidebarNarrowingLock.value = true
+  // 等一帧让侧栏宽度与菜单折叠先落地，再解除隔离，减少“收起时整页卡死”
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      sidebarNarrowingTimer = setTimeout(() => {
+        sidebarNarrowingLock.value = false
+        sidebarNarrowingTimer = null
+      }, 120)
+    })
+  })
+}
 
 const sendHeartbeat = async () => {
   try {
@@ -702,6 +769,10 @@ onMounted(() => {
   
   // 清理事件监听器和心跳定时器
   onUnmounted(() => {
+    if (sidebarNarrowingTimer) {
+      clearTimeout(sidebarNarrowingTimer)
+      sidebarNarrowingTimer = null
+    }
     document.removeEventListener('fullscreenchange', handleFullscreenChange)
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval)
@@ -825,7 +896,7 @@ const goToLogin = async () => {
   /* background-color: var(--sidebar-bg); */
   background-color: var(--card-bg, #fff);
   overflow-y: auto;
-  transition: width 0.3s, background-color 0.3s ease;
+  transition: background-color 0.22s ease;
   border-right: 1px solid var(--border-color-light, #00000014);
 }
 
@@ -901,6 +972,50 @@ const goToLogin = async () => {
   width: 240px;
 }
 
+/* 折叠菜单专用：统一一条垂直中心线（不依赖 el-sub-menu 内部结构） */
+.sidebar-menu--collapsed :deep(.el-menu-item),
+.sidebar-menu--collapsed :deep(.el-sub-menu__title) {
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  line-height: 40px;
+  margin: 3px 0;
+  padding: 0 !important;
+  text-indent: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative;
+}
+
+.sidebar-menu--collapsed :deep(.el-menu-item > span),
+.sidebar-menu--collapsed :deep(.el-sub-menu__title > span),
+.sidebar-menu--collapsed :deep(.el-sub-menu__icon-arrow) {
+  display: none !important;
+}
+
+.sidebar-menu--collapsed :deep(.el-menu-item .el-icon),
+.sidebar-menu--collapsed :deep(.el-sub-menu__title .el-icon),
+.sidebar-menu--collapsed :deep(.menu-icon) {
+  position: absolute;
+  left: 50% !important;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  min-width: 18px;
+  margin: 0 !important;
+  text-align: center;
+}
+
+.sidebar-menu--collapsed :deep(.el-sub-menu .el-menu-item) {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.sidebar-menu--collapsed :deep(.el-menu-item.is-active::before),
+.sidebar-menu--collapsed :deep(.el-sub-menu__title.is-active::before) {
+  display: none !important;
+}
+
 /* 侧栏菜单：胶囊化 + 更清晰层次 */
 .sidebar-menu :deep(.el-menu-item),
 .sidebar-menu :deep(.el-sub-menu__title) {
@@ -912,14 +1027,13 @@ const goToLogin = async () => {
   margin: 3px 0;
   padding: 0 12px !important;
   overflow: hidden;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.18s ease;
+  transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .sidebar-menu :deep(.el-menu-item:hover),
 .sidebar-menu :deep(.el-sub-menu__title:hover) {
   background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
-  transform: translateX(1px);
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active),
@@ -940,9 +1054,7 @@ const goToLogin = async () => {
   width: 3px;
   border-radius: 999px;
   background: var(--el-color-primary);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 35%, transparent),
-    0 0 8px color-mix(in srgb, var(--el-color-primary) 55%, transparent);
-  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  box-shadow: none;
 }
 
 .sidebar-menu :deep(.el-sub-menu .el-menu-item) {
@@ -978,15 +1090,62 @@ const goToLogin = async () => {
 }
 
 /* 折叠态下图标居中，避免左右跳动 */
-.sidebar-menu:deep(.el-menu--collapse .el-menu-item),
-.sidebar-menu:deep(.el-menu--collapse .el-sub-menu__title) {
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title) {
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  line-height: 40px;
+  margin: 3px 0;
+  position: relative;
   justify-content: center;
+  align-items: center;
   padding: 0 !important;
+  text-indent: 0 !important;
 }
 
-.sidebar-menu:deep(.el-menu--collapse .el-menu-item .el-icon),
-.sidebar-menu:deep(.el-menu--collapse .el-sub-menu__title .el-icon) {
-  margin-right: 0;
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item .el-icon),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title .el-icon) {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  font-size: 16px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0 !important;
+}
+
+/* 折叠后移除子级菜单的层级缩进，确保图标同列对齐 */
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu .el-menu-item) {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* 折叠态隐藏文案与下拉箭头占位，避免不同类型菜单图标偏移 */
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item > span),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title > span),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__icon-arrow) {
+  display: none !important;
+}
+
+/* MenuItem 组件内的 menu-icon 在折叠态也强制居中 */
+.sidebar-menu :deep(.el-menu--collapse .menu-icon) {
+  margin: 0 !important;
+}
+
+/* 折叠态移除左侧激活条，避免视觉中心偏左 */
+.sidebar-menu :deep(.el-menu--collapse .el-menu-item.is-active::before),
+.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title.is-active::before) {
+  display: none;
+}
+
+/* 折叠态禁用菜单项过渡，避免折叠时卡顿 */
+.sidebar.is-collapse .sidebar-menu :deep(.el-menu-item),
+.sidebar.is-collapse .sidebar-menu :deep(.el-sub-menu__title),
+.sidebar.is-collapse .sidebar-menu :deep(.el-sub-menu__icon-arrow) {
+  transition: none !important;
 }
 
 .header {
@@ -1361,6 +1520,12 @@ const goToLogin = async () => {
   padding: 20px;
   overflow-y: auto;
   transition: background-color 0.3s ease;
+}
+
+/* 侧栏收起导致主区域变宽时，先隔离主内容布局，减轻表格/图表等同步重排 */
+.main-content.main-content--sidebar-narrowing {
+  contain: layout style paint;
+  content-visibility: auto;
 }
 
 /* iframe 外部链接页面：去掉内边距并让内容区占满高度 */
@@ -1853,8 +2018,7 @@ html.dark .sidebar-menu .el-sub-menu__title.is-active {
 }
 html.dark .sidebar-menu .el-menu-item.is-active::before,
 html.dark .sidebar-menu .el-sub-menu__title.is-active::before {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 42%, transparent),
-    0 0 10px color-mix(in srgb, var(--el-color-primary) 65%, transparent);
+  box-shadow: none;
 }
 html.dark .logo,
 html.dark .drawer-content .logo {

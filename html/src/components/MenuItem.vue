@@ -4,14 +4,7 @@
       <el-icon v-if="getIcon(menu.icon)" class="menu-icon">
         <component :is="getIcon(menu.icon)" />
       </el-icon>
-      <el-tooltip
-        :content="getMenuTitle(menu)"
-        placement="right"
-        effect="dark"
-        :show-after="300"
-      >
-        <span class="menu-title">{{ getMenuTitle(menu) }}</span>
-      </el-tooltip>
+      <span class="menu-title" :title="getMenuTitle(menu)">{{ getMenuTitle(menu) }}</span>
     </template>
     <MenuItem
       v-for="child in menu.children"
@@ -29,14 +22,7 @@
       <component :is="getIcon(menu.icon)" />
     </el-icon>
     <template #title>
-      <el-tooltip
-        :content="getMenuTitle(menu)"
-        placement="right"
-        effect="dark"
-        :show-after="300"
-      >
-        <span class="menu-title">{{ getMenuTitle(menu) }}</span>
-      </el-tooltip>
+      <span class="menu-title" :title="getMenuTitle(menu)">{{ getMenuTitle(menu) }}</span>
     </template>
   </el-menu-item>
 </template>
