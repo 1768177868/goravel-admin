@@ -317,7 +317,50 @@ onMounted(() => {
   border-radius: 12px;
   background: color-mix(in srgb, var(--card-bg, #fff) 94%, transparent);
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
-  padding: 5px 8px;
+  padding: 5px 10px;
+  position: relative;
+}
+
+/* 标签过多出现滚动时：为左右箭头留出空间，避免被标签盖住 */
+.tabs-container :deep(.el-tabs__nav-wrap.is-scrollable) {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+.tabs-container :deep(.el-tabs__nav-prev),
+.tabs-container :deep(.el-tabs__nav-next) {
+  z-index: 6;
+  width: 32px;
+  height: auto;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border-radius: 8px;
+  color: var(--text-color-regular);
+  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-color-light) 55%, transparent),
+    4px 0 12px rgba(15, 23, 42, 0.06);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.tabs-container :deep(.el-tabs__nav-next) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-color-light) 55%, transparent),
+    -4px 0 12px rgba(15, 23, 42, 0.06);
+}
+
+.tabs-container :deep(.el-tabs__nav-prev:hover),
+.tabs-container :deep(.el-tabs__nav-next:hover) {
+  color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 10%, var(--card-bg, #fff) 90%);
+}
+
+.tabs-container :deep(.el-tabs__nav-prev.is-disabled),
+.tabs-container :deep(.el-tabs__nav-next.is-disabled) {
+  opacity: 0.35;
+  pointer-events: none;
+  box-shadow: none;
 }
 
 .tabs-container :deep(.el-tabs__nav) {
@@ -475,7 +518,16 @@ onMounted(() => {
   }
   .tabs-container :deep(.el-tabs__nav-wrap) {
     border-radius: 10px;
-    padding: 4px 6px;
+    padding: 4px 8px;
+  }
+  .tabs-container :deep(.el-tabs__nav-wrap.is-scrollable) {
+    padding-left: 36px;
+    padding-right: 36px;
+  }
+  .tabs-container :deep(.el-tabs__nav-prev),
+  .tabs-container :deep(.el-tabs__nav-next) {
+    width: 28px;
+    min-height: 30px;
   }
 
   .tab-label {
@@ -503,6 +555,24 @@ onMounted(() => {
     padding: 10px 14px;
     min-height: 44px;
   }
+}
+</style>
+
+<style>
+/* 暗色：标签滚动箭头底与描边，避免融进背景 */
+html.dark .tabs-container.el-tabs .el-tabs__nav-prev,
+html.dark .tabs-container.el-tabs .el-tabs__nav-next {
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 94%, transparent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 4px 0 14px rgba(0, 0, 0, 0.35);
+  color: var(--el-text-color-regular);
+}
+html.dark .tabs-container.el-tabs .el-tabs__nav-next {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), -4px 0 14px rgba(0, 0, 0, 0.35);
+}
+html.dark .tabs-container.el-tabs .el-tabs__nav-prev:hover,
+html.dark .tabs-container.el-tabs .el-tabs__nav-next:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--el-color-primary);
 }
 </style>
 
