@@ -1015,6 +1015,7 @@ const goToLogin = async () => {
 .sidebar-menu :deep(.el-menu-item),
 .sidebar-menu :deep(.el-sub-menu__title) {
   display: flex;
+  justify-content: flex-start;
   align-items: center;
   min-height: 38px;
   line-height: 38px;
@@ -1070,6 +1071,7 @@ const goToLogin = async () => {
 .sidebar-menu :deep(.el-menu-item .el-icon),
 .sidebar-menu :deep(.el-sub-menu__title .el-icon) {
   flex-shrink: 0;
+  margin-left: 0;
   margin-right: 10px;
   font-size: 16px;
   opacity: 0.9;
@@ -1085,22 +1087,29 @@ const goToLogin = async () => {
 }
 
 /* 折叠态下图标居中，避免左右跳动 */
-.sidebar-menu :deep(.el-menu--collapse .el-menu-item),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title) {
+.sidebar-menu.el-menu--collapse :deep(.el-menu-item),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__title) {
+  display: flex !important;
   width: 100%;
   height: 40px;
   min-height: 40px;
   line-height: 40px;
   margin: 3px 0;
   position: relative;
-  justify-content: center;
-  align-items: center;
+  justify-content: center !important;
+  align-items: center !important;
   padding: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   text-indent: 0 !important;
 }
 
-.sidebar-menu :deep(.el-menu--collapse .el-menu-item .el-icon),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title .el-icon) {
+.sidebar-menu.el-menu--collapse :deep(.el-menu-item .el-icon),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__title .el-icon) {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
   width: 18px;
   min-width: 18px;
   text-align: center;
@@ -1108,27 +1117,27 @@ const goToLogin = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: static !important;
-  transform: none !important;
   line-height: 1;
   margin: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 /* 折叠后移除子级菜单的层级缩进，确保图标同列对齐 */
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu .el-menu-item) {
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu .el-menu-item) {
   margin-left: 0 !important;
   padding-left: 0 !important;
 }
 
 /* 折叠态隐藏文案与下拉箭头占位，避免不同类型菜单图标偏移 */
-.sidebar-menu :deep(.el-menu--collapse .el-menu-item > span),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title > span),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__icon-arrow) {
+.sidebar-menu.el-menu--collapse :deep(.el-menu-item > span),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__title > span),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__icon-arrow) {
   display: none !important;
 }
 
 /* MenuItem 组件内的 menu-icon 在折叠态也强制居中 */
-.sidebar-menu :deep(.el-menu--collapse .menu-icon) {
+.sidebar-menu.el-menu--collapse :deep(.menu-icon) {
   margin: 0 !important;
   display: inline-flex;
   align-items: center;
@@ -1136,15 +1145,15 @@ const goToLogin = async () => {
 }
 
 /* 折叠态移除左侧激活条，避免视觉中心偏左 */
-.sidebar-menu :deep(.el-menu--collapse .el-menu-item.is-active::before),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title.is-active::before) {
+.sidebar-menu.el-menu--collapse :deep(.el-menu-item.is-active::before),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__title.is-active::before) {
   display: none;
 }
 
 /* 折叠态禁用菜单项过渡，避免折叠时卡顿 */
-.sidebar-menu :deep(.el-menu--collapse .el-menu-item),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__title),
-.sidebar-menu :deep(.el-menu--collapse .el-sub-menu__icon-arrow) {
+.sidebar-menu.el-menu--collapse :deep(.el-menu-item),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__title),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__icon-arrow) {
   transition: none !important;
 }
 
