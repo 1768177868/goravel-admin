@@ -890,7 +890,7 @@ const goToLogin = async () => {
 .sidebar {
   /* background-color: var(--sidebar-bg); */
   background-color: var(--card-bg, #fff);
-  overflow-y: auto;
+  overflow-y: scroll;
   transition: background-color 0.22s ease;
   border-right: 1px solid var(--border-color-light, #00000014);
 }
@@ -1017,10 +1017,11 @@ const goToLogin = async () => {
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  height: 38px;
   min-height: 38px;
   line-height: 38px;
   border-radius: 10px;
-  margin: 3px 0;
+  margin: 5px 0;
   padding: 0 12px !important;
   overflow: hidden;
   transition: background-color 0.16s ease, color 0.16s ease;
@@ -1055,6 +1056,11 @@ const goToLogin = async () => {
 
 .sidebar-menu :deep(.el-sub-menu .el-menu-item) {
   margin-left: 6px;
+}
+
+/* 关闭侧栏子菜单展开过渡，避免展开时上下抖动 */
+.sidebar-menu :deep(.el-menu--inline) {
+  transition: none !important;
 }
 
 .sidebar-menu :deep(.el-menu-item > span),
@@ -1094,7 +1100,7 @@ const goToLogin = async () => {
   height: 40px;
   min-height: 40px;
   line-height: 40px;
-  margin: 3px 0;
+  margin: 5px 0;
   position: relative;
   justify-content: center !important;
   align-items: center !important;
