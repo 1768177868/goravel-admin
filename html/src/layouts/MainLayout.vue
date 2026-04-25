@@ -13,7 +13,15 @@
     >
       <div class="drawer-content">
         <div class="logo">
-          <h3>{{ systemTitle }}</h3>
+          <div class="logo-brand">
+            <img
+              v-if="websiteLogoUrl"
+              :src="websiteLogoUrl"
+              alt="logo"
+              class="logo-image"
+            />
+            <h3>{{ systemTitle }}</h3>
+          </div>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -40,7 +48,21 @@
       class="sidebar"
     >
       <div class="logo">
-        <h3 v-if="!appStore.sidebarCollapsed">{{ systemTitle }}</h3>
+        <div v-if="!appStore.sidebarCollapsed" class="logo-brand">
+          <img
+            v-if="websiteLogoUrl"
+            :src="websiteLogoUrl"
+            alt="logo"
+            class="logo-image"
+          />
+          <h3>{{ systemTitle }}</h3>
+        </div>
+        <img
+          v-else-if="websiteLogoUrl"
+          :src="websiteLogoUrl"
+          alt="logo"
+          class="logo-image"
+        />
         <el-icon v-else><Setting /></el-icon>
       </div>
       <el-menu
@@ -557,10 +579,29 @@ const tabsStore = useTabsStore()
 const appStore = useAppStore()
 const { t } = useI18n()
 const websiteSiteName = ref('')
+const websiteSiteLogo = ref('')
 
 const systemTitle = computed(() => {
   const name = websiteSiteName.value?.trim()
   return name || t('header.system')
+})
+
+const websiteLogoUrl = computed(() => {
+  const raw = String(websiteSiteLogo.value || '').trim()
+  if (!raw) return ''
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:')) return raw
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+  const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
+  const normalizedPrefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
+  if (apiBaseURL) {
+    const base = apiBaseURL.replace(/\/+$/, '')
+    if (raw.startsWith(normalizedPrefix)) return `${base}${raw}`
+    if (raw.startsWith('/')) return `${base}${normalizedPrefix}${raw}`
+    return `${base}${normalizedPrefix}/${raw}`
+  }
+  if (raw.startsWith(normalizedPrefix)) return raw
+  if (raw.startsWith('/')) return `${normalizedPrefix}${raw}`
+  return `${normalizedPrefix}/${raw}`
 })
 
 const userAccountDisplayName = computed(() => {
@@ -727,9 +768,16 @@ const loadWebsiteTitle = async () => {
     })
     const value = siteNameConfig?.Value || siteNameConfig?.value || ''
     websiteSiteName.value = typeof value === 'string' ? value : ''
+    const siteLogoConfig = configs.find((config) => {
+      const key = config?.Key || config?.key
+      return key === 'site_logo'
+    })
+    const logoValue = siteLogoConfig?.Value || siteLogoConfig?.value || ''
+    websiteSiteLogo.value = typeof logoValue === 'string' ? logoValue : ''
   } catch (error) {
     // 配置读取失败时回退默认标题，不阻塞页面
     websiteSiteName.value = ''
+    websiteSiteLogo.value = ''
   }
 }
 
@@ -934,6 +982,22 @@ const goToLogin = async () => {
   background: var(--card-bg, #fff);
 }
 
+.logo-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.logo-image {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .logo h3 {
   margin: 0;
   font-size: 16px;
@@ -944,8 +1008,8 @@ const goToLogin = async () => {
   opacity: 0.96;
   text-overflow: ellipsis;
   overflow: hidden;
-  width: 100%;
-  text-align: center;
+  min-width: 0;
+  text-align: left;
 }
 
 .sidebar.is-collapse .logo {
@@ -1986,8 +2050,8 @@ const goToLogin = async () => {
   opacity: 0.96;
   text-overflow: ellipsis;
   overflow: hidden;
-  width: 100%;
-  text-align: center;
+  min-width: 0;
+  text-align: left;
 }
 
 .drawer-content .sidebar-menu {
