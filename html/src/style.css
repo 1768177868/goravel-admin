@@ -66,15 +66,16 @@ body {
 /* 列表页公共样式 */
 .list-page {
   background: var(--card-bg);
-  border-radius: var(--border-radius-sm);
+  border-radius: 0;
 }
 
 /* 全局 Card 质感统一 */
 .el-card {
-  border-radius: 14px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   background: color-mix(in srgb, var(--card-bg, #fff) 98%, transparent);
+  overflow: hidden;
 }
 
 .el-card .el-card__header {
@@ -84,6 +85,36 @@ body {
 
 .el-card .el-card__body {
   padding: 16px 18px;
+}
+
+/* 列表表格容器：统一圆角与背景，避免内层直角露底 */
+.list-table-scroll {
+  border-radius: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--card-bg, #fff) 98%, transparent);
+}
+
+.list-table-scroll .el-table,
+.list-table-scroll .el-table__inner-wrapper {
+  border-radius: 0;
+}
+
+/* Element Table 的边框伪元素会露出直角，列表容器内统一裁掉 */
+.list-table-scroll .el-table {
+  overflow: hidden;
+}
+
+.list-table-scroll .el-table::before,
+.list-table-scroll .el-table--border::after,
+.list-table-scroll .el-table--group::after {
+  display: none !important;
+}
+
+.list-table-scroll .el-table__inner-wrapper,
+.list-table-scroll .el-table__header-wrapper,
+.list-table-scroll .el-table__body-wrapper {
+  border-radius: 0;
+  overflow: hidden;
 }
 
 .card-header {
