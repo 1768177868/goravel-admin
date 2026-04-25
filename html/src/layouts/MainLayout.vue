@@ -13,7 +13,7 @@
     >
       <div class="drawer-content">
         <div class="logo">
-          <h3>{{ $t('header.system') }}</h3>
+          <h3>{{ systemTitle }}</h3>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -41,7 +41,7 @@
       :class="{ 'is-collapse': appStore.sidebarCollapsed }"
     >
       <div class="logo">
-        <h3 v-if="!appStore.sidebarCollapsed">{{ $t('header.system') }}</h3>
+        <h3 v-if="!appStore.sidebarCollapsed">{{ systemTitle }}</h3>
         <el-icon v-else><Setting /></el-icon>
       </div>
       <el-menu
@@ -491,6 +491,7 @@ import { useUserStore } from '../store/user'
 import { useTabsStore } from '../store/tabs'
 import { useAppStore, THEME_COLORS } from '../store/app'
 import request from '../utils/request'
+import { getConfigByGroup } from '../api/config'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import TimezoneSwitch from '../components/TimezoneSwitch.vue'
 import NotificationBell from '../components/NotificationBell.vue'
@@ -546,6 +547,12 @@ const userStore = useUserStore()
 const tabsStore = useTabsStore()
 const appStore = useAppStore()
 const { t } = useI18n()
+const websiteSiteName = ref('')
+
+const systemTitle = computed(() => {
+  const name = websiteSiteName.value?.trim()
+  return name || t('header.system')
+})
 
 const userAccountDisplayName = computed(() => {
   const u = userStore.adminInfo
@@ -650,6 +657,23 @@ const sendHeartbeat = async () => {
   }
 }
 
+const loadWebsiteTitle = async () => {
+  try {
+    const res = await getConfigByGroup('website')
+    const configs = res?.data?.configs
+    if (!Array.isArray(configs)) return
+    const siteNameConfig = configs.find((config) => {
+      const key = config?.Key || config?.key
+      return key === 'site_name'
+    })
+    const value = siteNameConfig?.Value || siteNameConfig?.value || ''
+    websiteSiteName.value = typeof value === 'string' ? value : ''
+  } catch (error) {
+    // 配置读取失败时回退默认标题，不阻塞页面
+    websiteSiteName.value = ''
+  }
+}
+
 // 监听全屏事件
 onMounted(() => {
   // 初始化布局大小
@@ -659,6 +683,8 @@ onMounted(() => {
   if (route.meta.requiresAuth !== false && route.name !== 'Login') {
     tabsStore.addTab(route)
   }
+
+  loadWebsiteTitle()
 
   // 初始化全屏状态
   appStore.isFullscreen = !!document.fullscreenElement

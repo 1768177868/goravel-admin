@@ -82,14 +82,7 @@ const formData = reactive({
   site_copyright: ''
 })
 
-const formRules = {
-  site_name: [
-    { required: true, message: t('config.site_name_required'), trigger: 'blur' }
-  ],
-  site_url: [
-    { required: true, message: t('config.site_url_required'), trigger: 'blur' }
-  ]
-}
+const formRules = {}
 
 const loadData = async () => {
   try {
