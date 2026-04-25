@@ -1,5 +1,9 @@
 <template>
-  <el-sub-menu v-if="menu.children && menu.children.length > 0" :index="getMenuIndex(menu)">
+  <el-sub-menu
+    v-if="menu.children && menu.children.length > 0"
+    :index="getMenuIndex(menu)"
+    :popper-class="popperClass || undefined"
+  >
     <template #title>
       <el-icon v-if="getIcon(menu.icon)" class="menu-icon">
         <component :is="getIcon(menu.icon)" />
@@ -41,6 +45,10 @@ export default defineComponent({
     menu: {
       type: Object,
       required: true
+    },
+    popperClass: {
+      type: String,
+      default: ''
     }
   },
   setup(props) {
