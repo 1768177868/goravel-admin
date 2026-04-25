@@ -105,6 +105,7 @@
             v-if="!isMobile"
             @command="handleLayoutSizeChange"
             class="layout-size-dropdown"
+            popper-class="layout-size-popper"
           >
             <el-button type="text" class="header-btn" :title="$t('header.layout_size')">
               <el-icon class="header-icon-fixed"><Operation /></el-icon>
@@ -112,24 +113,36 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="large" :class="{ 'is-active': appStore.layoutSize === 'large' }">
-                  <span style="display: flex; align-items: center; gap: 8px;">
-                    <el-icon v-if="appStore.layoutSize === 'large'" style="font-size: 16px;"><Check /></el-icon>
-                    <span v-else style="width: 16px;"></span>
-                    {{ $t('header.layout_size_large') }}
+                  <span class="layout-size-option">
+                    <span class="layout-size-option-left">
+                      <span class="layout-density layout-density-large" aria-hidden="true">
+                        <i></i><i></i><i></i>
+                      </span>
+                      <span>{{ $t('header.layout_size_large') }}</span>
+                    </span>
+                    <el-icon v-if="appStore.layoutSize === 'large'" class="layout-size-option-check"><Check /></el-icon>
                   </span>
                 </el-dropdown-item>
                 <el-dropdown-item command="default" :class="{ 'is-active': appStore.layoutSize === 'default' }">
-                  <span style="display: flex; align-items: center; gap: 8px;">
-                    <el-icon v-if="appStore.layoutSize === 'default'" style="font-size: 16px;"><Check /></el-icon>
-                    <span v-else style="width: 16px;"></span>
-                    {{ $t('header.layout_size_default') }}
+                  <span class="layout-size-option">
+                    <span class="layout-size-option-left">
+                      <span class="layout-density layout-density-default" aria-hidden="true">
+                        <i></i><i></i><i></i>
+                      </span>
+                      <span>{{ $t('header.layout_size_default') }}</span>
+                    </span>
+                    <el-icon v-if="appStore.layoutSize === 'default'" class="layout-size-option-check"><Check /></el-icon>
                   </span>
                 </el-dropdown-item>
                 <el-dropdown-item command="small" :class="{ 'is-active': appStore.layoutSize === 'small' }">
-                  <span style="display: flex; align-items: center; gap: 8px;">
-                    <el-icon v-if="appStore.layoutSize === 'small'" style="font-size: 16px;"><Check /></el-icon>
-                    <span v-else style="width: 16px;"></span>
-                    {{ $t('header.layout_size_small') }}
+                  <span class="layout-size-option">
+                    <span class="layout-size-option-left">
+                      <span class="layout-density layout-density-small" aria-hidden="true">
+                        <i></i><i></i><i></i>
+                      </span>
+                      <span>{{ $t('header.layout_size_small') }}</span>
+                    </span>
+                    <el-icon v-if="appStore.layoutSize === 'small'" class="layout-size-option-check"><Check /></el-icon>
                   </span>
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -139,8 +152,9 @@
           <el-popover
             v-if="!isMobile"
             placement="bottom-end"
-            :width="280"
+            :width="300"
             trigger="click"
+            popper-class="settings-popover"
           >
             <template #reference>
               <el-button
@@ -153,12 +167,28 @@
             </template>
             <div class="settings-panel">
               <div class="settings-title">{{ $t('header.settings') }}</div>
-              <div class="settings-item">
+              <div class="settings-item settings-item-menu-mode">
                 <span class="settings-label">{{ $t('header.menu_mode') }}</span>
-                <el-radio-group :model-value="appStore.menuMode" size="small" @update:model-value="appStore.setMenuMode">
-                  <el-radio-button label="sidebar">{{ $t('header.menu_mode_sidebar') }}</el-radio-button>
-                  <el-radio-button label="top">{{ $t('header.menu_mode_top') }}</el-radio-button>
-                </el-radio-group>
+                <div class="menu-mode-toggle" role="tablist" :aria-label="$t('header.menu_mode')">
+                  <button
+                    type="button"
+                    class="menu-mode-btn"
+                    :class="{ active: appStore.menuMode === 'sidebar' }"
+                    @click="appStore.setMenuMode('sidebar')"
+                  >
+                    <el-icon><Fold /></el-icon>
+                    <span>{{ $t('header.menu_mode_sidebar') }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="menu-mode-btn"
+                    :class="{ active: appStore.menuMode === 'top' }"
+                    @click="appStore.setMenuMode('top')"
+                  >
+                    <el-icon><Menu /></el-icon>
+                    <span>{{ $t('header.menu_mode_top') }}</span>
+                  </button>
+                </div>
               </div>
               <div class="settings-item">
                 <span class="settings-label">{{ $t('header.watermark') }}</span>
@@ -927,36 +957,108 @@ const goToLogin = async () => {
 
 /* 设置面板 */
 .settings-panel {
-  padding: 4px 0;
+  padding: 4px 2px 2px;
 }
 .settings-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
   color: var(--text-color-primary);
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color-light);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
 }
 .settings-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   gap: 12px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-color-tertiary) 58%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 55%, transparent);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.settings-item:hover {
+  background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--el-color-primary) 30%, transparent);
 }
 .settings-item:last-child {
   margin-bottom: 0;
 }
 .settings-label {
   font-size: 13px;
+  font-weight: 500;
   color: var(--text-color-regular);
   flex-shrink: 0;
 }
-.settings-item .el-radio-group {
+.menu-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 75%, var(--bg-color-tertiary) 25%);
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.menu-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-color-regular);
+  border-radius: 9px;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+.menu-mode-btn .el-icon {
+  font-size: 14px;
+  opacity: 0.85;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.menu-mode-btn:hover {
+  color: var(--text-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+}
+.menu-mode-btn:hover .el-icon {
+  opacity: 1;
+  transform: scale(1.06);
+}
+.menu-mode-btn.active {
+  color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 14%, var(--card-bg, #fff) 86%);
+  box-shadow: 0 4px 10px rgba(64, 158, 255, 0.18);
+}
+.menu-mode-btn.active .el-icon {
+  opacity: 1;
+}
+.menu-mode-btn:active {
+  transform: scale(0.97);
+}
+.settings-item-menu-mode {
+  align-items: flex-start;
   flex-wrap: wrap;
 }
-.settings-item .el-radio-button {
-  margin-bottom: 4px;
+.settings-item-menu-mode .settings-label {
+  width: 100%;
+}
+.settings-item-menu-mode .menu-mode-toggle {
+  width: 100%;
+  justify-content: space-between;
+}
+.settings-item-menu-mode .menu-mode-btn {
+  flex: 1;
+  min-width: 0;
 }
 .settings-item-theme {
   flex-wrap: wrap;
@@ -969,25 +1071,25 @@ const goToLogin = async () => {
 .theme-color-swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 .theme-swatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
   border: 2px solid transparent;
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
   transition: transform 0.15s ease, border-color 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.2);
 }
 .theme-swatch:hover {
-  transform: scale(1.1);
+  transform: translateY(-1px) scale(1.08);
 }
 .theme-swatch.active {
   border-color: var(--text-color-primary);
-  box-shadow: 0 0 0 1px var(--bg-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 22%, transparent);
 }
 
 /* 顶部菜单栏 */
@@ -1272,6 +1374,118 @@ html.dark .sidebar-menu .el-sub-menu__title:hover {
 html.dark .drawer-content .sidebar-menu .el-menu-item:hover,
 html.dark .drawer-content .sidebar-menu .el-sub-menu__title:hover {
   background-color: rgba(255, 255, 255, 0.06) !important;
+}
+/* 布局大小下拉：质感升级 */
+.layout-size-popper.el-popper {
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  padding: 6px !important;
+  backdrop-filter: blur(8px);
+}
+.layout-size-popper .el-dropdown-menu {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.layout-size-popper .el-dropdown-menu__item {
+  border-radius: 9px;
+  padding: 9px 12px;
+  margin: 2px 0;
+  font-size: 13px;
+  color: var(--text-color-regular);
+  transition: all 0.2s ease;
+}
+.layout-size-popper .el-dropdown-menu__item:hover {
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+.layout-size-popper .el-dropdown-menu__item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, var(--card-bg, #fff) 86%);
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+.layout-size-popper .el-dropdown-menu__item .el-icon {
+  font-size: 15px;
+}
+.layout-size-option {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.layout-size-option-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.layout-size-option-check {
+  font-size: 14px;
+  opacity: 0.95;
+}
+.layout-density {
+  width: 16px;
+  height: 14px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0.88;
+}
+.layout-density i {
+  display: block;
+  height: 2px;
+  border-radius: 10px;
+  background: currentColor;
+}
+.layout-density-large i:nth-child(1) { width: 14px; }
+.layout-density-large i:nth-child(2) { width: 11px; }
+.layout-density-large i:nth-child(3) { width: 8px; }
+.layout-density-default i:nth-child(1) { width: 12px; }
+.layout-density-default i:nth-child(2) { width: 9px; }
+.layout-density-default i:nth-child(3) { width: 6px; }
+.layout-density-small i:nth-child(1) { width: 10px; }
+.layout-density-small i:nth-child(2) { width: 7px; }
+.layout-density-small i:nth-child(3) { width: 4px; }
+/* 设置弹窗：更有质感的卡片层次 */
+.settings-popover.el-popover {
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  padding: 12px 12px 10px !important;
+  backdrop-filter: blur(8px);
+}
+html.dark .settings-popover.el-popover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .layout-size-popper.el-popper {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .layout-size-popper .el-dropdown-menu__item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+html.dark .layout-size-popper .el-dropdown-menu__item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 20%, rgba(255, 255, 255, 0.06));
+}
+html.dark .menu-mode-toggle {
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 70%, #000 30%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html.dark .menu-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+html.dark .menu-mode-btn.active {
+  background: color-mix(in srgb, var(--el-color-primary) 18%, rgba(255, 255, 255, 0.06));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 html.dark .header {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
