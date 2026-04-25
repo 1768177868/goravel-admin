@@ -833,39 +833,100 @@ const goToLogin = async () => {
 }
 
 .logo {
-  height: 60px;
+  height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  /* border-bottom: 1px solid #434a55; */
+  padding: 0 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card-bg, #fff) 94%, var(--el-color-primary) 6%) 0%,
+    var(--card-bg, #fff) 100%
+  );
 }
 
 .logo h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   color: var(--text-color-primary, #383853);
-  opacity: 1;
+  opacity: 0.96;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  width: 100%;
+  text-align: center;
+}
+
+.sidebar.is-collapse .logo {
+  padding: 0;
+}
+
+.sidebar.is-collapse .logo :deep(.el-icon) {
+  font-size: 18px;
+  color: var(--el-color-primary);
+  opacity: 0.95;
 }
 
 .sidebar-menu {
   border-right: none;
+  padding: 8px 8px 12px;
 }
 
 .sidebar-menu:not(.el-menu--collapse) {
   width: 240px;
 }
 
-/* 菜单项文字溢出处理 */
+/* 侧栏菜单：胶囊化 + 更清晰层次 */
 .sidebar-menu :deep(.el-menu-item),
 .sidebar-menu :deep(.el-sub-menu__title) {
   display: flex;
   align-items: center;
+  min-height: 38px;
+  line-height: 38px;
+  border-radius: 10px;
+  margin: 3px 0;
+  padding: 0 12px !important;
   overflow: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.18s ease;
 }
 
-/* 菜单项标题容器 */
+.sidebar-menu :deep(.el-menu-item:hover),
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+  transform: translateX(1px);
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active),
+.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  font-weight: 600;
+  position: relative;
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active::before),
+.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title::before) {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--el-color-primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 35%, transparent),
+    0 0 8px color-mix(in srgb, var(--el-color-primary) 55%, transparent);
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.sidebar-menu :deep(.el-sub-menu .el-menu-item) {
+  margin-left: 6px;
+}
+
 .sidebar-menu :deep(.el-menu-item > span),
 .sidebar-menu :deep(.el-sub-menu__title > span) {
   flex: 1;
@@ -877,43 +938,32 @@ const goToLogin = async () => {
   align-items: center;
 }
 
-/* 确保下拉箭头不被遮挡，固定在右侧 */
+.sidebar-menu :deep(.el-menu-item .el-icon),
+.sidebar-menu :deep(.el-sub-menu__title .el-icon) {
+  flex-shrink: 0;
+  margin-right: 10px;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
 .sidebar-menu :deep(.el-sub-menu__icon-arrow) {
   flex-shrink: 0;
   margin-left: auto;
   margin-right: 0;
   width: 16px;
   text-align: right;
+  opacity: 0.75;
 }
 
-/* 菜单项图标样式 */
-.sidebar-menu :deep(.el-menu-item .el-icon),
-.sidebar-menu :deep(.el-sub-menu__title .el-icon) {
-  flex-shrink: 0;
-  margin-right: 8px;
+/* 折叠态下图标居中，避免左右跳动 */
+.sidebar-menu:deep(.el-menu--collapse .el-menu-item),
+.sidebar-menu:deep(.el-menu--collapse .el-sub-menu__title) {
+  justify-content: center;
+  padding: 0 !important;
 }
 
-/* 菜单项文字溢出处理 */
-.sidebar-menu :deep(.el-menu-item),
-.sidebar-menu :deep(.el-sub-menu__title) {
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-
-.sidebar-menu :deep(.el-menu-item > span),
-.sidebar-menu :deep(.el-sub-menu__title > span) {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-/* 确保下拉箭头不被遮挡 */
-.sidebar-menu :deep(.el-sub-menu__icon-arrow) {
-  flex-shrink: 0;
-  margin-left: auto;
+.sidebar-menu:deep(.el-menu--collapse .el-menu-item .el-icon),
+.sidebar-menu:deep(.el-menu--collapse .el-sub-menu__title .el-icon) {
   margin-right: 0;
 }
 
@@ -1716,18 +1766,30 @@ const goToLogin = async () => {
 }
 
 .drawer-content .logo {
-  height: 60px;
+  height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--border-color-light);
-  padding: 0 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 72%, transparent);
+  padding: 0 14px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card-bg, #fff) 94%, var(--el-color-primary) 6%) 0%,
+    var(--card-bg, #fff) 100%
+  );
 }
 
 .drawer-content .logo h3 {
   margin: 0;
-  font-size: 18px;
-  color: #383853;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-color-primary, #383853);
+  opacity: 0.96;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  width: 100%;
+  text-align: center;
 }
 
 .drawer-content .sidebar-menu {
@@ -1756,14 +1818,34 @@ const goToLogin = async () => {
 </style>
 
 <style>
-/* 夜间模式：侧边栏菜单悬停时使用深色背景，避免浅字+浅底看不清（仅侧栏，顶部菜单保持蓝色标题不变） */
+/* 夜间模式：侧栏菜单维持清晰层次（仅侧栏，顶部菜单保持蓝色标题不变） */
 html.dark .sidebar-menu .el-menu-item:hover,
 html.dark .sidebar-menu .el-sub-menu__title:hover {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
 }
 html.dark .drawer-content .sidebar-menu .el-menu-item:hover,
 html.dark .drawer-content .sidebar-menu .el-sub-menu__title:hover {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
+}
+html.dark .sidebar-menu .el-menu-item.is-active,
+html.dark .sidebar-menu .el-sub-menu.is-active > .el-sub-menu__title {
+  background: color-mix(in srgb, var(--el-color-primary) 22%, rgba(255, 255, 255, 0.05)) !important;
+}
+html.dark .sidebar-menu .el-menu-item.is-active::before,
+html.dark .sidebar-menu .el-sub-menu.is-active > .el-sub-menu__title::before {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 42%, transparent),
+    0 0 10px color-mix(in srgb, var(--el-color-primary) 65%, transparent);
+}
+html.dark .logo,
+html.dark .drawer-content .logo {
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card-bg, #1d1e1f) 82%, rgba(255, 255, 255, 0.05) 18%) 0%,
+    color-mix(in srgb, var(--card-bg, #1d1e1f) 96%, transparent) 100%
+  ) !important;
 }
 /* 布局大小下拉：质感升级 */
 .layout-size-popper.el-popper {
