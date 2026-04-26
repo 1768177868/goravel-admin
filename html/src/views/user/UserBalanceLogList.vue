@@ -52,6 +52,8 @@
         </div>
       </el-card>
 
+      <TableToolbar :on-refresh="loadData" />
+
       <VxeTable
         :data="tableData"
         :loading="loading"
@@ -100,6 +102,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { useListPage } from '../../composables/useListPage'
 import { getUserBalanceLogList, getUserBalanceStatistics } from '../../api/userBalanceLog'
 import ErrorHandler from '../../utils/errorHandler'

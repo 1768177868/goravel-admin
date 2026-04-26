@@ -36,6 +36,8 @@
         @reset="handleReset"
       />
 
+      <TableToolbar :on-refresh="loadData" />
+
       <VxeTable
         ref="tableRef"
         :data="tableData"
@@ -154,6 +156,7 @@ import { useI18n } from 'vue-i18n'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import NotificationForm from './NotificationForm.vue'
 import { useListPage } from '../../composables/useListPage'
 import { buildSearchParams } from '../../utils/buildSearchParams'

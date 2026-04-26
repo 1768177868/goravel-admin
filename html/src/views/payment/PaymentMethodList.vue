@@ -25,6 +25,8 @@
         @reset="handleReset"
       />
 
+      <TableToolbar :on-refresh="loadData" />
+
       <VxeTable
         ref="tableRef"
         :data="tableData"
@@ -76,6 +78,7 @@ import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import PaymentMethodForm from './PaymentMethodForm.vue'
 import { useListPage } from '../../composables/useListPage'

@@ -48,6 +48,8 @@
         </template>
       </SearchForm>
 
+      <TableToolbar :on-refresh="loadData" />
+
       <!-- vxe-table with expand row -->
       <vxe-table
         ref="tableRef"
@@ -260,6 +262,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import Pagination from '../../components/Pagination.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import OrderForm from './OrderForm.vue'

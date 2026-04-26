@@ -40,7 +40,6 @@
       <!-- 表格工具栏 -->
       <TableToolbar
         :on-refresh="handleRefresh"
-        fullscreen-target=".user-list"
         :visible-columns="visibleColumns"
         :all-columns="allTableColumns"
         :default-visible-columns="defaultVisibleColumns"

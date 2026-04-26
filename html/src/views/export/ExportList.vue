@@ -25,6 +25,8 @@
         @reset="handleReset"
       />
 
+      <TableToolbar :on-refresh="loadData" />
+
       <VxeTable
         ref="tableRef"
         :data="tableData"
@@ -86,6 +88,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'
 import { getExportList, deleteExport, batchDeleteExports, createExportProgressSSE } from '../../api/export'

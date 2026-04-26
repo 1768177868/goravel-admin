@@ -37,13 +37,11 @@
       <!-- 表格工具栏 -->
       <!-- <TableToolbar
         :on-refresh="handleRefresh"
-        fullscreen-target=".list-page"
         :show-column-setting="true"
       /> -->
 
       <TableToolbar
         :on-refresh="handleRefresh"
-        fullscreen-target=".list-page"
         :show-column-setting-btn="false"
         :show-table-style="false"
         :visible-columns="visibleColumns"

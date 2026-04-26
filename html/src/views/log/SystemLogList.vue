@@ -4,16 +4,6 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu.system_log') }}</span>
-          <div class="header-actions">
-            <el-button 
-              type="danger" 
-              :disabled="!selectedRows || selectedRows.length === 0 || getButtonState('system_log.batch_delete').disabled"
-              @click="handleBatchDelete"
-            >
-              <el-icon><Delete /></el-icon>
-              {{ $t('common.delete_selected') }} ({{ selectedRows?.length || 0 }})
-            </el-button>
-          </div>
         </div>
       </template>
 
@@ -26,6 +16,19 @@
         @search="handleSearch"
         @reset="handleReset"
       />
+
+      <TableToolbar :on-refresh="loadData">
+        <template #left>
+          <el-button 
+            type="danger" 
+            :disabled="!selectedRows || selectedRows.length === 0 || getButtonState('system_log.batch_delete').disabled"
+            @click="handleBatchDelete"
+          >
+            <el-icon><Delete /></el-icon>
+            {{ $t('common.delete_selected') }} ({{ selectedRows?.length || 0 }})
+          </el-button>
+        </template>
+      </TableToolbar>
 
       <VxeTable
         ref="tableRef"
@@ -106,6 +109,7 @@ import { Delete } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import { useListPage } from '../../composables/useListPage'
 import { usePermission } from '../../composables/usePermission'

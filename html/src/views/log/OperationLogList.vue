@@ -4,16 +4,6 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu.operation_log') }}</span>
-          <div class="header-actions">
-            <el-button 
-              type="danger" 
-              :disabled="selectedRows.length === 0 || getButtonState('operation_log.batch_delete').disabled"
-              @click="handleBatchDelete"
-            >
-              <el-icon><Delete /></el-icon>
-              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
-            </el-button>
-          </div>
         </div>
       </template>
 
@@ -31,14 +21,24 @@
       <!-- 表格工具栏 -->
       <TableToolbar
         :on-refresh="handleRefresh"
-        fullscreen-target=".list-page"
         :visible-columns="visibleColumns"
         :all-columns="allTableColumns"
         :default-visible-columns="defaultVisibleColumns"
         :column-order="columnOrder"
         :fixed-columns="fixedColumns"
         :on-column-setting-confirm="handleColumnSettingConfirm"
-      />
+      >
+        <template #left>
+          <el-button 
+            type="danger" 
+            :disabled="selectedRows.length === 0 || getButtonState('operation_log.batch_delete').disabled"
+            @click="handleBatchDelete"
+          >
+            <el-icon><Delete /></el-icon>
+            {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
+          </el-button>
+        </template>
+      </TableToolbar>
 
       <VxeTable
         ref="tableRef"

@@ -14,14 +14,6 @@
           @click="handleRefresh"
           :title="$t('common.refresh')"
         />
-        <!-- 全屏按钮 -->
-        <el-button 
-          v-if="showFullscreen"
-          :icon="FullScreenIcon" 
-          circle
-          @click="handleFullscreen"
-          :title="$t('common.fullscreen')"
-        />
         <!-- 表格样式设置 -->
         <el-popover
           v-if="showTableStyle"
@@ -71,8 +63,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, markRaw, onMounted, onBeforeUnmount } from 'vue'
-import { Refresh, FullScreen, SetUp } from '@element-plus/icons-vue'
+import { reactive, ref, markRaw, onMounted } from 'vue'
+import { Refresh, SetUp } from '@element-plus/icons-vue'
 import ColumnSettingDialog from './ColumnSettingDialog.vue'
 
 const TABLE_STYLE_STORAGE_KEY = 'table_style_preferences'
@@ -84,11 +76,6 @@ const DEFAULT_TABLE_STYLE = {
 const props = defineProps({
   // 是否显示刷新按钮
   showRefresh: {
-    type: Boolean,
-    default: true
-  },
-  // 是否显示全屏按钮
-  showFullscreen: {
     type: Boolean,
     default: true
   },
@@ -105,11 +92,6 @@ const props = defineProps({
   // 刷新回调函数
   onRefresh: {
     type: Function,
-    default: null
-  },
-  // 全屏目标元素选择器（如 '.online-admin-list'）或元素引用
-  fullscreenTarget: {
-    type: [String, Object],
     default: null
   },
   // 列设置相关 props
@@ -140,18 +122,15 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['refresh', 'fullscreen-change'])
+const emit = defineEmits(['refresh'])
 
 // 图标
 const RefreshIcon = markRaw(Refresh)
-const FullScreenIcon = markRaw(FullScreen)
 const StyleIcon = markRaw(SetUp)
 
 // 列设置对话框显示状态
 const showColumnSettingDialog = ref(false)
 
-// 全屏状态
-const isFullscreen = ref(false)
 // 刷新动画状态
 const isRefreshing = ref(false)
 // 表格样式设置
@@ -177,59 +156,6 @@ const handleRefresh = async () => {
       isRefreshing.value = false
     }, remain)
   }
-}
-
-// 处理全屏
-const handleFullscreen = () => {
-  let el = null
-  
-  if (props.fullscreenTarget) {
-    if (typeof props.fullscreenTarget === 'string') {
-      el = document.querySelector(props.fullscreenTarget)
-    } else if (props.fullscreenTarget.value) {
-      // 如果是 ref 对象
-      el = props.fullscreenTarget.value
-    } else {
-      // 如果直接是元素
-      el = props.fullscreenTarget
-    }
-  }
-  
-  if (!el) {
-    // 如果没有指定目标，尝试查找最近的 .table-toolbar 的父容器
-    const toolbar = document.querySelector('.table-toolbar')
-    if (toolbar) {
-      el = toolbar.closest('.el-card') || toolbar.closest('[class*="list"]') || toolbar.parentElement
-    }
-  }
-  
-  if (!el) return
-  
-  if (!isFullscreen.value) {
-    if (el.requestFullscreen) {
-      el.requestFullscreen()
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen()
-    } else if (el.mozRequestFullScreen) {
-      el.mozRequestFullScreen()
-    } else if (el.msRequestFullscreen) {
-      el.msRequestFullscreen()
-    }
-    isFullscreen.value = true
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen()
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen()
-    } else if (document.mozCancelFullScreen) {
-      document.mozCancelFullScreen()
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen()
-    }
-    isFullscreen.value = false
-  }
-  
-  emit('fullscreen-change', isFullscreen.value)
 }
 
 // 处理列设置确认
@@ -265,39 +191,8 @@ const handleTableStyleChange = () => {
   }
 }
 
-// 监听全屏状态变化
-const handleFullscreenChange = () => {
-  isFullscreen.value = !!(
-    document.fullscreenElement ||
-    document.webkitFullscreenElement ||
-    document.mozFullScreenElement ||
-    document.msFullscreenElement
-  )
-  emit('fullscreen-change', isFullscreen.value)
-}
-
 onMounted(() => {
   loadTableStyle()
-  // 初始化全屏状态
-  isFullscreen.value = !!(
-    document.fullscreenElement ||
-    document.webkitFullscreenElement ||
-    document.mozFullScreenElement ||
-    document.msFullscreenElement
-  )
-  
-  // 监听全屏状态变化
-  document.addEventListener('fullscreenchange', handleFullscreenChange)
-  document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
-  document.addEventListener('mozfullscreenchange', handleFullscreenChange)
-  document.addEventListener('MSFullscreenChange', handleFullscreenChange)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
-  document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
-  document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
 })
 </script>
 

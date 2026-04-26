@@ -4,14 +4,6 @@
       <template #header>
         <div class="card-header">
           <span>{{ t('menu.online_admin') }}</span>
-          <el-button
-            type="danger"
-            :disabled="selectedRows.length === 0 || getButtonState('admin.kick_out').disabled"
-            @click="handleBatchKickOut"
-          >
-            <el-icon><Delete /></el-icon>
-            {{ t('online_admin.batch_kick_out') }}
-          </el-button>
         </div>
       </template>
 
@@ -28,14 +20,24 @@
       <!-- 表格工具栏 -->
       <TableToolbar
         :on-refresh="handleRefresh"
-        fullscreen-target=".online-admin-list"
         :visible-columns="visibleColumns"
         :all-columns="allColumns"
         :default-visible-columns="defaultVisibleColumns"
         :column-order="columnOrder"
         :fixed-columns="fixedColumns"
         :on-column-setting-confirm="handleColumnSettingConfirm"
-      />
+      >
+        <template #left>
+          <el-button
+            type="danger"
+            :disabled="selectedRows.length === 0 || getButtonState('admin.kick_out').disabled"
+            @click="handleBatchKickOut"
+          >
+            <el-icon><Delete /></el-icon>
+            {{ t('online_admin.batch_kick_out') }}
+          </el-button>
+        </template>
+      </TableToolbar>
 
       <!-- 表格 -->
       <VxeTable

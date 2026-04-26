@@ -29,6 +29,8 @@
         </template>
       </SearchForm>
 
+      <TableToolbar :on-refresh="loadData" />
+
       <VxeTable
         ref="tableRef"
         :data="tableData"
@@ -140,6 +142,7 @@ import { useListPage } from '../../composables/useListPage'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+import TableToolbar from '../../components/TableToolbar.vue'
 import { getPaymentList, getPaymentDetail, exportPayments } from '../../api/payment'
 import logger from '../../utils/logger'
 import ErrorHandler from '../../utils/errorHandler'
