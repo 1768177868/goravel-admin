@@ -134,12 +134,29 @@
           </div>
 
           <el-table :data="slowSqlData" size="small" border>
-            <el-table-column prop="max_duration_ms" :label="$t('observability.max_ms')" width="120" />
-            <el-table-column prop="avg_duration_ms" :label="$t('observability.avg_ms')" width="120" />
+            <el-table-column prop="max_duration_ms" :label="$t('observability.max_ms')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.max_duration_ms || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="avg_duration_ms" :label="$t('observability.avg_ms')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.avg_duration_ms || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="count" :label="$t('common.count')" width="90" />
             <el-table-column prop="normalized_sql" :label="$t('observability.normalized_sql')" min-width="420">
               <template #default="{ row }">
-                <code>{{ row.normalized_sql }}</code>
+                <el-tooltip
+                  v-if="row.normalized_sql"
+                  :content="row.normalized_sql"
+                  placement="top-start"
+                  effect="dark"
+                  :show-after="200"
+                >
+                  <code class="sql-ellipsis">{{ row.normalized_sql }}</code>
+                </el-tooltip>
+                <code v-else>-</code>
               </template>
             </el-table-column>
             <el-table-column prop="last_seen_at" :label="$t('observability.last_seen')" width="180" />
@@ -159,10 +176,26 @@
           <el-table :data="apiPerfData.slow_top || []" size="small" border>
             <el-table-column prop="method" :label="$t('log.method')" width="90" />
             <el-table-column prop="route_template" :label="$t('observability.api_route_template')" min-width="280" />
-            <el-table-column prop="p95_duration_ms" :label="$t('observability.p95_ms')" width="120" />
-            <el-table-column prop="p99_duration_ms" :label="$t('observability.p99_ms')" width="120" />
-            <el-table-column prop="avg_duration_ms" :label="$t('observability.avg_ms')" width="120" />
-            <el-table-column prop="max_duration_ms" :label="$t('observability.max_ms')" width="120" />
+            <el-table-column prop="p95_duration_ms" :label="$t('observability.p95_ms')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.p95_duration_ms || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="p99_duration_ms" :label="$t('observability.p99_ms')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.p99_duration_ms || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="avg_duration_ms" :label="$t('observability.avg_ms')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.avg_duration_ms || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="max_duration_ms" :label="$t('observability.max_ms')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.max_duration_ms || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="count" :label="$t('common.count')" width="100" />
             <el-table-column :label="$t('common.operation')" width="140">
               <template #default="{ row }">
@@ -662,6 +695,14 @@ onUnmounted(() => {
 .field-label {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+
+.sql-ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pager {
