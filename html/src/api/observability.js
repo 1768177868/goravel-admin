@@ -16,6 +16,22 @@ export function getSlowSqlTop(params) {
   })
 }
 
+export function getApiPerformanceOverview(params) {
+  return request({
+    url: '/observability/api-performance/overview',
+    method: 'get',
+    params
+  })
+}
+
+export function getApiPerformanceTraces(params) {
+  return request({
+    url: '/observability/api-performance/traces',
+    method: 'get',
+    params
+  })
+}
+
 export function getAuditTimeline(params) {
   return request({
     url: '/observability/audit-timeline',

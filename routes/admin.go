@@ -94,7 +94,7 @@ func Admin() {
 		})
 
 		// 需要认证、多语言、权限验证和操作日志的路由
-		router.Middleware(middleware.Lang(), middleware.Jwt(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
+		router.Middleware(middleware.Lang(), middleware.Jwt(), middleware.ApiMetric(), middleware.Permission(), middleware.OperationLog()).Group(func(router route.Router) {
 
 			router.Put("profile", adminAuthController.UpdateProfile)
 
@@ -189,6 +189,8 @@ func Admin() {
 			router.Get("monitor/system-info/stream", monitorController.StreamSystemInfo)
 			router.Get("observability/trace", observabilityController.TraceAggregate)
 			router.Get("observability/slow-sql/top", observabilityController.SlowSQLTopN)
+			router.Get("observability/api-performance/overview", observabilityController.APIPerformanceOverview)
+			router.Get("observability/api-performance/traces", observabilityController.APIPerformanceTraces)
 			router.Get("observability/audit-timeline", observabilityController.AuditTimeline)
 			router.Get("observability/queue-dashboard", observabilityController.QueueDashboard)
 			router.Get("observability/pprof/status", observabilityController.PprofStatus)

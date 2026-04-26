@@ -24,6 +24,7 @@ import (
 type ObservabilityController struct {
 	slowQueryService services.SlowQueryService
 	systemLogService services.SystemLogService
+	apiMetricService services.ApiMetricService
 }
 
 type auditEvent struct {
@@ -56,6 +57,7 @@ func NewObservabilityController() *ObservabilityController {
 	return &ObservabilityController{
 		slowQueryService: services.NewSlowQueryService(),
 		systemLogService: services.NewSystemLogService(),
+		apiMetricService: services.NewApiMetricService(),
 	}
 }
 
@@ -122,6 +124,44 @@ func (r *ObservabilityController) SlowSQLTopN(ctx ghttp.Context) ghttp.Response 
 		"limit":           limit,
 		"min_duration_ms": minDurationMS,
 		"list":            top,
+	})
+}
+
+// APIPerformanceOverview 接口性能总览（慢接口、错误率、QPS、P95/P99）
+func (r *ObservabilityController) APIPerformanceOverview(ctx ghttp.Context) ghttp.Response {
+	hours := helpers.GetIntQuery(ctx, "hours", 24)
+	limit := helpers.GetIntQuery(ctx, "limit", 20)
+	overview, err := r.apiMetricService.GetOverview(hours, limit)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "observability", err, map[string]any{
+			"hours": hours,
+			"limit": limit,
+		})
+	}
+	return response.Success(ctx, overview)
+}
+
+// APIPerformanceTraces 接口性能下钻（查看某接口最近 trace）
+func (r *ObservabilityController) APIPerformanceTraces(ctx ghttp.Context) ghttp.Response {
+	method := strings.TrimSpace(ctx.Request().Query("method", ""))
+	routeTemplate := strings.TrimSpace(ctx.Request().Query("route_template", ""))
+	hours := helpers.GetIntQuery(ctx, "hours", 24)
+	limit := helpers.GetIntQuery(ctx, "limit", 20)
+	list, err := r.apiMetricService.GetRecentTraces(method, routeTemplate, hours, limit)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "observability", err, map[string]any{
+			"method":         method,
+			"route_template": routeTemplate,
+			"hours":          hours,
+			"limit":          limit,
+		})
+	}
+	return response.Success(ctx, ghttp.Json{
+		"method":         method,
+		"route_template": routeTemplate,
+		"hours":          hours,
+		"limit":          limit,
+		"list":           list,
 	})
 }
 

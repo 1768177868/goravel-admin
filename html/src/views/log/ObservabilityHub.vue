@@ -146,6 +146,86 @@
           </el-table>
         </el-tab-pane>
 
+        <el-tab-pane :label="$t('observability.api_performance_tab')" name="apiPerformance">
+          <div class="search-row">
+            <span class="field-label">{{ $t('observability.api_perf_hours') }}</span>
+            <el-input-number v-model="apiPerfQuery.hours" :min="1" :max="168" />
+            <span class="field-label">{{ $t('observability.api_perf_limit') }}</span>
+            <el-input-number v-model="apiPerfQuery.limit" :min="1" :max="100" />
+            <el-button type="primary" :loading="apiPerfLoading" @click="loadApiPerformance">{{ $t('common.search') }}</el-button>
+          </div>
+
+          <el-divider>{{ $t('observability.api_perf_slow_top') }}</el-divider>
+          <el-table :data="apiPerfData.slow_top || []" size="small" border>
+            <el-table-column prop="method" :label="$t('log.method')" width="90" />
+            <el-table-column prop="route_template" :label="$t('observability.api_route_template')" min-width="280" />
+            <el-table-column prop="p95_duration_ms" :label="$t('observability.p95_ms')" width="120" />
+            <el-table-column prop="p99_duration_ms" :label="$t('observability.p99_ms')" width="120" />
+            <el-table-column prop="avg_duration_ms" :label="$t('observability.avg_ms')" width="120" />
+            <el-table-column prop="max_duration_ms" :label="$t('observability.max_ms')" width="120" />
+            <el-table-column prop="count" :label="$t('common.count')" width="100" />
+            <el-table-column :label="$t('common.operation')" width="140">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="loadApiPerformanceTraces(row)">{{ $t('observability.view_traces') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <el-divider>{{ $t('observability.api_perf_error_top') }}</el-divider>
+          <el-table :data="apiPerfData.error_top || []" size="small" border>
+            <el-table-column prop="method" :label="$t('log.method')" width="90" />
+            <el-table-column prop="route_template" :label="$t('observability.api_route_template')" min-width="280" />
+            <el-table-column prop="error_rate" :label="$t('observability.error_rate')" width="120">
+              <template #default="{ row }">
+                <span>{{ (Number(row.error_rate || 0) * 100).toFixed(2) }}%</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="error_count" :label="$t('observability.error_count')" width="120" />
+            <el-table-column prop="count" :label="$t('common.count')" width="100" />
+            <el-table-column :label="$t('common.operation')" width="140">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="loadApiPerformanceTraces(row)">{{ $t('observability.view_traces') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <el-divider>{{ $t('observability.api_perf_qps_top') }}</el-divider>
+          <el-table :data="apiPerfData.qps_top || []" size="small" border>
+            <el-table-column prop="method" :label="$t('log.method')" width="90" />
+            <el-table-column prop="route_template" :label="$t('observability.api_route_template')" min-width="280" />
+            <el-table-column prop="qps" :label="$t('observability.qps')" width="120">
+              <template #default="{ row }">
+                <span>{{ Number(row.qps || 0).toFixed(4) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="count" :label="$t('common.count')" width="100" />
+            <el-table-column :label="$t('common.operation')" width="140">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="loadApiPerformanceTraces(row)">{{ $t('observability.view_traces') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <el-divider>{{ $t('observability.api_perf_trace_drilldown') }}</el-divider>
+          <el-alert
+            v-if="selectedApiEndpoint.route_template"
+            type="info"
+            :closable="false"
+            class="queue-hint"
+            :title="`${selectedApiEndpoint.method} ${selectedApiEndpoint.route_template}`"
+          />
+          <el-table v-loading="apiPerfTraceLoading" :data="apiPerfTraceData" size="small" border>
+            <el-table-column prop="occurred_at" :label="$t('log.time')" width="180" />
+            <el-table-column prop="trace_id" :label="$t('log.trace_id')" min-width="250">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="jumpToTrace(row.trace_id)">{{ row.trace_id || '-' }}</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status_code" :label="$t('log.status_code')" width="110" />
+            <el-table-column prop="duration_ms" :label="$t('observability.duration_ms')" width="130" />
+          </el-table>
+        </el-tab-pane>
+
         <el-tab-pane v-if="showPprofTab" :label="$t('observability.pprof_tab')" name="pprof">
           <el-alert v-if="pprofStatus.token_required" type="warning" :closable="false" class="queue-hint" :title="$t('observability.pprof_hint')" />
           <div v-if="pprofStatus.token_required" class="search-row pprof-row">
@@ -223,7 +303,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../store/user'
-import { getAuditTimeline, getPprofCpuHotspots, getPprofMemoryHotspots, getPprofStatus, getQueueDashboard, getSlowSqlTop, getTraceAggregate, verifyPprofToken } from '../../api/observability'
+import { getApiPerformanceOverview, getApiPerformanceTraces, getAuditTimeline, getPprofCpuHotspots, getPprofMemoryHotspots, getPprofStatus, getQueueDashboard, getSlowSqlTop, getTraceAggregate, verifyPprofToken } from '../../api/observability'
 
 const activeTab = ref('queue')
 const userStore = useUserStore()
@@ -236,6 +316,12 @@ const traceData = reactive({})
 const slowSqlLoading = ref(false)
 const slowSqlQuery = reactive({ hours: 24, min_duration_ms: 200, limit: 20 })
 const slowSqlData = ref([])
+const apiPerfLoading = ref(false)
+const apiPerfTraceLoading = ref(false)
+const apiPerfQuery = reactive({ hours: 24, limit: 20 })
+const apiPerfData = reactive({ slow_top: [], error_top: [], qps_top: [] })
+const apiPerfTraceData = ref([])
+const selectedApiEndpoint = reactive({ method: '', route_template: '' })
 
 const auditLoading = ref(false)
 const auditQuery = reactive({ trace_id: '', keyword: '', page: 1, page_size: 20 })
@@ -501,6 +587,42 @@ const loadSlowSql = async () => {
   }
 }
 
+const loadApiPerformance = async () => {
+  apiPerfLoading.value = true
+  try {
+    const res = await getApiPerformanceOverview(apiPerfQuery)
+    apiPerfData.slow_top = res.data?.slow_top || []
+    apiPerfData.error_top = res.data?.error_top || []
+    apiPerfData.qps_top = res.data?.qps_top || []
+  } finally {
+    apiPerfLoading.value = false
+  }
+}
+
+const loadApiPerformanceTraces = async (row) => {
+  selectedApiEndpoint.method = row?.method || ''
+  selectedApiEndpoint.route_template = row?.route_template || ''
+  apiPerfTraceLoading.value = true
+  try {
+    const res = await getApiPerformanceTraces({
+      method: selectedApiEndpoint.method,
+      route_template: selectedApiEndpoint.route_template,
+      hours: apiPerfQuery.hours,
+      limit: apiPerfQuery.limit
+    })
+    apiPerfTraceData.value = res.data?.list || []
+  } finally {
+    apiPerfTraceLoading.value = false
+  }
+}
+
+const jumpToTrace = (traceID) => {
+  if (!traceID) return
+  traceQuery.trace_id = traceID
+  activeTab.value = 'trace'
+  loadTrace()
+}
+
 const loadAudit = async () => {
   auditLoading.value = true
   try {
@@ -514,6 +636,7 @@ const loadAudit = async () => {
 
 onMounted(() => {
   loadSlowSql()
+  loadApiPerformance()
   loadAudit()
   loadQueue()
   loadPprofStatus()
