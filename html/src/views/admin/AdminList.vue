@@ -280,7 +280,8 @@ const allTableColumns = computed(() => [
     field: 'created_at',
     title: t('table.created_at'),
     sortable: true,
-    key: 'created_at'
+    key: 'created_at',
+    width: 160,
   },
   {
     title: t('table.operation'),
