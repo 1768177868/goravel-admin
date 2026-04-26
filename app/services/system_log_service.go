@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -135,6 +136,8 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 		"context":    contextJSON,
 		"ip":         ctx.Request().Ip(),
 		"user_agent": ctx.Request().Header("User-Agent", ""),
+		"created_at": time.Now(),
+		"updated_at": time.Now(),
 	}
 	if hasSystemLogsTraceIDColumn() {
 		payload["trace_id"] = traceID
@@ -170,10 +173,12 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 	}
 
 	payload := map[string]any{
-		"level":   level,
-		"module":  module,
-		"message": message,
-		"context": contextJSON,
+		"level":      level,
+		"module":     module,
+		"message":    message,
+		"context":    contextJSON,
+		"created_at": time.Now(),
+		"updated_at": time.Now(),
 	}
 	if hasSystemLogsTraceIDColumn() {
 		payload["trace_id"] = traceID
