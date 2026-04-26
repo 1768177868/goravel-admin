@@ -4,25 +4,6 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('menu.login_log') }}</span>
-          <div class="header-actions">
-            <!-- 清理日志功能已禁用（后端权限被注释） -->
-            <!-- <el-button 
-              type="warning" 
-              :disabled="getButtonState('login_log.clean').disabled"
-              @click="handleClean"
-            >
-              <el-icon><Delete /></el-icon>
-              {{ $t('log.clean') || '清空日志' }}
-            </el-button> -->
-            <el-button 
-              type="danger" 
-              :disabled="selectedRows.length === 0 || getButtonState('login_log.batch_delete').disabled"
-              @click="handleBatchDelete"
-            >
-              <el-icon><Delete /></el-icon>
-              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
-            </el-button>
-          </div>
         </div>
       </template>
 
@@ -55,8 +36,6 @@
         :columns="tableColumns"
         :height="600"
         @sort-change="handleSortChange"
-        @checkbox-change="handleSelectionChange"
-        @checkbox-all="handleSelectionChange"
       >
         <template #admin="{ row }">
           {{ row.admin?.username || '-' }}
@@ -112,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, View } from '@element-plus/icons-vue'
@@ -130,7 +109,6 @@ import {
   getLoginLogList,
   getLoginLogDetail,
   deleteLoginLog,
-  batchDeleteLoginLogs,
   cleanLoginLogs
 } from '../../api/log'
 
@@ -139,8 +117,6 @@ const { getButtonState } = usePermission()
 
 const tableRef = ref(null)
 const detailVisible = ref(false)
-// 维护跨页选中的ID集合
-const selectedIds = ref(new Set())
 
 // 初始搜索值（避免每次渲染创建新对象）
 const initialSearchValues = {
@@ -151,12 +127,10 @@ const initialSearchValues = {
   end_time: ''
 }
 const logDetail = ref(null)
-const selectedRows = ref([])
 
-// 使用 CRUD composable（删除和批量删除）
-const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
-  deleteApi: deleteLoginLog,
-  batchDeleteApi: batchDeleteLoginLogs
+// 使用 CRUD composable（删除）
+const { handleDelete: handleDeleteCrud } = useCrud({
+  deleteApi: deleteLoginLog
 })
 
 // 字段名映射：前端字段名 -> 数据库字段名（只包含不同的字段）
@@ -207,41 +181,13 @@ const {
   fieldMapping: {},
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef),
-  transformData: transformLoginLogData,
-  onSearch: () => {
-    // 搜索前清除选中状态
-    selectedRows.value = []
-    selectedIds.value.clear()
-  },
-  onReset: () => {
-    // 重置前清除选中状态
-    selectedRows.value = []
-    selectedIds.value.clear()
-  },
-  onLoadSuccess: () => {
-    // 数据加载后，恢复选中状态
-    nextTick(() => {
-      if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
-        const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
-        rowsToSelect.forEach(row => {
-          tableRef.value.tableRef.setCheckboxRow(row, true)
-        })
-        // 更新 selectedRows
-        selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
-      }
-    })
-  }
+  transformData: transformLoginLogData
 })
 
 // 使用回调清除选中状态，无需重写方法
 
 // 表格列配置（使用 vxe-table columns）
 const allTableColumns = computed(() => [
-  {
-    type: 'checkbox',
-    width: 60,
-    key: 'checkbox'
-  },
   {
     field: 'id',
     title: t('table.id'),
@@ -406,31 +352,6 @@ const operationActions = computed(() => [
   }
 ])
 
-const handleSelectionChange = () => {
-  // 使用 vxe-table 的 getCheckboxRecords 方法获取选中的行
-  if (tableRef.value?.tableRef) {
-    const currentSelected = tableRef.value.tableRef.getCheckboxRecords() || []
-    selectedRows.value = currentSelected
-    
-    // 更新选中ID集合：先移除当前页的所有ID，再添加当前选中的ID
-    tableData.value.forEach(row => {
-      selectedIds.value.delete(row.id)
-    })
-    currentSelected.forEach(row => {
-      selectedIds.value.add(row.id)
-    })
-  }
-}
-
-const handleBatchDelete = () => {
-  handleBatchDeleteCrud(selectedRows.value, () => {
-    // 清除选中状态
-    selectedRows.value = []
-    selectedIds.value.clear()
-    loadData()
-  })
-}
-
 // 翻译登录消息
 const translateLoginMessage = (messageKey) => {
   if (!messageKey) return '-'
@@ -479,8 +400,6 @@ const handleClean = async () => {
     // 传递搜索条件给清空 API
     await cleanLoginLogs(searchParams)
     ElMessage.success(t('log.clean_success'))
-    selectedRows.value = []
-    selectedIds.value.clear()
     loadData()
   } catch (error) {
     if (error !== 'cancel') {

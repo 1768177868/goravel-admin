@@ -27,18 +27,7 @@
         :column-order="columnOrder"
         :fixed-columns="fixedColumns"
         :on-column-setting-confirm="handleColumnSettingConfirm"
-      >
-        <template #left>
-          <el-button 
-            type="danger" 
-            :disabled="selectedRows.length === 0 || getButtonState('operation_log.batch_delete').disabled"
-            @click="handleBatchDelete"
-          >
-            <el-icon><Delete /></el-icon>
-            {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
-          </el-button>
-        </template>
-      </TableToolbar>
+      />
 
       <VxeTable
         ref="tableRef"
@@ -48,8 +37,6 @@
         :columns="tableColumns"
         :height="600"
         @sort-change="handleSortChange"
-        @checkbox-change="handleSelectionChange"
-        @checkbox-all="handleSelectionChange"
       >
         <template #admin="{ row }">
           {{ row.admin?.username || '-' }}
@@ -159,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, DocumentCopy } from '@element-plus/icons-vue'
@@ -179,7 +166,6 @@ import {
   getOperationLogList,
   getOperationLogDetail,
   deleteOperationLog,
-  batchDeleteOperationLogs,
   cleanOperationLogs,
   getOperationLogTitleOptions
 } from '../../api/log'
@@ -190,14 +176,10 @@ const { getButtonState } = usePermission()
 const tableRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
-const selectedRows = ref([])
-// 维护跨页选中的ID集合
-const selectedIds = ref(new Set())
 
-// 使用 CRUD composable（删除和批量删除）
-const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
-  deleteApi: deleteOperationLog,
-  batchDeleteApi: batchDeleteOperationLogs
+// 使用 CRUD composable（删除）
+const { handleDelete: handleDeleteCrud } = useCrud({
+  deleteApi: deleteOperationLog
 })
 
 const titleOptions = ref([])
@@ -385,30 +367,7 @@ const {
   fieldMapping: {},
   defaultSort: 'id:desc',
   tableRef: computed(() => tableRef.value?.tableRef),
-  transformData: transformOperationLogData,
-  onSearch: () => {
-    // 搜索前清除选中状态
-    selectedRows.value = []
-    selectedIds.value.clear()
-  },
-  onReset: () => {
-    // 重置前清除选中状态
-    selectedRows.value = []
-    selectedIds.value.clear()
-  },
-  onLoadSuccess: () => {
-    // 数据加载后，恢复选中状态
-    nextTick(() => {
-      if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
-        const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
-        rowsToSelect.forEach(row => {
-          tableRef.value.tableRef.setCheckboxRow(row, true)
-        })
-        // 更新 selectedRows
-        selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
-      }
-    })
-  }
+  transformData: transformOperationLogData
 })
 
 // 获取当前时间的字符串格式（YYYY-MM-DD HH:mm:ss）
@@ -656,11 +615,6 @@ const getOperationTitle = (titleKey) => {
 // 表格列配置（使用 vxe-table columns）
 const allTableColumns = computed(() => [
   {
-    type: 'checkbox',
-    width: 60,
-    key: 'checkbox'
-  },
-  {
     field: 'id',
     title: t('table.id'),
     width: 80,
@@ -887,31 +841,6 @@ const operationActions = computed(() => [
     handler: handleDelete
   }
 ])
-
-const handleSelectionChange = () => {
-  // 使用 vxe-table 的 getCheckboxRecords 方法获取选中的行
-  if (tableRef.value?.tableRef) {
-    const currentSelected = tableRef.value.tableRef.getCheckboxRecords() || []
-    selectedRows.value = currentSelected
-    
-    // 更新选中ID集合：先移除当前页的所有ID，再添加当前选中的ID
-    tableData.value.forEach(row => {
-      selectedIds.value.delete(row.id)
-    })
-    currentSelected.forEach(row => {
-      selectedIds.value.add(row.id)
-    })
-  }
-}
-
-const handleBatchDelete = () => {
-  handleBatchDeleteCrud(selectedRows.value, () => {
-    // 清除选中状态
-    selectedRows.value = []
-    selectedIds.value.clear()
-    loadData()
-  })
-}
 
 // 加载标题选项
 const loadTitleOptions = async () => {

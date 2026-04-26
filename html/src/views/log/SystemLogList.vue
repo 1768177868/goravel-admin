@@ -27,6 +27,12 @@
             <el-icon><Delete /></el-icon>
             {{ $t('common.delete_selected') }} ({{ selectedRows?.length || 0 }})
           </el-button>
+          <el-button
+            :disabled="!selectedRows || selectedRows.length === 0"
+            @click="handleClearSelection"
+          >
+            {{ $t('common.reset') }}
+          </el-button>
         </template>
       </TableToolbar>
 
@@ -514,6 +520,24 @@ const handleBatchDelete = () => {
     selectedIds.value.clear()
     loadData()
   })
+}
+
+const handleClearSelection = () => {
+  selectedRows.value = []
+  selectedIds.value.clear()
+  const table = tableRef.value?.tableRef
+  if (!table) return
+
+  // 与 ArticleList 对齐，并补充保留勾选清理，确保视觉和状态都被重置
+  table.clearCheckboxRow?.()
+  table.setAllCheckboxRow?.(false)
+  table.clearCheckboxReserve?.()
+
+  if (Array.isArray(tableData.value) && tableData.value.length > 0) {
+    tableData.value.forEach((row) => {
+      table.setCheckboxRow?.(row, false)
+    })
+  }
 }
 
 onMounted(() => {
