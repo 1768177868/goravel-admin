@@ -198,6 +198,7 @@ const allTableColumns = computed(() => [
   {
     field: 'admin',
     title: t('log.admin'),
+    width: 100,
     slot: 'admin',
     sortable: false,
     key: 'admin'
@@ -212,7 +213,7 @@ const allTableColumns = computed(() => [
   {
     field: 'location',
     title: t('log.location'),
-    width: 200,
+    width: 180,
     sortable: false,
     key: 'location'
   },
@@ -233,6 +234,7 @@ const allTableColumns = computed(() => [
   {
     field: 'message',
     title: t('log.message'),
+    width: 100,
     sortable: false,
     slot: 'message',
     key: 'message'
