@@ -117,6 +117,16 @@ func generateDefaultTitle(method, path string) string {
 		return "admin.reset_google_auth"
 	}
 
+	// 管理员重置密码
+	if pathStr.Contains("/admins/") && pathStr.EndsWith("/password") && (method == "PUT" || method == "PATCH") {
+		return "admin.password"
+	}
+
+	// 用户重置密码
+	if pathStr.Contains("/users/") && pathStr.EndsWith("/password") && (method == "PUT" || method == "PATCH") {
+		return "user.password"
+	}
+
 	// 更新个人资料
 	if pathStr.EndsWith("/profile") && (method == "PUT" || method == "PATCH") {
 		return "profile.update"
@@ -194,15 +204,41 @@ func findPermissionSlugFromDB(method, path string) string {
 	}
 
 	// 然后匹配通配符路径
+	bestSlug := ""
+	bestScore := -1
 	for _, perm := range permissions {
 		if perm.Path != "" && perm.Path != path {
 			if matchPermissionPath(perm.Path, path) {
-				return perm.Slug
+				score := pathSpecificityScore(perm.Path)
+				if score > bestScore {
+					bestScore = score
+					bestSlug = perm.Slug
+				}
 			}
 		}
 	}
 
+	if bestSlug != "" {
+		return bestSlug
+	}
+
 	return ""
+}
+
+// pathSpecificityScore 计算权限路径的具体程度分数。
+// 分数越高表示路径越具体（越应优先匹配）。
+func pathSpecificityScore(pattern string) int {
+	if pattern == "" {
+		return 0
+	}
+	// 越长越具体，同时惩罚通配符数量。
+	score := len(pattern)
+	for i := range pattern {
+		if pattern[i] == '*' {
+			score -= 10
+		}
+	}
+	return score
 }
 
 // matchPermissionPath 路径匹配，支持通配符（与权限中间件中的 matchPath 逻辑一致）

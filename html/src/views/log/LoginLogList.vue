@@ -60,17 +60,17 @@
         @checkbox-all="handleSelectionChange"
       >
         <template #admin="{ row }">
-          {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
+          {{ row.admin?.username || '-' }}
         </template>
 
         <template #status="{ row }">
-          <el-tag :type="(row.status ?? row.Status ?? 1) === 1 ? 'success' : 'danger'">
-            {{ (row.status ?? row.Status ?? 1) === 1 ? $t('log.success') : $t('log.failed') }}
+          <el-tag :type="(row.status ?? 1) === 1 ? 'success' : 'danger'">
+            {{ (row.status ?? 1) === 1 ? $t('log.success') : $t('log.failed') }}
           </el-tag>
         </template>
 
         <template #message="{ row }">
-          {{ translateLoginMessage(row.message || row.Message || '') }}
+          {{ translateLoginMessage(row.message || '') }}
         </template>
 
         <template #operation="{ row }">
@@ -165,22 +165,20 @@ const fieldMapping = {
   'admin': 'admin_id' // 前端使用 admin，数据库字段是 admin_id
 }
 
-// 转换登录日志数据（PascalCase -> snake_case）
+// 转换登录日志数据（以 snake_case 为主）
 const transformLoginLogData = (log) => {
   return {
-    id: log.ID || log.id,
-    admin: log.Admin ? {
-      username: log.Admin.Username || log.Admin.username || ''
-    } : (log.admin ? {
+    id: log.id,
+    admin: log.admin ? {
       username: log.admin.username || ''
-    } : null),
-    ip: log.IP || log.ip || '',
-    user_agent: log.UserAgent || log.user_agent || '',
-    location: log.Location || log.location || '',
-    status: log.Status || log.status || 0,
-    message: log.Message || log.message || '',
-    request: log.Request || log.request || '',
-    created_at: log.CreatedAt || log.created_at || ''
+    } : null,
+    ip: log.ip || '',
+    user_agent: log.user_agent || '',
+    location: log.location || '',
+    status: log.status || 0,
+    message: log.message || '',
+    request: log.request || '',
+    created_at: log.created_at || ''
   }
 }
 

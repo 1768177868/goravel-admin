@@ -202,8 +202,16 @@ func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response
 		Order("title ASC").
 		Pluck("title", &dbTitles)
 
+	// 同时读取权限表中的启用 slug，避免前端依赖手写默认值。
+	var permissionSlugs []string
+	_ = facades.Orm().Query().Model(&models.Permission{}).
+		Select("slug").
+		Where("status = 1").
+		Order("slug ASC").
+		Pluck("slug", &permissionSlugs)
+
 	// 过滤并去重标题（权限标识），忽略旧的 operation.xxx 配置
-	result := lo.Uniq(lo.Filter(dbTitles, func(title string, _ int) bool {
+	result := lo.Uniq(lo.Filter(append(dbTitles, permissionSlugs...), func(title string, _ int) bool {
 		// 排除空标题、未知标题以及旧的 operation.xxx 标题
 		return title != "" && title != "operation.unknown" && !strings.HasPrefix(title, "operation.")
 	}))

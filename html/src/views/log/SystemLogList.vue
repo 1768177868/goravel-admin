@@ -112,6 +112,7 @@ import { usePermission } from '../../composables/usePermission'
 import { useCrud } from '../../composables/useCrud'
 import {
   getSystemLogList,
+  getSystemLogModuleOptions,
   getSystemLogDetail,
   deleteSystemLog,
   batchDeleteSystemLogs,
@@ -133,6 +134,7 @@ const logDetail = ref(null)
 const selectedRows = ref([])
 // 维护跨页选中的ID集合
 const selectedIds = ref(new Set())
+const moduleOptions = ref([])
 
 // 初始搜索表单
 const initialSearchForm = {
@@ -144,7 +146,7 @@ const initialSearchForm = {
   end_time: ''
 }
 
-// 转换系统日志数据（PascalCase -> snake_case）
+// 转换系统日志数据（以 snake_case 为主）
 // 必须在 useListPage 之前定义，因为 useListPage 会使用它
 const transformSystemLogData = (log) => {
   if (!log) {
@@ -160,23 +162,21 @@ const transformSystemLogData = (log) => {
   
   let context = null
   try {
-    if (log.Context) {
-      context = typeof log.Context === 'string' ? JSON.parse(log.Context) : log.Context
-    } else if (log.context) {
+    if (log.context) {
       context = typeof log.context === 'string' ? JSON.parse(log.context) : log.context
     }
   } catch (e) {
-    context = log.Context || log.context || null
+    context = log.context || null
   }
   
   return {
-    id: log.ID || log.id || 0,
-    level: log.Level || log.level || '',
-    module: log.Module || log.module || '',
-    trace_id: log.TraceID || log.trace_id || '',
-    message: log.Message || log.message || '',
+    id: log.id || 0,
+    level: log.level || '',
+    module: log.module || '',
+    trace_id: log.trace_id || '',
+    message: log.message || '',
     context: context,
-    created_at: log.CreatedAt || log.created_at || ''
+    created_at: log.created_at || ''
   }
 }
 
@@ -253,7 +253,7 @@ const tableColumns = computed(() => [
     title: t('log.trace_id'),
     width: 220,
     sortable: false,
-    formatter: ({ row }) => row.TraceID || row.trace_id || '-'
+    formatter: ({ row }) => row.trace_id || '-'
   },
   {
     field: 'message',
@@ -302,7 +302,7 @@ const searchFields = computed(() => [
     label: t('log.module'),
     type: 'select',
     width: '150px',
-    options: getModuleOptions(t),
+    options: moduleOptions.value,
     filterable: true,
     clearable: true,
     allowCreate: true,
@@ -340,35 +340,6 @@ const searchFields = computed(() => [
   }
 ])
 
-// 获取模块选项（带多语言）
-const getModuleOptions = (t) => {
-  return [
-    { label: t('menu.system_log'), value: 'system-log' },
-    { label: t('menu.attachment'), value: 'attachment' },
-    { label: t('log.module_auth'), value: 'auth' },
-    { label: t('menu.monitor'), value: 'monitor' },
-    { label: t('menu.operation_log'), value: 'operation-log' },
-    { label: t('menu.login_log'), value: 'login-log' },
-    { label: t('log.module_recover'), value: 'recover' },
-    { label: t('log.module_payment'), value: 'payment' },
-    { label: t('menu.payment_method'), value: 'payment_method' },
-    { label: t('menu.order'), value: 'order' },
-    { label: t('menu.export'), value: 'export' },
-    { label: t('menu.user'), value: 'user' },
-    { label: t('menu.admin'), value: 'admin' },
-    { label: t('menu.role'), value: 'role' },
-    { label: t('menu.permission'), value: 'permission' },
-    { label: t('menu.menu'), value: 'menu' },
-    { label: t('menu.department'), value: 'department' },
-    { label: t('menu.dictionary'), value: 'dictionary' },
-    { label: t('menu.config'), value: 'config' },
-    { label: t('menu.blacklist'), value: 'blacklist' },
-    { label: t('menu.online_admin'), value: 'online-admin' },
-    { label: t('log.module_background_task'), value: 'background-task' },
-    { label: t('log.module_pprof'), value: 'pprof' }
-  ]
-}
-
 const getLevelType = (level) => {
   const levelMap = {
     'error': 'danger',
@@ -392,35 +363,50 @@ const getLevelLabel = (level) => {
   return levelMap[levelLower] || level
 }
 
-// 获取模块的多语言标签
+// 获取模块的多语言标签：
+// 1) 优先使用少量兼容映射（历史命名差异）
+// 2) 再按规则推导 menu.<slug> 或 log.module_<slug>
+// 3) 最后回退模块原值
 const getModuleLabel = (module) => {
   if (!module) return '-'
-  const moduleMap = {
-    'system-log': t('menu.system_log'),
-    'attachment': t('menu.attachment'),
-    'auth': t('log.module_auth'),
-    'monitor': t('menu.monitor'),
-    'operation-log': t('menu.operation_log'),
-    'login-log': t('menu.login_log'),
-    'recover': t('log.module_recover'),
-    'payment': t('log.module_payment'),
-    'payment_method': t('menu.payment_method'),
-    'order': t('menu.order'),
-    'export': t('menu.export'),
-    'user': t('menu.user'),
-    'admin': t('menu.admin'),
-    'role': t('menu.role'),
-    'permission': t('menu.permission'),
-    'menu': t('menu.menu'),
-    'department': t('menu.department'),
-    'dictionary': t('menu.dictionary'),
-    'config': t('menu.config'),
-    'blacklist': t('menu.blacklist'),
-    'online-admin': t('menu.online_admin'),
-    'background-task': t('log.module_background_task'),
-    'pprof': t('log.module_pprof')
+  const normalized = String(module).trim()
+  if (!normalized) return '-'
+
+  const compatibilityMap = {
+    'operation-log': 'operation_log',
+    'login-log': 'login_log',
+    'system-log': 'system_log',
+    'online-admin': 'online_admin',
+    'background-task': 'module_background_task'
   }
-  return moduleMap[module] || module
+  const mapped = compatibilityMap[normalized] || normalized
+  const snake = mapped.replace(/-/g, '_')
+
+  const menuKey = `menu.${snake}`
+  if (typeof te === 'function' && te(menuKey)) {
+    return t(menuKey)
+  }
+
+  const logKey = snake.startsWith('module_') ? `log.${snake}` : `log.module_${snake}`
+  if (typeof te === 'function' && te(logKey)) {
+    return t(logKey)
+  }
+
+  return normalized
+}
+
+const loadModuleOptions = async () => {
+  try {
+    const res = await getSystemLogModuleOptions()
+    const modules = Array.isArray(res?.data?.modules) ? res.data.modules : []
+    moduleOptions.value = modules.map(module => ({
+      label: getModuleLabel(module),
+      value: module
+    }))
+  } catch (error) {
+    console.error('Load system log module options error:', error)
+    moduleOptions.value = []
+  }
 }
 
 // 格式化上下文为可读字符串（用于tooltip）
@@ -528,6 +514,7 @@ const handleBatchDelete = () => {
 
 onMounted(() => {
   initDefaultSort()
+  loadModuleOptions()
   loadData()
 })
 </script>

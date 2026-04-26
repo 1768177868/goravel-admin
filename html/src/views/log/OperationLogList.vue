@@ -52,7 +52,7 @@
         @checkbox-all="handleSelectionChange"
       >
         <template #admin="{ row }">
-          {{ (row.admin || row.Admin)?.username || (row.admin || row.Admin)?.Username || '-' }}
+          {{ row.admin?.username || '-' }}
         </template>
 
         <template #title="{ row }">
@@ -200,70 +200,6 @@ const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud
   batchDeleteApi: batchDeleteOperationLogs
 })
 
-// 预置的操作标题（权限标识），用于下拉选项，即使还没有对应的操作日志也能选择
-// 对应多语言中的 permission.* 配置
-const defaultTitleSlugs = [
-  // 管理员
-  'admin.store',
-  'admin.update',
-  'admin.destroy',
-  'admin.export',
-  'admin.password',
-  'admin.kick_out',
-  'admin.unbind_google_auth',
-  'admin.reset_google_auth',
-  // 角色
-  'role.store',
-  'role.update',
-  'role.destroy',
-  // 权限
-  'permission.store',
-  'permission.update',
-  'permission.destroy',
-  // 菜单
-  'menu.store',
-  'menu.update',
-  'menu.destroy',
-  // 部门
-  'department.store',
-  'department.update',
-  'department.destroy',
-  // 字典
-  'dictionary.store',
-  'dictionary.update',
-  'dictionary.destroy',
-  'dictionary.type',
-  // 操作日志
-  'operation_log.destroy',
-  'operation_log.batch_delete',
-  'operation_log.clean',
-  // 登录日志
-  'login_log.destroy',
-  'login_log.batch_delete',
-  'login_log.clean',
-  // 系统日志
-  'system_log.destroy',
-  'system_log.batch_delete',
-  'system_log.clean',
-  // 个人中心
-  'profile.update',
-  'password.update',
-  // 在线管理员
-  'online_admin.kick_out',
-  'online_admin.batch_kick_out',
-  // 日志与观测
-  'observability.trace',
-  'observability.slow_sql_top',
-  'observability.audit_timeline',
-  'observability.queue_dashboard',
-  'observability.api_performance_overview',
-  'observability.api_performance_traces',
-  'observability.pprof_status',
-  'observability.pprof_verify',
-  'observability.pprof_cpu_hotspots',
-  'observability.pprof_memory_hotspots'
-]
-
 const titleOptions = ref([])
 
 // 字段名映射：前端字段名 -> 数据库字段名（只包含不同的字段）
@@ -286,24 +222,22 @@ const initialSearchForm = {
   end_time: ''
 }
 
-// 转换操作日志数据（兼容当前后端返回结构）
+// 转换操作日志数据（以 snake_case 为主）
 const transformOperationLogData = (log) => {
   let params = null
   try {
-    if (log.Request) {
-      params = typeof log.Request === 'string' ? JSON.parse(log.Request) : log.Request
-    } else if (log.request) {
+    if (log.request) {
       params = typeof log.request === 'string' ? JSON.parse(log.request) : log.request
     } else if (log.params) {
       params = typeof log.params === 'string' ? JSON.parse(log.params) : log.params
     }
   } catch (e) {
-    params = log.Request || log.request || log.params || null
+    params = log.request || log.params || null
   }
   
   let changes = null
   try {
-    const raw = log.Changes || log.changes
+    const raw = log.changes
     if (raw) {
       changes = typeof raw === 'string' ? JSON.parse(raw) : raw
     }
@@ -312,19 +246,19 @@ const transformOperationLogData = (log) => {
   }
 
   return {
-    id: log.id ?? log.ID,
-    admin: log.admin || log.Admin ? {
-      username: (log.admin || log.Admin)?.username || (log.admin || log.Admin)?.Username || ''
+    id: log.id,
+    admin: log.admin ? {
+      username: log.admin.username || ''
     } : null,
-    method: log.method || log.Method || '',
-    path: log.path || log.Path || '',
-    title: log.title || log.Title || '',
-    ip: log.ip || log.IP || '',
-    status_code: log.status_code ?? log.StatusCode ?? log.status ?? log.Status ?? 0,
-    created_at: log.created_at || log.CreatedAt || '',
+    method: log.method || '',
+    path: log.path || '',
+    title: log.title || '',
+    ip: log.ip || '',
+    status_code: log.status_code ?? log.status ?? 0,
+    created_at: log.created_at || '',
     params: params,
-    request: log.request || log.Request || null,
-    response: log.response || log.Response || null,
+    request: log.request || null,
+    response: log.response || null,
     changes: changes
   }
 }
@@ -983,9 +917,7 @@ const handleBatchDelete = () => {
 const loadTitleOptions = async () => {
   try {
     const res = await getOperationLogTitleOptions()
-    // 使用 Set 合并后端返回的标题和预置的权限标识
-    const mergedSet = new Set(defaultTitleSlugs)
-
+    const mergedSet = new Set()
     if (res.data && res.data.titles && Array.isArray(res.data.titles)) {
       res.data.titles.forEach(title => {
         if (title && typeof title === 'string') {
@@ -1009,15 +941,7 @@ const loadTitleOptions = async () => {
     titleOptions.value = uniqueTitles
   } catch (error) {
     console.error('Load title options error:', error)
-    // 如果加载失败，至少使用预置的权限标识
-    const uniqueTitles = Array.from(new Set(defaultTitleSlugs))
-    uniqueTitles.sort((a, b) => {
-      const labelA = getOperationTitle(a)
-      const labelB = getOperationTitle(b)
-      const locale = t('common.locale') || navigator.language || 'zh-CN'
-      return labelA.localeCompare(labelB, locale)
-    })
-    titleOptions.value = uniqueTitles
+    titleOptions.value = []
   }
 }
 

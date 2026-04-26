@@ -94,6 +94,13 @@ export function getSystemLogList(params) {
   })
 }
 
+export function getSystemLogModuleOptions() {
+  return request({
+    url: '/system-logs/module-options',
+    method: 'get'
+  })
+}
+
 export function getSystemLogDetail(id) {
   return request({
     url: `/system-logs/${id}`,

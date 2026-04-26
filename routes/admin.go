@@ -167,6 +167,7 @@ func Admin() {
 
 			// 系统日志
 			router.Get("system-logs", systemLogController.Index)
+			router.Get("system-logs/module-options", systemLogController.GetModuleOptions)
 			router.Get("system-logs/{id}", systemLogController.Show)
 			router.Delete("system-logs/{id}", systemLogController.Destroy)
 			router.Post("system-logs/batch-delete", systemLogController.BatchDestroy)

@@ -50,6 +50,9 @@
 
 ## 七、返回字段与前端映射（必查）
 
+- [ ] 后端模型对外字段必须显式声明 `json` 标签（推荐 snake_case）。
+  - 例如：`json:"created_at"`、`json:"trace_id"`、`json:"user_agent"`。
+  - 避免依赖默认序列化导致的 `CreatedAt/TraceID` 与前端字段不一致。
 - [ ] 明确接口实际返回字段风格（snake_case / PascalCase）。
 - [ ] 前端转换逻辑（`transformXxxData`）与实际返回一致，避免“页面空数据”。
 - [ ] 若需兼容历史字段，写清注释和计划移除时间。

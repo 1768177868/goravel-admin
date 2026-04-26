@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"sort"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -151,4 +152,33 @@ func (r *SystemLogController) Clean(ctx http.Context) http.Response {
 	}
 
 	return response.Success(ctx)
+}
+
+// GetModuleOptions 获取系统日志模块选项（用于前端筛选下拉）
+func (r *SystemLogController) GetModuleOptions(ctx http.Context) http.Response {
+	var modules []string
+	_ = facades.Orm().Query().Model(&models.SystemLog{}).
+		Select("DISTINCT module").
+		Where("module IS NOT NULL AND module != ''").
+		Order("module ASC").
+		Pluck("module", &modules)
+
+	// 去重并排序，避免数据库方言差异导致顺序不稳定
+	moduleSet := make(map[string]struct{}, len(modules))
+	uniqueModules := make([]string, 0, len(modules))
+	for _, module := range modules {
+		if module == "" {
+			continue
+		}
+		if _, exists := moduleSet[module]; exists {
+			continue
+		}
+		moduleSet[module] = struct{}{}
+		uniqueModules = append(uniqueModules, module)
+	}
+	sort.Strings(uniqueModules)
+
+	return response.Success(ctx, http.Json{
+		"modules": uniqueModules,
+	})
 }
