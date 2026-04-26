@@ -241,6 +241,16 @@ request.interceptors.response.use(
       const url = config?.url || ''
       const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
       const { message, errorCode } = extractErrorInfo(data)
+      const shouldSkipErrorMessage = !!config?.skipErrorMessage
+
+      if (shouldSkipErrorMessage) {
+        error.errorCode = errorCode
+        error.message = message || error.message
+        error.translatedMessage = message || error.message
+        error.code = status
+        error.__handled = false
+        return Promise.reject(error)
+      }
 
       // 根据 HTTP 状态码和错误码处理
       if (status === 429) {

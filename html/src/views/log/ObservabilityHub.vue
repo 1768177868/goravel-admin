@@ -8,7 +8,7 @@
       </template>
 
       <el-tabs v-model="activeTab">
-        <el-tab-pane :label="$t('observability.queue_tab')" name="queue">
+        <el-tab-pane v-if="tabAccess.queue" :label="$t('observability.queue_tab')" name="queue">
           <el-alert type="info" :closable="false" class="queue-hint" :title="$t('observability.queue_dashboard_hint')" />
           <div class="search-row queue-toolbar">
             <span class="queue-default-label">{{ $t('observability.queue_default') }}: <code>{{ queueDashboard.default_connection || '-' }}</code></span>
@@ -64,7 +64,7 @@
           <el-empty v-else :description="$t('observability.queue_panel_missing')" />
         </el-tab-pane>
 
-        <el-tab-pane :label="$t('observability.trace_tab')" name="trace">
+        <el-tab-pane v-if="tabAccess.trace" :label="$t('observability.trace_tab')" name="trace">
           <div class="search-row">
             <el-input v-model="traceQuery.trace_id" :placeholder="$t('observability.trace_id_placeholder')" clearable />
             <el-button type="primary" :loading="traceLoading" @click="loadTrace">{{ $t('common.search') }}</el-button>
@@ -96,7 +96,7 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane :label="$t('observability.audit_tab')" name="audit">
+        <el-tab-pane v-if="tabAccess.audit" :label="$t('observability.audit_tab')" name="audit">
           <div class="search-row">
             <el-input v-model="auditQuery.trace_id" :placeholder="$t('observability.trace_id_placeholder')" clearable />
             <el-input v-model="auditQuery.keyword" :placeholder="$t('observability.keyword_placeholder')" clearable />
@@ -122,7 +122,7 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane :label="$t('observability.slow_sql_tab')" name="slowSql">
+        <el-tab-pane v-if="tabAccess.slowSql" :label="$t('observability.slow_sql_tab')" name="slowSql">
           <div class="search-row">
             <span class="field-label">{{ $t('observability.slow_sql_hours') }}</span>
             <el-input-number v-model="slowSqlQuery.hours" :min="1" :max="168" />
@@ -163,7 +163,7 @@
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane :label="$t('observability.api_performance_tab')" name="apiPerformance">
+        <el-tab-pane v-if="tabAccess.apiPerformance" :label="$t('observability.api_performance_tab')" name="apiPerformance">
           <div class="search-row">
             <span class="field-label">{{ $t('observability.api_perf_hours') }}</span>
             <el-input-number v-model="apiPerfQuery.hours" :min="1" :max="168" />
@@ -259,7 +259,7 @@
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane v-if="showPprofTab" :label="$t('observability.pprof_tab')" name="pprof">
+        <el-tab-pane v-if="tabAccess.pprof && showPprofTab" :label="$t('observability.pprof_tab')" name="pprof">
           <el-alert v-if="pprofStatus.token_required" type="warning" :closable="false" class="queue-hint" :title="$t('observability.pprof_hint')" />
           <div v-if="pprofStatus.token_required" class="search-row pprof-row">
             <el-input
@@ -332,7 +332,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../store/user'
@@ -376,6 +376,20 @@ const memoryHotspotData = ref([])
 const cpuSamplingRemaining = ref(0)
 let cpuSamplingTimer = null
 
+const hasAnyPermission = (slugs = []) => {
+  if (!Array.isArray(slugs) || slugs.length === 0) return false
+  return slugs.some(slug => userStore.hasPermission(slug))
+}
+
+const tabAccess = reactive({
+  queue: hasAnyPermission(['observability.queue_dashboard']),
+  trace: hasAnyPermission(['observability.trace']),
+  audit: hasAnyPermission(['observability.audit_timeline']),
+  slowSql: hasAnyPermission(['observability.slow_sql_top']),
+  apiPerformance: hasAnyPermission(['observability.api_performance_overview', 'observability.api_performance']),
+  pprof: !!(userStore.config?.isDeveloperAdmin && userStore.config?.pprofEnabled)
+})
+
 const showPprofTab = computed(() => {
   const cfg = userStore.config || {}
   return pprofStatusLoaded.value &&
@@ -383,6 +397,17 @@ const showPprofTab = computed(() => {
     pprofStatus.is_developer &&
     !!cfg.isDeveloperAdmin &&
     !!cfg.pprofEnabled
+})
+
+const visibleTabs = computed(() => {
+  const tabs = []
+  if (tabAccess.queue) tabs.push('queue')
+  if (tabAccess.trace) tabs.push('trace')
+  if (tabAccess.audit) tabs.push('audit')
+  if (tabAccess.slowSql) tabs.push('slowSql')
+  if (tabAccess.apiPerformance) tabs.push('apiPerformance')
+  if (tabAccess.pprof && showPprofTab.value) tabs.push('pprof')
+  return tabs
 })
 
 const currentQueuePanel = computed(() => {
@@ -443,11 +468,19 @@ const loadPprofStatus = async () => {
     pprofStatus.token_required = !!res.data?.token_required
     pprofStatusLoaded.value = true
   } catch (error) {
+    if (error?.response?.status === 403) {
+      tabAccess.pprof = false
+      pprofStatusLoaded.value = true
+      pprofStatus.enabled = false
+      pprofStatus.is_developer = false
+      pprofStatus.token_required = false
+      return
+    }
     pprofStatusLoaded.value = true
     pprofStatus.enabled = false
     pprofStatus.is_developer = false
     pprofStatus.token_required = false
-    console.error('Load pprof status error:', error)
+    handleViewRequestError(error)
   }
 }
 
@@ -639,6 +672,10 @@ const loadApiPerformance = async () => {
     apiPerfData.error_top = res.data?.error_top || []
     apiPerfData.qps_top = res.data?.qps_top || []
   } catch (error) {
+    if (error?.response?.status === 403) {
+      tabAccess.apiPerformance = false
+      return
+    }
     handleViewRequestError(error)
   } finally {
     apiPerfLoading.value = false
@@ -658,6 +695,10 @@ const loadApiPerformanceTraces = async (row) => {
     })
     apiPerfTraceData.value = res.data?.list || []
   } catch (error) {
+    if (error?.response?.status === 403) {
+      tabAccess.apiPerformance = false
+      return
+    }
     handleViewRequestError(error)
   } finally {
     apiPerfTraceLoading.value = false
@@ -685,12 +726,23 @@ const loadAudit = async () => {
 }
 
 onMounted(() => {
-  loadSlowSql()
-  loadApiPerformance()
-  loadAudit()
-  loadQueue()
-  loadPprofStatus()
+  if (tabAccess.slowSql) loadSlowSql()
+  if (tabAccess.apiPerformance) loadApiPerformance()
+  if (tabAccess.audit) loadAudit()
+  if (tabAccess.queue) loadQueue()
+  if (tabAccess.pprof) loadPprofStatus()
 })
+
+watch(
+  visibleTabs,
+  (tabs) => {
+    if (!tabs.length) return
+    if (!tabs.includes(activeTab.value)) {
+      activeTab.value = tabs[0]
+    }
+  },
+  { immediate: true }
+)
 
 onUnmounted(() => {
   if (cpuSamplingTimer) {

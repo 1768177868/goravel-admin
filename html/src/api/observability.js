@@ -20,7 +20,8 @@ export function getApiPerformanceOverview(params) {
   return request({
     url: '/observability/api-performance/overview',
     method: 'get',
-    params
+    params,
+    skipErrorMessage: true
   })
 }
 
@@ -50,7 +51,8 @@ export function getQueueDashboard() {
 export function getPprofStatus() {
   return request({
     url: '/observability/pprof/status',
-    method: 'get'
+    method: 'get',
+    skipErrorMessage: true
   })
 }
 
