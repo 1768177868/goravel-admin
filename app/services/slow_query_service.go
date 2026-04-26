@@ -26,6 +26,12 @@ var (
 	spacePattern      = regexp.MustCompile(`\s+`)
 )
 
+const (
+	slowQueryInsertBatchSize   = 20
+	maxSlowSQLTextLength       = 4000
+	maxNormalizedSQLTextLength = 4000
+)
+
 type SlowQueryTopItem struct {
 	SQLHash       string  `json:"sql_hash"`
 	NormalizedSQL string  `json:"normalized_sql"`
@@ -93,7 +99,7 @@ func (s *SlowQueryServiceImpl) CollectFromLatestLog(minDurationMS float64) error
 			continue
 		}
 		batch = append(batch, entry)
-		if len(batch) >= 100 {
+		if len(batch) >= slowQueryInsertBatchSize {
 			_ = facades.Orm().Query().Create(&batch)
 			batch = batch[:0]
 		}
@@ -247,13 +253,17 @@ func parseSlowQueryLine(line string, minDurationMS float64) (models.SlowQueryLog
 	if strings.HasPrefix(lower, "show status") || strings.HasPrefix(lower, "show variables") {
 		return models.SlowQueryLog{}, false
 	}
+	if strings.Contains(lower, "slow_query_logs") {
+		// Exclude self-observability SQL to avoid noisy recursive records.
+		return models.SlowQueryLog{}, false
+	}
 
 	rowsAffected, _ := strconv.ParseInt(matches[3], 10, 64)
 	normalized := normalizeSQL(sqlText)
 	hash := sha1.Sum([]byte(normalized))
 	return models.SlowQueryLog{
-		SQLText:       sqlText,
-		NormalizedSQL: normalized,
+		SQLText:       truncateText(sqlText, maxSlowSQLTextLength),
+		NormalizedSQL: truncateText(normalized, maxNormalizedSQLTextLength),
 		SQLHash:       hex.EncodeToString(hash[:]),
 		DurationMS:    durationMS,
 		RowsAffected:  rowsAffected,
@@ -269,4 +279,11 @@ func normalizeSQL(sqlText string) string {
 	normalized = strings.ToLower(strings.TrimSpace(normalized))
 	normalized = spacePattern.ReplaceAllString(normalized, " ")
 	return normalized
+}
+
+func truncateText(value string, maxLen int) string {
+	if maxLen <= 0 || len(value) <= maxLen {
+		return value
+	}
+	return value[:maxLen]
 }

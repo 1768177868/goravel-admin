@@ -124,8 +124,11 @@
 
         <el-tab-pane :label="$t('observability.slow_sql_tab')" name="slowSql">
           <div class="search-row">
+            <span class="field-label">{{ $t('observability.slow_sql_hours') }}</span>
             <el-input-number v-model="slowSqlQuery.hours" :min="1" :max="168" />
+            <span class="field-label">{{ $t('observability.slow_sql_min_duration_ms') }}</span>
             <el-input-number v-model="slowSqlQuery.min_duration_ms" :min="1" :max="10000" />
+            <span class="field-label">{{ $t('observability.slow_sql_limit') }}</span>
             <el-input-number v-model="slowSqlQuery.limit" :min="1" :max="100" />
             <el-button type="primary" :loading="slowSqlLoading" @click="loadSlowSql">{{ $t('common.search') }}</el-button>
           </div>
@@ -527,8 +530,15 @@ onUnmounted(() => {
 <style scoped>
 .search-row {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.field-label {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 
 .pager {
