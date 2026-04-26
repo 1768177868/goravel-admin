@@ -10,6 +10,7 @@
           v-if="showRefresh"
           :icon="RefreshIcon" 
           circle
+          :class="{ 'is-refreshing': isRefreshing }"
           @click="handleRefresh"
           :title="$t('common.refresh')"
         />
@@ -108,13 +109,29 @@ const showColumnSettingDialog = ref(false)
 
 // 全屏状态
 const isFullscreen = ref(false)
+// 刷新动画状态
+const isRefreshing = ref(false)
 
 // 处理刷新
-const handleRefresh = () => {
-  if (props.onRefresh) {
-    props.onRefresh()
+const handleRefresh = async () => {
+  if (isRefreshing.value) return
+  isRefreshing.value = true
+  const startAt = Date.now()
+
+  try {
+    if (props.onRefresh) {
+      await props.onRefresh()
+    }
+    emit('refresh')
+  } finally {
+    // 给动画一个最短展示时间，避免点击后几乎不可见
+    const elapsed = Date.now() - startAt
+    const minDuration = 450
+    const remain = Math.max(0, minDuration - elapsed)
+    window.setTimeout(() => {
+      isRefreshing.value = false
+    }, remain)
   }
-  emit('refresh')
 }
 
 // 处理全屏
@@ -251,5 +268,18 @@ onBeforeUnmount(() => {
   color: var(--el-color-primary);
   border-color: color-mix(in srgb, var(--el-color-primary) 30%, transparent);
   background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+}
+
+.toolbar-right :deep(.el-button-group > .el-button.is-refreshing .el-icon) {
+  animation: toolbar-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes toolbar-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
