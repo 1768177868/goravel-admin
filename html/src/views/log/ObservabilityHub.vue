@@ -417,12 +417,19 @@ const queueKindTag = (kind) => {
   return m[kind] || 'info'
 }
 
+const handleViewRequestError = (error) => {
+  if (error?.__handled) return
+  ElMessage.error(error?.response?.data?.message || error?.message || t('error.default'))
+}
+
 const loadQueue = async () => {
   queueLoading.value = true
   try {
     const res = await getQueueDashboard()
     queueDashboard.default_connection = res.data?.default_connection || ''
     queueDashboard.connections = res.data?.connections || []
+  } catch (error) {
+    handleViewRequestError(error)
   } finally {
     queueLoading.value = false
   }
@@ -605,6 +612,8 @@ const loadTrace = async () => {
     const res = await getTraceAggregate(traceQuery)
     Object.keys(traceData).forEach(key => delete traceData[key])
     Object.assign(traceData, res.data || {})
+  } catch (error) {
+    handleViewRequestError(error)
   } finally {
     traceLoading.value = false
   }
@@ -615,6 +624,8 @@ const loadSlowSql = async () => {
   try {
     const res = await getSlowSqlTop(slowSqlQuery)
     slowSqlData.value = res.data?.list || []
+  } catch (error) {
+    handleViewRequestError(error)
   } finally {
     slowSqlLoading.value = false
   }
@@ -627,6 +638,8 @@ const loadApiPerformance = async () => {
     apiPerfData.slow_top = res.data?.slow_top || []
     apiPerfData.error_top = res.data?.error_top || []
     apiPerfData.qps_top = res.data?.qps_top || []
+  } catch (error) {
+    handleViewRequestError(error)
   } finally {
     apiPerfLoading.value = false
   }
@@ -644,6 +657,8 @@ const loadApiPerformanceTraces = async (row) => {
       limit: apiPerfQuery.limit
     })
     apiPerfTraceData.value = res.data?.list || []
+  } catch (error) {
+    handleViewRequestError(error)
   } finally {
     apiPerfTraceLoading.value = false
   }
@@ -662,6 +677,8 @@ const loadAudit = async () => {
     const res = await getAuditTimeline(auditQuery)
     auditData.list = res.data?.list || []
     auditData.total = res.data?.total || 0
+  } catch (error) {
+    handleViewRequestError(error)
   } finally {
     auditLoading.value = false
   }
