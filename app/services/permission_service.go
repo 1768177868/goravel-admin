@@ -122,19 +122,22 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 
 // Create 创建权限
 func (s *PermissionServiceImpl) Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error) {
-	permission := &models.Permission{}
-	createData := map[string]any{
-		"name":        name,
-		"slug":        slug,
-		"method":      method,
-		"path":        path,
-		"description": description,
-		"status":      status,
-		"sort":        sort,
-		"menu_id":     menuID,
+	permission := &models.Permission{
+		Name:        name,
+		Slug:        slug,
+		Method:      method,
+		Path:        path,
+		Description: description,
+		Status:      status,
+		Sort:        sort,
+		MenuID:      menuID,
 	}
 
-	if err := facades.Orm().Query().Model(permission).Create(createData); err != nil {
+	if err := facades.Orm().Query().Create(permission); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	if err := facades.Orm().Query().Model(&models.Permission{}).Where("id", permission.ID).With("Menu").First(permission); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 

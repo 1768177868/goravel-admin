@@ -99,7 +99,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 	method := ctx.Request().Input("method")
 	path := ctx.Request().Input("path")
 	description := ctx.Request().Input("description")
-	status := cast.ToUint8(ctx.Request().Input("status", "0"))
+	status := cast.ToUint8(ctx.Request().Input("status", "1"))
 	sort := cast.ToInt(ctx.Request().Input("sort", "0"))
 	menuID := cast.ToUint(ctx.Request().Input("menu_id", "0"))
 
