@@ -26,6 +26,7 @@
         @reset="handleReset"
       >
         <template #extra-buttons>
+          <<if not .ShowToolbar>>
           <<if .HasDelete>>
           <el-button
             v-if="enableBatchActions && hasSelection"
@@ -50,6 +51,7 @@
           >
             {{ $t('common.reset') }}
           </el-button>
+          <<end>>
           <<if .HasExport>>
           <el-button 
             type="success" 
@@ -63,6 +65,37 @@
         </template>
       </SearchForm>
 
+      <<if .ShowToolbar>>
+      <TableToolbar :on-refresh="loadData">
+        <template #left>
+          <<if .HasDelete>>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            type="danger"
+            :disabled="getButtonState('<<.ModuleName>>.destroy').disabled"
+            @click="handleBatchDelete"
+          >
+            {{ `${$t('common.batch_delete')} (${selectedIds.length})` }}
+          </el-button>
+          <<else>>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            type="warning"
+            @click="handleBatchAction"
+          >
+            {{ `${$t('common.batch_action')} (${selectedIds.length})` }}
+          </el-button>
+          <<end>>
+          <el-button
+            v-if="enableBatchActions && hasSelection"
+            @click="handleClearSelection"
+          >
+            {{ $t('common.reset') }}
+          </el-button>
+        </template>
+      </TableToolbar>
+
+      <<end>>
       <VxeTable
         ref="tableRef"
         :data="tableData"
@@ -136,6 +169,9 @@ import { Plus } from '@element-plus/icons-vue'
 import SearchForm from '../../components/SearchForm.vue'
 import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
+<<if .ShowToolbar>>
+import TableToolbar from '../../components/TableToolbar.vue'
+<<end>>
 import TableActionButtons from '../../components/TableActionButtons.vue'
 import <<.ModelName>>Form from './<<.ModelName>>Form.vue'
 import { useTable } from '../../composables/useTable'

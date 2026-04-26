@@ -60,6 +60,7 @@
                 <el-checkbox label="has_edit">{{ $t('code_generator.has_edit') }}</el-checkbox>
                 <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
                 <el-checkbox label="enable_batch_actions">{{ $t('code_generator.enable_batch_actions') }}</el-checkbox>
+                <el-checkbox label="show_toolbar">{{ $t('code_generator.show_toolbar') }}</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
 
@@ -439,7 +440,7 @@ const form = reactive({
   module_name: '',
   table_name: '',
   files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page', 'form_page'],
-  options: ['has_create', 'has_edit', 'has_delete'],
+  options: ['has_create', 'has_edit', 'has_delete', 'show_toolbar'],
   export_mode: 'none',
   fields: [
     {
@@ -499,7 +500,8 @@ const buildGeneratorOptions = () => ({
   has_create: form.options.includes('has_create'),
   has_edit: form.options.includes('has_edit'),
   has_delete: form.options.includes('has_delete'),
-  enable_batch_actions: form.options.includes('enable_batch_actions')
+  enable_batch_actions: form.options.includes('enable_batch_actions'),
+  show_toolbar: form.options.includes('show_toolbar')
 })
 
 const fileTypes = [

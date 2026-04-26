@@ -847,6 +847,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 	hasExport := false
 	exportAsync := false
 	enableBatchActions := false
+	showToolbar := true
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -866,6 +867,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 		}
 		if val, ok := options["enable_batch_actions"]; ok {
 			enableBatchActions = val
+		}
+		if val, ok := options["show_toolbar"]; ok {
+			showToolbar = val
 		}
 	}
 
@@ -1042,6 +1046,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete          bool
 			HasExport          bool
 			EnableBatchActions bool
+			ShowToolbar        bool
 		}{
 			ModelName:          toPascalCase(moduleName),
 			ModuleName:         moduleName,
@@ -1054,6 +1059,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete:          hasDelete,
 			HasExport:          hasExport,
 			EnableBatchActions: enableBatchActions,
+			ShowToolbar:        showToolbar,
 		}
 	case "form_page":
 		// 检查是否有 editor 类型的字段
@@ -1611,6 +1617,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 	hasDelete := true
 	hasExport := false
 	enableBatchActions := false
+	showToolbar := true
 
 	if options != nil {
 		if val, ok := options["has_create"]; ok {
@@ -1628,6 +1635,9 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		if val, ok := options["enable_batch_actions"]; ok {
 			enableBatchActions = val
 		}
+		if val, ok := options["show_toolbar"]; ok {
+			showToolbar = val
+		}
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
@@ -1643,6 +1653,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		HasDelete          bool
 		HasExport          bool
 		EnableBatchActions bool
+		ShowToolbar        bool
 	}{
 		ModelName:          toPascalCase(moduleName),
 		ModuleName:         moduleName,
@@ -1655,6 +1666,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 		HasDelete:          hasDelete,
 		HasExport:          hasExport,
 		EnableBatchActions: enableBatchActions,
+		ShowToolbar:        showToolbar,
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)

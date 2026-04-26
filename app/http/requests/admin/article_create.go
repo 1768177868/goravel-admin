@@ -23,7 +23,7 @@ func (r *ArticleCreate) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 		"admin_id": "required",
 		"title":    "required",
-		"content":  "required",
+		"content":  "",
 		"status":   "required",
 	}
 	return rules
@@ -48,5 +48,8 @@ func (r *ArticleCreate) Attributes(ctx http.Context) map[string]string {
 }
 
 func (r *ArticleCreate) PrepareForValidation(ctx http.Context, data validation.Data) error {
-	return helpers.PrepareRichTextFieldForValidation(data, "content")
+	if err := helpers.PrepareRichTextFieldForValidation(data, "content"); err != nil {
+		return err
+	}
+	return nil
 }

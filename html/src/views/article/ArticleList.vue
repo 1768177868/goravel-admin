@@ -26,6 +26,19 @@
       >
         <template #extra-buttons>
           <el-button
+            type="success"
+            :disabled="getButtonState('article.export').disabled || isExporting"
+            :loading="isExporting"
+            @click="handleExport"
+          >
+            {{ $t("common.export") }}
+          </el-button>
+        </template>
+      </SearchForm>
+
+      <TableToolbar :on-refresh="loadData">
+        <template #left>
+          <el-button
             v-if="enableBatchActions && hasSelection"
             type="danger"
             :disabled="getButtonState('article.destroy').disabled"
@@ -40,19 +53,8 @@
           >
             {{ $t("common.reset") }}
           </el-button>
-
-          <el-button
-            type="success"
-            :disabled="getButtonState('article.export').disabled || isExporting"
-            :loading="isExporting"
-            @click="handleExport"
-          >
-            {{ $t("common.export") }}
-          </el-button>
         </template>
-      </SearchForm>
-
-      <TableToolbar :on-refresh="loadData" />
+      </TableToolbar>
 
       <VxeTable
         ref="tableRef"
@@ -109,8 +111,10 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import SearchForm from "../../components/SearchForm.vue";
 import Pagination from "../../components/Pagination.vue";
-import VxeTable from "../../components/VxeTable.vue"
+import VxeTable from "../../components/VxeTable.vue";
+
 import TableToolbar from "../../components/TableToolbar.vue";
+
 import TableActionButtons from "../../components/TableActionButtons.vue";
 import ArticleForm from "./ArticleForm.vue";
 import { useTable } from "../../composables/useTable";
@@ -312,7 +316,7 @@ const tableColumns = computed(() => {
     {
       field: "updated_at",
       title: t("table.updated_at"),
-      sortable: false,
+      sortable: true,
     },
     {
       field: "created_at",

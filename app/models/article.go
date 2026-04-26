@@ -7,7 +7,7 @@ import (
 type Article struct {
 	orm.Model
 
-	AdminId uint `gorm:"column:admin_id" json:"admin_id" comment:"用户ID"`
+	AdminId uint `gorm:"column:admin_id" json:"admin_id" comment:"管理员ID"`
 
 	Admin *Admin `gorm:"foreignKey:AdminId" json:"admin"`
 

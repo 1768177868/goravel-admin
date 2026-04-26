@@ -13,7 +13,7 @@
         label-width="120px"
       >
         <el-form-item :label="$t('content')" prop="content">
-          <MarkdownEditor
+          <WangEditor
             v-model="formData.content"
             :placeholder="$t('content_placeholder')"
             :height="400"
@@ -42,7 +42,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import FormField from "../../components/Form/FormField.vue";
 
-import MarkdownEditor from "../../components/MarkdownEditor.vue";
+import WangEditor from "../../components/WangEditor.vue";
 
 import {
   createArticle,
@@ -97,9 +97,6 @@ const formRules = computed(() => {
   ];
   rules["title"] = [
     { required: true, message: t("title_required"), trigger: "blur" },
-  ];
-  rules["content"] = [
-    { required: true, message: t("content_required"), trigger: "blur" },
   ];
   rules["status"] = [
     { required: true, message: t("status_required"), trigger: "blur" },

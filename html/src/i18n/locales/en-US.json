@@ -1564,6 +1564,7 @@
     "export_mode_sync": "Sync Export",
     "export_mode_async": "Async Export (Generate Job)",
     "enable_batch_actions": "Enable Batch Actions",
+    "show_toolbar": "Show Toolbar",
     "form_type": "Form Component",
     "form_types": {
       "input": "Input",
