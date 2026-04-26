@@ -1,6 +1,8 @@
 package seeders
 
 import (
+	"time"
+
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
@@ -19,6 +21,7 @@ func (s *MenuSeeder) Run() error {
 	hasNoCache := facades.Schema().HasColumn("menus", "no_cache")
 
 	menuToMap := func(menuData models.Menu) map[string]any {
+		now := time.Now().Format("2006-01-02 15:04:05")
 		data := map[string]any{
 			"parent_id":  menuData.ParentID,
 			"title":      menuData.Title,
@@ -31,6 +34,8 @@ func (s *MenuSeeder) Run() error {
 			"status":     menuData.Status,
 			"sort":       menuData.Sort,
 			"is_hidden":  menuData.IsHidden,
+			"created_at": now,
+			"updated_at": now,
 		}
 		if hasLinkType {
 			data["link_type"] = menuData.LinkType
@@ -56,16 +61,23 @@ func (s *MenuSeeder) Run() error {
 			facades.Orm().Query().Where("slug", menuData.Slug).First(&existingMenu)
 
 			hasUpdates := false
+			updateData := map[string]any{}
 
 			// 检查并更新 Component
 			if menuData.Component != "" && menuData.Component != existingMenu.Component {
-				existingMenu.Component = menuData.Component
+				updateData["component"] = menuData.Component
 				hasUpdates = true
 			}
 
 			// 检查并更新 Path
 			if menuData.Path != "" && menuData.Path != existingMenu.Path {
-				existingMenu.Path = menuData.Path
+				updateData["path"] = menuData.Path
+				hasUpdates = true
+			}
+
+			// 历史 seed 可能没有写入 created_at，这里补齐一次
+			if existingMenu.CreatedAt == nil || existingMenu.CreatedAt.IsZero() {
+				updateData["created_at"] = time.Now().Format("2006-01-02 15:04:05")
 				hasUpdates = true
 			}
 
@@ -88,10 +100,9 @@ func (s *MenuSeeder) Run() error {
 			// }
 
 			if hasUpdates {
-				_, _ = facades.Orm().Query().Model(&models.Menu{}).Where("id", existingMenu.ID).Update(map[string]any{
-					"component": existingMenu.Component,
-					"path":      existingMenu.Path,
-				})
+				updateData["updated_at"] = time.Now().Format("2006-01-02 15:04:05")
+				_, _ = facades.Orm().Query().Model(&models.Menu{}).Where("id", existingMenu.ID).Update(updateData)
+				_ = facades.Orm().Query().Where("id", existingMenu.ID).First(&existingMenu)
 			}
 
 			return existingMenu

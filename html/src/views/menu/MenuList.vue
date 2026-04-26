@@ -221,6 +221,7 @@ const allTableColumns = computed(() => [
   { field: 'status', title: t('table.status'), width: 100, slot: 'status', key: 'status' },
   { field: 'is_hidden', title: t('menu_management.is_hidden'), width: 100, slot: 'is_hidden', key: 'is_hidden' },
   { field: 'created_at', title: t('table.created_at'), width: 180, key: 'created_at' },
+  { field: 'updated_at', title: t('table.updated_at'), width: 180, key: 'updated_at' },
   { title: t('table.operation'), width: 150, fixed: 'right', slot: 'operation', key: 'operation' }
 ])
 

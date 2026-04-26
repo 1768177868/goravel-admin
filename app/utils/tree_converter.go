@@ -61,8 +61,12 @@ func ConvertDepartmentTree(departments []models.Department) []DepartmentTreeItem
 			Remark:   dept.Remark,
 		}
 
-		// 处理时间字段（JSON 序列化会自动处理，这里只是确保字段存在）
-		// 实际的时间格式化由框架的 JSON 序列化处理
+		if dept.CreatedAt != nil && !dept.CreatedAt.IsZero() {
+			item.CreatedAt = dept.CreatedAt.ToDateTimeString()
+		}
+		if dept.UpdatedAt != nil && !dept.UpdatedAt.IsZero() {
+			item.UpdatedAt = dept.UpdatedAt.ToDateTimeString()
+		}
 
 		// 递归转换子节点
 		if len(dept.Children) > 0 {
@@ -95,6 +99,13 @@ func ConvertMenuTree(menus []models.Menu) []MenuTreeItem {
 			LinkType:   menu.LinkType,
 			OpenType:   menu.OpenType,
 			NoCache:    menu.NoCache,
+		}
+
+		if menu.CreatedAt != nil && !menu.CreatedAt.IsZero() {
+			item.CreatedAt = menu.CreatedAt.ToDateTimeString()
+		}
+		if menu.UpdatedAt != nil && !menu.UpdatedAt.IsZero() {
+			item.UpdatedAt = menu.UpdatedAt.ToDateTimeString()
 		}
 
 		// 递归转换子节点
