@@ -17,7 +17,10 @@ export const useUserStore = defineStore('user', {
       // 如果从 localStorage 恢复了用户信息，认为已获取过（但菜单仍需从服务器获取）
       userInfoFetched: !!adminInfo, // 用户信息是否已获取过（用于判断是否需要阻塞导航）
       config: {
-        showButtonsWithoutPermission: false // 是否显示无权限的按钮
+        showButtonsWithoutPermission: false, // 是否显示无权限的按钮
+        isDeveloperAdmin: false,
+        pprofEnabled: false,
+        pprofTokenRequired: false
       }
     }
   },
@@ -121,7 +124,10 @@ export const useUserStore = defineStore('user', {
 
     setConfig(config) {
       this.config = {
-        showButtonsWithoutPermission: config?.show_buttons_without_permission || config?.showButtonsWithoutPermission || false
+        showButtonsWithoutPermission: config?.show_buttons_without_permission || config?.showButtonsWithoutPermission || false,
+        isDeveloperAdmin: config?.is_developer_admin || config?.isDeveloperAdmin || false,
+        pprofEnabled: config?.pprof_enabled || config?.pprofEnabled || false,
+        pprofTokenRequired: config?.pprof_token_required || config?.pprofTokenRequired || false
       }
     },
 
@@ -240,7 +246,10 @@ export const useUserStore = defineStore('user', {
         this.userInfoFetched = false
         this.isFetchingUserInfo = false
         this.config = {
-          showButtonsWithoutPermission: false
+          showButtonsWithoutPermission: false,
+          isDeveloperAdmin: false,
+          pprofEnabled: false,
+          pprofTokenRequired: false
         }
         Storage.removeItem('token')
         Storage.removeItem('adminInfo')

@@ -73,6 +73,27 @@ func parseAdminFromContext(ctx http.Context) (*models.Admin, bool) {
 	return nil, false
 }
 
+func isDeveloperAdminByConfig(adminID uint) bool {
+	if adminID == 0 {
+		return false
+	}
+
+	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
+	parts := str.Of(developerIDsStr).Split(",")
+	for _, part := range parts {
+		idStr := str.Of(part).Trim().String()
+		if idStr == "" {
+			continue
+		}
+		id, err := strconv.ParseUint(idStr, 10, 64)
+		if err == nil && uint(id) == adminID {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r *AuthController) currentAdminFromContextRequired(ctx http.Context) (*models.Admin, http.Response) {
 	admin, ok := parseAdminFromContext(ctx)
 	if !ok {
@@ -309,6 +330,9 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 
 	// 获取配置：是否显示无权限的按钮
 	showButtonsWithoutPermission := facades.Config().GetBool("admin.show_buttons_without_permission", false)
+	pprofEnabled := facades.Config().GetBool("pprof.enabled", false) || facades.Config().GetBool("app.debug", false)
+	pprofTokenRequired := facades.Config().GetString("pprof.token", "") != ""
+	isDeveloperAdmin := isDeveloperAdminByConfig(admin.ID)
 
 	// 检查是否是超级管理员
 	const SuperAdminRoleSlug = "super-admin"
@@ -384,6 +408,9 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		"config": http.Json{
 			"show_buttons_without_permission": showButtonsWithoutPermission,
 			"monitor_hidden":                  facades.Config().GetString("admin.monitor_hidden", ""),
+			"is_developer_admin":              isDeveloperAdmin,
+			"pprof_enabled":                   pprofEnabled,
+			"pprof_token_required":            pprofTokenRequired,
 		},
 	})
 }

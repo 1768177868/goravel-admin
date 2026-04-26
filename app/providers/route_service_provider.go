@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/goravel/framework/contracts/foundation"
@@ -12,6 +13,7 @@ import (
 	"goravel/app/http"
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
+	"goravel/app/models"
 	"goravel/app/services"
 )
 
@@ -71,6 +73,45 @@ func (receiver *RouteServiceProvider) configureRateLimiting() {
 			}).Abort()
 		})
 	})
+
+	// pprof token 验证限流（按管理员 + IP）
+	facades.RateLimiter().For("pprofVerify", func(ctx contractshttp.Context) contractshttp.Limit {
+		ip := helpers.GetRealIP(ctx)
+		identifier := resolvePprofVerifyIdentifier(ctx, ip)
+		return limit.PerMinute(6).Response(func(ctx contractshttp.Context) {
+			_ = ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"code":       contractshttp.StatusTooManyRequests,
+				"message":    trans.Get(ctx, "too_many_requests"),
+				"error_code": "pprof_verify_rate_limited",
+			}).Abort()
+		}).By(ip + ":pprof_verify:" + identifier)
+	})
+
+	// pprof CPU 采样限流（按管理员 + IP）
+	facades.RateLimiter().For("pprofCPU", func(ctx contractshttp.Context) contractshttp.Limit {
+		ip := helpers.GetRealIP(ctx)
+		identifier := resolvePprofVerifyIdentifier(ctx, ip)
+		return limit.PerMinute(3).Response(func(ctx contractshttp.Context) {
+			_ = ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"code":       contractshttp.StatusTooManyRequests,
+				"message":    trans.Get(ctx, "too_many_requests"),
+				"error_code": "pprof_cpu_rate_limited",
+			}).Abort()
+		}).By(ip + ":pprof_cpu:" + identifier)
+	})
+
+	// pprof 内存采样限流（按管理员 + IP）
+	facades.RateLimiter().For("pprofMemory", func(ctx contractshttp.Context) contractshttp.Limit {
+		ip := helpers.GetRealIP(ctx)
+		identifier := resolvePprofVerifyIdentifier(ctx, ip)
+		return limit.PerMinute(6).Response(func(ctx contractshttp.Context) {
+			_ = ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"code":       contractshttp.StatusTooManyRequests,
+				"message":    trans.Get(ctx, "too_many_requests"),
+				"error_code": "pprof_memory_rate_limited",
+			}).Abort()
+		}).By(ip + ":pprof_memory:" + identifier)
+	})
 }
 
 // resolveLoginIdentifier 从请求中提取登录标识（username > email > X-Username > IP fallback）。
@@ -83,5 +124,22 @@ func resolveLoginIdentifier(ctx contractshttp.Context, fallbackIP string) string
 	if v := strings.TrimSpace(ctx.Request().Header("X-Username", "")); v != "" {
 		return strings.ToLower(v)
 	}
+	return fallbackIP
+}
+
+// resolvePprofVerifyIdentifier 从上下文提取管理员 ID，找不到则回退到 IP
+func resolvePprofVerifyIdentifier(ctx contractshttp.Context, fallbackIP string) string {
+	adminValue := ctx.Value("admin")
+	if adminValue == nil {
+		return fallbackIP
+	}
+
+	if admin, ok := adminValue.(models.Admin); ok {
+		return strconv.FormatUint(uint64(admin.ID), 10)
+	}
+	if adminPtr, ok := adminValue.(*models.Admin); ok && adminPtr != nil {
+		return strconv.FormatUint(uint64(adminPtr.ID), 10)
+	}
+
 	return fallbackIP
 }

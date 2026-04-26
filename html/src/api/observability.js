@@ -30,3 +30,37 @@ export function getQueueDashboard() {
     method: 'get'
   })
 }
+
+export function getPprofStatus() {
+  return request({
+    url: '/observability/pprof/status',
+    method: 'get'
+  })
+}
+
+export function verifyPprofToken(data) {
+  return request({
+    url: '/observability/pprof/verify',
+    method: 'post',
+    data,
+    skipErrorMessage: true
+  })
+}
+
+export function getPprofCpuHotspots(data) {
+  return request({
+    url: '/observability/pprof/cpu-hotspots',
+    method: 'post',
+    data,
+    skipErrorMessage: true
+  })
+}
+
+export function getPprofMemoryHotspots(data) {
+  return request({
+    url: '/observability/pprof/memory-hotspots',
+    method: 'post',
+    data,
+    skipErrorMessage: true
+  })
+}

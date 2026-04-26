@@ -143,17 +143,88 @@
           </el-table>
         </el-tab-pane>
 
+        <el-tab-pane v-if="showPprofTab" :label="$t('observability.pprof_tab')" name="pprof">
+          <el-alert v-if="pprofStatus.token_required" type="warning" :closable="false" class="queue-hint" :title="$t('observability.pprof_hint')" />
+          <div v-if="pprofStatus.token_required" class="search-row pprof-row">
+            <el-input
+              v-model="pprofForm.token"
+              :placeholder="$t('observability.pprof_token_placeholder')"
+              type="password"
+              clearable
+            />
+            <el-button type="primary" :loading="pprofVerifying" @click="handleVerifyPprofToken">
+              {{ $t('observability.pprof_verify') }}
+            </el-button>
+            <el-tag :type="pprofVerified ? 'success' : 'info'">
+              {{ pprofVerified ? $t('observability.pprof_verified') : $t('observability.pprof_unverified') }}
+            </el-tag>
+          </div>
+
+          <div class="pprof-actions">
+            <el-button type="primary" @click="openPprofPath('/debug/pprof/')">Index</el-button>
+            <el-button @click="openPprofPath('/debug/pprof/heap')">Heap</el-button>
+            <el-button @click="openPprofPath('/debug/pprof/goroutine')">Goroutine</el-button>
+            <el-button @click="openPprofPath('/debug/pprof/allocs')">Allocs</el-button>
+            <el-button @click="openPprofPath('/debug/pprof/profile')">CPU Profile</el-button>
+            <el-button @click="openPprofPath('/debug/pprof/trace')">Trace</el-button>
+            <el-button @click="openPprofPath('/debug/pprof/runtime')">Runtime</el-button>
+          </div>
+
+          <el-divider>{{ $t('observability.cpu_hotspots_title') }}</el-divider>
+          <div class="search-row pprof-row">
+            <span>{{ $t('observability.pprof_sample_seconds') }}</span>
+            <el-input-number v-model="cpuHotspotForm.seconds" :min="1" :max="120" />
+            <span>{{ $t('observability.pprof_top_n') }}</span>
+            <el-input-number v-model="cpuHotspotForm.top_n" :min="1" :max="100" />
+            <el-button type="primary" :loading="cpuHotspotLoading" :disabled="memoryHotspotLoading" @click="loadCpuHotspots">
+              {{ $t('observability.pprof_start_sampling') }}
+            </el-button>
+            <el-tag v-if="cpuHotspotLoading" type="warning">
+              {{ $t('observability.pprof_sampling_in_progress', { seconds: cpuSamplingRemaining }) }}
+            </el-tag>
+          </div>
+          <el-table :data="cpuHotspotData" size="small" border>
+            <el-table-column type="index" :label="$t('table.sort')" width="70" />
+            <el-table-column prop="function" :label="$t('observability.pprof_function')" min-width="320" />
+            <el-table-column prop="flat_ms" :label="$t('observability.pprof_cpu_self_ms')" width="150" />
+            <el-table-column prop="flat_percent" :label="$t('observability.pprof_self_percent')" width="120" />
+            <el-table-column prop="cum_ms" :label="$t('observability.pprof_cpu_cum_ms')" width="150" />
+            <el-table-column prop="cum_percent" :label="$t('observability.pprof_cum_percent')" width="120" />
+          </el-table>
+
+          <el-divider>{{ $t('observability.memory_hotspots_title') }}</el-divider>
+          <div class="search-row pprof-row">
+            <span>{{ $t('observability.pprof_top_n') }}</span>
+            <el-input-number v-model="memoryHotspotForm.top_n" :min="1" :max="100" />
+            <el-button type="primary" :loading="memoryHotspotLoading" :disabled="cpuHotspotLoading" @click="loadMemoryHotspots">
+              {{ $t('common.refresh') }}
+            </el-button>
+          </div>
+          <el-table :data="memoryHotspotData" size="small" border>
+            <el-table-column type="index" :label="$t('table.sort')" width="70" />
+            <el-table-column prop="function" :label="$t('observability.pprof_function')" min-width="320" />
+            <el-table-column prop="flat_bytes" :label="$t('observability.pprof_mem_flat_bytes')" width="170" />
+            <el-table-column prop="flat_percent" :label="$t('observability.pprof_self_percent')" width="120" />
+            <el-table-column prop="cum_bytes" :label="$t('observability.pprof_mem_cum_bytes')" width="170" />
+            <el-table-column prop="cum_percent" :label="$t('observability.pprof_cum_percent')" width="120" />
+          </el-table>
+        </el-tab-pane>
+
       </el-tabs>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { getAuditTimeline, getQueueDashboard, getSlowSqlTop, getTraceAggregate } from '../../api/observability'
+import { useUserStore } from '../../store/user'
+import { getAuditTimeline, getPprofCpuHotspots, getPprofMemoryHotspots, getPprofStatus, getQueueDashboard, getSlowSqlTop, getTraceAggregate, verifyPprofToken } from '../../api/observability'
 
 const activeTab = ref('queue')
+const userStore = useUserStore()
+const { t } = useI18n()
 
 const traceLoading = ref(false)
 const traceQuery = reactive({ trace_id: '' })
@@ -169,6 +240,28 @@ const auditData = reactive({ list: [], total: 0 })
 
 const queueLoading = ref(false)
 const queueDashboard = reactive({ default_connection: '', connections: [] })
+const pprofStatus = reactive({ enabled: false, is_developer: false, token_required: false })
+const pprofForm = reactive({ token: '' })
+const pprofVerifying = ref(false)
+const pprofVerified = ref(false)
+const pprofStatusLoaded = ref(false)
+const cpuHotspotForm = reactive({ seconds: 3, top_n: 15 })
+const memoryHotspotForm = reactive({ top_n: 25 })
+const cpuHotspotLoading = ref(false)
+const memoryHotspotLoading = ref(false)
+const cpuHotspotData = ref([])
+const memoryHotspotData = ref([])
+const cpuSamplingRemaining = ref(0)
+let cpuSamplingTimer = null
+
+const showPprofTab = computed(() => {
+  const cfg = userStore.config || {}
+  return pprofStatusLoaded.value &&
+    pprofStatus.enabled &&
+    pprofStatus.is_developer &&
+    !!cfg.isDeveloperAdmin &&
+    !!cfg.pprofEnabled
+})
 
 const currentQueuePanel = computed(() => {
   const rows = queueDashboard.connections || []
@@ -213,6 +306,173 @@ const loadQueue = async () => {
   }
 }
 
+const loadPprofStatus = async () => {
+  try {
+    const res = await getPprofStatus()
+    pprofStatus.enabled = !!res.data?.enabled
+    pprofStatus.is_developer = !!res.data?.is_developer
+    pprofStatus.token_required = !!res.data?.token_required
+    pprofStatusLoaded.value = true
+  } catch (error) {
+    pprofStatusLoaded.value = true
+    pprofStatus.enabled = false
+    pprofStatus.is_developer = false
+    pprofStatus.token_required = false
+    console.error('Load pprof status error:', error)
+  }
+}
+
+const handleVerifyPprofToken = async () => {
+  if (!showPprofTab.value) return
+  if (pprofStatus.token_required && !pprofForm.token) {
+    ElMessage.warning(t('observability.pprof_token_placeholder'))
+    return
+  }
+
+  pprofVerifying.value = true
+  try {
+    await verifyPprofToken({ token: pprofForm.token || '' })
+    pprofVerified.value = true
+    ElMessage.success(t('observability.pprof_verified'))
+  } catch (error) {
+    pprofVerified.value = false
+    const retryAfter = error?.response?.data?.retry_after
+    if (error?.response?.status === 429 && retryAfter) {
+      ElMessage.error(t('observability.pprof_rate_limited', { seconds: retryAfter }))
+      return
+    }
+    ElMessage.error(error.response?.data?.message || error.message || t('observability.pprof_unverified'))
+  } finally {
+    pprofVerifying.value = false
+  }
+}
+
+const ensurePprofSamplingReady = () => {
+  if (!showPprofTab.value) return false
+  if (pprofStatus.token_required) {
+    if (!pprofForm.token) {
+      ElMessage.warning(t('observability.pprof_token_placeholder'))
+      return false
+    }
+    if (!pprofVerified.value) {
+      ElMessage.warning(t('observability.pprof_verify'))
+      return false
+    }
+  }
+  return true
+}
+
+const handlePprofApiError = (error) => {
+  const retryAfter = error?.response?.data?.retry_after
+  if (error?.response?.status === 429 && retryAfter) {
+    ElMessage.error(t('observability.pprof_rate_limited', { seconds: retryAfter }))
+    return
+  }
+  ElMessage.error(error?.response?.data?.message || error?.message || t('observability.pprof_unverified'))
+}
+
+const toCpuHotspotRows = (rows) => {
+  return (rows || []).map(item => ({
+    function: item.function || '-',
+    flat_ms: `${((item.flat_value || 0) / 1e6).toFixed(2)} ms`,
+    flat_percent: `${Number(item.flat_percent || 0).toFixed(2)}%`,
+    cum_ms: `${((item.cum_value || 0) / 1e6).toFixed(2)} ms`,
+    cum_percent: `${Number(item.cum_percent || 0).toFixed(2)}%`
+  }))
+}
+
+const toMemoryHotspotRows = (rows) => {
+  const formatBytes = (bytes) => {
+    const value = Number(bytes || 0)
+    if (value >= 1024 * 1024 * 1024) return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`
+    if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(2)} MB`
+    if (value >= 1024) return `${(value / 1024).toFixed(2)} KB`
+    return `${value} B`
+  }
+  return (rows || []).map(item => ({
+    function: item.function || '-',
+    flat_bytes: formatBytes(item.flat_value),
+    flat_percent: `${Number(item.flat_percent || 0).toFixed(2)}%`,
+    cum_bytes: formatBytes(item.cum_value),
+    cum_percent: `${Number(item.cum_percent || 0).toFixed(2)}%`
+  }))
+}
+
+const loadCpuHotspots = async () => {
+  if (!ensurePprofSamplingReady()) return
+  if (cpuHotspotLoading.value || memoryHotspotLoading.value) return
+  cpuHotspotLoading.value = true
+  cpuSamplingRemaining.value = Number(cpuHotspotForm.seconds || 0)
+  if (cpuSamplingTimer) clearInterval(cpuSamplingTimer)
+  cpuSamplingTimer = setInterval(() => {
+    if (cpuSamplingRemaining.value > 0) {
+      cpuSamplingRemaining.value -= 1
+    } else {
+      clearInterval(cpuSamplingTimer)
+      cpuSamplingTimer = null
+    }
+  }, 1000)
+  try {
+    const res = await getPprofCpuHotspots({
+      token: pprofForm.token || '',
+      seconds: cpuHotspotForm.seconds,
+      top_n: cpuHotspotForm.top_n
+    })
+    cpuHotspotData.value = toCpuHotspotRows(res.data?.list || [])
+  } catch (error) {
+    handlePprofApiError(error)
+  } finally {
+    cpuHotspotLoading.value = false
+    cpuSamplingRemaining.value = 0
+    if (cpuSamplingTimer) {
+      clearInterval(cpuSamplingTimer)
+      cpuSamplingTimer = null
+    }
+  }
+}
+
+const loadMemoryHotspots = async () => {
+  if (!ensurePprofSamplingReady()) return
+  if (cpuHotspotLoading.value || memoryHotspotLoading.value) return
+  memoryHotspotLoading.value = true
+  try {
+    const res = await getPprofMemoryHotspots({
+      token: pprofForm.token || '',
+      top_n: memoryHotspotForm.top_n
+    })
+    memoryHotspotData.value = toMemoryHotspotRows(res.data?.list || [])
+  } catch (error) {
+    handlePprofApiError(error)
+  } finally {
+    memoryHotspotLoading.value = false
+  }
+}
+
+const openPprofPath = (path) => {
+  if (!showPprofTab.value) return
+
+  if (pprofStatus.token_required) {
+    if (!pprofForm.token) {
+      ElMessage.warning(t('observability.pprof_token_placeholder'))
+      return
+    }
+    if (!pprofVerified.value) {
+      ElMessage.warning(t('observability.pprof_verify'))
+      return
+    }
+  }
+
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+  const backendOrigin = apiBaseURL
+    ? apiBaseURL.replace(/\/+$/, '')
+    : window.location.origin
+  const url = new URL(path, backendOrigin)
+  if (pprofForm.token) {
+    url.searchParams.set('token', pprofForm.token)
+  }
+  window.open(url.toString(), '_blank', 'noopener,noreferrer')
+}
+
 const loadTrace = async () => {
   if (!traceQuery.trace_id) {
     ElMessage.warning('trace_id is required')
@@ -253,6 +513,14 @@ onMounted(() => {
   loadSlowSql()
   loadAudit()
   loadQueue()
+  loadPprofStatus()
+})
+
+onUnmounted(() => {
+  if (cpuSamplingTimer) {
+    clearInterval(cpuSamplingTimer)
+    cpuSamplingTimer = null
+  }
 })
 </script>
 
@@ -302,5 +570,15 @@ onMounted(() => {
 .queue-fetch-err {
   display: block;
   margin-top: 8px;
+}
+
+.pprof-row {
+  align-items: center;
+}
+
+.pprof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 </style>

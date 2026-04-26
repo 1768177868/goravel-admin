@@ -246,9 +246,11 @@ request.interceptors.response.use(
       if (status === 429) {
         // 对于导出接口，不在这里显示错误，让业务代码自己处理
         const isExportEndpoint = url.includes('/export')
-        if (!isExportEndpoint) {
+        if (!isExportEndpoint && !config?.skipErrorMessage) {
           ElMessage.error(message || t('error.tooManyRequests'))
           error.__handled = true
+        } else if (config?.skipErrorMessage) {
+          error.__handled = false
         }
         // 导出接口的 429 错误不标记为已处理，让业务代码显示更友好的提示
       } else if (status === 401) {

@@ -81,6 +81,17 @@ func generateDefaultTitle(method, path string) string {
 		return "export.download"
 	}
 
+	// pprof 相关操作（观测采样）
+	if pathStr.Contains("/observability/pprof/verify") && method == "POST" {
+		return "pprof.verify"
+	}
+	if pathStr.Contains("/observability/pprof/cpu-hotspots") && method == "POST" {
+		return "pprof.cpu_hotspots"
+	}
+	if pathStr.Contains("/observability/pprof/memory-hotspots") && method == "POST" {
+		return "pprof.memory_hotspots"
+	}
+
 	// 订单导入
 	if pathStr.Contains("/orders/import") && method == "POST" {
 		return "order.import"

@@ -191,6 +191,10 @@ func Admin() {
 			router.Get("observability/slow-sql/top", observabilityController.SlowSQLTopN)
 			router.Get("observability/audit-timeline", observabilityController.AuditTimeline)
 			router.Get("observability/queue-dashboard", observabilityController.QueueDashboard)
+			router.Get("observability/pprof/status", observabilityController.PprofStatus)
+			router.Middleware(httpmiddleware.Throttle("pprofVerify")).Post("observability/pprof/verify", observabilityController.PprofVerify)
+			router.Middleware(httpmiddleware.Throttle("pprofCPU")).Post("observability/pprof/cpu-hotspots", observabilityController.PprofCPUHotspots)
+			router.Middleware(httpmiddleware.Throttle("pprofMemory")).Post("observability/pprof/memory-hotspots", observabilityController.PprofMemoryHotspots)
 
 			// 系统公告/通知
 			router.Post("notifications", notificationController.Store)

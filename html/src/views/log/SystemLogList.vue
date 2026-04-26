@@ -364,7 +364,8 @@ const getModuleOptions = (t) => {
     { label: t('menu.config'), value: 'config' },
     { label: t('menu.blacklist'), value: 'blacklist' },
     { label: t('menu.online_admin'), value: 'online-admin' },
-    { label: t('log.module_background_task'), value: 'background-task' }
+    { label: t('log.module_background_task'), value: 'background-task' },
+    { label: t('log.module_pprof'), value: 'pprof' }
   ]
 }
 
@@ -416,7 +417,8 @@ const getModuleLabel = (module) => {
     'config': t('menu.config'),
     'blacklist': t('menu.blacklist'),
     'online-admin': t('menu.online_admin'),
-    'background-task': t('log.module_background_task')
+    'background-task': t('log.module_background_task'),
+    'pprof': t('log.module_pprof')
   }
   return moduleMap[module] || module
 }

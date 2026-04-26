@@ -144,6 +144,10 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "慢SQL TopN", Slug: "observability.slow_sql_top", Method: "GET", Path: "/api/admin/observability/slow-sql/top", Description: "查询慢 SQL TopN 统计", Status: 1, Sort: 2, MenuID: observabilityMenu.ID},
 		{Name: "审计时间线", Slug: "observability.audit_timeline", Method: "GET", Path: "/api/admin/observability/audit-timeline", Description: "查询统一审计时间线", Status: 1, Sort: 3, MenuID: observabilityMenu.ID},
 		{Name: "队列看板", Slug: "observability.queue_dashboard", Method: "GET", Path: "/api/admin/observability/queue-dashboard", Description: "轻量队列统计看板", Status: 1, Sort: 4, MenuID: observabilityMenu.ID},
+		{Name: "PPROF状态", Slug: "observability.pprof_status", Method: "GET", Path: "/api/admin/observability/pprof/status", Description: "查询 pprof 功能状态", Status: 1, Sort: 5, MenuID: observabilityMenu.ID},
+		{Name: "PPROF验证", Slug: "observability.pprof_verify", Method: "POST", Path: "/api/admin/observability/pprof/verify", Description: "验证 pprof token", Status: 1, Sort: 6, MenuID: observabilityMenu.ID},
+		{Name: "CPU热点采样", Slug: "observability.pprof_cpu_hotspots", Method: "POST", Path: "/api/admin/observability/pprof/cpu-hotspots", Description: "采样并查询 CPU 热点函数", Status: 1, Sort: 7, MenuID: observabilityMenu.ID},
+		{Name: "内存热点采样", Slug: "observability.pprof_memory_hotspots", Method: "POST", Path: "/api/admin/observability/pprof/memory-hotspots", Description: "采样并查询内存分配热点", Status: 1, Sort: 8, MenuID: observabilityMenu.ID},
 		// 服务监控
 		{Name: "系统监控", Slug: "monitor.system_info", Method: "GET", Path: "/api/admin/monitor/system-info", Description: "查看系统监控信息", Status: 1, Sort: 1, MenuID: monitorMenu.ID},
 		{Name: "系统监控实时流", Slug: "monitor.system_info_stream", Method: "GET", Path: "/api/admin/monitor/system-info/stream", Description: "系统监控实时数据流", Status: 1, Sort: 2, MenuID: monitorMenu.ID},
