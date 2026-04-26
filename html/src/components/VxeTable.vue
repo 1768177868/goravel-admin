@@ -35,7 +35,8 @@
       ref="tableRef"
       :data="data"
       :loading="loading"
-      border
+      :border="tableStyle.border"
+      :stripe="tableStyle.stripe"
       :size="vxeSize"
       :column-config="{ resizable: true }"
       :height="height"
@@ -70,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, computed, useSlots } from 'vue'
+import { ref, computed, useSlots, onMounted, onBeforeUnmount } from 'vue'
 import { useResponsive } from '../composables/useResponsive'
 import { useVxeTableSize } from '../composables/useVxeTableSize'
 
@@ -78,6 +79,11 @@ const slots = useSlots()
 
 const { isMobile } = useResponsive()
 const { vxeSize } = useVxeTableSize()
+const TABLE_STYLE_STORAGE_KEY = 'table_style_preferences'
+const DEFAULT_TABLE_STYLE = {
+  stripe: false,
+  border: true
+}
 
 const props = defineProps({
   data: {
@@ -105,6 +111,35 @@ const props = defineProps({
 const emit = defineEmits(['sort-change', 'checkbox-change', 'checkbox-all', 'row-click'])
 
 const tableRef = ref(null)
+const tableStyle = ref({ ...DEFAULT_TABLE_STYLE })
+
+const applyTableStyle = (style) => {
+  tableStyle.value = {
+    stripe: style?.stripe === true,
+    border: style?.border !== false
+  }
+}
+
+const loadTableStyle = () => {
+  try {
+    const raw = window.localStorage.getItem(TABLE_STYLE_STORAGE_KEY)
+    if (!raw) {
+      applyTableStyle(DEFAULT_TABLE_STYLE)
+      return
+    }
+    applyTableStyle(JSON.parse(raw))
+  } catch {
+    applyTableStyle(DEFAULT_TABLE_STYLE)
+  }
+}
+
+const handleTableStyleChange = (event) => {
+  if (event?.detail) {
+    applyTableStyle(event.detail)
+    return
+  }
+  loadTableStyle()
+}
 
 function isOperationColumn(col) {
   return (
@@ -162,6 +197,15 @@ const handleCheckboxAll = (params) => {
 const handleCardClick = (row) => {
   emit('row-click', row)
 }
+
+onMounted(() => {
+  loadTableStyle()
+  window.addEventListener('table-style-change', handleTableStyleChange)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('table-style-change', handleTableStyleChange)
+})
 
 defineExpose({
   get tableRef() {

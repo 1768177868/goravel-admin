@@ -45,6 +45,7 @@
         :on-refresh="handleRefresh"
         fullscreen-target=".list-page"
         :show-column-setting-btn="false"
+        :show-table-style="false"
         :visible-columns="visibleColumns"
         :all-columns="allTableColumns"
         :default-visible-columns="defaultVisibleColumns"
