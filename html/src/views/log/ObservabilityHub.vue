@@ -386,7 +386,11 @@ const tabAccess = reactive({
   trace: hasAnyPermission(['observability.trace']),
   audit: hasAnyPermission(['observability.audit_timeline']),
   slowSql: hasAnyPermission(['observability.slow_sql_top']),
-  apiPerformance: hasAnyPermission(['observability.api_performance_overview', 'observability.api_performance']),
+  apiPerformance: hasAnyPermission([
+    'observability.api_performance_overview',
+    'observability.api_performance_traces',
+    'observability.api_performance'
+  ]),
   pprof: !!(userStore.config?.isDeveloperAdmin && userStore.config?.pprofEnabled)
 })
 
