@@ -58,6 +58,8 @@ func (r *MenuController) applyMenuTreeFilters(ctx http.Context, menus []models.M
 	adminID := r.extractAdminID(ctx)
 	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 	isDeveloper := r.isDeveloperAdmin(adminID, developerIDsStr)
+	appEnv := str.Of(facades.Config().GetString("app.env", "production")).Lower().Trim().String()
+	isLocalOrDevelopment := appEnv == "local" || appEnv == "development"
 
 	monitorHidden := facades.Config().GetString("admin.monitor_hidden", "")
 	if monitorHidden != "" && monitorHidden != "0" {
@@ -65,7 +67,7 @@ func (r *MenuController) applyMenuTreeFilters(ctx http.Context, menus []models.M
 			menus = r.filterMonitorMenu(menus)
 		}
 	}
-	if !facades.Config().GetBool("app.enable_dev_tool") && !isDeveloper {
+	if !isLocalOrDevelopment {
 		menus = r.filterDevMenu(menus)
 	}
 	return menus

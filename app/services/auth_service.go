@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -324,17 +325,34 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 		}
 	}
 
-	if !facades.Config().GetBool("app.enable_dev_tool") {
-		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
-		if !s.isDeveloperAdmin(admin.ID, developerIDsStr) {
-			var filteredMenus []models.Menu
+	appEnv := strings.ToLower(strings.TrimSpace(facades.Config().GetString("app.env", "production")))
+	isLocalOrDevelopment := appEnv == "local" || appEnv == "development"
+	if !isLocalOrDevelopment {
+		hiddenIDs := make(map[uint]bool)
+		for _, menu := range menus {
+			slug := strings.ToLower(strings.TrimSpace(menu.Slug))
+			if slug == "dev" || slug == "code-generator" || slug == "form_demo" {
+				hiddenIDs[menu.ID] = true
+			}
+		}
+		changed := true
+		for changed {
+			changed = false
 			for _, menu := range menus {
-				if menu.Slug != "dev" {
-					filteredMenus = append(filteredMenus, menu)
+				if hiddenIDs[menu.ParentID] && !hiddenIDs[menu.ID] {
+					hiddenIDs[menu.ID] = true
+					changed = true
 				}
 			}
-			menus = filteredMenus
 		}
+
+		var filteredMenus []models.Menu
+		for _, menu := range menus {
+			if !hiddenIDs[menu.ID] {
+				filteredMenus = append(filteredMenus, menu)
+			}
+		}
+		menus = filteredMenus
 	}
 
 	return &admin, permissions, menus, nil
