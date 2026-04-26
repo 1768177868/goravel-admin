@@ -1367,3 +1367,40 @@ curl -X POST "http://localhost:3000/api/admin/guestbooks/1/reply" \
 
 
 按照这个文档的步骤，你可以快速开发其他类似的 CRUD 模块。
+
+---
+
+## 新增模块时：操作标题维护清单（操作日志）
+
+当你新增后台模块或接口时，如果希望在“操作日志”里看到正确的操作标题（可检索、可翻译），请同步维护下面几个位置：
+
+1. **权限种子（首选来源）**
+   - 文件：`database/seeders/permission_seeder.go`
+   - 要求：为接口添加 `Slug + Method + Path`，例如 `xxx.update`。
+   - 说明：操作日志标题优先使用权限标识（slug）。
+
+2. **后端标题兜底映射**
+   - 文件：`app/utils/operation_title.go`
+   - 函数：`generateDefaultTitle(method, path)`
+   - 适用：当权限中间件未命中 slug 或历史数据场景，需按路径生成默认标题时。
+
+3. **前端多语言（操作标题显示）**
+   - 文件：
+     - `html/src/i18n/locales/zh-CN.json`
+     - `html/src/i18n/locales/en-US.json`
+   - 位置：`permission.*` 命名空间
+   - 要求：为新增 slug 增加翻译，例如 `permission.xxx.update`。
+
+4. **操作日志标题搜索下拉（推荐）**
+   - 文件：`html/src/views/log/OperationLogList.vue`
+   - 位置：
+     - `defaultTitleSlugs`（预置可选项）
+     - `getOperationTitle()` 中的 `legacyTitleMap`（历史键兼容时）
+
+### 建议规则
+
+- 优先保证标题来自**权限 slug**，`operation_title.go` 仅作为兜底。
+- 新增接口后，至少验证三处：
+  1) 操作日志列表标题显示正确；
+  2) 标题下拉可搜到并已翻译；
+  3) 使用标题筛选可命中对应日志。

@@ -48,6 +48,8 @@ func GetOperationTitleFromContext(ctx http.Context) string {
 
 // generateDefaultTitle 根据方法和路径生成默认操作标题
 func generateDefaultTitle(method, path string) string {
+	method = strings.ToUpper(strings.TrimSpace(method))
+	path = strings.TrimSpace(path)
 	pathStr := str.Of(path)
 
 	// 分片上传相关（与权限配置中的 slug 保持一致）
@@ -82,14 +84,17 @@ func generateDefaultTitle(method, path string) string {
 	}
 
 	// pprof 相关操作（观测采样）
+	if pathStr.Contains("/observability/pprof/status") && method == "GET" {
+		return "observability.pprof_status"
+	}
 	if pathStr.Contains("/observability/pprof/verify") && method == "POST" {
-		return "pprof.verify"
+		return "observability.pprof_verify"
 	}
 	if pathStr.Contains("/observability/pprof/cpu-hotspots") && method == "POST" {
-		return "pprof.cpu_hotspots"
+		return "observability.pprof_cpu_hotspots"
 	}
 	if pathStr.Contains("/observability/pprof/memory-hotspots") && method == "POST" {
-		return "pprof.memory_hotspots"
+		return "observability.pprof_memory_hotspots"
 	}
 
 	// 订单导入

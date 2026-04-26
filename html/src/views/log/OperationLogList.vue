@@ -247,7 +247,21 @@ const defaultTitleSlugs = [
   'system_log.clean',
   // 个人中心
   'profile.update',
-  'password.update'
+  'password.update',
+  // 在线管理员
+  'online_admin.kick_out',
+  'online_admin.batch_kick_out',
+  // 日志与观测
+  'observability.trace',
+  'observability.slow_sql_top',
+  'observability.audit_timeline',
+  'observability.queue_dashboard',
+  'observability.api_performance_overview',
+  'observability.api_performance_traces',
+  'observability.pprof_status',
+  'observability.pprof_verify',
+  'observability.pprof_cpu_hotspots',
+  'observability.pprof_memory_hotspots'
 ]
 
 const titleOptions = ref([])
@@ -272,7 +286,7 @@ const initialSearchForm = {
   end_time: ''
 }
 
-// 转换操作日志数据（PascalCase -> snake_case）
+// 转换操作日志数据（兼容当前后端返回结构）
 const transformOperationLogData = (log) => {
   let params = null
   try {
@@ -280,13 +294,11 @@ const transformOperationLogData = (log) => {
       params = typeof log.Request === 'string' ? JSON.parse(log.Request) : log.Request
     } else if (log.request) {
       params = typeof log.request === 'string' ? JSON.parse(log.request) : log.request
-    } else if (log.Params) {
-      params = typeof log.Params === 'string' ? JSON.parse(log.Params) : log.Params
     } else if (log.params) {
       params = typeof log.params === 'string' ? JSON.parse(log.params) : log.params
     }
   } catch (e) {
-    params = log.Request || log.request || log.Params || log.params || null
+    params = log.Request || log.request || log.params || null
   }
   
   let changes = null
@@ -300,21 +312,19 @@ const transformOperationLogData = (log) => {
   }
 
   return {
-    id: log.ID || log.id,
-    admin: log.Admin ? {
-      username: log.Admin.Username || log.Admin.username || ''
-    } : (log.admin ? {
-      username: log.admin.username || ''
-    } : null),
-    method: log.Method || log.method || '',
-    path: log.Path || log.path || '',
-    title: log.Title || log.title || '',
-    ip: log.IP || log.ip || '',
-    status_code: log.Status || log.status || log.StatusCode || log.status_code || 0,
-    created_at: log.CreatedAt || log.created_at || '',
+    id: log.id ?? log.ID,
+    admin: log.admin || log.Admin ? {
+      username: (log.admin || log.Admin)?.username || (log.admin || log.Admin)?.Username || ''
+    } : null,
+    method: log.method || log.Method || '',
+    path: log.path || log.Path || '',
+    title: log.title || log.Title || '',
+    ip: log.ip || log.IP || '',
+    status_code: log.status_code ?? log.StatusCode ?? log.status ?? log.Status ?? 0,
+    created_at: log.created_at || log.CreatedAt || '',
     params: params,
-    request: log.Request || log.request || null,
-    response: log.Response || log.response || null,
+    request: log.request || log.Request || null,
+    response: log.response || log.Response || null,
     changes: changes
   }
 }
@@ -641,9 +651,19 @@ const convertPluralToSingular = (word) => {
 const getOperationTitle = (titleKey) => {
   if (!titleKey) return '-'
 
+  // 兼容历史 pprof.* 标题，统一映射到 permission 命名空间里的 observability.* 键
+  const legacyTitleMap = {
+    'pprof.verify': 'observability.pprof_verify',
+    'pprof.cpu_hotspots': 'observability.pprof_cpu_hotspots',
+    'pprof.memory_hotspots': 'observability.pprof_memory_hotspots',
+    'online-admin.kick-out': 'online_admin.kick_out',
+    'online-admin.batch-kick-out': 'online_admin.batch_kick_out'
+  }
+  const normalizedTitleKey = legacyTitleMap[titleKey] || titleKey
+
   // 0. 先尝试将复数形式转换为单数形式
   // 如果包含点号，说明是 module.action 格式，需要转换 module 部分
-  let slug = titleKey
+  let slug = normalizedTitleKey
   if (slug.includes('.')) {
     const parts = slug.split('.')
     if (parts.length >= 2) {
@@ -673,22 +693,22 @@ const getOperationTitle = (titleKey) => {
   }
 
   // 2. 兼容旧的 operation.xxx key（如果还有残留数据）
-  if (titleKey.startsWith('operation.')) {
-    const translated = t(titleKey)
-    if (translated !== titleKey) {
+  if (normalizedTitleKey.startsWith('operation.')) {
+    const translated = t(normalizedTitleKey)
+    if (translated !== normalizedTitleKey) {
       return translated
     }
   }
 
   // 3. 如果转换后的 slug 和原始 titleKey 不同，再尝试用原始值查找一次（兼容旧数据）
-  if (slug !== titleKey) {
-    const originalSlugKey = `permission.${titleKey}`
+  if (slug !== normalizedTitleKey) {
+    const originalSlugKey = `permission.${normalizedTitleKey}`
     if (typeof te === 'function' && te(originalSlugKey)) {
       return t(originalSlugKey)
     }
     const originalMessages = typeof tm === 'function' ? tm('permission') : null
-    if (originalMessages && Object.prototype.hasOwnProperty.call(originalMessages, titleKey)) {
-      const value = originalMessages[titleKey]
+    if (originalMessages && Object.prototype.hasOwnProperty.call(originalMessages, normalizedTitleKey)) {
+      const value = originalMessages[normalizedTitleKey]
       if (typeof value === 'string') {
         return value
       }
@@ -696,7 +716,7 @@ const getOperationTitle = (titleKey) => {
   }
 
   // 4. 找不到翻译就原样返回
-  return titleKey
+  return normalizedTitleKey
 }
 
 // 表格列配置（使用 vxe-table columns）
@@ -718,7 +738,8 @@ const allTableColumns = computed(() => [
     title: t('log.admin'),
     slot: 'admin',
     sortable: false,
-    key: 'admin'
+    key: 'admin',
+    width: 120,
   },
   {
     field: 'title',
@@ -748,23 +769,23 @@ const allTableColumns = computed(() => [
     sortable: false,
     key: 'ip'
   },
-  {
-    field: 'status_code',
-    title: t('log.status'),
-    width: 100,
-    sortable: false,
-    formatter: ({ row }) => {
-      const v = row.status_code
-      if (v === 1 || v === '1') {
-        return t('log.success')
-      }
-      if (v === 0 || v === '0') {
-        return t('log.failed')
-      }
-      return v ?? '-'
-    },
-    key: 'status_code'
-  },
+  // {
+  //   field: 'status_code',
+  //   title: t('log.status'),
+  //   width: 100,
+  //   sortable: false,
+  //   formatter: ({ row }) => {
+  //     const v = row.status_code
+  //     if (v === 1 || v === '1') {
+  //       return t('log.success')
+  //     }
+  //     if (v === 0 || v === '0') {
+  //       return t('log.failed')
+  //     }
+  //     return v ?? '-'
+  //   },
+  //   key: 'status_code'
+  // },
   {
     field: 'request',
     title: t('log.request_params'),
