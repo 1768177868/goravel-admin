@@ -89,6 +89,46 @@ type AIGeneratedConfig struct {
 	Fields     []FieldConfig `json:"fields"`
 }
 
+func buildAISystemTimestampField(name, label string) FieldConfig {
+	return FieldConfig{
+		Name:         name,
+		Label:        label,
+		GoType:       "time.Time",
+		DBType:       "datetime",
+		Required:     false,
+		Searchable:   true,
+		Sortable:     false,
+		SearchType:   "=",
+		SearchUIType: "datetimerange",
+		ShowInList:   true,
+		ShowInForm:   false,
+		ShowInDetail: true,
+		FormType:     "datetime-picker",
+	}
+}
+
+func ensureAISystemFields(fields []FieldConfig) []FieldConfig {
+	hasCreatedAt := false
+	hasUpdatedAt := false
+	for _, field := range fields {
+		if field.Name == "created_at" {
+			hasCreatedAt = true
+		}
+		if field.Name == "updated_at" {
+			hasUpdatedAt = true
+		}
+	}
+
+	if !hasCreatedAt {
+		fields = append(fields, buildAISystemTimestampField("created_at", "创建时间"))
+	}
+	if !hasUpdatedAt {
+		fields = append(fields, buildAISystemTimestampField("updated_at", "更新时间"))
+	}
+
+	return fields
+}
+
 type CodeGeneratorServiceImpl struct{}
 
 //go:embed templates/*
@@ -2012,6 +2052,7 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 	if len(config.Fields) == 0 {
 		return nil, fmt.Errorf("fields cannot be empty")
 	}
+	config.Fields = ensureAISystemFields(config.Fields)
 
 	// 为字段设置默认值
 	fieldTypes := s.GetFieldTypes()
@@ -2072,6 +2113,13 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 		}
 		if !field.ShowInDetail {
 			field.ShowInDetail = true
+		}
+		// 系统时间字段在表单中默认不可编辑。
+		if field.Name == "created_at" || field.Name == "updated_at" {
+			field.ShowInForm = false
+			if field.SearchUIType == "" {
+				field.SearchUIType = "datetimerange"
+			}
 		}
 		// 确保关联表对象结构完整
 		if field.Relation != nil {
