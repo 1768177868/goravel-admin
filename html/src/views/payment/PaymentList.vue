@@ -29,7 +29,7 @@
         </template>
       </SearchForm>
 
-      <TableToolbar :on-refresh="loadData" />
+      <TableToolbar :on-refresh="loadData" :show-column-setting-btn="false" :show-table-style="false" />
 
       <VxeTable
         ref="tableRef"

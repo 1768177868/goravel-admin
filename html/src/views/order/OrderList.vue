@@ -48,7 +48,11 @@
         </template>
       </SearchForm>
 
-      <TableToolbar :on-refresh="loadData" />
+      <TableToolbar
+        :on-refresh="loadData"
+        :show-table-style="false"
+        :show-column-setting-btn="false"
+      />
 
       <!-- vxe-table with expand row -->
       <vxe-table
