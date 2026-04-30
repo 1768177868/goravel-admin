@@ -205,6 +205,9 @@ const { t, te, tm } = useI18n()
 const isDark = computed(() => appStore.darkMode)
 const textColor = computed(() => isDark.value ? '#e5eaf3' : '#303133')
 const secondaryTextColor = computed(() => isDark.value ? '#a3a6ad' : '#909399')
+const tooltipTextColor = computed(() => isDark.value ? '#f5f7fa' : '#303133')
+const tooltipBackgroundColor = computed(() => isDark.value ? 'rgba(22, 24, 29, 0.95)' : '#ffffff')
+const tooltipBorderColor = computed(() => isDark.value ? '#4c4d4f' : '#dcdfe6')
 const primaryColor = computed(() => {
   const preset = THEME_COLORS.find((t) => t.key === appStore.themeColor) || THEME_COLORS[0]
   return preset.color
@@ -575,6 +578,15 @@ const formatNumber = (num) => {
   return num.toLocaleString()
 }
 
+const getTooltipStyle = () => ({
+  backgroundColor: tooltipBackgroundColor.value,
+  borderColor: tooltipBorderColor.value,
+  borderWidth: 1,
+  textStyle: {
+    color: tooltipTextColor.value
+  }
+})
+
 // 初始化访问趋势图表
 const initVisitTrendChart = () => {
   if (!visitTrendChart.value) return
@@ -602,9 +614,7 @@ const initVisitTrendChart = () => {
       axisPointer: {
         type: 'cross'
       },
-      textStyle: {
-        color: textColor.value
-      }
+      ...getTooltipStyle()
     },
     legend: {
       data: ['访问量', '用户数'],
@@ -703,9 +713,7 @@ const initAccessSourceChart = () => {
     tooltip: {
       trigger: 'item',
       formatter: '{a} <br/>{b}: {c} ({d}%)',
-      textStyle: {
-        color: textColor.value
-      }
+      ...getTooltipStyle()
     },
     legend: {
       orient: 'vertical',
@@ -765,9 +773,7 @@ const initDeviceChart = () => {
     tooltip: {
       trigger: 'item',
       formatter: '{a} <br/>{b}: {c}% ({d}%)',
-      textStyle: {
-        color: textColor.value
-      }
+      ...getTooltipStyle()
     },
     legend: {
       bottom: '5%',
@@ -820,9 +826,7 @@ const initRegionChart = () => {
       axisPointer: {
         type: 'shadow'
       },
-      textStyle: {
-        color: textColor.value
-      }
+      ...getTooltipStyle()
     },
     grid: {
       left: '3%',
