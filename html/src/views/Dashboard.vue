@@ -2,19 +2,39 @@
   <div class="dashboard">
     <!-- 页面头部：刷新按钮 -->
     <div class="dashboard-header">
-      <h2>{{ $t('menu.dashboard') }}</h2>
-      <el-button 
-        :icon="RefreshIcon" 
-        :loading="refreshing"
-        :disabled="refreshing"
-        @click="handleRefresh"
-      >
-        {{ $t('tabs.refresh') || '刷新' }}
-      </el-button>
+      <div>
+        <h2>{{ $t('menu.dashboard') }}</h2>
+        <div class="dashboard-subtitle">
+          数据口径：已支付订单 / 独立访客（UV） · 最近更新 {{ lastUpdatedAt }}
+        </div>
+      </div>
+      <div class="header-actions">
+        <el-select v-model="selectedPeriod" size="small" class="header-select">
+          <el-option label="今日" value="today" />
+          <el-option label="近7天" value="week" />
+          <el-option label="近30天" value="month" />
+        </el-select>
+        <el-select v-model="selectedChannel" size="small" class="header-select">
+          <el-option label="全渠道" value="all" />
+          <el-option label="自然流量" value="organic" />
+          <el-option label="广告投放" value="ads" />
+          <el-option label="私域流量" value="private" />
+        </el-select>
+        <el-button 
+          :icon="RefreshIcon" 
+          :loading="refreshing"
+          :disabled="refreshing"
+          @click="handleRefresh"
+        >
+          {{ $t('tabs.refresh') || '刷新' }}
+        </el-button>
+      </div>
     </div>
     
+    <el-skeleton v-if="dashboardLoading" :rows="5" animated class="dashboard-skeleton" />
+
     <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stats-row">
+    <el-row v-else :gutter="20" class="stats-row">
       <el-col :xs="12" :sm="12" :md="6" :lg="6" v-for="stat in stats" :key="stat.title">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
@@ -33,6 +53,52 @@
               </div>
             </div>
           </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="overview-row">
+      <el-col :xs="24" :sm="24" :md="16" :lg="16">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>经营概览</span>
+              <el-tag size="small" type="info">{{ periodText }}</el-tag>
+            </div>
+          </template>
+          <div v-if="kpiOverview.length > 0" class="kpi-grid">
+            <div class="kpi-item" v-for="kpi in kpiOverview" :key="kpi.label">
+              <div class="kpi-label">{{ kpi.label }}</div>
+              <div class="kpi-value">{{ kpi.value }}</div>
+              <div class="kpi-foot">
+                <span>{{ kpi.subtitle }}</span>
+                <span :class="kpi.change >= 0 ? 'trend-up' : 'trend-down'">
+                  {{ kpi.change >= 0 ? '+' : '' }}{{ kpi.change }}%
+                </span>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else description="暂无经营数据" :image-size="74" />
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="24" :md="8" :lg="8">
+        <el-card shadow="hover" class="warn-card">
+          <template #header>
+            <div class="card-header">
+              <span>运营预警</span>
+              <el-tag size="small" type="danger">需关注</el-tag>
+            </div>
+          </template>
+          <div v-if="dashboardWarnings.length > 0" class="warning-list">
+            <div class="warning-item" v-for="warning in dashboardWarnings" :key="warning.title">
+              <div class="warning-title">
+                <el-tag :type="warning.type" size="small">{{ warning.level }}</el-tag>
+                <span>{{ warning.title }}</span>
+              </div>
+              <div class="warning-desc">{{ warning.desc }}</div>
+            </div>
+          </div>
+          <el-empty v-else description="暂无预警信息" :image-size="74" />
         </el-card>
       </el-col>
     </el-row>
@@ -61,6 +127,54 @@
             </div>
           </template>
           <div ref="accessSourceChart" style="height: 320px;"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="overview-row">
+      <el-col :xs="24" :sm="24" :md="12" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>渠道转化漏斗</span>
+              <el-tag size="small">{{ periodText }}</el-tag>
+            </div>
+          </template>
+          <div v-if="channelFunnel.length > 0" class="funnel-list">
+            <div class="funnel-row" v-for="item in channelFunnel" :key="item.stage">
+              <div class="funnel-header">
+                <span>{{ item.stage }}</span>
+                <span>{{ formatNumber(item.value) }} / {{ item.rate }}%</span>
+              </div>
+              <el-progress
+                :percentage="item.rate"
+                :stroke-width="10"
+                :color="item.color"
+                :show-text="false"
+              />
+            </div>
+          </div>
+          <el-empty v-else description="暂无漏斗数据" :image-size="74" />
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="24" :md="12" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>今日待办</span>
+              <el-tag size="small" type="warning">{{ pendingTasks.length }}项</el-tag>
+            </div>
+          </template>
+          <div v-if="pendingTasks.length > 0" class="todo-list">
+            <div class="todo-item" v-for="task in pendingTasks" :key="task.title">
+              <div class="todo-main">
+                <div class="todo-title">{{ task.title }}</div>
+                <div class="todo-meta">{{ task.owner }} · 截止 {{ task.deadline }}</div>
+              </div>
+              <el-tag :type="task.type" size="small">{{ task.priority }}</el-tag>
+            </div>
+          </div>
+          <el-empty v-else description="暂无待办事项" :image-size="74" />
         </el-card>
       </el-col>
     </el-row>
@@ -102,7 +216,7 @@
               <el-button type="primary" text size="small" @click="handleViewAllActivities">查看全部</el-button>
             </div>
           </template>
-          <el-table :data="recentActivities" style="width: 100%" :show-header="false">
+          <el-table v-if="recentActivities.length > 0" :data="recentActivities" style="width: 100%" :show-header="false">
             <el-table-column width="50">
               <template #default="{ row }">
                 <el-avatar :size="36" :style="{ backgroundColor: row.avatarColor }">
@@ -127,6 +241,7 @@
               </template>
             </el-table-column>
           </el-table>
+          <el-empty v-else description="暂无最近活动" :image-size="74" />
         </el-card>
       </el-col>
       
@@ -292,6 +407,68 @@ const regionData = ref([])
 
 // 刷新状态
 const refreshing = ref(false)
+const dashboardLoading = ref(true)
+const selectedPeriod = ref('week')
+const selectedChannel = ref('all')
+const lastUpdatedAt = ref('')
+const kpiOverview = ref([])
+const dashboardWarnings = ref([])
+const channelFunnel = ref([])
+const pendingTasks = ref([])
+const periodText = computed(() => {
+  if (selectedPeriod.value === 'today') return '今日'
+  if (selectedPeriod.value === 'month') return '近30天'
+  return '近7天'
+})
+
+const updateLastUpdatedAt = () => {
+  lastUpdatedAt.value = new Date().toLocaleString('zh-CN', { hour12: false })
+}
+
+const buildMockDashboardMeta = () => {
+  const scale = selectedPeriod.value === 'today' ? 0.35 : selectedPeriod.value === 'month' ? 4.2 : 1
+  const channelFactorMap = {
+    all: 1,
+    organic: 0.46,
+    ads: 0.34,
+    private: 0.2
+  }
+  const factor = channelFactorMap[selectedChannel.value] || 1
+  const exposure = Math.round(42650 * scale * factor)
+  const click = Math.round(exposure * 0.276)
+  const addCart = Math.round(click * 0.397)
+  const order = Math.round(addCart * 0.325)
+  const pay = Math.round(order * 0.846)
+
+  kpiOverview.value = [
+    { label: '支付订单', value: formatNumber(pay), subtitle: `${periodText.value}转化订单数`, change: 8.6 },
+    { label: 'GMV(元)', value: formatNumber(pay * 305), subtitle: `${periodText.value}交易总额`, change: 12.4 },
+    { label: '客单价(元)', value: `${Math.round(305 * (1 + (factor - 1) * 0.2))}`, subtitle: '平均每单金额', change: -2.1 },
+    { label: '退款率', value: `${(1.26 + (1 - factor) * 0.3).toFixed(2)}%`, subtitle: '较上周期', change: -0.4 }
+  ]
+
+  dashboardWarnings.value = [
+    { level: '高', title: '支付成功率波动', desc: `${periodText.value}支付成功率 92.4%，较基线低 1.8%。`, type: 'danger' },
+    { level: '中', title: '库存预警 SKU 12 个', desc: '建议优先补货近7天转化率前20的商品。', type: 'warning' },
+    { level: '低', title: '待审核内容 8 条', desc: '内容审核队列未超时，建议在晚间批量处理。', type: 'info' }
+  ]
+
+  channelFunnel.value = [
+    { stage: '曝光', value: exposure, rate: 100, color: '#409EFF' },
+    { stage: '点击', value: click, rate: Number(((click / exposure) * 100).toFixed(1)), color: '#67C23A' },
+    { stage: '加购', value: addCart, rate: Number(((addCart / exposure) * 100).toFixed(1)), color: '#E6A23C' },
+    { stage: '下单', value: order, rate: Number(((order / exposure) * 100).toFixed(1)), color: '#F56C6C' },
+    { stage: '支付', value: pay, rate: Number(((pay / exposure) * 100).toFixed(1)), color: '#9B59B6' }
+  ]
+
+  pendingTasks.value = [
+    { title: '处理支付异常订单', owner: '财务组', deadline: '20:30', priority: '紧急', type: 'danger' },
+    { title: '审核高优促销活动', owner: '运营组', deadline: '21:00', priority: '高', type: 'warning' },
+    { title: '复盘昨日转化漏斗', owner: '增长组', deadline: '22:00', priority: '中', type: 'info' },
+    { title: '更新首页 Banner 素材', owner: '设计组', deadline: '23:00', priority: '低', type: 'success' }
+  ]
+  updateLastUpdatedAt()
+}
 
 // 更新统计数据
 const updateStats = (countData) => {
@@ -401,8 +578,10 @@ const handleRefresh = async () => {
   if (refreshing.value) return
   
   refreshing.value = true
+  dashboardLoading.value = true
   try {
     await loadDashboardData()
+    buildMockDashboardMeta()
   } finally {
     refreshing.value = false
   }
@@ -445,6 +624,11 @@ const loadDashboardData = async () => {
   } catch (error) {
     logger.error('Failed to load dashboard data:', error)
     ErrorHandler.handle(error, { showNotification: true })
+  } finally {
+    if (kpiOverview.value.length === 0) {
+      buildMockDashboardMeta()
+    }
+    dashboardLoading.value = false
   }
 }
 
@@ -940,8 +1124,12 @@ watch(isDark, () => {
     initRegionChart()
   }
 })
+watch([selectedPeriod, selectedChannel], () => {
+  buildMockDashboardMeta()
+})
 
 onMounted(() => {
+  buildMockDashboardMeta()
   initCharts()
   // 初始加载数据
   loadDashboardData()
@@ -967,6 +1155,7 @@ onBeforeUnmount(() => {
   align-items: center;
   margin-bottom: var(--space-md);
   padding: 0 4px;
+  gap: 12px;
 }
 
 .dashboard-header h2 {
@@ -976,7 +1165,27 @@ onBeforeUnmount(() => {
   color: var(--text-color-primary, #303133);
 }
 
+.dashboard-subtitle {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-color-secondary, #909399);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-select {
+  width: 128px;
+}
+
 .stats-row {
+  margin-bottom: var(--space-md);
+}
+
+.dashboard-skeleton {
   margin-bottom: var(--space-md);
 }
 
@@ -1047,6 +1256,10 @@ onBeforeUnmount(() => {
   margin-bottom: var(--space-md);
 }
 
+.overview-row {
+  margin-bottom: var(--space-md);
+}
+
 .bottom-row {
   margin-top: var(--space-md);
 }
@@ -1102,8 +1315,133 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpi-item {
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--el-bg-color-page);
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+}
+
+.kpi-value {
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-color-primary);
+}
+
+.kpi-foot {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+}
+
+.warn-card {
+  height: 100%;
+}
+
+.warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.warning-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+}
+
+.warning-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color-primary);
+}
+
+.warning-desc {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+}
+
+.funnel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.funnel-header {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-color-regular);
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-bg-color-page);
+}
+
+.todo-main {
+  min-width: 0;
+}
+
+.todo-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color-primary);
+}
+
+.todo-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .header-select {
+    width: calc(50% - 6px);
+  }
+
   .stat-value {
     font-size: 24px;
   }
@@ -1112,6 +1450,10 @@ onBeforeUnmount(() => {
     width: 56px;
     height: 56px;
     margin-right: 12px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
