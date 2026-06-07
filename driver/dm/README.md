@@ -119,35 +119,27 @@ go test -tags dm ./driver/dm/... -run TestDMCrudAndTransaction -v
 
 达梦驱动**通常不在**公网 `proxy.golang.org`，需要本地解压官方提供的 Go 驱动源码，并用 **`replace`** 指到该目录。
 
-### 在项目中声明 `dm` 依赖（推荐流程）
+### 在本地声明 `dm` 依赖（推荐流程）
+
+项目默认不提交达梦官方驱动的 `require dm ...` 和 `replace dm => ...`，因为官方驱动通常来自本机安装目录或内网介质，提交绝对路径会破坏其他开发机和 CI 的可移植性。
 
 1. 从达梦安装介质解压得到驱动目录（内含 `go.mod`、模块名一般为 `dm`），例如 `.../drivers/go/dm`。
-2. 在项目根目录执行（二选一即可）：
+2. 在本机创建 `go.work` 管理本地覆盖。`go.work` 已加入 `.gitignore`，不要提交。
 
-   **方式 A — 先拉 require，再 replace（与当前仓库一致）**
-
-   ```bash
-   go get dm
-   ```
-
-   随后在 `go.mod` 中增加 **`replace dm => <本地驱动目录>`**（或执行 `go mod edit -replace=dm=<路径>`），再 `go mod tidy`。仅 `go get` 而不 `replace` 时，多数环境仍无法得到真实源码。
-
-   若公网无法解析 `dm`，改用方式 B。
-
-   **方式 B — 直接写 `go.mod`**
-
-   在 `go.mod` 中增加占位版本（满足 `replace` 要求即可），例如：
-
-   ```go
-   require dm v0.0.0-00010101000000-000000000000
-
-   replace dm => /绝对或相对路径/达梦驱动/dm
-   ```
-
-   然后执行：
+   Windows 示例：
 
    ```bash
-   go mod tidy
+   go work init .
+   go work use E:/dmdbms/drivers/go/dm
+   go work edit -replace=dm=E:/dmdbms/drivers/go/dm
+   ```
+
+   Linux/macOS 示例：
+
+   ```bash
+   go work init .
+   go work use /opt/dmdbms/drivers/go/dm
+   go work edit -replace=dm=/opt/dmdbms/drivers/go/dm
    ```
 
 3. 启用 DM 时再编译/测试：
@@ -156,18 +148,22 @@ go test -tags dm ./driver/dm/... -run TestDMCrudAndTransaction -v
    go build -tags dm ./...
    ```
 
-`replace` 路径示例：
+如果你确实需要临时改 `go.mod` 验证，请只在本地使用，不要提交：
 
 ```go
-replace dm => ../dm8/drivers/go/dm
+require dm v0.0.0-00010101000000-000000000000
+
+replace dm => /绝对或相对路径/达梦驱动/dm
 ```
 
 ### 项目已验证示例（Windows）
 
-如果达梦安装在 `E:/dmdbms`，可按以下方式配置并验证：
+如果达梦安装在 `E:/dmdbms`，可按以下方式配置 `go.work` 并验证：
 
-```go
-replace dm => E:/dmdbms/drivers/go/dm
+```bash
+go work init .
+go work use E:/dmdbms/drivers/go/dm
+go work edit -replace=dm=E:/dmdbms/drivers/go/dm
 ```
 
 ```bash

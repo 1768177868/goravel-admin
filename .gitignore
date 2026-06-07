@@ -8,6 +8,8 @@ launch.json
 .env.staging
 .env.*.local
 .env.bak
+go.work
+go.work.sum
 goravel
 main
 *.exe

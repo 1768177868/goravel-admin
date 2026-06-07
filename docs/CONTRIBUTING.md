@@ -223,14 +223,20 @@ git checkout -b feature/your-feature-name
 ### 2. 开发和测试
 
 ```bash
+# 后端构建
+go build ./...
+
 # 后端测试
-go test ./tests/...
+go test -timeout=5m ./...
 
 # 前端测试
-cd html && npm run test:run
+(cd html && npm run test:run)
 
 # 类型检查
-cd html && npm run type-check
+(cd html && npm run type-check)
+
+# 前端构建
+(cd html && npm run build)
 ```
 
 ### 3. 提交代码
