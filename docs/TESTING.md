@@ -4,49 +4,80 @@
 
 ## 后端测试 (Go - Goravel)
 
-基于 [Goravel 测试框架](https://www.goravel.dev/zh_CN/testing/getting-started.html)，使用 `testify/suite` 组织测试。
+后端测试分为两类：
 
-### 目录结构
+- **快速测试**：默认质量门禁，只运行当前根模块内的包，不能依赖外部服务。
+- **集成测试**：需要 Kafka、RabbitMQ、NSQ、Redis Stream、达梦数据库等外部依赖，按需单独运行。
+
+### 当前实际结构
 
 ```
 tests/
-├── test_case.go           # 测试基类
-├── feature/               # 功能测试（集成测试）
-│   ├── main_test.go       # 测试入口
-│   ├── example_test.go
-│   └── ...
-├── unit/                  # 单元测试
-│   ├── main_test.go       # 测试入口
-│   ├── token_service_test.go
-│   ├── tree_service_test.go
-│   ├── ip_matcher_test.go
-│   └── pagination_test.go
-└── services/              # 服务层测试
-    └── main_test.go
+└── test_case.go           # Goravel 测试基类，目前尚未形成完整 feature/unit 套件
+
+app/http/helpers/
+└── time_converter_test.go # 当前根模块内的快速 Go 测试
+
+driver/
+├── kafka/queue_test.go       # 集成测试：需要本地 Kafka
+├── nsq/queue_test.go         # 集成测试：需要本地 nsqd
+├── rabbitmq/queue_test.go    # 集成测试：需要本地 RabbitMQ
+├── redisstream/queue_test.go # 驱动子模块测试，使用 miniredis
+└── dm/integration_test.go    # 集成测试：需要 -tags dm 和 DM_TEST_DSN
 ```
 
 ### 运行测试
 
 ```bash
-# 运行所有测试
-go test ./tests/...
+# 快速后端门禁（CI 默认使用）
+go test -v -timeout=2m ./...
 
-# 运行单元测试
-go test ./tests/unit/...
+# 仅编译根模块测试包，用于快速定位编译/初始化问题
+go test -run TestNonExistent -count=0 -v ./...
 
-# 运行功能测试
-go test ./tests/feature/...
+# 运行当前已有 helper 测试
+go test -v -timeout=30s ./app/http/helpers
 
-# 显示详细输出
-go test -v ./tests/...
-
-# 运行特定测试
-go test -v -run TestTokenService ./tests/unit/...
-
-# 生成覆盖率报告
-go test -coverprofile=coverage.out ./tests/...
+# 生成根模块覆盖率报告
+go test -timeout=2m -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out -o coverage.html
 ```
+
+### 集成测试（按需运行）
+
+`driver/*` 下的 Kafka、NSQ、RabbitMQ、Redis Stream 是独立 Go module，默认 `go test ./...` 不会进入这些目录。需要验证队列驱动时，进入对应目录单独运行：
+
+```bash
+(cd driver/redisstream && go test -v ./...)
+(cd driver/kafka && go test -v -timeout=2m ./...)     # 需要 127.0.0.1:9092
+(cd driver/nsq && go test -v -timeout=2m ./...)       # 需要 127.0.0.1:4150
+(cd driver/rabbitmq && go test -v -timeout=2m ./...)  # 需要 127.0.0.1:5672
+```
+
+达梦驱动集成测试需要本地官方驱动、`dm` build tag 和可访问的达梦实例：
+
+```bash
+set DM_TEST_DSN=dm://SYSDBA:SYSDBA@127.0.0.1:5236
+go test -tags dm ./driver/dm/... -run TestDMCrudAndTransaction -v
+```
+
+### 卡住问题排查顺序
+
+如果 `go test ./...` 变慢或无输出，按下面顺序缩小范围：
+
+```bash
+# 1. 只编译，不运行测试，判断是否是包初始化/编译问题
+go test -run TestNonExistent -count=0 -v ./...
+
+# 2. 分区检查
+go test -run TestNonExistent -count=0 -v ./app/...
+go test -run TestNonExistent -count=0 -v ./routes ./config ./bootstrap ./database/...
+
+# 3. 再运行真实快速测试
+go test -v -timeout=2m ./...
+```
+
+注意：不要把需要外部服务的集成测试加入默认快速门禁；它们应独立运行并设置明确超时。
 
 ### 创建测试
 
@@ -185,6 +216,7 @@ npm run test:coverage
 | `composables/__tests__/useCrud.test.js` | CRUD 操作 | 19 |
 | `utils/__tests__/validation.test.js` | 验证器函数 | 41 |
 | `utils/__tests__/storage.test.js` | Storage 工具 | 13 |
+| `utils/__tests__/markdown.test.js` | Markdown/HTML 净化 | 4 |
 
 ### 测试示例
 
