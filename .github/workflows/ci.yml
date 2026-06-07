@@ -64,7 +64,9 @@ jobs:
           cache-dependency-path: html/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci --include=optional
+          npm install --no-save @rollup/rollup-linux-x64-gnu
 
       - name: Run unit tests
         run: npm run test:run
