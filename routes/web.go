@@ -17,9 +17,12 @@ func Web() {
 	// 	})
 	// })
 
-	// Swagger
-	swaggerController := controllers.NewSwaggerController()
-	facades.Route().Get("/swagger/*any", swaggerController.Index)
+	// Swagger is disabled by default in production. Enable with SWAGGER_ENABLED=true
+	// only for controlled environments.
+	if facades.Config().GetBool("swagger.enabled", false) {
+		swaggerController := controllers.NewSwaggerController()
+		facades.Route().Get("/swagger/*any", swaggerController.Index)
+	}
 
 	// 健康检查
 	facades.Route().Get("/health", func(ctx http.Context) http.Response {
