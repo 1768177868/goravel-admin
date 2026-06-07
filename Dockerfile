@@ -22,7 +22,8 @@ COPY --from=builder /build/database/ /www/database/
 COPY --from=builder /build/public/ /www/public/
 COPY --from=builder /build/storage/ /www/storage/
 COPY --from=builder /build/resources/ /www/resources/
-COPY --from=builder /build/.env /www/.env
+# Runtime configuration must be injected by docker compose, Kubernetes secrets,
+# or environment variables. Do not bake .env into the image.
 
 # 复制启动脚本
 COPY docker-entrypoint.sh /docker-entrypoint.sh

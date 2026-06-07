@@ -22,6 +22,7 @@
  * ```
  */
 
+import createDOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { getApiBaseURL } from './env'
 
@@ -29,9 +30,70 @@ import { getApiBaseURL } from './env'
 marked.setOptions({
   breaks: true, // 支持 GitHub 风格的换行
   gfm: true, // 启用 GitHub 风格的 Markdown
-  sanitize: false, // 允许 HTML（因为我们会在显示时处理）
   silent: true // 静默模式，不抛出错误
 })
+
+const sanitizeOptions = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: ['iframe', 'object', 'embed', 'script', 'style'],
+  FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover']
+}
+
+const purifier = typeof window !== 'undefined'
+  ? createDOMPurify(window)
+  : createDOMPurify
+
+const fallbackForbiddenTags = new Set(sanitizeOptions.FORBID_TAGS)
+const dangerousUrlPattern = /^(?:javascript|data|vbscript):/i
+
+function fallbackSanitizeHtml(html) {
+  if (typeof document === 'undefined') {
+    return ''
+  }
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+
+  template.content.querySelectorAll('*').forEach((element) => {
+    if (fallbackForbiddenTags.has(element.tagName.toLowerCase())) {
+      element.remove()
+      return
+    }
+
+    Array.from(element.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase()
+      const value = attr.value.trim()
+
+      if (name.startsWith('on') || sanitizeOptions.FORBID_ATTR.includes(name)) {
+        element.removeAttribute(attr.name)
+        return
+      }
+
+      if (['href', 'src', 'xlink:href', 'action'].includes(name) && dangerousUrlPattern.test(value)) {
+        element.removeAttribute(attr.name)
+      }
+    })
+  })
+
+  return template.innerHTML
+}
+
+/**
+ * 净化即将用于 v-html 的内容，防止脚本、事件属性和危险标签进入 DOM。
+ * @param {string} html - HTML 字符串
+ * @returns {string} 净化后的 HTML
+ */
+export function sanitizeHtml(html) {
+  if (!html) return ''
+  if (purifier?.isSupported === false) {
+    return fallbackSanitizeHtml(html)
+  }
+  const sanitized = purifier.sanitize(html, sanitizeOptions)
+  if (sanitized === '' && String(html).trim() !== '') {
+    return fallbackSanitizeHtml(html)
+  }
+  return sanitized
+}
 
 /**
  * 判断内容是 HTML 还是 Markdown
@@ -97,7 +159,7 @@ export function markdownToHtml(markdown) {
   // 处理图片路径
   html = processImageUrls(html)
   
-  return html
+  return sanitizeHtml(html)
 }
 
 /**
@@ -115,8 +177,8 @@ export function renderContent(content, contentType = 'auto') {
   }
   
   if (type === 'html') {
-    // 直接处理 HTML 中的图片路径
-    return processImageUrls(content)
+    // 处理 HTML 中的图片路径后统一净化，再交给 v-html 渲染。
+    return sanitizeHtml(processImageUrls(content))
   } else {
     // 转换为 HTML 并处理图片路径
     return markdownToHtml(content)
@@ -166,7 +228,7 @@ export function extractTextFromMarkdown(content) {
   // 如果是 HTML，先提取文本
   if (content.includes('<')) {
     const temp = document.createElement('div')
-    temp.innerHTML = content
+    temp.innerHTML = sanitizeHtml(content)
     return temp.textContent || temp.innerText || ''
   }
   

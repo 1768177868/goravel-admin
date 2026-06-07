@@ -18,6 +18,7 @@
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.6.2",
+    "dompurify": "^3.4.8",
     "echarts": "^5.4.3",
     "element-plus": "^2.4.4",
     "lodash-es": "^4.17.22",
