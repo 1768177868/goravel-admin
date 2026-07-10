@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"strings"
 	"time"
 
@@ -83,7 +84,7 @@ const PaymentCountThreshold int64 = 100000
 
 // BuildPaymentQuery 构建支付记录分表查询（包含时间范围 + 通用筛选），供列表查询/导出复用
 func BuildPaymentQuery(tableName string, filters PaymentFilters) orm.Query {
-	query := facades.Orm().Query().Table(tableName).Where("deleted_at IS NULL")
+	query := appfacades.OrmQuery(context.Background()).Table(tableName).Where("deleted_at IS NULL")
 
 	// 时间范围
 	if !filters.StartTime.IsZero() {
@@ -114,17 +115,19 @@ func BuildPaymentQuery(tableName string, filters PaymentFilters) orm.Query {
 }
 
 type PaymentServiceImpl struct {
+	ctx                  context.Context
 	shardingService      ShardingService
 	shardingQueryService ShardingQueryService
 }
 
-func NewPaymentService() PaymentService {
+func NewPaymentService(ctx context.Context) PaymentService {
 	service := &PaymentServiceImpl{
-		shardingService: NewShardingService(),
+		ctx:             ctx,
+		shardingService: NewShardingService(ctx),
 	}
 
 	// 初始化分表查询服务
-	service.shardingQueryService = NewShardingQueryService(ShardingQueryConfig{
+	service.shardingQueryService = NewShardingQueryService(ctx, ShardingQueryConfig{
 		BaseTableName: "payments",
 		GetColumns: func() string {
 			return service.getPaymentTableColumns()
@@ -157,7 +160,7 @@ func NewPaymentService() PaymentService {
 // GetPaymentMethodByID 根据ID获取支付方式
 func (s *PaymentServiceImpl) GetPaymentMethodByID(id uint) (*models.PaymentMethod, error) {
 	var paymentMethod models.PaymentMethod
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&paymentMethod); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&paymentMethod); err != nil {
 		return nil, apperrors.ErrPaymentMethodNotFound.WithError(err)
 	}
 	return &paymentMethod, nil
@@ -166,7 +169,7 @@ func (s *PaymentServiceImpl) GetPaymentMethodByID(id uint) (*models.PaymentMetho
 // GetPaymentMethodByCode 根据代码获取支付方式
 func (s *PaymentServiceImpl) GetPaymentMethodByCode(code string) (*models.PaymentMethod, error) {
 	var paymentMethod models.PaymentMethod
-	if err := facades.Orm().Query().Where("code", code).Where("is_active", true).FirstOrFail(&paymentMethod); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("code", code).Where("is_active", true).FirstOrFail(&paymentMethod); err != nil {
 		return nil, apperrors.ErrPaymentMethodNotFound.WithError(err)
 	}
 	return &paymentMethod, nil
@@ -174,7 +177,7 @@ func (s *PaymentServiceImpl) GetPaymentMethodByCode(code string) (*models.Paymen
 
 // GetPaymentMethods 获取支付方式列表
 func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, page, pageSize int) ([]models.PaymentMethod, int64, error) {
-	query := facades.Orm().Query().Model(&models.PaymentMethod{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.PaymentMethod{})
 
 	// 应用筛选条件
 	if filters.Name != "" {
@@ -215,7 +218,7 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 // CreatePaymentMethod 创建支付方式
 func (s *PaymentServiceImpl) CreatePaymentMethod(name, code, paymentType string, config map[string]any, isActive bool, sort int, description string) (*models.PaymentMethod, error) {
 	// 检查代码是否已存在
-	exists, err := facades.Orm().Query().Model(&models.PaymentMethod{}).Where("code", code).Exists()
+	exists, err := appfacades.OrmQuery(s.ctx).Model(&models.PaymentMethod{}).Where("code", code).Exists()
 	if err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
@@ -245,7 +248,7 @@ func (s *PaymentServiceImpl) CreatePaymentMethod(name, code, paymentType string,
 		"updated_at":  now,
 	}
 
-	if err := facades.Orm().Query().Model(paymentMethod).Create(createData); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(paymentMethod).Create(createData); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -279,7 +282,7 @@ func (s *PaymentServiceImpl) UpdatePaymentMethod(id uint, name string, config ma
 		"description": description,
 	}
 
-	if _, err := facades.Orm().Query().Where("id", id).Update(&models.PaymentMethod{}, updateData); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Where("id", id).Update(&models.PaymentMethod{}, updateData); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
@@ -288,7 +291,7 @@ func (s *PaymentServiceImpl) UpdatePaymentMethod(id uint, name string, config ma
 
 // UpdatePaymentMethodModel 更新支付方式（新模式）
 func (s *PaymentServiceImpl) UpdatePaymentMethodModel(paymentMethod *models.PaymentMethod) error {
-	if err := facades.Orm().Query().Save(paymentMethod); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(paymentMethod); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -301,7 +304,7 @@ func (s *PaymentServiceImpl) DeletePaymentMethod(id uint) error {
 		return err
 	}
 
-	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.PaymentMethod{}); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.PaymentMethod{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 
@@ -392,7 +395,7 @@ func (s *PaymentServiceImpl) GetPayments(filters PaymentFilters, page, pageSize 
 			idsAny[i] = id
 		}
 		var paymentMethods []models.PaymentMethod
-		if err := facades.Orm().Query().Model(&models.PaymentMethod{}).WhereIn("id", idsAny).Find(&paymentMethods); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Model(&models.PaymentMethod{}).WhereIn("id", idsAny).Find(&paymentMethods); err == nil {
 			for i := range paymentMethods {
 				paymentMethodsMap[paymentMethods[i].ID] = &paymentMethods[i]
 			}
@@ -448,7 +451,7 @@ func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint,
 	}
 
 	// 写入分表
-	if err := facades.Orm().Query().Table(tableName).Create(payment); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Table(tableName).Create(payment); err != nil {
 		errorlog.Record(context.Background(), "payment", "创建支付记录失败", map[string]any{
 			"table_name":        tableName,
 			"order_no":          orderNo,
@@ -503,7 +506,7 @@ func (s *PaymentServiceImpl) UpdatePaymentStatus(paymentID uint, status string, 
 		}
 	}
 
-	if _, err := facades.Orm().Query().Table(tableName).Where("id", payment.ID).Update(&models.Payment{}, updateData); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Table(tableName).Where("id", payment.ID).Update(&models.Payment{}, updateData); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 
@@ -927,7 +930,7 @@ func (s *PaymentServiceImpl) findPaymentByPaymentNo(paymentNo string) (*models.P
 		tableName := utils.GetShardingTableName("payments", parsedTime)
 		if facades.Schema().HasTable(tableName) {
 			var payment models.Payment
-			if err := facades.Orm().Query().Model(&models.Payment{}).Table(tableName).Where("payment_no", paymentNo).First(&payment); err == nil {
+			if err := appfacades.OrmQuery(s.ctx).Model(&models.Payment{}).Table(tableName).Where("payment_no", paymentNo).First(&payment); err == nil {
 				return &payment, nil
 			}
 		}
@@ -944,7 +947,7 @@ func (s *PaymentServiceImpl) findPaymentByPaymentNo(paymentNo string) (*models.P
 			continue
 		}
 		var payment models.Payment
-		if err := facades.Orm().Query().Model(&models.Payment{}).Table(tableNames[i]).Where("payment_no", paymentNo).First(&payment); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Model(&models.Payment{}).Table(tableNames[i]).Where("payment_no", paymentNo).First(&payment); err == nil {
 			return &payment, nil
 		}
 	}
@@ -982,7 +985,7 @@ func (s *PaymentServiceImpl) findPaymentByID(paymentID uint, paymentNo ...string
 			continue
 		}
 		var payment models.Payment
-		if err := facades.Orm().Query().Model(&models.Payment{}).Table(tableNames[i]).Where("id", paymentID).First(&payment); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Model(&models.Payment{}).Table(tableNames[i]).Where("id", paymentID).First(&payment); err == nil {
 			return &payment, nil
 		}
 	}
@@ -1026,7 +1029,7 @@ func (s *PaymentServiceImpl) querySinglePaymentTable(tableName string, filters P
 
 // buildPaymentShardingQuery 构建分表查询条件
 func (s *PaymentServiceImpl) buildPaymentShardingQuery(tableName string, filters PaymentFilters) orm.Query {
-	query := facades.Orm().Query().Table(tableName)
+	query := appfacades.OrmQuery(s.ctx).Table(tableName)
 
 	// 时间范围
 	if !filters.StartTime.IsZero() {

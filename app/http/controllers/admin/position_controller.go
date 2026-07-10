@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -17,7 +19,7 @@ type PositionController struct {
 
 func NewPositionController() *PositionController {
 	return &PositionController{
-		positionService: services.NewPositionService(),
+		positionService: services.NewPositionService(context.Background()),
 	}
 }
 

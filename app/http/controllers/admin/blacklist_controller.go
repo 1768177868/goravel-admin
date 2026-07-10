@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -47,7 +49,7 @@ type BlacklistDetailResponse struct {
 
 func NewBlacklistController() *BlacklistController {
 	return &BlacklistController{
-		blacklistService: services.NewBlacklistService(),
+		blacklistService: services.NewBlacklistService(context.Background()),
 	}
 }
 

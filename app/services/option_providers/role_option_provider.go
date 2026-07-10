@@ -1,22 +1,27 @@
 package option_providers
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/samber/lo"
 
 	"goravel/app/models"
 )
 
-type RoleOptionProvider struct{}
+type RoleOptionProvider struct {
+	ctx context.Context
+}
 
-func NewRoleOptionProvider() *RoleOptionProvider {
-	return &RoleOptionProvider{}
+func NewRoleOptionProvider(ctx context.Context) *RoleOptionProvider {
+	return &RoleOptionProvider{
+		ctx: ctx}
 }
 
 func (p *RoleOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {
 	var roles []models.Role
-	if err := facades.Orm().Query().Where("status", 1).Order("id asc").Get(&roles); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("status", 1).Order("id asc").Get(&roles); err != nil {
 		return nil, err
 	}
 

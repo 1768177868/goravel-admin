@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	nethttp "net/http"
@@ -23,7 +24,7 @@ type ExportController struct {
 
 func NewExportController() *ExportController {
 	return &ExportController{
-		exportRecordService: services.NewExportRecordService(),
+		exportRecordService: services.NewExportRecordService(context.Background()),
 	}
 }
 

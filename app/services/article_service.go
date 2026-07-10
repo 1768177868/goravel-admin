@@ -1,9 +1,11 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/requests/admin"
@@ -52,10 +54,12 @@ func BuildArticleFiltersFromHTTP(ctx http.Context) ArticleFilters {
 	}
 }
 
-type ArticleServiceImpl struct{}
+type ArticleServiceImpl struct {
+	ctx context.Context
+}
 
-func NewArticleService() ArticleService {
-	return &ArticleServiceImpl{}
+func NewArticleService(ctx context.Context) ArticleService {
+	return &ArticleServiceImpl{ctx: ctx}
 }
 
 func (s *ArticleServiceImpl) withRelations(query orm.Query) orm.Query {
@@ -65,7 +69,7 @@ func (s *ArticleServiceImpl) withRelations(query orm.Query) orm.Query {
 
 // BuildArticleQuery builds the Article query shared by list/export.
 func BuildArticleQuery(filters ArticleFilters) orm.Query {
-	query := facades.Orm().Query().Model(&models.Article{})
+	query := appfacades.OrmQuery(context.Background()).Model(&models.Article{})
 	if filters.AdminId != "" {
 		query = query.Where("admin_id = ?", filters.AdminId)
 	}
@@ -102,7 +106,7 @@ func BuildArticleQuery(filters ArticleFilters) orm.Query {
 
 func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 	var item models.Article
-	query := s.withRelations(facades.Orm().Query().Model(&models.Article{})).Where("id", id)
+	query := s.withRelations(appfacades.OrmQuery(s.ctx).Model(&models.Article{})).Where("id", id)
 	if err := query.FirstOrFail(&item); err != nil {
 		return nil, apperrors.ErrRecordNotFound.WithError(err)
 	}
@@ -140,7 +144,7 @@ func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, 
 		Status:  req.Status,
 	}
 
-	if err := facades.Orm().Query().Create(item); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(item); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -165,7 +169,7 @@ func (s *ArticleServiceImpl) Update(id uint, req *admin.ArticleUpdate) (*models.
 		item.Status = *req.Status
 	}
 
-	if err := facades.Orm().Query().Save(item); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(item); err != nil {
 		return nil, apperrors.ErrUpdateFailed.WithError(err)
 	}
 
@@ -177,7 +181,7 @@ func (s *ArticleServiceImpl) Delete(id uint) error {
 		return err
 	}
 
-	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.Article{}); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.Article{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

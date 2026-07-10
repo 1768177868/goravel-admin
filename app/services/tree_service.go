@@ -1,7 +1,8 @@
 package services
 
 import (
-	"github.com/goravel/framework/facades"
+	"context"
+	appfacades "goravel/app/facades"
 
 	"goravel/app/models"
 )
@@ -22,16 +23,18 @@ type TreeService interface {
 }
 
 type TreeServiceImpl struct {
+	ctx context.Context
 }
 
-func NewTreeServiceImpl() *TreeServiceImpl {
-	return &TreeServiceImpl{}
+func NewTreeServiceImpl(ctx context.Context) *TreeServiceImpl {
+	return &TreeServiceImpl{
+		ctx: ctx}
 }
 
 // BuildMenuTree 构建菜单树形结构（一次查询全量菜单后在内存中组树，避免 N+1 导致 /api/admin/info 等接口慢）
 func (s *TreeServiceImpl) BuildMenuTree(parentID uint) ([]models.Menu, error) {
 	var all []models.Menu
-	if err := facades.Orm().Query().Order("sort asc, id asc").Get(&all); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Order("sort asc, id asc").Get(&all); err != nil {
 		return nil, err
 	}
 	byParent := make(map[uint][]models.Menu)
@@ -52,7 +55,7 @@ func (s *TreeServiceImpl) buildMenuTreeFromMap(byParent map[uint][]models.Menu, 
 // BuildDepartmentTree 构建部门树形结构
 func (s *TreeServiceImpl) BuildDepartmentTree(parentID uint) ([]models.Department, error) {
 	var departments []models.Department
-	if err := facades.Orm().Query().Where("parent_id", parentID).Order("sort asc, id asc").Get(&departments); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("parent_id", parentID).Order("sort asc, id asc").Get(&departments); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +73,7 @@ func (s *TreeServiceImpl) BuildDepartmentTree(parentID uint) ([]models.Departmen
 
 // HasMenuChildren 检查菜单是否有子节点
 func (s *TreeServiceImpl) HasMenuChildren(menuID uint) (bool, error) {
-	count, err := facades.Orm().Query().Model(&models.Menu{}).Where("parent_id", menuID).Count()
+	count, err := appfacades.OrmQuery(s.ctx).Model(&models.Menu{}).Where("parent_id", menuID).Count()
 	if err != nil {
 		return false, err
 	}
@@ -79,7 +82,7 @@ func (s *TreeServiceImpl) HasMenuChildren(menuID uint) (bool, error) {
 
 // HasDepartmentChildren 检查部门是否有子节点
 func (s *TreeServiceImpl) HasDepartmentChildren(departmentID uint) (bool, error) {
-	count, err := facades.Orm().Query().Model(&models.Department{}).Where("parent_id", departmentID).Count()
+	count, err := appfacades.OrmQuery(s.ctx).Model(&models.Department{}).Where("parent_id", departmentID).Count()
 	if err != nil {
 		return false, err
 	}
@@ -95,7 +98,7 @@ func (s *TreeServiceImpl) GetMenuChildrenIDs(menuID uint) ([]uint, error) {
 	var getChildren func(parentID uint) error
 	getChildren = func(parentID uint) error {
 		var children []models.Menu
-		if err := facades.Orm().Query().Model(&models.Menu{}).Where("parent_id", parentID).Select("id").Get(&children); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Model(&models.Menu{}).Where("parent_id", parentID).Select("id").Get(&children); err != nil {
 			return err
 		}
 
@@ -132,7 +135,7 @@ func (s *TreeServiceImpl) GetMenuIDsWithAncestors(ids []uint) ([]uint, error) {
 			ID       uint
 			ParentID uint
 		}
-		if err := facades.Orm().Query().Model(&models.Menu{}).Where("id IN ?", current).Select("id", "parent_id").Get(&rows); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Model(&models.Menu{}).Where("id IN ?", current).Select("id", "parent_id").Get(&rows); err != nil {
 			return nil, err
 		}
 		var next []uint

@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -18,10 +20,10 @@ type DepartmentController struct {
 }
 
 func NewDepartmentController() *DepartmentController {
-	treeService := services.NewTreeServiceImpl()
+	treeService := services.NewTreeServiceImpl(context.Background())
 	return &DepartmentController{
 		treeService:       treeService,
-		departmentService: services.NewDepartmentServiceImpl(treeService),
+		departmentService: services.NewDepartmentServiceImpl(context.Background(), treeService),
 	}
 }
 

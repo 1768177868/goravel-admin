@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"io"
 	stdhttp "net/http"
 	"net/url"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xuri/excelize/v2"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -25,6 +25,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/tencentyun/cos-go-sdk-v5"
+	"github.com/xuri/excelize/v2"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -443,7 +444,7 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 			// 注意：虽然 ORM 可能不支持 WithContext，但超时控制通过 goroutine 的 context 实现
 			done := make(chan error, 1)
 			go func() {
-				done <- facades.Orm().Query().Create(&exportRecord)
+				done <- appfacades.OrmQuery(s.ctx).Create(&exportRecord)
 			}()
 
 			select {
@@ -575,7 +576,7 @@ func (s *ExportServiceImpl) recordExportLogWithContext(ctx context.Context, file
 	// 注意：虽然 ORM 可能不支持 WithContext，但超时控制通过 goroutine 的 context 实现
 	done := make(chan error, 1)
 	go func() {
-		done <- facades.Orm().Query().Create(&exportRecord)
+		done <- appfacades.OrmQuery(ctx).Create(&exportRecord)
 	}()
 
 	select {

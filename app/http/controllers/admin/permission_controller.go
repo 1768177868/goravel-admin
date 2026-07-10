@@ -1,9 +1,11 @@
 package admin
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/spf13/cast"
-	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -19,8 +21,8 @@ type PermissionController struct {
 
 func NewPermissionController() *PermissionController {
 	return &PermissionController{
-		permissionService: services.NewPermissionService(),
-		treeService:       services.NewTreeServiceImpl(),
+		permissionService: services.NewPermissionService(context.Background()),
+		treeService:       services.NewTreeServiceImpl(context.Background()),
 	}
 }
 

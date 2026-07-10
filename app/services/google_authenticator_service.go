@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"image/png"
 
 	"github.com/pquerna/otp"
@@ -33,10 +34,11 @@ type GoogleAuthenticatorService interface {
 }
 
 type GoogleAuthenticatorServiceImpl struct {
+	ctx context.Context
 }
 
-func NewGoogleAuthenticatorServiceImpl() GoogleAuthenticatorService {
-	return &GoogleAuthenticatorServiceImpl{}
+func NewGoogleAuthenticatorServiceImpl(ctx context.Context) GoogleAuthenticatorService {
+	return &GoogleAuthenticatorServiceImpl{ctx: ctx}
 }
 
 // GenerateSecret 生成密钥
@@ -143,7 +145,7 @@ func (s *GoogleAuthenticatorServiceImpl) IsBound(adminID uint) (bool, error) {
 	}
 
 	// 列存在，检查是否有值
-	count, err := facades.Orm().Query().Table("admins").
+	count, err := appfacades.OrmQuery(s.ctx).Table("admins").
 		Where("id", adminID).
 		Where("google_secret IS NOT NULL").
 		Where("google_secret != ?", "").
@@ -159,7 +161,7 @@ func (s *GoogleAuthenticatorServiceImpl) GetSecret(adminID uint) (string, error)
 	var admin struct {
 		GoogleSecret string
 	}
-	err := facades.Orm().Query().Table("admins").
+	err := appfacades.OrmQuery(s.ctx).Table("admins").
 		Select("google_secret").
 		Where("id", adminID).
 		First(&admin)
@@ -177,7 +179,7 @@ func (s *GoogleAuthenticatorServiceImpl) Bind(adminID uint, secret, code string)
 	}
 
 	// 更新管理员的google_secret
-	_, err := facades.Orm().Query().Table("admins").
+	_, err := appfacades.OrmQuery(s.ctx).Table("admins").
 		Where("id", adminID).
 		Update("google_secret", secret)
 	return err
@@ -185,7 +187,7 @@ func (s *GoogleAuthenticatorServiceImpl) Bind(adminID uint, secret, code string)
 
 // Unbind 解绑谷歌验证码
 func (s *GoogleAuthenticatorServiceImpl) Unbind(adminID uint) error {
-	_, err := facades.Orm().Query().Table("admins").
+	_, err := appfacades.OrmQuery(s.ctx).Table("admins").
 		Where("id", adminID).
 		Update("google_secret", nil)
 	return err

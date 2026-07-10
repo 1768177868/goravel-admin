@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
+	appfacades "goravel/app/facades"
 	"goravel/app/models"
 	"goravel/app/utils/logger"
 	"goravel/app/utils/traceid"
@@ -168,7 +168,7 @@ func recordToDatabaseHTTPWithLevel(ctx http.Context, level, module, message stri
 		UserAgent: ctx.Request().Header("User-Agent", ""),
 	}
 
-	_ = facades.Orm().Query().Create(&log)
+	_ = appfacades.OrmQuery(ctx).Create(&log)
 }
 
 // recordToDatabaseWithLevel 将日志记录到数据库（标准 context，支持所有级别）
@@ -199,5 +199,5 @@ func recordToDatabaseWithLevel(ctx context.Context, level, module, message strin
 		Context: contextJSON,
 	}
 
-	_ = facades.Orm().Query().Create(&log)
+	_ = appfacades.OrmQuery(ctx).Create(&log)
 }

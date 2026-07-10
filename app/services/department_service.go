@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/dromara/carbon/v2"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -34,11 +36,13 @@ type DepartmentFilters struct {
 }
 
 type DepartmentServiceImpl struct {
+	ctx         context.Context
 	treeService TreeService
 }
 
-func NewDepartmentServiceImpl(treeService TreeService) *DepartmentServiceImpl {
+func NewDepartmentServiceImpl(ctx context.Context, treeService TreeService) *DepartmentServiceImpl {
 	return &DepartmentServiceImpl{
+		ctx:         ctx,
 		treeService: treeService,
 	}
 }
@@ -46,7 +50,7 @@ func NewDepartmentServiceImpl(treeService TreeService) *DepartmentServiceImpl {
 // GetByID 根据ID获取部门
 func (s *DepartmentServiceImpl) GetByID(id uint) (*models.Department, error) {
 	var department models.Department
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&department); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&department); err != nil {
 		return nil, apperrors.ErrDepartmentNotFound.WithError(err)
 	}
 	return &department, nil
@@ -54,7 +58,7 @@ func (s *DepartmentServiceImpl) GetByID(id uint) (*models.Department, error) {
 
 // GetList 获取部门列表
 func (s *DepartmentServiceImpl) GetList(filters DepartmentFilters, page, pageSize int) ([]models.Department, int64, error) {
-	query := facades.Orm().Query().Model(&models.Department{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Department{})
 
 	// 应用筛选条件
 	if filters.Name != "" {
@@ -89,7 +93,7 @@ func (s *DepartmentServiceImpl) GetList(filters DepartmentFilters, page, pageSiz
 
 // HasAdmins 检查部门是否有管理员
 func (s *DepartmentServiceImpl) HasAdmins(departmentID uint) (bool, error) {
-	count, err := facades.Orm().Query().Model(&models.Admin{}).Where("department_id", departmentID).Count()
+	count, err := appfacades.OrmQuery(s.ctx).Model(&models.Admin{}).Where("department_id", departmentID).Count()
 	if err != nil {
 		return false, err
 	}
@@ -113,7 +117,7 @@ func (s *DepartmentServiceImpl) Create(parentID uint, name, code, leader, phone,
 		"updated_at": carbon.Now(),
 	}
 
-	if err := facades.Orm().Query().Model(department).Create(createData); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(department).Create(createData); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -122,7 +126,7 @@ func (s *DepartmentServiceImpl) Create(parentID uint, name, code, leader, phone,
 
 // Update 更新部门
 func (s *DepartmentServiceImpl) Update(department *models.Department) error {
-	if err := facades.Orm().Query().Save(department); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(department); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -130,7 +134,7 @@ func (s *DepartmentServiceImpl) Update(department *models.Department) error {
 
 // Delete 删除部门
 func (s *DepartmentServiceImpl) Delete(department *models.Department) error {
-	if _, err := facades.Orm().Query().Delete(department); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(department); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

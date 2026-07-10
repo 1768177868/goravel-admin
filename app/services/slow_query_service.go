@@ -2,9 +2,11 @@ package services
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -49,10 +51,12 @@ type SlowQueryService interface {
 	GetByTraceID(traceID string, limit int) ([]models.SlowQueryLog, error)
 }
 
-type SlowQueryServiceImpl struct{}
+type SlowQueryServiceImpl struct {
+	ctx context.Context
+}
 
-func NewSlowQueryService() SlowQueryService {
-	return &SlowQueryServiceImpl{}
+func NewSlowQueryService(ctx context.Context) SlowQueryService {
+	return &SlowQueryServiceImpl{ctx: ctx}
 }
 
 func (s *SlowQueryServiceImpl) CollectFromLatestLog(minDurationMS float64) error {
@@ -100,12 +104,12 @@ func (s *SlowQueryServiceImpl) CollectFromLatestLog(minDurationMS float64) error
 		}
 		batch = append(batch, entry)
 		if len(batch) >= slowQueryInsertBatchSize {
-			_ = facades.Orm().Query().Create(&batch)
+			_ = appfacades.OrmQuery(s.ctx).Create(&batch)
 			batch = batch[:0]
 		}
 	}
 	if len(batch) > 0 {
-		_ = facades.Orm().Query().Create(&batch)
+		_ = appfacades.OrmQuery(s.ctx).Create(&batch)
 	}
 
 	newOffset, _ := f.Seek(0, 1)
@@ -126,7 +130,7 @@ func (s *SlowQueryServiceImpl) GetTopN(hours, limit int, minDurationMS float64) 
 
 	cutoff := time.Now().Add(-time.Duration(hours) * time.Hour)
 	var logs []models.SlowQueryLog
-	if err := facades.Orm().Query().
+	if err := appfacades.OrmQuery(s.ctx).
 		Model(&models.SlowQueryLog{}).
 		Where("created_at >= ?", cutoff).
 		Where("duration_ms >= ?", minDurationMS).
@@ -210,7 +214,7 @@ func (s *SlowQueryServiceImpl) GetByTraceID(traceID string, limit int) ([]models
 		limit = 200
 	}
 	var rows []models.SlowQueryLog
-	err := facades.Orm().Query().
+	err := appfacades.OrmQuery(s.ctx).
 		Model(&models.SlowQueryLog{}).
 		Where("trace_id", traceID).
 		Order("id desc").

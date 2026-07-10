@@ -1,9 +1,10 @@
 package services
 
 import (
+	"context"
+
+	appfacades "goravel/app/facades"
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/requests/admin"
@@ -50,10 +51,12 @@ func Build<<.ModelName>>FiltersFromHTTP(ctx http.Context) <<.ModelName>>Filters 
 	}
 }
 
-type <<.ServiceName>>Impl struct{}
+type <<.ServiceName>>Impl struct {
+	ctx context.Context
+}
 
-func New<<.ServiceName>>() <<.ServiceName>> {
-	return &<<.ServiceName>>Impl{}
+func New<<.ServiceName>>(ctx context.Context) <<.ServiceName>> {
+	return &<<.ServiceName>>Impl{ctx: ctx}
 }
 
 func (s *<<.ServiceName>>Impl) withRelations(query orm.Query) orm.Query {
@@ -67,7 +70,7 @@ func (s *<<.ServiceName>>Impl) withRelations(query orm.Query) orm.Query {
 
 // Build<<.ModelName>>Query builds the <<.ModelName>> query shared by list/export.
 func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
-	query := facades.Orm().Query().Model(&models.<<.ModelName>>{})
+	query := appfacades.OrmQuery(context.Background()).Model(&models.<<.ModelName>>{})
 <<- range .SearchableFields>>
 	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
 	if filters.<<.PascalName>>Start != "" {
@@ -105,7 +108,7 @@ func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
 
 func (s *<<.ServiceName>>Impl) GetByID(id uint) (*models.<<.ModelName>>, error) {
 	var item models.<<.ModelName>>
-	query := s.withRelations(facades.Orm().Query().Model(&models.<<.ModelName>>{})).Where("id", id)
+	query := s.withRelations(appfacades.OrmQuery(s.ctx).Model(&models.<<.ModelName>>{})).Where("id", id)
 	if err := query.FirstOrFail(&item); err != nil {
 		return nil, apperrors.ErrRecordNotFound.WithError(err)
 	}
@@ -151,7 +154,7 @@ func (s *<<.ServiceName>>Impl) Create(req *admin.<<.RequestCreateName>>) (*model
 <<- end>>
 	}
 
-	if err := facades.Orm().Query().Create(item); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(item); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -178,7 +181,7 @@ func (s *<<.ServiceName>>Impl) Update(id uint, req *admin.<<.RequestUpdateName>>
 <<- end>>
 <<- end>>
 
-	if err := facades.Orm().Query().Save(item); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(item); err != nil {
 		return nil, apperrors.ErrUpdateFailed.WithError(err)
 	}
 
@@ -192,7 +195,7 @@ func (s *<<.ServiceName>>Impl) Delete(id uint) error {
 		return err
 	}
 
-	if _, err := facades.Orm().Query().Where("id", id).Delete(&models.<<.ModelName>>{}); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.<<.ModelName>>{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

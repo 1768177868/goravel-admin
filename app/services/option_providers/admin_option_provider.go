@@ -1,6 +1,9 @@
 package option_providers
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
@@ -10,10 +13,13 @@ import (
 	"goravel/app/models"
 )
 
-type AdminOptionProvider struct{}
+type AdminOptionProvider struct {
+	ctx context.Context
+}
 
-func NewAdminOptionProvider() *AdminOptionProvider {
-	return &AdminOptionProvider{}
+func NewAdminOptionProvider(ctx context.Context) *AdminOptionProvider {
+	return &AdminOptionProvider{
+		ctx: ctx}
 }
 
 func (p *AdminOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {
@@ -23,7 +29,7 @@ func (p *AdminOptionProvider) GetOptions(ctx http.Context) (map[string]any, erro
 	developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 	developerIDs := parseProtectedIDs(developerIDsStr)
 
-	query := facades.Orm().Query().Where("status", 1)
+	query := appfacades.OrmQuery(ctx).Where("status", 1)
 	if len(developerIDs) > 0 {
 		query = query.Where("id NOT IN ?", developerIDs)
 	}

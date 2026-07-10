@@ -1,9 +1,10 @@
 package orderrepo
 
 import (
+	"context"
 	"time"
 
-	"github.com/goravel/framework/facades"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
@@ -28,7 +29,7 @@ func FindOrderByID(orderID uint, orderNo ...string) (*models.Order, error) {
 	tableNames := utils.GetShardingTableNames("orders", startTime, now)
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		var order models.Order
-		if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("id", orderID).First(&order); err == nil {
+		if err := appfacades.OrmQuery(context.Background()).Model(&models.Order{}).Table(tableNames[i]).Where("id", orderID).First(&order); err == nil {
 			return &order, nil
 		}
 	}
@@ -47,7 +48,7 @@ func FindOrderByOrderNo(orderNo string) (*models.Order, error) {
 	}
 	tableName := utils.GetShardingTableName("orders", parsedTime)
 	var order models.Order
-	if err := facades.Orm().Query().Model(&models.Order{}).Table(tableName).Where("order_no", orderNo).First(&order); err == nil {
+	if err := appfacades.OrmQuery(context.Background()).Model(&models.Order{}).Table(tableName).Where("order_no", orderNo).First(&order); err == nil {
 		return &order, nil
 	}
 	return nil, apperrors.ErrOrderNotFound
@@ -59,7 +60,7 @@ func findOrderByOrderNoScan(orderNo string) (*models.Order, error) {
 	tableNames := utils.GetShardingTableNames("orders", startTime, now)
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		var order models.Order
-		if err := facades.Orm().Query().Model(&models.Order{}).Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
+		if err := appfacades.OrmQuery(context.Background()).Model(&models.Order{}).Table(tableNames[i]).Where("order_no", orderNo).First(&order); err == nil {
 			return &order, nil
 		}
 	}
@@ -85,7 +86,7 @@ func FindOrderWithDetails(orderID uint, orderNoHint string) (*models.Order, []mo
 	createdAt, _ := utils.ParseDateTimeUTC(timeStr)
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
 	var details []models.OrderDetail
-	if err := facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Find(&details); err != nil {
+	if err := appfacades.OrmQuery(context.Background()).Table(detailTableName).Where("order_id", order.ID).Find(&details); err != nil {
 		return nil, nil, apperrors.ErrQueryOrderDetailFailed.WithError(err)
 	}
 	return order, details, nil

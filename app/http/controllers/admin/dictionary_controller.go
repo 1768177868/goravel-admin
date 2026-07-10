@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -69,7 +71,7 @@ type DictionaryTypesResponse struct {
 
 func NewDictionaryController() *DictionaryController {
 	return &DictionaryController{
-		dictionaryService: services.NewDictionaryService(),
+		dictionaryService: services.NewDictionaryService(context.Background()),
 	}
 }
 

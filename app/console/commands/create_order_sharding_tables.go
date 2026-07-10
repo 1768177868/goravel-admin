@@ -20,7 +20,7 @@ type CreateOrderShardingTables struct {
 
 func NewCreateOrderShardingTables() *CreateOrderShardingTables {
 	return &CreateOrderShardingTables{
-		shardingService: services.NewShardingService(),
+		shardingService: services.NewShardingService(context.Background()),
 	}
 }
 

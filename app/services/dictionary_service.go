@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/dromara/carbon/v2"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -36,16 +38,17 @@ type DictionaryFilters struct {
 }
 
 type DictionaryServiceImpl struct {
+	ctx context.Context
 }
 
-func NewDictionaryService() DictionaryService {
-	return &DictionaryServiceImpl{}
+func NewDictionaryService(ctx context.Context) DictionaryService {
+	return &DictionaryServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取字典
 func (s *DictionaryServiceImpl) GetByID(id uint) (*models.Dictionary, error) {
 	var dictionary models.Dictionary
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&dictionary); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&dictionary); err != nil {
 		return nil, apperrors.ErrDictionaryNotFound.WithError(err)
 	}
 	return &dictionary, nil
@@ -53,7 +56,7 @@ func (s *DictionaryServiceImpl) GetByID(id uint) (*models.Dictionary, error) {
 
 // GetList 获取字典列表
 func (s *DictionaryServiceImpl) GetList(filters DictionaryFilters, page, pageSize int) ([]models.Dictionary, int64, error) {
-	query := facades.Orm().Query().Model(&models.Dictionary{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Dictionary{})
 
 	// 应用筛选条件
 	if filters.Type != "" {
@@ -89,7 +92,7 @@ func (s *DictionaryServiceImpl) GetList(filters DictionaryFilters, page, pageSiz
 // GetByType 根据类型获取字典列表
 func (s *DictionaryServiceImpl) GetByType(dictType string) ([]models.Dictionary, error) {
 	var dictionaries []models.Dictionary
-	if err := facades.Orm().Query().
+	if err := appfacades.OrmQuery(s.ctx).
 		Where("type", dictType).
 		Where("status", 1).
 		Order("sort asc, id asc").
@@ -102,7 +105,7 @@ func (s *DictionaryServiceImpl) GetByType(dictType string) ([]models.Dictionary,
 // GetAllTypes 获取所有字典类型
 func (s *DictionaryServiceImpl) GetAllTypes() ([]string, error) {
 	var types []string
-	if err := facades.Orm().Query().Model(&models.Dictionary{}).Distinct("type").Pluck("type", &types); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(&models.Dictionary{}).Distinct("type").Pluck("type", &types); err != nil {
 		return []string{}, nil
 	}
 	return types, nil
@@ -124,7 +127,7 @@ func (s *DictionaryServiceImpl) Create(dictType, label, value, translationKey, d
 		"updated_at":      carbon.Now(),
 	}
 
-	if err := facades.Orm().Query().Model(dictionary).Create(createData); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(dictionary).Create(createData); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -133,7 +136,7 @@ func (s *DictionaryServiceImpl) Create(dictType, label, value, translationKey, d
 
 // Update 更新字典
 func (s *DictionaryServiceImpl) Update(dictionary *models.Dictionary) error {
-	if err := facades.Orm().Query().Save(dictionary); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(dictionary); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -141,7 +144,7 @@ func (s *DictionaryServiceImpl) Update(dictionary *models.Dictionary) error {
 
 // Delete 删除字典
 func (s *DictionaryServiceImpl) Delete(dictionary *models.Dictionary) error {
-	if _, err := facades.Orm().Query().Delete(dictionary); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(dictionary); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

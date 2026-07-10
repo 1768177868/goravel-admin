@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/dromara/carbon/v2"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -26,22 +28,24 @@ type PositionFilters struct {
 	OrderBy   string
 }
 
-type PositionServiceImpl struct{}
+type PositionServiceImpl struct {
+	ctx context.Context
+}
 
-func NewPositionService() PositionService {
-	return &PositionServiceImpl{}
+func NewPositionService(ctx context.Context) PositionService {
+	return &PositionServiceImpl{ctx: ctx}
 }
 
 func (s *PositionServiceImpl) GetByID(id uint) (*models.Position, error) {
 	var position models.Position
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&position); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&position); err != nil {
 		return nil, apperrors.ErrPositionNotFound.WithError(err)
 	}
 	return &position, nil
 }
 
 func (s *PositionServiceImpl) GetList(filters PositionFilters, page, pageSize int) ([]models.Position, int64, error) {
-	query := facades.Orm().Query().Model(&models.Position{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Position{})
 	if filters.Name != "" {
 		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
 	}
@@ -68,7 +72,7 @@ func (s *PositionServiceImpl) GetList(filters PositionFilters, page, pageSize in
 }
 
 func (s *PositionServiceImpl) HasAdmins(positionID uint) (bool, error) {
-	count, err := facades.Orm().Query().Model(&models.Admin{}).Where("position_id", positionID).Count()
+	count, err := appfacades.OrmQuery(s.ctx).Model(&models.Admin{}).Where("position_id", positionID).Count()
 	if err != nil {
 		return false, err
 	}
@@ -86,21 +90,21 @@ func (s *PositionServiceImpl) Create(name, code, remark string, status uint8, so
 		"created_at": carbon.Now(),
 		"updated_at": carbon.Now(),
 	}
-	if err := facades.Orm().Query().Model(position).Create(createData); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(position).Create(createData); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 	return position, nil
 }
 
 func (s *PositionServiceImpl) Update(position *models.Position) error {
-	if err := facades.Orm().Query().Save(position); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(position); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
 }
 
 func (s *PositionServiceImpl) Delete(position *models.Position) error {
-	if _, err := facades.Orm().Query().Delete(position); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(position); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

@@ -58,7 +58,7 @@ func (r *SyncOrdersElasticsearch) Handle(ctx console.Context) error {
 	r.cancel = cancel
 	defer cancel()
 
-	svc := services.NewOrderService()
+	svc := services.NewOrderService(context.Background())
 
 	if id := cast.ToUint(ctx.Option("order-id")); id > 0 {
 		ctx.Info(fmt.Sprintf("同步订单 id=%d ...", id))

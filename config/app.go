@@ -70,6 +70,8 @@ func init() {
 			"driver": config.Env("APP_MAINTENANCE_DRIVER", "file"),
 			"store":  config.Env("APP_MAINTENANCE_STORE", ""),
 		},
+		// Allow artisan up/down in production when explicitly enabled (multi-node cache driver recommended).
+		"allow_maintenance_commands": config.Env("APP_ALLOW_MAINTENANCE_COMMANDS", false),
 		// Enable Development Tool
 		"enable_dev_tool": config.Env("APP_ENABLE_DEV_TOOL", false),
 		// Application Timezone

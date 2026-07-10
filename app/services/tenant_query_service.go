@@ -1,9 +1,10 @@
 package services
 
 import (
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/http/helpers"
 )
@@ -24,13 +25,13 @@ func NewTenantQueryService(ctx http.Context) *TenantQueryService {
 
 // Query 创建查询（预留：启用多租户后自动按 tenant_id 过滤）
 func (s *TenantQueryService) Query() orm.Query {
-	return helpers.ScopeTenant(s.ctx, facades.Orm().Query())
+	return helpers.ScopeTenant(s.ctx, appfacades.OrmQuery(s.ctx))
 }
 
 // QueryModel 创建模型查询（预留：启用多租户后自动按 tenant_id 过滤）
 // 如果模型定义了 GlobalScopes，会先应用这些作用域，然后添加租户过滤
 func (s *TenantQueryService) QueryModel(model any) orm.Query {
-	return helpers.ScopeTenant(s.ctx, facades.Orm().Query().Model(model))
+	return helpers.ScopeTenant(s.ctx, appfacades.OrmQuery(s.ctx).Model(model))
 }
 
 // QueryModelWithoutTenant 创建模型查询，排除租户过滤（用于超级管理员查看所有数据）
@@ -38,7 +39,7 @@ func (s *TenantQueryService) QueryModel(model any) orm.Query {
 func (s *TenantQueryService) QueryModelWithoutTenant(model any) orm.Query {
 	// 如果模型定义了名为 "tenant" 的全局作用域，使用 WithoutGlobalScopes 排除它
 	// 否则，直接返回查询（因为租户过滤是通过 ScopeTenant 手动添加的）
-	query := facades.Orm().Query().Model(model).WithoutGlobalScopes("tenant")
+	query := appfacades.OrmQuery(s.ctx).Model(model).WithoutGlobalScopes("tenant")
 	// 注意：由于租户过滤是通过 ScopeTenant 手动添加的，这里实际上不需要额外处理
 	// 但如果将来迁移到使用 GlobalScopes，WithoutGlobalScopes("tenant") 会生效
 	return query
@@ -46,24 +47,24 @@ func (s *TenantQueryService) QueryModelWithoutTenant(model any) orm.Query {
 
 // QueryTable 创建表查询（预留：用于分表场景，启用多租户后自动按 tenant_id 过滤）
 func (s *TenantQueryService) QueryTable(tableName string) orm.Query {
-	return helpers.ScopeTenant(s.ctx, facades.Orm().Query().Table(tableName))
+	return helpers.ScopeTenant(s.ctx, appfacades.OrmQuery(s.ctx).Table(tableName))
 }
 
 // QueryOrGlobal 创建查询并允许查询全局数据 tenant_id = 0（预留，适用于配置表等）
 func (s *TenantQueryService) QueryOrGlobal() orm.Query {
-	return helpers.ScopeTenantOrGlobal(s.ctx, facades.Orm().Query())
+	return helpers.ScopeTenantOrGlobal(s.ctx, appfacades.OrmQuery(s.ctx))
 }
 
 // QueryModelOrGlobal 创建模型查询并允许查询全局数据（预留）
 // 适用于配置表等需要"租户配置 + 全局默认"的场景
 func (s *TenantQueryService) QueryModelOrGlobal(model any) orm.Query {
-	return helpers.ScopeTenantOrGlobal(s.ctx, facades.Orm().Query().Model(model))
+	return helpers.ScopeTenantOrGlobal(s.ctx, appfacades.OrmQuery(s.ctx).Model(model))
 }
 
 // QueryModelWithoutScopes 创建模型查询，排除所有全局作用域（包括租户作用域）
 // 使用 v1.17 的 WithoutGlobalScopes() 功能
 func (s *TenantQueryService) QueryModelWithoutScopes(model any) orm.Query {
-	return facades.Orm().Query().Model(model).WithoutGlobalScopes()
+	return appfacades.OrmQuery(s.ctx).Model(model).WithoutGlobalScopes()
 }
 
 // GetTenantID 获取当前请求的租户ID（预留）

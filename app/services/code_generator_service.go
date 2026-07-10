@@ -129,13 +129,15 @@ func ensureAISystemFields(fields []FieldConfig) []FieldConfig {
 	return fields
 }
 
-type CodeGeneratorServiceImpl struct{}
+type CodeGeneratorServiceImpl struct {
+	ctx context.Context
+}
 
 //go:embed templates/*
 var templates embed.FS
 
-func NewCodeGeneratorService() CodeGeneratorService {
-	return &CodeGeneratorServiceImpl{}
+func NewCodeGeneratorService(ctx context.Context) CodeGeneratorService {
+	return &CodeGeneratorServiceImpl{ctx: ctx}
 }
 
 func normalizeGeneratedContent(content string) string {
@@ -1992,7 +1994,7 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 请只返回 JSON 配置，不要包含其他说明文字。`, string(promptFile), userDescription)
 
 	// 调用 AI Service
-	aiService := NewAIService()
+	aiService := NewAIService(s.ctx)
 	response, err := aiService.Complete(ctx, userPrompt, systemPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("AI completion failed: %w", err)

@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -23,22 +25,23 @@ func NewOptionController() *OptionController {
 	// 2. 实现 services.OptionProvider 接口
 	// 3. 在此处注册新的提供者
 	providers := make(map[string]services.OptionProvider)
-	providers["role"] = option_providers.NewRoleOptionProvider()
-	providers["department"] = option_providers.NewDepartmentOptionProvider()
-	providers["position"] = option_providers.NewPositionOptionProvider()
-	providers["menu"] = option_providers.NewMenuOptionProvider(services.NewTreeServiceImpl())
-	providers["status"] = option_providers.NewStatusOptionProvider()
-	providers["method"] = option_providers.NewMethodOptionProvider()
-	providers["yes_no"] = option_providers.NewYesNoOptionProvider()
-	providers["admin"] = option_providers.NewAdminOptionProvider()
-	providers["payment_method"] = option_providers.NewPaymentMethodOptionProvider()
-	providers["form_demo"] = option_providers.NewFormDemoOptionProvider()
+	bg := context.Background()
+	providers["role"] = option_providers.NewRoleOptionProvider(bg)
+	providers["department"] = option_providers.NewDepartmentOptionProvider(bg)
+	providers["position"] = option_providers.NewPositionOptionProvider(bg)
+	providers["menu"] = option_providers.NewMenuOptionProvider(bg, services.NewTreeServiceImpl(bg))
+	providers["status"] = option_providers.NewStatusOptionProvider(bg)
+	providers["method"] = option_providers.NewMethodOptionProvider(bg)
+	providers["yes_no"] = option_providers.NewYesNoOptionProvider(bg)
+	providers["admin"] = option_providers.NewAdminOptionProvider(bg)
+	providers["payment_method"] = option_providers.NewPaymentMethodOptionProvider(bg)
+	providers["form_demo"] = option_providers.NewFormDemoOptionProvider(bg)
 	// 在此处添加新的选项提供者，例如：
 	// providers["new_type"] = option_providers.NewNewTypeOptionProvider()
 
 	return &OptionController{
 		providers:         providers,
-		dictionaryService: services.NewDictionaryService(),
+		dictionaryService: services.NewDictionaryService(context.Background()),
 	}
 }
 

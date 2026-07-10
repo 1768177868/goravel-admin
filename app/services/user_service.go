@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/dromara/carbon/v2"
@@ -46,7 +47,7 @@ type UserFilters struct {
 
 // BuildUserQuery 构建用户查询（通用查询构建，供列表和导出复用）
 func BuildUserQuery(filters UserFilters) orm.Query {
-	query := facades.Orm().Query().Model(&models.User{})
+	query := appfacades.OrmQuery(context.Background()).Model(&models.User{})
 
 	if filters.Username != "" {
 		query = query.Where("username LIKE ?", "%"+filters.Username+"%")
@@ -68,26 +69,28 @@ func BuildUserQuery(filters UserFilters) orm.Query {
 }
 
 type UserServiceImpl struct {
+	ctx               context.Context
 	balanceLogService UserBalanceLogService
 }
 
-func NewUserService() UserService {
+func NewUserService(ctx context.Context) UserService {
 	return &UserServiceImpl{
-		balanceLogService: NewUserBalanceLogService(),
+		ctx:               ctx,
+		balanceLogService: NewUserBalanceLogService(ctx),
 	}
 }
 
 // GetByID 根据ID获取用户
 func (s *UserServiceImpl) GetByID(id uint) (*models.User, error) {
 	var user models.User
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&user); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&user); err != nil {
 		return nil, apperrors.ErrUserNotFound.WithError(err)
 	}
 
 	// 加载货币信息
 	if user.CurrencyID > 0 {
 		var currency models.Currency
-		if err := facades.Orm().Query().Where("id", user.CurrencyID).First(&currency); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id", user.CurrencyID).First(&currency); err == nil {
 			user.Currency = &currency
 		}
 	}
@@ -124,7 +127,7 @@ func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]mo
 	}
 	if len(currencyIDs) > 0 {
 		var currencies []models.Currency
-		if err := facades.Orm().Query().Where("id IN ?", currencyIDs).Find(&currencies); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", currencyIDs).Find(&currencies); err == nil {
 			for i := range currencies {
 				c := currencies[i]
 				currencyMap[c.ID] = &c
@@ -146,7 +149,7 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 	// 如果未设置货币ID，默认使用人民币
 	if user.CurrencyID == 0 {
 		var cnyCurrency models.Currency
-		if err := facades.Orm().Query().Where("code", "CNY").First(&cnyCurrency); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("code", "CNY").First(&cnyCurrency); err == nil {
 			user.CurrencyID = cnyCurrency.ID
 		}
 	}
@@ -166,7 +169,7 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 		"created_at":    carbon.Now(),
 		"updated_at":    carbon.Now(),
 	}
-	if err := facades.Orm().Query().Model(&models.User{}).Create(userData); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Create(userData); err != nil {
 		return err
 	}
 	// 将创建后的 ID 赋值回 user 对象（GORM 会将生成的 ID 填充到 map 中）
@@ -177,7 +180,7 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 	} else {
 		// 如果 map 中没有 ID，通过用户名查询获取（与管理员创建方式一致）
 		var createdUser models.User
-		if err := facades.Orm().Query().Where("username", user.Username).First(&createdUser); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("username", user.Username).First(&createdUser); err == nil {
 			user.ID = createdUser.ID
 		}
 	}
@@ -206,13 +209,13 @@ func (s *UserServiceImpl) Update(id uint, user *models.User) error {
 		updateData["password"] = user.Password
 	}
 
-	_, err := facades.Orm().Query().Model(&models.User{}).Where("id", id).Update(updateData)
+	_, err := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("id", id).Update(updateData)
 	return err
 }
 
 // Delete 删除用户（软删除）
 func (s *UserServiceImpl) Delete(id uint) error {
-	_, err := facades.Orm().Query().Where("id", id).Delete(&models.User{})
+	_, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.User{})
 	return err
 }
 
@@ -250,7 +253,7 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 	}
 
 	// 1. 更新用户余额
-	_, err = facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]any{
+	_, err = appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("id", userID).Update(map[string]any{
 		"balance": newBalance,
 	})
 	if err != nil {
@@ -294,7 +297,7 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 
 // rollbackBalance 回滚余额到指定值
 func (s *UserServiceImpl) rollbackBalance(userID uint, balance float64) error {
-	_, err := facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]any{
+	_, err := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("id", userID).Update(map[string]any{
 		"balance": balance,
 	})
 	return err
@@ -304,7 +307,7 @@ func (s *UserServiceImpl) rollbackBalance(userID uint, balance float64) error {
 func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excludeID uint) error {
 	// 检查用户名是否已存在
 	if username != "" {
-		query := facades.Orm().Query().Model(&models.User{}).Where("username", username)
+		query := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("username", username)
 		if excludeID > 0 {
 			query = query.Where("id != ?", excludeID)
 		}
@@ -319,7 +322,7 @@ func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excl
 
 	// 检查邮箱是否已存在（如果提供了邮箱）
 	if email != "" {
-		query := facades.Orm().Query().Model(&models.User{}).Where("email", email)
+		query := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("email", email)
 		if excludeID > 0 {
 			query = query.Where("id != ?", excludeID)
 		}
@@ -334,7 +337,7 @@ func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excl
 
 	// 检查手机号是否已存在（如果提供了手机号）
 	if phone != "" {
-		query := facades.Orm().Query().Model(&models.User{}).Where("phone", phone)
+		query := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("phone", phone)
 		if excludeID > 0 {
 			query = query.Where("id != ?", excludeID)
 		}
@@ -366,7 +369,7 @@ func (s *UserServiceImpl) CreateWithValidation(username, password, nickname, ema
 	// 如果未设置货币ID，默认使用人民币
 	var currencyID uint
 	var cnyCurrency models.Currency
-	if err := facades.Orm().Query().Where("code", "CNY").First(&cnyCurrency); err == nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("code", "CNY").First(&cnyCurrency); err == nil {
 		currencyID = cnyCurrency.ID
 	}
 
@@ -411,7 +414,7 @@ func (s *UserServiceImpl) ResetPassword(userID uint, newPassword string) error {
 	}
 
 	// 更新密码
-	_, err = facades.Orm().Query().Model(&models.User{}).Where("id", userID).Update(map[string]any{
+	_, err = appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("id", userID).Update(map[string]any{
 		"password": hashedPassword,
 	})
 	if err != nil {

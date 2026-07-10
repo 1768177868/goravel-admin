@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -142,7 +143,7 @@ type OrderProductItem struct {
 
 func NewOrderController() *OrderController {
 	return &OrderController{
-		orderService: services.NewOrderService(),
+		orderService: services.NewOrderService(context.Background()),
 	}
 }
 
@@ -639,7 +640,7 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "id_required")
 	}
 
-	exportRecordService := services.NewExportRecordService()
+	exportRecordService := services.NewExportRecordService(context.Background())
 	exportRecord, err := exportRecordService.GetByID(exportID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "export", err)

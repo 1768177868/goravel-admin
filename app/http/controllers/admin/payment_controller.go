@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -67,7 +68,7 @@ type PaymentDetailResponse struct {
 
 func NewPaymentController() *PaymentController {
 	return &PaymentController{
-		paymentService: services.NewPaymentService(),
+		paymentService: services.NewPaymentService(context.Background()),
 	}
 }
 

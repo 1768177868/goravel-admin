@@ -132,7 +132,7 @@ func (s *ImportOrderService) ImportOrders(csvContent string) (*ImportResult, err
 	})
 
 	// 导入订单
-	orderService := NewOrderService()
+	orderService := NewOrderService(s.ctx)
 	for orderKey, rows := range orderMapRows {
 		if err := s.importOrderGroup(orderService, orderKey, rows, result); err != nil {
 			result.FailedCount++

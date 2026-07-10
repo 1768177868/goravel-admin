@@ -67,7 +67,7 @@ func shouldPersistOperationLog(method, path string, ctx http.Context) bool {
 // OperationLog 操作日志中间件
 func OperationLog() http.Middleware {
 	return newMiddleware("operation_log", func(ctx http.Context) {
-		systemLogService := services.NewSystemLogService()
+		systemLogService := services.NewSystemLogService(ctx)
 		startTime := time.Now()
 
 		// 获取请求信息

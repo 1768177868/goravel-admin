@@ -1,13 +1,18 @@
 package option_providers
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 )
 
-type FormDemoOptionProvider struct{}
+type FormDemoOptionProvider struct {
+	ctx context.Context
+}
 
-func NewFormDemoOptionProvider() *FormDemoOptionProvider {
-	return &FormDemoOptionProvider{}
+func NewFormDemoOptionProvider(ctx context.Context) *FormDemoOptionProvider {
+	return &FormDemoOptionProvider{
+		ctx: ctx}
 }
 
 func (p *FormDemoOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {

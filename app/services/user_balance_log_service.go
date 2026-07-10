@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
@@ -42,12 +42,14 @@ type UserBalanceStatistics struct {
 }
 
 type UserBalanceLogServiceImpl struct {
+	ctx             context.Context
 	shardingService ShardingService
 }
 
-func NewUserBalanceLogService() UserBalanceLogService {
+func NewUserBalanceLogService(ctx context.Context) UserBalanceLogService {
 	return &UserBalanceLogServiceImpl{
-		shardingService: NewShardingService(),
+		ctx:             ctx,
+		shardingService: NewShardingService(ctx),
 	}
 }
 
@@ -101,7 +103,7 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 	}
 
 	// 使用 Goravel ORM，通过 Table() 方法指定分表名称
-	err := facades.Orm().Query().Table(tableName).Create(log)
+	err := appfacades.OrmQuery(s.ctx).Table(tableName).Create(log)
 	if err != nil {
 		errorlog.Record(context.Background(), "user-balance-log", "创建余额变动记录失败", map[string]any{
 			"user_id":    userID,
@@ -128,7 +130,7 @@ func (s *UserBalanceLogServiceImpl) GetLogs(filters UserBalanceLogFilters, page,
 
 	// 构建基础查询（用于 Count 和 Get）
 	buildQuery := func() orm.Query {
-		query := facades.Orm().Query().Table(tableName).
+		query := appfacades.OrmQuery(s.ctx).Table(tableName).
 			Where("user_id", filters.UserID)
 
 		// 添加其他筛选条件
@@ -182,7 +184,7 @@ func (s *UserBalanceLogServiceImpl) GetUserBalance(userID uint) (float64, error)
 	}
 
 	var user models.User
-	err := facades.Orm().Query().Where("id", userID).First(&user)
+	err := appfacades.OrmQuery(s.ctx).Where("id", userID).First(&user)
 	if err != nil {
 		return 0, apperrors.ErrUserNotFound.WithError(err)
 	}
@@ -200,7 +202,7 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	tableName := utils.GetHashShardingTableNameByConfig(utils.UserBalanceLogsShardingConfig, userID)
 
 	// 使用 Goravel ORM，通过 Table() 方法指定分表名称
-	query := facades.Orm().Query().Table(tableName).
+	query := appfacades.OrmQuery(s.ctx).Table(tableName).
 		Where("user_id", userID).
 		Where("status", "success")
 
@@ -231,7 +233,7 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	}
 	incomeSQL := "SELECT COALESCE(SUM(amount), 0) as total FROM " + tableName + " WHERE " + baseWhere + " AND type = ?"
 	incomeArgs := append(baseConditions, "income")
-	if err := facades.Orm().Query().Raw(incomeSQL, incomeArgs...).Scan(&incomeResult); err == nil {
+	if err := appfacades.OrmQuery(s.ctx).Raw(incomeSQL, incomeArgs...).Scan(&incomeResult); err == nil {
 		stats.TotalIncome = incomeResult.Total
 	}
 
@@ -241,7 +243,7 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	}
 	expenseSQL := "SELECT COALESCE(SUM(amount), 0) as total FROM " + tableName + " WHERE " + baseWhere + " AND type = ?"
 	expenseArgs := append(baseConditions, "expense")
-	if err := facades.Orm().Query().Raw(expenseSQL, expenseArgs...).Scan(&expenseResult); err == nil {
+	if err := appfacades.OrmQuery(s.ctx).Raw(expenseSQL, expenseArgs...).Scan(&expenseResult); err == nil {
 		stats.TotalExpense = expenseResult.Total
 	}
 
@@ -251,7 +253,7 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	}
 	refundSQL := "SELECT COALESCE(SUM(amount), 0) as total FROM " + tableName + " WHERE " + baseWhere + " AND type = ?"
 	refundArgs := append(baseConditions, "refund")
-	if err := facades.Orm().Query().Raw(refundSQL, refundArgs...).Scan(&refundResult); err == nil {
+	if err := appfacades.OrmQuery(s.ctx).Raw(refundSQL, refundArgs...).Scan(&refundResult); err == nil {
 		stats.TotalRefund = refundResult.Total
 	}
 
@@ -260,11 +262,11 @@ func (s *UserBalanceLogServiceImpl) GetUserStatistics(userID uint, startTime, en
 	if err == nil {
 		// 获取用户信息以获取货币信息
 		var user models.User
-		if err := facades.Orm().Query().Where("id", userID).First(&user); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id", userID).First(&user); err == nil {
 			// 加载货币信息
 			if user.CurrencyID > 0 {
 				var currency models.Currency
-				if err := facades.Orm().Query().Where("id", user.CurrencyID).First(&currency); err == nil {
+				if err := appfacades.OrmQuery(s.ctx).Where("id", user.CurrencyID).First(&currency); err == nil {
 					user.Currency = &currency
 				}
 			}

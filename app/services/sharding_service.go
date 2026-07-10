@@ -24,10 +24,11 @@ type ShardingService interface {
 }
 
 type ShardingServiceImpl struct {
+	ctx      context.Context
 	creators map[string]TableCreator
 }
 
-func NewShardingService() ShardingService {
+func NewShardingService(ctx context.Context) ShardingService {
 	service := &ShardingServiceImpl{
 		creators: make(map[string]TableCreator),
 	}

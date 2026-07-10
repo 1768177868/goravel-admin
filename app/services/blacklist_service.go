@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/dromara/carbon/v2"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -32,16 +34,17 @@ type BlacklistFilters struct {
 }
 
 type BlacklistServiceImpl struct {
+	ctx context.Context
 }
 
-func NewBlacklistService() BlacklistService {
-	return &BlacklistServiceImpl{}
+func NewBlacklistService(ctx context.Context) BlacklistService {
+	return &BlacklistServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取黑名单
 func (s *BlacklistServiceImpl) GetByID(id uint) (*models.Blacklist, error) {
 	var blacklist models.Blacklist
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&blacklist); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&blacklist); err != nil {
 		return nil, apperrors.ErrBlacklistNotFound.WithError(err)
 	}
 	return &blacklist, nil
@@ -49,7 +52,7 @@ func (s *BlacklistServiceImpl) GetByID(id uint) (*models.Blacklist, error) {
 
 // GetList 获取黑名单列表
 func (s *BlacklistServiceImpl) GetList(filters BlacklistFilters, page, pageSize int) ([]models.Blacklist, int64, error) {
-	query := facades.Orm().Query().Model(&models.Blacklist{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Blacklist{})
 
 	// 应用筛选条件
 	if filters.IP != "" {
@@ -93,7 +96,7 @@ func (s *BlacklistServiceImpl) Create(ip, remark string, status uint8) (*models.
 		"updated_at": carbon.Now(),
 	}
 
-	if err := facades.Orm().Query().Model(blacklist).Create(createData); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(blacklist).Create(createData); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -102,7 +105,7 @@ func (s *BlacklistServiceImpl) Create(ip, remark string, status uint8) (*models.
 
 // Update 更新黑名单
 func (s *BlacklistServiceImpl) Update(blacklist *models.Blacklist) error {
-	if err := facades.Orm().Query().Save(blacklist); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(blacklist); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -110,7 +113,7 @@ func (s *BlacklistServiceImpl) Update(blacklist *models.Blacklist) error {
 
 // Delete 删除黑名单
 func (s *BlacklistServiceImpl) Delete(blacklist *models.Blacklist) error {
-	if _, err := facades.Orm().Query().Delete(blacklist); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(blacklist); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

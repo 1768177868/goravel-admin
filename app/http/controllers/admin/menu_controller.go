@@ -1,11 +1,13 @@
 package admin
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
-	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -23,8 +25,8 @@ type MenuController struct {
 
 func NewMenuController() *MenuController {
 	return &MenuController{
-		treeService: services.NewTreeServiceImpl(),
-		menuService: services.NewMenuService(),
+		treeService: services.NewTreeServiceImpl(context.Background()),
+		menuService: services.NewMenuService(context.Background()),
 	}
 }
 

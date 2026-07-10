@@ -5,12 +5,17 @@ import (
 	"goravel/routes"
 
 	contractsfoundation "github.com/goravel/framework/contracts/foundation"
+	contractsconfiguration "github.com/goravel/framework/contracts/foundation/configuration"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/foundation"
+	telemetryhttp "github.com/goravel/framework/telemetry/instrumentation/http"
 )
 
 func Boot() contractsfoundation.Application {
 	return foundation.Setup().
+		WithMiddleware(func(handler contractsconfiguration.Middleware) {
+			handler.Append(telemetryhttp.Telemetry())
+		}).
 		WithMigrations(Migrations).
 		WithSeeders(Seeders).
 		WithRouting(func() {
@@ -27,12 +32,16 @@ func Boot() contractsfoundation.Application {
 			if facades.Config().GetString("app.env", "production") != "production" {
 				return nil
 			}
-			return []string{
-				"up", "down", "about", "key:generate",
+			filtered := []string{
+				"about", "key:generate",
 				"schedule:*", "queue:*", "migrate*",
 				"db:*", "cache:*", "config:*", "lang:*",
 				"app:*", "order:*", "payment:*", "es:*", "token:*",
 			}
+			if !facades.Config().GetBool("app.allow_maintenance_commands", false) {
+				filtered = append([]string{"up", "down"}, filtered...)
+			}
+			return filtered
 		}).
 		WithConfig(config.Boot).
 		Create()

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	appfacades "goravel/app/facades"
 	"time"
 
@@ -20,7 +21,7 @@ type AuthController struct {
 
 func NewAuthController() *AuthController {
 	return &AuthController{
-		userService: services.NewUserService(),
+		userService: services.NewUserService(context.Background()),
 	}
 }
 

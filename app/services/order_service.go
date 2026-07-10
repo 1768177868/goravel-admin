@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"sort"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ func ApplyOrderFiltersToQuery(query orm.Query, filters OrderFilters) orm.Query {
 
 // BuildOrderQuery 构建订单分表查询（包含时间范围 + 通用筛选），供列表查询/导出复用。
 func BuildOrderQuery(tableName string, filters OrderFilters) orm.Query {
-	query := facades.Orm().Query().Table(tableName)
+	query := appfacades.OrmQuery(context.Background()).Table(tableName)
 
 	// 时间范围（导出/列表都需要）
 	if !filters.StartTime.IsZero() {
@@ -125,6 +126,7 @@ type OrderFilters struct {
 }
 
 type OrderServiceImpl struct {
+	ctx                  context.Context
 	shardingService      ShardingService
 	shardingQueryService ShardingQueryService
 	countThreshold       int64 // count 查询优化阈值
@@ -148,13 +150,14 @@ type OrderWithDetails struct {
 	Details []models.OrderDetail `json:"details"`
 }
 
-func NewOrderService() *OrderServiceImpl {
+func NewOrderService(ctx context.Context) *OrderServiceImpl {
 	service := &OrderServiceImpl{
-		shardingService: NewShardingService(),
+		ctx:             ctx,
+		shardingService: NewShardingService(ctx),
 	}
 
 	// 初始化分表查询服务
-	service.shardingQueryService = NewShardingQueryService(ShardingQueryConfig{
+	service.shardingQueryService = NewShardingQueryService(ctx, ShardingQueryConfig{
 		BaseTableName: "orders",
 		GetColumns: func() string {
 			return service.getOrderTableColumns()
@@ -244,7 +247,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 		}
 
 		// 尝试插入订单（数据库唯一索引会防止重复）
-		err := facades.Orm().Query().Table(tableName).Create(order)
+		err := appfacades.OrmQuery(s.ctx).Table(tableName).Create(order)
 		if err == nil {
 			// 插入成功，跳出循环
 			break
@@ -301,9 +304,9 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			// CreatedAt 由 orm.Model 自动设置
 		}
 
-		if err := facades.Orm().Query().Table(detailTableName).Create(&detail); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Table(detailTableName).Create(&detail); err != nil {
 			// 如果详情创建失败，删除已创建的订单
-			_, _ = facades.Orm().Query().Table(tableName).Where("id", order.ID).Delete(&models.Order{})
+			_, _ = appfacades.OrmQuery(s.ctx).Table(tableName).Where("id", order.ID).Delete(&models.Order{})
 			_ = facades.Cache().Forget(lockKey)
 			errorlog.Record(context.Background(), "order", "创建订单详情失败", map[string]any{
 				"order_id":   order.ID,
@@ -598,7 +601,7 @@ func (s *OrderServiceImpl) GetOrdersWithDetails(filters OrderFilters, page, page
 		}
 
 		var details []models.OrderDetail
-		if err := facades.Orm().Query().Table(tableName).
+		if err := appfacades.OrmQuery(s.ctx).Table(tableName).
 			WhereIn("order_id", orderIDsAny).
 			Find(&details); err == nil {
 			// 将详情分配到对应的订单
@@ -743,7 +746,7 @@ func (s *OrderServiceImpl) GetAllOrdersWithDetailsForExport(filters OrderFilters
 		}
 
 		var details []models.OrderDetail
-		if err := facades.Orm().Query().Table(tableName).
+		if err := appfacades.OrmQuery(s.ctx).Table(tableName).
 			WhereIn("order_id", orderIDsAny).
 			Find(&details); err == nil {
 			// 将详情分配到对应的订单
@@ -785,7 +788,7 @@ func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status
 		"remark": remark,
 	}
 
-	_, err = facades.Orm().Query().Table(tableName).
+	_, err = appfacades.OrmQuery(s.ctx).Table(tableName).
 		Where("id", orderID).
 		Update(updateData)
 	if err != nil {
@@ -818,7 +821,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 
 	// 软删除订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
-	if _, err := facades.Orm().Query().Table(detailTableName).Where("order_id", orderID).Delete(&models.OrderDetail{}); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Table(detailTableName).Where("order_id", orderID).Delete(&models.OrderDetail{}); err != nil {
 		errorlog.Record(context.Background(), "order", "删除订单详情失败", map[string]any{
 			"order_id": orderID,
 			"error":    err.Error(),
@@ -828,7 +831,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 
 	// 软删除订单主表
 	tableName := utils.GetShardingTableName("orders", createdAt)
-	_, err = facades.Orm().Query().Table(tableName).Where("id", orderID).Delete(&models.Order{})
+	_, err = appfacades.OrmQuery(s.ctx).Table(tableName).Where("id", orderID).Delete(&models.Order{})
 	if err != nil {
 		return err
 	}
@@ -856,7 +859,7 @@ func (s *OrderServiceImpl) UpdateOrderByOrderNo(orderNo string, status string, r
 	}
 
 	// 更新订单
-	_, err = facades.Orm().Query().Table(tableName).Where("order_no", orderNo).Update(updateData)
+	_, err = appfacades.OrmQuery(s.ctx).Table(tableName).Where("order_no", orderNo).Update(updateData)
 	if err != nil {
 		return err
 	}
@@ -878,7 +881,7 @@ func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
 
 	// 软删除订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
-	_, err = facades.Orm().Query().Table(detailTableName).Where("order_id", order.ID).Delete(&models.OrderDetail{})
+	_, err = appfacades.OrmQuery(s.ctx).Table(detailTableName).Where("order_id", order.ID).Delete(&models.OrderDetail{})
 	if err != nil {
 		errorlog.Record(context.Background(), "order", "删除订单详情失败", map[string]any{
 			"order_no": orderNo,
@@ -889,7 +892,7 @@ func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
 
 	// 软删除订单主表
 	tableName := utils.GetShardingTableName("orders", createdAt)
-	_, err = facades.Orm().Query().Table(tableName).Where("order_no", orderNo).Delete(&models.Order{})
+	_, err = appfacades.OrmQuery(s.ctx).Table(tableName).Where("order_no", orderNo).Delete(&models.Order{})
 	if err != nil {
 		return err
 	}
@@ -937,7 +940,7 @@ func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
 			Rows int64 `gorm:"column:rows"`
 		}
 		sql := fmt.Sprintf("EXPLAIN SELECT * FROM `%s` WHERE created_at >= ? AND created_at <= ?", tableName)
-		err := facades.Orm().Query().Raw(sql, startTime, endTime).Scan(&explainResult)
+		err := appfacades.OrmQuery(s.ctx).Raw(sql, startTime, endTime).Scan(&explainResult)
 		if err != nil {
 			errorlog.Record(context.Background(), "order", "查询分表预估行数失败", map[string]any{
 				"table_name": tableName,

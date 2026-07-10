@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -28,7 +29,7 @@ type UserController struct {
 
 func NewUserController() *UserController {
 	return &UserController{
-		userService: services.NewUserService(),
+		userService: services.NewUserService(context.Background()),
 	}
 }
 

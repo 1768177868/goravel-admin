@@ -10,6 +10,8 @@ import (
 <<end>>
 	"strings"
 
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 <<if .HasExport>>
 <<if .ExportAsync>>
@@ -67,7 +69,7 @@ func (c *<<.ControllerName>>) build<<.ModelName>>Filters(ctx http.Context) servi
 
 func New<<.ControllerName>>() *<<.ControllerName>> {
 	return &<<.ControllerName>>{
-		<<.ServiceName>>: services.New<<.ServiceName>>(),
+		<<.ServiceName>>: services.New<<.ServiceName>>(context.Background()),
 	}
 }
 

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"reflect"
 	"strings"
 
@@ -63,11 +64,12 @@ type ShardingQueryService interface {
 }
 
 type ShardingQueryServiceImpl struct {
+	ctx    context.Context
 	config ShardingQueryConfig
 }
 
 // NewShardingQueryService 创建分表查询服务
-func NewShardingQueryService(config ShardingQueryConfig) ShardingQueryService {
+func NewShardingQueryService(ctx context.Context, config ShardingQueryConfig) ShardingQueryService {
 	// 设置默认值
 	if config.DefaultOrderBy == "" {
 		config.DefaultOrderBy = "created_at:desc"
@@ -161,7 +163,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	} else {
 		// 没有配置阈值，直接使用传统的 count 统计
 		// 根据数据库类型决定表名引号（MySQL 用反引号，PostgreSQL 不用）
-		driver := strings.ToLower(facades.Orm().Query().Driver())
+		driver := strings.ToLower(appfacades.OrmQuery(s.ctx).Driver())
 
 		tableQuote := ""
 		if driver == "mysql" {
@@ -176,7 +178,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 			}
 			// 使用对应的参数（每个分表使用相同的参数）
 			args := whereConditions
-			if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&countResult); err != nil {
+			if err := appfacades.OrmQuery(s.ctx).Raw(countSQL, args...).Scan(&countResult); err != nil {
 				errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
 					"table_name": tableName,
 					"error":      err.Error(),
@@ -208,7 +210,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	paginatedArgs := append(allArgs, pageSize, offset)
 
 	// 执行查询
-	if err := facades.Orm().Query().Raw(paginatedSQL, paginatedArgs...).Scan(result); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Raw(paginatedSQL, paginatedArgs...).Scan(result); err != nil {
 		errorlog.Record(context.Background(), s.config.ModuleName, "查询列表失败", map[string]any{
 			"table_count": len(tableNames),
 			"page":        page,
@@ -283,7 +285,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 	)
 
 	// 执行查询
-	if err := facades.Orm().Query().Raw(exportSQL, allArgs...).Scan(result); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Raw(exportSQL, allArgs...).Scan(result); err != nil {
 		errorlog.Record(context.Background(), s.config.ModuleName, "导出查询失败", map[string]any{
 			"table_count": len(tableNames),
 			"error":       err.Error(),
@@ -301,7 +303,7 @@ func (s *ShardingQueryServiceImpl) getColumnsForUnion() string {
 		return columnsStr
 	}
 	// 仅 MySQL 且配置了 UnionCollation 和 StringColumns 时，对字符串列添加 COLLATE
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(s.ctx).Driver())
 	if driver != "mysql" || s.config.UnionCollation == "" || len(s.config.StringColumns) == 0 {
 		return columnsStr
 	}

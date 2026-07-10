@@ -3,8 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
-
-	"github.com/goravel/framework/facades"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -38,16 +37,17 @@ type ExportRecordFilters struct {
 }
 
 type ExportRecordServiceImpl struct {
+	ctx context.Context
 }
 
-func NewExportRecordService() ExportRecordService {
-	return &ExportRecordServiceImpl{}
+func NewExportRecordService(ctx context.Context) ExportRecordService {
+	return &ExportRecordServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取导出记录
 func (s *ExportRecordServiceImpl) GetByID(id uint) (*models.Export, error) {
 	var export models.Export
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&export); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&export); err != nil {
 		return nil, apperrors.ErrExportRecordNotFound.WithError(err)
 	}
 	return &export, nil
@@ -61,7 +61,7 @@ func (s *ExportRecordServiceImpl) GetByIDs(ids []uint) ([]models.Export, error) 
 
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	var exports []models.Export
-	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&exports); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).WhereIn("id", idsAny).Get(&exports); err != nil {
 		return nil, apperrors.ErrQueryFailed.WithError(err)
 	}
 	return exports, nil
@@ -69,7 +69,7 @@ func (s *ExportRecordServiceImpl) GetByIDs(ids []uint) ([]models.Export, error) 
 
 // GetList 获取导出记录列表
 func (s *ExportRecordServiceImpl) GetList(filters ExportRecordFilters, page, pageSize int) ([]models.Export, int64, error) {
-	query := facades.Orm().Query().Model(&models.Export{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Export{})
 
 	// 应用筛选条件
 	if filters.AdminID != "" {
@@ -114,11 +114,11 @@ func (s *ExportRecordServiceImpl) GetList(filters ExportRecordFilters, page, pag
 // Delete 删除导出记录
 func (s *ExportRecordServiceImpl) Delete(id uint) error {
 	var export models.Export
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&export); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&export); err != nil {
 		return fmt.Errorf("导出记录不存在: %v", err)
 	}
 
-	if _, err := facades.Orm().Query().Delete(&export); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(&export); err != nil {
 		errorlog.Record(context.Background(), "export-record", "删除导出记录失败", map[string]any{
 			"export_id": id,
 			"error":     err.Error(),
@@ -136,7 +136,7 @@ func (s *ExportRecordServiceImpl) BatchDelete(ids []uint) error {
 	}
 
 	idsAny := helpers.ConvertUintSliceToAny(ids)
-	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
 		errorlog.Record(context.Background(), "export-record", "批量删除导出记录失败", map[string]any{
 			"ids":   ids,
 			"count": len(ids),

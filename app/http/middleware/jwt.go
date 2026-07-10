@@ -53,7 +53,7 @@ func Jwt() http.Middleware {
 		}
 
 		// 从数据库查找token
-		tokenService := services.NewTokenServiceImpl()
+		tokenService := services.NewTokenServiceImpl(ctx)
 		accessToken, err := tokenService.FindToken(token)
 		if err != nil {
 			tokenPrefix := token[:min(20, len(token))]

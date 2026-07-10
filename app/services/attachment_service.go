@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"io"
 	"mime"
 	"os"
@@ -87,7 +88,7 @@ func NewAttachmentService(ctx http.Context) AttachmentService {
 	return &AttachmentServiceImpl{
 		ctx:              ctx,
 		disk:             disk,
-		systemLogService: NewSystemLogService(),
+		systemLogService: NewSystemLogService(ctx),
 	}
 }
 
@@ -309,7 +310,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		ChunkID:   chunkID,
 	}
 
-	if err := facades.Orm().Query().Create(attachment); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(attachment); err != nil {
 		// 如果创建记录失败，删除已上传的文件
 		_ = storage.Delete(finalPath)
 		if s.ctx != nil {
@@ -451,7 +452,7 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 		FileType:  fileType,
 	}
 
-	if err := facades.Orm().Query().Create(attachment); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(attachment); err != nil {
 		_ = storage.Delete(finalPath)
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "创建附件记录失败", map[string]any{
@@ -528,7 +529,7 @@ func (s *AttachmentServiceImpl) GetFileType(mimeType string) string {
 // GetByID 根据ID获取附件
 func (s *AttachmentServiceImpl) GetByID(id uint) (*models.Attachment, error) {
 	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&attachment); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&attachment); err != nil {
 		return nil, apperrors.ErrAttachmentNotFound.WithError(err)
 	}
 	return &attachment, nil
@@ -542,7 +543,7 @@ func (s *AttachmentServiceImpl) GetByIDs(ids []uint) ([]models.Attachment, error
 
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	var attachments []models.Attachment
-	if err := facades.Orm().Query().WhereIn("id", idsAny).Get(&attachments); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).WhereIn("id", idsAny).Get(&attachments); err != nil {
 		return nil, apperrors.ErrQueryFailed.WithError(err)
 	}
 	return attachments, nil
@@ -550,7 +551,7 @@ func (s *AttachmentServiceImpl) GetByIDs(ids []uint) ([]models.Attachment, error
 
 // GetList 获取附件列表
 func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSize int) ([]models.Attachment, int64, error) {
-	query := facades.Orm().Query().Model(&models.Attachment{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Attachment{})
 
 	// 应用筛选条件
 	if filters.AdminID != "" {
@@ -595,12 +596,12 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 // UpdateDisplayName 更新显示名称
 func (s *AttachmentServiceImpl) UpdateDisplayName(id uint, displayName string) error {
 	var attachment models.Attachment
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&attachment); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&attachment); err != nil {
 		return fmt.Errorf("附件不存在: %v", err)
 	}
 
 	attachment.DisplayName = displayName
-	if err := facades.Orm().Query().Save(&attachment); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(&attachment); err != nil {
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "更新附件显示名称失败", map[string]any{
 				"attachment_id": id,
@@ -633,7 +634,7 @@ func (s *AttachmentServiceImpl) DeleteFile(attachment *models.Attachment) error 
 	}
 
 	// 删除数据库记录
-	if _, err := facades.Orm().Query().Delete(attachment); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(attachment); err != nil {
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "删除附件记录失败", map[string]any{
 				"attachment_id": attachment.ID,

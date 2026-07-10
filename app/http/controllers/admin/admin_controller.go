@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	stderrors "errors"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -88,8 +89,8 @@ type UnbindGoogleAuthRequest struct {
 
 func NewAdminController() *AdminController {
 	return &AdminController{
-		adminService:               services.NewAdminServiceImpl(),
-		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
+		adminService:               services.NewAdminServiceImpl(context.Background()),
+		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(context.Background()),
 	}
 }
 

@@ -47,7 +47,7 @@ type GenerateWithAIRequest struct {
 
 func NewCodeGeneratorController() *CodeGeneratorController {
 	return &CodeGeneratorController{
-		codeGeneratorService: services.NewCodeGeneratorService(),
+		codeGeneratorService: services.NewCodeGeneratorService(context.Background()),
 	}
 }
 

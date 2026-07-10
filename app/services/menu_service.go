@@ -1,7 +1,8 @@
 package services
 
 import (
-	"github.com/goravel/framework/facades"
+	"context"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
@@ -19,16 +20,17 @@ type MenuService interface {
 }
 
 type MenuServiceImpl struct {
+	ctx context.Context
 }
 
-func NewMenuService() MenuService {
-	return &MenuServiceImpl{}
+func NewMenuService(ctx context.Context) MenuService {
+	return &MenuServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取菜单
 func (s *MenuServiceImpl) GetByID(id uint) (*models.Menu, error) {
 	var menu models.Menu
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&menu); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&menu); err != nil {
 		return nil, apperrors.ErrMenuNotFound.WithError(err)
 	}
 	return &menu, nil
@@ -53,7 +55,7 @@ func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, compone
 		NoCache:    noCache,
 	}
 
-	if err := facades.Orm().Query().Create(menu); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(menu); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -62,7 +64,7 @@ func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, compone
 
 // Update 更新菜单
 func (s *MenuServiceImpl) Update(menu *models.Menu) error {
-	if err := facades.Orm().Query().Save(menu); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(menu); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -70,7 +72,7 @@ func (s *MenuServiceImpl) Update(menu *models.Menu) error {
 
 // Delete 删除菜单
 func (s *MenuServiceImpl) Delete(menu *models.Menu) error {
-	if _, err := facades.Orm().Query().Delete(menu); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(menu); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

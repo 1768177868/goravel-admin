@@ -1,7 +1,8 @@
 package services
 
 import (
-	"github.com/goravel/framework/facades"
+	"context"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -33,16 +34,17 @@ type OperationLogFilters struct {
 }
 
 type OperationLogServiceImpl struct {
+	ctx context.Context
 }
 
-func NewOperationLogService() OperationLogService {
-	return &OperationLogServiceImpl{}
+func NewOperationLogService(ctx context.Context) OperationLogService {
+	return &OperationLogServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取操作日志
 func (s *OperationLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.OperationLog, error) {
 	var log models.OperationLog
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(s.ctx).Where("id", id)
 
 	// 预加载关联
 	if withAdmin {
@@ -58,7 +60,7 @@ func (s *OperationLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.Oper
 
 // GetList 获取操作日志列表
 func (s *OperationLogServiceImpl) GetList(filters OperationLogFilters, page, pageSize int) ([]models.OperationLog, int64, error) {
-	query := facades.Orm().Query().Model(&models.OperationLog{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.OperationLog{})
 
 	// 应用筛选条件
 	if filters.AdminID != "" {
@@ -71,7 +73,7 @@ func (s *OperationLogServiceImpl) GetList(filters OperationLogFilters, page, pag
 		// 通过用户名查找管理员ID
 		var adminIDs []uint
 		var admins []models.Admin
-		if err := facades.Orm().Query().Where("username LIKE ?", "%"+filters.Username+"%").Get(&admins); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("username LIKE ?", "%"+filters.Username+"%").Get(&admins); err == nil {
 			for _, admin := range admins {
 				adminIDs = append(adminIDs, admin.ID)
 			}

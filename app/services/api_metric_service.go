@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
 	"sort"
 	"time"
 
@@ -44,7 +46,9 @@ type ApiMetricService interface {
 	GetRecentTraces(method, routeTemplate string, hours, limit int) ([]ApiPerformanceTraceItem, error)
 }
 
-type ApiMetricServiceImpl struct{}
+type ApiMetricServiceImpl struct {
+	ctx context.Context
+}
 
 type apiAggregateRow struct {
 	Method        string  `json:"method"`
@@ -55,8 +59,8 @@ type apiAggregateRow struct {
 	MaxDurationMS float64 `json:"max_duration_ms"`
 }
 
-func NewApiMetricService() ApiMetricService {
-	return &ApiMetricServiceImpl{}
+func NewApiMetricService(ctx context.Context) ApiMetricService {
+	return &ApiMetricServiceImpl{ctx: ctx}
 }
 
 func (s *ApiMetricServiceImpl) GetOverview(hours, limit int) (ApiPerformanceOverview, error) {
@@ -85,7 +89,7 @@ func (s *ApiMetricServiceImpl) GetOverview(hours, limit int) (ApiPerformanceOver
 
 	cutoff := time.Now().Add(-time.Duration(hours) * time.Hour)
 	var rows []apiAggregateRow
-	err := facades.Orm().Query().Raw(`
+	err := appfacades.OrmQuery(s.ctx).Raw(`
 SELECT
 	method,
 	route_template,
@@ -177,7 +181,7 @@ func (s *ApiMetricServiceImpl) GetRecentTraces(method, routeTemplate string, hou
 
 	cutoff := time.Now().Add(-time.Duration(hours) * time.Hour)
 	var rows []models.ApiEndpointMetric
-	query := facades.Orm().Query().
+	query := appfacades.OrmQuery(s.ctx).
 		Model(&models.ApiEndpointMetric{}).
 		Where("created_at >= ?", cutoff).
 		Order("id desc").
@@ -208,7 +212,7 @@ func (s *ApiMetricServiceImpl) GetRecentTraces(method, routeTemplate string, hou
 
 func (s *ApiMetricServiceImpl) getEndpointPercentiles(cutoff time.Time, method, routeTemplate string) (float64, float64) {
 	var rows []models.ApiEndpointMetric
-	err := facades.Orm().Query().
+	err := appfacades.OrmQuery(s.ctx).
 		Model(&models.ApiEndpointMetric{}).
 		Select("duration_ms").
 		Where("created_at >= ?", cutoff).

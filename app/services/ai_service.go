@@ -15,20 +15,22 @@ type AIService interface {
 	Complete(ctx context.Context, prompt string, systemPrompt string) (string, error)
 }
 
-type AIServiceImpl struct{}
+type AIServiceImpl struct {
+	ctx context.Context
+}
 
-func NewAIService() AIService {
-	return &AIServiceImpl{}
+func NewAIService(ctx context.Context) AIService {
+	return &AIServiceImpl{ctx: ctx}
 }
 
 type promptAgent struct {
 	instructions string
 }
 
-func (a *promptAgent) Instructions() string              { return a.instructions }
-func (a *promptAgent) Messages() []contractsai.Message   { return nil }
+func (a *promptAgent) Instructions() string                 { return a.instructions }
+func (a *promptAgent) Messages() []contractsai.Message      { return nil }
 func (a *promptAgent) Middleware() []contractsai.Middleware { return nil }
-func (a *promptAgent) Tools() []contractsai.Tool         { return nil }
+func (a *promptAgent) Tools() []contractsai.Tool            { return nil }
 
 func (s *AIServiceImpl) Complete(ctx context.Context, prompt string, systemPrompt string) (string, error) {
 	provider := facades.Config().GetString("ai.default", "openai")

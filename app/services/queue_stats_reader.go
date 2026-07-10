@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"sort"
 	"strings"
 	"time"
@@ -16,10 +17,13 @@ import (
 )
 
 // QueueStatsReader 与 artisan queue:stats 使用同一套键与统计逻辑，供控制台与 HTTP 看板复用。
-type QueueStatsReader struct{}
+type QueueStatsReader struct {
+	ctx context.Context
+}
 
-func NewQueueStatsReader() *QueueStatsReader {
-	return &QueueStatsReader{}
+func NewQueueStatsReader(ctx context.Context) *QueueStatsReader {
+	return &QueueStatsReader{
+		ctx: ctx}
 }
 
 // QueueStatsInfo 数据库队列按逻辑队列名聚合的统计。
@@ -93,14 +97,14 @@ func (s *QueueStatsReader) RedisStreamKey(queueConnectionName, queueName string)
 // GetStatsByQueue 数据库驱动：按 queue 字段聚合 jobs / failed_jobs。
 func (s *QueueStatsReader) GetStatsByQueue() (map[string]QueueStatsInfo, error) {
 	var queues []string
-	err := facades.Orm().Query().Table("jobs").
+	err := appfacades.OrmQuery(s.ctx).Table("jobs").
 		Select("DISTINCT queue").
 		Pluck("queue", &queues)
 	if err != nil {
 		return nil, err
 	}
 	var failedQueues []string
-	err = facades.Orm().Query().Table("failed_jobs").
+	err = appfacades.OrmQuery(s.ctx).Table("failed_jobs").
 		Select("DISTINCT queue").
 		Pluck("queue", &failedQueues)
 	if err != nil {
@@ -116,21 +120,21 @@ func (s *QueueStatsReader) GetStatsByQueue() (map[string]QueueStatsInfo, error) 
 	result := make(map[string]QueueStatsInfo)
 	now := time.Now()
 	for qName := range queueMap {
-		pendingCount, _ := facades.Orm().Query().Table("jobs").
+		pendingCount, _ := appfacades.OrmQuery(s.ctx).Table("jobs").
 			Where("queue = ?", qName).
 			Where("available_at <= ?", now).
 			Where("reserved_at IS NULL").
 			Count()
-		delayedCount, _ := facades.Orm().Query().Table("jobs").
+		delayedCount, _ := appfacades.OrmQuery(s.ctx).Table("jobs").
 			Where("queue = ?", qName).
 			Where("available_at > ?", now).
 			Where("reserved_at IS NULL").
 			Count()
-		reservedCount, _ := facades.Orm().Query().Table("jobs").
+		reservedCount, _ := appfacades.OrmQuery(s.ctx).Table("jobs").
 			Where("queue = ?", qName).
 			Where("reserved_at IS NOT NULL").
 			Count()
-		failedCount, _ := facades.Orm().Query().Table("failed_jobs").
+		failedCount, _ := appfacades.OrmQuery(s.ctx).Table("failed_jobs").
 			Where("queue = ?", qName).
 			Count()
 		result[qName] = QueueStatsInfo{
@@ -195,11 +199,11 @@ func (s *QueueStatsReader) GetRedisQueueStats(redisConnectionName, queueConnecti
 		stats.Delayed = delayedLen
 		var failedCount int64
 		if queueName != "" {
-			failedCount, err = facades.Orm().Query().Table("failed_jobs").
+			failedCount, err = appfacades.OrmQuery(s.ctx).Table("failed_jobs").
 				Where("queue = ?", queueName).
 				Count()
 		} else {
-			failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
+			failedCount, err = appfacades.OrmQuery(s.ctx).Table("failed_jobs").Count()
 		}
 		if err == nil {
 			stats.Failed = failedCount
@@ -242,11 +246,11 @@ func (s *QueueStatsReader) GetRedisQueueStats(redisConnectionName, queueConnecti
 	stats.Delayed = delayedLen
 	var failedCount int64
 	if queueName != "" {
-		failedCount, err = facades.Orm().Query().Table("failed_jobs").
+		failedCount, err = appfacades.OrmQuery(s.ctx).Table("failed_jobs").
 			Where("queue = ?", queueName).
 			Count()
 	} else {
-		failedCount, err = facades.Orm().Query().Table("failed_jobs").Count()
+		failedCount, err = appfacades.OrmQuery(s.ctx).Table("failed_jobs").Count()
 	}
 	if err != nil {
 		stats.Failed = 0
@@ -335,7 +339,7 @@ func (s *QueueStatsReader) GetRedisStatsByQueue(redisConnectionName, queueConnec
 	})
 	if len(queueMap) == 0 {
 		var failedQueues []string
-		err = facades.Orm().Query().Table("failed_jobs").
+		err = appfacades.OrmQuery(s.ctx).Table("failed_jobs").
 			Select("DISTINCT queue").
 			Pluck("queue", &failedQueues)
 		if err == nil {

@@ -93,7 +93,7 @@ func (receiver *GenerateTestOrders) Extend() command.Extend {
 
 // Handle Execute the console command.
 func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
-	receiver.shardingService = services.NewShardingService()
+	receiver.shardingService = services.NewShardingService(context.Background())
 
 	runCtx, cancel := context.WithCancel(ctx)
 	receiver.cancel = cancel

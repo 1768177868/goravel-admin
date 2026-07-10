@@ -40,7 +40,7 @@ func (r *DefaultQueueRunner) Run() error {
 	r.mu.Unlock()
 
 	facades.Log().Infof("默认队列工作进程启动 - 队列: default, 并发数: %d, 最大重试次数: %d", concurrent, tries)
-	systemLogService := services.NewSystemLogService()
+	systemLogService := services.NewSystemLogService(context.Background())
 	_ = systemLogService.Record(context.Background(), "info", "queue", "默认队列工作进程启动", map[string]any{
 		"queue":      "default",
 		"concurrent": concurrent,
@@ -88,7 +88,7 @@ func (r *LongRunningQueueRunner) Run() error {
 	r.mu.Unlock()
 
 	facades.Log().Infof("耗时任务队列工作进程启动 - 队列: long-running, 并发数: %d, 最大重试次数: %d", longRunningConcurrent, tries)
-	systemLogService := services.NewSystemLogService()
+	systemLogService := services.NewSystemLogService(context.Background())
 	_ = systemLogService.Record(context.Background(), "info", "queue", "耗时任务队列工作进程启动", map[string]any{
 		"queue":      "long-running",
 		"concurrent": longRunningConcurrent,
@@ -140,7 +140,7 @@ func (r *ElasticsearchQueueRunner) Run() error {
 	r.mu.Unlock()
 
 	facades.Log().Infof("Elasticsearch 同步队列启动 - 队列: %s, 并发数: %d, 最大重试: %d", queueName, concurrent, tries)
-	systemLogService := services.NewSystemLogService()
+	systemLogService := services.NewSystemLogService(context.Background())
 	_ = systemLogService.Record(context.Background(), "info", "queue", "Elasticsearch 同步队列启动", map[string]any{
 		"queue":      queueName,
 		"concurrent": concurrent,
@@ -203,7 +203,7 @@ func (r *TestQueueRunner) Run() error {
 	r.mu.Unlock()
 
 	facades.Log().Infof("测试队列工作进程启动 - 队列: test, 并发数: %d, 最大重试次数: %d", testConcurrent, tries)
-	systemLogService := services.NewSystemLogService()
+	systemLogService := services.NewSystemLogService(context.Background())
 	_ = systemLogService.Record(context.Background(), "info", "queue", "测试队列工作进程启动", map[string]any{
 		"queue":      "test",
 		"concurrent": testConcurrent,

@@ -9,7 +9,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/binding"
-	"goravel/app/elasticsearch/demo"
+	esdemo "goravel/app/elasticsearch/demo"
 )
 
 // ElasticsearchExample 演示 Ping / 写入 / 搜索 / 删除（需 ELASTICSEARCH_ENABLED=true）。

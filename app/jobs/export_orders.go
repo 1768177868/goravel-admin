@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	appfacades "goravel/app/facades"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -177,7 +179,7 @@ func (r *ExportOrders) exportTable(w *csv.Writer, tableName string, filters serv
 
 		var details []models.OrderDetail
 		if len(orderIDsAny) > 0 {
-			_ = facades.Orm().Query().Table(detailTableName).
+			_ = appfacades.OrmQuery(context.Background()).Table(detailTableName).
 				WhereIn("order_id", orderIDsAny).
 				Get(&details)
 		}

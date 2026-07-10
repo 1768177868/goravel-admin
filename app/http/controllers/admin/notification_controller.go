@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"regexp"
 	"strings"
 
@@ -22,7 +23,7 @@ type NotificationController struct {
 
 func NewNotificationController() *NotificationController {
 	return &NotificationController{
-		service: services.NewNotificationServiceImpl(),
+		service: services.NewNotificationServiceImpl(context.Background()),
 	}
 }
 

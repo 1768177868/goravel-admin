@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	appfacades "goravel/app/facades"
 	"time"
 
@@ -20,7 +21,7 @@ type LoginLogController struct {
 
 func NewLoginLogController() *LoginLogController {
 	return &LoginLogController{
-		loginLogService: services.NewLoginLogService(),
+		loginLogService: services.NewLoginLogService(context.Background()),
 	}
 }
 

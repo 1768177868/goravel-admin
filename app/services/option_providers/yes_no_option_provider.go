@@ -1,15 +1,20 @@
 package option_providers
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	"goravel/app/http/trans"
 )
 
-type YesNoOptionProvider struct{}
+type YesNoOptionProvider struct {
+	ctx context.Context
+}
 
-func NewYesNoOptionProvider() *YesNoOptionProvider {
-	return &YesNoOptionProvider{}
+func NewYesNoOptionProvider(ctx context.Context) *YesNoOptionProvider {
+	return &YesNoOptionProvider{
+		ctx: ctx}
 }
 
 func (p *YesNoOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {

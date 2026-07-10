@@ -1,10 +1,11 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
 	"strconv"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -42,16 +43,18 @@ type RoleFilters struct {
 }
 
 type RoleServiceImpl struct {
+	ctx context.Context
 }
 
-func NewRoleServiceImpl() *RoleServiceImpl {
-	return &RoleServiceImpl{}
+func NewRoleServiceImpl(ctx context.Context) *RoleServiceImpl {
+	return &RoleServiceImpl{
+		ctx: ctx}
 }
 
 // GetByID 根据ID获取角色
 func (s *RoleServiceImpl) GetByID(id uint, withRelations bool) (*models.Role, error) {
 	var role models.Role
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(s.ctx).Where("id", id)
 
 	// 预加载关联
 	if withRelations {
@@ -67,7 +70,7 @@ func (s *RoleServiceImpl) GetByID(id uint, withRelations bool) (*models.Role, er
 
 // GetList 获取角色列表
 func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]models.Role, int64, error) {
-	query := facades.Orm().Query().Model(&models.Role{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Role{})
 
 	// 应用筛选条件
 	if filters.Name != "" {
@@ -103,12 +106,12 @@ func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]mo
 // LoadRelations 加载角色的关联数据（权限、菜单）
 func (s *RoleServiceImpl) LoadRelations(role *models.Role) error {
 	// 加载权限
-	if err := facades.Orm().Query().Model(role).Association("Permissions").Find(&role.Permissions); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(role).Association("Permissions").Find(&role.Permissions); err != nil {
 		return err
 	}
 
 	// 加载菜单
-	if err := facades.Orm().Query().Model(role).Association("Menus").Find(&role.Menus); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(role).Association("Menus").Find(&role.Menus); err != nil {
 		return err
 	}
 
@@ -119,22 +122,22 @@ func (s *RoleServiceImpl) LoadRelations(role *models.Role) error {
 func (s *RoleServiceImpl) SyncPermissions(role *models.Role, permissionIDs []uint) error {
 	var permissions []models.Permission
 	if len(permissionIDs) > 0 {
-		if err := facades.Orm().Query().Where("id IN ?", permissionIDs).Find(&permissions); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", permissionIDs).Find(&permissions); err != nil {
 			return err
 		}
 	}
-	return facades.Orm().Query().Model(role).Association("Permissions").Replace(permissions)
+	return appfacades.OrmQuery(s.ctx).Model(role).Association("Permissions").Replace(permissions)
 }
 
 // SyncMenus 同步角色菜单关联
 func (s *RoleServiceImpl) SyncMenus(role *models.Role, menuIDs []uint) error {
 	var menus []models.Menu
 	if len(menuIDs) > 0 {
-		if err := facades.Orm().Query().Where("id IN ?", menuIDs).Find(&menus); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", menuIDs).Find(&menus); err != nil {
 			return err
 		}
 	}
-	return facades.Orm().Query().Model(role).Association("Menus").Replace(menus)
+	return appfacades.OrmQuery(s.ctx).Model(role).Association("Menus").Replace(menus)
 }
 
 // ParseIDsFromRequest 从请求中解析ID数组
@@ -161,7 +164,7 @@ func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, s
 		Sort:        sort,
 	}
 
-	if err := facades.Orm().Query().Create(role); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(role); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -170,7 +173,7 @@ func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, s
 
 // Update 更新角色
 func (s *RoleServiceImpl) Update(role *models.Role) error {
-	if err := facades.Orm().Query().Save(role); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(role); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -178,7 +181,7 @@ func (s *RoleServiceImpl) Update(role *models.Role) error {
 
 // Delete 删除角色
 func (s *RoleServiceImpl) Delete(role *models.Role) error {
-	if _, err := facades.Orm().Query().Delete(role); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(role); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

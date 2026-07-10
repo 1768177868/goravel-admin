@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	appfacades "goravel/app/facades"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ type TokenService interface {
 }
 
 type TokenServiceImpl struct {
+	ctx context.Context
 }
 
 var (
@@ -42,8 +44,9 @@ var (
 	hasPATSessionIDColumn           bool
 )
 
-func NewTokenServiceImpl() *TokenServiceImpl {
-	return &TokenServiceImpl{}
+func NewTokenServiceImpl(ctx context.Context) *TokenServiceImpl {
+	return &TokenServiceImpl{
+		ctx: ctx}
 }
 
 func loadPersonalAccessTokenColumns() {
@@ -97,12 +100,12 @@ func (s *TokenServiceImpl) CreateToken(tokenableType string, tokenableID uint, n
 		payload["session_id"] = sessionID
 	}
 
-	if err := facades.Orm().Query().Table("personal_access_tokens").Create(payload); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Table("personal_access_tokens").Create(payload); err != nil {
 		return "", nil, err
 	}
 
 	var accessToken models.PersonalAccessToken
-	if err := facades.Orm().Query().Where("token", tokenHash).First(&accessToken); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("token", tokenHash).First(&accessToken); err != nil {
 		return plainToken, nil, nil
 	}
 
@@ -117,7 +120,7 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 
 	tokenHash := s.hashToken(token)
 	var accessToken models.PersonalAccessToken
-	if err := facades.Orm().Query().Where("token", tokenHash).FirstOrFail(&accessToken); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("token", tokenHash).FirstOrFail(&accessToken); err != nil {
 		// 记录调试信息
 		// facades.Log().Debugf("TokenService: FindToken failed, hash: %s, error: %v", tokenHash[:min(20, len(tokenHash))], err)
 		return nil, err
@@ -125,7 +128,7 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 
 	// 检查是否过期
 	if accessToken.ExpiresAt != nil && accessToken.ExpiresAt.Before(time.Now()) {
-		if _, err := facades.Orm().Query().Delete(&accessToken); err != nil {
+		if _, err := appfacades.OrmQuery(s.ctx).Delete(&accessToken); err != nil {
 			// 使用 traceid.EnsureContext 确保有 trace_id，即使使用 context.Background()
 			// 这样可以保证日志的可追踪性
 			ctx, _ := traceid.EnsureContext(context.Background())
@@ -146,13 +149,13 @@ func (s *TokenServiceImpl) FindToken(token string) (*models.PersonalAccessToken,
 // DeleteToken 删除token
 func (s *TokenServiceImpl) DeleteToken(token string) error {
 	tokenHash := s.hashToken(token)
-	_, err := facades.Orm().Query().Where("token", tokenHash).Delete(&models.PersonalAccessToken{})
+	_, err := appfacades.OrmQuery(s.ctx).Where("token", tokenHash).Delete(&models.PersonalAccessToken{})
 	return err
 }
 
 // DeleteTokensByUser 删除用户的所有token
 func (s *TokenServiceImpl) DeleteTokensByUser(tokenableType string, tokenableID uint) error {
-	_, err := facades.Orm().Query().
+	_, err := appfacades.OrmQuery(s.ctx).
 		Where("tokenable_type", tokenableType).
 		Where("tokenable_id", tokenableID).
 		Delete(&models.PersonalAccessToken{})
@@ -162,7 +165,7 @@ func (s *TokenServiceImpl) DeleteTokensByUser(tokenableType string, tokenableID 
 // GetTokensByUser 获取用户的所有token
 func (s *TokenServiceImpl) GetTokensByUser(tokenableType string, tokenableID uint) ([]models.PersonalAccessToken, error) {
 	var tokens []models.PersonalAccessToken
-	err := facades.Orm().Query().
+	err := appfacades.OrmQuery(s.ctx).
 		Where("tokenable_type", tokenableType).
 		Where("tokenable_id", tokenableID).
 		Order("created_at desc").
@@ -174,7 +177,7 @@ func (s *TokenServiceImpl) GetTokensByUser(tokenableType string, tokenableID uin
 func (s *TokenServiceImpl) UpdateLastUsedAt(token string) error {
 	tokenHash := s.hashToken(token)
 	now := time.Now()
-	_, err := facades.Orm().Query().
+	_, err := appfacades.OrmQuery(s.ctx).
 		Model(&models.PersonalAccessToken{}).
 		Where("token", tokenHash).
 		Update("last_used_at", now)

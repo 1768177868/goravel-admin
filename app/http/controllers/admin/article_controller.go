@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	appfacades "goravel/app/facades"
 
@@ -60,7 +61,7 @@ func (c *ArticleController) buildArticleFilters(ctx http.Context) services.Artic
 
 func NewArticleController() *ArticleController {
 	return &ArticleController{
-		ArticleService: services.NewArticleService(),
+		ArticleService: services.NewArticleService(context.Background()),
 	}
 }
 

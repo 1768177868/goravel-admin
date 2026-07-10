@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	appfacades "goravel/app/facades"
 	"net/http"
@@ -56,9 +57,9 @@ type pprofHotspot struct {
 
 func NewObservabilityController() *ObservabilityController {
 	return &ObservabilityController{
-		slowQueryService: services.NewSlowQueryService(),
-		systemLogService: services.NewSystemLogService(),
-		apiMetricService: services.NewApiMetricService(),
+		slowQueryService: services.NewSlowQueryService(context.Background()),
+		systemLogService: services.NewSystemLogService(context.Background()),
+		apiMetricService: services.NewApiMetricService(context.Background()),
 	}
 }
 
@@ -211,7 +212,7 @@ func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Respons
 
 // QueueDashboard 轻量队列看板（database / Redis 列表 / Redis Stream 三类可统计，其余标记不支持）
 func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Response {
-	reader := services.NewQueueStatsReader()
+	reader := services.NewQueueStatsReader(context.Background())
 	panels, defaultConn := reader.BuildQueueDashboard()
 	return response.Success(ctx, ghttp.Json{
 		"default_connection": defaultConn,

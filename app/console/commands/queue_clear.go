@@ -52,7 +52,7 @@ func (r *QueueClear) Extend() command.Extend {
 
 // Handle Execute the console command.
 func (r *QueueClear) Handle(ctx console.Context) error {
-	reader := services.NewQueueStatsReader()
+	reader := services.NewQueueStatsReader(context.Background())
 	queueName := ctx.Option("queue")
 	connectionName := ctx.Option("connection")
 	// 布尔标志：检查命令行参数中是否包含 --force

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -16,13 +17,14 @@ type CaptchaService interface {
 }
 
 type CaptchaServiceImpl struct {
+	ctx           context.Context
 	driver        base64Captcha.Driver
 	store         base64Captcha.Store
 	expireSeconds int
 	initialized   bool
 }
 
-func NewCaptchaServiceImpl() CaptchaService {
+func NewCaptchaServiceImpl(ctx context.Context) CaptchaService {
 	// 延迟初始化，不在构造函数中查询数据库
 	// 这样可以避免在构建时访问数据库
 	return &CaptchaServiceImpl{

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -19,10 +20,12 @@ type LoginLockoutService interface {
 	ClearFailures(ip, username string)
 }
 
-type LoginLockoutServiceImpl struct{}
+type LoginLockoutServiceImpl struct {
+	ctx context.Context
+}
 
-func NewLoginLockoutService() LoginLockoutService {
-	return &LoginLockoutServiceImpl{}
+func NewLoginLockoutService(ctx context.Context) LoginLockoutService {
+	return &LoginLockoutServiceImpl{ctx: ctx}
 }
 
 func (s *LoginLockoutServiceImpl) config() (maxAttempts int, lockDuration time.Duration, decayMinutes time.Duration) {

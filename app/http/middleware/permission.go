@@ -35,7 +35,7 @@ func Permission() http.Middleware {
 		}
 
 		// 加载管理员的角色、权限等关联数据
-		adminService := services.NewAdminServiceImpl()
+		adminService := services.NewAdminServiceImpl(ctx)
 		if err := adminService.LoadRelationsWithPermissions(&admin); err != nil {
 			logger.ErrorfHTTP(ctx, "permission middleware load relations failed: %v", err)
 			errorlog.RecordHTTP(ctx, "permission", "Failed to load admin relations with permissions", map[string]any{

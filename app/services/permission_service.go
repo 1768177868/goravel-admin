@@ -1,7 +1,9 @@
 package services
 
 import (
-	"github.com/goravel/framework/facades"
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -36,19 +38,21 @@ type PermissionFilters struct {
 }
 
 type PermissionServiceImpl struct {
+	ctx         context.Context
 	treeService TreeService
 }
 
-func NewPermissionService() PermissionService {
+func NewPermissionService(ctx context.Context) PermissionService {
 	return &PermissionServiceImpl{
-		treeService: NewTreeServiceImpl(),
+		ctx:         ctx,
+		treeService: NewTreeServiceImpl(ctx),
 	}
 }
 
 // GetByID 根据ID获取权限
 func (s *PermissionServiceImpl) GetByID(id uint, withMenu bool) (*models.Permission, error) {
 	var permission models.Permission
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(s.ctx).Where("id", id)
 
 	// 预加载关联
 	if withMenu {
@@ -64,7 +68,7 @@ func (s *PermissionServiceImpl) GetByID(id uint, withMenu bool) (*models.Permiss
 
 // GetList 获取权限列表
 func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSize int) ([]models.Permission, int64, error) {
-	query := facades.Orm().Query().Model(&models.Permission{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Permission{})
 
 	// 应用筛选条件
 	if filters.Name != "" {
@@ -133,11 +137,11 @@ func (s *PermissionServiceImpl) Create(name, slug, method, path, description str
 		MenuID:      menuID,
 	}
 
-	if err := facades.Orm().Query().Create(permission); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(permission); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
-	if err := facades.Orm().Query().Model(&models.Permission{}).Where("id", permission.ID).With("Menu").First(permission); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(&models.Permission{}).Where("id", permission.ID).With("Menu").First(permission); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -146,7 +150,7 @@ func (s *PermissionServiceImpl) Create(name, slug, method, path, description str
 
 // Update 更新权限
 func (s *PermissionServiceImpl) Update(permission *models.Permission) error {
-	if err := facades.Orm().Query().Save(permission); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(permission); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -154,7 +158,7 @@ func (s *PermissionServiceImpl) Update(permission *models.Permission) error {
 
 // Delete 删除权限
 func (s *PermissionServiceImpl) Delete(permission *models.Permission) error {
-	if _, err := facades.Orm().Query().Delete(permission); err != nil {
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(permission); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

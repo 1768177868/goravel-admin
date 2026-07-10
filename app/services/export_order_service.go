@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"path/filepath"
 	"time"
 
@@ -27,7 +28,7 @@ func NewExportOrderService(ctx http.Context) *ExportOrderService {
 func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) error {
 	// 更新导出状态为处理中
 	var exportRecord models.Export
-	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
 		return fmt.Errorf("查询导出记录失败: %v", err)
 	}
 
@@ -35,18 +36,18 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 
 	exportRecord.Status = models.ExportStatusProcessing
 	exportRecord.ErrorMsg = ""
-	if err := facades.Orm().Query().Save(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(&exportRecord); err != nil {
 		return fmt.Errorf("更新导出状态失败: %v", err)
 	}
 
 	// 获取订单数据
-	orderService := NewOrderService()
+	orderService := NewOrderService(s.ctx)
 	ordersWithDetails, err := orderService.GetAllOrdersWithDetailsForExport(filters)
 	if err != nil {
 		errorMsg := fmt.Sprintf("获取订单数据失败: %v", err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = errorMsg
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(s.ctx).Save(&exportRecord)
 		return errors.New(errorMsg)
 	}
 
@@ -160,7 +161,7 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 		errorMsg := fmt.Sprintf("导出文件失败: %v", err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = errorMsg
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(s.ctx).Save(&exportRecord)
 		errorlog.RecordHTTP(s.ctx, "export", "导出文件失败", map[string]any{
 			"export_id": exportID,
 			"filename":  filename,
@@ -172,7 +173,7 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 	facades.Log().Infof("文件导出成功: export_id=%d, file_path=%s", exportID, filePath)
 
 	// 更新导出记录的文件路径和大小
-	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
 		facades.Log().Errorf("查询导出记录失败: export_id=%d, error=%v", exportID, err)
 		return fmt.Errorf("查询导出记录失败: %v", err)
 	}
@@ -204,7 +205,7 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 	exportRecord.ErrorMsg = ""
 
 	// 保存更新
-	if err := facades.Orm().Query().Save(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(&exportRecord); err != nil {
 		facades.Log().Errorf("保存导出记录失败: export_id=%d, error=%v", exportID, err)
 		return fmt.Errorf("更新导出记录失败: %v", err)
 	}

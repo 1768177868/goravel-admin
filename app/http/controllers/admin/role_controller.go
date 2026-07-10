@@ -1,10 +1,12 @@
 package admin
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
-	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -20,7 +22,7 @@ type RoleController struct {
 
 func NewRoleController() *RoleController {
 	return &RoleController{
-		roleService: services.NewRoleServiceImpl(),
+		roleService: services.NewRoleServiceImpl(context.Background()),
 	}
 }
 

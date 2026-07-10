@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
 
+	appfacades "goravel/app/facades"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -262,7 +264,7 @@ func (r *ExportPayments) formatPaymentRow(payment models.Payment, paymentMethodM
 // loadPaymentMethods 加载支付方式映射
 func (r *ExportPayments) loadPaymentMethods() map[uint]models.PaymentMethod {
 	var methods []models.PaymentMethod
-	facades.Orm().Query().Model(&models.PaymentMethod{}).Get(&methods)
+	appfacades.OrmQuery(context.Background()).Model(&models.PaymentMethod{}).Get(&methods)
 
 	result := make(map[uint]models.PaymentMethod)
 	for _, m := range methods {

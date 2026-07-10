@@ -1,8 +1,8 @@
 package jobs
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -18,6 +18,7 @@ import (
 	supportcarbon "github.com/goravel/framework/support/carbon"
 
 	apperrors "goravel/app/errors"
+	appfacades "goravel/app/facades"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -171,10 +172,10 @@ func MarkExportFailed(exportID uint, errorMsg string) {
 		return
 	}
 	var failedRecord models.Export
-	if queryErr := facades.Orm().Query().Where("id", exportID).First(&failedRecord); queryErr == nil {
+	if queryErr := appfacades.OrmQuery(context.Background()).Where("id", exportID).First(&failedRecord); queryErr == nil {
 		failedRecord.Status = models.ExportStatusFailed
 		failedRecord.ErrorMsg = errorMsg
-		if saveErr := facades.Orm().Query().Save(&failedRecord); saveErr != nil {
+		if saveErr := appfacades.OrmQuery(context.Background()).Save(&failedRecord); saveErr != nil {
 			facades.Log().Errorf("更新导出记录失败状态失败: export_id=%d, error=%v", exportID, saveErr)
 		}
 	}
@@ -183,7 +184,7 @@ func MarkExportFailed(exportID uint, errorMsg string) {
 // CheckAndUpdateExportStatus 检查导出记录并更新状态为处理中
 // 返回导出记录和错误，如果记录不存在返回 nil, nil
 func CheckAndUpdateExportStatus(exportID uint) (*models.Export, error) {
-	exists, err := facades.Orm().Query().Model(&models.Export{}).Where("id", exportID).Exists()
+	exists, err := appfacades.OrmQuery(context.Background()).Model(&models.Export{}).Where("id", exportID).Exists()
 	if err != nil {
 		errorlog.Record(context.Background(), "export", "检查导出记录是否存在失败", map[string]any{
 			"export_id": exportID,
@@ -197,7 +198,7 @@ func CheckAndUpdateExportStatus(exportID uint) (*models.Export, error) {
 	}
 
 	var exportRecords []models.Export
-	if err := facades.Orm().Query().Where("id", exportID).Limit(1).Get(&exportRecords); err != nil {
+	if err := appfacades.OrmQuery(context.Background()).Where("id", exportID).Limit(1).Get(&exportRecords); err != nil {
 		errorlog.Record(context.Background(), "export", "查询导出记录失败", map[string]any{
 			"export_id": exportID,
 			"error":     err.Error(),
@@ -216,7 +217,7 @@ func CheckAndUpdateExportStatus(exportID uint) (*models.Export, error) {
 	}
 	exportRecord.Status = models.ExportStatusProcessing
 	exportRecord.ErrorMsg = ""
-	if err := facades.Orm().Query().Save(exportRecord); err != nil {
+	if err := appfacades.OrmQuery(context.Background()).Save(exportRecord); err != nil {
 		facades.Log().Errorf("更新导出状态为处理中失败: export_id=%d, error=%v", exportID, err)
 		return nil, err
 	}
@@ -265,7 +266,7 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 			return false
 		}
 		lastExistCheckAt = time.Now()
-		exists, err := facades.Orm().Query().Model(&models.Export{}).Where("id", args.ExportID).Exists()
+		exists, err := appfacades.OrmQuery(context.Background()).Model(&models.Export{}).Where("id", args.ExportID).Exists()
 		if err != nil {
 			return false
 		}
@@ -304,7 +305,7 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 				return
 			}
 			lastUpdateAt = time.Now()
-			result, _ := facades.Orm().Query().Model(&models.Export{}).Where("id", args.ExportID).Update(map[string]any{
+			result, _ := appfacades.OrmQuery(context.Background()).Model(&models.Export{}).Where("id", args.ExportID).Update(map[string]any{
 				"size": writtenBytes,
 			})
 			if result == nil || result.RowsAffected == 0 {
@@ -332,7 +333,7 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 // preWriteFileInfo 预写入文件信息
 func (e *BaseExporter) preWriteFileInfo(exportID uint, filePath, filename string) {
 	var exportRecord models.Export
-	if err := facades.Orm().Query().Where("id", exportID).First(&exportRecord); err == nil {
+	if err := appfacades.OrmQuery(context.Background()).Where("id", exportID).First(&exportRecord); err == nil {
 		changed := false
 		if exportRecord.Path == "" {
 			exportRecord.Path = filePath
@@ -351,7 +352,7 @@ func (e *BaseExporter) preWriteFileInfo(exportID uint, filePath, filename string
 			changed = true
 		}
 		if changed {
-			_ = facades.Orm().Query().Save(&exportRecord)
+			_ = appfacades.OrmQuery(context.Background()).Save(&exportRecord)
 		}
 	}
 }
@@ -359,7 +360,7 @@ func (e *BaseExporter) preWriteFileInfo(exportID uint, filePath, filename string
 // finalizeExport 完成导出，更新记录
 func (e *BaseExporter) finalizeExport(exportID uint, filePath string) error {
 	var exportRecord models.Export
-	if err := facades.Orm().Query().Where("id", exportID).First(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(context.Background()).Where("id", exportID).First(&exportRecord); err != nil {
 		return nil
 	}
 
@@ -382,7 +383,7 @@ func (e *BaseExporter) finalizeExport(exportID uint, filePath string) error {
 	exportRecord.Status = models.ExportStatusSuccess
 	exportRecord.ErrorMsg = ""
 
-	if err := facades.Orm().Query().Save(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(context.Background()).Save(&exportRecord); err != nil {
 		facades.Log().Errorf("保存导出记录失败: export_id=%d, error=%v", exportID, err)
 		return fmt.Errorf("更新导出记录失败: %v", err)
 	}

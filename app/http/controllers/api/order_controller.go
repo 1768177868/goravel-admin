@@ -20,7 +20,7 @@ type OrderController struct {
 
 func NewOrderController() *OrderController {
 	return &OrderController{
-		orderService: services.NewOrderService(),
+		orderService: services.NewOrderService(context.Background()),
 	}
 }
 

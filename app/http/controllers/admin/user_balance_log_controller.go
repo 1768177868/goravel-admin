@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -18,7 +19,7 @@ type UserBalanceLogController struct {
 
 func NewUserBalanceLogController() *UserBalanceLogController {
 	return &UserBalanceLogController{
-		balanceLogService: services.NewUserBalanceLogService(),
+		balanceLogService: services.NewUserBalanceLogService(context.Background()),
 	}
 }
 

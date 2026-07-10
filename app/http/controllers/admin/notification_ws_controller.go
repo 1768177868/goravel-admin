@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"fmt"
 	appfacades "goravel/app/facades"
 	"net/http"
@@ -33,7 +34,7 @@ const (
 
 func NewNotificationWsController() *NotificationWsController {
 	return &NotificationWsController{
-		tokenService: services.NewTokenServiceImpl(),
+		tokenService: services.NewTokenServiceImpl(context.Background()),
 	}
 }
 

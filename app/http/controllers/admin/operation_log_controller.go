@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	appfacades "goravel/app/facades"
 	"sort"
 	"strings"
@@ -23,7 +24,7 @@ type OperationLogController struct {
 
 func NewOperationLogController() *OperationLogController {
 	return &OperationLogController{
-		operationLogService: services.NewOperationLogService(),
+		operationLogService: services.NewOperationLogService(context.Background()),
 	}
 }
 

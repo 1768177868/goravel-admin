@@ -1,6 +1,8 @@
 package option_providers
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 
 	"goravel/app/models"
@@ -11,7 +13,7 @@ type MenuOptionProvider struct {
 	treeService services.TreeService
 }
 
-func NewMenuOptionProvider(treeService services.TreeService) *MenuOptionProvider {
+func NewMenuOptionProvider(ctx context.Context, treeService services.TreeService) *MenuOptionProvider {
 	return &MenuOptionProvider{
 		treeService: treeService,
 	}

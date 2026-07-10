@@ -1,10 +1,11 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
@@ -20,17 +21,19 @@ type NotificationService interface {
 	UnreadCount(adminID uint) (int64, error)
 }
 
-type NotificationServiceImpl struct{}
+type NotificationServiceImpl struct {
+	ctx context.Context
+}
 
-func NewNotificationServiceImpl() NotificationService {
-	return &NotificationServiceImpl{}
+func NewNotificationServiceImpl(ctx context.Context) NotificationService {
+	return &NotificationServiceImpl{ctx: ctx}
 }
 
 func (s *NotificationServiceImpl) Create(title, content, notifType string, senderID *uint, receiverID *uint) (*models.Notification, error) {
 	if receiverID == nil {
 		// 批量创建通知给所有管理员，使用事务确保原子性
 		var admins []models.Admin
-		if err := facades.Orm().Query().Find(&admins); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Find(&admins); err != nil {
 			return nil, err
 		}
 
@@ -53,10 +56,10 @@ func (s *NotificationServiceImpl) Create(title, content, notifType string, sende
 				SenderID:   senderID,
 				ReceiverID: &rid,
 			}
-			if err := facades.Orm().Query().Create(notification); err != nil {
+			if err := appfacades.OrmQuery(s.ctx).Create(notification); err != nil {
 				// 如果创建失败，尝试删除已创建的通知（手动回滚）
 				for _, id := range createdIDs {
-					_, _ = facades.Orm().Query().Where("id", id).Delete(&models.Notification{})
+					_, _ = appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.Notification{})
 				}
 				return nil, err
 			}
@@ -83,7 +86,7 @@ func (s *NotificationServiceImpl) Create(title, content, notifType string, sende
 		SenderID:   senderID,
 		ReceiverID: receiverID,
 	}
-	if err := facades.Orm().Query().Create(notification); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(notification); err != nil {
 		return nil, err
 	}
 
@@ -96,7 +99,7 @@ func (s *NotificationServiceImpl) Create(title, content, notifType string, sende
 // 对于私信类型，需要同时查询发送和接收的消息
 // 对于其他类型，只查询接收的消息
 func (s *NotificationServiceImpl) buildNotificationQuery(adminID uint, notifType, isRead string) orm.Query {
-	query := facades.Orm().Query().Model(&models.Notification{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Notification{})
 
 	if notifType == "message" {
 		// 私信：查询发送或接收的消息
@@ -145,7 +148,7 @@ func (s *NotificationServiceImpl) ListRecent(adminID uint, limit int) ([]models.
 	}
 
 	// 查询最近的通知，包括接收的消息和发送的私信
-	if err := facades.Orm().Query().Model(&models.Notification{}).With("Sender").With("Receiver").
+	if err := appfacades.OrmQuery(s.ctx).Model(&models.Notification{}).With("Sender").With("Receiver").
 		Where("(receiver_id = ? OR (sender_id = ? AND type = ?))", adminID, adminID, "message").
 		Order("created_at desc").
 		Limit(limit).
@@ -157,7 +160,7 @@ func (s *NotificationServiceImpl) ListRecent(adminID uint, limit int) ([]models.
 
 func (s *NotificationServiceImpl) MarkRead(adminID uint, notificationID uint) error {
 	var notification models.Notification
-	if err := facades.Orm().Query().Where("id = ?", notificationID).
+	if err := appfacades.OrmQuery(s.ctx).Where("id = ?", notificationID).
 		Where("receiver_id = ?", adminID).
 		First(&notification); err != nil {
 		return apperrors.ErrRecordNotFound.WithMessage("notification not found")
@@ -169,7 +172,7 @@ func (s *NotificationServiceImpl) MarkRead(adminID uint, notificationID uint) er
 
 	now := time.Now()
 
-	_, err := facades.Orm().Query().
+	_, err := appfacades.OrmQuery(s.ctx).
 		Model(&models.Notification{}).
 		Where("id = ?", notificationID).
 		Update(map[string]any{
@@ -182,7 +185,7 @@ func (s *NotificationServiceImpl) MarkRead(adminID uint, notificationID uint) er
 
 func (s *NotificationServiceImpl) MarkAllRead(adminID uint) error {
 	now := time.Now()
-	_, err := facades.Orm().Query().
+	_, err := appfacades.OrmQuery(s.ctx).
 		Table("notifications").
 		Where("receiver_id = ?", adminID).
 		Where("is_read = ?", false).
@@ -194,7 +197,7 @@ func (s *NotificationServiceImpl) MarkAllRead(adminID uint) error {
 }
 
 func (s *NotificationServiceImpl) UnreadCount(adminID uint) (int64, error) {
-	query := facades.Orm().Query().Model(&models.Notification{}).
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Notification{}).
 		Where("receiver_id = ?", adminID).
 		Where("is_read = ?", false)
 

@@ -1,7 +1,8 @@
 package services
 
 import (
-	"github.com/goravel/framework/facades"
+	"context"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -27,16 +28,17 @@ type LoginLogFilters struct {
 }
 
 type LoginLogServiceImpl struct {
+	ctx context.Context
 }
 
-func NewLoginLogService() LoginLogService {
-	return &LoginLogServiceImpl{}
+func NewLoginLogService(ctx context.Context) LoginLogService {
+	return &LoginLogServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取登录日志
 func (s *LoginLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.LoginLog, error) {
 	var log models.LoginLog
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(s.ctx).Where("id", id)
 
 	// 预加载关联
 	if withAdmin {
@@ -52,7 +54,7 @@ func (s *LoginLogServiceImpl) GetByID(id uint, withAdmin bool) (*models.LoginLog
 
 // GetList 获取登录日志列表
 func (s *LoginLogServiceImpl) GetList(filters LoginLogFilters, page, pageSize int) ([]models.LoginLog, int64, error) {
-	query := facades.Orm().Query().Model(&models.LoginLog{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.LoginLog{})
 
 	// 应用筛选条件
 	if filters.AdminID != "" {

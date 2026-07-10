@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	appfacades "goravel/app/facades"
 	"sort"
 	"time"
@@ -21,7 +22,7 @@ type SystemLogController struct {
 
 func NewSystemLogController() *SystemLogController {
 	return &SystemLogController{
-		systemLogService: services.NewSystemLogService(),
+		systemLogService: services.NewSystemLogService(context.Background()),
 	}
 }
 

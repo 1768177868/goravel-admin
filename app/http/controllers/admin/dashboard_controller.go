@@ -40,7 +40,7 @@ func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 	onlineAdminCount := r.getOnlineAdminCount(ctx)
 
 	// 获取最近一年的订单总数
-	orderService := services.NewOrderService()
+	orderService := services.NewOrderService(ctx)
 	orderCountInYear, _ := orderService.GetOrdersCountInYear()
 
 	return ctx.Response().Success().Json(http.Json{

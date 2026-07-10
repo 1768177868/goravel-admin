@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	appfacades "goravel/app/facades"
 	"strconv"
@@ -115,7 +116,7 @@ func (receiver *CreateToken) Handle(ctx console.Context) error {
 	username := admin.Username
 
 	// 创建token
-	tokenService := services.NewTokenServiceImpl()
+	tokenService := services.NewTokenServiceImpl(context.Background())
 	// 命令行创建token时，浏览器、IP、操作系统信息为空
 	plainToken, accessToken, err := tokenService.CreateToken(userType, userID, tokenName, expiresAt, "", "", "", "")
 	if err != nil {

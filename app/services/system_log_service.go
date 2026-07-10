@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	appfacades "goravel/app/facades"
 	"sync"
 	"time"
 
@@ -38,6 +39,7 @@ type SystemLogFilters struct {
 }
 
 type SystemLogServiceImpl struct {
+	ctx context.Context
 }
 
 var (
@@ -52,14 +54,14 @@ func hasSystemLogsTraceIDColumn() bool {
 	return systemLogsHasTraceIDColumn
 }
 
-func NewSystemLogService() SystemLogService {
-	return &SystemLogServiceImpl{}
+func NewSystemLogService(ctx context.Context) SystemLogService {
+	return &SystemLogServiceImpl{ctx: ctx}
 }
 
 // GetByID 根据ID获取系统日志
 func (s *SystemLogServiceImpl) GetByID(id uint) (*models.SystemLog, error) {
 	var log models.SystemLog
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&log); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&log); err != nil {
 		return nil, apperrors.ErrLogNotFound.WithError(err)
 	}
 	return &log, nil
@@ -67,7 +69,7 @@ func (s *SystemLogServiceImpl) GetByID(id uint) (*models.SystemLog, error) {
 
 // GetList 获取系统日志列表
 func (s *SystemLogServiceImpl) GetList(filters SystemLogFilters, page, pageSize int) ([]models.SystemLog, int64, error) {
-	query := facades.Orm().Query().Model(&models.SystemLog{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.SystemLog{})
 
 	// 应用筛选条件
 	if filters.Level != "" {

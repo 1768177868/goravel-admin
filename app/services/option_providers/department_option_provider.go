@@ -1,21 +1,26 @@
 package option_providers
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
 )
 
-type DepartmentOptionProvider struct{}
+type DepartmentOptionProvider struct {
+	ctx context.Context
+}
 
-func NewDepartmentOptionProvider() *DepartmentOptionProvider {
-	return &DepartmentOptionProvider{}
+func NewDepartmentOptionProvider(ctx context.Context) *DepartmentOptionProvider {
+	return &DepartmentOptionProvider{
+		ctx: ctx}
 }
 
 func (p *DepartmentOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {
 	var departments []models.Department
-	if err := facades.Orm().Query().Where("status", 1).Order("sort asc, id asc").Get(&departments); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("status", 1).Order("sort asc, id asc").Get(&departments); err != nil {
 		return nil, err
 	}
 

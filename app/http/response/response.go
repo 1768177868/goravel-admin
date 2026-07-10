@@ -5,9 +5,9 @@ import (
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
+	appfacades "goravel/app/facades"
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
 	"goravel/app/services"
@@ -627,7 +627,7 @@ func FindByID[T any](ctx http.Context, id uint, options *FindByIDOptions) (*T, h
 	}
 
 	// 创建查询
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(ctx).Where("id", id)
 
 	// 应用关联预加载
 	if options != nil && len(options.WithRelations) > 0 {

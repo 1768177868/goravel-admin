@@ -1,13 +1,18 @@
 package option_providers
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/http"
 )
 
-type MethodOptionProvider struct{}
+type MethodOptionProvider struct {
+	ctx context.Context
+}
 
-func NewMethodOptionProvider() *MethodOptionProvider {
-	return &MethodOptionProvider{}
+func NewMethodOptionProvider(ctx context.Context) *MethodOptionProvider {
+	return &MethodOptionProvider{
+		ctx: ctx}
 }
 
 func (p *MethodOptionProvider) GetOptions(ctx http.Context) (map[string]any, error) {

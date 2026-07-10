@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -44,7 +45,7 @@ func (r *QueueStats) Extend() command.Extend {
 func (r *QueueStats) Handle(ctx console.Context) error {
 	queueName := ctx.Option("queue")
 	connectionName := ctx.Option("connection")
-	reader := services.NewQueueStatsReader()
+	reader := services.NewQueueStatsReader(context.Background())
 
 	if connectionName == "" {
 		connectionName = facades.Config().GetString("queue.default", "sync")

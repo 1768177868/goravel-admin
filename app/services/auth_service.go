@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	appfacades "goravel/app/facades"
 	"strings"
 	"time"
 
@@ -29,12 +30,14 @@ type AuthService interface {
 }
 
 type AuthServiceImpl struct {
+	ctx          context.Context
 	adminService AdminService
 	tokenService TokenService
 }
 
-func NewAuthServiceImpl(adminService AdminService, tokenService TokenService) *AuthServiceImpl {
+func NewAuthServiceImpl(ctx context.Context, adminService AdminService, tokenService TokenService) *AuthServiceImpl {
 	return &AuthServiceImpl{
+		ctx:          ctx,
 		adminService: adminService,
 		tokenService: tokenService,
 	}
@@ -53,7 +56,7 @@ func NewAuthServiceImpl(adminService AdminService, tokenService TokenService) *A
 //   - error: 错误信息
 func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*models.Admin, string, error) {
 	// 验证用户名是否存在
-	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", username).Exists()
+	exists, err := appfacades.OrmQuery(ctx).Model(&models.Admin{}).Where("username", username).Exists()
 	if err != nil {
 		return nil, "", err
 	}
@@ -63,7 +66,7 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 
 	// 获取管理员信息
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", username).First(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("username", username).First(&admin); err != nil {
 		return nil, "", err
 	}
 
@@ -109,7 +112,7 @@ func (s *AuthServiceImpl) Login(ctx http.Context, username, password string) (*m
 	token := plainToken
 
 	// 更新最后登录时间（ORM会自动更新UpdatedAt）
-	facades.Orm().Query().Save(&admin)
+	appfacades.OrmQuery(ctx).Save(&admin)
 
 	// 记录登录成功日志
 	requestData := ""
@@ -161,7 +164,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 
 	// 重新查询admin并加载关联（避免使用已存在的admin对象，可能导致关联加载问题）
 	var adminWithRelations models.Admin
-	if err := facades.Orm().Query().With("Department").With("Position").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
+	if err := appfacades.OrmQuery(ctx).With("Department").With("Position").With("Roles").Where("id", admin.ID).First(&adminWithRelations); err != nil {
 		errorlog.RecordHTTP(ctx, "auth", "Failed to load admin with relations", map[string]any{
 			"error":    err.Error(),
 			"admin_id": admin.ID,
@@ -183,7 +186,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 			PermissionID uint `gorm:"column:permission_id"`
 		}
 		var rolePermissions []RolePermission
-		if err := facades.Orm().Query().Table("role_permission").Where("role_id IN ?", roleIDs).Find(&rolePermissions); err == nil {
+		if err := appfacades.OrmQuery(ctx).Table("role_permission").Where("role_id IN ?", roleIDs).Find(&rolePermissions); err == nil {
 			var permissionIDs []uint
 			rolePermissionMap := make(map[uint][]uint)
 			for _, rp := range rolePermissions {
@@ -192,7 +195,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 			}
 			if len(permissionIDs) > 0 {
 				var permissions []models.Permission
-				if err := facades.Orm().Query().Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
+				if err := appfacades.OrmQuery(ctx).Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
 					permissionMap := make(map[uint]models.Permission)
 					for _, perm := range permissions {
 						permissionMap[perm.ID] = perm
@@ -216,7 +219,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 			MenuID uint `gorm:"column:menu_id"`
 		}
 		var roleMenus []RoleMenu
-		if err := facades.Orm().Query().Table("role_menu").Where("role_id IN ?", roleIDs).Find(&roleMenus); err == nil {
+		if err := appfacades.OrmQuery(ctx).Table("role_menu").Where("role_id IN ?", roleIDs).Find(&roleMenus); err == nil {
 			var menuIDs []uint
 			roleMenuMap := make(map[uint][]uint)
 			for _, rm := range roleMenus {
@@ -225,7 +228,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 			}
 			if len(menuIDs) > 0 {
 				var menus []models.Menu
-				if err := facades.Orm().Query().Where("id IN ?", menuIDs).Find(&menus); err == nil {
+				if err := appfacades.OrmQuery(ctx).Where("id IN ?", menuIDs).Find(&menus); err == nil {
 					menuMap := make(map[uint]models.Menu)
 					for _, menu := range menus {
 						menuMap[menu.ID] = menu
@@ -271,7 +274,7 @@ func (s *AuthServiceImpl) GetAdminInfo(ctx http.Context) (*models.Admin, []model
 	// 但不需要返回所有权限，因为权限检查在中间件中会跳过
 	if isSuperAdmin {
 		var allMenus []models.Menu
-		if err := facades.Orm().Query().Where("status", 1).Order("sort ASC").Find(&allMenus); err == nil {
+		if err := appfacades.OrmQuery(ctx).Where("status", 1).Order("sort ASC").Find(&allMenus); err == nil {
 			for _, menu := range allMenus {
 				menuMap[menu.ID] = menu
 			}
@@ -374,7 +377,7 @@ func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, usernam
 		Request:   request,
 	}
 
-	if err := facades.Orm().Query().Create(&loginLog); err != nil {
+	if err := appfacades.OrmQuery(ctx).Create(&loginLog); err != nil {
 		return err
 	}
 
@@ -395,7 +398,7 @@ func (s *AuthServiceImpl) RecordLoginLog(ctx http.Context, adminID uint, usernam
 		location := utils.GetIPLocation(ip)
 		if location != "" {
 			// 更新登录日志的 Location 字段
-			if _, err := facades.Orm().Query().
+			if _, err := appfacades.OrmQuery(ctx).
 				Model(&models.LoginLog{}).
 				Where("id", loginLog.ID).
 				Update("location", location); err != nil {

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	appfacades "goravel/app/facades"
 	"strconv"
@@ -28,15 +29,15 @@ type AuthController struct {
 }
 
 func NewAuthController() *AuthController {
-	adminService := services.NewAdminServiceImpl()
-	tokenService := services.NewTokenServiceImpl()
-	authService := services.NewAuthServiceImpl(adminService, tokenService)
+	adminService := services.NewAdminServiceImpl(context.Background())
+	tokenService := services.NewTokenServiceImpl(context.Background())
+	authService := services.NewAuthServiceImpl(context.Background(), adminService, tokenService)
 	return &AuthController{
 		authService:                authService,
-		captchaService:             services.NewCaptchaServiceImpl(),
-		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(),
-		treeService:                services.NewTreeServiceImpl(),
-		lockoutService:             services.NewLoginLockoutService(),
+		captchaService:             services.NewCaptchaServiceImpl(context.Background()),
+		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(context.Background()),
+		treeService:                services.NewTreeServiceImpl(context.Background()),
+		lockoutService:             services.NewLoginLockoutService(context.Background()),
 	}
 }
 
@@ -153,7 +154,7 @@ func requiredInput(ctx http.Context, key, requiredErrorCode string) (string, htt
 }
 
 func (r *AuthController) tokenService() services.TokenService {
-	return services.NewTokenServiceImpl()
+	return services.NewTokenServiceImpl(context.Background())
 }
 
 func bearerTokenFromHeader(ctx http.Context) string {

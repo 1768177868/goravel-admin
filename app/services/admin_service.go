@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	appfacades "goravel/app/facades"
 	"slices"
 
 	"github.com/goravel/framework/contracts/database/orm"
@@ -77,16 +79,18 @@ type CreateAdminInput struct {
 }
 
 type AdminServiceImpl struct {
+	ctx context.Context
 }
 
-func NewAdminServiceImpl() *AdminServiceImpl {
-	return &AdminServiceImpl{}
+func NewAdminServiceImpl(ctx context.Context) *AdminServiceImpl {
+	return &AdminServiceImpl{
+		ctx: ctx}
 }
 
 // GetByID 根据ID获取管理员
 func (s *AdminServiceImpl) GetByID(id uint, withDepartment bool, withRoles bool) (*models.Admin, error) {
 	var admin models.Admin
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(s.ctx).Where("id", id)
 
 	// 预加载关联
 	if withDepartment {
@@ -110,7 +114,7 @@ func (s *AdminServiceImpl) GetByID(id uint, withDepartment bool, withRoles bool)
 
 // buildQuery 构建查询（公共方法，用于列表和导出）
 func (s *AdminServiceImpl) buildQuery(filters AdminFilters) orm.Query {
-	query := facades.Orm().Query().Model(&models.Admin{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Admin{})
 
 	// 排除受保护的管理员
 	protectedIDs := s.GetProtectedAdminIDs()
@@ -221,7 +225,7 @@ func (s *AdminServiceImpl) GetAllAdminsForExport(filters AdminFilters) ([]models
 
 // Update 更新管理员
 func (s *AdminServiceImpl) Update(admin *models.Admin) error {
-	if err := facades.Orm().Query().Save(admin); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Save(admin); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}
 	return nil
@@ -229,7 +233,7 @@ func (s *AdminServiceImpl) Update(admin *models.Admin) error {
 
 // CreateAdmin 创建管理员并同步角色
 func (s *AdminServiceImpl) CreateAdmin(input CreateAdminInput) (*models.Admin, error) {
-	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", input.Username).Exists()
+	exists, err := appfacades.OrmQuery(s.ctx).Model(&models.Admin{}).Where("username", input.Username).Exists()
 	if err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
@@ -253,7 +257,7 @@ func (s *AdminServiceImpl) CreateAdmin(input CreateAdminInput) (*models.Admin, e
 		PositionID:   input.PositionID,
 		Status:       input.Status,
 	}
-	if err := facades.Orm().Query().Create(admin); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(admin); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
 	}
 
@@ -340,7 +344,7 @@ func (s *AdminServiceImpl) GetDepartmentAndChildrenIDs(departmentID uint) []uint
 // getChildrenDepartmentIDs 递归获取子部门ID
 func (s *AdminServiceImpl) getChildrenDepartmentIDs(parentID uint, departmentIDs *[]uint) {
 	var children []models.Department
-	if err := facades.Orm().Query().Where("parent_id", parentID).Get(&children); err == nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("parent_id", parentID).Get(&children); err == nil {
 		for _, child := range children {
 			*departmentIDs = append(*departmentIDs, child.ID)
 			s.getChildrenDepartmentIDs(child.ID, departmentIDs)
@@ -357,13 +361,13 @@ func (s *AdminServiceImpl) LoadRelations(admin *models.Admin) error {
 	// 加载部门
 	if admin.DepartmentID > 0 {
 		var department models.Department
-		if err := facades.Orm().Query().Where("id", admin.DepartmentID).First(&department); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id", admin.DepartmentID).First(&department); err == nil {
 			admin.Department = department
 		}
 	}
 	if admin.PositionID > 0 {
 		var position models.Position
-		if err := facades.Orm().Query().Where("id", admin.PositionID).First(&position); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id", admin.PositionID).First(&position); err == nil {
 			admin.Position = position
 		}
 	}
@@ -374,7 +378,7 @@ func (s *AdminServiceImpl) LoadRelations(admin *models.Admin) error {
 		RoleID  uint `gorm:"column:role_id"`
 	}
 	var adminRoles []AdminRole
-	if err := facades.Orm().Query().Table("admin_role").Where("admin_id", admin.ID).Find(&adminRoles); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Table("admin_role").Where("admin_id", admin.ID).Find(&adminRoles); err != nil {
 		return err
 	}
 
@@ -388,7 +392,7 @@ func (s *AdminServiceImpl) LoadRelations(admin *models.Admin) error {
 	admin.Roles = nil
 	if len(roleIDs) > 0 {
 		var roles []models.Role
-		if err := facades.Orm().Query().Where("id IN ?", roleIDs).Find(&roles); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", roleIDs).Find(&roles); err != nil {
 			return err
 		}
 		admin.Roles = roles
@@ -422,7 +426,7 @@ func (s *AdminServiceImpl) LoadRelationsWithPermissions(admin *models.Admin) err
 			PermissionID uint `gorm:"column:permission_id"`
 		}
 		var rolePermissions []RolePermission
-		if err := facades.Orm().Query().Table("role_permission").Where("role_id IN ?", roleIDs).Find(&rolePermissions); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Table("role_permission").Where("role_id IN ?", roleIDs).Find(&rolePermissions); err == nil {
 			var permissionIDs []uint
 			rolePermissionMap := make(map[uint][]uint)
 			for _, rp := range rolePermissions {
@@ -432,7 +436,7 @@ func (s *AdminServiceImpl) LoadRelationsWithPermissions(admin *models.Admin) err
 			if len(permissionIDs) > 0 {
 				var permissions []models.Permission
 				// 预加载菜单关联，用于检查菜单状态
-				if err := facades.Orm().Query().With("Menu").Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
+				if err := appfacades.OrmQuery(s.ctx).With("Menu").Where("id IN ?", permissionIDs).Find(&permissions); err == nil {
 					permissionMap := make(map[uint]models.Permission)
 					for _, perm := range permissions {
 						permissionMap[perm.ID] = perm
@@ -456,7 +460,7 @@ func (s *AdminServiceImpl) LoadRelationsWithPermissions(admin *models.Admin) err
 			MenuID uint `gorm:"column:menu_id"`
 		}
 		var roleMenus []RoleMenu
-		if err := facades.Orm().Query().Table("role_menu").Where("role_id IN ?", roleIDs).Find(&roleMenus); err == nil {
+		if err := appfacades.OrmQuery(s.ctx).Table("role_menu").Where("role_id IN ?", roleIDs).Find(&roleMenus); err == nil {
 			var menuIDs []uint
 			roleMenuMap := make(map[uint][]uint)
 			for _, rm := range roleMenus {
@@ -465,7 +469,7 @@ func (s *AdminServiceImpl) LoadRelationsWithPermissions(admin *models.Admin) err
 			}
 			if len(menuIDs) > 0 {
 				var menus []models.Menu
-				if err := facades.Orm().Query().Where("id IN ?", menuIDs).Find(&menus); err == nil {
+				if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", menuIDs).Find(&menus); err == nil {
 					menuMap := make(map[uint]models.Menu)
 					for _, menu := range menus {
 						menuMap[menu.ID] = menu
@@ -536,7 +540,7 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 				uniqueDeptIDs[id] = true
 			}
 		}
-		if err := facades.Orm().Query().Where("id IN ?", uniqueIDs).Find(&departments); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", uniqueIDs).Find(&departments); err != nil {
 			return err
 		}
 		for _, dept := range departments {
@@ -555,7 +559,7 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 			}
 		}
 		var positions []models.Position
-		if err := facades.Orm().Query().Where("id IN ?", uniqueIDs).Find(&positions); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", uniqueIDs).Find(&positions); err != nil {
 			return err
 		}
 		for _, pos := range positions {
@@ -570,7 +574,7 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 		RoleID  uint `gorm:"column:role_id"`
 	}
 	var adminRoles []AdminRole
-	if err := facades.Orm().Query().Table("admin_role").Where("admin_id IN ?", adminIDs).Find(&adminRoles); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Table("admin_role").Where("admin_id IN ?", adminIDs).Find(&adminRoles); err != nil {
 		return err
 	}
 
@@ -589,7 +593,7 @@ func (s *AdminServiceImpl) LoadRelationsForList(admins []models.Admin) error {
 	rolesMap := make(map[uint]models.Role)
 	if len(roleIDs) > 0 {
 		var roles []models.Role
-		if err := facades.Orm().Query().Where("id IN ?", roleIDs).Find(&roles); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", roleIDs).Find(&roles); err != nil {
 			return err
 		}
 		rolesMap = lo.SliceToMap(roles, func(role models.Role) (uint, models.Role) {
@@ -637,14 +641,14 @@ func (s *AdminServiceImpl) SyncRoles(admin *models.Admin, roleIDs []uint) error 
 	deduplicatedRoleIDs := s.NormalizeRoleIDs(roleIDs)
 
 	// 先清空该管理员的所有角色关联（包括重复的），确保彻底清理重复数据
-	if err := facades.Orm().Query().Model(admin).Association("Roles").Clear(); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Model(admin).Association("Roles").Clear(); err != nil {
 		return err
 	}
 
 	// 如果有角色需要关联，则添加去重后的角色关联
 	if len(deduplicatedRoleIDs) > 0 {
 		var roles []models.Role
-		if err := facades.Orm().Query().Where("id IN ?", deduplicatedRoleIDs).Find(&roles); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", deduplicatedRoleIDs).Find(&roles); err != nil {
 			return err
 		}
 
@@ -657,7 +661,7 @@ func (s *AdminServiceImpl) SyncRoles(admin *models.Admin, roleIDs []uint) error 
 		deduplicatedRoles := lo.Values(roleMap)
 
 		// Replace 方法会先删除所有现有关联，然后添加新的关联
-		if err := facades.Orm().Query().Model(admin).Association("Roles").Replace(deduplicatedRoles); err != nil {
+		if err := appfacades.OrmQuery(s.ctx).Model(admin).Association("Roles").Replace(deduplicatedRoles); err != nil {
 			return err
 		}
 	}
