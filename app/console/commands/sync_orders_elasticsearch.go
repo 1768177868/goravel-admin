@@ -62,6 +62,10 @@ func (r *SyncOrdersElasticsearch) Handle(ctx console.Context) error {
 
 	if id := cast.ToUint(ctx.Option("order-id")); id > 0 {
 		ctx.Info(fmt.Sprintf("同步订单 id=%d ...", id))
+		if err := esorders.InitOrdersIndex(runCtx); err != nil {
+			ctx.Error(err.Error())
+			return err
+		}
 		if err := esorders.PushOrderToElasticsearch(runCtx, id, "", "index"); err != nil {
 			ctx.Error(err.Error())
 			return err
@@ -105,6 +109,10 @@ func (r *SyncOrdersElasticsearch) Handle(ctx console.Context) error {
 		return err
 	}
 	ctx.Info(fmt.Sprintf("共 %d 条，开始写入 ES...", len(list)))
+	if err := esorders.InitOrdersIndex(runCtx); err != nil {
+		ctx.Error(err.Error())
+		return err
+	}
 	var fail int
 	for i, row := range list {
 		if runCtx.Err() != nil {

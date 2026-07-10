@@ -12,7 +12,6 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/binding"
-	"goravel/app/clients"
 	"goravel/app/dto"
 )
 
@@ -39,8 +38,7 @@ func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, page
 		return 0, nil, fmt.Errorf("elasticsearch client not available")
 	}
 
-	short := facades.Config().GetString("elasticsearch.orders_index", "orders")
-	index := clients.ElasticsearchIndexName(facades.Config(), short)
+	index := OrdersIndexName()
 
 	filters := []any{
 		map[string]any{"term": map[string]any{"user_id": userID}},
@@ -53,9 +51,8 @@ func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, page
 		if createdAtLTE != nil {
 			rng["lte"] = *createdAtLTE
 		}
-		// 动态映射下多为 text + keyword；按字符串序比较需用 .keyword
 		filters = append(filters, map[string]any{
-			"range": map[string]any{"created_at.keyword": rng},
+			"range": map[string]any{"created_at": rng},
 		})
 	}
 
@@ -79,7 +76,7 @@ func SearchMyOrders(ctx context.Context, userID uint, keyword string, page, page
 		"from":  (page - 1) * pageSize,
 		"size":  pageSize,
 		"sort": []any{
-			map[string]any{"created_at.keyword": map[string]any{"order": "desc"}},
+			map[string]any{"created_at": map[string]any{"order": "desc"}},
 		},
 	}
 	payload, err := json.Marshal(body)

@@ -8,8 +8,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/binding"
-	"goravel/app/clients"
-	"goravel/app/repositories"
+	orderrepo "goravel/app/repositories"
 )
 
 // PushOrderToElasticsearch 将单条订单写入或从 ES 删除（需集群已启用且容器已绑定客户端）。
@@ -23,12 +22,23 @@ func PushOrderToElasticsearch(ctx context.Context, orderID uint, orderNoHint str
 		return fmt.Errorf("elasticsearch client not available")
 	}
 
-	short := facades.Config().GetString("elasticsearch.orders_index", "orders")
-	index := clients.ElasticsearchIndexName(facades.Config(), short)
+	index := OrdersIndexName()
 	idx := NewOrderIndexer(es, index)
 
 	if op == "delete" {
-		return idx.DeleteByOrderID(ctx, orderID)
+		orderNo := orderNoHint
+		if orderNo == "" {
+			order, err := orderrepo.FindOrderByID(ctx, orderID)
+			if err != nil {
+				return err
+			}
+			orderNo = order.OrderNo
+		}
+		return idx.DeleteByOrderNo(ctx, orderNo)
+	}
+
+	if err := EnsureOrdersIndex(ctx); err != nil {
+		return err
 	}
 
 	order, details, err := orderrepo.FindOrderWithDetails(ctx, orderID, orderNoHint)

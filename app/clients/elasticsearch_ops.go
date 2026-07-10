@@ -10,14 +10,13 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 )
 
-// ElasticsearchIndexJSON 写入/覆盖指定 _id 的文档（refresh=true）。
+// ElasticsearchIndexJSON 写入/覆盖指定 _id 的文档。
 func ElasticsearchIndexJSON(ctx context.Context, es *elasticsearch.Client, index, documentID string, body []byte) error {
 	res, err := es.Index(
 		index,
 		bytes.NewReader(body),
 		es.Index.WithContext(ctx),
 		es.Index.WithDocumentID(documentID),
-		es.Index.WithRefresh("true"),
 	)
 	if err != nil {
 		return err
@@ -45,7 +44,6 @@ func ElasticsearchDeleteDocument(ctx context.Context, es *elasticsearch.Client, 
 		index,
 		documentID,
 		es.Delete.WithContext(ctx),
-		es.Delete.WithRefresh("true"),
 	)
 	if err != nil {
 		return err

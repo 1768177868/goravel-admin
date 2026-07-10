@@ -835,7 +835,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 	if err != nil {
 		return err
 	}
-	support.DispatchOrderElasticsearchSync(orderID, "", "delete")
+	support.DispatchOrderElasticsearchSync(orderID, order.OrderNo, "delete")
 	return nil
 }
 
@@ -896,7 +896,7 @@ func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
 	if err != nil {
 		return err
 	}
-	support.DispatchOrderElasticsearchSync(order.ID, "", "delete")
+	support.DispatchOrderElasticsearchSync(order.ID, orderNo, "delete")
 	return nil
 }
 
@@ -973,16 +973,8 @@ func orderWithDetailsToSearchListItem(o OrderWithDetails) dto.OrderSearchListIte
 	}
 }
 
-// SearchMyOrdersForUser C 端「我的订单」检索：ELASTICSEARCH_ENABLED 时走 ES（含商品名等多字段）；否则走分表数据库（关键词仅订单号、备注；时间无参数时默认近 3 个月，与列表接口一致）。
-func (s *OrderServiceImpl) SearchMyOrdersForUser(ctx context.Context, userID uint, keyword string, page, pageSize int, tr dto.OrderSearchCreatedRange) ([]dto.OrderSearchListItem, int64, error) {
-	if facades.Config().GetBool("elasticsearch.enabled", false) {
-		total, items, err := esorders.SearchMyOrders(ctx, userID, keyword, page, pageSize, tr.ESGTE, tr.ESLTE)
-		if err != nil {
-			return nil, 0, err
-		}
-		return items, total, nil
-	}
-
+// searchMyOrdersFromDB C 端订单检索的数据库路径（分表 + 关键词 LIKE）。
+func (s *OrderServiceImpl) searchMyOrdersFromDB(userID uint, keyword string, page, pageSize int, tr dto.OrderSearchCreatedRange) ([]dto.OrderSearchListItem, int64, error) {
 	valid, err := utils.ValidateTimeRange(tr.DBStart, tr.DBEnd)
 	if !valid {
 		return nil, 0, err
@@ -1004,4 +996,18 @@ func (s *OrderServiceImpl) SearchMyOrdersForUser(ctx context.Context, userID uin
 		out = append(out, orderWithDetailsToSearchListItem(rows[i]))
 	}
 	return out, total, nil
+}
+
+// SearchMyOrdersForUser C 端「我的订单」检索：ELASTICSEARCH_ENABLED 时走 ES（含商品名等多字段）；否则走分表数据库（关键词仅订单号、备注；时间无参数时默认近 3 个月，与列表接口一致）。
+func (s *OrderServiceImpl) SearchMyOrdersForUser(ctx context.Context, userID uint, keyword string, page, pageSize int, tr dto.OrderSearchCreatedRange) ([]dto.OrderSearchListItem, int64, error) {
+	if facades.Config().GetBool("elasticsearch.enabled", false) {
+		total, items, err := esorders.SearchMyOrders(ctx, userID, keyword, page, pageSize, tr.ESGTE, tr.ESLTE)
+		if err != nil {
+			facades.Log().Warningf("order ES search failed, fallback to DB: %v", err)
+			return s.searchMyOrdersFromDB(userID, keyword, page, pageSize, tr)
+		}
+		return items, total, nil
+	}
+
+	return s.searchMyOrdersFromDB(userID, keyword, page, pageSize, tr)
 }

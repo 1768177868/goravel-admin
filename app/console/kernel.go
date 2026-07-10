@@ -48,6 +48,7 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.AnalyzeStats{},
 		&commands.OptimizeTables{},
 		&commands.ElasticsearchExample{},
+		&commands.InitOrdersElasticsearchIndex{},
 		&commands.SyncOrdersElasticsearch{},
 	}
 }
