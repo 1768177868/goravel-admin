@@ -46,8 +46,8 @@ type UserFilters struct {
 }
 
 // BuildUserQuery 构建用户查询（通用查询构建，供列表和导出复用）
-func BuildUserQuery(filters UserFilters) orm.Query {
-	query := appfacades.OrmQuery(context.Background()).Model(&models.User{})
+func BuildUserQuery(ctx context.Context, filters UserFilters) orm.Query {
+	query := appfacades.OrmQuery(ctx).Model(&models.User{})
 
 	if filters.Username != "" {
 		query = query.Where("username LIKE ?", "%"+filters.Username+"%")
@@ -102,7 +102,7 @@ func (s *UserServiceImpl) GetByID(id uint) (*models.User, error) {
 
 // GetList 获取用户列表
 func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]models.User, int64, error) {
-	query := BuildUserQuery(filters)
+	query := BuildUserQuery(s.ctx, filters)
 
 	// 分页查询
 	var users []models.User

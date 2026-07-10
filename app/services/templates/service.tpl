@@ -69,8 +69,8 @@ func (s *<<.ServiceName>>Impl) withRelations(query orm.Query) orm.Query {
 }
 
 // Build<<.ModelName>>Query builds the <<.ModelName>> query shared by list/export.
-func Build<<.ModelName>>Query(filters <<.ModelName>>Filters) orm.Query {
-	query := appfacades.OrmQuery(context.Background()).Model(&models.<<.ModelName>>{})
+func Build<<.ModelName>>Query(ctx context.Context, filters <<.ModelName>>Filters) orm.Query {
+	query := appfacades.OrmQuery(ctx).Model(&models.<<.ModelName>>{})
 <<- range .SearchableFields>>
 	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
 	if filters.<<.PascalName>>Start != "" {
@@ -116,7 +116,7 @@ func (s *<<.ServiceName>>Impl) GetByID(id uint) (*models.<<.ModelName>>, error) 
 }
 
 func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error) {
-	query := s.withRelations(Build<<.ModelName>>Query(filters))
+	query := s.withRelations(Build<<.ModelName>>Query(s.ctx, filters))
 
 	var list []models.<<.ModelName>>
 	var total int64
@@ -129,7 +129,7 @@ func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, page
 
 <<if .HasExport>>
 func (s *<<.ServiceName>>Impl) GetAll<<.ModelName>>ForExport(filters <<.ModelName>>Filters) ([]models.<<.ModelName>>, error) {
-	query := s.withRelations(Build<<.ModelName>>Query(filters))
+	query := s.withRelations(Build<<.ModelName>>Query(s.ctx, filters))
 
 	var list []models.<<.ModelName>>
 	if err := query.Order("id desc").Find(&list); err != nil {

@@ -68,8 +68,8 @@ func (s *ArticleServiceImpl) withRelations(query orm.Query) orm.Query {
 }
 
 // BuildArticleQuery builds the Article query shared by list/export.
-func BuildArticleQuery(filters ArticleFilters) orm.Query {
-	query := appfacades.OrmQuery(context.Background()).Model(&models.Article{})
+func BuildArticleQuery(ctx context.Context, filters ArticleFilters) orm.Query {
+	query := appfacades.OrmQuery(ctx).Model(&models.Article{})
 	if filters.AdminId != "" {
 		query = query.Where("admin_id = ?", filters.AdminId)
 	}
@@ -114,7 +114,7 @@ func (s *ArticleServiceImpl) GetByID(id uint) (*models.Article, error) {
 }
 
 func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error) {
-	query := s.withRelations(BuildArticleQuery(filters))
+	query := s.withRelations(BuildArticleQuery(s.ctx, filters))
 
 	var list []models.Article
 	var total int64
@@ -126,7 +126,7 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 }
 
 func (s *ArticleServiceImpl) GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error) {
-	query := s.withRelations(BuildArticleQuery(filters))
+	query := s.withRelations(BuildArticleQuery(s.ctx, filters))
 
 	var list []models.Article
 	if err := query.Order("id desc").Find(&list); err != nil {

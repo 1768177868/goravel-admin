@@ -59,8 +59,8 @@ func ApplyOrderFiltersToQuery(query orm.Query, filters OrderFilters) orm.Query {
 }
 
 // BuildOrderQuery 构建订单分表查询（包含时间范围 + 通用筛选），供列表查询/导出复用。
-func BuildOrderQuery(tableName string, filters OrderFilters) orm.Query {
-	query := appfacades.OrmQuery(context.Background()).Table(tableName)
+func BuildOrderQuery(ctx context.Context, tableName string, filters OrderFilters) orm.Query {
+	query := appfacades.OrmQuery(ctx).Table(tableName)
 
 	// 时间范围（导出/列表都需要）
 	if !filters.StartTime.IsZero() {
@@ -368,7 +368,7 @@ func (s *OrderServiceImpl) GetOrders(filters OrderFilters, page, pageSize int) (
 
 // buildShardingQuery 构建分表查询条件（辅助函数，减少重复代码）
 func (s *OrderServiceImpl) buildShardingQuery(tableName string, filters OrderFilters) orm.Query {
-	return BuildOrderQuery(tableName, filters)
+	return BuildOrderQuery(s.ctx, tableName, filters)
 }
 
 // buildOrderWhereClause 构建订单查询的 WHERE 条件（用于通用分表查询服务）

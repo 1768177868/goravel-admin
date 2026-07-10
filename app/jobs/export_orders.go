@@ -146,7 +146,7 @@ func (r *ExportOrders) exportTable(w *csv.Writer, tableName string, filters serv
 			return ErrExportRecordMissing
 		}
 
-		query := services.BuildOrderQuery(tableName, filters)
+		query := services.BuildOrderQuery(context.Background(), tableName, filters)
 
 		if lastTimeStr != "" {
 			if direction == "desc" {

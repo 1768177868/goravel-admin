@@ -163,7 +163,7 @@ func (r *ExportPayments) exportTable(w *csv.Writer, tableName string, filters se
 			return ErrExportRecordMissing
 		}
 
-		query := services.BuildPaymentQuery(tableName, filters)
+		query := services.BuildPaymentQuery(context.Background(), tableName, filters)
 
 		// Keyset 分页
 		if lastTimeStr != "" {

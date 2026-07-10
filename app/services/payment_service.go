@@ -83,8 +83,8 @@ type PaymentFilters struct {
 const PaymentCountThreshold int64 = 100000
 
 // BuildPaymentQuery 构建支付记录分表查询（包含时间范围 + 通用筛选），供列表查询/导出复用
-func BuildPaymentQuery(tableName string, filters PaymentFilters) orm.Query {
-	query := appfacades.OrmQuery(context.Background()).Table(tableName).Where("deleted_at IS NULL")
+func BuildPaymentQuery(ctx context.Context, tableName string, filters PaymentFilters) orm.Query {
+	query := appfacades.OrmQuery(ctx).Table(tableName).Where("deleted_at IS NULL")
 
 	// 时间范围
 	if !filters.StartTime.IsZero() {

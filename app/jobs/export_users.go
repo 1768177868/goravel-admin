@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -111,7 +112,7 @@ func (r *ExportUsers) writeUsersToCSV(w *csv.Writer, filters map[string]any, lan
 		}
 
 		// 使用通用查询构建（复用 UserService 的逻辑）
-		query := services.BuildUserQuery(userFilters).With("Currency")
+		query := services.BuildUserQuery(context.Background(), userFilters).With("Currency")
 
 		// Keyset 分页
 		if lastID > 0 {

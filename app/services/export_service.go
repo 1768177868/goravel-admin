@@ -440,20 +440,8 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 				Status:    1,
 			}
 
-			// 使用带超时的 context 执行数据库操作
-			// 注意：虽然 ORM 可能不支持 WithContext，但超时控制通过 goroutine 的 context 实现
-			done := make(chan error, 1)
-			go func() {
-				done <- appfacades.OrmQuery(s.ctx).Create(&exportRecord)
-			}()
-
-			select {
-			case err := <-done:
-				if err != nil {
-					facades.Log().Errorf("ExportService: failed to record export log: %v", err)
-				}
-			case <-ctx.Done():
-				facades.Log().Errorf("ExportService: timeout while recording export log")
+			if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
+				facades.Log().Errorf("ExportService: failed to record export log: %v", err)
 			}
 		}()
 	}
@@ -572,20 +560,8 @@ func (s *ExportServiceImpl) recordExportLogWithContext(ctx context.Context, file
 		Status:    1,
 	}
 
-	// 使用带超时的 context 执行数据库操作
-	// 注意：虽然 ORM 可能不支持 WithContext，但超时控制通过 goroutine 的 context 实现
-	done := make(chan error, 1)
-	go func() {
-		done <- appfacades.OrmQuery(ctx).Create(&exportRecord)
-	}()
-
-	select {
-	case err := <-done:
-		if err != nil {
-			facades.Log().Errorf("ExportService: failed to record export log: %v", err)
-		}
-	case <-ctx.Done():
-		facades.Log().Errorf("ExportService: timeout while recording export log")
+	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
+		facades.Log().Errorf("ExportService: failed to record export log: %v", err)
 	}
 }
 
