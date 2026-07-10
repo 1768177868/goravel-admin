@@ -208,8 +208,6 @@
     "payment_amount_invalid": "支付金额无效",
     "payment_status_invalid": "支付状态无效",
     "payment_method_code_exists": "支付方式代码已存在",
-    "trace_test_warning": "追踪测试警告",
-    "trace_test_error": "追踪测试错误",
     "enabled": "启用",
     "disabled": "禁用",
     "directory": "目录",
@@ -272,61 +270,6 @@
     "forbidden": "禁止访问",
     "batch_delete_failed": "批量删除失败",
     "validation": {
-      "required": {
-        "username": "用户名不能为空",
-        "password": "密码不能为空",
-        "name": "名称不能为空",
-        "slug": "标识不能为空",
-        "label": "标签不能为空",
-        "value": "值不能为空",
-        "old_password": "原密码不能为空",
-        "new_password": "新密码不能为空",
-        "confirm_password": "确认密码不能为空",
-        "admin_id": "管理员ID不能为空",
-        "code": "编码不能为空",
-        "config": "配置不能为空",
-        "content": "内容不能为空",
-        "status": "状态不能为空",
-        "title": "标题不能为空",
-        "type": "类型不能为空",
-        "username_and_password": "用户名和密码不能为空",
-        "role_name_and_slug": "角色名称和标识不能为空",
-        "path": "请输入路径",
-        "ip": "IP地址不能为空"
-      },
-      "min": {
-        "username": "用户名长度不能少于:min位",
-        "password": "密码长度不能少于:min位"
-      },
-      "max": {
-        "username": "用户名长度不能超过:max位",
-        "password": "密码长度不能超过:max位",
-        "email": "邮箱长度不能超过:max位",
-        "nickname": "昵称长度不能超过:max位",
-        "phone": "手机号长度不能超过:max位",
-        "title": "标题长度不能超过:max位",
-        "slug": "标识长度不能超过:max位",
-        "icon": "图标长度不能超过:max位",
-        "path": "路径长度不能超过:max位",
-        "component": "组件长度不能超过:max位",
-        "permission": "权限长度不能超过:max位",
-        "type": "类型长度不能超过:max位",
-        "description": "描述长度不能超过:max位",
-        "code": "编码长度不能超过:max位",
-        "leader": "负责人长度不能超过:max位",
-        "remark": "备注长度不能超过:max位",
-        "label": "标签长度不能超过:max位",
-        "value": "值长度不能超过:max位",
-        "name": "名称长度不能超过:max位",
-        "keyword": "搜索关键词不能超过:max个字符",
-        "start_time": "开始时间长度不能超过:max个字符",
-        "end_time": "结束时间长度不能超过:max个字符",
-        "translation_key": "多语言Key长度不能超过:max位"
-      },
-      "in": {
-        "status": "状态值必须是:values",
-        "menu_type": "菜单类型必须是:values"
-      },
       "attributes": {
         "status": "状态",
         "username": "用户名",
@@ -360,22 +303,13 @@
         "sort": "排序",
         "translation_key": "多语言Key"
       },
-      "path": {
-        "url_invalid": "链接必须是有效的URL地址"
-      },
-      "same": {
-        "confirm_password": ""
-      },
       "datetime": {
         "start_time_invalid": "开始时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
         "end_time_invalid": "结束时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS"
       },
       "range": {
         "time_inverted": "开始时间不能晚于结束时间"
-      },
-      "email": "邮箱格式不正确",
-      "boolean": "必须是布尔值",
-      "min_value": "不能小于:min"
+      }
     }
   }
 }

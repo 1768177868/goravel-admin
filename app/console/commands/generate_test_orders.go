@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -9,10 +10,10 @@ import (
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
-	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/oklog/ulid/v2"
 
+	appfacades "goravel/app/facades"
 	"goravel/app/models"
 	"goravel/app/services"
 	"goravel/app/utils"
@@ -21,6 +22,7 @@ import (
 // GenerateTestOrders 生成测试订单数据
 type GenerateTestOrders struct {
 	shardingService services.ShardingService
+	cancel          context.CancelFunc
 }
 
 // Signature The name and signature of the console command.
@@ -92,6 +94,10 @@ func (receiver *GenerateTestOrders) Extend() command.Extend {
 // Handle Execute the console command.
 func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	receiver.shardingService = services.NewShardingService()
+
+	runCtx, cancel := context.WithCancel(ctx)
+	receiver.cancel = cancel
+	defer cancel()
 
 	// 获取参数
 	count := ctx.OptionInt("count")
@@ -182,6 +188,11 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	rand.Seed(time.Now().UnixNano())
 
 	for range batches {
+		if runCtx.Err() != nil {
+			ctx.Warning("收到停止信号，正在退出...")
+			return runCtx.Err()
+		}
+
 		// 计算本批次要插入的数量
 		remaining := count - totalInserted
 		currentBatchSize := min(remaining, batchSize)
@@ -278,7 +289,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 
 					// 批量插入
 					for j := range batchData {
-						if err := facades.Orm().Query().Table(tn).Create(batchData[j]); err != nil {
+						if err := appfacades.OrmQuery(ctx).Table(tn).Create(batchData[j]); err != nil {
 							errChan <- fmt.Errorf("插入订单失败: %v", err)
 							return
 						}
@@ -295,7 +306,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 					// 批量查询订单ID
 					if len(orderNos) > 0 {
 						var insertedOrders []models.Order
-						if err := facades.Orm().Query().Table(tn).Where("order_no IN ?", orderNos).Find(&insertedOrders); err == nil {
+						if err := appfacades.OrmQuery(ctx).Table(tn).Where("order_no IN ?", orderNos).Find(&insertedOrders); err == nil {
 							// 更新全局订单ID映射
 							mu.Lock()
 							for k := range insertedOrders {
@@ -428,7 +439,7 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 							"created_at":   createdAtStr,
 							"updated_at":   createdAtStr,
 						}
-						if err := facades.Orm().Query().Table(dtn).Create(detailData); err != nil {
+						if err := appfacades.OrmQuery(ctx).Table(dtn).Create(detailData); err != nil {
 							detailErrChan <- fmt.Errorf("插入订单详情失败: %v", err)
 							return
 						}
@@ -476,6 +487,13 @@ func (receiver *GenerateTestOrders) Handle(ctx console.Context) error {
 	ctx.Info(fmt.Sprintf("总耗时: %s", formatDuration(elapsed)))
 	ctx.Info(fmt.Sprintf("平均速度: %.0f 条/秒", float64(totalInserted)/elapsed.Seconds()))
 
+	return nil
+}
+
+func (receiver *GenerateTestOrders) Shutdown(ctx console.Context) error {
+	if receiver.cancel != nil {
+		receiver.cancel()
+	}
 	return nil
 }
 

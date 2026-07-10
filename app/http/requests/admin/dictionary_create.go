@@ -23,35 +23,20 @@ func (r *DictionaryCreate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *DictionaryCreate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"type":            "required|max_len:50",
-		"label":           "required|max_len:50",
-		"value":           "required|max_len:100",
-		"translation_key": "max_len:255",
-		"description":     "max_len:255",
+func (r *DictionaryCreate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"type":            "required|max:50",
+		"label":           "required|max:50",
+		"value":           "required|max:100",
+		"translation_key": "max:255",
+		"description":     "max:255",
 		"status":          "in:0,1",
-		"remark":          "max_len:500",
+		"remark":          "max:500",
 	}
 }
 
-func (r *DictionaryCreate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"type.required":           trans.Get(ctx, "validation.required.type"),
-		"type.max_len":            trans.Get(ctx, "validation.max.type", map[string]string{"max": "50"}),
-		"label.required":          trans.Get(ctx, "validation.required.label"),
-		"label.max_len":           trans.Get(ctx, "validation.max.label", map[string]string{"max": "50"}),
-		"value.required":          trans.Get(ctx, "validation.required.value"),
-		"value.max_len":           trans.Get(ctx, "validation.max.value", map[string]string{"max": "100"}),
-		"translation_key.max_len": trans.Get(ctx, "validation.max.translation_key", map[string]string{"max": "255"}),
-		"description.max_len":     trans.Get(ctx, "validation.max.description", map[string]string{"max": "255"}),
-		"status.in":               trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"remark.max_len":          trans.Get(ctx, "validation.max.remark", map[string]string{"max": "500"}),
-	}
-}
-
-func (r *DictionaryCreate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *DictionaryCreate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"type":            trans.Get(ctx, "validation.attributes.type"),
 		"label":           trans.Get(ctx, "validation.attributes.label"),
 		"value":           trans.Get(ctx, "validation.attributes.value"),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"math"
 	"os"
 	"strings"
@@ -271,7 +272,7 @@ func (r *QueuePeek) Handle(ctx console.Context) error {
 	}
 
 	// database driver
-	q := facades.Orm().Query().Table("jobs").Select("id", "queue", "payload", "attempts", "reserved_at", "available_at", "created_at")
+	q := appfacades.OrmQuery(ctx).Table("jobs").Select("id", "queue", "payload", "attempts", "reserved_at", "available_at", "created_at")
 	now := time.Now()
 
 	switch state {

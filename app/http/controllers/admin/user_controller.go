@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -271,7 +272,7 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 		Disk:    disk,
 		Path:    "",
 	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -304,7 +305,7 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 		facades.Log().Errorf("序列化导出参数失败: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -322,7 +323,7 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 		facades.Log().Errorf("提交导出任务失败: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 

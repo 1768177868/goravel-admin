@@ -1,10 +1,10 @@
 package admin
 
 import (
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/constants"
 	apperrors "goravel/app/errors"
@@ -96,7 +96,7 @@ func (r *LoginLogController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(log); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(log); err != nil {
 		return response.ErrorWithLog(ctx, "login-log", err, map[string]any{
 			"log_id": log.ID,
 		})
@@ -127,7 +127,7 @@ func (r *LoginLogController) BatchDestroy(ctx http.Context) http.Response {
 	// 使用工具函数转换为 []any
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 
-	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.LoginLog{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).WhereIn("id", idsAny).Delete(&models.LoginLog{}); err != nil {
 		return response.ErrorWithLog(ctx, "login-log", err, map[string]any{
 			"ids": ids,
 		})
@@ -145,7 +145,7 @@ func (r *LoginLogController) Clean(ctx http.Context) http.Response {
 	}
 
 	cutoffTime := time.Now().AddDate(0, 0, -days)
-	if _, err := facades.Orm().Query().Model(&models.LoginLog{}).Where("created_at < ?", cutoffTime).Delete(&models.LoginLog{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Model(&models.LoginLog{}).Where("created_at < ?", cutoffTime).Delete(&models.LoginLog{}); err != nil {
 		return response.ErrorWithLog(ctx, "login-log", err, map[string]any{
 			"days": days,
 		})

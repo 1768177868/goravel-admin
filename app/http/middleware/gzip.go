@@ -57,7 +57,7 @@ func (w *gzipResponseWriter) Close() error {
 
 // Gzip 仅在本地/开发环境下对响应做 gzip 压缩（线上由 Nginx 等做压缩）
 func Gzip() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("gzip", func(ctx http.Context) {
 		env := facades.Config().GetString("app.env", "production")
 		if env != "local" && env != "development" {
 			ctx.Request().Next()
@@ -97,7 +97,7 @@ func Gzip() http.Middleware {
 
 		ginCtx.Writer = &ginResponseWriter{ResponseWriter: gw, gzipWriter: gw, size: noWrittenGzip}
 		ctx.Request().Next()
-	}
+	})
 }
 
 // ginResponseWriter 实现 gin.ResponseWriter，委托给底层并支持 gzip

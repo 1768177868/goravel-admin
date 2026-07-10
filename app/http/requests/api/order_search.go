@@ -22,24 +22,16 @@ func (r *OrderSearch) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *OrderSearch) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"q":            "max_len:200",
-		"created_from": "max_len:32",
-		"created_to":   "max_len:32",
+func (r *OrderSearch) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"q":            "max:200",
+		"created_from": "max:32",
+		"created_to":   "max:32",
 	}
 }
 
-func (r *OrderSearch) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"q.max_len":            trans.Get(ctx, "validation.max.keyword", map[string]string{"max": "200"}),
-		"created_from.max_len": trans.Get(ctx, "validation.max.start_time", map[string]string{"max": "32"}),
-		"created_to.max_len":   trans.Get(ctx, "validation.max.end_time", map[string]string{"max": "32"}),
-	}
-}
-
-func (r *OrderSearch) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *OrderSearch) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"q":            trans.Get(ctx, "keyword"),
 		"created_from": trans.Get(ctx, "start_time"),
 		"created_to":   trans.Get(ctx, "end_time"),

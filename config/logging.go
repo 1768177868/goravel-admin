@@ -13,7 +13,17 @@ func init() {
 		// messages to the logs. The name specified in this option should match
 		// one of the channels defined in the "channels" configuration array.
 		"default": config.Env("LOG_CHANNEL", "stack"),
-
+		// Context keys excluded from log output (framework keys are excluded by default).
+		"context": map[string]any{
+			"exclude": []string{
+				"admin",
+				"user",
+				"token",
+				"permission_slug",
+				"trace.traceContextKeyType",
+				"go.opentelemetry.io/otel/trace.traceContextKeyType",
+			},
+		},
 		// Log Channels
 		//
 		// Here you may configure the log channels for your application.
@@ -36,6 +46,10 @@ func init() {
 				"level":  config.Env("LOG_LEVEL", "debug"),
 				"days":   7,
 				"print":  true,
+			},
+			"otel": map[string]any{
+				"driver":          "otel",
+				"instrument_name": config.GetString("APP_NAME", "goravel/log"),
 			},
 		},
 	})

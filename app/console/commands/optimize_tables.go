@@ -7,6 +7,8 @@ import (
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
+
+	appfacades "goravel/app/facades"
 )
 
 type OptimizeTables struct {
@@ -17,23 +19,6 @@ func (r *OptimizeTables) Signature() string {
 }
 
 func (r *OptimizeTables) Description() string {
-
-	// # MySQL: OPTIMIZE TABLE（整理碎片，回收空间）
-	// # PostgreSQL: VACUUM (ANALYZE)（清理死元组并更新统计信息）
-	//
-	// # 传参方式：直接传表名（可多个）
-	// go run . artisan db:optimize-tables payments
-	// go run . artisan db:optimize-tables payments orders_202601 order_details_202601
-	//
-	// # 选项方式：--tables= 逗号分隔
-	// go run . artisan db:optimize-tables --tables=payments,orders_202601
-	//
-	// # PostgreSQL 重度回收空间（风险高：会锁表，且耗时长）
-	// go run . artisan db:optimize-tables payments --full=true
-	//
-	// # 帮助
-	// go run . artisan db:optimize-tables --help
-
 	return "优化表（MySQL: OPTIMIZE TABLE; PostgreSQL: VACUUM）"
 }
 
@@ -56,11 +41,10 @@ func (r *OptimizeTables) Extend() command.Extend {
 }
 
 func (r *OptimizeTables) Handle(ctx console.Context) error {
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(ctx).Driver())
 	full := ctx.OptionBool("full")
 
 	var tables []string
-	// 1) 从 --tables 读取（逗号分隔）
 	tablesFlag := strings.TrimSpace(ctx.Option("tables"))
 	if tablesFlag != "" {
 		parts := strings.Split(tablesFlag, ",")
@@ -71,7 +55,6 @@ func (r *OptimizeTables) Handle(ctx console.Context) error {
 			}
 		}
 	}
-	// 2) 从参数读取（db:optimize-tables table1 table2 ...）
 	for i := 0; ; i++ {
 		arg := strings.TrimSpace(ctx.Argument(i))
 		if arg == "" {
@@ -83,6 +66,8 @@ func (r *OptimizeTables) Handle(ctx console.Context) error {
 	if len(tables) == 0 {
 		return fmt.Errorf("请提供要优化的表名，例如：go run . artisan db:optimize-tables payments 或使用 --tables=payments,orders_202601")
 	}
+
+	rows := make([][]string, 0, len(tables))
 
 	execOptimize := func(table string) error {
 		var sql string
@@ -99,10 +84,10 @@ func (r *OptimizeTables) Handle(ctx console.Context) error {
 			return fmt.Errorf("unsupported database driver: %v", driver)
 		}
 
-		if _, err := facades.Orm().Query().Exec(sql); err != nil {
+		if _, err := appfacades.OrmQuery(ctx).Exec(sql); err != nil {
 			return err
 		}
-		ctx.Info("✓ " + sql)
+		rows = append(rows, []string{table, "成功"})
 		return nil
 	}
 
@@ -113,7 +98,13 @@ func (r *OptimizeTables) Handle(ctx console.Context) error {
 			if err := execOptimize(table); err != nil {
 				return fmt.Errorf("optimize %s failed: %v", table, err)
 			}
+		} else {
+			rows = append(rows, []string{table, "跳过（表不存在）"})
 		}
+	}
+
+	if len(rows) > 0 {
+		ctx.Table([]string{"表名", "状态"}, rows)
 	}
 
 	ctx.Info("完成")

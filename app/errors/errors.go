@@ -172,10 +172,6 @@ var (
 	ErrRoleProtectedCannotModifySlug = NewBusinessError("role_protected_cannot_modify_slug", "受保护的角色不能修改标识")
 	ErrRoleProtectedCannotDisable    = NewBusinessError("role_protected_cannot_disable", "受保护的角色不能禁用")
 	ErrRoleProtectedCannotDelete     = NewBusinessError("role_protected_cannot_delete", "受保护的角色不能删除")
-
-	// 测试相关错误
-	ErrTraceTestWarning = NewBusinessError("trace_test_warning", "追踪测试警告")
-	ErrTraceTestError   = NewBusinessError("trace_test_error", "追踪测试错误")
 )
 
 // BusinessError 业务错误类型

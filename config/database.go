@@ -72,7 +72,7 @@ func init() {
 				"username": config.Env("DB_USERNAME", "SYSDBA"),
 				"password": config.Env("DB_PASSWORD", "SYSDBA"),
 				// 仅当需要把模式名写进自动 DSN（dm://...@host:port/模式）时设置；留空则不拼路径，用登录用户默认模式。勿填服务/实例名。
-				"schema":           config.Env("DB_SCHEMA", ""),
+				"schema": config.Env("DB_SCHEMA", ""),
 				// DM 会话时区，默认跟随框架 app.timezone
 				"session_timezone": config.Env("DB_SESSION_TIMEZONE", config.GetString("app.timezone", "UTC")),
 				"prefix":           "",

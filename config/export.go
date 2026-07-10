@@ -11,9 +11,9 @@ func init() {
 	// 如需在代码中使用导出配置，请从数据库读取，而不是从环境变量读取
 	// 保留此配置仅用于框架初始化，实际导出配置请使用数据库中的配置
 	config.Add("export", map[string]any{
-		"disk":      config.Env("EXPORT_DISK", "public"),
-		"path":      config.Env("EXPORT_PATH", "exports"),
-		"format":    config.Env("EXPORT_FORMAT", "csv"),
+		"disk":       config.Env("EXPORT_DISK", "public"),
+		"path":       config.Env("EXPORT_PATH", "exports"),
+		"format":     config.Env("EXPORT_FORMAT", "csv"),
 		"url_prefix": config.Env("EXPORT_URL_PREFIX", ""),
 	})
 }

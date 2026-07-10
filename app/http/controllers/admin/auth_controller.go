@@ -2,6 +2,7 @@ package admin
 
 import (
 	"encoding/json"
+	appfacades "goravel/app/facades"
 	"strconv"
 	"time"
 
@@ -186,7 +187,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 
 	// 验证用户名是否存在
-	exists, err := facades.Orm().Query().Model(&models.Admin{}).Where("username", loginRequest.Username).Exists()
+	exists, err := appfacades.OrmQuery(ctx).Model(&models.Admin{}).Where("username", loginRequest.Username).Exists()
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"username": loginRequest.Username,
@@ -200,7 +201,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// 获取管理员信息
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("username", loginRequest.Username).FirstOrFail(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("username", loginRequest.Username).FirstOrFail(&admin); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"username": loginRequest.Username,
 		})
@@ -286,7 +287,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, "login_success", requestData)
 
 	// 更新最后登录时间（ORM会自动更新UpdatedAt）
-	facades.Orm().Query().Save(&admin)
+	appfacades.OrmQuery(ctx).Save(&admin)
 
 	return response.SuccessWithHeader(ctx, "login_success", "Authorization", "Bearer "+token, http.Json{
 		"token": token,
@@ -424,7 +425,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 	admin := *currentAdmin
 
 	// 重新查询admin以确保获取最新数据
-	if err := facades.Orm().Query().Where("id", admin.ID).FirstOrFail(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", admin.ID).FirstOrFail(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
@@ -446,7 +447,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 		admin.Avatar = avatar
 	}
 
-	if err := facades.Orm().Query().Save(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Save(&admin); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -454,7 +455,7 @@ func (r *AuthController) UpdateProfile(ctx http.Context) http.Response {
 
 	// 重新加载关联数据（确保部门和角色被正确加载）
 	var adminWithRelations models.Admin
-	if err := facades.Orm().Query().With("Department").With("Position").With("Roles").Where("id", admin.ID).FirstOrFail(&adminWithRelations); err != nil {
+	if err := appfacades.OrmQuery(ctx).With("Department").With("Position").With("Roles").Where("id", admin.ID).FirstOrFail(&adminWithRelations); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -589,7 +590,7 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 
 	// 查询token是否存在且属于当前用户
 	var token models.PersonalAccessToken
-	if err := facades.Orm().Query().
+	if err := appfacades.OrmQuery(ctx).
 		Where("id", tokenID).
 		Where("tokenable_type", "admin").
 		Where("tokenable_id", admin.ID).
@@ -598,7 +599,7 @@ func (r *AuthController) RevokeToken(ctx http.Context) http.Response {
 	}
 
 	// 删除token（直接通过ID删除，因为数据库中存储的是hash值，无法获取原始token）
-	if _, err := facades.Orm().Query().Delete(&token); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(&token); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"token_id": token.ID,
 			"admin_id": admin.ID,
@@ -639,7 +640,7 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 
 	// 查询用户是否存在
 	var targetAdmin models.Admin
-	if err := facades.Orm().Query().Where("id", userID).FirstOrFail(&targetAdmin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", userID).FirstOrFail(&targetAdmin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrUserNotFound.Code)
 	}
 

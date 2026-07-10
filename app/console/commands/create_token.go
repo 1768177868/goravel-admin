@@ -2,13 +2,13 @@ package commands
 
 import (
 	"errors"
+	appfacades "goravel/app/facades"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
 	"goravel/app/services"
@@ -101,10 +101,10 @@ func (receiver *CreateToken) Handle(ctx console.Context) error {
 	// 尝试作为ID解析
 	if id, parseErr := strconv.ParseUint(userIdentifier, 10, 32); parseErr == nil {
 		// 作为ID查询
-		err = facades.Orm().Query().Where("id", uint(id)).First(&admin)
+		err = appfacades.OrmQuery(ctx).Where("id", uint(id)).First(&admin)
 	} else {
 		// 作为用户名查询
-		err = facades.Orm().Query().Where("username", userIdentifier).First(&admin)
+		err = appfacades.OrmQuery(ctx).Where("username", userIdentifier).First(&admin)
 	}
 
 	if err != nil {

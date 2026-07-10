@@ -11,7 +11,7 @@ import (
 
 // Cors CORS 中间件，处理跨域请求
 func Cors() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("cors", func(ctx http.Context) {
 		// 获取请求路径
 		path := ctx.Request().Path()
 
@@ -153,5 +153,5 @@ func Cors() http.Middleware {
 
 		// 继续处理请求
 		ctx.Request().Next()
-	}
+	})
 }

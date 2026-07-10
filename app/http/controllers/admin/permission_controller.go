@@ -2,8 +2,8 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/spf13/cast"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -107,7 +107,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameAndSlugRequired.Code)
 	}
 
-	exists, err := facades.Orm().Query().Model(&models.Permission{}).
+	exists, err := appfacades.OrmQuery(ctx).Model(&models.Permission{}).
 		Where("name", name).
 		OrWhere("slug", slug).
 		Exists()
@@ -157,7 +157,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	menuIDStr := ctx.Request().Input("menu_id", "")
 
 	if name != "" {
-		exists, err := facades.Orm().Query().Model(&models.Permission{}).Where("name", name).Where("id <> ?", id).Exists()
+		exists, err := appfacades.OrmQuery(ctx).Model(&models.Permission{}).Where("name", name).Where("id <> ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}
@@ -167,7 +167,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 		permission.Name = name
 	}
 	if slug != "" {
-		exists, err := facades.Orm().Query().Model(&models.Permission{}).Where("slug", slug).Where("id <> ?", id).Exists()
+		exists, err := appfacades.OrmQuery(ctx).Model(&models.Permission{}).Where("slug", slug).Where("id <> ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}

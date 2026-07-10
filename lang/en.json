@@ -252,8 +252,6 @@
     "payment_amount_invalid": "Invalid payment amount",
     "payment_status_invalid": "Invalid payment status",
     "payment_method_code_exists": "Payment method code already exists",
-    "trace_test_warning": "Trace test warning",
-    "trace_test_error": "Trace test error",
     "enabled": "Enabled",
     "disabled": "Disabled",
     "directory": "Directory",
@@ -272,61 +270,6 @@
     "forbidden": "Forbidden",
     "batch_delete_failed": "Batch delete failed",
     "validation": {
-      "required": {
-        "username": "Username cannot be empty",
-        "password": "Password cannot be empty",
-        "name": "Name cannot be empty",
-        "slug": "Slug cannot be empty",
-        "label": "Label cannot be empty",
-        "value": "Value cannot be empty",
-        "old_password": "Old password cannot be empty",
-        "new_password": "New password cannot be empty",
-        "confirm_password": "Confirm password cannot be empty",
-        "admin_id": "Admin ID cannot be empty",
-        "code": "Code cannot be empty",
-        "config": "Config cannot be empty",
-        "content": "Content cannot be empty",
-        "status": "Status cannot be empty",
-        "title": "Title cannot be empty",
-        "type": "Type cannot be empty",
-        "username_and_password": "Username and password cannot be empty",
-        "role_name_and_slug": "Role name and slug cannot be empty",
-        "path": "Please enter path",
-        "ip": "IP address cannot be empty"
-      },
-      "min": {
-        "username": "Username length cannot be less than :min characters",
-        "password": "Password length cannot be less than :min characters"
-      },
-      "max": {
-        "username": "Username length cannot exceed :max characters",
-        "password": "Password length cannot exceed :max characters",
-        "email": "Email length cannot exceed :max characters",
-        "nickname": "Nickname length cannot exceed :max characters",
-        "phone": "Phone length cannot exceed :max characters",
-        "title": "Title length cannot exceed :max characters",
-        "slug": "Slug length cannot exceed :max characters",
-        "icon": "Icon length cannot exceed :max characters",
-        "path": "Path length cannot exceed :max characters",
-        "component": "Component length cannot exceed :max characters",
-        "permission": "Permission length cannot exceed :max characters",
-        "type": "Type length cannot exceed :max characters",
-        "description": "Description length cannot exceed :max characters",
-        "code": "Code length cannot exceed :max characters",
-        "leader": "Leader length cannot exceed :max characters",
-        "remark": "Remark length cannot exceed :max characters",
-        "label": "Label length cannot exceed :max characters",
-        "value": "Value length cannot exceed :max characters",
-        "name": "Name length cannot exceed :max characters",
-        "translation_key": "Translation key length cannot exceed :max characters",
-        "keyword": "Search keyword cannot exceed :max characters",
-        "start_time": "Start time length cannot exceed :max characters",
-        "end_time": "End time length cannot exceed :max characters"
-      },
-      "in": {
-        "status": "Status value must be :values",
-        "menu_type": "Menu type must be :values"
-      },
       "attributes": {
         "status": "Status",
         "username": "Username",
@@ -360,22 +303,13 @@
         "sort": "sort",
         "translation_key": "translation key"
       },
-      "path": {
-        "url_invalid": "External link must be a valid URL address"
-      },
-      "same": {
-        "confirm_password": ""
-      },
       "datetime": {
         "start_time_invalid": "Invalid start time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
         "end_time_invalid": "Invalid end time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"
       },
       "range": {
         "time_inverted": "Start time cannot be after end time"
-      },
-      "email": "Invalid email format",
-      "boolean": "Must be a boolean value",
-      "min_value": "Must not be less than :min"
+      }
     }
   }
 }

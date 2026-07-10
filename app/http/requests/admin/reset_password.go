@@ -14,21 +14,14 @@ func (r *ResetPassword) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *ResetPassword) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"password": "required|min_len:6",
+func (r *ResetPassword) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"password": "required|min:6",
 	}
 }
 
-func (r *ResetPassword) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"password.required": trans.Get(ctx, "validation.required.password"),
-		"password.min_len":  trans.Get(ctx, "validation.min.password", map[string]string{"min": "6"}),
-	}
-}
-
-func (r *ResetPassword) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *ResetPassword) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"password": trans.Get(ctx, "validation.attributes.password"),
 	}
 }

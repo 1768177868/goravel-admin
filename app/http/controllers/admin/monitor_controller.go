@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"math"
 	nethttp "net/http"
 	"os"
@@ -638,7 +639,7 @@ func getMySQLInfoFromDB(ctx http.Context) map[string]any {
 	}()
 
 	// 获取数据库连接配置
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(ctx).Driver())
 	// 获取默认连接名（用于读取配置）
 	connectionName := facades.Config().GetString("database.default", "")
 	// 如果连接名为空，尝试根据驱动名推断
@@ -799,7 +800,7 @@ func getPostgreSQLInfoFromDB(ctx http.Context) map[string]any {
 	}()
 
 	// 获取数据库连接配置
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(ctx).Driver())
 	// 获取默认连接名（用于读取配置）
 	connectionName := facades.Config().GetString("database.default", "")
 	// 如果连接名为空，尝试根据驱动名推断
@@ -1141,8 +1142,8 @@ func (r *MonitorController) getProcessesInfo(ctx http.Context) map[string]any {
 	// 获取数据库和Redis连接配置
 	var driver string
 	var connectionName string
-	if facades.Orm() != nil && facades.Orm().Query() != nil {
-		driver = strings.ToLower(facades.Orm().Query().Driver())
+	if facades.Orm() != nil {
+		driver = strings.ToLower(appfacades.OrmQuery(ctx).Driver())
 		// 获取默认连接名（用于读取配置）
 		connectionName = facades.Config().GetString("database.default", "")
 		// 如果连接名为空，尝试根据驱动名推断

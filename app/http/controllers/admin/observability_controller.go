@@ -3,6 +3,7 @@ package admin
 import (
 	"bytes"
 	"encoding/json"
+	appfacades "goravel/app/facades"
 	"net/http"
 	rpprof "runtime/pprof"
 	"sort"
@@ -71,7 +72,7 @@ func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Respon
 	_ = r.slowQueryService.CollectFromLatestLog(200)
 
 	var operations []models.OperationLog
-	if err := facades.Orm().Query().
+	if err := appfacades.OrmQuery(ctx).
 		Model(&models.OperationLog{}).
 		Where("trace_id", traceID).
 		With("Admin").
@@ -82,7 +83,7 @@ func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Respon
 	}
 
 	var systemLogs []models.SystemLog
-	if err := facades.Orm().Query().
+	if err := appfacades.OrmQuery(ctx).
 		Model(&models.SystemLog{}).
 		Where("trace_id", traceID).
 		Order("id asc").
@@ -185,7 +186,7 @@ func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Respons
 	startTime := getTimeQueryUTC(ctx, "start_time")
 	endTime := getTimeQueryUTC(ctx, "end_time")
 
-	events, err := r.collectAuditEvents(traceID, keyword, adminID, startTime, endTime)
+	events, err := r.collectAuditEvents(ctx, traceID, keyword, adminID, startTime, endTime)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "observability", err)
 	}
@@ -617,8 +618,8 @@ func (r *ObservabilityController) recordPprofSamplingLog(ctx ghttp.Context, mess
 	_ = r.systemLogService.RecordHTTP(ctx, "info", "pprof", message, attrs)
 }
 
-func (r *ObservabilityController) collectAuditEvents(traceID, keyword string, adminID int, startTime, endTime string) ([]auditEvent, error) {
-	opQuery := facades.Orm().Query().Model(&models.OperationLog{}).With("Admin").Order("id desc").Limit(500)
+func (r *ObservabilityController) collectAuditEvents(ctx ghttp.Context, traceID, keyword string, adminID int, startTime, endTime string) ([]auditEvent, error) {
+	opQuery := appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).With("Admin").Order("id desc").Limit(500)
 	if traceID != "" {
 		opQuery = opQuery.Where("trace_id = ?", traceID)
 	}
@@ -639,7 +640,7 @@ func (r *ObservabilityController) collectAuditEvents(traceID, keyword string, ad
 		return nil, err
 	}
 
-	sysQuery := facades.Orm().Query().Model(&models.SystemLog{}).Order("id desc").Limit(500)
+	sysQuery := appfacades.OrmQuery(ctx).Model(&models.SystemLog{}).Order("id desc").Limit(500)
 	if traceID != "" {
 		sysQuery = sysQuery.Where("trace_id = ?", traceID)
 	}

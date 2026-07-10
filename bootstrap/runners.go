@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/goravel/framework/contracts/foundation"
@@ -24,9 +23,7 @@ func (r *DefaultQueueRunner) Signature() string {
 }
 
 func (r *DefaultQueueRunner) ShouldRun() bool {
-	connection := facades.Config().GetString("queue.default")
-	driver := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.driver", connection))
-	return connection != "" && driver != "sync" && facades.Config().GetBool("app.auto_run", true)
+	return shouldRunQueueRunner(r.Signature())
 }
 
 func (r *DefaultQueueRunner) Run() error {
@@ -74,9 +71,7 @@ func (r *LongRunningQueueRunner) Signature() string {
 }
 
 func (r *LongRunningQueueRunner) ShouldRun() bool {
-	connection := facades.Config().GetString("queue.default")
-	driver := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.driver", connection))
-	return connection != "" && driver != "sync" && facades.Config().GetBool("app.auto_run", true)
+	return shouldRunQueueRunner(r.Signature())
 }
 
 func (r *LongRunningQueueRunner) Run() error {
@@ -124,9 +119,7 @@ func (r *ElasticsearchQueueRunner) Signature() string {
 }
 
 func (r *ElasticsearchQueueRunner) ShouldRun() bool {
-	connection := facades.Config().GetString("queue.default")
-	driver := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.driver", connection))
-	if connection == "" || driver == "sync" || !facades.Config().GetBool("app.auto_run", true) {
+	if !shouldRunQueueRunner(r.Signature()) {
 		return false
 	}
 	return esworker.ShouldRunQueueWorker()
@@ -193,7 +186,7 @@ func (r *TestQueueRunner) Signature() string {
 func (r *TestQueueRunner) ShouldRun() bool {
 	connection := facades.Config().GetString("queue.default")
 	driver := facades.Config().GetString(fmt.Sprintf("queue.connections.%s.driver", connection))
-	return connection != "" && driver != "sync" && facades.Config().GetBool("app.auto_run", true)
+	return connection != "" && driver != "sync" && shouldRunQueueRunner(r.Signature())
 }
 
 func (r *TestQueueRunner) Run() error {

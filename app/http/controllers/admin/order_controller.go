@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"strings"
 	"time"
 
@@ -543,7 +544,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		Disk:    disk,
 		Path:    "", // Updated when job is finished.
 	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -583,7 +584,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		facades.Log().Errorf("Failed to marshal export args: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -606,7 +607,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 		facades.Log().Errorf("Failed to dispatch export task: export_id=%d, error=%v", exportRecord.ID, err)
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 

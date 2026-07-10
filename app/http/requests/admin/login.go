@@ -18,23 +18,15 @@ func (r *Login) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *Login) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *Login) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
 		"username": "required",
-		"password": "required|min_len:6",
+		"password": "required|min:6",
 	}
 }
 
-func (r *Login) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"username.required": trans.Get(ctx, "validation.required.username"),
-		"password.required": trans.Get(ctx, "validation.required.password"),
-		"password.min_len":  trans.Get(ctx, "validation.min.password", map[string]string{"min": "6"}),
-	}
-}
-
-func (r *Login) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *Login) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"username": trans.Get(ctx, "validation.attributes.username"),
 		"password": trans.Get(ctx, "validation.attributes.password"),
 	}

@@ -16,7 +16,9 @@ import (
 )
 
 // SyncOrdersElasticsearch 手动将订单同步到 Elasticsearch（受 ELASTICSEARCH_* 与 SYNC_ORDERS 开关约束）。
-type SyncOrdersElasticsearch struct{}
+type SyncOrdersElasticsearch struct {
+	cancel context.CancelFunc
+}
 
 func (r *SyncOrdersElasticsearch) Signature() string {
 	return "es:sync-orders"
@@ -52,12 +54,15 @@ func (r *SyncOrdersElasticsearch) Handle(ctx console.Context) error {
 		return nil
 	}
 
+	runCtx, cancel := context.WithCancel(ctx)
+	r.cancel = cancel
+	defer cancel()
+
 	svc := services.NewOrderService()
-	c := context.Background()
 
 	if id := cast.ToUint(ctx.Option("order-id")); id > 0 {
 		ctx.Info(fmt.Sprintf("同步订单 id=%d ...", id))
-		if err := esorders.PushOrderToElasticsearch(c, id, "", "index"); err != nil {
+		if err := esorders.PushOrderToElasticsearch(runCtx, id, "", "index"); err != nil {
 			ctx.Error(err.Error())
 			return err
 		}
@@ -102,7 +107,11 @@ func (r *SyncOrdersElasticsearch) Handle(ctx console.Context) error {
 	ctx.Info(fmt.Sprintf("共 %d 条，开始写入 ES...", len(list)))
 	var fail int
 	for i, row := range list {
-		if err := esorders.PushOrderToElasticsearch(c, row.ID, row.OrderNo, "index"); err != nil {
+		if runCtx.Err() != nil {
+			ctx.Warning("收到停止信号，已中断同步")
+			return runCtx.Err()
+		}
+		if err := esorders.PushOrderToElasticsearch(runCtx, row.ID, row.OrderNo, "index"); err != nil {
 			fail++
 			facades.Log().Warningf("es sync order id=%d: %v", row.ID, err)
 		}
@@ -114,6 +123,13 @@ func (r *SyncOrdersElasticsearch) Handle(ctx console.Context) error {
 		ctx.Warning(fmt.Sprintf("完成，失败 %d 条（见日志）", fail))
 	} else {
 		ctx.Success(fmt.Sprintf("完成，共 %d 条", len(list)))
+	}
+	return nil
+}
+
+func (r *SyncOrdersElasticsearch) Shutdown(ctx console.Context) error {
+	if r.cancel != nil {
+		r.cancel()
 	}
 	return nil
 }

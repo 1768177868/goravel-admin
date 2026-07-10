@@ -3,10 +3,10 @@ package admin
 import (
 	"crypto/tls"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"net/smtp"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/spf13/cast"
 
@@ -31,7 +31,7 @@ func (r *ConfigController) GetByGroup(ctx http.Context) http.Response {
 
 	var configs []models.Config
 	// 查询配置，即使没有数据也返回空数组，不返回错误
-	_ = facades.Orm().Query().Where("group", group).Order("sort asc, id asc").Get(&configs)
+	_ = appfacades.OrmQuery(ctx).Where("group", group).Order("sort asc, id asc").Get(&configs)
 
 	// 如果是邮箱配置分组，将密码字段的值设为空，不让前端看到
 	if group == "email" {
@@ -61,7 +61,7 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 
 	// 获取该分组下的所有配置（即使查询失败也继续，使用空数组）
 	var existingConfigs []models.Config
-	_ = facades.Orm().Query().Where("group", group).Get(&existingConfigs)
+	_ = appfacades.OrmQuery(ctx).Where("group", group).Get(&existingConfigs)
 
 	// 创建key到config的映射
 	configMap := make(map[string]*models.Config)
@@ -74,9 +74,9 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 	// 对于 storage 分组，只允许保存驱动选择字段（白名单）
 	if group == "storage" {
 		allowedKeys := map[string]bool{
-			"file_disk":    true,
-			"storage_disk": true, // 向后兼容，保留但不推荐使用
-			"export_disk":  true, // 向后兼容
+			"file_disk":     true,
+			"storage_disk":  true, // 向后兼容，保留但不推荐使用
+			"export_disk":   true, // 向后兼容
 			"export_format": true,
 		}
 		filteredConfigs := make(map[string]any)
@@ -116,7 +116,7 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 		if config, exists := configMap[key]; exists {
 			// 更新现有配置
 			config.Value = valueStr
-			if err := facades.Orm().Query().Save(config); err != nil {
+			if err := appfacades.OrmQuery(ctx).Save(config); err != nil {
 				return response.ErrorWithLog(ctx, "config", err, map[string]any{
 					"group": group,
 					"key":   key,
@@ -133,7 +133,7 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 				"created_at": now,
 				"updated_at": now,
 			}
-			if err := facades.Orm().Query().Table("configs").Create(configData); err != nil {
+			if err := appfacades.OrmQuery(ctx).Table("configs").Create(configData); err != nil {
 				return response.ErrorWithLog(ctx, "config", err, map[string]any{
 					"group": group,
 					"key":   key,

@@ -1,11 +1,11 @@
 package admin
 
 import (
+	appfacades "goravel/app/facades"
 	"sort"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/constants"
 	apperrors "goravel/app/errors"
@@ -96,7 +96,7 @@ func (r *SystemLogController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(log); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(log); err != nil {
 		return response.ErrorWithLog(ctx, "system-log", err, map[string]any{
 			"log_id": log.ID,
 		})
@@ -127,7 +127,7 @@ func (r *SystemLogController) BatchDestroy(ctx http.Context) http.Response {
 	// 使用工具函数转换为 []any
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 
-	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.SystemLog{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).WhereIn("id", idsAny).Delete(&models.SystemLog{}); err != nil {
 		return response.ErrorWithLog(ctx, "system-log", err, map[string]any{
 			"ids": ids,
 		})
@@ -145,7 +145,7 @@ func (r *SystemLogController) Clean(ctx http.Context) http.Response {
 	}
 
 	cutoffTime := time.Now().AddDate(0, 0, -days)
-	if _, err := facades.Orm().Query().Model(&models.SystemLog{}).Where("created_at < ?", cutoffTime).Delete(&models.SystemLog{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Model(&models.SystemLog{}).Where("created_at < ?", cutoffTime).Delete(&models.SystemLog{}); err != nil {
 		return response.ErrorWithLog(ctx, "system-log", err, map[string]any{
 			"days": days,
 		})
@@ -157,7 +157,7 @@ func (r *SystemLogController) Clean(ctx http.Context) http.Response {
 // GetModuleOptions 获取系统日志模块选项（用于前端筛选下拉）
 func (r *SystemLogController) GetModuleOptions(ctx http.Context) http.Response {
 	var modules []string
-	_ = facades.Orm().Query().Model(&models.SystemLog{}).
+	_ = appfacades.OrmQuery(ctx).Model(&models.SystemLog{}).
 		Select("DISTINCT module").
 		Where("module IS NOT NULL AND module != ''").
 		Order("module ASC").

@@ -2,11 +2,11 @@ package commands
 
 import (
 	"fmt"
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
 )
@@ -37,7 +37,7 @@ func (r *ClearLogs) Handle(ctx console.Context) error {
 	ctx.Info("开始清理6个月前的日志...")
 
 	// 清理操作日志
-	operationLogResult, err := facades.Orm().Query().Model(&models.OperationLog{}).
+	operationLogResult, err := appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).
 		Where("created_at < ?", monthsAgo).
 		Delete(&models.OperationLog{})
 	if err != nil {
@@ -47,7 +47,7 @@ func (r *ClearLogs) Handle(ctx console.Context) error {
 	ctx.Info(fmt.Sprintf("已清理操作日志: %d 条", operationLogResult.RowsAffected))
 
 	// 清理登录日志
-	loginLogResult, err := facades.Orm().Query().Model(&models.LoginLog{}).
+	loginLogResult, err := appfacades.OrmQuery(ctx).Model(&models.LoginLog{}).
 		Where("created_at < ?", monthsAgo).
 		Delete(&models.LoginLog{})
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *ClearLogs) Handle(ctx console.Context) error {
 	ctx.Info(fmt.Sprintf("已清理登录日志: %d 条", loginLogResult.RowsAffected))
 
 	// 清理系统日志
-	systemLogResult, err := facades.Orm().Query().Model(&models.SystemLog{}).
+	systemLogResult, err := appfacades.OrmQuery(ctx).Model(&models.SystemLog{}).
 		Where("created_at < ?", monthsAgo).
 		Delete(&models.SystemLog{})
 	if err != nil {

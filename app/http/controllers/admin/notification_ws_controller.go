@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	appfacades "goravel/app/facades"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -87,7 +88,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	}
 
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("id", accessToken.TokenableID).FirstOrFail(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", accessToken.TokenableID).FirstOrFail(&admin); err != nil {
 		response.Error(ctx, http.StatusUnauthorized, "user_not_found")
 		ctx.Request().Abort()
 		return nil

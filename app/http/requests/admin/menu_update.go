@@ -29,13 +29,13 @@ func (r *MenuUpdate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *MenuUpdate) Rules(ctx http.Context) map[string]string {
-	rules := map[string]string{
-		"title":      "max_len:50",
-		"slug":       "max_len:50",
-		"icon":       "max_len:50",
-		"component":  "max_len:255",
-		"permission": "max_len:100",
+func (r *MenuUpdate) Rules(ctx http.Context) map[string]any {
+	rules := map[string]any{
+		"title":      "max:50",
+		"slug":       "max:50",
+		"icon":       "max:50",
+		"component":  "max:255",
+		"permission": "max:100",
 		"type":       "in:1,2,3",
 		"status":     "in:0,1",
 		"is_hidden":  "in:0,1",
@@ -48,10 +48,10 @@ func (r *MenuUpdate) Rules(ctx http.Context) map[string]string {
 	linkType := ctx.Request().Input("link_type")
 	if linkType == "2" {
 		// 外部链接：需要验证为完整的 URL
-		rules["path"] = "max_len:1000|full_url"
+		rules["path"] = "max:1000|url"
 	} else {
 		// 内部页面：只需要长度验证
-		rules["path"] = "max_len:1000"
+		rules["path"] = "max:1000"
 		// 内部页面不验证 open_type
 		delete(rules, "open_type")
 	}
@@ -59,23 +59,8 @@ func (r *MenuUpdate) Rules(ctx http.Context) map[string]string {
 	return rules
 }
 
-func (r *MenuUpdate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"title.max_len":      trans.Get(ctx, "validation.max.title", map[string]string{"max": "50"}),
-		"slug.max_len":       trans.Get(ctx, "validation.max.slug", map[string]string{"max": "50"}),
-		"icon.max_len":       trans.Get(ctx, "validation.max.icon", map[string]string{"max": "50"}),
-		"path.max_len":       trans.Get(ctx, "validation.max.path", map[string]string{"max": "0"}),
-		"path.full_url":      trans.Get(ctx, "validation.path.url_invalid"),
-		"component.max_len":  trans.Get(ctx, "validation.max.component", map[string]string{"max": "255"}),
-		"permission.max_len": trans.Get(ctx, "validation.max.permission", map[string]string{"max": "100"}),
-		"type.in":            trans.Get(ctx, "validation.in.menu_type", map[string]string{"values": "1,2,3"}),
-		"status.in":          trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"is_hidden.in":       trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-	}
-}
-
-func (r *MenuUpdate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *MenuUpdate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"title":      trans.Get(ctx, "validation.attributes.title"),
 		"slug":       trans.Get(ctx, "validation.attributes.slug"),
 		"icon":       trans.Get(ctx, "validation.attributes.icon"),

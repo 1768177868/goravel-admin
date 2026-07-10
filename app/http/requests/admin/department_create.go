@@ -24,34 +24,20 @@ func (r *DepartmentCreate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *DepartmentCreate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name":   "required|max_len:50",
-		"code":   "max_len:50",
-		"leader": "max_len:50",
-		"phone":  "max_len:20",
-		"email":  "email|max_len:100",
+func (r *DepartmentCreate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name":   "required|max:50",
+		"code":   "max:50",
+		"leader": "max:50",
+		"phone":  "max:20",
+		"email":  "email|max:100",
 		"status": "in:0,1",
-		"remark": "max_len:500",
+		"remark": "max:500",
 	}
 }
 
-func (r *DepartmentCreate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name.required":  trans.Get(ctx, "validation.required.name"),
-		"name.max_len":   trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
-		"code.max_len":   trans.Get(ctx, "validation.max.code", map[string]string{"max": "50"}),
-		"leader.max_len": trans.Get(ctx, "validation.max.leader", map[string]string{"max": "50"}),
-		"phone.max_len":  trans.Get(ctx, "validation.max.phone", map[string]string{"max": "20"}),
-		"email.email":    trans.Get(ctx, "validation.email"),
-		"email.max_len":  trans.Get(ctx, "validation.max.email", map[string]string{"max": "100"}),
-		"status.in":      trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"remark.max_len": trans.Get(ctx, "validation.max.remark", map[string]string{"max": "500"}),
-	}
-}
-
-func (r *DepartmentCreate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *DepartmentCreate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name":   trans.Get(ctx, "validation.attributes.name"),
 		"code":   trans.Get(ctx, "validation.attributes.code"),
 		"leader": trans.Get(ctx, "validation.attributes.leader"),

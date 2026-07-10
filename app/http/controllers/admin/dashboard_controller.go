@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	nethttp "net/http"
 	"strings"
 	"time"
@@ -23,20 +24,20 @@ func NewDashboardController() *DashboardController {
 
 // GetCount 获取统计数据
 func (r *DashboardController) GetCount(ctx http.Context) http.Response {
-	countData := r.getCountData()
+	countData := r.getCountData(ctx)
 
 	// 获取今日访问量（今日登录日志数）
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	todayEnd := todayStart.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
-	todayVisits, _ := facades.Orm().Query().Model(&models.LoginLog{}).
+	todayVisits, _ := appfacades.OrmQuery(ctx).Model(&models.LoginLog{}).
 		Where("created_at >= ?", todayStart).
 		Where("created_at <= ?", todayEnd).
 		Where("status", 1).
 		Count()
 
 	// 获取在线管理员数
-	onlineAdminCount := r.getOnlineAdminCount()
+	onlineAdminCount := r.getOnlineAdminCount(ctx)
 
 	// 获取最近一年的订单总数
 	orderService := services.NewOrderService()
@@ -63,7 +64,7 @@ func (r *DashboardController) GetUserAccessSource(ctx http.Context) http.Respons
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
 	var loginLogs []models.LoginLog
-	facades.Orm().Query().Model(&models.LoginLog{}).
+	appfacades.OrmQuery(ctx).Model(&models.LoginLog{}).
 		Where("created_at >= ?", thirtyDaysAgo).
 		Where("status", 1).
 		Get(&loginLogs)
@@ -114,7 +115,7 @@ func (r *DashboardController) parseDeviceType(userAgent string) string {
 
 // GetWeeklyUserActivity 获取每周用户活跃量（从操作日志统计）
 func (r *DashboardController) GetWeeklyUserActivity(ctx http.Context) http.Response {
-	weeklyData := r.getWeeklyUserActivityData()
+	weeklyData := r.getWeeklyUserActivityData(ctx)
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -125,7 +126,7 @@ func (r *DashboardController) GetWeeklyUserActivity(ctx http.Context) http.Respo
 // GetMonthlySales 获取每月操作统计（替换销售额数据）
 func (r *DashboardController) GetMonthlySales(ctx http.Context) http.Response {
 	// 替换成操作日志月度统计
-	monthlyData := r.getMonthlyOperationData()
+	monthlyData := r.getMonthlyOperationData(ctx)
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -137,7 +138,7 @@ func (r *DashboardController) GetMonthlySales(ctx http.Context) http.Response {
 func (r *DashboardController) GetRecentActivities(ctx http.Context) http.Response {
 	// 获取最近10条操作日志
 	var logs []models.OperationLog
-	facades.Orm().Query().Model(&models.OperationLog{}).
+	appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).
 		With("Admin").
 		Order("id desc").
 		Limit(10).
@@ -305,7 +306,7 @@ func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]
 	data := make(map[string]any)
 
 	// 1. 获取统计数据（管理员、角色、权限等）
-	countData := r.getCountData()
+	countData := r.getCountData(ctx)
 	data["count"] = countData
 
 	// 2. 获取用户访问来源数据
@@ -313,30 +314,30 @@ func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]
 	data["user_access_source"] = accessSourceData
 
 	// 3. 获取每周用户活跃量
-	weeklyActivityData := r.getWeeklyUserActivityData()
+	weeklyActivityData := r.getWeeklyUserActivityData(ctx)
 	data["weekly_user_activity"] = weeklyActivityData
 
 	// 4. 获取每月销售额
-	monthlySalesData := r.getMonthlySalesData()
+	monthlySalesData := r.getMonthlySalesData(ctx)
 	data["monthly_sales"] = monthlySalesData
 
 	// 5. 获取在线管理员数
-	onlineAdminCount := r.getOnlineAdminCount()
+	onlineAdminCount := r.getOnlineAdminCount(ctx)
 	data["online_admin_count"] = onlineAdminCount
 
 	return data
 }
 
 // getCountData 获取统计数据
-func (r *DashboardController) getCountData() map[string]any {
+func (r *DashboardController) getCountData(ctx http.Context) map[string]any {
 	// 统计各种数据
-	adminCount, _ := facades.Orm().Query().Model(&models.Admin{}).Count()
-	roleCount, _ := facades.Orm().Query().Model(&models.Role{}).Count()
-	permissionCount, _ := facades.Orm().Query().Model(&models.Permission{}).Count()
-	menuCount, _ := facades.Orm().Query().Model(&models.Menu{}).Count()
-	departmentCount, _ := facades.Orm().Query().Model(&models.Department{}).Count()
-	dictionaryCount, _ := facades.Orm().Query().Model(&models.Dictionary{}).Count()
-	configCount, _ := facades.Orm().Query().Model(&models.Config{}).Count()
+	adminCount, _ := appfacades.OrmQuery(ctx).Model(&models.Admin{}).Count()
+	roleCount, _ := appfacades.OrmQuery(ctx).Model(&models.Role{}).Count()
+	permissionCount, _ := appfacades.OrmQuery(ctx).Model(&models.Permission{}).Count()
+	menuCount, _ := appfacades.OrmQuery(ctx).Model(&models.Menu{}).Count()
+	departmentCount, _ := appfacades.OrmQuery(ctx).Model(&models.Department{}).Count()
+	dictionaryCount, _ := appfacades.OrmQuery(ctx).Model(&models.Dictionary{}).Count()
+	configCount, _ := appfacades.OrmQuery(ctx).Model(&models.Config{}).Count()
 
 	return map[string]any{
 		"admins":       adminCount,
@@ -362,7 +363,7 @@ func (r *DashboardController) getUserAccessSourceData() []map[string]any {
 }
 
 // getWeeklyUserActivityData 获取每周用户活跃量（从操作日志统计）
-func (r *DashboardController) getWeeklyUserActivityData() []map[string]any {
+func (r *DashboardController) getWeeklyUserActivityData(ctx http.Context) []map[string]any {
 	now := time.Now()
 	weeklyData := make([]map[string]any, 7)
 
@@ -375,7 +376,7 @@ func (r *DashboardController) getWeeklyUserActivityData() []map[string]any {
 		endOfDay := startOfDay.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 
 		// 统计当天的操作日志数（访问量）
-		visitCount, _ := facades.Orm().Query().Model(&models.OperationLog{}).
+		visitCount, _ := appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).
 			Where("created_at >= ?", startOfDay).
 			Where("created_at <= ?", endOfDay).
 			Where("status", 1).
@@ -383,7 +384,7 @@ func (r *DashboardController) getWeeklyUserActivityData() []map[string]any {
 
 		// 统计当天活跃的管理员数（去重）
 		var uniqueAdmins []uint
-		facades.Orm().Query().Model(&models.OperationLog{}).
+		appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).
 			Where("created_at >= ?", startOfDay).
 			Where("created_at <= ?", endOfDay).
 			Where("status", 1).
@@ -402,12 +403,12 @@ func (r *DashboardController) getWeeklyUserActivityData() []map[string]any {
 }
 
 // getMonthlySalesData 获取每月销售额（保留方法名以兼容 SSE）
-func (r *DashboardController) getMonthlySalesData() []map[string]any {
-	return r.getMonthlyOperationData()
+func (r *DashboardController) getMonthlySalesData(ctx http.Context) []map[string]any {
+	return r.getMonthlyOperationData(ctx)
 }
 
 // getMonthlyOperationData 获取每月操作统计（替换销售额）
-func (r *DashboardController) getMonthlyOperationData() []map[string]any {
+func (r *DashboardController) getMonthlyOperationData(ctx http.Context) []map[string]any {
 	now := time.Now()
 	monthlyData := make([]map[string]any, 12)
 
@@ -427,7 +428,7 @@ func (r *DashboardController) getMonthlyOperationData() []map[string]any {
 		}
 
 		// 统计当月的操作日志数
-		operationCount, _ := facades.Orm().Query().Model(&models.OperationLog{}).
+		operationCount, _ := appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).
 			Where("created_at >= ?", startOfMonth).
 			Where("created_at <= ?", endOfMonth).
 			Where("status", 1).
@@ -442,10 +443,10 @@ func (r *DashboardController) getMonthlyOperationData() []map[string]any {
 }
 
 // getOnlineAdminCount 获取在线管理员数
-func (r *DashboardController) getOnlineAdminCount() int64 {
+func (r *DashboardController) getOnlineAdminCount(ctx http.Context) int64 {
 	// 统计最近15分钟内有活动的管理员（在线管理员）
 	onlineThreshold := time.Now().Add(-15 * time.Minute)
-	count, _ := facades.Orm().Query().Model(&models.PersonalAccessToken{}).
+	count, _ := appfacades.OrmQuery(ctx).Model(&models.PersonalAccessToken{}).
 		Where("tokenable_type", "admin").
 		Where("last_used_at IS NOT NULL").
 		Where("last_used_at >= ?", onlineThreshold).

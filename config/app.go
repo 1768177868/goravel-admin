@@ -1,11 +1,44 @@
 package config
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
+	"github.com/spf13/cast"
 
 	"goravel/lang"
 )
+
+func parseDisabledRunners(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{}
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
+}
+
+// mergeDisabledRunners appends goravel:telemetry when OTEL exporters are not configured.
+func mergeDisabledRunners(user []string, tracesExporter, metricsExporter string) []string {
+	if tracesExporter != "" || metricsExporter != "" {
+		return user
+	}
+	for _, pattern := range user {
+		switch pattern {
+		case "goravel:telemetry", "*", "goravel:*":
+			return user
+		}
+	}
+	return append(slices.Clone(user), "goravel:telemetry")
+}
 
 // Boot Start all init methods of the current folder to bootstrap all config.
 func Boot() {}
@@ -26,6 +59,17 @@ func init() {
 		"env": config.Env("APP_ENV", "production"),
 		// Application Debug Mode
 		"debug": config.Env("APP_DEBUG", false),
+		// Disabled framework/custom runners. Supports glob patterns such as goravel:schedule or queue-*.
+		"disabled_runners": mergeDisabledRunners(
+			parseDisabledRunners(config.GetString("APP_DISABLED_RUNNERS", "")),
+			cast.ToString(config.Env("OTEL_TRACES_EXPORTER", "")),
+			cast.ToString(config.Env("OTEL_METRICS_EXPORTER", "")),
+		),
+		// Maintenance mode configuration.
+		"maintenance": map[string]any{
+			"driver": config.Env("APP_MAINTENANCE_DRIVER", "file"),
+			"store":  config.Env("APP_MAINTENANCE_STORE", ""),
+		},
 		// Enable Development Tool
 		"enable_dev_tool": config.Env("APP_ENABLE_DEV_TOOL", false),
 		// Application Timezone

@@ -3,6 +3,7 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -33,7 +34,7 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	if err := facades.Orm().Query().Where("id", admin.ID).FirstOrFail(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", admin.ID).FirstOrFail(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
@@ -58,7 +59,7 @@ func (r *PasswordController) UpdatePassword(ctx http.Context) http.Response {
 	}
 
 	admin.Password = hashedPassword
-	if err := facades.Orm().Query().Save(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Save(&admin); err != nil {
 		return response.ErrorWithLog(ctx, "password", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -82,7 +83,7 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 	}
 
 	var admin models.Admin
-	if err := facades.Orm().Query().Where("id", id).FirstOrFail(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", id).FirstOrFail(&admin); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
 
@@ -92,7 +93,7 @@ func (r *PasswordController) ResetPassword(ctx http.Context) http.Response {
 	}
 
 	admin.Password = hashedPassword
-	if err := facades.Orm().Query().Save(&admin); err != nil {
+	if err := appfacades.OrmQuery(ctx).Save(&admin); err != nil {
 		return response.ErrorWithLog(ctx, "password", err, map[string]any{
 			"admin_id": admin.ID,
 		})

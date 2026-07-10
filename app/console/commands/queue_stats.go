@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
+	appfacades "goravel/app/facades"
 	"goravel/app/services"
 )
 
@@ -84,13 +85,17 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 		ctx.Info("═══════════════════════════════════════")
 		ctx.Info("队列统计信息 (Redis)")
 		ctx.Info("═══════════════════════════════════════")
-		ctx.Info(fmt.Sprintf("队列名称:      %s", queueNameForStats))
-		ctx.Info(fmt.Sprintf("待执行任务:    %d", stats.Pending))
-		ctx.Info(fmt.Sprintf("正在执行任务:  %d", stats.Reserved))
-		ctx.Info(fmt.Sprintf("延迟任务:      %d", stats.Delayed))
-		ctx.Info(fmt.Sprintf("失败任务:      %d", stats.Failed))
-		ctx.Info(fmt.Sprintf("总任务数:      %d", totalCount))
-		ctx.Info("═══════════════════════════════════════")
+		ctx.Table(
+			[]string{"指标", "数量"},
+			[][]string{
+				{"队列名称", queueNameForStats},
+				{"待执行任务", fmt.Sprintf("%d", stats.Pending)},
+				{"正在执行任务", fmt.Sprintf("%d", stats.Reserved)},
+				{"延迟任务", fmt.Sprintf("%d", stats.Delayed)},
+				{"失败任务", fmt.Sprintf("%d", stats.Failed)},
+				{"总任务数", fmt.Sprintf("%d", totalCount)},
+			},
+		)
 
 		if stats.Pending > 0 {
 			ctx.Info("")
@@ -152,11 +157,11 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 	var pendingCount, reservedCount int64
 	var err error
 
-	pendingQuery := facades.Orm().Query().Table("jobs").
+	pendingQuery := appfacades.OrmQuery(ctx).Table("jobs").
 		Where("available_at <= ?", time.Now()).
 		Where("reserved_at IS NULL")
 
-	reservedQuery := facades.Orm().Query().Table("jobs").
+	reservedQuery := appfacades.OrmQuery(ctx).Table("jobs").
 		Where("reserved_at IS NOT NULL")
 
 	if queueName != "" {
@@ -176,7 +181,7 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 		return err
 	}
 
-	failedQuery := facades.Orm().Query().Table("failed_jobs")
+	failedQuery := appfacades.OrmQuery(ctx).Table("failed_jobs")
 	if queueName != "" {
 		failedQuery = failedQuery.Where("queue = ?", queueName)
 	}
@@ -191,10 +196,15 @@ func (r *QueueStats) Handle(ctx console.Context) error {
 	ctx.Info("═══════════════════════════════════════")
 	ctx.Info("队列统计信息")
 	ctx.Info("═══════════════════════════════════════")
-	ctx.Info(fmt.Sprintf("待执行任务:    %d", pendingCount))
-	ctx.Info(fmt.Sprintf("正在执行任务:  %d", reservedCount))
-	ctx.Info(fmt.Sprintf("失败任务:      %d", failedCount))
-	ctx.Info(fmt.Sprintf("总任务数:      %d", totalCount))
+	ctx.Table(
+		[]string{"指标", "数量"},
+		[][]string{
+			{"待执行任务", fmt.Sprintf("%d", pendingCount)},
+			{"正在执行任务", fmt.Sprintf("%d", reservedCount)},
+			{"失败任务", fmt.Sprintf("%d", failedCount)},
+			{"总任务数", fmt.Sprintf("%d", totalCount)},
+		},
+	)
 	ctx.Info("═══════════════════════════════════════")
 
 	if queueName == "" {

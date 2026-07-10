@@ -159,20 +159,20 @@ type XxxCreate struct {
 	Status uint8  `form:"status" json:"status"`
 }
 func (r *XxxCreate) Authorize(ctx http.Context) error { return nil }
-func (r *XxxCreate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name":   "required|max_len:255",
+func (r *XxxCreate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name":   "required|max:255",
 		"status": "in:0,1",
 	}
 }
-func (r *XxxCreate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *XxxCreate) Messages(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name.required": trans.Get(ctx, "validation_name_required"),
 		"status.in":     trans.Get(ctx, "validation_status_in"),
 	}
 }
-func (r *XxxCreate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *XxxCreate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name":   trans.Get(ctx, "validation_name"),
 		"status": trans.Get(ctx, "validation_status"),
 	}

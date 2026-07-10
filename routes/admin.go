@@ -25,7 +25,6 @@ func Admin() {
 	loginLogController := admin.NewLoginLogController()
 	systemLogController := admin.NewSystemLogController()
 	dashboardController := admin.NewDashboardController()
-	// debugController := admin.NewDebugController()
 	monitorController := admin.NewMonitorController()
 	observabilityController := admin.NewObservabilityController()
 	notificationController := admin.NewNotificationController()
@@ -181,13 +180,15 @@ func Admin() {
 			router.Get("dashboard/monthly-sales", dashboardController.GetMonthlySales)
 			router.Get("dashboard/recent-activities", dashboardController.GetRecentActivities)
 			// SSE 路由：实时推送所有 Dashboard 数据（适合实时 Dashboard 页面，自动更新）
-			router.Get("dashboard/stream", dashboardController.StreamDashboardData)
+			router.Get("dashboard/stream", dashboardController.StreamDashboardData).
+				WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
 
 			// 服务监控
 			// 原路由：手动刷新、一次性查询（适合按需查看或定时刷新）
 			router.Get("monitor/system-info", monitorController.GetSystemInfo)
 			// SSE 路由：实时推送系统监控数据（适合实时监控页面，自动更新）
-			router.Get("monitor/system-info/stream", monitorController.StreamSystemInfo)
+			router.Get("monitor/system-info/stream", monitorController.StreamSystemInfo).
+				WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
 			router.Get("observability/trace", observabilityController.TraceAggregate)
 			router.Get("observability/slow-sql/top", observabilityController.SlowSQLTopN)
 			router.Get("observability/api-performance/overview", observabilityController.APIPerformanceOverview)
@@ -201,9 +202,6 @@ func Admin() {
 
 			// 系统公告/通知
 			router.Post("notifications", notificationController.Store)
-
-			// 调试: trace id 日志验证
-			// router.Get("debug/trace-test", debugController.TraceTest)
 
 			// 附件管理
 			router.Get("attachments", attachmentController.Index)
@@ -263,8 +261,9 @@ func Admin() {
 
 	})
 
-	// 通知 WebSocket（不在域名限制范围内）
-	facades.Route().Get("/ws/admin/notifications", notificationWsController.Server)
+	// 通知 WebSocket（不在域名限制范围内；长连接排除操作日志与 API 指标中间件）
+	facades.Route().Get("/ws/admin/notifications", notificationWsController.Server).
+		WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
 
 	registerRouteFallback()
 }

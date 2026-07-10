@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	appfacades "goravel/app/facades"
 	"strings"
 	"time"
 
@@ -24,15 +25,7 @@ func min(a, b int) int {
 }
 
 func Jwt() http.Middleware {
-	return func(ctx http.Context) {
-		// 如果路径是api/admin前缀，使用admin guard
-		path := ctx.Request().Path()
-		pathStr := str.Of(path)
-		if pathStr.IsEmpty() || (!pathStr.StartsWith("/api/admin") && !pathStr.StartsWith("/admin")) {
-			ctx.Request().Next()
-			return
-		}
-
+	return newMiddleware("jwt", func(ctx http.Context) {
 		token := ctx.Request().Header("Authorization", "")
 
 		// 如果 Header 中没有 token，尝试从 URL 参数中获取（用于 SSE 等不支持自定义 headers 的场景）
@@ -95,7 +88,7 @@ func Jwt() http.Middleware {
 
 		// 查询用户信息
 		var admin models.Admin
-		if err := facades.Orm().Query().Where("id", accessToken.TokenableID).First(&admin); err != nil {
+		if err := appfacades.OrmQuery(ctx).Where("id", accessToken.TokenableID).First(&admin); err != nil {
 			_ = ctx.Response().Json(http.StatusUnauthorized, http.Json{
 				"code":    http.StatusUnauthorized,
 				"message": trans.Get(ctx, "user_not_found"),
@@ -112,7 +105,7 @@ func Jwt() http.Middleware {
 			if ttl > 0 {
 				newExpiresAt := time.Now().Add(time.Duration(ttl) * time.Minute)
 				// 更新token的过期时间
-				_, _ = facades.Orm().Query().
+				_, _ = appfacades.OrmQuery(ctx).
 					Model(&models.PersonalAccessToken{}).
 					Where("id", accessToken.ID).
 					Update("expires_at", newExpiresAt)
@@ -126,7 +119,7 @@ func Jwt() http.Middleware {
 		// facades.Log().Debugf("JWT middleware: admin set in context, ID: %d, Username: %s", admin.ID, admin.Username)
 
 		ctx.Request().Next()
-	}
+	})
 }
 
 func isExpectedUnauthorizedErr(err error) bool {

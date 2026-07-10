@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	appfacades "goravel/app/facades"
 	"slices"
 	"strings"
 	"time"
@@ -65,7 +66,7 @@ func shouldPersistOperationLog(method, path string, ctx http.Context) bool {
 
 // OperationLog 操作日志中间件
 func OperationLog() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("operation_log", func(ctx http.Context) {
 		systemLogService := services.NewSystemLogService()
 		startTime := time.Now()
 
@@ -173,7 +174,7 @@ func OperationLog() http.Middleware {
 				}()
 				// 使用新的 context，避免请求 context 已过期导致操作失败
 				ctx := context.Background()
-				if err := facades.Orm().Query().Create(&operationLog); err != nil {
+				if err := appfacades.OrmQuery(ctx).Create(&operationLog); err != nil {
 					_ = systemLogService.Record(ctx, "error", "operation-log", "failed to persist operation log", map[string]any{
 						"error": err.Error(),
 						"path":  savedPath,
@@ -182,5 +183,5 @@ func OperationLog() http.Middleware {
 				}
 			}()
 		}
-	}
+	})
 }

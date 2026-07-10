@@ -18,25 +18,16 @@ func (r *PaymentMethodUpdate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *PaymentMethodUpdate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name":      "required|max_len:50",
+func (r *PaymentMethodUpdate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name":      "required|max:50",
 		"is_active": "boolean",
 		"sort":      "min:0",
 	}
 }
 
-func (r *PaymentMethodUpdate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name.required":     trans.Get(ctx, "validation.required.name"),
-		"name.max_len":      trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
-		"is_active.boolean": trans.Get(ctx, "validation.boolean"),
-		"sort.min":          trans.Get(ctx, "validation.min_value", map[string]string{"min": "0"}),
-	}
-}
-
-func (r *PaymentMethodUpdate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *PaymentMethodUpdate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name":      trans.Get(ctx, "validation.attributes.name"),
 		"is_active": trans.Get(ctx, "validation.attributes.is_active"),
 		"sort":      trans.Get(ctx, "validation.attributes.sort"),

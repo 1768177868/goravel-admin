@@ -16,26 +16,16 @@ func (r *UpdatePassword) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *UpdatePassword) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *UpdatePassword) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
 		"old_password":     "required",
-		"new_password":     "required|min_len:6",
+		"new_password":     "required|min:6",
 		"confirm_password": "required|same:new_password",
 	}
 }
 
-func (r *UpdatePassword) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"old_password.required":     trans.Get(ctx, "validation.required.old_password"),
-		"new_password.required":     trans.Get(ctx, "validation.required.new_password"),
-		"new_password.min_len":      trans.Get(ctx, "validation.min.password", map[string]string{"min": "6"}),
-		"confirm_password.required": trans.Get(ctx, "validation.required.confirm_password"),
-		"confirm_password.same":     trans.Get(ctx, "validation.same.confirm_password"),
-	}
-}
-
-func (r *UpdatePassword) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *UpdatePassword) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"old_password":     trans.Get(ctx, "validation.attributes.old_password"),
 		"new_password":     trans.Get(ctx, "validation.attributes.new_password"),
 		"confirm_password": trans.Get(ctx, "validation.attributes.confirm_password"),

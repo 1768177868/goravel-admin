@@ -1,6 +1,7 @@
 package api
 
 import (
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -87,7 +88,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 
 	// 验证用户名是否存在
-	exists, err := facades.Orm().Query().Model(&models.User{}).Where("username", loginRequest.Username).Exists()
+	exists, err := appfacades.OrmQuery(ctx).Model(&models.User{}).Where("username", loginRequest.Username).Exists()
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"username": loginRequest.Username,
@@ -99,7 +100,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// 获取用户信息
 	var user models.User
-	if err := facades.Orm().Query().Where("username", loginRequest.Username).FirstOrFail(&user); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("username", loginRequest.Username).FirstOrFail(&user); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"username": loginRequest.Username,
 		})
@@ -125,7 +126,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	// 更新最后登录时间
 	now := time.Now()
 	user.LastLoginAt = &now
-	facades.Orm().Query().Save(&user)
+	appfacades.OrmQuery(ctx).Save(&user)
 
 	return response.SuccessWithHeader(ctx, "login_success", "Authorization", "Bearer "+token, http.Json{
 		"token": token,
@@ -152,7 +153,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 	}
 
 	// 重新查询用户以确保获取最新数据（包括关联的货币信息）
-	if err := facades.Orm().Query().With("Currency").Where("id", user.ID).FirstOrFail(&user); err != nil {
+	if err := appfacades.OrmQuery(ctx).With("Currency").Where("id", user.ID).FirstOrFail(&user); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "user_not_found")
 	}
 

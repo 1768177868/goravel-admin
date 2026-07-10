@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"context"
+	appfacades "goravel/app/facades"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
 	"goravel/app/utils/logger"
@@ -21,7 +21,7 @@ var (
 
 // ApiMetric collects per-request API metrics for performance observability.
 func ApiMetric() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("api_metric", func(ctx http.Context) {
 		startAt := time.Now()
 		method := strings.ToUpper(strings.TrimSpace(ctx.Request().Method()))
 		path := strings.TrimSpace(ctx.Request().Path())
@@ -51,11 +51,11 @@ func ApiMetric() http.Middleware {
 		}
 
 		go func(data models.ApiEndpointMetric) {
-			if err := facades.Orm().Query().Create(&data); err != nil {
+			if err := appfacades.OrmQuery(ctx).Create(&data); err != nil {
 				logger.ErrorfContext(context.Background(), "persist api endpoint metric failed: %v", err)
 			}
 		}(metric)
-	}
+	})
 }
 
 func shouldCollectAPIMetric(method, path string) bool {

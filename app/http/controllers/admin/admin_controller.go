@@ -3,6 +3,7 @@ package admin
 import (
 	stderrors "errors"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"strings"
 	"time"
 
@@ -428,7 +429,7 @@ func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	if resp != nil {
 		return resp
 	}
-	if _, err := facades.Orm().Query().Delete(admin); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(admin); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": admin.ID,
 		})

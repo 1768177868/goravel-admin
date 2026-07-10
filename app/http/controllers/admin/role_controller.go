@@ -4,6 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -97,7 +98,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查名称是否已存在
-	exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", roleCreate.Name).Exists()
+	exists, err := appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("name", roleCreate.Name).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
@@ -106,7 +107,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查标识是否已存在
-	exists, err = facades.Orm().Query().Model(&models.Role{}).Where("slug", roleCreate.Slug).Exists()
+	exists, err = appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("slug", roleCreate.Slug).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
@@ -210,7 +211,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 
 	if _, exists := allInputs["name"]; exists {
 		// 检查名称是否已被其他角色使用（排除当前角色）
-		exists, err := facades.Orm().Query().Model(&models.Role{}).Where("name", roleUpdate.Name).Where("id != ?", id).Exists()
+		exists, err := appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("name", roleUpdate.Name).Where("id != ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}
@@ -227,7 +228,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 				return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotModifySlug.Code)
 			}
 			// 检查标识是否已被其他角色使用（排除当前角色）
-			exists, err := facades.Orm().Query().Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
+			exists, err := appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
 			if err != nil {
 				return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 			}
@@ -305,7 +306,7 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	if r.isProtectedRole(role.Slug) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDelete.Code)
 	}
-	if _, err := facades.Orm().Query().Delete(role); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(role); err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
 		})

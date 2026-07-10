@@ -9,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
+	appfacades "goravel/app/facades"
 	"goravel/app/utils"
 )
 
@@ -20,26 +21,6 @@ func (r *AnalyzeStats) Signature() string {
 }
 
 func (r *AnalyzeStats) Description() string {
-
-	// # 默认：分析当前月+上个月的 orders/order_details 分表，并分析 payments 表
-	// go run . artisan db:analyze-stats
-	//
-	// # 指定向前分析几个月（含当前月）
-	// go run . artisan db:analyze-stats --months=2
-	// go run . artisan db:analyze-stats --months=6
-	//
-	// # 指定某一个月（只分析该月的分表）
-	// go run . artisan db:analyze-stats --month=202601
-	//
-	// # 只分析订单分表，不分析支付表
-	// go run . artisan db:analyze-stats --payments=false
-	//
-	// # 只分析 payments 表
-	// go run . artisan db:analyze-stats --orders=false --order-details=false
-	//
-	// # 帮助
-	// go run . artisan db:analyze-stats --help
-
 	return "更新订单分表与支付表统计信息（ANALYZE）"
 }
 
@@ -78,8 +59,7 @@ func (r *AnalyzeStats) Extend() command.Extend {
 }
 
 func (r *AnalyzeStats) Handle(ctx console.Context) error {
-
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(ctx).Driver())
 
 	monthsFlag := ctx.OptionInt("months")
 	if monthsFlag <= 0 {
@@ -109,6 +89,8 @@ func (r *AnalyzeStats) Handle(ctx console.Context) error {
 
 	ctx.Info("开始执行 ANALYZE...")
 
+	rows := make([][]string, 0, 16)
+
 	execAnalyze := func(table string) error {
 		var sql string
 		switch driver {
@@ -120,11 +102,10 @@ func (r *AnalyzeStats) Handle(ctx console.Context) error {
 			return fmt.Errorf("unsupported database driver: %v", driver)
 		}
 
-		_, err := facades.Orm().Query().Exec(sql)
-		if err != nil {
+		if _, err := appfacades.OrmQuery(ctx).Exec(sql); err != nil {
 			return err
 		}
-		ctx.Info("✓ " + sql)
+		rows = append(rows, []string{table, "成功"})
 		return nil
 	}
 
@@ -156,6 +137,10 @@ func (r *AnalyzeStats) Handle(ctx console.Context) error {
 				return fmt.Errorf("analyze payments failed: %v", err)
 			}
 		}
+	}
+
+	if len(rows) > 0 {
+		ctx.Table([]string{"表名", "状态"}, rows)
 	}
 
 	ctx.Info("完成")

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	appfacades "goravel/app/facades"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ func (r *OnlineAdminController) buildQuery(ctx http.Context) orm.Query {
 	// 只查询最近15分钟内有活动的token（在线管理员）
 	// 默认只显示admin类型的token
 	onlineThreshold := time.Now().Add(-constants.OnlineAdminThreshold)
-	query := facades.Orm().Query().Model(&models.PersonalAccessToken{}).
+	query := appfacades.OrmQuery(ctx).Model(&models.PersonalAccessToken{}).
 		Where("tokenable_type", "admin").
 		Where("last_used_at IS NOT NULL").
 		Where("last_used_at >= ?", onlineThreshold)
@@ -87,7 +88,7 @@ func (r *OnlineAdminController) Index(ctx http.Context) http.Response {
 		developerIDsStr := facades.Config().GetString("admin.developer_ids", "2")
 		developerIDs := r.parseProtectedIDs(developerIDsStr)
 
-		query := facades.Orm().Query().Where("id IN ?", adminIDs)
+		query := appfacades.OrmQuery(ctx).Where("id IN ?", adminIDs)
 		if len(developerIDs) > 0 {
 			query = query.Where("id NOT IN ?", developerIDs)
 		}
@@ -149,12 +150,12 @@ func (r *OnlineAdminController) KickOut(ctx http.Context) http.Response {
 
 	// 查询token是否存在
 	var token models.PersonalAccessToken
-	if err := facades.Orm().Query().Where("id", tokenID).FirstOrFail(&token); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", tokenID).FirstOrFail(&token); err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrTokenNotFound.Code)
 	}
 
 	// 删除token
-	if _, err := facades.Orm().Query().Delete(&token); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(&token); err != nil {
 		return response.ErrorWithLog(ctx, "online_admin", err, map[string]any{
 			"token_id": tokenID,
 		})
@@ -178,7 +179,7 @@ func (r *OnlineAdminController) BatchKickOut(ctx http.Context) http.Response {
 
 	// 批量删除token
 	idsAny := helpers.ConvertUintSliceToAny(ids)
-	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.PersonalAccessToken{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).WhereIn("id", idsAny).Delete(&models.PersonalAccessToken{}); err != nil {
 		return response.ErrorWithLog(ctx, "online_admin", err, map[string]any{
 			"token_ids": ids,
 		})

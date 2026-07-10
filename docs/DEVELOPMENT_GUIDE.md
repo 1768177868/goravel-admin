@@ -277,30 +277,30 @@ func (r *GuestbookCreate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *GuestbookCreate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name":    "required|max_len:50",
-		"email":   "required|email|max_len:100",
-		"content": "required|min_len:5|max_len:2000",
+func (r *GuestbookCreate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name":    "required|max:50",
+		"email":   "required|email|max:100",
+		"content": "required|min:5|max:2000",
 		"status":  "in:0,1",
 	}
 }
 
-func (r *GuestbookCreate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *GuestbookCreate) Messages(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name.required":    trans.Get(ctx, "validation_name_required"),
-		"name.max_len":     trans.Get(ctx, "validation_name_max"),
+		"name.max":     trans.Get(ctx, "validation_name_max"),
 		"email.required":   trans.Get(ctx, "validation_email_required"),
 		"email.email":       trans.Get(ctx, "validation_email_format"),
 		"content.required": trans.Get(ctx, "validation_content_required"),
-		"content.min_len":  trans.Get(ctx, "validation_content_min"),
-		"content.max_len":  trans.Get(ctx, "validation_content_max"),
+		"content.min":  trans.Get(ctx, "validation_content_min"),
+		"content.max":  trans.Get(ctx, "validation_content_max"),
 		"status.in":         trans.Get(ctx, "validation_status_in"),
 	}
 }
 
-func (r *GuestbookCreate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *GuestbookCreate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name":    trans.Get(ctx, "validation_name"),
 		"email":   trans.Get(ctx, "validation_email"),
 		"content": trans.Get(ctx, "validation_content"),
@@ -332,29 +332,29 @@ func (r *GuestbookUpdate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *GuestbookUpdate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name":    "max_len:50",
-		"email":   "email|max_len:100",
-		"content": "min_len:5|max_len:2000",
-		"reply":   "max_len:2000",
+func (r *GuestbookUpdate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name":    "max:50",
+		"email":   "email|max:100",
+		"content": "min:5|max:2000",
+		"reply":   "max:2000",
 		"status":  "in:0,1",
 	}
 }
 
-func (r *GuestbookUpdate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name.max_len":     trans.Get(ctx, "validation_name_max"),
+func (r *GuestbookUpdate) Messages(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name.max":     trans.Get(ctx, "validation_name_max"),
 		"email.email":      trans.Get(ctx, "validation_email_format"),
-		"content.min_len":  trans.Get(ctx, "validation_content_min"),
-		"content.max_len":  trans.Get(ctx, "validation_content_max"),
-		"reply.max_len":    trans.Get(ctx, "validation_reply_max"),
+		"content.min":  trans.Get(ctx, "validation_content_min"),
+		"content.max":  trans.Get(ctx, "validation_content_max"),
+		"reply.max":    trans.Get(ctx, "validation_reply_max"),
 		"status.in":         trans.Get(ctx, "validation_status_in"),
 	}
 }
 
-func (r *GuestbookUpdate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *GuestbookUpdate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name":    trans.Get(ctx, "validation_name"),
 		"email":   trans.Get(ctx, "validation_email"),
 		"content": trans.Get(ctx, "validation_content"),
@@ -383,22 +383,22 @@ func (r *GuestbookReply) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *GuestbookReply) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"reply": "required|min_len:5|max_len:2000",
+func (r *GuestbookReply) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"reply": "required|min:5|max:2000",
 	}
 }
 
-func (r *GuestbookReply) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *GuestbookReply) Messages(ctx http.Context) map[string]any {
+	return map[string]any{
 		"reply.required": trans.Get(ctx, "validation_reply_required"),
-		"reply.min_len":  trans.Get(ctx, "validation_reply_min"),
-		"reply.max_len":  trans.Get(ctx, "validation_reply_max"),
+		"reply.min":  trans.Get(ctx, "validation_reply_min"),
+		"reply.max":  trans.Get(ctx, "validation_reply_max"),
 	}
 }
 
-func (r *GuestbookReply) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *GuestbookReply) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"reply": trans.Get(ctx, "validation_reply"),
 	}
 }

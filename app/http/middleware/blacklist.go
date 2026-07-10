@@ -3,6 +3,7 @@ package middleware
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	appfacades "goravel/app/facades"
 
 	"goravel/app/http/helpers"
 	"goravel/app/http/trans"
@@ -11,7 +12,7 @@ import (
 )
 
 func Blacklist() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("blacklist", func(ctx http.Context) {
 		// 排除登录接口，避免管理员被封禁后无法登录
 		path := ctx.Request().Path()
 		if path == "/api/admin/login" || path == "/api/admin/login/captcha" {
@@ -24,7 +25,7 @@ func Blacklist() http.Middleware {
 
 		// 查询所有启用的黑名单记录
 		var blacklists []models.Blacklist
-		if err := facades.Orm().Query().Where("status", 1).Get(&blacklists); err != nil {
+		if err := appfacades.OrmQuery(ctx).Where("status", 1).Get(&blacklists); err != nil {
 			// 如果查询失败，记录错误但继续处理请求（避免影响系统正常运行）
 			facades.Log().Errorf("Blacklist middleware: Failed to query blacklists: %v", err)
 			ctx.Request().Next()
@@ -46,5 +47,5 @@ func Blacklist() http.Middleware {
 
 		// IP不在黑名单中，继续处理请求
 		ctx.Request().Next()
-	}
+	})
 }

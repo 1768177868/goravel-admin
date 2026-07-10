@@ -17,8 +17,8 @@ func (r *ArticleUpdate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
-	rules := map[string]string{
+func (r *ArticleUpdate) Rules(ctx http.Context) map[string]any {
+	rules := map[string]any{
 		"admin_id": "",
 		"title":    "",
 		"content":  "",
@@ -27,17 +27,8 @@ func (r *ArticleUpdate) Rules(ctx http.Context) map[string]string {
 	return rules
 }
 
-func (r *ArticleUpdate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"admin_id.required": trans.Get(ctx, "validation.required.admin_id"),
-		"title.required":    trans.Get(ctx, "validation.required.title"),
-		"content.required":  trans.Get(ctx, "validation.required.content"),
-		"status.required":   trans.Get(ctx, "validation.required.status"),
-	}
-}
-
-func (r *ArticleUpdate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *ArticleUpdate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"admin_id": trans.Get(ctx, "validation.attributes.admin_id"),
 		"title":    trans.Get(ctx, "validation.attributes.title"),
 		"content":  trans.Get(ctx, "validation.attributes.content"),

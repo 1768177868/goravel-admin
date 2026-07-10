@@ -20,26 +20,17 @@ func (r *PositionUpdate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *PositionUpdate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name":   "max_len:50",
-		"code":   "max_len:50",
+func (r *PositionUpdate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
+		"name":   "max:50",
+		"code":   "max:50",
 		"status": "in:0,1",
-		"remark": "max_len:500",
+		"remark": "max:500",
 	}
 }
 
-func (r *PositionUpdate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"name.max_len":   trans.Get(ctx, "validation.max.name", map[string]string{"max": "50"}),
-		"code.max_len":   trans.Get(ctx, "validation.max.code", map[string]string{"max": "50"}),
-		"status.in":      trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-		"remark.max_len": trans.Get(ctx, "validation.max.remark", map[string]string{"max": "500"}),
-	}
-}
-
-func (r *PositionUpdate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *PositionUpdate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"name":   trans.Get(ctx, "validation.attributes.name"),
 		"code":   trans.Get(ctx, "validation.attributes.code"),
 		"status": trans.Get(ctx, "validation.attributes.status"),

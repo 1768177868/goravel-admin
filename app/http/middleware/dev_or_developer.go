@@ -12,7 +12,7 @@ import (
 )
 
 func DevelopmentOrDeveloperOnly() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("development_or_developer_only", func(ctx http.Context) {
 		env := facades.Config().GetString("app.env", "production")
 		if env == "local" || env == "development" {
 			ctx.Request().Next()
@@ -27,7 +27,7 @@ func DevelopmentOrDeveloperOnly() http.Middleware {
 
 		response.Error(ctx, http.StatusForbidden, "development_only")
 		ctx.Request().Abort()
-	}
+	})
 }
 
 func currentAdminID(ctx http.Context) uint {

@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+	appfacades "goravel/app/facades"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -242,7 +243,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 		Disk:    disk,
 		Path:    "",
 	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -277,7 +278,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 	if err != nil {
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -292,7 +293,7 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 		lock.Release()
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -309,7 +310,7 @@ func (r *PaymentController) GetExportStatus(ctx http.Context) http.Response {
 	}
 
 	var exportRecord models.Export
-	if err := facades.Orm().Query().Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(ctx).Where("id", exportID).FirstOrFail(&exportRecord); err != nil {
 		return response.Error(ctx, http.StatusNotFound, "record_not_found")
 	}
 

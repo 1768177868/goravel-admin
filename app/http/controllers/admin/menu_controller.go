@@ -5,6 +5,7 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -125,7 +126,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 	}
 
 	// 检查 slug 是否已存在
-	exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuCreate.Slug).Exists()
+	exists, err := appfacades.OrmQuery(ctx).Model(&models.Menu{}).Where("slug", menuCreate.Slug).Exists()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}
@@ -185,7 +186,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	}
 	if _, exists := allInputs["slug"]; exists {
 		// 检查 slug 是否已被其他菜单使用
-		exists, err := facades.Orm().Query().Model(&models.Menu{}).Where("slug", menuUpdate.Slug).Where("id != ?", id).Exists()
+		exists, err := appfacades.OrmQuery(ctx).Model(&models.Menu{}).Where("slug", menuUpdate.Slug).Where("id != ?", id).Exists()
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 		}

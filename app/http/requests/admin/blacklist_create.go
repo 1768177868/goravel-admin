@@ -18,22 +18,15 @@ func (r *BlacklistCreate) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *BlacklistCreate) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *BlacklistCreate) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
 		"ip":     "required",
 		"status": "in:0,1",
 	}
 }
 
-func (r *BlacklistCreate) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"ip.required": trans.Get(ctx, "validation.required.ip"),
-		"status.in":   trans.Get(ctx, "validation.in.status", map[string]string{"values": "0,1"}),
-	}
-}
-
-func (r *BlacklistCreate) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *BlacklistCreate) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"ip":     trans.Get(ctx, "validation.attributes.ip"),
 		"status": trans.Get(ctx, "validation.attributes.status"),
 	}

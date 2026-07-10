@@ -1,12 +1,12 @@
 package admin
 
 import (
+	appfacades "goravel/app/facades"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/samber/lo"
 
 	"goravel/app/constants"
@@ -134,7 +134,7 @@ func (r *OperationLogController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if _, err := facades.Orm().Query().Delete(log); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Delete(log); err != nil {
 		return response.ErrorWithLog(ctx, "operation-log", err, map[string]any{
 			"log_id": log.ID,
 		})
@@ -165,7 +165,7 @@ func (r *OperationLogController) BatchDestroy(ctx http.Context) http.Response {
 	// 使用工具函数转换为 []any
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 
-	if _, err := facades.Orm().Query().WhereIn("id", idsAny).Delete(&models.OperationLog{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).WhereIn("id", idsAny).Delete(&models.OperationLog{}); err != nil {
 		return response.ErrorWithLog(ctx, "operation-log", err, map[string]any{
 			"ids": ids,
 		})
@@ -183,7 +183,7 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 	}
 
 	cutoffTime := time.Now().AddDate(0, 0, -days)
-	if _, err := facades.Orm().Query().Model(&models.OperationLog{}).Where("created_at < ?", cutoffTime).Delete(&models.OperationLog{}); err != nil {
+	if _, err := appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).Where("created_at < ?", cutoffTime).Delete(&models.OperationLog{}); err != nil {
 		return response.ErrorWithLog(ctx, "operation-log", err, map[string]any{
 			"days": days,
 		})
@@ -196,7 +196,7 @@ func (r *OperationLogController) Clean(ctx http.Context) http.Response {
 func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response {
 	// 从数据库查询已存在的标题（现在标题直接存权限标识 slug，如 admin.update）
 	var dbTitles []string
-	_ = facades.Orm().Query().Model(&models.OperationLog{}).
+	_ = appfacades.OrmQuery(ctx).Model(&models.OperationLog{}).
 		Select("DISTINCT title").
 		Where("title IS NOT NULL AND title != ''"). // 排除空标题
 		Order("title ASC").
@@ -204,7 +204,7 @@ func (r *OperationLogController) GetTitleOptions(ctx http.Context) http.Response
 
 	// 同时读取权限表中的启用 slug，避免前端依赖手写默认值。
 	var permissionSlugs []string
-	_ = facades.Orm().Query().Model(&models.Permission{}).
+	_ = appfacades.OrmQuery(ctx).Model(&models.Permission{}).
 		Select("slug").
 		Where("status = 1").
 		Order("slug ASC").

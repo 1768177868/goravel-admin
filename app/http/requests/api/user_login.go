@@ -16,22 +16,15 @@ func (r *UserLogin) Authorize(ctx http.Context) error {
 	return nil
 }
 
-func (r *UserLogin) Rules(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *UserLogin) Rules(ctx http.Context) map[string]any {
+	return map[string]any{
 		"username": "required",
 		"password": "required",
 	}
 }
 
-func (r *UserLogin) Messages(ctx http.Context) map[string]string {
-	return map[string]string{
-		"username.required": trans.Get(ctx, "validation.required.username"),
-		"password.required": trans.Get(ctx, "validation.required.password"),
-	}
-}
-
-func (r *UserLogin) Attributes(ctx http.Context) map[string]string {
-	return map[string]string{
+func (r *UserLogin) Attributes(ctx http.Context) map[string]any {
+	return map[string]any{
 		"username": trans.Get(ctx, "attribute_username"),
 		"password": trans.Get(ctx, "attribute_password"),
 	}

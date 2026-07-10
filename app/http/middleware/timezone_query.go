@@ -9,7 +9,7 @@ import (
 // TimezoneQuery 时区查询参数转换中间件
 // 自动将查询参数中的时间字段从本地时区转换为 UTC 时间用于数据库查询
 func TimezoneQuery() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("timezone_query", func(ctx http.Context) {
 		// 定义需要转换的时间查询参数名称
 		timeParams := []string{
 			"start_time",
@@ -35,5 +35,5 @@ func TimezoneQuery() http.Middleware {
 
 		// 继续处理请求
 		ctx.Request().Next()
-	}
+	})
 }

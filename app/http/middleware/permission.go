@@ -14,7 +14,7 @@ import (
 
 // Permission 权限验证中间件
 func Permission() http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("permission", func(ctx http.Context) {
 		// 从context中获取admin信息（由JWT中间件设置）
 		adminValue := ctx.Value("admin")
 		if adminValue == nil {
@@ -132,7 +132,7 @@ func Permission() http.Middleware {
 		}
 
 		ctx.Request().Next()
-	}
+	})
 }
 
 // matchPath 路径匹配，支持通配符

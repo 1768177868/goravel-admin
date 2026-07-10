@@ -10,7 +10,7 @@ import (
 
 // Domain 域名验证中间件
 func Domain(configValueOrDomains ...any) http.Middleware {
-	return func(ctx http.Context) {
+	return newMiddleware("domain", func(ctx http.Context) {
 		var domains []string
 
 		// 如果没有参数，不验证（允许所有域名）
@@ -164,7 +164,7 @@ func Domain(configValueOrDomains ...any) http.Middleware {
 
 		// 域名验证通过，继续处理请求
 		ctx.Request().Next()
-	}
+	})
 }
 
 // normalizeHost 规范化域名（移除端口号，转换为小写，去除前后空格）

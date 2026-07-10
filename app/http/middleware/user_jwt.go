@@ -3,7 +3,6 @@ package middleware
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/str"
 
 	"goravel/app/http/trans"
 	"goravel/app/models"
@@ -11,15 +10,7 @@ import (
 
 // UserJwt C端用户JWT认证中间件（使用Goravel标准Auth）
 func UserJwt() http.Middleware {
-	return func(ctx http.Context) {
-		// 如果路径是api/user前缀，使用user guard
-		path := ctx.Request().Path()
-		pathStr := str.Of(path)
-		if pathStr.IsEmpty() || !pathStr.StartsWith("/api/user") {
-			ctx.Request().Next()
-			return
-		}
-
+	return newMiddleware("user_jwt", func(ctx http.Context) {
 		// 使用Goravel标准Auth解析token
 		if _, err := facades.Auth(ctx).Guard("user").Parse(ctx.Request().Header("Authorization", "")); err != nil {
 			// 如果Header中没有token，尝试从URL参数中获取
@@ -71,5 +62,5 @@ func UserJwt() http.Middleware {
 		ctx.WithValue("user", user)
 
 		ctx.Request().Next()
-	}
+	})
 }

@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"github.com/goravel/cos"
+	"github.com/goravel/framework/ai"
 	"github.com/goravel/framework/auth"
 	"github.com/goravel/framework/cache"
 	"github.com/goravel/framework/console"
@@ -19,6 +20,7 @@ import (
 	"github.com/goravel/framework/route"
 	"github.com/goravel/framework/schedule"
 	"github.com/goravel/framework/session"
+	"github.com/goravel/framework/telemetry"
 	"github.com/goravel/framework/testing"
 	"github.com/goravel/framework/translation"
 	"github.com/goravel/framework/validation"
@@ -26,6 +28,7 @@ import (
 	"github.com/goravel/gin"
 	"github.com/goravel/minio"
 	"github.com/goravel/mysql"
+	"github.com/goravel/openai"
 	"github.com/goravel/oss"
 	"github.com/goravel/postgres"
 	"github.com/goravel/redis"
@@ -64,7 +67,6 @@ func Providers() []foundation.ServiceProvider {
 		&providers.ConsoleServiceProvider{},
 		&providers.QueueServiceProvider{},
 		&providers.EventServiceProvider{},
-		&providers.ValidationServiceProvider{},
 		&providers.DatabaseServiceProvider{},
 		&dm.ServiceProvider{},
 		&postgres.ServiceProvider{},
@@ -74,5 +76,8 @@ func Providers() []foundation.ServiceProvider {
 		&oss.ServiceProvider{},
 		&minio.ServiceProvider{},
 		&gin.ServiceProvider{},
+		&telemetry.ServiceProvider{},
+		&ai.ServiceProvider{},
+		&openai.ServiceProvider{},
 	}
 }
