@@ -81,7 +81,7 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 
 	// 检查分表是否存在，不存在则创建
 	if err := s.shardingService.EnsureShardingTable(tableName, "user_balance_logs"); err != nil {
-		errorlog.Record(context.Background(), "user-balance-log", "创建分表失败", map[string]any{
+		errorlog.Record(s.ctx, "user-balance-log", "创建分表失败", map[string]any{
 			"table_name": tableName,
 			"user_id":    userID,
 			"error":      err.Error(),
@@ -105,7 +105,7 @@ func (s *UserBalanceLogServiceImpl) CreateLog(
 	// 使用 Goravel ORM，通过 Table() 方法指定分表名称
 	err := appfacades.OrmQuery(s.ctx).Table(tableName).Create(log)
 	if err != nil {
-		errorlog.Record(context.Background(), "user-balance-log", "创建余额变动记录失败", map[string]any{
+		errorlog.Record(s.ctx, "user-balance-log", "创建余额变动记录失败", map[string]any{
 			"user_id":    userID,
 			"log_type":   logType,
 			"amount":     amount,

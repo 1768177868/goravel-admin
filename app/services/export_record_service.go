@@ -119,7 +119,7 @@ func (s *ExportRecordServiceImpl) Delete(id uint) error {
 	}
 
 	if _, err := appfacades.OrmQuery(s.ctx).Delete(&export); err != nil {
-		errorlog.Record(context.Background(), "export-record", "删除导出记录失败", map[string]any{
+		errorlog.Record(s.ctx, "export-record", "删除导出记录失败", map[string]any{
 			"export_id": id,
 			"error":     err.Error(),
 		}, "删除导出记录失败: %v", err)
@@ -137,7 +137,7 @@ func (s *ExportRecordServiceImpl) BatchDelete(ids []uint) error {
 
 	idsAny := helpers.ConvertUintSliceToAny(ids)
 	if _, err := appfacades.OrmQuery(s.ctx).WhereIn("id", idsAny).Delete(&models.Export{}); err != nil {
-		errorlog.Record(context.Background(), "export-record", "批量删除导出记录失败", map[string]any{
+		errorlog.Record(s.ctx, "export-record", "批量删除导出记录失败", map[string]any{
 			"ids":   ids,
 			"count": len(ids),
 			"error": err.Error(),

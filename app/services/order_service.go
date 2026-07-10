@@ -206,7 +206,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 
 	// 设置锁，过期时间5秒
 	if err := facades.Cache().Put(lockKey, lockValue, 5*time.Second); err != nil {
-		errorlog.Record(context.Background(), "order", "获取锁失败", map[string]any{
+		errorlog.Record(s.ctx, "order", "获取锁失败", map[string]any{
 			"user_id":    userID,
 			"request_id": requestID,
 			"lock_key":   lockKey,
@@ -261,7 +261,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			if i == maxRetries-1 {
 				// 最后一次重试也失败，返回错误
 				_ = facades.Cache().Forget(lockKey)
-				errorlog.Record(context.Background(), "order", "生成唯一订单号失败", map[string]any{
+				errorlog.Record(s.ctx, "order", "生成唯一订单号失败", map[string]any{
 					"user_id":    userID,
 					"request_id": requestID,
 					"retries":    maxRetries,
@@ -274,7 +274,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 
 		// 其他错误，直接返回
 		_ = facades.Cache().Forget(lockKey)
-		errorlog.Record(context.Background(), "order", "创建订单失败", map[string]any{
+		errorlog.Record(s.ctx, "order", "创建订单失败", map[string]any{
 			"user_id":    userID,
 			"request_id": requestID,
 			"amount":     amount,
@@ -308,7 +308,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 			// 如果详情创建失败，删除已创建的订单
 			_, _ = appfacades.OrmQuery(s.ctx).Table(tableName).Where("id", order.ID).Delete(&models.Order{})
 			_ = facades.Cache().Forget(lockKey)
-			errorlog.Record(context.Background(), "order", "创建订单详情失败", map[string]any{
+			errorlog.Record(s.ctx, "order", "创建订单详情失败", map[string]any{
 				"order_id":   order.ID,
 				"user_id":    userID,
 				"product_id": product.ProductID,
@@ -822,7 +822,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 	// 软删除订单详情
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
 	if _, err := appfacades.OrmQuery(s.ctx).Table(detailTableName).Where("order_id", orderID).Delete(&models.OrderDetail{}); err != nil {
-		errorlog.Record(context.Background(), "order", "删除订单详情失败", map[string]any{
+		errorlog.Record(s.ctx, "order", "删除订单详情失败", map[string]any{
 			"order_id": orderID,
 			"error":    err.Error(),
 		}, "删除订单详情失败: %v", err)
@@ -883,7 +883,7 @@ func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
 	detailTableName := utils.GetShardingTableName("order_details", createdAt)
 	_, err = appfacades.OrmQuery(s.ctx).Table(detailTableName).Where("order_id", order.ID).Delete(&models.OrderDetail{})
 	if err != nil {
-		errorlog.Record(context.Background(), "order", "删除订单详情失败", map[string]any{
+		errorlog.Record(s.ctx, "order", "删除订单详情失败", map[string]any{
 			"order_no": orderNo,
 			"error":    err.Error(),
 		}, "删除订单详情失败: %v", err)
@@ -942,7 +942,7 @@ func (s *OrderServiceImpl) GetOrdersCountInYear() (int64, error) {
 		sql := fmt.Sprintf("EXPLAIN SELECT * FROM `%s` WHERE created_at >= ? AND created_at <= ?", tableName)
 		err := appfacades.OrmQuery(s.ctx).Raw(sql, startTime, endTime).Scan(&explainResult)
 		if err != nil {
-			errorlog.Record(context.Background(), "order", "查询分表预估行数失败", map[string]any{
+			errorlog.Record(s.ctx, "order", "查询分表预估行数失败", map[string]any{
 				"table_name": tableName,
 				"error":      err.Error(),
 			}, "查询分表 %s 预估行数失败: %v", tableName, err)

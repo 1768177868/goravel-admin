@@ -1304,7 +1304,18 @@ watch(dialogVisible, (val) => {
 
 ## 测试验证
 
-### 后端接口测试
+### 自动化集成测试（`tests/feature`）
+
+项目提供 HTTP 层 smoke test，覆盖健康检查、公开 API 校验与 Admin JWT 保护：
+
+```bash
+# 本地需配置 .env 并 migrate 后执行
+go test -v ./tests/feature/...
+```
+
+CI 中 **Backend** job 跑快速单测（不含 `tests/feature`），**Backend Integration** job 启动 MySQL 后单独跑集成测试。
+
+### 后端接口测试（手动）
 
 1. **测试列表接口**
 ```bash

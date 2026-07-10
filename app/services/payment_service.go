@@ -452,7 +452,7 @@ func (s *PaymentServiceImpl) CreatePayment(orderNo string, paymentMethodID uint,
 
 	// 写入分表
 	if err := appfacades.OrmQuery(s.ctx).Table(tableName).Create(payment); err != nil {
-		errorlog.Record(context.Background(), "payment", "创建支付记录失败", map[string]any{
+		errorlog.Record(s.ctx, "payment", "创建支付记录失败", map[string]any{
 			"table_name":        tableName,
 			"order_no":          orderNo,
 			"payment_method_id": paymentMethodID,
@@ -1050,7 +1050,7 @@ func (s *PaymentServiceImpl) ensurePaymentShardingTableExists(paymentTime time.T
 	if !facades.Schema().HasTable(tableName) {
 		// 使用迁移函数创建分表
 		if err := migrations.CreatePaymentsShardingTable(tableName); err != nil {
-			errorlog.Record(context.Background(), "payment", "创建支付记录分表失败", map[string]any{
+			errorlog.Record(s.ctx, "payment", "创建支付记录分表失败", map[string]any{
 				"table_name": tableName,
 				"error":      err.Error(),
 			}, "创建支付记录分表失败: %v", err)

@@ -1,5 +1,7 @@
 # 数据库分表指南
 
+> **Goravel v1.18**：分表查询/写入请使用 `appfacades.OrmQuery(ctx)` 传递请求 context。下文示例已对齐 v1.18，新代码请遵循 `NewXxxService(ctx)` + `OrmQuery(s.ctx)` 模式。
+
 项目支持两种分表策略：**时间分表**（按月分表）和**哈希分表**（按ID哈希分表）。本文档包含分表功能的完整说明，包括如何创建分表、如何使用分表，以及如何为新的表添加分表支持。
 
 ## 目录
@@ -116,8 +118,8 @@ if err := s.shardingService.EnsureShardingTable(tableName, "orders"); err != nil
 	return err
 }
 
-// 使用分表进行查询
-facades.Orm().Query().Table(tableName).Where("id", orderID).First(&order)
+// 使用分表进行查询（v1.18：传递 Service 持有的 ctx）
+appfacades.OrmQuery(s.ctx).Table(tableName).Where("id", orderID).First(&order)
 ```
 
 #### 查询跨月数据
@@ -200,8 +202,8 @@ if err := s.shardingService.EnsureShardingTable(tableName, "user_balance_logs");
 	return err
 }
 
-// 使用分表进行查询（必须包含分表键字段）
-facades.Orm().Query().Table(tableName).Where("user_id", userID).First(&log)
+// 使用分表进行查询（必须包含分表键字段；v1.18 使用 OrmQuery(ctx)）
+appfacades.OrmQuery(s.ctx).Table(tableName).Where("user_id", userID).First(&log)
 ```
 
 #### 注意事项
@@ -305,8 +307,8 @@ if err := s.shardingService.EnsureShardingTable(tableName, "example_table"); err
 	return err
 }
 
-// 使用分表进行查询
-facades.Orm().Query().Table(tableName).Where("entity_id", entityID).Create(&example)
+// 使用分表进行写入（v1.18 使用 OrmQuery(ctx)）
+appfacades.OrmQuery(s.ctx).Table(tableName).Where("entity_id", entityID).Create(&example)
 ```
 
 ## 分表字段修改

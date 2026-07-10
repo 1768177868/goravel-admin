@@ -79,6 +79,7 @@ func NewShardingQueryService(ctx context.Context, config ShardingQueryConfig) Sh
 	}
 
 	return &ShardingQueryServiceImpl{
+		ctx:    ctx,
 		config: config,
 	}
 }
@@ -151,7 +152,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 			args := whereConditions
 			tableTotal, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, args...)
 			if err != nil {
-				errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
+				errorlog.Record(s.ctx, s.config.ModuleName, "查询分表总数失败", map[string]any{
 					"table_name": tableName,
 					"error":      err.Error(),
 				}, "查询分表 %s 总数失败: %v", tableName, err)
@@ -179,7 +180,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 			// 使用对应的参数（每个分表使用相同的参数）
 			args := whereConditions
 			if err := appfacades.OrmQuery(s.ctx).Raw(countSQL, args...).Scan(&countResult); err != nil {
-				errorlog.Record(context.Background(), s.config.ModuleName, "查询分表总数失败", map[string]any{
+				errorlog.Record(s.ctx, s.config.ModuleName, "查询分表总数失败", map[string]any{
 					"table_name": tableName,
 					"error":      err.Error(),
 				}, "查询分表 %s 总数失败: %v", tableName, err)
@@ -211,7 +212,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 
 	// 执行查询
 	if err := appfacades.OrmQuery(s.ctx).Raw(paginatedSQL, paginatedArgs...).Scan(result); err != nil {
-		errorlog.Record(context.Background(), s.config.ModuleName, "查询列表失败", map[string]any{
+		errorlog.Record(s.ctx, s.config.ModuleName, "查询列表失败", map[string]any{
 			"table_count": len(tableNames),
 			"page":        page,
 			"page_size":   pageSize,
@@ -286,7 +287,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTablesForExport(tableNames []str
 
 	// 执行查询
 	if err := appfacades.OrmQuery(s.ctx).Raw(exportSQL, allArgs...).Scan(result); err != nil {
-		errorlog.Record(context.Background(), s.config.ModuleName, "导出查询失败", map[string]any{
+		errorlog.Record(s.ctx, s.config.ModuleName, "导出查询失败", map[string]any{
 			"table_count": len(tableNames),
 			"error":       err.Error(),
 		}, "导出查询失败: %v", err)

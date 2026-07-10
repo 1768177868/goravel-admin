@@ -18,6 +18,7 @@ import (
 	"github.com/goravel/framework/facades"
 <<if .ExportAsync>>
 	"goravel/app/jobs"
+	appfacades "goravel/app/facades"
 	"goravel/app/models"
 	"goravel/app/utils"
 <<end>>
@@ -189,7 +190,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 		Disk:    "local",
 		Path:    "",
 	}
-	if err := facades.Orm().Query().Create(&exportRecord); err != nil {
+	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -206,7 +207,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 	if err != nil {
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
@@ -221,7 +222,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 		lock.Release()
 		exportRecord.Status = models.ExportStatusFailed
 		exportRecord.ErrorMsg = err.Error()
-		facades.Orm().Query().Save(&exportRecord)
+		appfacades.OrmQuery(ctx).Save(&exportRecord)
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 

@@ -1,5 +1,7 @@
 # 租户功能预留说明
 
+> **Goravel v1.18**：业务查询请使用 `appfacades.OrmQuery(ctx)` 传递请求 context，便于 OTEL trace 贯通与请求取消。下文示例中 `facades.Orm().Query()` 为历史写法，新代码请改用 `OrmQuery(ctx)`。
+
 当前已预留租户相关代码，**未启用多租户时不会对现有查询产生任何影响**。后续需要多租户时按以下步骤接入即可。
 
 ## 已预留文件
@@ -13,7 +15,7 @@
 
 - `GetTenantIDFromContext(ctx)`：未设置租户时返回 `(0, false)`。
 - `ScopeTenant(ctx, query)`：未设置租户时直接返回原 `query`，不添加任何条件。
-- `NewTenantQueryService(ctx).QueryModel(&User{})`：等价于 `facades.Orm().Query().Model(&User{})`。
+- `NewTenantQueryService(ctx).QueryModel(&User{})`：等价于 `appfacades.OrmQuery(ctx).Model(&User{})`。
 
 因此现有代码无需修改，也不会被租户逻辑影响。
 

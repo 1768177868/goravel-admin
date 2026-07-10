@@ -257,7 +257,7 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 		"balance": newBalance,
 	})
 	if err != nil {
-		errorlog.Record(context.Background(), "user", "更新用户余额失败", map[string]any{
+		errorlog.Record(s.ctx, "user", "更新用户余额失败", map[string]any{
 			"user_id":     userID,
 			"amount":      amount,
 			"log_type":    logType,
@@ -274,7 +274,7 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 		// 注意：由于涉及分表，无法使用跨表事务，这里手动回滚
 		rollbackErr := s.rollbackBalance(userID, user.Balance)
 		if rollbackErr != nil {
-			errorlog.Record(context.Background(), "user", "回滚余额失败", map[string]any{
+			errorlog.Record(s.ctx, "user", "回滚余额失败", map[string]any{
 				"user_id":      userID,
 				"old_balance":  user.Balance,
 				"new_balance":  newBalance,
@@ -282,7 +282,7 @@ func (s *UserServiceImpl) UpdateBalance(userID uint, amount float64, logType str
 			}, "回滚余额失败: %v", rollbackErr)
 		}
 
-		errorlog.Record(context.Background(), "user", "创建余额变动记录失败", map[string]any{
+		errorlog.Record(s.ctx, "user", "创建余额变动记录失败", map[string]any{
 			"user_id":     userID,
 			"amount":      amount,
 			"log_type":    logType,

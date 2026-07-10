@@ -30,6 +30,7 @@ type ShardingServiceImpl struct {
 
 func NewShardingService(ctx context.Context) ShardingService {
 	service := &ShardingServiceImpl{
+		ctx:      ctx,
 		creators: make(map[string]TableCreator),
 	}
 
@@ -83,7 +84,7 @@ func (s *ShardingServiceImpl) EnsureShardingTable(tableName, baseTableName strin
 
 	// 创建表
 	if err := s.CreateShardingTable(tableName, baseTableName); err != nil {
-		errorlog.Record(context.Background(), "sharding", "创建分表失败", map[string]any{
+		errorlog.Record(s.ctx, "sharding", "创建分表失败", map[string]any{
 			"table_name":      tableName,
 			"base_table_name": baseTableName,
 			"error":           err.Error(),

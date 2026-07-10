@@ -1,5 +1,7 @@
 # 多租户迁移到 GlobalScopes 指南
 
+> **Goravel v1.18**：推荐 `appfacades.OrmQuery(ctx)` 替代 `facades.Orm().Query().WithContext(ctx)`，与 Service `NewXxxService(ctx)` 模式一致。下文部分示例仍保留历史写法，新代码请统一使用 `OrmQuery(ctx)`。
+
 ## 概述
 
 Goravel v1.17 引入了 `GlobalScopes` 和 `WithoutGlobalScopes` 功能，可以将租户过滤作为全局作用域实现，使代码更优雅、更自动化。
@@ -8,8 +10,8 @@ Goravel v1.17 引入了 `GlobalScopes` 和 `WithoutGlobalScopes` 功能，可以
 
 ### 旧方式（手动 ScopeTenant）
 ```go
-// 需要在每个查询处手动添加
-query := facades.Orm().Query().Model(&models.User{})
+// 需要在每个查询处手动添加（v1.18 推荐 OrmQuery）
+query := appfacades.OrmQuery(ctx).Model(&models.User{})
 query = helpers.ScopeTenant(ctx, query)
 query.Find(&users)
 
@@ -20,12 +22,12 @@ tenantQuery.QueryModel(&models.User{}).Find(&users)
 
 ### 新方式（GlobalScopes）
 ```go
-// 自动应用租户过滤，无需手动调用
+// 自动应用租户过滤，无需手动调用（v1.18）
 var users []models.User
-facades.Orm().Query().Model(&models.User{}).Find(&users)
+appfacades.OrmQuery(ctx).Model(&models.User{}).Find(&users)
 
 // 需要排除租户过滤时（如超级管理员查看所有数据）
-facades.Orm().Query().Model(&models.User{}).WithoutGlobalScopes("tenant").Find(&users)
+appfacades.OrmQuery(ctx).Model(&models.User{}).WithoutGlobalScopes("tenant").Find(&users)
 ```
 
 ## 迁移步骤
@@ -68,14 +70,11 @@ func (r *User) GlobalScopes() map[string]func(orm.Query) orm.Query {
 由于全局作用域需要访问 HTTP Context 来获取租户ID，需要在查询时传递：
 
 ```go
-// 方式1：通过 ORM 的 Context 传递
-ctx := http.Context // 从控制器获取
-facades.Orm().Query().WithContext(ctx).Model(&models.User{}).Find(&users)
+// 方式1：通过 OrmQuery 传递 context（v1.18 推荐）
+appfacades.OrmQuery(ctx).Model(&models.User{}).Find(&users)
 
-// 方式2：创建一个辅助函数
-func QueryWithTenant(ctx http.Context, model any) orm.Query {
-	return facades.Orm().Query().WithContext(ctx).Model(model)
-}
+// 方式2：历史写法（仍可用）
+facades.Orm().Query().WithContext(ctx).Model(&models.User{}).Find(&users)
 ```
 
 ### 3. 使用 WithoutGlobalScopes 排除租户过滤

@@ -79,7 +79,7 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 	// 从URL创建key对象（这样可以确保格式完全符合标准）
 	key, err := otp.NewKeyFromURL(otpURL)
 	if err != nil {
-		errorlog.Record(context.Background(), "google-authenticator", "创建密钥失败", map[string]any{
+		errorlog.Record(s.ctx, "google-authenticator", "创建密钥失败", map[string]any{
 			"app_name":     appName,
 			"account_name": accountName,
 			"error":        err.Error(),
@@ -91,7 +91,7 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 	var buf bytes.Buffer
 	img, err := key.Image(200, 200)
 	if err != nil {
-		errorlog.Record(context.Background(), "google-authenticator", "生成二维码图片失败", map[string]any{
+		errorlog.Record(s.ctx, "google-authenticator", "生成二维码图片失败", map[string]any{
 			"app_name":     appName,
 			"account_name": accountName,
 			"error":        err.Error(),
@@ -101,7 +101,7 @@ func (s *GoogleAuthenticatorServiceImpl) GenerateQRCodeImage(accountName, secret
 
 	// 将图片编码为PNG
 	if err := png.Encode(&buf, img); err != nil {
-		errorlog.Record(context.Background(), "google-authenticator", "编码PNG失败", map[string]any{
+		errorlog.Record(s.ctx, "google-authenticator", "编码PNG失败", map[string]any{
 			"app_name":     appName,
 			"account_name": accountName,
 			"error":        err.Error(),
