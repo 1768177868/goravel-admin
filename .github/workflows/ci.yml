@@ -40,6 +40,9 @@ jobs:
       - name: Build backend
         run: go build ./...
 
+      - name: Vet backend
+        run: go vet ./...
+
       - name: Run backend fast tests
         run: go test -v -timeout=2m ./...
 

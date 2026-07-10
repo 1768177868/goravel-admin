@@ -134,5 +134,12 @@
   "uppercase": ":attribute 必须是大写。",
   "url": ":attribute 必须是有效的 URL。",
   "ulid": ":attribute 必须是有效的 ULID。",
-  "uuid": ":attribute 必须是有效的 UUID。"
+  "uuid": ":attribute 必须是有效的 UUID。",
+  "datetime": {
+    "start_time_invalid": "开始时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
+    "end_time_invalid": "结束时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS"
+  },
+  "range": {
+    "time_inverted": "开始时间不能晚于结束时间"
+  }
 }

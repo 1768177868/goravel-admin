@@ -301,14 +301,10 @@
         "content": "content",
         "is_active": "is active",
         "sort": "sort",
-        "translation_key": "translation key"
-      },
-      "datetime": {
-        "start_time_invalid": "Invalid start time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
-        "end_time_invalid": "Invalid end time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"
-      },
-      "range": {
-        "time_inverted": "Start time cannot be after end time"
+        "translation_key": "translation key",
+        "keyword": "keyword",
+        "start_time": "start time",
+        "end_time": "end time"
       }
     }
   }

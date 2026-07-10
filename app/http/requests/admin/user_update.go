@@ -32,11 +32,11 @@ func (r *UserUpdate) Rules(ctx http.Context) map[string]any {
 
 func (r *UserUpdate) Attributes(ctx http.Context) map[string]any {
 	return map[string]any{
-		"nickname": trans.Get(ctx, "attribute_nickname"),
-		"email":    trans.Get(ctx, "attribute_email"),
-		"phone":    trans.Get(ctx, "attribute_phone"),
-		"password": trans.Get(ctx, "attribute_password"),
-		"status":   trans.Get(ctx, "attribute_status"),
+		"nickname": trans.Get(ctx, "validation.attributes.nickname"),
+		"email":    trans.Get(ctx, "validation.attributes.email"),
+		"phone":    trans.Get(ctx, "validation.attributes.phone"),
+		"password": trans.Get(ctx, "validation.attributes.password"),
+		"status":   trans.Get(ctx, "validation.attributes.status"),
 	}
 }
 

@@ -169,5 +169,12 @@
   "lt_date": "The :attribute field must be a date before :date.",
   "gte_date": "The :attribute field must be a date after or equal to :date.",
   "lte_date": "The :attribute field must be a date before or equal to :date.",
-  "number": "The :attribute field must be a number."
+  "number": "The :attribute field must be a number.",
+  "datetime": {
+    "start_time_invalid": "Invalid start time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+    "end_time_invalid": "Invalid end time, use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"
+  },
+  "range": {
+    "time_inverted": "Start time cannot be after end time"
+  }
 }

@@ -59,31 +59,7 @@ func (r *DashboardController) GetCount(ctx http.Context) http.Response {
 
 // GetUserAccessSource 获取用户访问来源数据（根据 UserAgent 判断设备类型）
 func (r *DashboardController) GetUserAccessSource(ctx http.Context) http.Response {
-	// 从登录日志中统计不同设备类型的访问量
-	// 统计最近30天的数据
-	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
-
-	var loginLogs []models.LoginLog
-	appfacades.OrmQuery(ctx).Model(&models.LoginLog{}).
-		Where("created_at >= ?", thirtyDaysAgo).
-		Where("status", 1).
-		Get(&loginLogs)
-
-	// 统计设备类型
-	deviceStats := make(map[string]int64)
-	for _, log := range loginLogs {
-		deviceType := r.parseDeviceType(log.UserAgent)
-		deviceStats[deviceType]++
-	}
-
-	// 转换为数组格式
-	result := []map[string]any{
-		{"name": "桌面端", "value": deviceStats["desktop"]},
-		{"name": "移动端", "value": deviceStats["mobile"]},
-		{"name": "平板端", "value": deviceStats["tablet"]},
-		{"name": "其他", "value": deviceStats["other"]},
-	}
-
+	result := r.getUserAccessSourceData(ctx)
 	return ctx.Response().Success().Json(http.Json{
 		"code":    200,
 		"message": "get_success",
@@ -310,7 +286,7 @@ func (r *DashboardController) collectDashboardData(ctx http.Context) map[string]
 	data["count"] = countData
 
 	// 2. 获取用户访问来源数据
-	accessSourceData := r.getUserAccessSourceData()
+	accessSourceData := r.getUserAccessSourceData(ctx)
 	data["user_access_source"] = accessSourceData
 
 	// 3. 获取每周用户活跃量
@@ -350,15 +326,27 @@ func (r *DashboardController) getCountData(ctx http.Context) map[string]any {
 	}
 }
 
-// getUserAccessSourceData 获取用户访问来源数据
-func (r *DashboardController) getUserAccessSourceData() []map[string]any {
-	// 这里可以根据实际业务逻辑查询用户访问来源
-	// 例如：根据登录日志统计不同来源的用户数
-	// 暂时返回示例数据
+// getUserAccessSourceData 从登录日志统计近 30 天设备访问来源
+func (r *DashboardController) getUserAccessSourceData(ctx http.Context) []map[string]any {
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+
+	var loginLogs []models.LoginLog
+	appfacades.OrmQuery(ctx).Model(&models.LoginLog{}).
+		Where("created_at >= ?", thirtyDaysAgo).
+		Where("status", 1).
+		Get(&loginLogs)
+
+	deviceStats := make(map[string]int64)
+	for _, log := range loginLogs {
+		deviceType := r.parseDeviceType(log.UserAgent)
+		deviceStats[deviceType]++
+	}
+
 	return []map[string]any{
-		{"source": "web", "count": 0},
-		{"source": "mobile", "count": 0},
-		{"source": "api", "count": 0},
+		{"name": "桌面端", "value": deviceStats["desktop"]},
+		{"name": "移动端", "value": deviceStats["mobile"]},
+		{"name": "平板端", "value": deviceStats["tablet"]},
+		{"name": "其他", "value": deviceStats["other"]},
 	}
 }
 

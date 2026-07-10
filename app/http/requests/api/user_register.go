@@ -31,11 +31,11 @@ func (r *UserRegister) Rules(ctx http.Context) map[string]any {
 
 func (r *UserRegister) Attributes(ctx http.Context) map[string]any {
 	return map[string]any{
-		"username": trans.Get(ctx, "attribute_username"),
-		"password": trans.Get(ctx, "attribute_password"),
-		"nickname": trans.Get(ctx, "attribute_nickname"),
-		"email":    trans.Get(ctx, "attribute_email"),
-		"phone":    trans.Get(ctx, "attribute_phone"),
+		"username": trans.Get(ctx, "validation.attributes.username"),
+		"password": trans.Get(ctx, "validation.attributes.password"),
+		"nickname": trans.Get(ctx, "validation.attributes.nickname"),
+		"email":    trans.Get(ctx, "validation.attributes.email"),
+		"phone":    trans.Get(ctx, "validation.attributes.phone"),
 	}
 }
 

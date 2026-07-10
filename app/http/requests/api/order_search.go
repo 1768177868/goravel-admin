@@ -32,9 +32,9 @@ func (r *OrderSearch) Rules(ctx http.Context) map[string]any {
 
 func (r *OrderSearch) Attributes(ctx http.Context) map[string]any {
 	return map[string]any{
-		"q":            trans.Get(ctx, "keyword"),
-		"created_from": trans.Get(ctx, "start_time"),
-		"created_to":   trans.Get(ctx, "end_time"),
+		"q":            trans.Get(ctx, "validation.attributes.keyword"),
+		"created_from": trans.Get(ctx, "validation.attributes.start_time"),
+		"created_to":   trans.Get(ctx, "validation.attributes.end_time"),
 	}
 }
 

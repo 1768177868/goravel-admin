@@ -301,14 +301,10 @@
         "content": "内容",
         "is_active": "是否开启",
         "sort": "排序",
-        "translation_key": "多语言Key"
-      },
-      "datetime": {
-        "start_time_invalid": "开始时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS",
-        "end_time_invalid": "结束时间格式无效，请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS"
-      },
-      "range": {
-        "time_inverted": "开始时间不能晚于结束时间"
+        "translation_key": "多语言Key",
+        "keyword": "关键词",
+        "start_time": "开始时间",
+        "end_time": "结束时间"
       }
     }
   }

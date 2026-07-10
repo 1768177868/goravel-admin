@@ -25,8 +25,8 @@ func (r *UserLogin) Rules(ctx http.Context) map[string]any {
 
 func (r *UserLogin) Attributes(ctx http.Context) map[string]any {
 	return map[string]any{
-		"username": trans.Get(ctx, "attribute_username"),
-		"password": trans.Get(ctx, "attribute_password"),
+		"username": trans.Get(ctx, "validation.attributes.username"),
+		"password": trans.Get(ctx, "validation.attributes.password"),
 	}
 }
 

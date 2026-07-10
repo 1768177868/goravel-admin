@@ -185,7 +185,7 @@ func MarkExportFailed(exportID uint, errorMsg string) {
 func CheckAndUpdateExportStatus(exportID uint) (*models.Export, error) {
 	exists, err := facades.Orm().Query().Model(&models.Export{}).Where("id", exportID).Exists()
 	if err != nil {
-		errorlog.Record(context.TODO(), "export", "检查导出记录是否存在失败", map[string]any{
+		errorlog.Record(context.Background(), "export", "检查导出记录是否存在失败", map[string]any{
 			"export_id": exportID,
 			"error":     err.Error(),
 		}, "检查导出记录是否存在失败: %v", err)
@@ -198,7 +198,7 @@ func CheckAndUpdateExportStatus(exportID uint) (*models.Export, error) {
 
 	var exportRecords []models.Export
 	if err := facades.Orm().Query().Where("id", exportID).Limit(1).Get(&exportRecords); err != nil {
-		errorlog.Record(context.TODO(), "export", "查询导出记录失败", map[string]any{
+		errorlog.Record(context.Background(), "export", "查询导出记录失败", map[string]any{
 			"export_id": exportID,
 			"error":     err.Error(),
 		}, "查询导出记录失败: %v", err)
@@ -317,7 +317,7 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 		if shouldStop() {
 			return ErrExportRecordMissing
 		}
-		errorlog.Record(context.TODO(), "export", "导出文件失败", map[string]any{
+		errorlog.Record(context.Background(), "export", "导出文件失败", map[string]any{
 			"export_id": args.ExportID,
 			"filename":  filename,
 			"error":     err.Error(),
