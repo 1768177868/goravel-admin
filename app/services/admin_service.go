@@ -14,6 +14,7 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
+	"goravel/app/utils"
 )
 
 type AdminService interface {
@@ -43,6 +44,8 @@ type AdminService interface {
 	RoleIDsChanged(currentRoles []models.Role, newRoleIDs []uint) bool
 	// CreateAdmin 创建管理员并同步角色
 	CreateAdmin(input CreateAdminInput) (*models.Admin, error)
+	// ValidateUsernameUnique 校验管理员用户名唯一性（软删后仍占位）。
+	ValidateUsernameUnique(username string, excludeID uint) error
 	// IsProtectedAdmin 判断是否受保护管理员
 	IsProtectedAdmin(adminID uint) bool
 	// IsSuperAdmin 判断是否超级管理员
@@ -231,16 +234,26 @@ func (s *AdminServiceImpl) Update(admin *models.Admin) error {
 	return nil
 }
 
-// CreateAdmin 创建管理员并同步角色
-func (s *AdminServiceImpl) CreateAdmin(input CreateAdminInput) (*models.Admin, error) {
-	exists, err := appfacades.OrmQuery(s.ctx).Model(&models.Admin{}).Where("username", input.Username).Exists()
+// ValidateUsernameUnique 校验管理员用户名唯一性（软删后仍占位）。
+func (s *AdminServiceImpl) ValidateUsernameUnique(username string, excludeID uint) error {
+	if username == "" {
+		return nil
+	}
+	exists, err := utils.ExistsColumnValue(s.ctx, "admins", nil, utils.UniqueReuseDeny, "username", username, excludeID)
 	if err != nil {
-		return nil, apperrors.ErrCreateFailed.WithError(err)
+		return apperrors.ErrCreateFailed.WithError(err)
 	}
 	if exists {
-		return nil, apperrors.ErrUsernameExists
+		return apperrors.ErrUsernameExists
 	}
+	return nil
+}
 
+// CreateAdmin 创建管理员并同步角色
+func (s *AdminServiceImpl) CreateAdmin(input CreateAdminInput) (*models.Admin, error) {
+	if err := s.ValidateUsernameUnique(input.Username, 0); err != nil {
+		return nil, err
+	}
 	hashedPassword, err := facades.Hash().Make(input.Password)
 	if err != nil {
 		return nil, apperrors.ErrPasswordEncryptFailed.WithError(err)

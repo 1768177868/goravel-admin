@@ -10,6 +10,7 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
+	"goravel/app/utils"
 )
 
 type RoleService interface {
@@ -27,6 +28,8 @@ type RoleService interface {
 	ParseIDsFromRequest(ctx http.Context, key string) []uint
 	// Create 创建角色
 	Create(name, slug, description string, status uint8, sort int) (*models.Role, error)
+	// ValidateUnique 校验角色名称/标识唯一性（硬删后可复用）。
+	ValidateUnique(name, slug string, excludeID uint) error
 	// Update 更新角色
 	Update(role *models.Role) error
 	// Delete 删除角色
@@ -153,8 +156,35 @@ func (s *RoleServiceImpl) ParseIDsFromRequest(ctx http.Context, key string) []ui
 	return ids
 }
 
+// ValidateUnique 校验角色名称/标识唯一性（硬删后可复用）。
+func (s *RoleServiceImpl) ValidateUnique(name, slug string, excludeID uint) error {
+	if name != "" {
+		exists, err := utils.ExistsColumnValue(s.ctx, "roles", &models.Role{}, utils.UniqueReuseAllow, "name", name, excludeID)
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.ErrRoleNameExists
+		}
+	}
+	if slug != "" {
+		exists, err := utils.ExistsColumnValue(s.ctx, "roles", &models.Role{}, utils.UniqueReuseAllow, "slug", slug, excludeID)
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.ErrRoleSlugExists
+		}
+	}
+	return nil
+}
+
 // Create 创建角色
 func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, sort int) (*models.Role, error) {
+	if err := s.ValidateUnique(name, slug, 0); err != nil {
+		return nil, err
+	}
+
 	// 使用结构体创建，这样数据库生成的主键 ID 会回填到 role 上
 	role := &models.Role{
 		Name:        name,
@@ -173,6 +203,9 @@ func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, s
 
 // Update 更新角色
 func (s *RoleServiceImpl) Update(role *models.Role) error {
+	if err := s.ValidateUnique(role.Name, role.Slug, role.ID); err != nil {
+		return err
+	}
 	if err := appfacades.OrmQuery(s.ctx).Save(role); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}

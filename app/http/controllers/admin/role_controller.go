@@ -1,8 +1,6 @@
 package admin
 
 import (
-	appfacades "goravel/app/facades"
-
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
@@ -100,24 +98,6 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 检查名称是否已存在
-	exists, err := appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("name", roleCreate.Name).Exists()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleNameExists.Code)
-	}
-
-	// 检查标识是否已存在
-	exists, err = appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("slug", roleCreate.Slug).Exists()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleSlugExists.Code)
-	}
-
 	role, err := r.roleService(ctx).Create(
 		roleCreate.Name,
 		roleCreate.Slug,
@@ -126,6 +106,9 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		roleCreate.Sort,
 	)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"name": roleCreate.Name,
 			"slug": roleCreate.Slug,
@@ -213,34 +196,15 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	allInputs := ctx.Request().All()
 
 	if _, exists := allInputs["name"]; exists {
-		// 检查名称是否已被其他角色使用（排除当前角色）
-		exists, err := appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("name", roleUpdate.Name).Where("id != ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleNameExists.Code)
-		}
 		role.Name = roleUpdate.Name
 	}
 	if _, exists := allInputs["slug"]; exists {
-		// 只有当 slug 值真正改变时才检查
 		if roleUpdate.Slug != role.Slug {
-			// 受保护角色的标识不能修改
 			if isProtected {
 				return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotModifySlug.Code)
 			}
-			// 检查标识是否已被其他角色使用（排除当前角色）
-			exists, err := appfacades.OrmQuery(ctx).Model(&models.Role{}).Where("slug", roleUpdate.Slug).Where("id != ?", id).Exists()
-			if err != nil {
-				return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-			}
-			if exists {
-				return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleSlugExists.Code)
-			}
 			role.Slug = roleUpdate.Slug
 		}
-		// 如果 slug 值未改变，跳过更新（允许其他字段正常更新）
 	}
 	if _, exists := allInputs["description"]; exists {
 		// 描述字段允许修改，包括受保护角色（如 super-admin）也可以修改描述
@@ -258,6 +222,9 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := r.roleService(ctx).Update(role); err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
 		})
@@ -309,7 +276,7 @@ func (r *RoleController) Destroy(ctx http.Context) http.Response {
 	if r.isProtectedRole(role.Slug) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDelete.Code)
 	}
-	if _, err := appfacades.OrmQuery(ctx).Delete(role); err != nil {
+	if err := r.roleService(ctx).Delete(role); err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
 		})

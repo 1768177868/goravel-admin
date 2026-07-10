@@ -26,7 +26,8 @@ func (r *M20250131000001CreatePaymentMethodsTable) Up() error {
 			table.Timestamps()
 			table.SoftDeletes()
 
-			table.Unique("code", "deleted_at")
+			// 支付方式代码软删后仍占位
+			table.Unique("code")
 			table.Index("type")
 			table.Index("is_active")
 			table.Index("sort")

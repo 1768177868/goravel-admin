@@ -33,7 +33,7 @@ type UserService interface {
 	UpdateBalance(userID uint, amount float64, logType string, source string, sourceID *uint, description string, operatorID *uint, remark string) error
 	// ResetPassword 重置用户密码
 	ResetPassword(userID uint, newPassword string) error
-	// ValidateUserExists 验证用户是否存在（用户名、邮箱、手机号）
+	// ValidateUserExists 校验用户名/邮箱/手机号是否与活跃用户冲突（用户业务：软删后可复用，见 migration users.username+deleted_at 联合唯一）。
 	ValidateUserExists(username, email, phone string, excludeID uint) error
 }
 
@@ -303,50 +303,28 @@ func (s *UserServiceImpl) rollbackBalance(userID uint, balance float64) error {
 	return err
 }
 
-// ValidateUserExists 验证用户是否存在（用户名、邮箱、手机号）
+// ValidateUserExists 校验用户名/邮箱/手机号是否与活跃用户冲突（用户：软删后可复用）。
 func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excludeID uint) error {
-	// 检查用户名是否已存在
-	if username != "" {
-		query := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("username", username)
-		if excludeID > 0 {
-			query = query.Where("id != ?", excludeID)
-		}
-		exists, err := query.Exists()
-		if err != nil {
-			return apperrors.ErrCreateFailed.WithError(err)
-		}
-		if exists {
-			return apperrors.ErrUsernameExists
-		}
+	checks := []struct {
+		column string
+		value  string
+		err    error
+	}{
+		{"username", username, apperrors.ErrUsernameExists},
+		{"email", email, apperrors.NewBusinessError("email_already_exists", "邮箱已存在")},
+		{"phone", phone, apperrors.NewBusinessError("phone_already_exists", "手机号已存在")},
 	}
 
-	// 检查邮箱是否已存在（如果提供了邮箱）
-	if email != "" {
-		query := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("email", email)
-		if excludeID > 0 {
-			query = query.Where("id != ?", excludeID)
+	for _, check := range checks {
+		if check.value == "" {
+			continue
 		}
-		exists, err := query.Exists()
+		exists, err := utils.ExistsColumnValue(s.ctx, "users", &models.User{}, utils.UniqueReuseAllow, check.column, check.value, excludeID)
 		if err != nil {
 			return apperrors.ErrCreateFailed.WithError(err)
 		}
 		if exists {
-			return apperrors.NewBusinessError("email_already_exists", "邮箱已存在")
-		}
-	}
-
-	// 检查手机号是否已存在（如果提供了手机号）
-	if phone != "" {
-		query := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("phone", phone)
-		if excludeID > 0 {
-			query = query.Where("id != ?", excludeID)
-		}
-		exists, err := query.Exists()
-		if err != nil {
-			return apperrors.ErrCreateFailed.WithError(err)
-		}
-		if exists {
-			return apperrors.NewBusinessError("phone_already_exists", "手机号已存在")
+			return check.err
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
+	"goravel/app/utils"
 )
 
 type PermissionService interface {
@@ -18,6 +19,8 @@ type PermissionService interface {
 	GetList(filters PermissionFilters, page, pageSize int) ([]models.Permission, int64, error)
 	// Create 创建权限
 	Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error)
+	// ValidateUnique 校验权限名称/标识唯一性（硬删后可复用）。
+	ValidateUnique(name, slug string, excludeID uint) error
 	// Update 更新权限
 	Update(permission *models.Permission) error
 	// Delete 删除权限
@@ -124,8 +127,42 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 	return permissions, total, nil
 }
 
+// ValidateUnique 校验权限名称/标识唯一性（硬删后可复用）。
+func (s *PermissionServiceImpl) ValidateUnique(name, slug string, excludeID uint) error {
+	if name != "" {
+		exists, err := utils.ExistsColumnValue(s.ctx, "permissions", &models.Permission{}, utils.UniqueReuseAllow, "name", name, excludeID)
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.ErrPermissionNameExists
+		}
+	}
+	if slug != "" {
+		exists, err := utils.ExistsColumnValue(s.ctx, "permissions", &models.Permission{}, utils.UniqueReuseAllow, "slug", slug, excludeID)
+		if err != nil {
+			return apperrors.ErrCreateFailed.WithError(err)
+		}
+		if exists {
+			return apperrors.ErrPermissionSlugExists
+		}
+	}
+	return nil
+}
+
 // Create 创建权限
 func (s *PermissionServiceImpl) Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error) {
+	exists, err := utils.ExistsColumnValueAny(s.ctx, "permissions", &models.Permission{}, utils.UniqueReuseAllow, 0, map[string]any{
+		"name": name,
+		"slug": slug,
+	})
+	if err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+	if exists {
+		return nil, apperrors.ErrPermissionNameOrSlugExists
+	}
+
 	permission := &models.Permission{
 		Name:        name,
 		Slug:        slug,
@@ -150,6 +187,9 @@ func (s *PermissionServiceImpl) Create(name, slug, method, path, description str
 
 // Update 更新权限
 func (s *PermissionServiceImpl) Update(permission *models.Permission) error {
+	if err := s.ValidateUnique(permission.Name, permission.Slug, permission.ID); err != nil {
+		return err
+	}
 	if err := appfacades.OrmQuery(s.ctx).Save(permission); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}

@@ -1,8 +1,6 @@
 package admin
 
 import (
-	appfacades "goravel/app/facades"
-
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
@@ -130,15 +128,6 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 检查 slug 是否已存在
-	exists, err := appfacades.OrmQuery(ctx).Model(&models.Menu{}).Where("slug", menuCreate.Slug).Exists()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuSlugExists.Code)
-	}
-
 	menu, err := r.menuService(ctx).Create(
 		menuCreate.ParentID,
 		menuCreate.Title,
@@ -156,6 +145,9 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		menuCreate.NoCache,
 	)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"title": menuCreate.Title,
 			"slug":  menuCreate.Slug,
@@ -190,14 +182,6 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		menu.Title = menuUpdate.Title
 	}
 	if _, exists := allInputs["slug"]; exists {
-		// 检查 slug 是否已被其他菜单使用
-		exists, err := appfacades.OrmQuery(ctx).Model(&models.Menu{}).Where("slug", menuUpdate.Slug).Where("id != ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuSlugExists.Code)
-		}
 		menu.Slug = menuUpdate.Slug
 	}
 	// 处理 parent_id，需要根据是否存在来更新，如果存在但为空或0，则设为0
@@ -243,6 +227,9 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := r.menuService(ctx).Update(menu); err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"menu_id": menu.ID,
 		})

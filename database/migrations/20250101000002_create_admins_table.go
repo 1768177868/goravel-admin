@@ -26,9 +26,8 @@ func (r *M20250101000002CreateAdminsTable) Up() error {
 			table.UnsignedBigInteger("department_id").Nullable()
 			table.Timestamps()
 			table.SoftDeletes()
-			// 创建 username 和 deleted_at 的联合唯一索引
-			// 这样软删除的记录（deleted_at 不为 NULL）不会与未删除的记录冲突
-			table.Unique("username", "deleted_at")
+			// 管理员用户名软删后仍占位（审计/防冒充）
+			table.Unique("username")
 			table.Comment("管理员表")
 		}); err != nil {
 			return err

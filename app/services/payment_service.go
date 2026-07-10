@@ -215,17 +215,26 @@ func (s *PaymentServiceImpl) GetPaymentMethods(filters PaymentMethodFilters, pag
 	return paymentMethods, total, nil
 }
 
-// CreatePaymentMethod 创建支付方式
-func (s *PaymentServiceImpl) CreatePaymentMethod(name, code, paymentType string, config map[string]any, isActive bool, sort int, description string) (*models.PaymentMethod, error) {
-	// 检查代码是否已存在
-	exists, err := appfacades.OrmQuery(s.ctx).Model(&models.PaymentMethod{}).Where("code", code).Exists()
+// validatePaymentMethodCodeUnique 校验支付方式代码唯一性（软删后仍占位）。
+func (s *PaymentServiceImpl) validatePaymentMethodCodeUnique(code string, excludeID uint) error {
+	if code == "" {
+		return nil
+	}
+	exists, err := utils.ExistsColumnValue(s.ctx, "payment_methods", nil, utils.UniqueReuseDeny, "code", code, excludeID)
 	if err != nil {
-		return nil, apperrors.ErrCreateFailed.WithError(err)
+		return apperrors.ErrCreateFailed.WithError(err)
 	}
 	if exists {
-		return nil, apperrors.ErrPaymentMethodCodeExists
+		return apperrors.ErrPaymentMethodCodeExists
 	}
+	return nil
+}
 
+// CreatePaymentMethod 创建支付方式
+func (s *PaymentServiceImpl) CreatePaymentMethod(name, code, paymentType string, config map[string]any, isActive bool, sort int, description string) (*models.PaymentMethod, error) {
+	if err := s.validatePaymentMethodCodeUnique(code, 0); err != nil {
+		return nil, err
+	}
 	// 序列化配置
 	configJSON, err := json.Marshal(config)
 	if err != nil {

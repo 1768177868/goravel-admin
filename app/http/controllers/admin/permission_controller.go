@@ -1,8 +1,6 @@
 package admin
 
 import (
-	appfacades "goravel/app/facades"
-
 	"github.com/goravel/framework/contracts/http"
 	"github.com/spf13/cast"
 
@@ -112,17 +110,6 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameAndSlugRequired.Code)
 	}
 
-	exists, err := appfacades.OrmQuery(ctx).Model(&models.Permission{}).
-		Where("name", name).
-		OrWhere("slug", slug).
-		Exists()
-	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
-	}
-	if exists {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameOrSlugExists.Code)
-	}
-
 	permission, err := r.permissionService(ctx).Create(
 		name,
 		slug,
@@ -134,6 +121,9 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		menuID,
 	)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"name": name,
 			"slug": slug,
@@ -162,23 +152,9 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	menuIDStr := ctx.Request().Input("menu_id", "")
 
 	if name != "" {
-		exists, err := appfacades.OrmQuery(ctx).Model(&models.Permission{}).Where("name", name).Where("id <> ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameExists.Code)
-		}
 		permission.Name = name
 	}
 	if slug != "" {
-		exists, err := appfacades.OrmQuery(ctx).Model(&models.Permission{}).Where("slug", slug).Where("id <> ?", id).Exists()
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-		}
-		if exists {
-			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionSlugExists.Code)
-		}
 		permission.Slug = slug
 	}
 	if method != "" {
@@ -201,6 +177,9 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 	}
 
 	if err := r.permissionService(ctx).Update(permission); err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
+		}
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
 		})

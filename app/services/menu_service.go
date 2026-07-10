@@ -6,6 +6,7 @@ import (
 
 	apperrors "goravel/app/errors"
 	"goravel/app/models"
+	"goravel/app/utils"
 )
 
 type MenuService interface {
@@ -13,6 +14,8 @@ type MenuService interface {
 	GetByID(id uint) (*models.Menu, error)
 	// Create 创建菜单
 	Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType, noCache uint8) (*models.Menu, error)
+	// ValidateSlugUnique 校验菜单 slug 唯一性（硬删后可复用）。
+	ValidateSlugUnique(slug string, excludeID uint) error
 	// Update 更新菜单
 	Update(menu *models.Menu) error
 	// Delete 删除菜单
@@ -36,8 +39,27 @@ func (s *MenuServiceImpl) GetByID(id uint) (*models.Menu, error) {
 	return &menu, nil
 }
 
+// ValidateSlugUnique 校验菜单 slug 唯一性（硬删后可复用）。
+func (s *MenuServiceImpl) ValidateSlugUnique(slug string, excludeID uint) error {
+	if slug == "" {
+		return nil
+	}
+	exists, err := utils.ExistsColumnValue(s.ctx, "menus", &models.Menu{}, utils.UniqueReuseAllow, "slug", slug, excludeID)
+	if err != nil {
+		return apperrors.ErrCreateFailed.WithError(err)
+	}
+	if exists {
+		return apperrors.ErrMenuSlugExists
+	}
+	return nil
+}
+
 // Create 创建菜单
 func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, component, permission string, menuType uint8, status uint8, sort int, isHidden uint8, linkType, openType, noCache uint8) (*models.Menu, error) {
+	if err := s.ValidateSlugUnique(slug, 0); err != nil {
+		return nil, err
+	}
+
 	menu := &models.Menu{
 		ParentID:   parentID,
 		Title:      title,
@@ -64,6 +86,9 @@ func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, compone
 
 // Update 更新菜单
 func (s *MenuServiceImpl) Update(menu *models.Menu) error {
+	if err := s.ValidateSlugUnique(menu.Slug, menu.ID); err != nil {
+		return err
+	}
 	if err := appfacades.OrmQuery(s.ctx).Save(menu); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}

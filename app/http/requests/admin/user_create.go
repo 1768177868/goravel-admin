@@ -23,10 +23,10 @@ func (r *UserCreate) Authorize(ctx http.Context) error {
 
 func (r *UserCreate) Rules(ctx http.Context) map[string]any {
 	return map[string]any{
-		"username": "required|min:3|max:50|unique:users,username",
+		"username": "required|min:3|max:50",
 		"password": "required|min:6|max:50",
 		"nickname": "max:50",
-		"email":    "email|max:100|unique:users,email",
+		"email":    "email|max:100",
 		"phone":    "max:20",
 		"status":   "in:0,1",
 	}
