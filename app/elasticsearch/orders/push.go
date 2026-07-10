@@ -31,7 +31,7 @@ func PushOrderToElasticsearch(ctx context.Context, orderID uint, orderNoHint str
 		return idx.DeleteByOrderID(ctx, orderID)
 	}
 
-	order, details, err := orderrepo.FindOrderWithDetails(orderID, orderNoHint)
+	order, details, err := orderrepo.FindOrderWithDetails(ctx, orderID, orderNoHint)
 	if err != nil {
 		return err
 	}

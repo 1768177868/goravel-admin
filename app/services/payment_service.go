@@ -1029,42 +1029,7 @@ func (s *PaymentServiceImpl) querySinglePaymentTable(tableName string, filters P
 
 // buildPaymentShardingQuery 构建分表查询条件
 func (s *PaymentServiceImpl) buildPaymentShardingQuery(tableName string, filters PaymentFilters) orm.Query {
-	query := appfacades.OrmQuery(s.ctx).Table(tableName)
-
-	// 时间范围
-	if !filters.StartTime.IsZero() {
-		query = query.Where("created_at >= ?", filters.StartTime)
-	}
-	if !filters.EndTime.IsZero() {
-		query = query.Where("created_at <= ?", filters.EndTime)
-	}
-
-	// 支付单号筛选
-	if filters.PaymentNo != "" {
-		query = query.Where("payment_no = ?", filters.PaymentNo)
-	}
-
-	// 订单号筛选
-	if filters.OrderNo != "" {
-		query = query.Where("order_no = ?", filters.OrderNo)
-	}
-
-	// 支付方式ID筛选
-	if filters.PaymentMethodID > 0 {
-		query = query.Where("payment_method_id = ?", filters.PaymentMethodID)
-	}
-
-	// 用户ID筛选
-	if filters.UserID > 0 {
-		query = query.Where("user_id = ?", filters.UserID)
-	}
-
-	// 状态筛选
-	if filters.Status != "" {
-		query = query.Where("status = ?", filters.Status)
-	}
-
-	return query
+	return BuildPaymentQuery(s.ctx, tableName, filters)
 }
 
 // queryMultiplePaymentTablesWithUnion 使用 UNION ALL 查询多个分表

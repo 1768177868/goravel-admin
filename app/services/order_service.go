@@ -328,19 +328,19 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 // findOrderByID 委托 orderrepo，与 ES 同步等只读场景共用同一套分表查找逻辑。
 func (s *OrderServiceImpl) findOrderByID(orderID uint, orderNo ...string) (*models.Order, error) {
 	if len(orderNo) > 0 && orderNo[0] != "" {
-		return orderrepo.FindOrderByID(orderID, orderNo[0])
+		return orderrepo.FindOrderByID(s.ctx, orderID, orderNo[0])
 	}
-	return orderrepo.FindOrderByID(orderID)
+	return orderrepo.FindOrderByID(s.ctx, orderID)
 }
 
 // GetOrderByID 根据ID查询订单
 func (s *OrderServiceImpl) GetOrderByID(orderID uint, orderTime time.Time) (*models.Order, []models.OrderDetail, error) {
-	return orderrepo.FindOrderWithDetails(orderID, "")
+	return orderrepo.FindOrderWithDetails(s.ctx, orderID, "")
 }
 
 // GetOrderByOrderNo 根据订单号查询订单（直接定位分表，更高效）
 func (s *OrderServiceImpl) GetOrderByOrderNo(orderNo string) (*models.Order, []models.OrderDetail, error) {
-	return orderrepo.FindOrderWithDetails(0, orderNo)
+	return orderrepo.FindOrderWithDetails(s.ctx, 0, orderNo)
 }
 
 // GetOrders 查询订单列表（限制不超过3个月）
@@ -909,7 +909,7 @@ func (s *OrderServiceImpl) generateOrderNo() string {
 
 // findOrderByOrderNo 委托 orderrepo。
 func (s *OrderServiceImpl) findOrderByOrderNo(orderNo string) (*models.Order, error) {
-	return orderrepo.FindOrderByOrderNo(orderNo)
+	return orderrepo.FindOrderByOrderNo(s.ctx, orderNo)
 }
 
 // GetOrdersCountInYear 获取最近一年的订单总数（用于仪表盘统计）
