@@ -244,7 +244,7 @@ func (e *BaseExporter) Execute(args ExportArgs) error {
 
 	// 翻译表头
 	headers := utils.TranslateHeaders(e.config.HeaderKeys, lang)
-	exportFormat := strings.ToLower(strings.TrimSpace(utils.GetConfigValue("storage", "export_format", "csv")))
+	exportFormat := strings.ToLower(strings.TrimSpace(utils.GetConfigValue(context.Background(), "storage", "export_format", "csv")))
 	if exportFormat != "xlsx" && exportFormat != "csv" {
 		exportFormat = "csv"
 	}

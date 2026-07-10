@@ -9,6 +9,8 @@ import (
 
 	"github.com/goravel/framework/facades"
 
+	appfacades "goravel/app/facades"
+
 	"goravel/app/constants"
 	"goravel/app/utils/errorlog"
 )
@@ -175,7 +177,10 @@ func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, er
 // GetAllExistingShardingTables 获取数据库中所有已存在的分表名称
 // baseTableName: 基础表名，如 "orders" 或 "order_details"
 // 返回: 已存在的分表名称列表
-func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
+func GetAllExistingShardingTables(ctx context.Context, baseTableName string) ([]string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	var tableNames []string
 
 	// 构建表名匹配模式：orders_YYYYMM 或 order_details_YYYYMM
@@ -185,8 +190,8 @@ func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 
 	// 执行查询，使用 Scan 获取结果
 	var rows []map[string]any
-	if err := facades.Orm().Query().Raw(query, args...).Scan(&rows); err != nil {
-		errorlog.Record(context.Background(), "sharding", "查询分表失败", map[string]any{
+	if err := appfacades.OrmQuery(ctx).Raw(query, args...).Scan(&rows); err != nil {
+		errorlog.Record(ctx, "sharding", "查询分表失败", map[string]any{
 			"pattern": pattern,
 			"error":   err.Error(),
 		}, "查询分表失败: %v", err)
@@ -239,14 +244,17 @@ func GetAllExistingShardingTables(baseTableName string) ([]string, error) {
 // GetAllExistingShardingTablesByPattern 通过表名模式获取所有已存在的分表
 // 这是一个更通用的方法，可以通过自定义模式匹配
 // pattern: 表名匹配模式，如 "orders_%" 或 "order_details_%"
-func GetAllExistingShardingTablesByPattern(pattern string) ([]string, error) {
+func GetAllExistingShardingTablesByPattern(ctx context.Context, pattern string) ([]string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	var tableNames []string
 	query, args := buildShardingTableQuery(pattern)
 
 	// 执行查询，使用 Scan 获取结果
 	var rows []map[string]any
-	if err := facades.Orm().Query().Raw(query, args...).Scan(&rows); err != nil {
-		errorlog.Record(context.Background(), "sharding", "查询分表失败", map[string]any{
+	if err := appfacades.OrmQuery(ctx).Raw(query, args...).Scan(&rows); err != nil {
+		errorlog.Record(ctx, "sharding", "查询分表失败", map[string]any{
 			"pattern": pattern,
 			"error":   err.Error(),
 		}, "查询分表失败: %v", err)

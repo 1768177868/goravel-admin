@@ -28,7 +28,8 @@ func NewCaptchaServiceImpl(ctx context.Context) CaptchaService {
 	// 延迟初始化，不在构造函数中查询数据库
 	// 这样可以避免在构建时访问数据库
 	return &CaptchaServiceImpl{
-		expireSeconds: 120, // 默认值
+		ctx:           ctx,
+		expireSeconds: 120,
 		initialized:   false,
 	}
 }
@@ -40,7 +41,7 @@ func (s *CaptchaServiceImpl) initDriver() {
 	}
 
 	// 从数据库读取验证码配置，如果不存在则使用默认值
-	expireSeconds := utils.GetConfigValueInt("captcha", "captcha_expire", 120)
+	expireSeconds := utils.GetConfigValueInt(s.ctx, "captcha", "captcha_expire", 120)
 	if expireSeconds <= 0 {
 		expireSeconds = 120
 	}
@@ -64,7 +65,7 @@ func (s *CaptchaServiceImpl) initDriver() {
 
 func (s *CaptchaServiceImpl) Enabled() bool {
 	// 从数据库读取验证码配置，如果不存在则使用默认值
-	return utils.GetConfigValueBool("captcha", "captcha_enabled", false)
+	return utils.GetConfigValueBool(s.ctx, "captcha", "captcha_enabled", false)
 }
 
 func (s *CaptchaServiceImpl) Generate() (string, string, error) {

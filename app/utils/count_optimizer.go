@@ -1,19 +1,22 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
 )
 
 // CountOptimizer 分页统计优化器
 // 当数据量超过阈值时，使用执行计划估算的行数，否则使用实际的 count(*)
 type CountOptimizer struct {
+	ctx context.Context
 	// Threshold 阈值，超过此值使用估算值（默认 10000）
 	Threshold int64
 	// ModuleName 模块名称，用于日志记录
@@ -21,13 +24,12 @@ type CountOptimizer struct {
 }
 
 // NewCountOptimizer 创建新的 CountOptimizer
-// threshold: 阈值，超过此值使用估算值（默认 10000）
-// moduleName: 模块名称，用于日志记录
-func NewCountOptimizer(threshold int64, moduleName string) *CountOptimizer {
+func NewCountOptimizer(ctx context.Context, threshold int64, moduleName string) *CountOptimizer {
 	if threshold <= 0 {
-		threshold = 10000 // 默认阈值
+		threshold = 10000
 	}
 	return &CountOptimizer{
+		ctx:        ctx,
 		Threshold:  threshold,
 		ModuleName: moduleName,
 	}
@@ -90,7 +92,7 @@ func (co *CountOptimizer) extractRowsFromPostgreSQLExplainText(result []map[stri
 // args: WHERE 条件的参数
 // 返回：总数、是否使用估算值、错误
 func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string, args ...any) (int64, bool, error) {
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(co.ctx).Driver())
 
 	// 构建 COUNT SQL
 	var countSQL string
@@ -108,7 +110,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 			var result struct {
 				Cnt int64
 			}
-			if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&result); err != nil {
+			if err := appfacades.OrmQuery(co.ctx).Raw(countSQL, args...).Scan(&result); err != nil {
 				return 0, false, err
 			}
 			return result.Cnt, false, nil
@@ -127,7 +129,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 			var result struct {
 				Cnt int64
 			}
-			if err := facades.Orm().Query().Raw(countSQL).Scan(&result); err != nil {
+			if err := appfacades.OrmQuery(co.ctx).Raw(countSQL).Scan(&result); err != nil {
 				return 0, false, err
 			}
 			return result.Cnt, false, nil
@@ -160,7 +162,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 		var result struct {
 			Cnt int64
 		}
-		if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&result); err != nil {
+		if err := appfacades.OrmQuery(co.ctx).Raw(countSQL, args...).Scan(&result); err != nil {
 			return 0, false, err
 		}
 		return result.Cnt, false, nil
@@ -173,7 +175,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 		var result struct {
 			Cnt int64
 		}
-		if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&result); err != nil {
+		if err := appfacades.OrmQuery(co.ctx).Raw(countSQL, args...).Scan(&result); err != nil {
 			return 0, false, err
 		}
 		return result.Cnt, false, nil
@@ -188,7 +190,7 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 	var result struct {
 		Cnt int64
 	}
-	if err := facades.Orm().Query().Raw(countSQL, args...).Scan(&result); err != nil {
+	if err := appfacades.OrmQuery(co.ctx).Raw(countSQL, args...).Scan(&result); err != nil {
 		return 0, false, err
 	}
 	return result.Cnt, false, nil
@@ -196,12 +198,12 @@ func (co *CountOptimizer) OptimizedCountWithTable(tableName, whereClause string,
 
 // executeExplain 执行 EXPLAIN 查询并提取估算行数
 func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64, error) {
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(appfacades.OrmQuery(co.ctx).Driver())
 	switch driver {
 	case "mysql":
 		// MySQL EXPLAIN 返回表格格式
 		var explainResult []map[string]any
-		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
+		if err := appfacades.OrmQuery(co.ctx).Raw(explainSQL, args...).Get(&explainResult); err != nil {
 			return 0, err
 		}
 
@@ -229,7 +231,7 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 	case "postgresql":
 		// PostgreSQL EXPLAIN (FORMAT JSON) 返回 JSON 格式
 		var explainResult []map[string]any
-		if err := facades.Orm().Query().Raw(explainSQL, args...).Get(&explainResult); err != nil {
+		if err := appfacades.OrmQuery(co.ctx).Raw(explainSQL, args...).Get(&explainResult); err != nil {
 			return 0, err
 		}
 
@@ -251,7 +253,7 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 		// 如果 JSON 格式解析失败，尝试文本格式
 		explainTextSQL := strings.Replace(explainSQL, "EXPLAIN (FORMAT JSON)", "EXPLAIN", 1)
 		var explainTextResult []map[string]any
-		if err := facades.Orm().Query().Raw(explainTextSQL, args...).Get(&explainTextResult); err == nil {
+		if err := appfacades.OrmQuery(co.ctx).Raw(explainTextSQL, args...).Get(&explainTextResult); err == nil {
 			rows := co.extractRowsFromPostgreSQLExplainText(explainTextResult)
 			if rows > 0 {
 				return rows, nil
@@ -262,14 +264,14 @@ func (co *CountOptimizer) executeExplain(explainSQL string, args ...any) (int64,
 	case "dm":
 		// DM 使用 EXPLAIN SELECT 执行计划（通过 Exec 执行更稳定）
 		resolvedSQL := renderSQLWithArgs(explainSQL, args...)
-		if _, execErr := facades.Orm().Query().Exec(resolvedSQL); execErr != nil {
+		if _, execErr := appfacades.OrmQuery(co.ctx).Exec(resolvedSQL); execErr != nil {
 			return 0, execErr
 		}
 
 		// 执行 EXPLAIN 后，从当前 schema 统计信息读取估算行数（NUM_ROWS）
 		// 注：这不是精确过滤后行数，但作为大数据量阈值判定已足够。
 		var planRows []map[string]any
-		if scanErr := facades.Orm().Query().
+		if scanErr := appfacades.OrmQuery(co.ctx).
 			Raw("SELECT NUM_ROWS AS CARDINALITY FROM ALL_TABLES WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AND TABLE_NAME = UPPER(?)", extractMainTableNameFromSQL(resolvedSQL)).
 			Get(&planRows); scanErr != nil {
 			return 0, scanErr

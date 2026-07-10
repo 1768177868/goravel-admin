@@ -82,13 +82,13 @@ type ExportServiceImpl struct {
 func NewExportService(ctx http.Context) ExportService {
 	// 从数据库读取文件存储配置，如果不存在则使用默认值
 	// 优先使用 file_disk，如果没有则使用 storage_disk（向后兼容），再尝试 export_disk，最后使用默认值 local
-	disk := utils.GetConfigValue("storage", "file_disk", "")
+	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
 	if disk == "" {
-		disk = utils.GetConfigValue("storage", "storage_disk", "")
+		disk = utils.GetConfigValue(ctx, "storage", "storage_disk", "")
 	}
 	if disk == "" {
 		// 向后兼容 export_disk
-		disk = utils.GetConfigValue("storage", "export_disk", "")
+		disk = utils.GetConfigValue(ctx, "storage", "export_disk", "")
 	}
 	// 如果都不存在，使用默认值 local
 	if disk == "" {
@@ -100,7 +100,7 @@ func NewExportService(ctx http.Context) ExportService {
 
 	// 文件路径默认使用 exports，不再从配置读取
 	path := "exports"
-	format := strings.ToLower(strings.TrimSpace(utils.GetConfigValue("storage", "export_format", "csv")))
+	format := strings.ToLower(strings.TrimSpace(utils.GetConfigValue(ctx, "storage", "export_format", "csv")))
 	if format != "xlsx" && format != "csv" {
 		format = "csv"
 	}
@@ -720,15 +720,15 @@ func (s *ExportServiceImpl) GetExportURL(filePath string) string {
 	var configURL string
 	switch s.disk {
 	case "s3":
-		configURL = utils.GetConfigValue("storage", "s3_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "s3_url", "")
 	case "oss":
-		configURL = utils.GetConfigValue("storage", "oss_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "oss_url", "")
 	case "cos":
-		configURL = utils.GetConfigValue("storage", "cos_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "cos_url", "")
 	case "qiniu":
-		configURL = utils.GetConfigValue("storage", "qiniu_domain", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "qiniu_domain", "")
 	case "minio":
-		configURL = utils.GetConfigValue("storage", "minio_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "minio_url", "")
 	}
 
 	if configURL != "" {

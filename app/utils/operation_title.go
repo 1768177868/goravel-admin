@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"context"
 	"strings"
 
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
 
 	"goravel/app/models"
@@ -31,7 +33,7 @@ func GetOperationTitleFromContext(ctx http.Context) string {
 	path := ctx.Request().Path()
 
 	// 先从权限表中查询匹配的权限
-	permissionSlug := findPermissionSlugFromDB(method, path)
+	permissionSlug := findPermissionSlugFromDB(ctx, method, path)
 	if permissionSlug != "" {
 		return permissionSlug
 	}
@@ -183,11 +185,10 @@ func generateDefaultTitle(method, path string) string {
 
 // findPermissionSlugFromDB 从权限表中查询匹配的权限标识
 // 优先匹配精确路径，然后匹配通配符路径
-func findPermissionSlugFromDB(method, path string) string {
+func findPermissionSlugFromDB(ctx context.Context, method, path string) string {
 	var permissions []models.Permission
 
-	// 查询所有启用的权限，方法匹配或方法为空
-	query := facades.Orm().Query().Model(&models.Permission{}).
+	query := appfacades.OrmQuery(ctx).Model(&models.Permission{}).
 		Where("status", 1).
 		Where("(method = ? OR method = '')", method)
 

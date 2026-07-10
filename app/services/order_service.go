@@ -530,7 +530,7 @@ func (s *OrderServiceImpl) querySingleTable(tableName string, filters OrderFilte
 
 	// 获取总数（使用 CountOptimizer 优化，超过阈值使用 EXPLAIN 估算）
 	whereClause, whereArgs := s.buildOrderWhereClause(filters)
-	countOptimizer := utils.NewCountOptimizer(OrderCountThreshold, "order")
+	countOptimizer := utils.NewCountOptimizer(s.ctx, OrderCountThreshold, "order")
 	total, _, err := countOptimizer.OptimizedCountWithTable(tableName, whereClause, whereArgs...)
 	if err != nil {
 		return nil, 0, err

@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goravel/framework/contracts/database/schema"
@@ -20,7 +21,7 @@ func (r *M20251228004525AddPaymentMethodToOrdersShardingTables) Signature() stri
 
 func (r *M20251228004525AddPaymentMethodToOrdersShardingTables) Up() error {
 	// 获取所有已存在的订单主表分表
-	ordersTables, err := utils.GetAllExistingShardingTables("orders")
+	ordersTables, err := utils.GetAllExistingShardingTables(context.Background(), "orders")
 	if err != nil {
 		return fmt.Errorf("获取订单分表列表失败: %v", err)
 	}
@@ -74,7 +75,7 @@ func (r *M20251228004525AddPaymentMethodToOrdersShardingTables) Up() error {
 }
 
 func (r *M20251228004525AddPaymentMethodToOrdersShardingTables) Down() error {
-	ordersTables, err := utils.GetAllExistingShardingTables("orders")
+	ordersTables, err := utils.GetAllExistingShardingTables(context.Background(), "orders")
 	if err != nil {
 		return fmt.Errorf("获取订单分表列表失败: %v", err)
 	}

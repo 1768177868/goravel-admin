@@ -1,13 +1,14 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/goravel/framework/facades"
+	appfacades "goravel/app/facades"
 
 	"goravel/app/models"
 )
@@ -48,13 +49,13 @@ func ParseResourcePath(path string) (string, uint) {
 
 // LoadModelSnapshot 根据请求路径中的表名和 ID，用 ORM 查询修改前的记录并转为 map。
 // 返回 nil 表示该表不需要审计或记录不存在。
-func LoadModelSnapshot(tableName string, id uint) map[string]any {
+func LoadModelSnapshot(ctx context.Context, tableName string, id uint) map[string]any {
 	factory, ok := auditModelFactories[tableName]
 	if !ok || id == 0 {
 		return nil
 	}
 	model := factory()
-	if err := facades.Orm().Query().Find(model, id); err != nil {
+	if err := appfacades.OrmQuery(ctx).Find(model, id); err != nil {
 		return nil
 	}
 	snapshot := ModelToMap(model)
@@ -126,12 +127,12 @@ func FormatDeleteSnapshot(before map[string]any) string {
 }
 
 // LoadConfigSnapshotByGroup 加载某分组下全部配置项，返回 key → value（用于 configs/save 等批量保存审计）。
-func LoadConfigSnapshotByGroup(group string) map[string]any {
+func LoadConfigSnapshotByGroup(ctx context.Context, group string) map[string]any {
 	if group == "" {
 		return nil
 	}
 	var configs []models.Config
-	if err := facades.Orm().Query().Where("group", group).Get(&configs); err != nil || len(configs) == 0 {
+	if err := appfacades.OrmQuery(ctx).Where("group", group).Get(&configs); err != nil || len(configs) == 0 {
 		return nil
 	}
 	snapshot := make(map[string]any, len(configs))

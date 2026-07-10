@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ func (r *M20250105000001AddCompositeIndexesToOrders) Signature() string {
 
 func (r *M20250105000001AddCompositeIndexesToOrders) Up() error {
 	// 获取所有已存在的订单分表
-	tableNames, err := utils.GetAllExistingShardingTables("orders")
+	tableNames, err := utils.GetAllExistingShardingTables(context.Background(),"orders")
 	if err != nil {
 		return fmt.Errorf("获取订单分表失败: %v", err)
 	}
@@ -130,7 +131,7 @@ func (r *M20250105000001AddCompositeIndexesToOrders) Up() error {
 
 func (r *M20250105000001AddCompositeIndexesToOrders) Down() error {
 	// 获取所有已存在的订单分表
-	tableNames, err := utils.GetAllExistingShardingTables("orders")
+	tableNames, err := utils.GetAllExistingShardingTables(context.Background(),"orders")
 	if err != nil {
 		return fmt.Errorf("获取订单分表失败: %v", err)
 	}

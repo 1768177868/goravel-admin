@@ -146,7 +146,7 @@ func (s *ShardingQueryServiceImpl) QueryMultipleTables(tableNames []string, filt
 	// 如果配置了阈值，使用执行计划优化；否则直接使用 count
 	if threshold > 0 {
 		// 使用优化的 count 查询（先估算，超过阈值用估算值，否则用实际 count）
-		countOptimizer := utils.NewCountOptimizer(threshold, s.config.ModuleName)
+		countOptimizer := utils.NewCountOptimizer(s.ctx, threshold, s.config.ModuleName)
 		for _, tableName := range existingTableNames {
 			// 使用对应的参数（每个分表使用相同的参数）
 			args := whereConditions

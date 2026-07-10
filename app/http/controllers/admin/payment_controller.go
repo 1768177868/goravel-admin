@@ -230,9 +230,9 @@ func (r *PaymentController) Export(ctx http.Context) http.Response {
 		return resp
 	}
 
-	disk := utils.GetConfigValue("storage", "file_disk", "")
+	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
 	if disk == "" {
-		disk = utils.GetConfigValue("storage", "export_disk", "")
+		disk = utils.GetConfigValue(ctx, "storage", "export_disk", "")
 	}
 	if disk == "" {
 		disk = "local"

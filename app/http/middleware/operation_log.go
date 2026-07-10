@@ -103,7 +103,7 @@ func OperationLog() http.Middleware {
 		}
 
 		// 审计变更：在 Next 前加载快照，闭包在 Next 后计算 changes（规则见 utils.RegisterAuditHandler / audit_handlers.go）
-		computeAuditChanges := utils.PrepareAuditChanges(method, path, requestBody, adminID)
+		computeAuditChanges := utils.PrepareAuditChanges(ctx, method, path, requestBody, adminID)
 
 		// 继续处理请求
 		ctx.Request().Next()

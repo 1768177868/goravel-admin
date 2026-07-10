@@ -55,6 +55,7 @@ func Providers() []foundation.ServiceProvider {
 		&crypt.ServiceProvider{},
 		&filesystem.ServiceProvider{},
 		&validation.ServiceProvider{},
+		&providers.ValidationServiceProvider{},
 		&session.ServiceProvider{},
 		&translation.ServiceProvider{},
 		&testing.ServiceProvider{},

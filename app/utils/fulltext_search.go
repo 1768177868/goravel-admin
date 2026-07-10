@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"context"
 	"strings"
 
+	appfacades "goravel/app/facades"
+
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
 )
 
 // ApplyFulltextSearch 应用全文索引搜索条件
@@ -17,8 +19,7 @@ func ApplyFulltextSearch(query orm.Query, column, keyword string) orm.Query {
 		return query
 	}
 
-	// 获取数据库类型
-	driver := strings.ToLower(facades.Orm().Query().Driver())
+	driver := strings.ToLower(query.Driver())
 
 	isPostgreSQL := driver == "postgresql"
 	isMySQLFamily := driver == "mysql" || driver == "mariadb"
@@ -87,9 +88,9 @@ func ShouldUseFulltextIndex(keyword string) bool {
 }
 
 // IsPostgreSQL 判断当前数据库是否为 PostgreSQL
-func IsPostgreSQL() bool {
-	if facades.Orm() == nil {
-		return false
+func IsPostgreSQL(ctx context.Context) bool {
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	return strings.ToLower(facades.Orm().Query().Driver()) == "postgresql"
+	return strings.ToLower(appfacades.OrmQuery(ctx).Driver()) == "postgresql"
 }

@@ -13,12 +13,13 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 )
 
 // AuditBeforeFunc 在 Next 之前加载快照；operatorAdminID 为当前登录管理员 ID（JWT），无则 0。
-type AuditBeforeFunc func(method, path, requestBody string, operatorAdminID uint) map[string]any
+type AuditBeforeFunc func(ctx context.Context, method, path, requestBody string, operatorAdminID uint) map[string]any
 
 // AuditHandler 自定义审计规则：匹配请求 → 加载修改前快照 → 与请求体对比生成 changes JSON。
 type AuditHandler struct {
@@ -44,12 +45,12 @@ func RegisterAuditHandlerFirst(h AuditHandler) {
 // PrepareAuditChanges 在 Next 之前调用；返回的闭包在 Next 之后执行以生成 changes JSON。
 // operatorAdminID 为 JWT 中的管理员 ID（个人资料等无路径 ID 的接口依赖此值加载快照）。
 // 无匹配规则时返回 nil。
-func PrepareAuditChanges(method, path, requestBody string, operatorAdminID uint) func() string {
+func PrepareAuditChanges(ctx context.Context, method, path, requestBody string, operatorAdminID uint) func() string {
 	for _, h := range auditHandlers {
 		if h.Match == nil || !h.Match(method, path) {
 			continue
 		}
-		before := safeBefore(h.Before, method, path, requestBody, operatorAdminID)
+		before := safeBefore(ctx, h.Before, method, path, requestBody, operatorAdminID)
 		h := h
 		return func() string {
 			if h.Diff == nil {
@@ -61,11 +62,11 @@ func PrepareAuditChanges(method, path, requestBody string, operatorAdminID uint)
 	return nil
 }
 
-func safeBefore(before AuditBeforeFunc, method, path, requestBody string, operatorAdminID uint) map[string]any {
+func safeBefore(ctx context.Context, before AuditBeforeFunc, method, path, requestBody string, operatorAdminID uint) map[string]any {
 	if before == nil {
 		return nil
 	}
-	return before(method, path, requestBody, operatorAdminID)
+	return before(ctx, method, path, requestBody, operatorAdminID)
 }
 
 func init() {
@@ -77,9 +78,9 @@ func registerDefaultAuditHandlers() {
 	RegisterAuditHandler(AuditHandler{
 		Name:  "config_batch_save",
 		Match: matchConfigSavePath,
-		Before: func(method, path, requestBody string, _ uint) map[string]any {
+		Before: func(ctx context.Context, method, path, requestBody string, _ uint) map[string]any {
 			g := ExtractStringFromJSON(requestBody, "group")
-			return LoadConfigSnapshotByGroup(g)
+			return LoadConfigSnapshotByGroup(ctx, g)
 		},
 		Diff: func(method, path string, before map[string]any, requestBody string) string {
 			return ComputeDiffAgainstNestedMap(before, requestBody, "configs")
@@ -92,11 +93,11 @@ func registerDefaultAuditHandlers() {
 		Match: func(method, path string) bool {
 			return method == "PUT" && path == "/api/admin/profile"
 		},
-		Before: func(method, path, requestBody string, operatorAdminID uint) map[string]any {
+		Before: func(ctx context.Context, method, path, requestBody string, operatorAdminID uint) map[string]any {
 			if operatorAdminID == 0 {
 				return nil
 			}
-			return LoadModelSnapshot("admins", operatorAdminID)
+			return LoadModelSnapshot(ctx, "admins", operatorAdminID)
 		},
 		Diff: func(method, path string, before map[string]any, requestBody string) string {
 			return ComputeDiffFromRequest(before, requestBody)
@@ -113,9 +114,9 @@ func registerDefaultAuditHandlers() {
 			_, id := ParseResourcePath(path)
 			return id > 0
 		},
-		Before: func(method, path, requestBody string, _ uint) map[string]any {
+		Before: func(ctx context.Context, method, path, requestBody string, _ uint) map[string]any {
 			table, id := ParseResourcePath(path)
-			return LoadModelSnapshot(table, id)
+			return LoadModelSnapshot(ctx, table, id)
 		},
 		Diff: func(method, path string, before map[string]any, requestBody string) string {
 			return ComputeDiffFromRequest(before, requestBody)
@@ -132,9 +133,9 @@ func registerDefaultAuditHandlers() {
 			_, id := ParseResourcePath(path)
 			return id > 0
 		},
-		Before: func(method, path, requestBody string, _ uint) map[string]any {
+		Before: func(ctx context.Context, method, path, requestBody string, _ uint) map[string]any {
 			table, id := ParseResourcePath(path)
-			return LoadModelSnapshot(table, id)
+			return LoadModelSnapshot(ctx, table, id)
 		},
 		Diff: func(method, path string, before map[string]any, requestBody string) string {
 			return FormatDeleteSnapshot(before)

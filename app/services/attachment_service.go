@@ -77,9 +77,9 @@ type AttachmentServiceImpl struct {
 func NewAttachmentService(ctx http.Context) AttachmentService {
 	// 从数据库读取文件存储配置
 	// 优先使用 file_disk，如果没有则使用 storage_disk（向后兼容），最后使用默认值 local
-	disk := utils.GetConfigValue("storage", "file_disk", "")
+	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
 	if disk == "" {
-		disk = utils.GetConfigValue("storage", "storage_disk", "")
+		disk = utils.GetConfigValue(ctx, "storage", "storage_disk", "")
 	}
 	if disk == "" {
 		disk = "local"
@@ -486,13 +486,13 @@ func (s *AttachmentServiceImpl) GetFileURL(attachment *models.Attachment) string
 	var configURL string
 	switch attachment.Disk {
 	case "s3":
-		configURL = utils.GetConfigValue("storage", "s3_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "s3_url", "")
 	case "oss":
-		configURL = utils.GetConfigValue("storage", "oss_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "oss_url", "")
 	case "cos":
-		configURL = utils.GetConfigValue("storage", "cos_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "cos_url", "")
 	case "minio":
-		configURL = utils.GetConfigValue("storage", "minio_url", "")
+		configURL = utils.GetConfigValue(s.ctx, "storage", "minio_url", "")
 	}
 
 	if configURL != "" {

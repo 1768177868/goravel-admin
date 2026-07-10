@@ -531,9 +531,9 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	// Create export record in processing status.
 	// Resolve storage disk config.
-	disk := utils.GetConfigValue("storage", "file_disk", "")
+	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
 	if disk == "" {
-		disk = utils.GetConfigValue("storage", "export_disk", "")
+		disk = utils.GetConfigValue(ctx, "storage", "export_disk", "")
 	}
 	if disk == "" {
 		disk = "local"

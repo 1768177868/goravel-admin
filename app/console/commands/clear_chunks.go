@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func (r *ClearChunks) Extend() command.Extend {
 // Handle Execute the console command.
 func (r *ClearChunks) Handle(ctx console.Context) error {
 	// 从数据库读取文件存储配置
-	disk := utils.GetConfigValue("storage", "file_disk", "")
+	disk := utils.GetConfigValue(context.Background(), "storage", "file_disk", "")
 	if disk == "" {
 		disk = "local"
 	}

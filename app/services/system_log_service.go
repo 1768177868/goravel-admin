@@ -112,10 +112,7 @@ func (s *SystemLogServiceImpl) GetList(filters SystemLogFilters, page, pageSize 
 
 // RecordHTTP 记录系统日志（HTTP context）
 func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, message string, attributes map[string]any) error {
-	// 检查数据库连接是否可用
-	orm := facades.Orm()
-	if orm == nil {
-		// 数据库未初始化时，静默跳过日志记录
+	if appfacades.Orm() == nil {
 		return nil
 	}
 
@@ -145,7 +142,7 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 		payload["trace_id"] = traceID
 	}
 
-	if err := orm.Query().Table("system_logs").Create(payload); err != nil {
+	if err := appfacades.OrmQuery(ctx).Table("system_logs").Create(payload); err != nil {
 		return err
 	}
 	return nil
@@ -153,10 +150,7 @@ func (s *SystemLogServiceImpl) RecordHTTP(ctx http.Context, level, module, messa
 
 // Record 记录系统日志（标准 context）
 func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, message string, attributes map[string]any) error {
-	// 检查数据库连接是否可用
-	orm := facades.Orm()
-	if orm == nil {
-		// 数据库未初始化时，静默跳过日志记录
+	if appfacades.Orm() == nil {
 		return nil
 	}
 
@@ -186,7 +180,7 @@ func (s *SystemLogServiceImpl) Record(ctx context.Context, level, module, messag
 		payload["trace_id"] = traceID
 	}
 
-	if err := orm.Query().Table("system_logs").Create(payload); err != nil {
+	if err := appfacades.OrmQuery(ctx).Table("system_logs").Create(payload); err != nil {
 		return err
 	}
 	return nil

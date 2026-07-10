@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goravel/framework/contracts/database/schema"
@@ -20,7 +21,7 @@ func (r *M20250131000003AddTransactionHashToUserBalanceLogsShardingTables) Signa
 
 func (r *M20250131000003AddTransactionHashToUserBalanceLogsShardingTables) Up() error {
 	// 获取所有已存在的用户余额变动记录分表
-	balanceLogsTables, err := utils.GetAllExistingShardingTables("user_balance_logs")
+	balanceLogsTables, err := utils.GetAllExistingShardingTables(context.Background(), "user_balance_logs")
 	if err != nil {
 		return fmt.Errorf("获取用户余额变动记录分表列表失败: %v", err)
 	}
@@ -76,7 +77,7 @@ func (r *M20250131000003AddTransactionHashToUserBalanceLogsShardingTables) Up() 
 }
 
 func (r *M20250131000003AddTransactionHashToUserBalanceLogsShardingTables) Down() error {
-	balanceLogsTables, err := utils.GetAllExistingShardingTables("user_balance_logs")
+	balanceLogsTables, err := utils.GetAllExistingShardingTables(context.Background(), "user_balance_logs")
 	if err != nil {
 		return fmt.Errorf("获取用户余额变动记录分表列表失败: %v", err)
 	}
