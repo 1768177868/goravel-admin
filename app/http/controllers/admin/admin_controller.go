@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	stderrors "errors"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -22,10 +21,8 @@ import (
 	"goravel/app/services"
 )
 
-type AdminController struct {
-	adminService               services.AdminService
-	googleAuthenticatorService services.GoogleAuthenticatorService
-}
+type AdminController struct {}
+
 
 // AdminResponse 管理员 JSON 字段（列表项含 2FA/超管；详情/写接口可能不含 is_2fa_bound）
 type AdminResponse struct {
@@ -88,17 +85,23 @@ type UnbindGoogleAuthRequest struct {
 }
 
 func NewAdminController() *AdminController {
-	return &AdminController{
-		adminService:               services.NewAdminServiceImpl(context.Background()),
-		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(context.Background()),
-	}
+	return &AdminController{}
 }
+
+func (r *AdminController) adminService(ctx http.Context) services.AdminService {
+	return services.NewAdminServiceImpl(ctx)
+}
+
+func (r *AdminController) googleAuthenticatorService(ctx http.Context) services.GoogleAuthenticatorService {
+	return services.NewGoogleAuthenticatorServiceImpl(ctx)
+}
+
 
 // findAdminByID 根据ID查找管理员，如果不存在则返回错误响应
 // withDepartment 为 true 时会预加载 Department 关联
 // withRoles 为 true 时会预加载 Roles 关联
 func (r *AdminController) findAdminByID(ctx http.Context, id uint, withDepartment bool, withRoles bool) (*models.Admin, http.Response) {
-	admin, err := r.adminService.GetByID(id, withDepartment, withRoles)
+	admin, err := r.adminService(ctx).GetByID(id, withDepartment, withRoles)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrAdminNotFound.Code)
 	}
@@ -183,7 +186,7 @@ func (r *AdminController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	admins, total, err := r.adminService.GetList(filters, page, pageSize)
+	admins, total, err := r.adminService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"action": "list_admins",
@@ -290,7 +293,7 @@ func (r *AdminController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", validationErrors.All())
 	}
 
-	admin, err := r.adminService.CreateAdmin(services.CreateAdminInput{
+	admin, err := r.adminService(ctx).CreateAdmin(services.CreateAdminInput{
 		Username:     adminCreate.Username,
 		Password:     adminCreate.Password,
 		Nickname:     adminCreate.Nickname,
@@ -354,7 +357,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 	r.applyAdminUpdatableFields(admin, adminUpdate, allInputs)
 
 	if hasInput(allInputs, "status") {
-		if err := r.adminService.ValidateStatusChange(admin.ID, adminUpdate.Status); err != nil {
+		if err := r.adminService(ctx).ValidateStatusChange(admin.ID, adminUpdate.Status); err != nil {
 			return response.Error(ctx, http.StatusForbidden, err)
 		}
 		admin.Status = adminUpdate.Status
@@ -371,7 +374,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 		admin.Password = hashedPassword
 	}
 
-	if err := r.adminService.Update(admin); err != nil {
+	if err := r.adminService(ctx).Update(admin); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -379,14 +382,14 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 
 	// 检查是否尝试修改 admin 用户的角色
 	if hasInput(allInputs, "role_ids") {
-		deduplicatedRoleIDs := r.adminService.NormalizeRoleIDs(adminUpdate.RoleIDs)
-		if err := r.adminService.ValidateRoleChange(admin.ID, admin.Roles, deduplicatedRoleIDs); err != nil {
+		deduplicatedRoleIDs := r.adminService(ctx).NormalizeRoleIDs(adminUpdate.RoleIDs)
+		if err := r.adminService(ctx).ValidateRoleChange(admin.ID, admin.Roles, deduplicatedRoleIDs); err != nil {
 			return response.Error(ctx, http.StatusForbidden, err)
 		}
 
 		// 即使角色ID没有改变，也调用 SyncRoles 来清理重复数据
 		// 使用去重后的角色ID列表
-		if err := r.adminService.SyncRoles(admin, deduplicatedRoleIDs); err != nil {
+		if err := r.adminService(ctx).SyncRoles(admin, deduplicatedRoleIDs); err != nil {
 			return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 				"admin_id": admin.ID,
 				"role_ids": deduplicatedRoleIDs,
@@ -414,7 +417,7 @@ func (r *AdminController) Update(ctx http.Context) http.Response {
 func (r *AdminController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
-	if r.adminService.IsProtectedAdmin(id) {
+	if r.adminService(ctx).IsProtectedAdmin(id) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAdminProtectedCannotDelete.Code)
 	}
 
@@ -477,7 +480,7 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	// 检查当前管理员是否已绑定谷歌验证码
-	isBound, err := r.googleAuthenticatorService.IsBound(currentAdmin.ID)
+	isBound, err := r.googleAuthenticatorService(ctx).IsBound(currentAdmin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": currentAdmin.ID,
@@ -495,7 +498,7 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	// 获取当前管理员的密钥
-	secret, err := r.googleAuthenticatorService.GetSecret(currentAdmin.ID)
+	secret, err := r.googleAuthenticatorService(ctx).GetSecret(currentAdmin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"admin_id": currentAdmin.ID,
@@ -507,12 +510,12 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	// 验证当前管理员的验证码
-	if !r.googleAuthenticatorService.Verify(secret, code) {
+	if !r.googleAuthenticatorService(ctx).Verify(secret, code) {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 	}
 
 	// 检查目标管理员是否已绑定
-	targetIsBound, err := r.googleAuthenticatorService.IsBound(targetAdminID)
+	targetIsBound, err := r.googleAuthenticatorService(ctx).IsBound(targetAdminID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"target_admin_id": targetAdminID,
@@ -524,7 +527,7 @@ func (r *AdminController) UnbindGoogleAuthenticator(ctx http.Context) http.Respo
 	}
 
 	// 解绑目标管理员的谷歌验证码
-	if err := r.googleAuthenticatorService.Unbind(targetAdminID); err != nil {
+	if err := r.googleAuthenticatorService(ctx).Unbind(targetAdminID); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"target_admin_id":  targetAdminID,
 			"current_admin_id": currentAdmin.ID,
@@ -559,11 +562,11 @@ func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Respon
 		return resp
 	}
 
-	if r.adminService.IsProtectedAdmin(targetAdminID) {
+	if r.adminService(ctx).IsProtectedAdmin(targetAdminID) {
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrProtectedAdmin.Code)
 	}
 
-	targetIsBound, err := r.googleAuthenticatorService.IsBound(targetAdminID)
+	targetIsBound, err := r.googleAuthenticatorService(ctx).IsBound(targetAdminID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"target_admin_id": targetAdminID,
@@ -573,7 +576,7 @@ func (r *AdminController) ResetGoogleAuthenticator(ctx http.Context) http.Respon
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleAuthenticatorNotBound.Code)
 	}
 
-	if err := r.googleAuthenticatorService.Unbind(targetAdminID); err != nil {
+	if err := r.googleAuthenticatorService(ctx).Unbind(targetAdminID); err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"target_admin_id": targetAdminID,
 		})
@@ -630,7 +633,7 @@ func (r *AdminController) Export(ctx http.Context) http.Response {
 	filters := r.buildFilters(ctx)
 
 	// 导出时获取所有数据，不分页
-	admins, err := r.adminService.GetAllAdminsForExport(filters)
+	admins, err := r.adminService(ctx).GetAllAdminsForExport(filters)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "admin", err, map[string]any{
 			"action":   "export_admins",

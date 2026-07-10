@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	appfacades "goravel/app/facades"
 
@@ -27,9 +26,8 @@ import (
 	"goravel/app/services"
 )
 
-type ArticleController struct {
-	ArticleService services.ArticleService
-}
+type ArticleController struct {}
+
 
 func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
 	if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -60,10 +58,13 @@ func (c *ArticleController) buildArticleFilters(ctx http.Context) services.Artic
 }
 
 func NewArticleController() *ArticleController {
-	return &ArticleController{
-		ArticleService: services.NewArticleService(context.Background()),
-	}
+	return &ArticleController{}
 }
+
+func (c *ArticleController) ArticleService(ctx http.Context) services.ArticleService {
+	return services.NewArticleService(ctx)
+}
+
 
 // Index lists Article records.
 func (c *ArticleController) Index(ctx http.Context) http.Response {
@@ -72,7 +73,7 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 
 	filters := c.buildArticleFilters(ctx)
 
-	list, total, err := c.ArticleService.GetList(filters, page, pageSize)
+	list, total, err := c.ArticleService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
@@ -88,7 +89,7 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 // Show returns Article details.
 func (c *ArticleController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	item, err := c.ArticleService.GetByID(id)
+	item, err := c.ArticleService(ctx).GetByID(id)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusNotFound, err)
 	}
@@ -105,7 +106,7 @@ func (c *ArticleController) Store(ctx http.Context) http.Response {
 		return resp
 	}
 
-	item, err := c.ArticleService.Create(&req)
+	item, err := c.ArticleService(ctx).Create(&req)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
@@ -124,7 +125,7 @@ func (c *ArticleController) Update(ctx http.Context) http.Response {
 		return resp
 	}
 
-	item, err := c.ArticleService.Update(id, &req)
+	item, err := c.ArticleService(ctx).Update(id, &req)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
@@ -137,7 +138,7 @@ func (c *ArticleController) Update(ctx http.Context) http.Response {
 // Destroy deletes a Article.
 func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if err := c.ArticleService.Delete(id); err != nil {
+	if err := c.ArticleService(ctx).Delete(id); err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
 

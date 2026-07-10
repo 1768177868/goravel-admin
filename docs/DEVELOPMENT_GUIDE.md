@@ -125,14 +125,19 @@ type Guestbook struct {
 
 ### 3. 创建服务层
 
+Goravel v1.18：`NewXxxService(ctx)` + `appfacades.OrmQuery(s.ctx)`；Controller 用 getter 传请求 `ctx`。
+
 创建服务接口和实现：`app/services/guestbook_service.go`
 
 ```go
 package services
 
 import (
+	"context"
+
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
+
+	appfacades "goravel/app/facades"
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
@@ -158,22 +163,24 @@ type GuestbookFilters struct {
 	OrderBy   string
 }
 
-type GuestbookServiceImpl struct{}
+type GuestbookServiceImpl struct {
+	ctx context.Context
+}
 
-func NewGuestbookServiceImpl() *GuestbookServiceImpl {
-	return &GuestbookServiceImpl{}
+func NewGuestbookServiceImpl(ctx context.Context) *GuestbookServiceImpl {
+	return &GuestbookServiceImpl{ctx: ctx}
 }
 
 func (s *GuestbookServiceImpl) GetByID(id uint) (*models.Guestbook, error) {
 	var guestbook models.Guestbook
-	if err := facades.Orm().Query().Where("id", id).First(&guestbook); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).First(&guestbook); err != nil {
 		return nil, apperrors.ErrNotFound.WithError(err)
 	}
 	return &guestbook, nil
 }
 
 func (s *GuestbookServiceImpl) buildQuery(filters GuestbookFilters) orm.Query {
-	query := facades.Orm().Query().Model(&models.Guestbook{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Guestbook{})
 
 	if filters.Name != "" {
 		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
@@ -219,7 +226,7 @@ func (s *GuestbookServiceImpl) GetList(filters GuestbookFilters, page, pageSize 
 
 func (s *GuestbookServiceImpl) Create(data map[string]any) (*models.Guestbook, error) {
 	var guestbook models.Guestbook
-	if err := facades.Orm().Query().Create(&guestbook, data); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(&guestbook, data); err != nil {
 		return nil, err
 	}
 	return &guestbook, nil
@@ -227,29 +234,29 @@ func (s *GuestbookServiceImpl) Create(data map[string]any) (*models.Guestbook, e
 
 func (s *GuestbookServiceImpl) Update(id uint, data map[string]any) error {
 	var guestbook models.Guestbook
-	if err := facades.Orm().Query().Where("id", id).First(&guestbook); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).First(&guestbook); err != nil {
 		return apperrors.ErrNotFound.WithError(err)
 	}
-	return facades.Orm().Query().Save(&guestbook, data)
+	return appfacades.OrmQuery(s.ctx).Save(&guestbook, data)
 }
 
 func (s *GuestbookServiceImpl) Delete(id uint) error {
 	var guestbook models.Guestbook
-	if err := facades.Orm().Query().Where("id", id).First(&guestbook); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).First(&guestbook); err != nil {
 		return apperrors.ErrNotFound.WithError(err)
 	}
-	_, err := facades.Orm().Query().Delete(&guestbook)
+	_, err := appfacades.OrmQuery(s.ctx).Delete(&guestbook)
 	return err
 }
 
 func (s *GuestbookServiceImpl) Reply(id uint, replyContent string) error {
 	var guestbook models.Guestbook
-	if err := facades.Orm().Query().Where("id", id).First(&guestbook); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).First(&guestbook); err != nil {
 		return apperrors.ErrNotFound.WithError(err)
 	}
 	guestbook.Reply = replyContent
 	guestbook.Status = 1 // 回复后自动审核通过
-	return facades.Orm().Query().Save(&guestbook)
+	return appfacades.OrmQuery(s.ctx).Save(&guestbook)
 }
 ```
 
@@ -286,28 +293,17 @@ func (r *GuestbookCreate) Rules(ctx http.Context) map[string]any {
 	}
 }
 
-func (r *GuestbookCreate) Messages(ctx http.Context) map[string]any {
-	return map[string]any{
-		"name.required":    trans.Get(ctx, "validation_name_required"),
-		"name.max":     trans.Get(ctx, "validation_name_max"),
-		"email.required":   trans.Get(ctx, "validation_email_required"),
-		"email.email":       trans.Get(ctx, "validation_email_format"),
-		"content.required": trans.Get(ctx, "validation_content_required"),
-		"content.min":  trans.Get(ctx, "validation_content_min"),
-		"content.max":  trans.Get(ctx, "validation_content_max"),
-		"status.in":         trans.Get(ctx, "validation_status_in"),
-	}
-}
-
 func (r *GuestbookCreate) Attributes(ctx http.Context) map[string]any {
 	return map[string]any{
-		"name":    trans.Get(ctx, "validation_name"),
-		"email":   trans.Get(ctx, "validation_email"),
-		"content": trans.Get(ctx, "validation_content"),
-		"status":  trans.Get(ctx, "validation_status"),
+		"name":    trans.Get(ctx, "validation.attributes.name"),
+		"email":   trans.Get(ctx, "validation.attributes.email"),
+		"content": trans.Get(ctx, "validation.attributes.content"),
+		"status":  trans.Get(ctx, "validation.attributes.status"),
 	}
 }
 ```
+
+校验文案统一维护在 `lang/cn/validation.json` 与 `lang/en/validation.json`，无需再实现 `Messages()`。
 
 创建更新请求验证：`app/http/requests/admin/guestbook_update.go`
 
@@ -422,14 +418,14 @@ import (
 	"goravel/app/services"
 )
 
-type GuestbookController struct {
-	guestbookService services.GuestbookService
-}
+type GuestbookController struct{}
 
 func NewGuestbookController() *GuestbookController {
-	return &GuestbookController{
-		guestbookService: services.NewGuestbookServiceImpl(),
-	}
+	return &GuestbookController{}
+}
+
+func (r *GuestbookController) guestbookService(ctx http.Context) services.GuestbookService {
+	return services.NewGuestbookServiceImpl(ctx)
 }
 
 // Index 留言列表
@@ -477,7 +473,7 @@ func (r *GuestbookController) Index(ctx http.Context) http.Response {
 		OrderBy:   ctx.Request().Query("order_by", ""),
 	}
 
-	guestbooks, total, err := r.guestbookService.GetList(filters, page, pageSize)
+	guestbooks, total, err := r.guestbookService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -503,7 +499,7 @@ func (r *GuestbookController) Index(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *GuestbookController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	guestbook, err := r.guestbookService.GetByID(id)
+	guestbook, err := r.guestbookService(ctx).GetByID(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrNotFound.Code)
 	}
@@ -550,7 +546,7 @@ func (r *GuestbookController) Store(ctx http.Context) http.Response {
 		"user_agent": userAgent,
 	}
 
-	guestbook, err := r.guestbookService.Create(data)
+	guestbook, err := r.guestbookService(ctx).Create(data)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -605,11 +601,11 @@ func (r *GuestbookController) Update(ctx http.Context) http.Response {
 		data["status"] = req.Status
 	}
 
-	if err := r.guestbookService.Update(id, data); err != nil {
+	if err := r.guestbookService(ctx).Update(id, data); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
-	guestbook, _ := r.guestbookService.GetByID(id)
+	guestbook, _ := r.guestbookService(ctx).GetByID(id)
 	return response.Success(ctx, http.Json{
 		"guestbook": guestbook,
 	})
@@ -629,7 +625,7 @@ func (r *GuestbookController) Update(ctx http.Context) http.Response {
 func (r *GuestbookController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
 
-	if err := r.guestbookService.Delete(id); err != nil {
+	if err := r.guestbookService(ctx).Delete(id); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -660,11 +656,11 @@ func (r *GuestbookController) Reply(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	if err := r.guestbookService.Reply(id, req.Reply); err != nil {
+	if err := r.guestbookService(ctx).Reply(id, req.Reply); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
-	guestbook, _ := r.guestbookService.GetByID(id)
+	guestbook, _ := r.guestbookService(ctx).GetByID(id)
 	return response.Success(ctx, http.Json{
 		"guestbook": guestbook,
 	})

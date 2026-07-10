@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 
 	"github.com/goravel/framework/contracts/http"
 
@@ -15,9 +14,8 @@ import (
 	"goravel/app/utils"
 )
 
-type BlacklistController struct {
-	blacklistService services.BlacklistService
-}
+type BlacklistController struct {}
+
 
 type BlacklistResponse struct {
 	ID        uint   `json:"id" example:"1"`                           // 黑名单ID
@@ -48,14 +46,17 @@ type BlacklistDetailResponse struct {
 }
 
 func NewBlacklistController() *BlacklistController {
-	return &BlacklistController{
-		blacklistService: services.NewBlacklistService(context.Background()),
-	}
+	return &BlacklistController{}
 }
+
+func (r *BlacklistController) blacklistService(ctx http.Context) services.BlacklistService {
+	return services.NewBlacklistService(ctx)
+}
+
 
 // findBlacklistByID 根据ID查找黑名单，如果不存在则返回错误响应
 func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*models.Blacklist, http.Response) {
-	blacklist, err := r.blacklistService.GetByID(id)
+	blacklist, err := r.blacklistService(ctx).GetByID(id)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
@@ -101,7 +102,7 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	blacklists, total, err := r.blacklistService.GetList(filters, page, pageSize)
+	blacklists, total, err := r.blacklistService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -171,7 +172,7 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidIPFormat.Code)
 	}
 
-	blacklist, err := r.blacklistService.Create(
+	blacklist, err := r.blacklistService(ctx).Create(
 		blacklistCreate.IP,
 		blacklistCreate.Remark,
 		blacklistCreate.Status,
@@ -241,7 +242,7 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 		blacklist.Status = blacklistUpdate.Status
 	}
 
-	if err := r.blacklistService.Update(blacklist); err != nil {
+	if err := r.blacklistService(ctx).Update(blacklist); err != nil {
 		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"blacklist_id": blacklist.ID,
 		})
@@ -271,7 +272,7 @@ func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if err := r.blacklistService.Delete(blacklist); err != nil {
+	if err := r.blacklistService(ctx).Delete(blacklist); err != nil {
 		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
 			"blacklist_id": blacklist.ID,
 		})

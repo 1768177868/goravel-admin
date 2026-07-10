@@ -60,13 +60,18 @@ type Xxx struct {
 }
 ```
 
-### 3. 服务层
+### 3. 服务层（Goravel v1.18）
 `app/services/xxx_service.go`
+
+- Service 构造：`NewXxxService(ctx context.Context)`，内部用 `appfacades.OrmQuery(s.ctx)` 访问数据库
+- Controller 通过 getter 按请求传 `ctx`：`c.xxxService(ctx).GetList(...)`
+
 ```go
 package services
 import (
+	"context"
 	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
+	appfacades "goravel/app/facades"
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/models"
@@ -82,12 +87,14 @@ type XxxFilters struct {
 	Name    string
 	OrderBy string
 }
-type XxxServiceImpl struct{}
-func NewXxxServiceImpl() *XxxServiceImpl {
-	return &XxxServiceImpl{}
+type XxxServiceImpl struct {
+	ctx context.Context
+}
+func NewXxxServiceImpl(ctx context.Context) *XxxServiceImpl {
+	return &XxxServiceImpl{ctx: ctx}
 }
 func (s *XxxServiceImpl) buildQuery(filters XxxFilters) orm.Query {
-	query := facades.Orm().Query().Model(&models.Xxx{})
+	query := appfacades.OrmQuery(s.ctx).Model(&models.Xxx{})
 	if filters.Name != "" {
 		query = query.Where("name", "like", "%"+filters.Name+"%")
 	}
@@ -110,7 +117,7 @@ func (s *XxxServiceImpl) GetList(filters XxxFilters, page, pageSize int) ([]mode
 }
 func (s *XxxServiceImpl) GetByID(id uint, withRelations ...bool) (*models.Xxx, error) {
 	var item models.Xxx
-	query := facades.Orm().Query().Where("id", id)
+	query := appfacades.OrmQuery(s.ctx).Where("id", id)
 	if len(withRelations) > 0 && withRelations[0] {
 		query = query.With("RelationName")
 	}
@@ -122,7 +129,7 @@ func (s *XxxServiceImpl) GetByID(id uint, withRelations ...bool) (*models.Xxx, e
 func (s *XxxServiceImpl) Create(data map[string]any) (*models.Xxx, error) {
 	item := &models.Xxx{}
 	// 赋值
-	if err := facades.Orm().Query().Create(item); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Create(item); err != nil {
 		return nil, err
 	}
 	return item, nil
@@ -133,14 +140,14 @@ func (s *XxxServiceImpl) Update(id uint, data map[string]any) error {
 		return err
 	}
 	// 更新字段
-	return facades.Orm().Query().Save(item)
+	return appfacades.OrmQuery(s.ctx).Save(item)
 }
 func (s *XxxServiceImpl) Delete(id uint) error {
 	item, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
-	return facades.Orm().Query().Delete(item)
+	return appfacades.OrmQuery(s.ctx).Delete(item)
 }
 ```
 
@@ -195,14 +202,16 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/services"
 )
-type XxxController struct {
-	xxxService services.XxxService
-}
+type XxxController struct{}
+
 func NewXxxController() *XxxController {
-	return &XxxController{
-		xxxService: services.NewXxxServiceImpl(),
-	}
+	return &XxxController{}
 }
+
+func (r *XxxController) xxxService(ctx http.Context) services.XxxService {
+	return services.NewXxxServiceImpl(ctx)
+}
+
 func (r *XxxController) buildFilters(ctx http.Context) services.XxxFilters {
 	name := ctx.Request().Input("name", ctx.Request().Query("name", ""))
 	orderBy := ctx.Request().Input("order_by", ctx.Request().Query("order_by", ""))
@@ -220,7 +229,7 @@ func (r *XxxController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 	filters := r.buildFilters(ctx)
-	list, total, err := r.xxxService.GetList(filters, page, pageSize)
+	list, total, err := r.xxxService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -239,7 +248,7 @@ func (r *XxxController) Index(ctx http.Context) http.Response {
 // @Security BearerAuth
 func (r *XxxController) Show(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	item, err := r.xxxService.GetByID(id)
+	item, err := r.xxxService(ctx).GetByID(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrXxxNotFound.Code)
 	}
@@ -258,7 +267,7 @@ func (r *XxxController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_fields")
 	}
 	data := map[string]any{"name": req.Name, "status": req.Status}
-	item, err := r.xxxService.Create(data)
+	item, err := r.xxxService(ctx).Create(data)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -279,7 +288,7 @@ func (r *XxxController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_fields")
 	}
 	data := map[string]any{"name": req.Name, "status": req.Status}
-	if err := r.xxxService.Update(id, data); err != nil {
+	if err := r.xxxService(ctx).Update(id, data); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 	return response.Success(ctx, http.Json{})
@@ -293,7 +302,7 @@ func (r *XxxController) Update(ctx http.Context) http.Response {
 // @Security BearerAuth
 func (r *XxxController) Destroy(ctx http.Context) http.Response {
 	id := cast.ToUint(ctx.Request().Route("id"))
-	if err := r.xxxService.Delete(id); err != nil {
+	if err := r.xxxService(ctx).Delete(id); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 	return response.Success(ctx, http.Json{})

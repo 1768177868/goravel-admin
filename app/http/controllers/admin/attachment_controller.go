@@ -18,9 +18,7 @@ import (
 	"github.com/goravel/framework/facades"
 )
 
-type AttachmentController struct {
-	attachmentService services.AttachmentService
-}
+type AttachmentController struct{}
 
 func NewAttachmentController() *AttachmentController {
 	return &AttachmentController{}

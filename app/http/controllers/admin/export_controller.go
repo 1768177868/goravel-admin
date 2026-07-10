@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	nethttp "net/http"
@@ -18,15 +17,17 @@ import (
 	"goravel/app/utils/errorlog"
 )
 
-type ExportController struct {
-	exportRecordService services.ExportRecordService
-}
+type ExportController struct {}
+
 
 func NewExportController() *ExportController {
-	return &ExportController{
-		exportRecordService: services.NewExportRecordService(context.Background()),
-	}
+	return &ExportController{}
 }
+
+func (r *ExportController) exportRecordService(ctx http.Context) services.ExportRecordService {
+	return services.NewExportRecordService(ctx)
+}
+
 
 // Index 导出记录列表
 func (r *ExportController) Index(ctx http.Context) http.Response {
@@ -34,7 +35,7 @@ func (r *ExportController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	exports, total, err := r.exportRecordService.GetList(filters, page, pageSize)
+	exports, total, err := r.exportRecordService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
@@ -97,7 +98,7 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	export, err := r.exportRecordService.GetByID(id)
+	export, err := r.exportRecordService(ctx).GetByID(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
@@ -115,7 +116,7 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 		}
 	}
 
-	if err := r.exportRecordService.Delete(id); err != nil {
+	if err := r.exportRecordService(ctx).Delete(id); err != nil {
 		return response.ErrorWithLog(ctx, "export", err, map[string]any{
 			"exportId": id,
 		})
@@ -131,7 +132,7 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
 	}
 
-	export, err := r.exportRecordService.GetByID(id)
+	export, err := r.exportRecordService(ctx).GetByID(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
@@ -199,7 +200,7 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 	ids := req.IDs
 
 	// 查询要删除的导出记录（用于删除源文件）
-	exports, err := r.exportRecordService.GetByIDs(ids)
+	exports, err := r.exportRecordService(ctx).GetByIDs(ids)
 	if err == nil {
 		// 尝试删除源文件（忽略失败，仅记录日志）
 		for _, export := range exports {
@@ -217,7 +218,7 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 	}
 
 	// 批量删除数据库记录
-	if err := r.exportRecordService.BatchDelete(ids); err != nil {
+	if err := r.exportRecordService(ctx).BatchDelete(ids); err != nil {
 		return response.ErrorWithLog(ctx, "export", err, map[string]any{
 			"ids": ids,
 		})
@@ -290,7 +291,7 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 			return nil
 		case <-ticker.C:
 			// 查询导出任务
-			export, err := r.exportRecordService.GetByID(exportID)
+			export, err := r.exportRecordService(ctx).GetByID(exportID)
 			if err != nil {
 				// 导出任务不存在或已删除
 				errorMsg := map[string]any{

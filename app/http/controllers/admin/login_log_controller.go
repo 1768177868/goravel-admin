@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 	"time"
 
@@ -15,20 +14,22 @@ import (
 	"goravel/app/services"
 )
 
-type LoginLogController struct {
-	loginLogService services.LoginLogService
-}
+type LoginLogController struct {}
+
 
 func NewLoginLogController() *LoginLogController {
-	return &LoginLogController{
-		loginLogService: services.NewLoginLogService(context.Background()),
-	}
+	return &LoginLogController{}
 }
+
+func (r *LoginLogController) loginLogService(ctx http.Context) services.LoginLogService {
+	return services.NewLoginLogService(ctx)
+}
+
 
 // findLoginLogByID 根据ID查找登录日志，如果不存在则返回错误响应
 // withAdmin 为 true 时会预加载 Admin 关联
 func (r *LoginLogController) findLoginLogByID(ctx http.Context, id uint, withAdmin bool) (*models.LoginLog, http.Response) {
-	log, err := r.loginLogService.GetByID(id, withAdmin)
+	log, err := r.loginLogService(ctx).GetByID(id, withAdmin)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrLogNotFound.Code)
 	}
@@ -63,7 +64,7 @@ func (r *LoginLogController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
-	logs, total, err := r.loginLogService.GetList(filters, page, pageSize)
+	logs, total, err := r.loginLogService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "login-log", err)
 	}

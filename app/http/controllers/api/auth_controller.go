@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 	"time"
 
@@ -15,14 +14,14 @@ import (
 	"goravel/app/services"
 )
 
-type AuthController struct {
-	userService services.UserService
-}
+type AuthController struct{}
 
 func NewAuthController() *AuthController {
-	return &AuthController{
-		userService: services.NewUserService(context.Background()),
-	}
+	return &AuthController{}
+}
+
+func (r *AuthController) userService(ctx http.Context) services.UserService {
+	return services.NewUserService(ctx)
 }
 
 // Register 用户注册
@@ -37,7 +36,7 @@ func (r *AuthController) Register(ctx http.Context) http.Response {
 	}
 
 	// 使用服务方法创建用户（包含验证、密码加密、默认货币设置）
-	user, err := r.userService.CreateWithValidation(
+	user, err := r.userService(ctx).CreateWithValidation(
 		registerRequest.Username,
 		registerRequest.Password,
 		registerRequest.Nickname,

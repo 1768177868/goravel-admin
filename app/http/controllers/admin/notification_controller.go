@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"regexp"
 	"strings"
 
@@ -17,15 +16,17 @@ import (
 	"goravel/app/utils/logger"
 )
 
-type NotificationController struct {
-	service services.NotificationService
-}
+type NotificationController struct {}
+
 
 func NewNotificationController() *NotificationController {
-	return &NotificationController{
-		service: services.NewNotificationServiceImpl(context.Background()),
-	}
+	return &NotificationController{}
 }
+
+func (r *NotificationController) service(ctx http.Context) services.NotificationService {
+	return services.NewNotificationServiceImpl(ctx)
+}
+
 
 func (r *NotificationController) Index(ctx http.Context) http.Response {
 	admin := r.currentAdmin(ctx)
@@ -37,12 +38,12 @@ func (r *NotificationController) Index(ctx http.Context) http.Response {
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 	notifType := ctx.Request().Query("type", "")
 	isRead := ctx.Request().Query("is_read", "")
-	notifications, total, err := r.service.List(admin.ID, page, pageSize, notifType, isRead)
+	notifications, total, err := r.service(ctx).List(admin.ID, page, pageSize, notifType, isRead)
 	if err != nil {
 		logger.ErrorfHTTP(ctx, "list notifications error: %v", err)
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
-	count, err := r.service.UnreadCount(admin.ID)
+	count, err := r.service(ctx).UnreadCount(admin.ID)
 	if err != nil {
 		logger.ErrorfHTTP(ctx, "unread count error: %v", err)
 	}
@@ -65,7 +66,7 @@ func (r *NotificationController) UnreadCount(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	count, err := r.service.UnreadCount(admin.ID)
+	count, err := r.service(ctx).UnreadCount(admin.ID)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -82,12 +83,12 @@ func (r *NotificationController) Recent(ctx http.Context) http.Response {
 	}
 
 	limit := helpers.GetIntQuery(ctx, "limit", 5)
-	notifications, err := r.service.ListRecent(admin.ID, limit)
+	notifications, err := r.service(ctx).ListRecent(admin.ID, limit)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 
-	count, _ := r.service.UnreadCount(admin.ID)
+	count, _ := r.service(ctx).UnreadCount(admin.ID)
 
 	return response.Success(ctx, http.Json{
 		"notifications": notifications,
@@ -106,7 +107,7 @@ func (r *NotificationController) MarkRead(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsRequired.Code)
 	}
 
-	if err := r.service.MarkRead(admin.ID, id); err != nil {
+	if err := r.service(ctx).MarkRead(admin.ID, id); err != nil {
 		// 使用业务错误类型，直接提取错误码
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
@@ -125,7 +126,7 @@ func (r *NotificationController) MarkAllRead(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
 
-	if err := r.service.MarkAllRead(admin.ID); err != nil {
+	if err := r.service(ctx).MarkAllRead(admin.ID); err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
 	}
 
@@ -203,7 +204,7 @@ func (r *NotificationController) Store(ctx http.Context) http.Response {
 	}
 
 	senderID := admin.ID
-	notification, err := r.service.Create(title, content, notificationType, &senderID, receiverID)
+	notification, err := r.service(ctx).Create(title, content, notificationType, &senderID, receiverID)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrCreateFailed.Code)
 	}

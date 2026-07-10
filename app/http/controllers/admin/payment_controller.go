@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -23,9 +22,8 @@ import (
 	"goravel/app/utils"
 )
 
-type PaymentController struct {
-	paymentService services.PaymentService
-}
+type PaymentController struct {}
+
 
 type PaymentMethodSimple struct {
 	ID   uint   `json:"id" example:"1"`
@@ -67,10 +65,13 @@ type PaymentDetailResponse struct {
 }
 
 func NewPaymentController() *PaymentController {
-	return &PaymentController{
-		paymentService: services.NewPaymentService(context.Background()),
-	}
+	return &PaymentController{}
 }
+
+func (r *PaymentController) paymentService(ctx http.Context) services.PaymentService {
+	return services.NewPaymentService(ctx)
+}
+
 
 func (r *PaymentController) buildFilters(ctx http.Context) (services.PaymentFilters, http.Response) {
 	paymentNo := ctx.Request().Input("payment_no", ctx.Request().Query("payment_no", ""))
@@ -124,7 +125,7 @@ func (r *PaymentController) Index(ctx http.Context) http.Response {
 		return resp
 	}
 
-	payments, total, err := r.paymentService.GetPayments(filters, page, pageSize)
+	payments, total, err := r.paymentService(ctx).GetPayments(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "payment", err, map[string]any{
 			"filters": filters,
@@ -174,7 +175,7 @@ func (r *PaymentController) Show(ctx http.Context) http.Response {
 	if paymentNo == "" {
 		return response.Error(ctx, http.StatusBadRequest, "payment_no_required")
 	}
-	payment, err := r.paymentService.GetPaymentByPaymentNo(paymentNo)
+	payment, err := r.paymentService(ctx).GetPaymentByPaymentNo(paymentNo)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrPaymentNotFound.Code)
 	}

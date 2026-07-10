@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"context"
-
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -12,37 +10,32 @@ import (
 	"goravel/app/services/option_providers"
 )
 
-type OptionController struct {
-	providers         map[string]services.OptionProvider
-	dictionaryService services.DictionaryService
-}
+type OptionController struct{}
 
 func NewOptionController() *OptionController {
+	return &OptionController{}
+}
 
-	// 注册所有选项提供者
-	// 添加新的选项类型时，只需：
-	// 1. 在 app/services/option_providers/ 目录下创建新的提供者文件
-	// 2. 实现 services.OptionProvider 接口
-	// 3. 在此处注册新的提供者
-	providers := make(map[string]services.OptionProvider)
-	bg := context.Background()
-	providers["role"] = option_providers.NewRoleOptionProvider(bg)
-	providers["department"] = option_providers.NewDepartmentOptionProvider(bg)
-	providers["position"] = option_providers.NewPositionOptionProvider(bg)
-	providers["menu"] = option_providers.NewMenuOptionProvider(bg, services.NewTreeServiceImpl(bg))
-	providers["status"] = option_providers.NewStatusOptionProvider(bg)
-	providers["method"] = option_providers.NewMethodOptionProvider(bg)
-	providers["yes_no"] = option_providers.NewYesNoOptionProvider(bg)
-	providers["admin"] = option_providers.NewAdminOptionProvider(bg)
-	providers["payment_method"] = option_providers.NewPaymentMethodOptionProvider(bg)
-	providers["form_demo"] = option_providers.NewFormDemoOptionProvider(bg)
-	// 在此处添加新的选项提供者，例如：
-	// providers["new_type"] = option_providers.NewNewTypeOptionProvider()
+func (r *OptionController) dictionaryService(ctx http.Context) services.DictionaryService {
+	return services.NewDictionaryService(ctx)
+}
 
-	return &OptionController{
-		providers:         providers,
-		dictionaryService: services.NewDictionaryService(context.Background()),
+func (r *OptionController) provider(ctx http.Context, optionType string) (services.OptionProvider, bool) {
+	tree := services.NewTreeServiceImpl(ctx)
+	providers := map[string]services.OptionProvider{
+		"role":           option_providers.NewRoleOptionProvider(ctx),
+		"department":     option_providers.NewDepartmentOptionProvider(ctx),
+		"position":       option_providers.NewPositionOptionProvider(ctx),
+		"menu":           option_providers.NewMenuOptionProvider(ctx, tree),
+		"status":         option_providers.NewStatusOptionProvider(ctx),
+		"method":         option_providers.NewMethodOptionProvider(ctx),
+		"yes_no":         option_providers.NewYesNoOptionProvider(ctx),
+		"admin":          option_providers.NewAdminOptionProvider(ctx),
+		"payment_method": option_providers.NewPaymentMethodOptionProvider(ctx),
+		"form_demo":      option_providers.NewFormDemoOptionProvider(ctx),
 	}
+	provider, ok := providers[optionType]
+	return provider, ok
 }
 
 // Index 获取选项列表
@@ -61,7 +54,7 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrOptionTypeRequired.Code)
 		}
 
-		dictionaries, err := r.dictionaryService.GetByType(dictType)
+		dictionaries, err := r.dictionaryService(ctx).GetByType(dictType)
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 		}
@@ -87,7 +80,7 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 		return response.Success(ctx, options)
 	}
 
-	provider, exists := r.providers[optionType]
+	provider, exists := r.provider(ctx, optionType)
 	if !exists {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidOptionType.Code)
 	}
@@ -100,8 +93,8 @@ func (r *OptionController) Index(ctx http.Context) http.Response {
 	return response.Success(ctx, data)
 }
 
-// RegisterProvider 注册新的选项提供者（可选，用于动态注册）
-// 如果需要在运行时动态添加提供者，可以使用此方法
+// RegisterProvider 注册新的选项提供者（保留扩展点；当前按请求懒加载，动态注册需另行实现）
 func (r *OptionController) RegisterProvider(optionType string, provider services.OptionProvider) {
-	r.providers[optionType] = provider
+	_ = optionType
+	_ = provider
 }

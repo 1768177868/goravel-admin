@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -23,15 +22,17 @@ import (
 	"goravel/app/utils"
 )
 
-type UserController struct {
-	userService services.UserService
-}
+type UserController struct {}
+
 
 func NewUserController() *UserController {
-	return &UserController{
-		userService: services.NewUserService(context.Background()),
-	}
+	return &UserController{}
 }
+
+func (r *UserController) userService(ctx http.Context) services.UserService {
+	return services.NewUserService(ctx)
+}
+
 
 // Index 用户列表
 func (r *UserController) Index(ctx http.Context) http.Response {
@@ -45,7 +46,7 @@ func (r *UserController) Index(ctx http.Context) http.Response {
 		Status:   ctx.Request().Query("status", ""),
 	}
 
-	users, total, err := r.userService.GetList(filters, page, pageSize)
+	users, total, err := r.userService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
@@ -64,7 +65,7 @@ func (r *UserController) Index(ctx http.Context) http.Response {
 // Show 用户详情
 func (r *UserController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	user, err := r.userService.GetByID(id)
+	user, err := r.userService(ctx).GetByID(id)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
@@ -90,7 +91,7 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 	}
 
 	// 使用服务方法创建用户（包含验证、密码加密、默认货币设置）
-	user, err := r.userService.CreateWithValidation(
+	user, err := r.userService(ctx).CreateWithValidation(
 		userCreate.Username,
 		userCreate.Password,
 		userCreate.Nickname,
@@ -127,7 +128,7 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 	}
 
 	// 使用服务方法验证用户是否存在（排除当前用户）
-	if err := r.userService.ValidateUserExists("", userUpdate.Email, userUpdate.Phone, id); err != nil {
+	if err := r.userService(ctx).ValidateUserExists("", userUpdate.Email, userUpdate.Phone, id); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 		}
@@ -150,7 +151,7 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 		user.Password = hashedPassword
 	}
 
-	if err := r.userService.Update(id, &user); err != nil {
+	if err := r.userService(ctx).Update(id, &user); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
 		}
@@ -165,7 +166,7 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 // Destroy 删除用户
 func (r *UserController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if err := r.userService.Delete(id); err != nil {
+	if err := r.userService(ctx).Delete(id); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
 		}
@@ -207,7 +208,7 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "balance_type_required")
 	}
 
-	if err := r.userService.UpdateBalance(userID, amount, logType, source, sourceID, description, operatorID, remark); err != nil {
+	if err := r.userService(ctx).UpdateBalance(userID, amount, logType, source, sourceID, description, operatorID, remark); err != nil {
 		// response.Error 会自动检测 BusinessError 并处理占位符替换
 		return response.Error(ctx, http.StatusBadRequest, err)
 	}
@@ -230,7 +231,7 @@ func (r *UserController) ResetPassword(ctx http.Context) http.Response {
 	}
 
 	// 使用服务方法重置密码
-	if err := r.userService.ResetPassword(id, resetPasswordRequest.Password); err != nil {
+	if err := r.userService(ctx).ResetPassword(id, resetPasswordRequest.Password); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 		}

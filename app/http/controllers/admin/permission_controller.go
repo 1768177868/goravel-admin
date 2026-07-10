@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 
 	"github.com/goravel/framework/contracts/http"
@@ -14,22 +13,26 @@ import (
 	"goravel/app/services"
 )
 
-type PermissionController struct {
-	permissionService services.PermissionService
-	treeService       services.TreeService
-}
+type PermissionController struct {}
+
 
 func NewPermissionController() *PermissionController {
-	return &PermissionController{
-		permissionService: services.NewPermissionService(context.Background()),
-		treeService:       services.NewTreeServiceImpl(context.Background()),
-	}
+	return &PermissionController{}
 }
+
+func (r *PermissionController) permissionService(ctx http.Context) services.PermissionService {
+	return services.NewPermissionService(ctx)
+}
+
+func (r *PermissionController) treeService(ctx http.Context) services.TreeService {
+	return services.NewTreeServiceImpl(ctx)
+}
+
 
 // findPermissionByID 根据ID查找权限，如果不存在则返回错误响应
 // withMenu 为 true 时会预加载 Menu 关联
 func (r *PermissionController) findPermissionByID(ctx http.Context, id uint, withMenu bool) (*models.Permission, http.Response) {
-	permission, err := r.permissionService.GetByID(id, withMenu)
+	permission, err := r.permissionService(ctx).GetByID(id, withMenu)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrPermissionNotFound.Code)
 	}
@@ -68,7 +71,7 @@ func (r *PermissionController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	permissions, total, err := r.permissionService.GetList(filters, page, pageSize)
+	permissions, total, err := r.permissionService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "permission", err)
 	}
@@ -120,7 +123,7 @@ func (r *PermissionController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPermissionNameOrSlugExists.Code)
 	}
 
-	permission, err := r.permissionService.Create(
+	permission, err := r.permissionService(ctx).Create(
 		name,
 		slug,
 		method,
@@ -197,7 +200,7 @@ func (r *PermissionController) Update(ctx http.Context) http.Response {
 		permission.MenuID = cast.ToUint(menuIDStr)
 	}
 
-	if err := r.permissionService.Update(permission); err != nil {
+	if err := r.permissionService(ctx).Update(permission); err != nil {
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
 		})
@@ -216,7 +219,7 @@ func (r *PermissionController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if err := r.permissionService.Delete(permission); err != nil {
+	if err := r.permissionService(ctx).Delete(permission); err != nil {
 		return response.ErrorWithLog(ctx, "permission", err, map[string]any{
 			"permission_id": permission.ID,
 		})

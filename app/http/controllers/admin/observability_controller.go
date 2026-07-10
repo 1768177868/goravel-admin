@@ -2,7 +2,6 @@ package admin
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	appfacades "goravel/app/facades"
 	"net/http"
@@ -23,11 +22,8 @@ import (
 	"goravel/app/services"
 )
 
-type ObservabilityController struct {
-	slowQueryService services.SlowQueryService
-	systemLogService services.SystemLogService
-	apiMetricService services.ApiMetricService
-}
+type ObservabilityController struct {}
+
 
 type auditEvent struct {
 	Time       string `json:"time"`
@@ -56,21 +52,30 @@ type pprofHotspot struct {
 }
 
 func NewObservabilityController() *ObservabilityController {
-	return &ObservabilityController{
-		slowQueryService: services.NewSlowQueryService(context.Background()),
-		systemLogService: services.NewSystemLogService(context.Background()),
-		apiMetricService: services.NewApiMetricService(context.Background()),
-	}
+	return &ObservabilityController{}
 }
 
-// TraceAggregate 请求追踪聚合（按 trace_id 串联请求、异常、SQL）
+func (r *ObservabilityController) slowQueryService(ctx ghttp.Context) services.SlowQueryService {
+	return services.NewSlowQueryService(ctx)
+}
+
+func (r *ObservabilityController) systemLogService(ctx ghttp.Context) services.SystemLogService {
+	return services.NewSystemLogService(ctx)
+}
+
+func (r *ObservabilityController) apiMetricService(ctx ghttp.Context) services.ApiMetricService {
+	return services.NewApiMetricService(ctx)
+}
+
+
+// TraceAggregate ???????? trace_id ????????SQL?
 func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Response {
 	traceID := strings.TrimSpace(ctx.Request().Query("trace_id", ""))
 	if traceID == "" {
 		return response.Error(ctx, http.StatusBadRequest, "trace_id_required")
 	}
 
-	_ = r.slowQueryService.CollectFromLatestLog(200)
+	_ = r.slowQueryService(ctx).CollectFromLatestLog(200)
 
 	var operations []models.OperationLog
 	if err := appfacades.OrmQuery(ctx).
@@ -93,7 +98,7 @@ func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Respon
 		return response.ErrorWithLog(ctx, "observability", err, map[string]any{"trace_id": traceID})
 	}
 
-	slowSQL, _ := r.slowQueryService.GetByTraceID(traceID, 100)
+	slowSQL, _ := r.slowQueryService(ctx).GetByTraceID(traceID, 100)
 
 	return response.Success(ctx, ghttp.Json{
 		"trace_id":    traceID,
@@ -105,14 +110,14 @@ func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Respon
 	})
 }
 
-// SlowSQLTopN 慢 SQL TopN 聚合
+// SlowSQLTopN ? SQL TopN ??
 func (r *ObservabilityController) SlowSQLTopN(ctx ghttp.Context) ghttp.Response {
 	minDurationMS := float64(helpers.GetIntQuery(ctx, "min_duration_ms", 200))
 	hours := helpers.GetIntQuery(ctx, "hours", 24)
 	limit := helpers.GetIntQuery(ctx, "limit", 20)
 
-	_ = r.slowQueryService.CollectFromLatestLog(minDurationMS)
-	top, err := r.slowQueryService.GetTopN(hours, limit, minDurationMS)
+	_ = r.slowQueryService(ctx).CollectFromLatestLog(minDurationMS)
+	top, err := r.slowQueryService(ctx).GetTopN(hours, limit, minDurationMS)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "observability", err, map[string]any{
 			"hours":           hours,
@@ -129,11 +134,11 @@ func (r *ObservabilityController) SlowSQLTopN(ctx ghttp.Context) ghttp.Response 
 	})
 }
 
-// APIPerformanceOverview 接口性能总览（慢接口、错误率、QPS、P95/P99）
+// APIPerformanceOverview ???????????????QPS?P95/P99?
 func (r *ObservabilityController) APIPerformanceOverview(ctx ghttp.Context) ghttp.Response {
 	hours := helpers.GetIntQuery(ctx, "hours", 24)
 	limit := helpers.GetIntQuery(ctx, "limit", 20)
-	overview, err := r.apiMetricService.GetOverview(hours, limit)
+	overview, err := r.apiMetricService(ctx).GetOverview(hours, limit)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "observability", err, map[string]any{
 			"hours": hours,
@@ -143,13 +148,13 @@ func (r *ObservabilityController) APIPerformanceOverview(ctx ghttp.Context) ghtt
 	return response.Success(ctx, overview)
 }
 
-// APIPerformanceTraces 接口性能下钻（查看某接口最近 trace）
+// APIPerformanceTraces ?????????????? trace?
 func (r *ObservabilityController) APIPerformanceTraces(ctx ghttp.Context) ghttp.Response {
 	method := strings.TrimSpace(ctx.Request().Query("method", ""))
 	routeTemplate := strings.TrimSpace(ctx.Request().Query("route_template", ""))
 	hours := helpers.GetIntQuery(ctx, "hours", 24)
 	limit := helpers.GetIntQuery(ctx, "limit", 20)
-	list, err := r.apiMetricService.GetRecentTraces(method, routeTemplate, hours, limit)
+	list, err := r.apiMetricService(ctx).GetRecentTraces(method, routeTemplate, hours, limit)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "observability", err, map[string]any{
 			"method":         method,
@@ -167,7 +172,7 @@ func (r *ObservabilityController) APIPerformanceTraces(ctx ghttp.Context) ghttp.
 	})
 }
 
-// AuditTimeline 审计事件聚合时间线（操作日志 + 系统日志）
+// AuditTimeline ?????????????? + ?????
 func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Response {
 	traceID := strings.TrimSpace(ctx.Request().Query("trace_id", ""))
 	keyword := strings.TrimSpace(ctx.Request().Query("keyword", ""))
@@ -210,9 +215,9 @@ func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Respons
 	})
 }
 
-// QueueDashboard 轻量队列看板（database / Redis 列表 / Redis Stream 三类可统计，其余标记不支持）
+// QueueDashboard ???????database / Redis ?? / Redis Stream ??????????????
 func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Response {
-	reader := services.NewQueueStatsReader(context.Background())
+	reader := services.NewQueueStatsReader(ctx)
 	panels, defaultConn := reader.BuildQueueDashboard()
 	return response.Success(ctx, ghttp.Json{
 		"default_connection": defaultConn,
@@ -220,7 +225,7 @@ func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Respon
 	})
 }
 
-// PprofStatus 返回 pprof 功能开关与 token 要求
+// PprofStatus ?? pprof ????? token ??
 func (r *ObservabilityController) PprofStatus(ctx ghttp.Context) ghttp.Response {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
@@ -261,7 +266,7 @@ func (r *ObservabilityController) PprofStatus(ctx ghttp.Context) ghttp.Response 
 	})
 }
 
-// PprofVerify 验证 pprof token 是否可用（仅开发者）
+// PprofVerify ?? pprof token ??????????
 func (r *ObservabilityController) PprofVerify(ctx ghttp.Context) ghttp.Response {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
@@ -316,7 +321,7 @@ func (r *ObservabilityController) PprofVerify(ctx ghttp.Context) ghttp.Response 
 	})
 }
 
-// PprofCPUHotspots CPU 热点函数 TopN（按自身 CPU 时间排序）
+// PprofCPUHotspots CPU ???? TopN???? CPU ?????
 func (r *ObservabilityController) PprofCPUHotspots(ctx ghttp.Context) ghttp.Response {
 	adminID, resp := r.ensurePprofAccess(ctx, true)
 	if resp != nil {
@@ -393,7 +398,7 @@ func (r *ObservabilityController) PprofCPUHotspots(ctx ghttp.Context) ghttp.Resp
 	})
 }
 
-// PprofMemoryHotspots 内存分配热点 TopN（按分配量排序）
+// PprofMemoryHotspots ?????? TopN????????
 func (r *ObservabilityController) PprofMemoryHotspots(ctx ghttp.Context) ghttp.Response {
 	adminID, resp := r.ensurePprofAccess(ctx, true)
 	if resp != nil {
@@ -613,10 +618,7 @@ func parsePositiveIntInput(ctx ghttp.Context, key string, defaultValue int) int 
 }
 
 func (r *ObservabilityController) recordPprofSamplingLog(ctx ghttp.Context, message string, attrs map[string]any) {
-	if r.systemLogService == nil {
-		return
-	}
-	_ = r.systemLogService.RecordHTTP(ctx, "info", "pprof", message, attrs)
+	_ = r.systemLogService(ctx).RecordHTTP(ctx, "info", "pprof", message, attrs)
 }
 
 func (r *ObservabilityController) collectAuditEvents(ctx ghttp.Context, traceID, keyword string, adminID int, startTime, endTime string) ([]auditEvent, error) {

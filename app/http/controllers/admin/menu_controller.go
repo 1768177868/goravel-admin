@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 
 	"github.com/goravel/framework/contracts/http"
@@ -18,17 +17,21 @@ import (
 	"goravel/app/utils"
 )
 
-type MenuController struct {
-	treeService services.TreeService
-	menuService services.MenuService
-}
+type MenuController struct {}
+
 
 func NewMenuController() *MenuController {
-	return &MenuController{
-		treeService: services.NewTreeServiceImpl(context.Background()),
-		menuService: services.NewMenuService(context.Background()),
-	}
+	return &MenuController{}
 }
+
+func (r *MenuController) treeService(ctx http.Context) services.TreeService {
+	return services.NewTreeServiceImpl(ctx)
+}
+
+func (r *MenuController) menuService(ctx http.Context) services.MenuService {
+	return services.NewMenuService(ctx)
+}
+
 
 // findMenuByID 根据ID查找菜单，如果不存在则返回错误响应
 func (r *MenuController) findMenuByID(ctx http.Context, id uint) (*models.Menu, http.Response) {
@@ -48,7 +51,7 @@ func (r *MenuController) buildMenuTreeResponse(ctx http.Context, menus []models.
 
 // Tree 菜单树（仅登录即可访问，不校验菜单权限；用于角色/权限表单等）
 func (r *MenuController) Tree(ctx http.Context) http.Response {
-	menus, err := r.treeService.BuildMenuTree(0)
+	menus, err := r.treeService(ctx).BuildMenuTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -94,7 +97,7 @@ func (r *MenuController) extractAdminID(ctx http.Context) uint {
 
 // Index 菜单列表（树形结构，需要菜单权限）
 func (r *MenuController) Index(ctx http.Context) http.Response {
-	menus, err := r.treeService.BuildMenuTree(0)
+	menus, err := r.treeService(ctx).BuildMenuTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -136,7 +139,7 @@ func (r *MenuController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuSlugExists.Code)
 	}
 
-	menu, err := r.menuService.Create(
+	menu, err := r.menuService(ctx).Create(
 		menuCreate.ParentID,
 		menuCreate.Title,
 		menuCreate.Slug,
@@ -239,7 +242,7 @@ func (r *MenuController) Update(ctx http.Context) http.Response {
 		menu.NoCache = menuUpdate.NoCache
 	}
 
-	if err := r.menuService.Update(menu); err != nil {
+	if err := r.menuService(ctx).Update(menu); err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"menu_id": menu.ID,
 		})
@@ -256,14 +259,14 @@ func (r *MenuController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	hasChildren, err := r.treeService.HasMenuChildren(id)
+	hasChildren, err := r.treeService(ctx).HasMenuChildren(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 	if hasChildren {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrMenuHasChildren.Code)
 	}
-	if err := r.menuService.Delete(menu); err != nil {
+	if err := r.menuService(ctx).Delete(menu); err != nil {
 		return response.ErrorWithLog(ctx, "menu", err, map[string]any{
 			"menu_id": menu.ID,
 		})

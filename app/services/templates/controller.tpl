@@ -10,8 +10,6 @@ import (
 <<end>>
 	"strings"
 
-	"context"
-
 	"github.com/goravel/framework/contracts/http"
 <<if .HasExport>>
 <<if .ExportAsync>>
@@ -35,9 +33,7 @@ import (
 	"goravel/app/services"
 )
 
-type <<.ControllerName>> struct {
-	<<.ServiceName>> services.<<.ServiceName>>
-}
+type <<.ControllerName>> struct {}
 
 func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
 	if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -68,9 +64,11 @@ func (c *<<.ControllerName>>) build<<.ModelName>>Filters(ctx http.Context) servi
 }
 
 func New<<.ControllerName>>() *<<.ControllerName>> {
-	return &<<.ControllerName>>{
-		<<.ServiceName>>: services.New<<.ServiceName>>(context.Background()),
-	}
+	return &<<.ControllerName>>{}
+}
+
+func (c *<<.ControllerName>>) <<.ServiceName>>(ctx http.Context) services.<<.ServiceName>> {
+	return services.New<<.ServiceName>>(ctx)
 }
 
 // Index lists <<.ModelName>> records.
@@ -80,7 +78,7 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 
 	filters := c.build<<.ModelName>>Filters(ctx)
 
-	list, total, err := c.<<.ServiceName>>.GetList(filters, page, pageSize)
+	list, total, err := c.<<.ServiceName>>(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
@@ -96,7 +94,7 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 // Show returns <<.ModelName>> details.
 func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	item, err := c.<<.ServiceName>>.GetByID(id)
+	item, err := c.<<.ServiceName>>(ctx).GetByID(id)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusNotFound, err)
 	}
@@ -114,7 +112,7 @@ func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
 		return resp
 	}
 
-	item, err := c.<<.ServiceName>>.Create(&req)
+	item, err := c.<<.ServiceName>>(ctx).Create(&req)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
@@ -137,7 +135,7 @@ func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
 		return resp
 	}
 
-	item, err := c.<<.ServiceName>>.Update(id, &req)
+	item, err := c.<<.ServiceName>>(ctx).Update(id, &req)
 	if err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
@@ -154,7 +152,7 @@ func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
 func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 <<- if .HasDelete>>
 	id := helpers.GetUintRoute(ctx, "id")
-	if err := c.<<.ServiceName>>.Delete(id); err != nil {
+	if err := c.<<.ServiceName>>(ctx).Delete(id); err != nil {
 		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
 	}
 
@@ -233,7 +231,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 	})
 <<- else>>
 
-	list, err := c.<<.ServiceName>>.GetAll<<.ModelName>>ForExport(filters)
+	list, err := c.<<.ServiceName>>(ctx).GetAll<<.ModelName>>ForExport(filters)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "<<.ModuleName>>", err, map[string]any{
 			"action":   "export_<<.ModuleName>>s",

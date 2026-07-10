@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"fmt"
 	appfacades "goravel/app/facades"
 	"net/http"
@@ -23,9 +22,8 @@ import (
 	wsnotifications "goravel/app/websocket/notifications"
 )
 
-type NotificationWsController struct {
-	tokenService services.TokenService
-}
+type NotificationWsController struct {}
+
 
 const (
 	wsTicketCachePrefix = "ws:ticket:"
@@ -33,10 +31,13 @@ const (
 )
 
 func NewNotificationWsController() *NotificationWsController {
-	return &NotificationWsController{
-		tokenService: services.NewTokenServiceImpl(context.Background()),
-	}
+	return &NotificationWsController{}
 }
+
+func (r *NotificationWsController) tokenService(ctx apphttp.Context) services.TokenService {
+	return services.NewTokenServiceImpl(ctx)
+}
+
 
 func (r *NotificationWsController) Ticket(ctx apphttp.Context) apphttp.Response {
 	admin := r.currentAdmin(ctx)
@@ -81,7 +82,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	}
 
 	token = str.Of(token).ChopStart("Bearer ").Trim().String()
-	accessToken, err := r.tokenService.FindToken(token)
+	accessToken, err := r.tokenService(ctx).FindToken(token)
 	if err != nil || accessToken == nil || accessToken.TokenableType != "admin" {
 		response.Error(ctx, http.StatusUnauthorized, "invalid_token")
 		ctx.Request().Abort()
@@ -94,7 +95,7 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 		ctx.Request().Abort()
 		return nil
 	}
-	_ = r.tokenService.UpdateLastUsedAt(token)
+	_ = r.tokenService(ctx).UpdateLastUsedAt(token)
 
 	upgrader := websocket.Upgrader{
 		CheckOrigin:     r.isOriginAllowed,

@@ -51,7 +51,8 @@ func ApiMetric() http.Middleware {
 		}
 
 		go func(data models.ApiEndpointMetric) {
-			if err := appfacades.OrmQuery(ctx).Create(&data); err != nil {
+			// 请求返回后 ctx 会被取消，异步落库使用独立 context。
+			if err := appfacades.OrmQuery(context.Background()).Create(&data); err != nil {
 				logger.ErrorfContext(context.Background(), "persist api endpoint metric failed: %v", err)
 			}
 		}(metric)

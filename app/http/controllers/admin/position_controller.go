@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 
 	"github.com/goravel/framework/contracts/http"
 
@@ -13,18 +12,20 @@ import (
 	"goravel/app/services"
 )
 
-type PositionController struct {
-	positionService services.PositionService
-}
+type PositionController struct {}
+
 
 func NewPositionController() *PositionController {
-	return &PositionController{
-		positionService: services.NewPositionService(context.Background()),
-	}
+	return &PositionController{}
 }
 
+func (r *PositionController) positionService(ctx http.Context) services.PositionService {
+	return services.NewPositionService(ctx)
+}
+
+
 func (r *PositionController) findPositionByID(ctx http.Context, id uint) (*models.Position, http.Response) {
-	position, err := r.positionService.GetByID(id)
+	position, err := r.positionService(ctx).GetByID(id)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrPositionNotFound.Code)
 	}
@@ -45,7 +46,7 @@ func (r *PositionController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 	filters := r.buildFilters(ctx)
-	list, total, err := r.positionService.GetList(filters, page, pageSize)
+	list, total, err := r.positionService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -77,7 +78,7 @@ func (r *PositionController) Store(ctx http.Context) http.Response {
 	if errors != nil {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
-	position, err := r.positionService.Create(req.Name, req.Code, req.Remark, req.Status, req.Sort)
+	position, err := r.positionService(ctx).Create(req.Name, req.Code, req.Remark, req.Status, req.Sort)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "position", err, map[string]any{"name": req.Name})
 	}
@@ -116,7 +117,7 @@ func (r *PositionController) Update(ctx http.Context) http.Response {
 	if _, exists := allInputs["remark"]; exists {
 		position.Remark = req.Remark
 	}
-	if err := r.positionService.Update(position); err != nil {
+	if err := r.positionService(ctx).Update(position); err != nil {
 		return response.ErrorWithLog(ctx, "position", err, map[string]any{"position_id": position.ID})
 	}
 	return response.Success(ctx, http.Json{
@@ -130,14 +131,14 @@ func (r *PositionController) Destroy(ctx http.Context) http.Response {
 	if resp != nil {
 		return resp
 	}
-	hasAdmins, err := r.positionService.HasAdmins(id)
+	hasAdmins, err := r.positionService(ctx).HasAdmins(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
 	if hasAdmins {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrPositionHasAdmins.Code)
 	}
-	if err := r.positionService.Delete(position); err != nil {
+	if err := r.positionService(ctx).Delete(position); err != nil {
 		return response.ErrorWithLog(ctx, "position", err, map[string]any{"position_id": position.ID})
 	}
 	return response.Success(ctx)

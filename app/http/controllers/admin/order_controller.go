@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	appfacades "goravel/app/facades"
@@ -25,9 +24,8 @@ import (
 	"goravel/app/utils"
 )
 
-type OrderController struct {
-	orderService services.OrderService
-}
+type OrderController struct {}
+
 
 // OrderResponse swagger response for order summary.
 type OrderResponse struct {
@@ -142,10 +140,13 @@ type OrderProductItem struct {
 }
 
 func NewOrderController() *OrderController {
-	return &OrderController{
-		orderService: services.NewOrderService(context.Background()),
-	}
+	return &OrderController{}
 }
+
+func (r *OrderController) orderService(ctx http.Context) services.OrderService {
+	return services.NewOrderService(ctx)
+}
+
 
 // buildFilters builds filters shared by list/export endpoints.
 // It accepts both query params (GET) and body params (POST).
@@ -304,7 +305,7 @@ func (r *OrderController) Index(ctx http.Context) http.Response {
 	}
 
 	// Query order list with details.
-	ordersWithDetails, total, err := r.orderService.GetOrdersWithDetails(filters, page, pageSize)
+	ordersWithDetails, total, err := r.orderService(ctx).GetOrdersWithDetails(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
 			"filters": filters,
@@ -346,13 +347,13 @@ func (r *OrderController) Show(ctx http.Context) http.Response {
 	orderNo := ctx.Request().Query("order_no", "")
 
 	if orderNo != "" {
-		order, details, err := r.orderService.GetOrderByOrderNo(orderNo)
+		order, details, err := r.orderService(ctx).GetOrderByOrderNo(orderNo)
 		if err == nil {
 			return r.buildOrderDetailResponse(ctx, order, details)
 		}
 		if routeID := ctx.Request().Route("id"); routeID != "" && orderNo == routeID {
 			if orderID := cast.ToUint(routeID); orderID > 0 {
-				order, details, err := r.orderService.GetOrderByID(orderID, time.Time{})
+				order, details, err := r.orderService(ctx).GetOrderByID(orderID, time.Time{})
 				if err == nil {
 					return r.buildOrderDetailResponse(ctx, order, details)
 				}
@@ -405,7 +406,7 @@ func (r *OrderController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "empty_products")
 	}
 
-	order, details, err := r.orderService.CreateOrder(req.UserID, req.Amount, req.Products, req.RequestID, req.Remark)
+	order, details, err := r.orderService(ctx).CreateOrder(req.UserID, req.Amount, req.Products, req.RequestID, req.Remark)
 	if err != nil {
 		return response.Error(ctx, http.StatusBadRequest, "create_failed")
 	}
@@ -450,7 +451,7 @@ func (r *OrderController) Update(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "invalid_params")
 	}
 
-	if err := r.orderService.UpdateOrderByOrderNo(orderNo, req.Status, req.Remark); err != nil {
+	if err := r.orderService(ctx).UpdateOrderByOrderNo(orderNo, req.Status, req.Remark); err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
 			"order_no": orderNo,
 			"status":   req.Status,
@@ -477,7 +478,7 @@ func (r *OrderController) Destroy(ctx http.Context) http.Response {
 	// 浣跨敤璁㈠崟鍙锋煡璇紙鍙洿鎺ュ畾浣嶅垎琛級
 	orderNo := ctx.Request().Query("order_no", "")
 
-	if err := r.orderService.DeleteOrderByOrderNo(orderNo); err != nil {
+	if err := r.orderService(ctx).DeleteOrderByOrderNo(orderNo); err != nil {
 		return response.ErrorWithLog(ctx, "order", err, map[string]any{
 			"order_no": orderNo,
 		})
@@ -640,7 +641,7 @@ func (r *OrderController) GetExportStatus(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "id_required")
 	}
 
-	exportRecordService := services.NewExportRecordService(context.Background())
+	exportRecordService := services.NewExportRecordService(ctx)
 	exportRecord, err := exportRecordService.GetByID(exportID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "export", err)

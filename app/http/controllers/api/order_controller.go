@@ -14,15 +14,17 @@ import (
 	"goravel/app/services"
 )
 
-type OrderController struct {
-	orderService services.OrderService
-}
+type OrderController struct {}
+
 
 func NewOrderController() *OrderController {
-	return &OrderController{
-		orderService: services.NewOrderService(context.Background()),
-	}
+	return &OrderController{}
 }
+
+func (c *OrderController) orderService(ctx http.Context) services.OrderService {
+	return services.NewOrderService(ctx)
+}
+
 
 // SearchMyOrders GET：当前登录用户检索自己的订单。开启 ELASTICSEARCH_ENABLED 时走 ES（可多字段含商品名）；否则走分表数据库（关键词仅订单号、备注；无时间参数时默认近 3 个月）。
 func (c *OrderController) SearchMyOrders(ctx http.Context) http.Response {
@@ -49,10 +51,10 @@ func (c *OrderController) SearchMyOrders(ctx http.Context) http.Response {
 		})
 	}
 
-	searchCtx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	searchCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 
-	list, total, err := c.orderService.SearchMyOrdersForUser(searchCtx, userID, req.Q, page, pageSize, timeRange)
+	list, total, err := c.orderService(ctx).SearchMyOrdersForUser(searchCtx, userID, req.Q, page, pageSize, timeRange)
 	if err != nil {
 		if resp := timeRangeErrorResponse(ctx, err); resp != nil {
 			return resp

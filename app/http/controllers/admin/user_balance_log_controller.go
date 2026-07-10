@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -13,15 +12,17 @@ import (
 	"goravel/app/services"
 )
 
-type UserBalanceLogController struct {
-	balanceLogService services.UserBalanceLogService
-}
+type UserBalanceLogController struct {}
+
 
 func NewUserBalanceLogController() *UserBalanceLogController {
-	return &UserBalanceLogController{
-		balanceLogService: services.NewUserBalanceLogService(context.Background()),
-	}
+	return &UserBalanceLogController{}
 }
+
+func (r *UserBalanceLogController) balanceLogService(ctx http.Context) services.UserBalanceLogService {
+	return services.NewUserBalanceLogService(ctx)
+}
+
 
 func (r *UserBalanceLogController) parseTimeRangeFromQuery(ctx http.Context) (time.Time, time.Time, http.Response) {
 	startTime, resp := parseOptionalTimeFromQuery(ctx, "start_time", "invalid_start_time")
@@ -68,7 +69,7 @@ func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
 		OperatorID: operatorID,
 	}
 
-	logs, total, err := r.balanceLogService.GetLogs(filters, page, pageSize)
+	logs, total, err := r.balanceLogService(ctx).GetLogs(filters, page, pageSize)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
@@ -96,7 +97,7 @@ func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 		return resp
 	}
 
-	stats, err := r.balanceLogService.GetUserStatistics(userID, startTime, endTime)
+	stats, err := r.balanceLogService(ctx).GetUserStatistics(userID, startTime, endTime)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
@@ -146,7 +147,7 @@ func (r *UserBalanceLogController) Store(ctx http.Context) http.Response {
 
 	// 如果未提供 balance，从用户表获取当前余额
 	if balance == 0 {
-		currentBalance, err := r.balanceLogService.GetUserBalance(userID)
+		currentBalance, err := r.balanceLogService(ctx).GetUserBalance(userID)
 		if err != nil {
 			// 检查是否是业务错误
 			if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -157,7 +158,7 @@ func (r *UserBalanceLogController) Store(ctx http.Context) http.Response {
 		balance = currentBalance
 	}
 
-	log, err := r.balanceLogService.CreateLog(userID, logType, amount, balance, source, sourceID, description, operatorID, status, remark)
+	log, err := r.balanceLogService(ctx).CreateLog(userID, logType, amount, balance, source, sourceID, description, operatorID, status, remark)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)

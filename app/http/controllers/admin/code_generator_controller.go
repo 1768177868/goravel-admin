@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
@@ -12,9 +11,8 @@ import (
 	"goravel/app/services"
 )
 
-type CodeGeneratorController struct {
-	codeGeneratorService services.CodeGeneratorService
-}
+type CodeGeneratorController struct {}
+
 
 type GenerateRequest struct {
 	ModuleName string                 `json:"module_name"`
@@ -46,10 +44,13 @@ type GenerateWithAIRequest struct {
 }
 
 func NewCodeGeneratorController() *CodeGeneratorController {
-	return &CodeGeneratorController{
-		codeGeneratorService: services.NewCodeGeneratorService(context.Background()),
-	}
+	return &CodeGeneratorController{}
 }
+
+func (c *CodeGeneratorController) codeGeneratorService(ctx http.Context) services.CodeGeneratorService {
+	return services.NewCodeGeneratorService(ctx)
+}
+
 
 // Generate 生成CRUD代码
 func (c *CodeGeneratorController) Generate(ctx http.Context) http.Response {
@@ -65,7 +66,7 @@ func (c *CodeGeneratorController) Generate(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "table_name_required")
 	}
 
-	files, err := c.codeGeneratorService.Generate(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
+	files, err := c.codeGeneratorService(ctx).Generate(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
@@ -95,7 +96,7 @@ func (c *CodeGeneratorController) Preview(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "file_type_required")
 	}
 
-	code, err := c.codeGeneratorService.Preview(req.ModuleName, req.TableName, req.Fields, req.FileType, req.Options)
+	code, err := c.codeGeneratorService(ctx).Preview(req.ModuleName, req.TableName, req.Fields, req.FileType, req.Options)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
@@ -126,9 +127,9 @@ func (c *CodeGeneratorController) Save(ctx http.Context) http.Response {
 	var err error
 
 	if req.Force {
-		savedFiles, err = c.codeGeneratorService.ForceSave(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
+		savedFiles, err = c.codeGeneratorService(ctx).ForceSave(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
 	} else {
-		savedFiles, err = c.codeGeneratorService.Save(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
+		savedFiles, err = c.codeGeneratorService(ctx).Save(req.ModuleName, req.TableName, req.Fields, req.Files, req.Options)
 	}
 
 	if err != nil {
@@ -153,7 +154,7 @@ func (c *CodeGeneratorController) Save(ctx http.Context) http.Response {
 
 // GetFieldTypes 获取支持的字段类型
 func (c *CodeGeneratorController) GetFieldTypes(ctx http.Context) http.Response {
-	fieldTypes := c.codeGeneratorService.GetFieldTypes()
+	fieldTypes := c.codeGeneratorService(ctx).GetFieldTypes()
 	return response.Success(ctx, http.Json{
 		"field_types": fieldTypes,
 	})
@@ -161,7 +162,7 @@ func (c *CodeGeneratorController) GetFieldTypes(ctx http.Context) http.Response 
 
 // GetTables 获取数据库表列表
 func (c *CodeGeneratorController) GetTables(ctx http.Context) http.Response {
-	tables, err := c.codeGeneratorService.GetTables()
+	tables, err := c.codeGeneratorService(ctx).GetTables()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -177,7 +178,7 @@ func (c *CodeGeneratorController) GetTableColumns(ctx http.Context) http.Respons
 		return response.Error(ctx, http.StatusBadRequest, "table_name_required")
 	}
 
-	fields, err := c.codeGeneratorService.GetTableColumns(tableName)
+	fields, err := c.codeGeneratorService(ctx).GetTableColumns(tableName)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -197,7 +198,7 @@ func (c *CodeGeneratorController) GenerateWithAI(ctx http.Context) http.Response
 		return response.Error(ctx, http.StatusBadRequest, "description_required")
 	}
 
-	config, err := c.codeGeneratorService.GenerateWithAI(context.Background(), req.Description)
+	config, err := c.codeGeneratorService(ctx).GenerateWithAI(ctx, req.Description)
 	if err != nil {
 		// 检查是否是 JSON 解析错误
 		errMsg := err.Error()

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 
 	"github.com/goravel/framework/contracts/http"
 
@@ -14,9 +13,8 @@ import (
 	"goravel/app/services"
 )
 
-type DictionaryController struct {
-	dictionaryService services.DictionaryService
-}
+type DictionaryController struct {}
+
 
 type DictionaryResponse struct {
 	ID             uint   `json:"id" example:"1"`                              // 字典ID
@@ -70,14 +68,17 @@ type DictionaryTypesResponse struct {
 }
 
 func NewDictionaryController() *DictionaryController {
-	return &DictionaryController{
-		dictionaryService: services.NewDictionaryService(context.Background()),
-	}
+	return &DictionaryController{}
 }
+
+func (r *DictionaryController) dictionaryService(ctx http.Context) services.DictionaryService {
+	return services.NewDictionaryService(ctx)
+}
+
 
 // findDictionaryByID 根据ID查找字典，如果不存在则返回错误响应
 func (r *DictionaryController) findDictionaryByID(ctx http.Context, id uint) (*models.Dictionary, http.Response) {
-	dictionary, err := r.dictionaryService.GetByID(id)
+	dictionary, err := r.dictionaryService(ctx).GetByID(id)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrDictionaryNotFound.Code)
 	}
@@ -124,7 +125,7 @@ func (r *DictionaryController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	dictionaries, total, err := r.dictionaryService.GetList(filters, page, pageSize)
+	dictionaries, total, err := r.dictionaryService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -184,7 +185,7 @@ func (r *DictionaryController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	dictionary, err := r.dictionaryService.Create(
+	dictionary, err := r.dictionaryService(ctx).Create(
 		dictionaryCreate.Type,
 		dictionaryCreate.Label,
 		dictionaryCreate.Value,
@@ -265,7 +266,7 @@ func (r *DictionaryController) Update(ctx http.Context) http.Response {
 		dictionary.Remark = dictionaryUpdate.Remark
 	}
 
-	if err := r.dictionaryService.Update(dictionary); err != nil {
+	if err := r.dictionaryService(ctx).Update(dictionary); err != nil {
 		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"dictionary_id": dictionary.ID,
 		})
@@ -295,7 +296,7 @@ func (r *DictionaryController) Destroy(ctx http.Context) http.Response {
 		return resp
 	}
 
-	if err := r.dictionaryService.Delete(dictionary); err != nil {
+	if err := r.dictionaryService(ctx).Delete(dictionary); err != nil {
 		return response.ErrorWithLog(ctx, "dictionary", err, map[string]any{
 			"dictionary_id": dictionary.ID,
 		})
@@ -321,7 +322,7 @@ func (r *DictionaryController) GetByType(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDictionaryTypeRequired.Code)
 	}
 
-	dictionaries, err := r.dictionaryService.GetByType(dictType)
+	dictionaries, err := r.dictionaryService(ctx).GetByType(dictType)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -341,7 +342,7 @@ func (r *DictionaryController) GetByType(ctx http.Context) http.Response {
 // @Router       /api/admin/dictionaries/types [get]
 // @Security     BearerAuth
 func (r *DictionaryController) GetAllTypes(ctx http.Context) http.Response {
-	types, err := r.dictionaryService.GetAllTypes()
+	types, err := r.dictionaryService(ctx).GetAllTypes()
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}

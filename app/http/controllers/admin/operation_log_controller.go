@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 	"sort"
 	"strings"
@@ -18,20 +17,22 @@ import (
 	"goravel/app/services"
 )
 
-type OperationLogController struct {
-	operationLogService services.OperationLogService
-}
+type OperationLogController struct {}
+
 
 func NewOperationLogController() *OperationLogController {
-	return &OperationLogController{
-		operationLogService: services.NewOperationLogService(context.Background()),
-	}
+	return &OperationLogController{}
 }
+
+func (r *OperationLogController) operationLogService(ctx http.Context) services.OperationLogService {
+	return services.NewOperationLogService(ctx)
+}
+
 
 // findOperationLogByID 根据ID查找操作日志，如果不存在则返回错误响应
 // withAdmin 为 true 时会预加载 Admin 关联
 func (r *OperationLogController) findOperationLogByID(ctx http.Context, id uint, withAdmin bool) (*models.OperationLog, http.Response) {
-	log, err := r.operationLogService.GetByID(id, withAdmin)
+	log, err := r.operationLogService(ctx).GetByID(id, withAdmin)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrLogNotFound.Code)
 	}
@@ -101,7 +102,7 @@ func (r *OperationLogController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
-	logs, total, err := r.operationLogService.GetList(filters, page, pageSize)
+	logs, total, err := r.operationLogService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "operation-log", err)
 	}

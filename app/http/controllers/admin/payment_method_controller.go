@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/goravel/framework/contracts/http"
@@ -14,9 +13,8 @@ import (
 	"goravel/app/services"
 )
 
-type PaymentMethodController struct {
-	paymentService services.PaymentService
-}
+type PaymentMethodController struct {}
+
 
 type PaymentMethodResponse struct {
 	ID          uint           `json:"id" example:"1"`                           // 支付方式ID
@@ -47,10 +45,13 @@ type PaymentMethodDetailResponse struct {
 }
 
 func NewPaymentMethodController() *PaymentMethodController {
-	return &PaymentMethodController{
-		paymentService: services.NewPaymentService(context.Background()),
-	}
+	return &PaymentMethodController{}
 }
+
+func (r *PaymentMethodController) paymentService(ctx http.Context) services.PaymentService {
+	return services.NewPaymentService(ctx)
+}
+
 
 // Index 支付方式列表
 // @Summary      获取支付方式列表
@@ -83,7 +84,7 @@ func (r *PaymentMethodController) Index(ctx http.Context) http.Response {
 		OrderBy:     ctx.Request().Query("order_by", ""),
 	}
 
-	paymentMethods, total, err := r.paymentService.GetPaymentMethods(filters, page, pageSize)
+	paymentMethods, total, err := r.paymentService(ctx).GetPaymentMethods(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "payment_method", err, map[string]any{
 			"filters": filters,
@@ -129,7 +130,7 @@ func (r *PaymentMethodController) Index(ctx http.Context) http.Response {
 // @Security     BearerAuth
 func (r *PaymentMethodController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	paymentMethod, err := r.paymentService.GetPaymentMethodByID(id)
+	paymentMethod, err := r.paymentService(ctx).GetPaymentMethodByID(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrPaymentMethodNotFound.Code)
 	}
@@ -186,7 +187,7 @@ func (r *PaymentMethodController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	paymentMethod, err := r.paymentService.CreatePaymentMethod(
+	paymentMethod, err := r.paymentService(ctx).CreatePaymentMethod(
 		req.Name,
 		req.Code,
 		req.Type,
@@ -239,7 +240,7 @@ func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
 	// 获取支付方式
-	paymentMethod, err := r.paymentService.GetPaymentMethodByID(id)
+	paymentMethod, err := r.paymentService(ctx).GetPaymentMethodByID(id)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
@@ -279,7 +280,7 @@ func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
 		paymentMethod.Description = req.Description
 	}
 
-	if err := r.paymentService.UpdatePaymentMethodModel(paymentMethod); err != nil {
+	if err := r.paymentService(ctx).UpdatePaymentMethodModel(paymentMethod); err != nil {
 		return response.ErrorWithLog(ctx, "payment_method", err, map[string]any{
 			"id": id,
 		})
@@ -305,7 +306,7 @@ func (r *PaymentMethodController) Update(ctx http.Context) http.Response {
 func (r *PaymentMethodController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
-	err := r.paymentService.DeletePaymentMethod(id)
+	err := r.paymentService(ctx).DeletePaymentMethod(id)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)

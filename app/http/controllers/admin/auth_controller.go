@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	appfacades "goravel/app/facades"
 	"strconv"
@@ -20,25 +19,38 @@ import (
 	"goravel/app/utils"
 )
 
-type AuthController struct {
-	authService                services.AuthService
-	captchaService             services.CaptchaService
-	googleAuthenticatorService services.GoogleAuthenticatorService
-	treeService                services.TreeService
-	lockoutService             services.LoginLockoutService
-}
+type AuthController struct{}
 
 func NewAuthController() *AuthController {
-	adminService := services.NewAdminServiceImpl(context.Background())
-	tokenService := services.NewTokenServiceImpl(context.Background())
-	authService := services.NewAuthServiceImpl(context.Background(), adminService, tokenService)
-	return &AuthController{
-		authService:                authService,
-		captchaService:             services.NewCaptchaServiceImpl(context.Background()),
-		googleAuthenticatorService: services.NewGoogleAuthenticatorServiceImpl(context.Background()),
-		treeService:                services.NewTreeServiceImpl(context.Background()),
-		lockoutService:             services.NewLoginLockoutService(context.Background()),
-	}
+	return &AuthController{}
+}
+
+func (r *AuthController) adminService(ctx http.Context) services.AdminService {
+	return services.NewAdminServiceImpl(ctx)
+}
+
+func (r *AuthController) tokenService(ctx http.Context) services.TokenService {
+	return services.NewTokenServiceImpl(ctx)
+}
+
+func (r *AuthController) authService(ctx http.Context) services.AuthService {
+	return services.NewAuthServiceImpl(ctx, r.adminService(ctx), r.tokenService(ctx))
+}
+
+func (r *AuthController) captchaService(ctx http.Context) services.CaptchaService {
+	return services.NewCaptchaServiceImpl(ctx)
+}
+
+func (r *AuthController) googleAuthenticatorService(ctx http.Context) services.GoogleAuthenticatorService {
+	return services.NewGoogleAuthenticatorServiceImpl(ctx)
+}
+
+func (r *AuthController) treeService(ctx http.Context) services.TreeService {
+	return services.NewTreeServiceImpl(ctx)
+}
+
+func (r *AuthController) lockoutService(ctx http.Context) services.LoginLockoutService {
+	return services.NewLoginLockoutService(ctx)
 }
 
 // getLoginRequestData 获取登录请求数据（排除敏感信息）
@@ -153,10 +165,6 @@ func requiredInput(ctx http.Context, key, requiredErrorCode string) (string, htt
 	return value, nil
 }
 
-func (r *AuthController) tokenService() services.TokenService {
-	return services.NewTokenServiceImpl(context.Background())
-}
-
 func bearerTokenFromHeader(ctx http.Context) string {
 	return str.Of(ctx.Request().Header("Authorization", "")).ChopStart("Bearer ").Trim().String()
 }
@@ -167,12 +175,12 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	errors, err := ctx.Request().ValidateRequest(&loginRequest)
 	if err != nil {
 		requestData := r.getLoginRequestData(ctx)
-		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
+		r.authService(ctx).RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
 		return response.Error(ctx, http.StatusBadRequest, err.Error())
 	}
 	if errors != nil {
 		requestData := r.getLoginRequestData(ctx)
-		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
+		r.authService(ctx).RecordLoginLog(ctx, 0, loginRequest.Username, 0, "validation_failed", requestData)
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
@@ -180,9 +188,9 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	ip := helpers.GetRealIP(ctx)
 
 	// ---- 登录失败锁定检查 ----
-	if locked, _ := r.lockoutService.IsLocked(ip, loginRequest.Username); locked {
+	if locked, _ := r.lockoutService(ctx).IsLocked(ip, loginRequest.Username); locked {
 		lockMinutes := facades.Config().GetInt("login_security.lock_duration_minutes", 15)
-		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "login_locked", requestData)
+		r.authService(ctx).RecordLoginLog(ctx, 0, loginRequest.Username, 0, "login_locked", requestData)
 		return response.Error(ctx, http.StatusTooManyRequests,
 			apperrors.ErrLoginLocked.WithParams(map[string]any{"minutes": lockMinutes}))
 	}
@@ -195,8 +203,8 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		})
 	}
 	if !exists {
-		r.lockoutService.RecordFailure(ip, loginRequest.Username)
-		r.authService.RecordLoginLog(ctx, 0, loginRequest.Username, 0, "username_not_found", requestData)
+		r.lockoutService(ctx).RecordFailure(ip, loginRequest.Username)
+		r.authService(ctx).RecordLoginLog(ctx, 0, loginRequest.Username, 0, "username_not_found", requestData)
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
@@ -209,19 +217,19 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 
 	if admin.Status == 0 {
-		r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "account_disabled", requestData)
+		r.authService(ctx).RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "account_disabled", requestData)
 		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAccountDisabled.Code)
 	}
 
 	// 验证密码
 	if !facades.Hash().Check(loginRequest.Password, admin.Password) {
-		r.lockoutService.RecordFailure(ip, loginRequest.Username)
-		r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "password_error", requestData)
+		r.lockoutService(ctx).RecordFailure(ip, loginRequest.Username)
+		r.authService(ctx).RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "password_error", requestData)
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUsernameOrPasswordErr.Code)
 	}
 
 	// 检查是否绑定了谷歌验证码
-	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
+	isBound, err := r.googleAuthenticatorService(ctx).IsBound(admin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -232,38 +240,38 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	if isBound {
 		googleCode := loginRequest.GoogleCode
 		if googleCode == "" {
-			r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_required", requestData)
+			r.authService(ctx).RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_required", requestData)
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeRequired.Code)
 		}
 
-		secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
+		secret, err := r.googleAuthenticatorService(ctx).GetSecret(admin.ID)
 		if err != nil {
 			return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 				"admin_id": admin.ID,
 			})
 		}
 
-		if !r.googleAuthenticatorService.Verify(secret, googleCode) {
-			r.lockoutService.RecordFailure(ip, loginRequest.Username)
-			r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_error", requestData)
+		if !r.googleAuthenticatorService(ctx).Verify(secret, googleCode) {
+			r.lockoutService(ctx).RecordFailure(ip, loginRequest.Username)
+			r.authService(ctx).RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, "google_code_error", requestData)
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
 	} else {
-		if r.captchaService.Enabled() {
+		if r.captchaService(ctx).Enabled() {
 			captchaID := ctx.Request().Input("captcha_id")
 			captchaAnswer := ctx.Request().Input("captcha_answer")
-			if ok, messageKey := r.captchaService.Verify(captchaID, captchaAnswer); !ok {
+			if ok, messageKey := r.captchaService(ctx).Verify(captchaID, captchaAnswer); !ok {
 				if messageKey == "" {
 					messageKey = "captcha_invalid"
 				}
-				r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, messageKey, requestData)
+				r.authService(ctx).RecordLoginLog(ctx, admin.ID, loginRequest.Username, 0, messageKey, requestData)
 				return response.Error(ctx, http.StatusBadRequest, messageKey)
 			}
 		}
 	}
 
 	// 所有验证通过，清除失败计数
-	r.lockoutService.ClearFailures(ip, loginRequest.Username)
+	r.lockoutService(ctx).ClearFailures(ip, loginRequest.Username)
 
 	// 验证通过，生成token并完成登录
 	browser, os := helpers.GetBrowserAndOS(ctx)
@@ -276,7 +284,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		expiresAt = &exp
 	}
 
-	plainToken, _, err := r.tokenService().CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
+	plainToken, _, err := r.tokenService(ctx).CreateToken("admin", admin.ID, "admin-token", expiresAt, browser, ip, os, "")
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -285,7 +293,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	token := plainToken
 
 	// 记录登录成功日志
-	r.authService.RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, "login_success", requestData)
+	r.authService(ctx).RecordLoginLog(ctx, admin.ID, loginRequest.Username, 1, "login_success", requestData)
 
 	// 更新最后登录时间（ORM会自动更新UpdatedAt）
 	appfacades.OrmQuery(ctx).Save(&admin)
@@ -303,13 +311,13 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 // Captcha 获取登录验证码
 func (r *AuthController) Captcha(ctx http.Context) http.Response {
-	enabled := r.captchaService.Enabled()
+	enabled := r.captchaService(ctx).Enabled()
 	captchaData := http.Json{
 		"enabled": enabled,
 	}
 
 	if enabled {
-		captchaID, image, err := r.captchaService.Generate()
+		captchaID, image, err := r.captchaService(ctx).Generate()
 		if err != nil {
 			return response.ErrorWithLog(ctx, "captcha", err)
 		}
@@ -325,7 +333,7 @@ func (r *AuthController) Captcha(ctx http.Context) http.Response {
 
 // Info 获取当前登录管理员信息
 func (r *AuthController) Info(ctx http.Context) http.Response {
-	admin, permissions, menus, err := r.authService.GetAdminInfo(ctx)
+	admin, permissions, menus, err := r.authService(ctx).GetAdminInfo(ctx)
 	if err != nil {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrNotLoggedIn.Code)
 	}
@@ -363,7 +371,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		menuIDs = append(menuIDs, id)
 	}
 	if len(menuIDs) > 0 {
-		expandedIDs, err := r.treeService.GetMenuIDsWithAncestors(menuIDs)
+		expandedIDs, err := r.treeService(ctx).GetMenuIDsWithAncestors(menuIDs)
 		if err == nil && len(expandedIDs) > 0 {
 			menuIDSet = make(map[uint]bool)
 			for _, id := range expandedIDs {
@@ -371,7 +379,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			}
 		}
 		// 先构建完整树形结构
-		menuTree, _ = r.treeService.BuildMenuTree(0)
+		menuTree, _ = r.treeService(ctx).BuildMenuTree(0)
 		// 递归过滤树形结构，只保留有权限的菜单（含因权限而显示的目录）
 		var filterMenuTree func([]models.Menu) []models.Menu
 		filterMenuTree = func(menuList []models.Menu) []models.Menu {
@@ -530,12 +538,12 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 
 		if token != "" {
 			// 删除token
-			_ = r.tokenService().DeleteToken(token)
+			_ = r.tokenService(ctx).DeleteToken(token)
 		}
 
 		// 记录退出日志
 		logoutRequestData := r.getLoginRequestData(ctx)
-		r.authService.RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success", logoutRequestData)
+		r.authService(ctx).RecordLoginLog(ctx, admin.ID, admin.Username, 1, "logout_success", logoutRequestData)
 	}
 
 	return response.Success(ctx, "logout_success")
@@ -549,7 +557,7 @@ func (r *AuthController) Tokens(ctx http.Context) http.Response {
 	}
 
 	// 获取用户的所有token
-	tokens, err := r.tokenService().GetTokensByUser("admin", admin.ID)
+	tokens, err := r.tokenService(ctx).GetTokensByUser("admin", admin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -618,7 +626,7 @@ func (r *AuthController) RevokeAllTokens(ctx http.Context) http.Response {
 	}
 
 	// 删除用户的所有token
-	if err := r.tokenService().DeleteTokensByUser("admin", admin.ID); err != nil {
+	if err := r.tokenService(ctx).DeleteTokensByUser("admin", admin.ID); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -646,7 +654,7 @@ func (r *AuthController) KickOutUser(ctx http.Context) http.Response {
 	}
 
 	// 删除用户的所有token
-	if err := r.tokenService().DeleteTokensByUser("admin", targetAdmin.ID); err != nil {
+	if err := r.tokenService(ctx).DeleteTokensByUser("admin", targetAdmin.ID); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"target_user_id": targetAdmin.ID,
 			"operator_id":    admin.ID,
@@ -664,7 +672,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	}
 
 	// 检查是否已经绑定
-	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
+	isBound, err := r.googleAuthenticatorService(ctx).IsBound(admin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -680,7 +688,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	if admin.Email != "" {
 		accountName = admin.Email
 	}
-	secret, qrCodeURL, err := r.googleAuthenticatorService.GenerateSecret(accountName)
+	secret, qrCodeURL, err := r.googleAuthenticatorService(ctx).GenerateSecret(accountName)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -688,7 +696,7 @@ func (r *AuthController) GetGoogleAuthenticatorQRCode(ctx http.Context) http.Res
 	}
 
 	// 生成二维码图片
-	qrCodeImage, err := r.googleAuthenticatorService.GenerateQRCodeImage(accountName, secret)
+	qrCodeImage, err := r.googleAuthenticatorService(ctx).GenerateQRCodeImage(accountName, secret)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -719,7 +727,7 @@ func (r *AuthController) BindGoogleAuthenticator(ctx http.Context) http.Response
 	}
 
 	// 绑定谷歌验证码
-	if err := r.googleAuthenticatorService.Bind(admin.ID, secret, code); err != nil {
+	if err := r.googleAuthenticatorService(ctx).Bind(admin.ID, secret, code); err != nil {
 		if err.Error() == "invalid_code" {
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 		}
@@ -745,7 +753,7 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	}
 
 	// 获取管理员的密钥
-	secret, err := r.googleAuthenticatorService.GetSecret(admin.ID)
+	secret, err := r.googleAuthenticatorService(ctx).GetSecret(admin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
@@ -757,12 +765,12 @@ func (r *AuthController) UnbindGoogleAuthenticator(ctx http.Context) http.Respon
 	}
 
 	// 验证验证码
-	if !r.googleAuthenticatorService.Verify(secret, code) {
+	if !r.googleAuthenticatorService(ctx).Verify(secret, code) {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrGoogleCodeInvalid.Code)
 	}
 
 	// 解绑谷歌验证码
-	if err := r.googleAuthenticatorService.Unbind(admin.ID); err != nil {
+	if err := r.googleAuthenticatorService(ctx).Unbind(admin.ID); err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,
 		})
@@ -779,7 +787,7 @@ func (r *AuthController) GetGoogleAuthenticatorStatus(ctx http.Context) http.Res
 	}
 
 	// 检查是否绑定
-	isBound, err := r.googleAuthenticatorService.IsBound(admin.ID)
+	isBound, err := r.googleAuthenticatorService(ctx).IsBound(admin.ID)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "auth", err, map[string]any{
 			"admin_id": admin.ID,

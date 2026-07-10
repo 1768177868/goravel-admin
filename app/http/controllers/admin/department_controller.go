@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"context"
-
 	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
@@ -14,22 +12,23 @@ import (
 	"goravel/app/utils"
 )
 
-type DepartmentController struct {
-	treeService       services.TreeService
-	departmentService services.DepartmentService
-}
+type DepartmentController struct{}
 
 func NewDepartmentController() *DepartmentController {
-	treeService := services.NewTreeServiceImpl(context.Background())
-	return &DepartmentController{
-		treeService:       treeService,
-		departmentService: services.NewDepartmentServiceImpl(context.Background(), treeService),
-	}
+	return &DepartmentController{}
+}
+
+func (r *DepartmentController) treeService(ctx http.Context) services.TreeService {
+	return services.NewTreeServiceImpl(ctx)
+}
+
+func (r *DepartmentController) departmentService(ctx http.Context) services.DepartmentService {
+	return services.NewDepartmentServiceImpl(ctx, r.treeService(ctx))
 }
 
 // findDepartmentByID 根据ID查找部门，如果不存在则返回错误响应
 func (r *DepartmentController) findDepartmentByID(ctx http.Context, id uint) (*models.Department, http.Response) {
-	department, err := r.departmentService.GetByID(id)
+	department, err := r.departmentService(ctx).GetByID(id)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrDepartmentNotFound.Code)
 	}
@@ -66,7 +65,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	if name != "" || status != "" || startTime != "" || endTime != "" {
 		filters := r.buildFilters(ctx)
 		// 搜索时获取所有匹配的记录，不限制分页
-		departments, _, err := r.departmentService.GetList(filters, 1, 10000)
+		departments, _, err := r.departmentService(ctx).GetList(filters, 1, 10000)
 		if err != nil {
 			return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 		}
@@ -77,7 +76,7 @@ func (r *DepartmentController) Index(ctx http.Context) http.Response {
 	}
 
 	// 无搜索条件时返回树形结构（前端可直接使用的格式）
-	departments, err := r.treeService.BuildDepartmentTree(0)
+	departments, err := r.treeService(ctx).BuildDepartmentTree(0)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -115,7 +114,7 @@ func (r *DepartmentController) Store(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	department, err := r.departmentService.Create(
+	department, err := r.departmentService(ctx).Create(
 		departmentCreate.ParentID,
 		departmentCreate.Name,
 		departmentCreate.Code,
@@ -186,7 +185,7 @@ func (r *DepartmentController) Update(ctx http.Context) http.Response {
 		department.Remark = departmentUpdate.Remark
 	}
 
-	if err := r.departmentService.Update(department); err != nil {
+	if err := r.departmentService(ctx).Update(department); err != nil {
 		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"department_id": department.ID,
 		})
@@ -206,7 +205,7 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 	}
 
 	// 检查是否有子部门
-	hasChildren, err := r.treeService.HasDepartmentChildren(id)
+	hasChildren, err := r.treeService(ctx).HasDepartmentChildren(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -215,7 +214,7 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 	}
 
 	// 检查是否有管理员
-	hasAdmins, err := r.departmentService.HasAdmins(id)
+	hasAdmins, err := r.departmentService(ctx).HasAdmins(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrQueryFailed.Code)
 	}
@@ -223,7 +222,7 @@ func (r *DepartmentController) Destroy(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrDepartmentHasAdmins.Code)
 	}
 
-	if err := r.departmentService.Delete(department); err != nil {
+	if err := r.departmentService(ctx).Delete(department); err != nil {
 		return response.ErrorWithLog(ctx, "department", err, map[string]any{
 			"department_id": department.ID,
 		})

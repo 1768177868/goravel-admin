@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 
 	"github.com/goravel/framework/contracts/http"
@@ -16,20 +15,22 @@ import (
 	"goravel/app/services"
 )
 
-type RoleController struct {
-	roleService services.RoleService
-}
+type RoleController struct {}
+
 
 func NewRoleController() *RoleController {
-	return &RoleController{
-		roleService: services.NewRoleServiceImpl(context.Background()),
-	}
+	return &RoleController{}
 }
+
+func (r *RoleController) roleService(ctx http.Context) services.RoleService {
+	return services.NewRoleServiceImpl(ctx)
+}
+
 
 // findRoleByID 根据ID查找角色，如果不存在则返回错误响应
 // withRelations 为 true 时会预加载 Permissions 和 Menus 关联
 func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations bool) (*models.Role, http.Response) {
-	role, err := r.roleService.GetByID(id, withRelations)
+	role, err := r.roleService(ctx).GetByID(id, withRelations)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrRoleNotFound.Code)
 	}
@@ -61,7 +62,7 @@ func (r *RoleController) Index(ctx http.Context) http.Response {
 
 	filters := r.buildFilters(ctx)
 
-	roles, total, err := r.roleService.GetList(filters, page, pageSize)
+	roles, total, err := r.roleService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -117,7 +118,7 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrRoleSlugExists.Code)
 	}
 
-	role, err := r.roleService.Create(
+	role, err := r.roleService(ctx).Create(
 		roleCreate.Name,
 		roleCreate.Slug,
 		roleCreate.Description,
@@ -132,9 +133,9 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	// 处理权限关联
-	permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
+	permissionIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "permission_ids")
 	if len(permissionIDs) > 0 {
-		if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
+		if err := r.roleService(ctx).SyncPermissions(role, permissionIDs); err != nil {
 			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":        role.ID,
 				"permission_ids": permissionIDs,
@@ -143,9 +144,9 @@ func (r *RoleController) Store(ctx http.Context) http.Response {
 	}
 
 	// 处理菜单关联
-	menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
+	menuIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "menu_ids")
 	if len(menuIDs) > 0 {
-		if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
+		if err := r.roleService(ctx).SyncMenus(role, menuIDs); err != nil {
 			return response.ErrorWithLog(ctx, "role", err, map[string]any{
 				"role_id":  role.ID,
 				"menu_ids": menuIDs,
@@ -256,7 +257,7 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 		role.Sort = roleUpdate.Sort
 	}
 
-	if err := r.roleService.Update(role); err != nil {
+	if err := r.roleService(ctx).Update(role); err != nil {
 		return response.ErrorWithLog(ctx, "role", err, map[string]any{
 			"role_id": role.ID,
 		})
@@ -267,8 +268,8 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	// 检查字段是否存在（即使值为空数组，也应该同步以清空关联）
 	if !isProtected {
 		if _, exists := allInputs["permission_ids"]; exists {
-			permissionIDs := r.roleService.ParseIDsFromRequest(ctx, "permission_ids")
-			if err := r.roleService.SyncPermissions(role, permissionIDs); err != nil {
+			permissionIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "permission_ids")
+			if err := r.roleService(ctx).SyncPermissions(role, permissionIDs); err != nil {
 				return response.ErrorWithLog(ctx, "role", err, map[string]any{
 					"role_id":        role.ID,
 					"permission_ids": permissionIDs,
@@ -281,8 +282,8 @@ func (r *RoleController) Update(ctx http.Context) http.Response {
 	// 检查字段是否存在（即使值为空数组，也应该同步以清空关联）
 	if !isProtected {
 		if _, exists := allInputs["menu_ids"]; exists {
-			menuIDs := r.roleService.ParseIDsFromRequest(ctx, "menu_ids")
-			if err := r.roleService.SyncMenus(role, menuIDs); err != nil {
+			menuIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "menu_ids")
+			if err := r.roleService(ctx).SyncMenus(role, menuIDs); err != nil {
 				return response.ErrorWithLog(ctx, "role", err, map[string]any{
 					"role_id":  role.ID,
 					"menu_ids": menuIDs,

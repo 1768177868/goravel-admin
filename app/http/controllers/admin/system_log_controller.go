@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	appfacades "goravel/app/facades"
 	"sort"
 	"time"
@@ -16,19 +15,21 @@ import (
 	"goravel/app/services"
 )
 
-type SystemLogController struct {
-	systemLogService services.SystemLogService
-}
+type SystemLogController struct {}
+
 
 func NewSystemLogController() *SystemLogController {
-	return &SystemLogController{
-		systemLogService: services.NewSystemLogService(context.Background()),
-	}
+	return &SystemLogController{}
 }
+
+func (r *SystemLogController) systemLogService(ctx http.Context) services.SystemLogService {
+	return services.NewSystemLogService(ctx)
+}
+
 
 // findSystemLogByID 根据ID查找系统日志，如果不存在则返回错误响应
 func (r *SystemLogController) findSystemLogByID(ctx http.Context, id uint) (*models.SystemLog, http.Response) {
-	log, err := r.systemLogService.GetByID(id)
+	log, err := r.systemLogService(ctx).GetByID(id)
 	if err != nil {
 		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrLogNotFound.Code)
 	}
@@ -63,7 +64,7 @@ func (r *SystemLogController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
-	logs, total, err := r.systemLogService.GetList(filters, page, pageSize)
+	logs, total, err := r.systemLogService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "system-log", err)
 	}
