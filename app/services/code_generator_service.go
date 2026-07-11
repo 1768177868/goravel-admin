@@ -1993,15 +1993,21 @@ func (s *CodeGeneratorServiceImpl) GenerateWithAI(ctx context.Context, userDescr
 
 请只返回 JSON 配置，不要包含其他说明文字。`, string(promptFile), userDescription)
 
-	// 调用 AI Service
+	// 调用 AI Service（失败时自动重试一次）
 	aiService := NewAIService(s.ctx)
-	response, err := aiService.Complete(ctx, userPrompt, systemPrompt)
-	if err != nil {
-		return nil, fmt.Errorf("AI completion failed: %w", err)
+	var aiResponse string
+	for attempt := 1; attempt <= 2; attempt++ {
+		aiResponse, err = aiService.Complete(ctx, userPrompt, systemPrompt)
+		if err == nil {
+			break
+		}
+		if attempt == 2 {
+			return nil, fmt.Errorf("AI completion failed: %w", err)
+		}
 	}
 
 	// 尝试提取 JSON（AI 可能返回带 markdown 代码块的 JSON）
-	jsonStr := strings.TrimSpace(response)
+	jsonStr := strings.TrimSpace(aiResponse)
 
 	// 处理 ```json 代码块
 	if strings.Contains(jsonStr, "```json") {

@@ -421,6 +421,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"is_developer_admin":              isDeveloperAdmin,
 			"pprof_enabled":                   pprofEnabled,
 			"pprof_token_required":            pprofTokenRequired,
+			"ai_enabled":                      utils.AIEnabled(),
 		},
 	})
 }

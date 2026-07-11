@@ -9,6 +9,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	appfacades "goravel/app/facades"
+	"goravel/app/utils"
 )
 
 type AIService interface {
@@ -33,11 +34,11 @@ func (a *promptAgent) Middleware() []contractsai.Middleware { return nil }
 func (a *promptAgent) Tools() []contractsai.Tool            { return nil }
 
 func (s *AIServiceImpl) Complete(ctx context.Context, prompt string, systemPrompt string) (string, error) {
-	provider := facades.Config().GetString("ai.default", "openai")
-	if facades.Config().GetString(fmt.Sprintf("ai.providers.%s.key", provider), "") == "" {
-		return "", fmt.Errorf("AI API key is not configured. Please set AI_API_KEY in .env file and restart the server")
+	if !utils.AIEnabled() {
+		return "", fmt.Errorf("AI API key is not configured. Please set AI_API_KEY (or OPENAI_API_KEY) in .env and restart the server")
 	}
 
+	provider := facades.Config().GetString("ai.default", "openai")
 	agent := &promptAgent{instructions: systemPrompt}
 	opts := []contractsai.Option{ai.WithProvider(provider)}
 	if model := facades.Config().GetString("ai.model", ""); model != "" {

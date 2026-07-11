@@ -50,6 +50,8 @@
 | OpenTelemetry | Jaeger / Grafana 等统一观测 | `OTEL_*`、[Telemetry 文档](https://www.goravel.dev/zh_CN/digging-deeper/telemetry.html) |
 | AI / pprof / Swagger | 开发与排障 | 生产默认关闭或限权 |
 
+**AI（可选）：** 仅用于开发环境「代码生成器 → AI 辅助」标签页；未配置 `AI_API_KEY`（或兼容别名 `OPENAI_API_KEY`）时，前端自动隐藏该标签页。设置 `AI_ENABLED=false` 可显式关闭。详见 `.env.example` 中 AI 配置段。
+
 **原则：** 新用户先跑通核心；需要业务扩展再开进阶，并准备对应运维。
 
 ---

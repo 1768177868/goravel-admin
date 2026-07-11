@@ -75,6 +75,8 @@
     "generate_success": "生成成功",
     "generate_failed": "生成失败",
     "files_exist": "检测到文件已存在",
+    "ai_not_configured": "AI 功能未配置，请在 .env 中设置 AI_API_KEY 后重启服务",
+    "description_required": "请输入模块描述",
     "parse_success": "解析成功",
     "ulid_required": "ULID 不能为空",
     "invalid_ulid": "无效的 ULID",

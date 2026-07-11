@@ -201,8 +201,8 @@
           </el-form>
       </el-tab-pane>
 
-        <!-- AI 辅助标签页 -->
-        <el-tab-pane :label="$t('code_generator.ai_mode')" name="ai">
+        <!-- AI 辅助标签页（未配置 API Key 时隐藏） -->
+        <el-tab-pane v-if="aiEnabled" :label="$t('code_generator.ai_mode')" name="ai">
           <div class="ai-assistant">
             <el-alert
               :title="$t('code_generator.ai_mode_tip')"
@@ -211,6 +211,19 @@
               style="margin-bottom: 20px"
             />
             <el-form label-width="120px">
+              <el-form-item :label="$t('code_generator.ai_example_title')">
+                <div class="ai-example-prompts">
+                  <el-tag
+                    v-for="(prompt, index) in aiExamplePrompts"
+                    :key="index"
+                    class="ai-example-tag"
+                    effect="plain"
+                    @click="applyAIExample(prompt)"
+                  >
+                    {{ prompt }}
+                  </el-tag>
+                </div>
+              </el-form-item>
               <el-form-item :label="$t('code_generator.ai_description')">
                 <el-input
                   v-model="aiDescription"
@@ -227,6 +240,13 @@
                 >
                   <el-icon><Document /></el-icon>
                   {{ $t('code_generator.ai_generate') }}
+                </el-button>
+                <el-button
+                  v-if="aiLastError"
+                  :disabled="aiGenerating"
+                  @click="handleGenerateWithAI"
+                >
+                  {{ $t('code_generator.ai_retry') }}
                 </el-button>
                 <el-button @click="handleApplyAIConfig" :disabled="!aiGeneratedConfig">
                   {{ $t('code_generator.ai_apply_config') }}
@@ -387,9 +407,11 @@ import { Plus, Document, Delete, Setting } from '@element-plus/icons-vue'
 import { getFieldTypes, getTables, getTableColumns, previewCode as previewCodeApi, generateCode, saveCode, generateWithAI } from '../../api/codeGenerator'
 import { getDictionaryTypes } from '../../api/dictionary'
 import { isDev } from '../../utils/env'
+import { useUserStore } from '../../store/user'
 import logger from '../../utils/logger'
 
 const { t } = useI18n()
+const userStore = useUserStore()
 
 if (!isDev()) {
   ElMessage.error(t('code_generator.dev_only'))
@@ -407,6 +429,14 @@ const selectedTable = ref('')
 const aiDescription = ref('')
 const aiGenerating = ref(false)
 const aiGeneratedConfig = ref(null)
+const aiLastError = ref(null)
+const aiEnabled = ref(false)
+
+const aiExamplePrompts = computed(() => [
+  t('code_generator.ai_example_product'),
+  t('code_generator.ai_example_article'),
+  t('code_generator.ai_example_guestbook'),
+])
 
 // 使用 computed 让字段类型标签响应语言变化
 const fieldTypes = computed(() => {
@@ -535,10 +565,16 @@ const loadFieldTypes = async () => {
   try {
     const response = await getFieldTypes()
     fieldTypesRaw.value = response.data.field_types || []
+    aiEnabled.value = response.data.ai_enabled === true || userStore.config.aiEnabled
   } catch (error) {
     logger.error('Failed to load field types:', error)
     ElMessage.error(t('code_generator.load_field_types_failed'))
+    aiEnabled.value = userStore.config.aiEnabled
   }
+}
+
+const applyAIExample = (prompt) => {
+  aiDescription.value = prompt
 }
 
 const loadDictionaryTypes = async () => {
@@ -828,6 +864,7 @@ const handleGenerateWithAI = async () => {
 
   try {
     aiGenerating.value = true
+    aiLastError.value = null
     const response = await generateWithAI({
       description: aiDescription.value
     })
@@ -836,11 +873,13 @@ const handleGenerateWithAI = async () => {
       aiGeneratedConfig.value = response.data.config
       ElMessage.success(t('code_generator.ai_generate_success'))
     } else {
+      aiLastError.value = t('code_generator.ai_generate_failed')
       ElMessage.error(t('code_generator.ai_generate_failed'))
     }
   } catch (error) {
     logger.error('Failed to generate with AI:', error)
     const errorMessage = error.response?.data?.message || error.message || t('code_generator.ai_generate_failed')
+    aiLastError.value = errorMessage
     ElMessage.error(errorMessage)
   } finally {
     aiGenerating.value = false
@@ -1032,5 +1071,20 @@ html.dark .code-preview pre {
 
 html.dark .code-preview code {
   color: var(--el-text-color-regular) !important;
+}
+
+.ai-example-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-example-tag {
+  cursor: pointer;
+  max-width: 100%;
+  height: auto;
+  white-space: normal;
+  line-height: 1.4;
+  padding: 6px 10px;
 }
 </style>

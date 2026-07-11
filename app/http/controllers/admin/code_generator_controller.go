@@ -9,6 +9,7 @@ import (
 	apperrors "goravel/app/errors"
 	"goravel/app/http/response"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type CodeGeneratorController struct {}
@@ -157,6 +158,7 @@ func (c *CodeGeneratorController) GetFieldTypes(ctx http.Context) http.Response 
 	fieldTypes := c.codeGeneratorService(ctx).GetFieldTypes()
 	return response.Success(ctx, http.Json{
 		"field_types": fieldTypes,
+		"ai_enabled":  utils.AIEnabled(),
 	})
 }
 
@@ -196,6 +198,10 @@ func (c *CodeGeneratorController) GenerateWithAI(ctx http.Context) http.Response
 
 	if req.Description == "" {
 		return response.Error(ctx, http.StatusBadRequest, "description_required")
+	}
+
+	if !utils.AIEnabled() {
+		return response.Error(ctx, http.StatusBadRequest, "ai_not_configured")
 	}
 
 	config, err := c.codeGeneratorService(ctx).GenerateWithAI(ctx, req.Description)

@@ -20,7 +20,8 @@ export const useUserStore = defineStore('user', {
         showButtonsWithoutPermission: false, // 是否显示无权限的按钮
         isDeveloperAdmin: false,
         pprofEnabled: false,
-        pprofTokenRequired: false
+        pprofTokenRequired: false,
+        aiEnabled: false
       }
     }
   },
@@ -127,7 +128,8 @@ export const useUserStore = defineStore('user', {
         showButtonsWithoutPermission: config?.show_buttons_without_permission || config?.showButtonsWithoutPermission || false,
         isDeveloperAdmin: config?.is_developer_admin || config?.isDeveloperAdmin || false,
         pprofEnabled: config?.pprof_enabled || config?.pprofEnabled || false,
-        pprofTokenRequired: config?.pprof_token_required || config?.pprofTokenRequired || false
+        pprofTokenRequired: config?.pprof_token_required || config?.pprofTokenRequired || false,
+        aiEnabled: config?.ai_enabled || config?.aiEnabled || false
       }
     },
 

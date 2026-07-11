@@ -119,6 +119,8 @@
     "generate_success": "Generate successful",
     "generate_failed": "Generate failed",
     "files_exist": "Files already exist",
+    "ai_not_configured": "AI is not configured. Set AI_API_KEY in .env and restart the server",
+    "description_required": "Please enter module description",
     "parse_success": "Parse successful",
     "ulid_required": "ULID cannot be empty",
     "invalid_ulid": "Invalid ULID",
