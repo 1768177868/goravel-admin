@@ -6,7 +6,7 @@ import (
 	"goravel/app/utils/traceid"
 )
 
-// Trace middleware ensures every request carries a trace id and mirrors it in response headers.
+// Trace middleware bridges OTEL trace ids into the app trace_id field and X-Trace-Id header.
 func Trace() http.Middleware {
 	return newMiddleware("trace", func(ctx http.Context) {
 		traceID := traceid.EnsureHTTPContext(ctx, "")
