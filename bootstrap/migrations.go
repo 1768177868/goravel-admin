@@ -65,5 +65,6 @@ func Migrations() []schema.Migration {
 		&migrations.M20260423000200CreateSlowQueryLogsTable{},
 		&migrations.M20260426021000CreateApiEndpointMetricsTable{},
 		&migrations.M20260115152848ArticleTable{},
+		&migrations.M20260710000001AdjustSoftDeleteUniqueIndexes{},
 	}
 }
