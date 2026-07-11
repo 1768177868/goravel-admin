@@ -70,6 +70,7 @@ jobs:
     env:
       APP_ENV: test
       APP_KEY: base64:dGVzdC1jaS1hcHAta2V5MTIzNDU2Nzg5MDEyMzQ1Ng==
+      JWT_SECRET: ci-test-jwt-secret-please-change-in-production
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
       DB_PORT: 3306

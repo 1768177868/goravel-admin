@@ -7,40 +7,45 @@
 后端测试分为两类：
 
 - **快速测试**：默认质量门禁，只运行当前根模块内的包，不能依赖外部服务。
-- **集成测试**：需要 Kafka、RabbitMQ、NSQ、Redis Stream、达梦数据库等外部依赖，按需单独运行。
+- **集成测试 / 冒烟测试**：需要数据库等依赖；CI 的 `backend-integration` job 会跑 `./tests/feature/...`。
 
 ### 当前实际结构
 
 ```
 tests/
-└── test_case.go           # Goravel 测试基类，目前尚未形成完整 feature/unit 套件
+├── test_case.go                      # Goravel 测试基类
+└── feature/
+    ├── admin_auth_test.go            # 登录校验、未授权访问
+    ├── admin_smoke_test.go           # 冒烟：登录成功、info、menus/tree
+    └── api_auth_test.go              # health、用户注册/登录校验
 
 app/http/helpers/
-└── time_converter_test.go # 当前根模块内的快速 Go 测试
+└── time_converter_test.go            # 快速 Go 测试
+
+app/utils/
+├── sharding_helper_test.go
+└── traceid/traceid_test.go
 
 driver/
-├── kafka/queue_test.go       # 集成测试：需要本地 Kafka
-├── nsq/queue_test.go         # 集成测试：需要本地 nsqd
-├── rabbitmq/queue_test.go    # 集成测试：需要本地 RabbitMQ
-├── redisstream/queue_test.go # 驱动子模块测试，使用 miniredis
-└── dm/integration_test.go    # 集成测试：需要 -tags dm 和 DM_TEST_DSN
+├── kafka/queue_test.go               # 集成测试：需要本地 Kafka
+├── nsq/queue_test.go                 # 集成测试：需要本地 nsqd
+├── rabbitmq/queue_test.go            # 集成测试：需要本地 RabbitMQ
+├── redisstream/queue_test.go         # 驱动子模块测试，使用 miniredis
+└── dm/integration_test.go            # 集成测试：需要 -tags dm 和 DM_TEST_DSN
 ```
 
 ### 运行测试
 
 ```bash
-# 快速后端门禁（CI 默认使用）
-go test -v -timeout=2m ./...
+# 快速后端门禁（CI 默认使用，排除 tests/feature）
+PKGS=$(go list ./... | grep -v '/tests/feature$')
+go test -v -timeout=2m $PKGS
 
-# 仅编译根模块测试包，用于快速定位编译/初始化问题
-go test -run TestNonExistent -count=0 -v ./...
+# 冒烟 / feature 集成测试（需 migrate 后的数据库）
+go test -v -timeout=2m ./tests/feature/...
 
-# 运行当前已有 helper 测试
-go test -v -timeout=30s ./app/http/helpers
-
-# 生成根模块覆盖率报告
-go test -timeout=2m -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out -o coverage.html
+# 仅 helper / utils
+go test -v -timeout=30s ./app/http/helpers ./app/utils/...
 ```
 
 ### 集成测试（按需运行）

@@ -1,0 +1,168 @@
+# 开源定位与生产配置
+
+本文档面向把本项目当作**开源后台管理系统 / 二次开发底座**的使用者。  
+目标不是对标商业 SaaS 全套 SRE，而是：**能跑起来、能放心二次开发、能按需上生产。**
+
+---
+
+## 1. 适用 / 不适用
+
+### 适合
+
+- 企业内部后台、运营后台、管理中台
+- Goravel + Vue 的二次开发脚手架
+- 需要 RBAC、菜单、日志、导出、代码生成器的管理端
+- 中小规模业务扩展（用户、订单、支付等示例能力可选用）
+
+### 不适合（至少不能「开箱当核心」）
+
+- 金融级交易核心、强一致支付中台
+- 超大规模、多区域、强 SLA 的商业 SaaS 产品中台
+- 未做运维规划就直接开启「分表 + ES + 多队列」当生产核心
+
+> 演示站账号仅用于体验，**切勿用于生产**。生产请改默认管理员密码，并配置独立密钥。
+
+---
+
+## 2. 模块分层：核心 vs 进阶
+
+### 核心（默认可跑）
+
+| 能力 | 说明 |
+|------|------|
+| 认证授权 | JWT、RBAC、菜单权限 |
+| 系统管理 | 管理员、角色、部门、字典、配置 |
+| 日志 | 操作日志、登录日志、系统日志 |
+| 基础导出 | 列表导出（小数据可同步；异步导出见进阶） |
+| 代码生成器 | 本地/开发环境使用；生产请限权或关闭 |
+
+**最小依赖：** MySQL（或兼容库）+ 可运行的 Go 服务。  
+本地开发可用 `QUEUE_CONNECTION=sync`、`CACHE_STORE=memory`（不推荐生产）。
+
+### 进阶（可选，按需开启）
+
+| 模块 | 何时需要 | 相关配置 / 文档 |
+|------|----------|-----------------|
+| Redis 缓存 / 队列 | 生产导出、异步任务、限流与锁 | `CACHE_STORE`、`QUEUE_CONNECTION` |
+| 订单 / 支付分表 | 数据量大、按月归档 | [SHARDING_MIGRATION.md](./SHARDING_MIGRATION.md)、`SHARDING_*` |
+| Elasticsearch | 订单检索、全文检索 | `ELASTICSEARCH_*`、ES Worker |
+| 多队列驱动 | Kafka / RabbitMQ / NSQ / Redis Stream | `.env.example` 队列段 |
+| OpenTelemetry | Jaeger / Grafana 等统一观测 | `OTEL_*`、[Telemetry 文档](https://www.goravel.dev/zh_CN/digging-deeper/telemetry.html) |
+| AI / pprof / Swagger | 开发与排障 | 生产默认关闭或限权 |
+
+**原则：** 新用户先跑通核心；需要业务扩展再开进阶，并准备对应运维。
+
+---
+
+## 3. 最小生产配置
+
+适用于：后台管理为主、暂不分表、暂不用 ES。
+
+```ini
+APP_ENV=production
+APP_DEBUG=false
+APP_KEY=          # 必填：go run . artisan key:generate
+JWT_SECRET=       # 必填：强随机字符串
+
+LOG_CHANNEL=stack
+LOG_LEVEL=info
+
+DB_CONNECTION=mysql
+# ... 生产库连接 ...
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+QUEUE_CONCURRENT=2
+QUEUE_TRIES=5
+
+# 建议：限制管理端域名（可按需）
+# DOMAINS_ADMIN=admin.example.com
+
+# 生产默认关闭
+SWAGGER_ENABLED=false
+# APP_DISABLED_RUNNERS=  # 不要误关 queue:*
+```
+
+**上线检查（最小）：**
+
+1. `migrate` 成功，`db:seed` 后修改默认 `admin` 密码  
+2. Redis 可用，Web 进程与 Queue Worker 常驻  
+3. HTTPS + 反向代理  
+4. 关闭或限权：Swagger、pprof、代码生成器  
+5. 日志磁盘与备份策略就绪  
+
+部署细节见 [BUILD.md](./BUILD.md)、[DOCKER_DEPLOY.md](./DOCKER_DEPLOY.md)。
+
+---
+
+## 4. 完整进阶配置（可选）
+
+在「最小生产」之上，按模块叠加：
+
+### 4.1 异步导出 / 长任务
+
+```ini
+QUEUE_CONNECTION=redis
+QUEUE_LONG_RUNNING_CONCURRENT=1
+# Worker 需消费 long-running 队列（见 bootstrap runners）
+```
+
+### 4.2 分表
+
+```ini
+# SHARDING_TIME_SUFFIX_LAYOUT=200601
+# SHARDING_MAX_TIME_RANGE_MONTHS=3
+# SHARDING_ID_LOOKUP_SCAN_MONTHS=6
+# SHARDING_USER_BALANCE_LOGS_SHARDS=4
+```
+
+并配置定时任务创建未来分表（见分表文档）。
+
+### 4.3 Elasticsearch
+
+```ini
+ELASTICSEARCH_ENABLED=true
+ELASTICSEARCH_SYNC_ORDERS=true
+ELASTICSEARCH_URLS=http://127.0.0.1:9200
+ELASTICSEARCH_QUEUE=elasticsearch
+ELASTICSEARCH_SYNC_WORKER=auto
+# ELASTICSEARCH_OUTBOX_ENABLED=true
+```
+
+需要 ES 集群 + elasticsearch 队列 Worker。
+
+### 4.4 OpenTelemetry
+
+```ini
+# OTEL_TRACES_EXPORTER=otlptrace
+# OTEL_METRICS_EXPORTER=otlpmetric
+# OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318
+```
+
+未配置 exporter 时框架会自动禁用 `goravel:telemetry` runner，减少噪音。
+
+---
+
+## 5. 开源发布检查清单
+
+```text
+□ README 写清适用 / 不适用场景
+□ .env.example 可对照最小 / 进阶配置
+□ migrate + seed 可一键初始化
+□ CI：build / vet / 测试 / 前端构建通过
+□ 演示账号与生产密钥分离说明
+□ 进阶模块（分表 / ES / 队列）标注为可选
+□ 冒烟集成测试：登录、鉴权接口、基础业务读接口
+```
+
+---
+
+## 6. 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| [BUILD.md](./BUILD.md) | 编译与部署 |
+| [TESTING.md](./TESTING.md) | 测试指南 |
+| [SHARDING_MIGRATION.md](./SHARDING_MIGRATION.md) | 分表 |
+| [ERROR_CODES.md](./ERROR_CODES.md) | 错误码 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 架构 |

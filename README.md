@@ -23,6 +23,14 @@ git clone https://github.com/1768177868/goravel-admin.git
 username: demo  
 password: demo123
 
+### Intended Use
+
+**Good fit:** internal admin panels, ops backends, Goravel + Vue starter for secondary development.
+
+**Not a drop-in fit:** financial trading cores or large-scale commercial SaaS platforms out of the box. Sharding / Elasticsearch / multi-queue drivers are **optional** and need extra ops.
+
+See module tiers and production configs: [docs/OPENSOURCE.md](./docs/OPENSOURCE.md).
+
 ### Screenshots
 
 <p align="center">
@@ -91,6 +99,15 @@ password: demo123
   - Data export management
   - Multi-language support (Chinese/English)
   - Responsive UI design
+
+#### Optional Advanced Modules
+
+Enable only when needed (see [OPENSOURCE.md](./docs/OPENSOURCE.md)):
+
+- Monthly order/payment sharding and balance-log hash sharding
+- Elasticsearch order sync / search
+- Redis async queues, long-running export jobs, extra queue drivers
+- OpenTelemetry export to Jaeger / Grafana
 
 ### Tech Stack
 
@@ -215,9 +232,15 @@ This will regenerate the `docs/docs.go`, `docs/swagger.json`, and `docs/swagger.
 └── images/                       # Screenshots
 ```
 
-### Database Sharding
+### Database Sharding (Advanced)
 
-The project supports monthly sharding strategy and has implemented monthly sharding for order tables. For detailed documentation on how to create, use, and modify sharding tables, please refer to [docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md).
+Monthly sharding (orders, etc.) is supported. **New users can skip this** until data volume requires it.  
+See [docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) and [docs/OPENSOURCE.md](./docs/OPENSOURCE.md).
+
+### Production Config
+
+- **Minimal production** (admin-focused, no sharding / ES): [docs/OPENSOURCE.md](./docs/OPENSOURCE.md#3-最小生产配置)
+- **Full advanced stack** (queues, sharding, ES, OTEL): [docs/OPENSOURCE.md](./docs/OPENSOURCE.md#4-完整进阶配置可选)
 
 ### Security Features
 
@@ -318,6 +341,7 @@ upx -9 main
 | [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | Database sharding guide (creating, using, and modifying sharding tables) |
 | [BUILD.md](./docs/BUILD.md) | Build and deployment |
 | [TESTING.md](./docs/TESTING.md) | Testing guide (unit & integration) |
+| [OPENSOURCE.md](./docs/OPENSOURCE.md) | Open-source positioning, core vs advanced modules, production configs |
 | [Frontend Guide](./html/DEVELOPMENT.md) | Frontend development guide |
 
 ### Goravel Framework

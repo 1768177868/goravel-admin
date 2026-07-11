@@ -23,6 +23,13 @@ git clone https://github.com/1768177868/goravel-admin.git
 账号: demo  
 密码: demo123
 
+### 适用场景
+
+**适合：** 企业内部后台、运营管理端、Goravel + Vue 二次开发底座。
+
+**不适合：** 直接当金融交易核心、超大规模商业 SaaS 中台；分表 / ES / 多队列需额外运维，请按需开启。
+
+模块分层、最小生产配置与进阶配置说明见：[docs/OPENSOURCE.md](./docs/OPENSOURCE.md)。
 
 ### 截图展示
 
@@ -90,6 +97,15 @@ git clone https://github.com/1768177868/goravel-admin.git
   - 数据导出管理
   - 多语言支持（中文/英文）
   - 响应式 UI 设计
+
+#### 进阶模块（可选）
+
+以下能力**默认不必开启**，按业务需要再接入（详见 [OPENSOURCE.md](./docs/OPENSOURCE.md)）：
+
+- 订单 / 支付按月分表、用户余额哈希分表
+- Elasticsearch 订单同步与检索
+- Redis 异步队列、导出长任务、多队列驱动（Kafka / RabbitMQ / NSQ 等）
+- OpenTelemetry 导出到 Jaeger / Grafana
 
 ### 技术栈
 
@@ -215,9 +231,15 @@ swag init
 └── images/                       # 截图文件
 ```
 
-### 数据库分表
+### 数据库分表（进阶）
 
-项目支持按月分表策略，已实现订单表的按月分表功能。关于如何创建、使用和修改分表的详细文档，请参考 [docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md)。
+项目支持按月分表策略（订单等）。**新用户可先忽略**，仅在数据量大时再启用。  
+详细说明：[docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md)、[docs/OPENSOURCE.md](./docs/OPENSOURCE.md)。
+
+### 生产配置
+
+- **最小生产配置**（后台管理为主，不分表 / 不用 ES）：见 [docs/OPENSOURCE.md](./docs/OPENSOURCE.md#3-最小生产配置)
+- **完整进阶配置**（队列、分表、ES、OTEL）：见 [docs/OPENSOURCE.md](./docs/OPENSOURCE.md#4-完整进阶配置可选)
 
 ### 安全特性
 
@@ -316,6 +338,7 @@ upx -9 main
 | [SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) | 数据库分表指南（创建、使用和修改分表） |
 | [BUILD.md](./docs/BUILD.md) | 编译打包与部署 |
 | [TESTING.md](./docs/TESTING.md) | 测试指南（单元测试 & 集成测试） |
+| [OPENSOURCE.md](./docs/OPENSOURCE.md) | 开源定位、核心/进阶模块、最小与进阶生产配置 |
 | [前端开发指南](./html/DEVELOPMENT.md) | 前端开发文档 |
 
 ### Goravel 框架文档
