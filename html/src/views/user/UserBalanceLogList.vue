@@ -52,9 +52,18 @@
         </div>
       </el-card>
 
-      <TableToolbar :on-refresh="loadData" />
+      <TableToolbar
+        :on-refresh="loadData"
+        :visible-columns="visibleColumns"
+        :all-columns="allTableColumns"
+        :default-visible-columns="defaultVisibleColumns"
+        :column-order="columnOrder"
+        :fixed-columns="fixedColumns"
+        :on-column-setting-confirm="handleColumnSettingConfirm"
+      />
 
       <VxeTable
+        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
         :data="tableData"
         :loading="loading"
         :columns="tableColumns"
@@ -104,6 +113,7 @@ import Pagination from '../../components/Pagination.vue'
 import VxeTable from '../../components/VxeTable.vue'
 import TableToolbar from '../../components/TableToolbar.vue'
 import { useListPage } from '../../composables/useListPage'
+import { useColumnSetting } from '../../composables/useColumnSetting'
 import { getUserBalanceLogList, getUserBalanceStatistics } from '../../api/userBalanceLog'
 import ErrorHandler from '../../utils/errorHandler'
 import { forOwn } from 'lodash-es'
@@ -170,16 +180,25 @@ pagination.pageSize = 20
 // 统计信息
 const statistics = ref(null)
 
-// 表格列配置
-const tableColumns = computed(() => [
-  { field: 'id', title: t('table.id'), width: 180 },
-  { field: 'type', title: t('user.type'), width: 100, slot: 'type' },
-  { field: 'amount', title: t('user.amount'), width: 120, slot: 'amount' },
-  { field: 'balance', title: t('user.balance'), width: 120, slot: 'balance' },
-  { field: 'source', title: t('user.source'), width: 100, slot: 'source' },
-  { field: 'description', title: t('user.description'), minWidth: 200 },
-  { field: 'created_at', title: t('table.created_at'), width: 180 }
+// 所有列配置（用于列设置）
+const allTableColumns = computed(() => [
+  { field: 'id', title: t('table.id'), width: 180, key: 'id' },
+  { field: 'type', title: t('user.type'), width: 100, slot: 'type', key: 'type' },
+  { field: 'amount', title: t('user.amount'), width: 120, slot: 'amount', key: 'amount' },
+  { field: 'balance', title: t('user.balance'), width: 120, slot: 'balance', key: 'balance' },
+  { field: 'source', title: t('user.source'), width: 100, slot: 'source', key: 'source' },
+  { field: 'description', title: t('user.description'), minWidth: 200, key: 'description' },
+  { field: 'created_at', title: t('table.created_at'), width: 180, key: 'created_at' }
 ])
+
+const {
+  tableColumns,
+  visibleColumns,
+  defaultVisibleColumns,
+  columnOrder,
+  fixedColumns,
+  handleColumnSettingConfirm
+} = useColumnSetting('user_balance_log', allTableColumns)
 
 // 搜索表单字段配置
 const searchFields = computed(() => [
