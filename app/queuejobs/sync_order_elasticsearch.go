@@ -54,7 +54,9 @@ func (r *SyncOrderToElasticsearch) Handle(args ...any) error {
 	ctx := context.Background()
 	if err := esorders.PushOrderToElasticsearch(ctx, orderID, orderNo, op); err != nil {
 		facades.Log().Errorf("SyncOrderToElasticsearch failed: order_id=%d op=%s err=%v", orderID, op, err)
+		utils.MarkElasticsearchSyncOutboxFailed(orderID, op, err.Error())
 		return err
 	}
+	utils.MarkElasticsearchSyncOutboxProcessed(orderID, op)
 	return nil
 }

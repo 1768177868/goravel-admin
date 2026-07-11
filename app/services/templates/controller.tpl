@@ -5,8 +5,6 @@ import (
 <<if .ExportAsync>>
 	"encoding/json"
 <<end>>
-	"fmt"
-	"time"
 <<end>>
 	"strings"
 
@@ -14,9 +12,7 @@ import (
 <<if .HasExport>>
 <<if .ExportAsync>>
 	"github.com/goravel/framework/contracts/queue"
-<<end>>
 	"github.com/goravel/framework/facades"
-<<if .ExportAsync>>
 	"goravel/app/jobs"
 	appfacades "goravel/app/facades"
 	"goravel/app/models"
@@ -166,16 +162,14 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 // Export exports <<.ModelName>> records.
 func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 <<- if .HasExport>>
-	adminID, err := helpers.GetAdminIDFromContext(ctx)
-	if err != nil {
+	lock := helpers.AcquireExportLock(ctx, "<<.ModuleName>>s")
+	if lock.Unauthorized {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
-
-	lockKey := fmt.Sprintf("export:<<.ModuleName>>s:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10*time.Second)
-	if !lock.Get() {
+	if lock.Blocked {
 		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
+	adminID := lock.AdminID
 
 	filters := c.build<<.ModelName>>Filters(ctx)
 <<- if .ExportAsync>>
@@ -187,7 +181,7 @@ func (c *<<.ControllerName>>) Export(ctx http.Context) http.Response {
 		AdminID: adminID,
 		Type:    "<<.ModuleName>>s",
 		Status:  models.ExportStatusProcessing,
-		Disk:    "local",
+		Disk:    helpers.ResolveExportDisk(ctx),
 		Path:    "",
 	}
 	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {

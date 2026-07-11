@@ -320,7 +320,7 @@ func (s *OrderServiceImpl) CreateOrder(userID uint, amount float64, products []O
 		details = append(details, detail)
 	}
 
-	support.DispatchOrderElasticsearchSync(order.ID, order.OrderNo, "index")
+	support.RequestOrderElasticsearchSync(order.ID, order.OrderNo, "index")
 
 	return order, details, nil
 }
@@ -794,7 +794,7 @@ func (s *OrderServiceImpl) UpdateOrder(orderID uint, orderTime time.Time, status
 	if err != nil {
 		return err
 	}
-	support.DispatchOrderElasticsearchSync(orderID, order.OrderNo, "index")
+	support.RequestOrderElasticsearchSync(orderID, order.OrderNo, "index")
 	return nil
 }
 
@@ -835,7 +835,7 @@ func (s *OrderServiceImpl) DeleteOrder(orderID uint, orderTime time.Time, orderN
 	if err != nil {
 		return err
 	}
-	support.DispatchOrderElasticsearchSync(orderID, order.OrderNo, "delete")
+	support.RequestOrderElasticsearchSync(orderID, order.OrderNo, "delete")
 	return nil
 }
 
@@ -863,7 +863,7 @@ func (s *OrderServiceImpl) UpdateOrderByOrderNo(orderNo string, status string, r
 	if err != nil {
 		return err
 	}
-	support.DispatchOrderElasticsearchSync(order.ID, orderNo, "index")
+	support.RequestOrderElasticsearchSync(order.ID, orderNo, "index")
 	return nil
 }
 
@@ -896,7 +896,7 @@ func (s *OrderServiceImpl) DeleteOrderByOrderNo(orderNo string) error {
 	if err != nil {
 		return err
 	}
-	support.DispatchOrderElasticsearchSync(order.ID, orderNo, "delete")
+	support.RequestOrderElasticsearchSync(order.ID, orderNo, "delete")
 	return nil
 }
 

@@ -6,7 +6,7 @@ import (
 	"github.com/goravel/framework/database/orm"
 )
 
-// Payment 支付记录表
+// Payment 支付记录表（按月分表）。跨分表时 id 仅表内唯一，业务主键请用 payment_no。
 type Payment struct {
 	orm.Model
 	orm.SoftDeletes

@@ -2,9 +2,7 @@ package admin
 
 import (
 	"encoding/json"
-	"fmt"
 	appfacades "goravel/app/facades"
-	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/queue"
@@ -245,27 +243,16 @@ func (r *UserController) ResetPassword(ctx http.Context) http.Response {
 
 // Export 导出用户列表
 func (r *UserController) Export(ctx http.Context) http.Response {
-	adminID, err := helpers.GetAdminIDFromContext(ctx)
-	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	lock := helpers.AcquireExportLock(ctx, "users")
+	if lock.Unauthorized {
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
+	if lock.Blocked {
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
+	}
+	adminID := lock.AdminID
 
-	// 防重复点击
-	lockKey := fmt.Sprintf("export:users:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10*time.Second)
-
-	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
-	}
-
-	// 获取存储驱动配置
-	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
-	if disk == "" {
-		disk = utils.GetConfigValue(ctx, "storage", "export_disk", "")
-	}
-	if disk == "" {
-		disk = "local"
-	}
+	disk := helpers.ResolveExportDisk(ctx)
 
 	exportRecord := models.Export{
 		AdminID: adminID,

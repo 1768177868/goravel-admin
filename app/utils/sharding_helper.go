@@ -11,7 +11,6 @@ import (
 
 	appfacades "goravel/app/facades"
 
-	"goravel/app/constants"
 	"goravel/app/utils/errorlog"
 )
 
@@ -20,7 +19,7 @@ import (
 // orderTime: 订单时间
 // 返回: 分表名称，如 "orders_202501"
 func GetShardingTableName(baseTableName string, orderTime time.Time) string {
-	return fmt.Sprintf("%s_%s", baseTableName, orderTime.Format("200601"))
+	return fmt.Sprintf("%s_%s", baseTableName, orderTime.Format(GetTimeShardingSuffixLayout()))
 }
 
 // GetUserBalanceLogsShardingTableName 根据 user_id 获取用户余额变动记录分表名称
@@ -29,7 +28,7 @@ func GetShardingTableName(baseTableName string, orderTime time.Time) string {
 // 分表逻辑：user_id % UserBalanceLogsShards
 // 注意：此函数为特定表实现，如需为其他表实现哈希分表，请使用 GetHashShardingTableName
 func GetUserBalanceLogsShardingTableName(userID uint) string {
-	return GetHashShardingTableName("user_balance_logs", userID, constants.UserBalanceLogsShards)
+	return GetHashShardingTableName("user_balance_logs", userID, GetUserBalanceLogsShards())
 }
 
 // HashShardingConfig 哈希分表配置
@@ -38,14 +37,13 @@ type HashShardingConfig struct {
 	NumberOfShards int    // 分表数量，建议为 2 的幂次（如 4, 8, 16, 32, 64 等）
 }
 
-// 预定义的哈希分表配置
-var (
-	// UserBalanceLogsShardingConfig 用户余额变动记录分表配置
-	UserBalanceLogsShardingConfig = HashShardingConfig{
+// GetUserBalanceLogsShardingConfig 用户余额变动记录分表配置（运行时读取 config）。
+func GetUserBalanceLogsShardingConfig() HashShardingConfig {
+	return HashShardingConfig{
 		BaseTableName:  "user_balance_logs",
-		NumberOfShards: constants.UserBalanceLogsShards,
+		NumberOfShards: GetUserBalanceLogsShards(),
 	}
-)
+}
 
 // GetHashShardingTableName 通用的哈希分表名称生成函数
 // baseTableName: 基础表名，如 "user_balance_logs"
@@ -123,9 +121,8 @@ func GetShardingTableNames(baseTableName string, startTime, endTime time.Time) [
 	return tableNames
 }
 
-// DefaultMaxTimeRangeMonths 默认最大时间范围（月数）
-// 可以通过配置覆盖，用于限制查询时间范围，避免跨太多分表
-const DefaultMaxTimeRangeMonths = 3
+// 默认最大时间范围（月），运行时应优先使用 GetMaxTimeRangeMonths()。
+const defaultMaxTimeRangeMonths = 3
 
 // TimeRangeError 时间范围验证错误
 type TimeRangeError struct {
@@ -153,7 +150,7 @@ func ValidateTimeRange(startTime, endTime time.Time, maxMonths ...int) (bool, er
 	}
 
 	// 确定最大月数
-	maxMonthsValue := DefaultMaxTimeRangeMonths
+	maxMonthsValue := GetMaxTimeRangeMonths()
 	if len(maxMonths) > 0 && maxMonths[0] > 0 {
 		maxMonthsValue = maxMonths[0]
 	}

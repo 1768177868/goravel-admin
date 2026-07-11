@@ -213,30 +213,21 @@ func (r *PaymentController) formatPayTime(t *time.Time) string {
 }
 
 func (r *PaymentController) Export(ctx http.Context) http.Response {
-	adminID, err := helpers.GetAdminIDFromContext(ctx)
-	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	lock := helpers.AcquireExportLock(ctx, "payments")
+	if lock.Unauthorized {
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
-
-	lockKey := fmt.Sprintf("export:payments:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10*time.Second)
-
-	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
+	if lock.Blocked {
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
+	adminID := lock.AdminID
 
 	filters, resp := r.buildFilters(ctx)
 	if resp != nil {
 		return resp
 	}
 
-	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
-	if disk == "" {
-		disk = utils.GetConfigValue(ctx, "storage", "export_disk", "")
-	}
-	if disk == "" {
-		disk = "local"
-	}
+	disk := helpers.ResolveExportDisk(ctx)
 
 	exportRecord := models.Export{
 		AdminID: adminID,

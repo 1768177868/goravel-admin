@@ -2,10 +2,8 @@ package admin
 
 import (
 	stderrors "errors"
-	"fmt"
 	appfacades "goravel/app/facades"
 	"strings"
-	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -615,20 +613,14 @@ func (r *AdminController) currentAdminFromContext(ctx http.Context) (*models.Adm
 // @Router       /api/admin/admins/export [post]
 // @Security     BearerAuth
 func (r *AdminController) Export(ctx http.Context) http.Response {
-	adminID, err := helpers.GetAdminIDFromContext(ctx)
-	if err != nil {
+	lock := helpers.AcquireExportLock(ctx, "admins")
+	if lock.Unauthorized {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
-
-	// 防重复点击：使用框架自带的原子锁（锁会在10秒后自动过期，防止短时间内重复请求）
-	lockKey := fmt.Sprintf("export:admins:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10*time.Second)
-
-	// 尝试获取锁，如果获取失败则返回错误
-	if !lock.Get() {
+	if lock.Blocked {
 		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
-	// 同步导出：锁会在 Redis 中自动过期（10秒），不需要手动释放
+	adminID := lock.AdminID
 
 	filters := r.buildFilters(ctx)
 

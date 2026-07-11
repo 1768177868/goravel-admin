@@ -25,7 +25,7 @@ func FindOrderByID(ctx context.Context, orderID uint, orderNo ...string) (*model
 		return nil, apperrors.ErrOrderIDRequired
 	}
 	now := time.Now().UTC()
-	startTime := now.AddDate(0, -6, 0)
+	startTime := now.AddDate(0, -utils.GetIDLookupScanMonths(), 0)
 	tableNames := utils.GetShardingTableNames("orders", startTime, now)
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		var order models.Order
@@ -42,7 +42,7 @@ func FindOrderByOrderNo(ctx context.Context, orderNo string) (*models.Order, err
 	if !ok {
 		return findOrderByOrderNoScan(ctx, orderNo)
 	}
-	parsedTime, err := time.Parse("200601", yearMonth)
+	parsedTime, err := time.Parse(utils.GetTimeShardingSuffixLayout(), yearMonth)
 	if err != nil {
 		return findOrderByOrderNoScan(ctx, orderNo)
 	}
@@ -56,7 +56,7 @@ func FindOrderByOrderNo(ctx context.Context, orderNo string) (*models.Order, err
 
 func findOrderByOrderNoScan(ctx context.Context, orderNo string) (*models.Order, error) {
 	now := time.Now().UTC()
-	startTime := now.AddDate(0, -6, 0)
+	startTime := now.AddDate(0, -utils.GetIDLookupScanMonths(), 0)
 	tableNames := utils.GetShardingTableNames("orders", startTime, now)
 	for i := len(tableNames) - 1; i >= 0; i-- {
 		var order models.Order

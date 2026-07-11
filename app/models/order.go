@@ -4,7 +4,7 @@ import (
 	"github.com/goravel/framework/database/orm"
 )
 
-// Order 订单主表
+// Order 订单主表（按月分表）。跨分表时 id 仅表内唯一，业务主键请用 order_no。
 type Order struct {
 	orm.Model
 	orm.SoftDeletes         // 软删除支持

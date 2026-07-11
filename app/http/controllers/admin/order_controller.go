@@ -509,19 +509,14 @@ func (r *OrderController) Destroy(ctx http.Context) http.Response {
 // @Router       /api/admin/orders/export [post]
 // @Security     BearerAuth
 func (r *OrderController) Export(ctx http.Context) http.Response {
-	adminID, err := helpers.GetAdminIDFromContext(ctx)
-	if err != nil {
-		return response.Error(ctx, http.StatusUnauthorized, "unauthorized")
+	lock := helpers.AcquireExportLock(ctx, "orders")
+	if lock.Unauthorized {
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
 	}
-
-	// Prevent duplicate exports in short period.
-	lockKey := fmt.Sprintf("export:orders:lock:%d", adminID)
-	lock := facades.Cache().Lock(lockKey, 10*time.Second)
-
-	// Try lock.
-	if !lock.Get() {
-		return response.Error(ctx, http.StatusTooManyRequests, "already_queued")
+	if lock.Blocked {
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
 	}
+	adminID := lock.AdminID
 
 	// Build filters.
 	filters, resp := r.buildFilters(ctx)
@@ -531,13 +526,7 @@ func (r *OrderController) Export(ctx http.Context) http.Response {
 
 	// Create export record in processing status.
 	// Resolve storage disk config.
-	disk := utils.GetConfigValue(ctx, "storage", "file_disk", "")
-	if disk == "" {
-		disk = utils.GetConfigValue(ctx, "storage", "export_disk", "")
-	}
-	if disk == "" {
-		disk = "local"
-	}
+	disk := helpers.ResolveExportDisk(ctx)
 
 	exportRecord := models.Export{
 		AdminID: adminID,

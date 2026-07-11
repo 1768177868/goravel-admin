@@ -32,5 +32,7 @@ func init() {
 		"sync_queue": config.Env("ELASTICSEARCH_QUEUE", "elasticsearch"),
 		// 同步队列 Worker：auto=任一副开关开启则启动 | true | false
 		"sync_worker": config.Env("ELASTICSEARCH_SYNC_WORKER", "auto"),
+		// 订单 ES 同步 outbox（DB 落库后再入队，便于失败重试与对账）
+		"outbox_enabled": config.Env("ELASTICSEARCH_OUTBOX_ENABLED", true),
 	})
 }
