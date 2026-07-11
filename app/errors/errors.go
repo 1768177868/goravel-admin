@@ -139,7 +139,6 @@ var (
 	ErrWriteCSVHeaderFailed    = NewBusinessError("write_csv_header_failed", "写入CSV表头失败")
 	ErrWriteCSVDataFailed      = NewBusinessError("write_csv_data_failed", "写入CSV数据失败")
 	ErrCSVWriteFailed          = NewBusinessError("csv_write_failed", "CSV写入失败")
-	ErrExcelNotImplemented     = NewBusinessError("excel_not_implemented", "Excel导出功能暂未实现，请使用CSV格式")
 	ErrBatchDeleteExportFailed = NewBusinessError("batch_delete_failed", "批量删除导出记录失败")
 
 	// 导入相关错误

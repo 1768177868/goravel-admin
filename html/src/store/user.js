@@ -21,7 +21,12 @@ export const useUserStore = defineStore('user', {
         isDeveloperAdmin: false,
         pprofEnabled: false,
         pprofTokenRequired: false,
-        aiEnabled: false
+        aiEnabled: false,
+        ordersEnabled: true,
+        paymentsEnabled: true,
+        devToolsEnabled: false,
+        elasticsearchEnabled: false,
+        otelEnabled: false
       }
     }
   },
@@ -129,7 +134,12 @@ export const useUserStore = defineStore('user', {
         isDeveloperAdmin: config?.is_developer_admin || config?.isDeveloperAdmin || false,
         pprofEnabled: config?.pprof_enabled || config?.pprofEnabled || false,
         pprofTokenRequired: config?.pprof_token_required || config?.pprofTokenRequired || false,
-        aiEnabled: config?.ai_enabled || config?.aiEnabled || false
+        aiEnabled: config?.ai_enabled || config?.aiEnabled || false,
+        ordersEnabled: config?.orders_enabled ?? config?.ordersEnabled ?? true,
+        paymentsEnabled: config?.payments_enabled ?? config?.paymentsEnabled ?? true,
+        devToolsEnabled: config?.dev_tools_enabled || config?.devToolsEnabled || false,
+        elasticsearchEnabled: config?.elasticsearch_enabled || config?.elasticsearchEnabled || false,
+        otelEnabled: config?.otel_enabled || config?.otelEnabled || false
       }
     },
 
@@ -251,7 +261,13 @@ export const useUserStore = defineStore('user', {
           showButtonsWithoutPermission: false,
           isDeveloperAdmin: false,
           pprofEnabled: false,
-          pprofTokenRequired: false
+          pprofTokenRequired: false,
+          aiEnabled: false,
+          ordersEnabled: true,
+          paymentsEnabled: true,
+          devToolsEnabled: false,
+          elasticsearchEnabled: false,
+          otelEnabled: false
         }
         Storage.removeItem('token')
         Storage.removeItem('adminInfo')

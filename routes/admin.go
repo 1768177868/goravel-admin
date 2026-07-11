@@ -77,7 +77,7 @@ func Admin() {
 
 			// 统一的下拉选项接口（不需要权限验证）
 			router.Get("options", optionController.Index)
-			router.Get("form-demo/data", formDemoController.GetData)
+			router.Middleware(middleware.DevelopmentOnly()).Get("form-demo/data", formDemoController.GetData)
 
 			// 菜单树（仅登录即可，不校验菜单权限；用于角色/权限表单、刷新后展示等）
 			router.Get("menus/tree", menuController.Tree)
@@ -147,13 +147,13 @@ func Admin() {
 			router.Get("operation-logs/{id}", operationLogController.Show)
 			router.Delete("operation-logs/{id}", operationLogController.Destroy)
 			router.Post("operation-logs/batch-delete", operationLogController.BatchDestroy)
-			// router.Post("operation-logs/clean", operationLogController.Clean)
+			router.Post("operation-logs/clean", operationLogController.Clean)
 
 			// 导出管理
 			router.Get("exports", exportController.Index)
 			router.Get("exports/{id}/download", exportController.Download)
-			// SSE 路由：实时推送导出任务进度（之前没有进度查询接口，直接使用 SSE）
-			// router.Get("exports/{id}/progress", exportController.StreamExportProgress)
+			router.Get("exports/{id}/progress", exportController.StreamExportProgress).
+				WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
 			router.Delete("exports/{id}", exportController.Destroy)
 			router.Post("exports/batch-delete", exportController.BatchDestroy)
 
@@ -162,7 +162,7 @@ func Admin() {
 			router.Get("login-logs/{id}", loginLogController.Show)
 			router.Delete("login-logs/{id}", loginLogController.Destroy)
 			router.Post("login-logs/batch-delete", loginLogController.BatchDestroy)
-			// router.Post("login-logs/clean", loginLogController.Clean)
+			router.Post("login-logs/clean", loginLogController.Clean)
 
 			// 系统日志
 			router.Get("system-logs", systemLogController.Index)
@@ -170,7 +170,7 @@ func Admin() {
 			router.Get("system-logs/{id}", systemLogController.Show)
 			router.Delete("system-logs/{id}", systemLogController.Destroy)
 			router.Post("system-logs/batch-delete", systemLogController.BatchDestroy)
-			// router.Post("system-logs/clean", systemLogController.Clean)
+			router.Post("system-logs/clean", systemLogController.Clean)
 
 			// Dashboard 统计
 			// 原路由：按需查询特定数据（适合一次性查询或按需刷新）
@@ -218,10 +218,12 @@ func Admin() {
 			router.Post("attachments/batch-delete", attachmentController.BatchDestroy)
 
 			// 订单管理
-			router.Resource("orders", orderController)
-			router.Post("orders/export", orderController.Export)
-			router.Post("orders/import", orderController.Import)
-			router.Get("orders/export/status/{id}", orderController.GetExportStatus)
+			router.Middleware(middleware.OrdersModule()).Group(func(router route.Router) {
+				router.Resource("orders", orderController)
+				router.Post("orders/export", orderController.Export)
+				router.Post("orders/import", orderController.Import)
+				router.Get("orders/export/status/{id}", orderController.GetExportStatus)
+			})
 
 			// 用户管理
 			router.Resource("users", userController)
@@ -235,13 +237,15 @@ func Admin() {
 			router.Get("user-balance-logs/statistics", userBalanceLogController.Statistics)
 
 			// 支付方式管理
-			router.Resource("payment-methods", paymentMethodController)
+			router.Middleware(middleware.PaymentsModule()).Group(func(router route.Router) {
+				router.Resource("payment-methods", paymentMethodController)
 
-			// 支付记录管理
-			router.Get("payments", paymentController.Index)
-			router.Get("payments/{id}", paymentController.Show)
-			router.Post("payments/export", paymentController.Export)
-			router.Get("payments/export/status/{id}", paymentController.GetExportStatus)
+				// 支付记录管理
+				router.Get("payments", paymentController.Index)
+				router.Get("payments/{id}", paymentController.Show)
+				router.Post("payments/export", paymentController.Export)
+				router.Get("payments/export/status/{id}", paymentController.GetExportStatus)
+			})
 
 			router.Resource("articles", articleController)
 			router.Post("articles/export", articleController.Export)

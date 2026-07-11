@@ -202,6 +202,8 @@
     "time_range_exceeded": "Query time range cannot exceed {months} months",
     "start_time_after_end_time": "Start time cannot be later than end time",
     "development_only": "This feature is only available in development mode",
+    "module_orders_disabled": "Orders module is disabled. Set MODULE_ORDERS_ENABLED=true in .env",
+    "module_payments_disabled": "Payments module is disabled. Set MODULE_PAYMENTS_ENABLED=true in .env",
     "trace_id_required": "trace_id is required",
     "operation_failed": "Operation failed",
     "invalid_action": "Invalid action",

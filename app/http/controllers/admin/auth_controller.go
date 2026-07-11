@@ -422,6 +422,11 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"pprof_enabled":                   pprofEnabled,
 			"pprof_token_required":            pprofTokenRequired,
 			"ai_enabled":                      utils.AIEnabled(),
+			"orders_enabled":                  utils.OrdersEnabled(),
+			"payments_enabled":                utils.PaymentsEnabled(),
+			"dev_tools_enabled":               utils.DevToolsEnabled(),
+			"elasticsearch_enabled":           utils.ElasticsearchEnabled(),
+			"otel_enabled":                    utils.OTELEnabled(),
 		},
 	})
 }

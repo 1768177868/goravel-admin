@@ -2,17 +2,16 @@ package middleware
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
+
+	"goravel/app/http/response"
+	"goravel/app/utils"
 )
 
 func DevelopmentOnly() http.Middleware {
 	return newMiddleware("development_only", func(ctx http.Context) {
-		env := facades.Config().Get("app.env", "production")
-		if env != "local" && env != "development" {
-			_ = ctx.Response().Json(http.StatusForbidden, http.Json{
-				"code":    403,
-				"message": "This feature is only available in development mode",
-			}).Abort()
+		if !utils.DevToolsEnabled() {
+			response.Error(ctx, http.StatusForbidden, "development_only")
+			ctx.Request().Abort()
 			return
 		}
 

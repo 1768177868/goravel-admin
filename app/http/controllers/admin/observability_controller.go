@@ -20,6 +20,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 )
 
 type ObservabilityController struct {}
@@ -219,9 +220,15 @@ func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Respons
 func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Response {
 	reader := services.NewQueueStatsReader(ctx)
 	panels, defaultConn := reader.BuildQueueDashboard()
+	pending, failed := utils.CountElasticsearchOutboxBacklog()
 	return response.Success(ctx, ghttp.Json{
 		"default_connection": defaultConn,
 		"connections":        panels,
+		"es_outbox": ghttp.Json{
+			"enabled": utils.ElasticsearchEnabled() && facades.Config().GetBool("elasticsearch.outbox_enabled", true),
+			"pending": pending,
+			"failed":  failed,
+		},
 	})
 }
 

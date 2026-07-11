@@ -54,6 +54,16 @@
 
 **原则：** 新用户先跑通核心；需要业务扩展再开进阶，并准备对应运维。
 
+### 模块开关（二次开发推荐）
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `MODULE_ORDERS_ENABLED` | `true` | 关闭后隐藏订单菜单并拒绝订单 API |
+| `MODULE_PAYMENTS_ENABLED` | `true` | 关闭后隐藏支付相关菜单并拒绝支付 API |
+| `APP_ENABLE_DEV_TOOL` | `false` | 生产显式 `true` 才开放代码生成器/表单演示；`local/development/test` 默认可见 |
+
+登录 `Info` 与 `menus/tree` 会按开关过滤菜单；前端 `userStore.config` 同步 `orders_enabled` 等字段。
+
 ---
 
 ## 3. 最小生产配置
@@ -131,7 +141,7 @@ ELASTICSEARCH_SYNC_WORKER=auto
 # ELASTICSEARCH_OUTBOX_ENABLED=true
 ```
 
-需要 ES 集群 + elasticsearch 队列 Worker。
+需要 ES 集群 + elasticsearch 队列 Worker。Outbox 积压可用 `go run . artisan es:retry-outbox` 补偿（已加入每小时定时任务）。
 
 ### 4.4 OpenTelemetry
 

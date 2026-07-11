@@ -27,6 +27,8 @@ func (kernel *Kernel) Schedule() []schedule.Event {
 		facades.Schedule().Command("order:create-sharding-tables").Monthly().OnOneServer(),
 		// 每月1号凌晨1点30分执行（UTC时间），创建下个月的支付记录分表
 		facades.Schedule().Command("payment:create-sharding-tables").Monthly().OnOneServer(),
+		// 每小时重试 ES outbox 积压（需开启 ES 同步与 outbox）
+		facades.Schedule().Command("es:retry-outbox").Hourly().OnOneServer(),
 		// 测试任务：支持通过 SCHEDULE_TEST_CRON 自定义频率（默认每5秒）
 		// facades.Schedule().Command("app:schedule-test-log").Cron(testCron).OnOneServer(),
 	}
@@ -50,5 +52,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.ElasticsearchExample{},
 		&commands.InitOrdersElasticsearchIndex{},
 		&commands.SyncOrdersElasticsearch{},
+		&commands.RetryElasticsearchOutbox{},
 	}
 }
