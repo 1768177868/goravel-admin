@@ -89,7 +89,7 @@ export function formatExportType(t, cellValue) {
   return map[type] || type || '-'
 }
 
-export function formatExportSize(cellValue) {
+export function formatExportSize({ cellValue } = {}) {
   const size = Number(cellValue || 0)
   if (!size) return '-'
   if (size < 1024) return `${size} B`
