@@ -38,10 +38,18 @@ func (s *MenuSeeder) Run() error {
 			"updated_at": now,
 		}
 		if hasLinkType {
-			data["link_type"] = menuData.LinkType
+			linkType := menuData.LinkType
+			if linkType == 0 {
+				linkType = 1
+			}
+			data["link_type"] = linkType
 		}
 		if hasOpenType {
-			data["open_type"] = menuData.OpenType
+			openType := menuData.OpenType
+			if openType == 0 {
+				openType = 1
+			}
+			data["open_type"] = openType
 		}
 		if hasNoCache {
 			data["no_cache"] = menuData.NoCache
@@ -98,6 +106,16 @@ func (s *MenuSeeder) Run() error {
 			// 	existingMenu.IsHidden = menuData.IsHidden
 			// 	hasUpdates = true
 			// }
+
+			// 历史 seed / 部署菜单可能未写入 link_type，补齐默认值
+			if hasLinkType && existingMenu.LinkType == 0 {
+				updateData["link_type"] = uint8(1)
+				hasUpdates = true
+			}
+			if hasOpenType && existingMenu.OpenType == 0 {
+				updateData["open_type"] = uint8(1)
+				hasUpdates = true
+			}
 
 			if hasUpdates {
 				updateData["updated_at"] = time.Now().Format("2006-01-02 15:04:05")

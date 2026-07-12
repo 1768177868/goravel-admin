@@ -60,6 +60,13 @@ func (s *MenuServiceImpl) Create(parentID uint, title, slug, icon, path, compone
 		return nil, err
 	}
 
+	if linkType == 0 {
+		linkType = 1
+	}
+	if openType == 0 {
+		openType = 1
+	}
+
 	menu := &models.Menu{
 		ParentID:   parentID,
 		Title:      title,
