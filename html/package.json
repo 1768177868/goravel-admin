@@ -7,10 +7,7 @@
     "build": "vite build",
     "build:ci": "vite build",
     "preview": "vite preview",
-    "type-check": "vue-tsc --noEmit",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

@@ -1042,29 +1042,28 @@ defineExpose({
   font-weight: 600;
   color: #fff;
   letter-spacing: 0.3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
   line-height: 1.2;
 }
 
 .method-get {
-  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  background: var(--el-color-success);
 }
 
 .method-post {
-  background: linear-gradient(135deg, var(--el-color-primary) 0%, #66b1ff 100%);
+  background: var(--el-color-primary);
 }
 
 .method-put {
-  background: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+  background: var(--el-color-warning);
 }
 
 .method-patch {
-  background: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+  background: var(--el-color-info);
 }
 
 .method-delete {
-  background: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+  background: var(--el-color-danger);
 }
 
 .permission-path-icon {

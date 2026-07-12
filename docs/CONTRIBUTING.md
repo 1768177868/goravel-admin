@@ -229,9 +229,6 @@ go build ./...
 # 后端测试
 go test -v -timeout=2m ./...
 
-# 前端测试
-(cd html && npm run test:run)
-
 # 类型检查
 (cd html && npm run type-check)
 

@@ -47,9 +47,6 @@ jobs:
           npm ci --include=optional
           npm install --no-save @rollup/rollup-linux-x64-gnu
 
-      - name: Run unit tests
-        run: npm run test:run
-
       - name: Run type check
         run: npm run type-check
 

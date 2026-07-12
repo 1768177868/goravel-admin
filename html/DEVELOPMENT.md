@@ -87,7 +87,6 @@ html/
 │   └── style.css           # 全局样式
 ├── package.json
 ├── vite.config.js          # Vite 配置
-├── vitest.config.js        # 测试配置
 └── tsconfig.json           # TypeScript 配置
 ```
 
@@ -117,19 +116,6 @@ npm run build
 
 ```bash
 npm run type-check
-```
-
-### 运行测试
-
-```bash
-# 交互式模式
-npm test
-
-# 单次运行
-npm run test:run
-
-# 覆盖率报告
-npm run test:coverage
 ```
 
 ### 环境配置
@@ -421,66 +407,6 @@ const title = t('module.title')
 
 ---
 
-## 测试
-
-### 目录结构
-
-```
-src/
-├── composables/
-│   ├── useCrud.ts
-│   └── __tests__/
-│       └── useCrud.test.js
-├── utils/
-│   ├── validation.js
-│   └── __tests__/
-│       └── validation.test.js
-```
-
-### 编写测试
-
-```javascript
-// src/utils/__tests__/validation.test.js
-import { describe, it, expect } from 'vitest'
-import { validators } from '../validation'
-
-describe('validators', () => {
-  describe('required', () => {
-    it('应该拒绝空字符串', () => {
-      expect(validators.required('')).not.toBe(true)
-    })
-
-    it('应该接受有效字符串', () => {
-      expect(validators.required('hello')).toBe(true)
-    })
-  })
-})
-```
-
-### Mock 示例
-
-```javascript
-import { vi } from 'vitest'
-
-// Mock API
-vi.mock('@/api/admin', () => ({
-  getAdminList: vi.fn().mockResolvedValue({ data: { list: [] } })
-}))
-
-// Mock Element Plus
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn()
-  },
-  ElMessageBox: {
-    confirm: vi.fn().mockResolvedValue(true)
-  }
-}))
-```
-
----
-
 ## 最佳实践
 
 ### 1. 组件命名
@@ -540,7 +466,6 @@ const tableData = shallowRef([])
 1. 在 `composables/` 下创建文件
 2. 使用 TypeScript 编写（推荐）
 3. 在 `composables/index.ts` 中导出
-4. 添加对应的测试文件
 
 ### Q: 如何自定义主题？
 
@@ -562,5 +487,4 @@ const tableData = shallowRef([])
 - [VXE-Table 文档](https://vxetable.cn)
 - [Pinia 文档](https://pinia.vuejs.org)
 - [vue-i18n 文档](https://vue-i18n.intlify.dev)
-- [Vitest 文档](https://vitest.dev)
 
