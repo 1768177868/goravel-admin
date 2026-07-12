@@ -235,7 +235,8 @@
 <script setup>
 import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useQueuedExport } from '@/composables/useQueuedExport'
+import { useCsvImport } from '@/composables/useCsvImport'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
@@ -271,12 +272,8 @@ import {
 const { getButtonState } = usePermission()
 const { vxeSize } = useVxeTableSize()
 const { t } = useI18n()
-const router = useRouter()
 const listPageRef = ref(null)
 const tableRef = ref(null)
-const fileInputRef = ref(null)
-const isExporting = ref(false)
-const isImporting = ref(false)
 const orderInitialSearchForm = createOrderInitialSearchForm()
 
 const { dialogVisible, handleFormSuccess: handleFormSuccessCrud } = useCrud()
@@ -312,6 +309,16 @@ const {
 
 const searchFields = computed(() => createOrderSearchFields(t))
 const tableColumns = computed(() => createOrderTableColumns(t))
+
+const { isExporting, handleExport } = useQueuedExport({
+  exportApi: exportOrder,
+  getParams: () => searchForm
+})
+
+const { fileInputRef, isImporting, handleImport, handleFileChange } = useCsvImport({
+  importApi: importOrder,
+  onSuccess: loadData
+})
 
 const getCurrentTimeString = () => {
   const now = new Date()
@@ -467,74 +474,8 @@ const handleAction = (command, row) => {
   if (command === 'delete') handleDelete(row)
 }
 
-const handleExport = async () => {
-  if (isExporting.value) return
-  isExporting.value = true
-  try {
-    const response = await exportOrder(searchForm)
-    const exportId = response.data?.export_id || response.data?.data?.export_id
-    if (!exportId) {
-      ElMessage.error(t('common.output_failed'))
-      return
-    }
-    ElMessage.success(t('common.queued') || response.data?.message)
-    router.push('/exports')
-  } catch (error) {
-    logger.error('Export order error:', error)
-    if (error.response?.status === 429) {
-      ElMessage.warning(t('common.already_queued'))
-    } else if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true })
-    }
-  } finally {
-    isExporting.value = false
-  }
-}
-
 const handleAdd = () => {
   dialogVisible.value = true
-}
-
-const handleImport = () => {
-  fileInputRef.value?.click()
-}
-
-const handleFileChange = async (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    ElMessage.error(t('common.invalid_file_type') || '文件类型错误，请上传CSV文件')
-    if (fileInputRef.value) fileInputRef.value.value = ''
-    return
-  }
-  if (isImporting.value) return
-  isImporting.value = true
-  try {
-    const response = await importOrder(file)
-    const result = response.data?.data || response.data
-    if (result.success_count > 0) {
-      ElMessage.success(
-        t('common.import_success') ||
-          `导入成功：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
-      )
-      if (result.failed_count > 0 && result.errors?.length) {
-        const errorMsg = result.errors.slice(0, 10).join('\n')
-        ElMessage.warning(result.errors.length > 10 ? `部分导入失败，前10条错误：\n${errorMsg}\n...` : `部分导入失败：\n${errorMsg}`)
-      }
-      await loadData()
-    } else {
-      ElMessage.warning(t('common.import_no_data') || '没有成功导入任何数据')
-      if (result.errors?.length) {
-        ElMessage.error(`导入失败：\n${result.errors.slice(0, 10).join('\n')}`)
-      }
-    }
-  } catch (error) {
-    logger.error('Import order error:', error)
-    if (!error.__handled) ErrorHandler.handle(error, { silent: true })
-  } finally {
-    isImporting.value = false
-    if (fileInputRef.value) fileInputRef.value.value = ''
-  }
 }
 
 const handleFormSuccess = () => {

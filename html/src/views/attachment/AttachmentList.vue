@@ -37,7 +37,6 @@
           :before-upload="beforeUpload"
           :on-success="handleUploadSuccess"
           :on-error="handleUploadError"
-          :on-progress="handleUploadProgress"
           :show-file-list="false"
           :multiple="false"
         >
@@ -264,15 +263,13 @@ import { useListPage } from '@/composables/useListPage'
 import { usePermission } from '@/composables/usePermission'
 import { useCrud } from '@/composables/useCrud'
 import { useColumnSetting } from '@/composables/useColumnSetting'
+import { useAttachmentImagePreview } from '@/composables/useAttachmentImagePreview'
+import { useAttachmentChunkUpload, useAttachmentUploadConfig } from '@/composables/useAttachmentChunkUpload'
 import axios from 'axios'
 import {
   getAttachmentList,
   deleteAttachment,
   batchDeleteAttachments,
-  initChunkUpload,
-  uploadChunk,
-  mergeChunks,
-  getChunkProgress,
   updateDisplayName
 } from '@/api/attachment'
 import i18n from '@/i18n'
@@ -286,9 +283,7 @@ import {
   createAttachmentTableColumns,
   formatAttachmentFileSize,
   getAttachmentFileTypeTagType,
-  getAttachmentFileTypeLabel,
-  ATTACHMENT_CHUNK_SIZE,
-  ATTACHMENT_LARGE_FILE_THRESHOLD
+  getAttachmentFileTypeLabel
 } from './attachment.config'
 
 const UploadIcon = markRaw(Upload)
@@ -306,13 +301,6 @@ const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud
 const listPageRef = ref(null)
 const uploadRef = ref(null)
 const downloadingIds = ref(new Set())
-const chunkUploadVisible = ref(false)
-const chunkUploadFile = ref(null)
-const chunkUploadProgress = ref(0)
-const chunkUploadStatus = ref('')
-const chunkUploadChunkID = ref('')
-const chunkUploadChunks = ref([])
-const chunkUploadCancelled = ref(false) // 标记是否已取消上传
 // 裁剪上传相关
 const cropDialogVisible = ref(false)
 const cropperRef = ref(null)
@@ -337,13 +325,14 @@ const cropOption = reactive({
   mode: 'contain'
 })
 
-// 图片URL缓存（key: attachment_id, value: blob_url 或 直接URL）
-const imageUrlMap = ref(new Map()) // 存储图片 URL
-const imageLoadingMap = ref(new Map()) // 存储图片加载状态: 'loading' | 'loaded' | 'error'
-
-// 大文件阈值
-const CHUNK_SIZE = ATTACHMENT_CHUNK_SIZE
-const LARGE_FILE_THRESHOLD = ATTACHMENT_LARGE_FILE_THRESHOLD
+// 图片预览
+const {
+  loadImageAsBlob,
+  getImageUrl,
+  getImageLoadingState,
+  handleImageLoad,
+  handleImageError
+} = useAttachmentImagePreview()
 
 const {
   pagination,
@@ -390,471 +379,27 @@ const formatFileSize = formatAttachmentFileSize
 const getFileTypeTagType = getAttachmentFileTypeTagType
 const getFileTypeLabel = (fileType) => getAttachmentFileTypeLabel(t, fileType)
 
-const uploadAction = computed(() => {
-  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-  const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
-  if (apiBaseURL) {
-    const base = apiBaseURL.replace(/\/+$/, '')
-    const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-    return `${base}${prefix}/attachments/upload`
-  }
-  return `${apiPrefix}/attachments/upload`
-})
+const { uploadAction, uploadHeaders, uploadData } = useAttachmentUploadConfig(locale)
 
-const uploadHeaders = computed(() => {
-  const token = Storage.getItem('token', '') || ''
-  return {
-    'Authorization': `Bearer ${typeof token === 'string' ? token.trim() : ''}`
-  }
-})
+const {
+  chunkUploadVisible,
+  chunkUploadFile,
+  chunkUploadProgress,
+  chunkUploadStatus,
+  beforeUpload,
+  handleLargeFileUpload,
+  handleCancelChunkUpload,
+  handleChunkUploadClose,
+  handleRetryChunkUpload
+} = useAttachmentChunkUpload({ onUploaded: loadData })
 
-const uploadData = computed(() => {
-  const currentLocale = locale.value || Storage.getItem('language', 'zh-CN') || 'zh-CN'
-  const acceptLanguage = currentLocale === 'en-US' ? 'en-US' : 'zh-CN'
-  return {
-    'Accept-Language': acceptLanguage
-  }
-})
-
-// 加载图片并转换为blob URL
-const loadImageAsBlob = async (row) => {
-  if (!row || row.file_type !== 'image') return
-  
-  const attachmentId = row.id
-  if (!attachmentId) return
-  
-  // 如果已经加载过或正在加载，直接返回
-  const currentState = imageLoadingMap.value.get(attachmentId)
-  if (currentState === 'loaded' || currentState === 'loading') {
-    return
-  }
-  
-  const fileUrl = row.file_url
-  if (!fileUrl) {
-    imageLoadingMap.value.set(attachmentId, 'error')
-    return
-  }
-  
-  // 设置加载状态
-  imageLoadingMap.value.set(attachmentId, 'loading')
-  
-  // 如果是外部URL（http/https），直接使用
-  // 对于云存储（S3、OSS、COS、MinIO等），GetFileURL 会返回：
-  // 1. 临时URL（带签名，可直接访问，如：https://bucket.s3.amazonaws.com/path?signature=...）
-  // 2. 配置的基础URL + 文件路径（如：https://cdn.example.com/path/file.jpg）
-  // 这些URL都可以直接在浏览器中访问，不需要JWT认证
-  if (fileUrl.startsWith('http')) {
-    imageUrlMap.value.set(attachmentId, fileUrl)
-    // 对于外部URL，让浏览器自己加载，不设置状态，等待 @load 或 @error 事件
-    return
-  }
-  
-  // 构建完整的URL
-  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-  const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
-  let fullUrl = fileUrl
-  if (apiBaseURL) {
-    const base = apiBaseURL.replace(/\/+$/, '')
-    fullUrl = `${base}${fileUrl}`
-  } else {
-    fullUrl = `${apiPrefix}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`
-  }
-  
-  // 通过axios获取图片并转换为blob URL
-  // 因为预览接口需要JWT认证，直接使用src无法携带认证头
-  try {
-    const token = Storage.getItem('token', '') || ''
-    const tokenStr = typeof token === 'string' ? token.trim() : ''
-    const response = await axios.get(fullUrl, {
-      responseType: 'blob',
-      headers: {
-        'Authorization': `Bearer ${tokenStr}`
-      }
-    })
-    const blob = new Blob([response.data])
-    const blobUrl = URL.createObjectURL(blob)
-    imageUrlMap.value.set(attachmentId, blobUrl)
-    // 设置加载成功状态（但实际加载由浏览器完成，等待 @load 事件）
-    imageLoadingMap.value.set(attachmentId, 'loading')
-  } catch (error) {
-    // console.error('Failed to load image:', error)
-    // 加载失败时设置为错误状态
-    imageLoadingMap.value.set(attachmentId, 'error')
-    imageUrlMap.value.set(attachmentId, '')
-  }
-}
-
-// 获取图片URL（用于缩略图和预览）
-const getImageUrl = (row) => {
-  if (!row) return ''
-  const attachmentId = row.id
-  if (!attachmentId) return ''
-  
-  // 从缓存中获取
-  const url = imageUrlMap.value.get(attachmentId)
-  // 如果有URL，返回URL；如果没有URL但状态是loading，返回空字符串（显示加载占位符）
-  return url || ''
-}
-
-// 获取图片加载状态
-const getImageLoadingState = (row) => {
-  if (!row) return ''
-  const attachmentId = row.id
-  if (!attachmentId) return ''
-  
-  const state = imageLoadingMap.value.get(attachmentId)
-  const url = imageUrlMap.value.get(attachmentId)
-  
-  // 如果有URL但没有状态，说明是外部URL，让浏览器自己处理
-  if (url && !state) {
-    return ''
-  }
-  
-  // 如果有URL且状态是loading，说明正在加载
-  if (url && state === 'loading') {
-    return 'loading'
-  }
-  
-  // 如果状态是error，返回error
-  if (state === 'error') {
-    return 'error'
-  }
-  
-  // 如果状态是loaded，返回空（正常显示）
-  if (state === 'loaded') {
-    return ''
-  }
-  
-  // 默认返回loading（还没有开始加载或正在加载）
-  return 'loading'
-}
-
-// 图片加载成功处理
-const handleImageLoad = (row) => {
-  const attachmentId = row.id
-  if (attachmentId) {
-    imageLoadingMap.value.set(attachmentId, 'loaded')
-  }
-}
-
-// 图片加载失败处理
-const handleImageError = (row) => {
-  const attachmentId = row.id
-  if (attachmentId) {
-    imageLoadingMap.value.set(attachmentId, 'error')
-  }
-}
-
-// loadData, handleSearch, handleReset 已由 useListPage 提供
-
-// 大文件上传按钮处理
-const handleLargeFileUpload = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      handleChunkUpload(file, true) // 第二个参数表示是大文件上传按钮触发的
-    }
-  }
-  input.click()
-}
-
-const beforeUpload = (file) => {
-  // 检查文件大小（限制100MB）
-  const maxSize = 100 * 1024 * 1024
-  if (file.size > maxSize) {
-    ElMessage.error(t('attachment.file_too_large'))
-    return false
-  }
-
-  // 如果是大文件，使用分片上传
-  if (file.size > LARGE_FILE_THRESHOLD) {
-    handleChunkUpload(file, false) // 普通上传按钮触发的
-    return false // 阻止默认上传
-  }
-
-  return true // 小文件使用普通上传
-}
-
-const handleUploadProgress = (event, file) => {
-  // 普通上传的进度处理
-}
-
-const handleUploadSuccess = (response, file) => {
+const handleUploadSuccess = () => {
   ElMessage.success(t('attachment.upload_success'))
   loadData()
 }
 
-const handleUploadError = (error, file) => {
+const handleUploadError = () => {
   ElMessage.error(t('attachment.upload_failed'))
-}
-
-// 分片上传处理（支持断点续传）
-const handleChunkUpload = async (file, isLargeFileButton = false, useExistingChunkID = false) => {
-  chunkUploadFile.value = file
-  chunkUploadVisible.value = true
-  chunkUploadProgress.value = 0
-  chunkUploadStatus.value = ''
-  chunkUploadCancelled.value = false // 重置取消标志
-
-  try {
-    // 计算分片信息
-    const totalSize = file.size
-    if (!totalSize || totalSize <= 0) {
-      ElMessage.error(t('attachment.invalid_file_size'))
-      chunkUploadVisible.value = false
-      chunkUploadFile.value = null
-      return
-    }
-    
-    const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
-    if (!totalChunks || totalChunks <= 0 || !isFinite(totalChunks)) {
-      console.error('Invalid totalChunks calculated:', { totalSize, CHUNK_SIZE, totalChunks })
-      ElMessage.error(t('attachment.invalid_chunk_calculation'))
-      chunkUploadVisible.value = false
-      chunkUploadFile.value = null
-      return
-    }
-
-    // 如果使用已存在的 chunk_id（重试场景），跳过初始化
-    if (!useExistingChunkID || !chunkUploadChunkID.value) {
-      // 初始化分片上传
-      try {
-        const initRes = await initChunkUpload(
-          file.name,
-          totalSize,
-          CHUNK_SIZE,
-          totalChunks
-        )
-        chunkUploadChunkID.value = initRes.data.chunk_id
-        
-        // 保存分片信息到 localStorage（用于断点续传）
-        try {
-          Storage.setItem(`chunk_${chunkUploadChunkID.value}`, {
-            filename: file.name,
-            total_size: totalSize,
-            chunk_size: CHUNK_SIZE,
-            total_chunks: totalChunks,
-            created_at: Date.now()
-          })
-        } catch (e) {
-          console.warn('Failed to save chunk info to localStorage:', e)
-        }
-      } catch (error) {
-        console.error('Init chunk upload error:', error)
-        // 如果错误已经在响应拦截器中处理过，就不再重复显示
-        if (!error.__handled) {
-          // 检查错误码来决定是否需要关闭对话框
-          const errorCode = error.errorCode || error.response?.data?.error_code || ''
-          const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
-          
-          // 如果是存储驱动不支持的错误，需要关闭对话框
-          if (errorCode === 'chunk_upload_only_local_storage') {
-            chunkUploadVisible.value = false
-            chunkUploadFile.value = null
-          }
-          
-          ElMessage.error(errorMessage)
-        } else {
-          // 即使错误已处理，也可能需要关闭对话框
-          const errorCode = error.errorCode || error.response?.data?.error_code || ''
-          if (errorCode === 'chunk_upload_only_local_storage') {
-            chunkUploadVisible.value = false
-            chunkUploadFile.value = null
-          }
-        }
-        throw error // 重新抛出其他错误
-      }
-    }
-
-    // 检查已上传的分片（断点续传）
-    let uploadedChunksSet = new Set()
-    // 只有在 chunkID 存在且未取消时才获取进度
-    if (chunkUploadChunkID.value && !chunkUploadCancelled.value) {
-      try {
-        const progressRes = await getChunkProgress(chunkUploadChunkID.value, totalChunks)
-        if (progressRes.data && progressRes.data.uploaded_chunks) {
-          // 后端返回已上传的分片索引数组
-          const uploadedIndices = progressRes.data.uploaded_chunks || []
-          uploadedChunksSet = new Set(uploadedIndices)
-          if (uploadedChunksSet.size > 0) {
-            ElMessage.info(t('attachment.resume_upload', { count: uploadedChunksSet.size, total: totalChunks }))
-          }
-        }
-      } catch (error) {
-        // 如果获取进度失败，继续正常上传（但不显示错误，因为可能是已取消）
-        if (!chunkUploadCancelled.value) {
-          console.warn('Failed to get chunk progress, starting fresh upload:', error)
-        }
-      }
-    }
-
-    // 不再使用SSE，改用基于分片上传进度的方式
-
-    // 准备所有分片
-    const chunks = []
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * CHUNK_SIZE
-      const end = Math.min(start + CHUNK_SIZE, totalSize)
-      const chunk = file.slice(start, end)
-      chunks.push({ index: i, chunk, uploaded: uploadedChunksSet.has(i) })
-    }
-
-    chunkUploadChunks.value = chunks
-
-    // 过滤出未上传的分片
-    const pendingChunks = chunks.filter(chunk => !chunk.uploaded)
-    const alreadyUploadedCount = chunks.length - pendingChunks.length
-
-    // 更新初始进度
-    if (alreadyUploadedCount > 0) {
-      chunkUploadProgress.value = Math.round((alreadyUploadedCount / totalChunks) * 100)
-    }
-
-    // 并发上传分片（限制并发数为1）
-    const concurrency = 1
-    let uploadedCount = alreadyUploadedCount
-    // 记录每个分片的上传进度（0-1），用于计算总进度
-    const chunkProgressMap = new Map()
-    // 初始化所有分片的进度
-    for (let i = 0; i < totalChunks; i++) {
-      if (uploadedChunksSet.has(i)) {
-        chunkProgressMap.set(i, 1) // 已上传的分片进度为1
-      } else {
-        chunkProgressMap.set(i, 0) // 未上传的分片进度为0
-      }
-    }
-
-    // 更新总进度的函数
-    const updateTotalProgress = () => {
-      if (chunkUploadCancelled.value) return
-      let totalProgress = 0
-      for (let i = 0; i < totalChunks; i++) {
-        totalProgress += chunkProgressMap.get(i) || 0
-      }
-      const percent = Math.min(Math.round((totalProgress / totalChunks) * 100), 99) // 最多显示99%，等合并完成再显示100%
-      chunkUploadProgress.value = percent
-    }
-
-    const uploadChunkWithProgress = async (chunkData) => {
-      // 如果已取消，停止上传
-      if (chunkUploadCancelled.value) {
-        return
-      }
-      
-      try {
-        // 如果已上传，跳过
-        if (chunkData.uploaded) {
-          return
-        }
-
-        await uploadChunk(
-          chunkUploadChunkID.value,
-          chunkData.index,
-          chunkData.chunk,
-          (progress) => {
-            // 单个分片的上传进度（0-100），转换为0-1
-            if (!chunkUploadCancelled.value) {
-              chunkProgressMap.set(chunkData.index, progress / 100)
-              updateTotalProgress()
-            }
-          }
-        )
-        
-        // 再次检查是否已取消
-        if (chunkUploadCancelled.value) {
-          return
-        }
-        
-        uploadedCount++
-        chunkProgressMap.set(chunkData.index, 1) // 标记该分片已完成
-        // 更新总进度
-        updateTotalProgress()
-      } catch (error) {
-        // 如果已取消，不抛出错误
-        if (!chunkUploadCancelled.value) {
-          throw error
-        }
-      }
-    }
-
-    // 分批上传未完成的分片
-    for (let i = 0; i < pendingChunks.length; i += concurrency) {
-      const batch = pendingChunks.slice(i, i + concurrency)
-      await Promise.all(batch.map(uploadChunkWithProgress))
-    }
-
-    // 检查是否已取消
-    if (chunkUploadCancelled.value) {
-      return
-    }
-
-    // 所有分片上传完成，合并
-    const mimeType = file.type || 'application/octet-stream'
-    const mergeRes = await mergeChunks(
-      chunkUploadChunkID.value,
-      file.name,
-      mimeType,
-      totalChunks
-    )
-
-    // 再次检查是否已取消
-    if (chunkUploadCancelled.value) {
-      return
-    }
-
-    // 上传完成
-    chunkUploadStatus.value = 'success'
-    chunkUploadProgress.value = 100
-    ElMessage.success(t('attachment.upload_success'))
-    
-    // 清理 localStorage 中的分片信息
-    try {
-      if (chunkUploadChunkID.value) {
-        Storage.removeItem(`chunk_${chunkUploadChunkID.value}`)
-      }
-    } catch (e) {
-      console.warn('Failed to remove chunk info from storage:', e)
-    }
-    
-    // 刷新列表
-    loadData()
-  } catch (error) {
-    if (chunkUploadCancelled.value) {
-      return
-    }
-    console.error('Chunk upload error:', error)
-    chunkUploadStatus.value = 'exception'
-    if (!error.__handled) {
-      const errorMessage = error.response?.data?.message || error.message || t('attachment.upload_failed')
-      ElMessage.error(errorMessage)
-    }
-  }
-}
-
-const handleCancelChunkUpload = () => {
-  // 标记为已取消，停止所有上传操作
-  chunkUploadCancelled.value = true
-  chunkUploadVisible.value = false
-  chunkUploadFile.value = null
-  chunkUploadChunkID.value = ''
-  chunkUploadChunks.value = []
-}
-
-const handleChunkUploadClose = () => {
-  handleCancelChunkUpload()
-  loadData()
-}
-
-const handleRetryChunkUpload = () => {
-  if (chunkUploadFile.value && chunkUploadChunkID.value) {
-    // 重试时使用已存在的 chunk_id，实现断点续传
-    handleChunkUpload(chunkUploadFile.value, false, true)
-  } else if (chunkUploadFile.value) {
-    // 如果没有 chunk_id，重新开始上传
-    handleChunkUpload(chunkUploadFile.value)
-  }
 }
 
 // 裁剪上传相关方法

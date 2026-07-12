@@ -1,4 +1,36 @@
 import { getField } from './normalizeFormData'
+import { buildSearchParams } from './buildSearchParams'
+
+/**
+ * Append *_start / *_end query params from datetimerange/daterange form fields.
+ */
+export function buildRangeSearchParams(form, baseParams, fieldNames = []) {
+  const params = buildSearchParams(form, baseParams)
+
+  fieldNames.forEach((fieldName) => {
+    const rangeValue = form[fieldName]
+    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
+      delete params[`${fieldName}_start`]
+      delete params[`${fieldName}_end`]
+      return
+    }
+
+    const [start, end] = rangeValue
+    if (start) {
+      params[`${fieldName}_start`] = start
+    } else {
+      delete params[`${fieldName}_start`]
+    }
+    if (end) {
+      params[`${fieldName}_end`] = end
+    } else {
+      delete params[`${fieldName}_end`]
+    }
+    delete params[fieldName]
+  })
+
+  return params
+}
 
 /**
  * Build standard edit/delete action buttons for TableActionButtons.

@@ -1,0 +1,117 @@
+import { ref } from 'vue'
+import axios from 'axios'
+import Storage from '@/utils/storage'
+
+/**
+ * Lazy-load attachment thumbnails as blob URLs when preview requires auth.
+ */
+export function useAttachmentImagePreview() {
+  const imageUrlMap = ref(new Map())
+  const imageLoadingMap = ref(new Map())
+
+  const loadImageAsBlob = async (row) => {
+    if (!row || row.file_type !== 'image') {
+      return
+    }
+
+    const attachmentId = row.id
+    if (!attachmentId) {
+      return
+    }
+
+    const currentState = imageLoadingMap.value.get(attachmentId)
+    if (currentState === 'loaded' || currentState === 'loading') {
+      return
+    }
+
+    const fileUrl = row.file_url
+    if (!fileUrl) {
+      imageLoadingMap.value.set(attachmentId, 'error')
+      return
+    }
+
+    imageLoadingMap.value.set(attachmentId, 'loading')
+
+    if (fileUrl.startsWith('http')) {
+      imageUrlMap.value.set(attachmentId, fileUrl)
+      return
+    }
+
+    const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+    const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
+    let fullUrl = fileUrl
+    if (apiBaseURL) {
+      const base = apiBaseURL.replace(/\/+$/, '')
+      fullUrl = `${base}${fileUrl}`
+    } else {
+      fullUrl = `${apiPrefix}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`
+    }
+
+    try {
+      const token = Storage.getItem('token', '') || ''
+      const tokenStr = typeof token === 'string' ? token.trim() : ''
+      const response = await axios.get(fullUrl, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${tokenStr}`
+        }
+      })
+      const blobUrl = URL.createObjectURL(new Blob([response.data]))
+      imageUrlMap.value.set(attachmentId, blobUrl)
+      imageLoadingMap.value.set(attachmentId, 'loading')
+    } catch {
+      imageLoadingMap.value.set(attachmentId, 'error')
+      imageUrlMap.value.set(attachmentId, '')
+    }
+  }
+
+  const getImageUrl = (row) => {
+    if (!row?.id) {
+      return ''
+    }
+    return imageUrlMap.value.get(row.id) || ''
+  }
+
+  const getImageLoadingState = (row) => {
+    if (!row?.id) {
+      return ''
+    }
+
+    const state = imageLoadingMap.value.get(row.id)
+    const url = imageUrlMap.value.get(row.id)
+
+    if (url && !state) {
+      return ''
+    }
+    if (url && state === 'loading') {
+      return 'loading'
+    }
+    if (state === 'error') {
+      return 'error'
+    }
+    if (state === 'loaded') {
+      return ''
+    }
+    return 'loading'
+  }
+
+  const handleImageLoad = (row) => {
+    if (row?.id) {
+      imageLoadingMap.value.set(row.id, 'loaded')
+    }
+  }
+
+  const handleImageError = (row) => {
+    if (row?.id) {
+      imageLoadingMap.value.set(row.id, 'error')
+    }
+  }
+
+  return {
+    loadImageAsBlob,
+    getImageUrl,
+    getImageLoadingState,
+    handleImageLoad,
+    handleImageError
+  }
+}

@@ -1,4 +1,4 @@
-import { buildSearchParams } from '@/utils/buildSearchParams'
+import { buildRangeSearchParams } from '@/utils/listPageHelpers'
 
 export const <<.ModuleNameCamel>>InitialSearchForm = {
 <<range .SearchableFields>>
@@ -15,22 +15,7 @@ const rangeSearchFields = [
 ]
 
 export function build<<.ModelName>>ListParams(form, baseParams) {
-  const params = buildSearchParams(form, baseParams)
-  rangeSearchFields.forEach((fieldName) => {
-    const rangeValue = form[fieldName]
-    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
-      delete params[`${fieldName}_start`]
-      delete params[`${fieldName}_end`]
-      return
-    }
-    const [start, end] = rangeValue
-    if (start) params[`${fieldName}_start`] = start
-    else delete params[`${fieldName}_start`]
-    if (end) params[`${fieldName}_end`] = end
-    else delete params[`${fieldName}_end`]
-    delete params[fieldName]
-  })
-  return params
+  return buildRangeSearchParams(form, baseParams, rangeSearchFields)
 }
 
 export function create<<.ModelName>>SearchFields(t) {

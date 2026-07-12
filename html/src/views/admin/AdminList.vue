@@ -97,7 +97,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useQueuedExport } from '@/composables/useQueuedExport'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
@@ -133,11 +133,15 @@ import {
 } from './admin.config'
 
 const { t } = useI18n()
-const router = useRouter()
 const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const adminFormRef = ref(null)
-const isExporting = ref(false)
+
+const { isExporting, handleExport } = useQueuedExport({
+  exportApi: exportAdmin,
+  getParams: () => searchForm,
+  requireExportId: false
+})
 
 const {
   dialogVisible,
@@ -405,25 +409,6 @@ const handleResetGoogleAuth = async (row) => {
         )
       }
     }
-  }
-}
-
-const handleExport = async () => {
-  if (isExporting.value) return
-  isExporting.value = true
-  try {
-    await exportAdmin(searchForm)
-    ElMessage.success(t('common.queued'))
-    router.push('/exports')
-  } catch (error) {
-    logger.error('Export error:', error)
-    if (error.response?.status === 429) {
-      ElMessage.warning(t('common.already_queued'))
-    } else if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true })
-    }
-  } finally {
-    isExporting.value = false
   }
 }
 

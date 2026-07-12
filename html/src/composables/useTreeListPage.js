@@ -2,6 +2,7 @@ import { ref, reactive } from 'vue'
 import { forOwn } from 'lodash-es'
 import { buildSearchParams } from '../utils/buildSearchParams'
 import { normalizeTreeList } from '../utils/normalize'
+import { extractListFromResponse } from '../utils/extractListFromResponse'
 import logger from '../utils/logger'
 
 /**
@@ -14,6 +15,7 @@ export function useTreeListPage(options = {}) {
     initialSearchForm = {},
     buildParams = null,
     normalizeRows = true,
+    extractList = extractListFromResponse,
     onSearch = null,
     onReset = null,
     onLoadSuccess = null
@@ -36,7 +38,7 @@ export function useTreeListPage(options = {}) {
         : buildSearchParams(searchForm, {})
 
       const res = await fetchApi(params)
-      let list = res?.data?.list ?? res?.data?.data ?? []
+      let list = extractList(res)
 
       if (normalizeRows) {
         list = normalizeTreeList(list)

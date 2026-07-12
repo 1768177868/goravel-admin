@@ -45,18 +45,13 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ElMessage, ElMessageBox } from "element-plus";
 import ListPage from "@/components/ListPage.vue";
 import TableActionButtons from "@/components/TableActionButtons.vue";
 import ArticleForm from "./ArticleForm.vue";
 import { useStandardListPage } from "@/composables/useStandardListPage";
 import { createCrudActions } from "@/utils/listPageHelpers";
-
-import { getArticleList, deleteArticle, updateArticle } from "@/api/article";
-import logger from "@/utils/logger";
-import ErrorHandler from "@/utils/errorHandler";
+import { getArticleList, deleteArticle } from "@/api/article";
 import {
   articleInitialSearchForm,
   buildArticleListParams,
@@ -66,7 +61,6 @@ import {
 } from "./article.config";
 
 const { t } = useI18n();
-const router = useRouter();
 const listPageRef = ref(null);
 
 const {
@@ -74,14 +68,12 @@ const {
   tableData,
   loading,
   searchForm,
-  selectedIds,
   dialogVisible,
   editId,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
-  handleSelectionChange,
   handleAdd,
   handleEdit,
   handleFormSuccess,
@@ -97,7 +89,6 @@ const {
   normalizeRows: false,
 });
 
-const hasSelection = computed(() => selectedIds.value.length > 0);
 const searchFields = computed(() => createArticleSearchFields(t));
 const tableColumns = computed(() =>
   createArticleTableColumns(t, { enableBatchActions: false }),
@@ -109,21 +100,4 @@ const operationActions = computed(() =>
     onDelete: handleDelete,
   }),
 );
-
-const handleBatchDelete = async () => {
-  if (!selectedIds.value.length) return;
-  try {
-    await ElMessageBox.confirm(
-      t("common.batch_delete_confirm", { count: selectedIds.value.length }),
-      t("common.warning"),
-      { type: "warning" },
-    );
-    await Promise.all(selectedIds.value.map((id) => deleteArticle(id)));
-    ElMessage.success(t("common.operation_success"));
-    await loadData();
-  } catch (error) {
-    if (error === "cancel" || error === "close") return;
-    logger.error("Batch delete error:", error);
-  }
-};
 </script>
