@@ -450,16 +450,6 @@ const handleCropConfirm = () => {
       type: blob.type
     })
 
-    // 使用现有的上传逻辑
-    // 手动构造 element-plus upload 组件所需的 file 对象结构
-    const uploadFileObj = {
-      raw: file,
-      name: file.name,
-      size: file.size,
-      uid: Date.now()
-    }
-
-    // 调用上传接口
     const formData = new FormData()
     formData.append('file', file)
 

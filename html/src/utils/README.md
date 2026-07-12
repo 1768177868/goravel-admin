@@ -123,23 +123,7 @@ if (isSafeUrl(userInput)) {
 const sanitized = sanitizeInput(userInput)
 ```
 
-## 6. useApiRequest（请求取消）
-
-提供请求取消机制和加载状态管理。
-
-```javascript
-import { useApiRequest } from '@/composables/useApiRequest'
-
-const { request, cancel, loading, error } = useApiRequest()
-
-// 执行请求（自动取消之前的请求）
-const result = await request(() => getAdminList(params))
-
-// 手动取消请求
-cancel()
-```
-
-## 7. API Factory（API 工厂）
+## 6. API Factory（API 工厂）
 
 减少 API 代码重复。
 

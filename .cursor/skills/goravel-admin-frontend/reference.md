@@ -1,7 +1,7 @@
 ## Critical frontend files (do not bypass)
 - `html/src/utils/request.js`: axios instance + interceptors + token/i18n/timezone headers + global error handling
 - `html/src/utils/apiFactory.js`: CRUD API factory (`createCRUDApi`, `extendApi`)
-- `html/src/composables/useApiRequest.js`: cancellable request wrapper + loading/error state
+- `html/src/composables/useStandardListPage.js`: standard paginated CRUD list pages
 
 ## Base URL / routing conventions
 - API base URL is composed by:

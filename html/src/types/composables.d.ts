@@ -195,33 +195,3 @@ export function useDebounce<T extends (...args: any[]) => any>(
   fn: T,
   delay?: number
 ): UseDebounceReturn<T>
-
-// ==================== useApiRequest ====================
-
-export interface UseApiRequestOptions {
-  /** 是否立即执行 */
-  immediate?: boolean
-  /** 成功回调 */
-  onSuccess?: (data: any) => void
-  /** 失败回调 */
-  onError?: (error: any) => void
-}
-
-export interface UseApiRequestReturn<T = any> {
-  /** 响应数据 */
-  data: Ref<T | null>
-  /** 加载状态 */
-  loading: Ref<boolean>
-  /** 错误信息 */
-  error: Ref<Error | null>
-  /** 执行请求 */
-  execute: (...args: any[]) => Promise<T>
-  /** 重置状态 */
-  reset: () => void
-}
-
-export function useApiRequest<T = any>(
-  apiFn: (...args: any[]) => Promise<any>,
-  options?: UseApiRequestOptions
-): UseApiRequestReturn<T>
-

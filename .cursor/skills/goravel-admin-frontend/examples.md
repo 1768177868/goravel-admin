@@ -46,24 +46,15 @@ export const menusApi = extendApi(base, {
 
 ## Page wiring templates
 
-### 3) Use `useApiRequest()` for cancellable calls
+### 3) Use `useStandardListPage()` for list pages
 ```js
-import { useApiRequest } from '@/composables/useApiRequest'
-import { getUserList } from '@/api/user'
+import { useStandardListPage } from '@/composables/useStandardListPage'
+import { getUserList, deleteUser } from '@/api/user'
 
-const { request, loading, error } = useApiRequest()
-
-const fetchUsers = () =>
-  request(() => getUserList({ page: 1, page_size: 10 }))
-
-try {
-  const res = await fetchUsers()
-  if (!res) return // cancelled
-  tableData.value = res.data.list
-} catch (err) {
-  // If err.__handled === true, global toast already happened.
-  // Only show local UI if needed (e.g. inline error state).
-}
+const { tableData, loading, loadData, handleSearch, handleReset } = useStandardListPage({
+  fetchApi: getUserList,
+  deleteApi: deleteUser
+})
 ```
 
 ### 3.1) Preferred list-page pattern: `useListPage` + `Pagination` auto-load

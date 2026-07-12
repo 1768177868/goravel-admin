@@ -155,9 +155,9 @@ import {
   hasRequestParams,
   getRequestPreview,
   formatRequestParamsFull,
-  formatChangeValue,
-  getOperationTitle
+  formatChangeValue
 } from './operationLog.config'
+import { getOperationTitle } from '@/utils/operationTitle'
 
 const { t, te, tm } = useI18n()
 const { getButtonState } = usePermission()

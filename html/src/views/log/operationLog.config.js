@@ -1,7 +1,4 @@
 import { getSevenDaysAgo } from '@/utils/dateUtils'
-import { getOperationTitle } from '@/utils/operationTitle'
-
-export { getOperationTitle }
 
 export function createOperationLogInitialSearchForm() {
   return {

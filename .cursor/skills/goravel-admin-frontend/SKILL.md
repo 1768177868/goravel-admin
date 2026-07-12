@@ -1,6 +1,6 @@
 ---
 name: goravel-admin-frontend
-description: Implements the Vue 3 + Vite admin frontend in html/ using the existing axios request wrapper (src/utils/request.js), API factory (src/utils/apiFactory.js), and composables (src/composables/useApiRequest.js). Use when creating pages/components, wiring APIs, handling auth tokens, i18n messages, and matching backend response conventions (code/message/error_code/trace_id, Authorization: Bearer).
+description: Implements the Vue 3 + Vite admin frontend in html/ using the existing axios request wrapper (src/utils/request.js), API factory (src/utils/apiFactory.js), and list-page composables (useListPage/useStandardListPage). Use when creating pages/components, wiring APIs, handling auth tokens, i18n messages, and matching backend response conventions (code/message/error_code/trace_id, Authorization: Bearer).
 ---
 
 # Goravel Admin Frontend (html/)
@@ -55,7 +55,7 @@ Prefer following the existing pattern used by modules like `html/src/api/user.js
 Extend with custom methods via `extendApi(baseApi, customMethods)` when needed.
 
 When wiring a page:
-- Use `useApiRequest()` for cancellable requests and loading/error state.
+- Prefer `useStandardListPage()` / `useStandardTreeListPage()` for CRUD list pages.
 - Keep API calls in `html/src/api/...` modules (do not call `request` directly from views unless it’s truly one-off).
 
 ## Output expectations (how the agent should report changes)
