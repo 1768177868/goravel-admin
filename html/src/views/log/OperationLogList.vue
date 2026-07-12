@@ -135,9 +135,7 @@ import { ElMessage } from 'element-plus'
 import { DocumentCopy } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
-import { useListPage } from '@/composables/useListPage'
-import { useCrud } from '@/composables/useCrud'
-import { usePermission } from '@/composables/usePermission'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useColumnSetting } from '@/composables/useColumnSetting'
 import { getMethodOptions } from '@/utils/fieldOptions'
 import { validateTimeRange, OPERATION_LOG_MAX_TIME_RANGE_MONTHS } from '@/utils/timeRangeValidator'
@@ -160,17 +158,12 @@ import {
 import { getOperationTitle } from '@/utils/operationTitle'
 
 const { t, te, tm } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const requestParamsPre = ref(null)
 const titleOptions = ref([])
 const operationLogInitialSearchForm = createOperationLogInitialSearchForm()
-
-const { handleDelete: handleDeleteCrud } = useCrud({
-  deleteApi: deleteOperationLog
-})
 
 const {
   pagination,
@@ -181,11 +174,13 @@ const {
   handleSearch: baseHandleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleDelete: handleDeleteRow,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getOperationLogList,
   initialSearchForm: operationLogInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteOperationLog,
   normalizeRows: false,
   transformData: transformOperationLogRow,
   tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
@@ -309,7 +304,7 @@ const handleView = async (row) => {
   }
 }
 
-const handleDelete = (row) => handleDeleteCrud(row, loadData)
+const handleDelete = (row) => handleDeleteRow(row, loadData)
 
 const operationActions = computed(() => [
   {
@@ -355,9 +350,7 @@ const loadTitleOptions = async () => {
 }
 
 onMounted(() => {
-  initDefaultSort()
   loadTitleOptions()
-  loadData()
 })
 </script>
 

@@ -103,9 +103,7 @@ import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
-import { useCrud } from '@/composables/useCrud'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import {
   getSystemLogList,
   getSystemLogModuleOptions,
@@ -126,18 +124,12 @@ import {
 } from './systemLog.config'
 
 const { t, te } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
 const selectedRows = ref([])
 const selectedIds = ref(new Set())
 const moduleOptions = ref([])
-
-const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
-  deleteApi: deleteSystemLog,
-  batchDeleteApi: batchDeleteSystemLogs
-})
 
 const getTable = () => listPageRef.value?.tableRef?.tableRef
 
@@ -150,11 +142,15 @@ const {
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleDelete: handleDeleteRow,
+  handleBatchDelete: handleBatchDeleteRows,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getSystemLogList,
   initialSearchForm: systemLogInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteSystemLog,
+  batchDeleteApi: batchDeleteSystemLogs,
   normalizeRows: false,
   transformData: transformSystemLogRow,
   tableRef: computed(() => getTable()),
@@ -213,7 +209,7 @@ const handleView = async (row) => {
   }
 }
 
-const handleDelete = (row) => handleDeleteCrud(row, loadData)
+const handleDelete = (row) => handleDeleteRow(row, loadData)
 
 const operationActions = computed(() => [
   {
@@ -244,7 +240,7 @@ const onTableSelectionChange = () => {
 }
 
 const handleBatchDelete = () => {
-  handleBatchDeleteCrud(selectedRows.value, () => {
+  handleBatchDeleteRows(selectedRows.value, () => {
     selectedRows.value = []
     selectedIds.value.clear()
     loadData()
@@ -264,9 +260,7 @@ const handleClearSelection = () => {
 }
 
 onMounted(() => {
-  initDefaultSort()
   loadModuleOptions()
-  loadData()
 })
 </script>
 

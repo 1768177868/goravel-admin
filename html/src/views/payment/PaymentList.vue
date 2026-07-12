@@ -119,14 +119,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { getPaymentList, getPaymentDetail, exportPayments } from '@/api/payment'
 import logger from '@/utils/logger'
 import ErrorHandler from '@/utils/errorHandler'
@@ -144,7 +143,6 @@ import {
 
 const { t } = useI18n()
 const router = useRouter()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const detailDialogVisible = ref(false)
 const detailLoading = ref(false)
@@ -161,8 +159,8 @@ const {
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  getButtonState
+} = useStandardListPage({
   fetchApi: getPaymentList,
   initialSearchForm: paymentInitialSearchForm,
   defaultSort: 'created_at:desc',
@@ -213,9 +211,4 @@ const handleExport = async () => {
     isExporting.value = false
   }
 }
-
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-})
 </script>

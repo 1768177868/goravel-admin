@@ -140,13 +140,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
 import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import ListPage from '@/components/ListPage.vue'
 import NotificationForm from './NotificationForm.vue'
-import { useListPage } from '@/composables/useListPage'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useNotificationStore } from '@/store/notification'
 import { useUserStore } from '@/store/user'
 import { getNotificationList } from '@/api/notification'
@@ -166,7 +166,6 @@ const userStore = useUserStore()
 const canCreate = computed(() => userStore.shouldShowButton('notification.store'))
 
 const listPageRef = ref(null)
-const dialogVisible = ref(false)
 const viewDialogVisible = ref(false)
 const currentNotification = ref(null)
 
@@ -175,11 +174,13 @@ const {
   tableData,
   loading,
   searchForm,
+  dialogVisible,
   loadData,
   handleSearch,
   handleReset,
-  handleSortChange
-} = useListPage({
+  handleSortChange,
+  handleAdd,
+} = useStandardListPage({
   fetchApi: getNotificationList,
   initialSearchForm: notificationInitialSearchForm,
   defaultSort: 'id:desc',
@@ -226,18 +227,10 @@ const formatDate = (value) => {
   return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
 }
 
-const handleAdd = () => {
-  dialogVisible.value = true
-}
-
 const handleFormSuccess = async () => {
   pagination.page = 1
   await loadData()
 }
-
-onMounted(() => {
-  loadData()
-})
 </script>
 
 <style scoped>

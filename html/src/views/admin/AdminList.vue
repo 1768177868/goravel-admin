@@ -95,16 +95,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQueuedExport } from '@/composables/useQueuedExport'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
 import AdminForm from './AdminForm.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
-import { useCrud } from '@/composables/useCrud'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useColumnSetting } from '@/composables/useColumnSetting'
 import { rowStatus } from '@/utils/listPageHelpers'
 import { getField } from '@/utils/normalizeFormData'
@@ -133,7 +131,6 @@ import {
 } from './admin.config'
 
 const { t } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const adminFormRef = ref(null)
 
@@ -144,30 +141,32 @@ const { isExporting, handleExport } = useQueuedExport({
 })
 
 const {
-  dialogVisible,
-  editId,
-  handleAdd,
-  handleDelete: handleDeleteCrud
-} = useCrud({
-  deleteApi: deleteAdmin
-})
-
-const {
   pagination,
   tableData,
   loading,
   searchForm,
+  dialogVisible,
+  editId,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleAdd,
+  handleDelete: handleDeleteRow,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getAdminList,
   initialSearchForm: adminInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteAdmin,
   normalizeRows: false,
-  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef),
+  beforeDelete: (row) => {
+    if (isProtectedAdmin(row.id)) {
+      ElMessage.warning(t('admin.protected_cannot_delete'))
+      return false
+    }
+  }
 })
 
 const searchFields = computed(() => createAdminSearchFields(t, getStatusOptions))
@@ -238,7 +237,7 @@ const handleStatusChange = async (row, newStatus) => {
   }
 }
 
-const handleDelete = (row) => handleDeleteCrud(row, loadData)
+const handleDelete = (row) => handleDeleteRow(row, loadData)
 
 const handleResetPassword = async (row) => {
   try {
@@ -411,14 +410,4 @@ const handleResetGoogleAuth = async (row) => {
     }
   }
 }
-
-onMounted(async () => {
-  try {
-    initDefaultSort()
-    await loadData()
-  } catch (error) {
-    logger.error('AdminList onMounted error:', error)
-    ErrorHandler.handle(error)
-  }
-})
 </script>

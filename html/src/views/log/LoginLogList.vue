@@ -77,14 +77,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Delete, View } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
-import { useCrud } from '@/composables/useCrud'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useColumnSetting } from '@/composables/useColumnSetting'
 import { getLoginLogList, getLoginLogDetail, deleteLoginLog } from '@/api/log'
 import {
@@ -96,14 +94,9 @@ import {
 } from './loginLog.config'
 
 const { t } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const detailVisible = ref(false)
 const logDetail = ref(null)
-
-const { handleDelete: handleDeleteCrud } = useCrud({
-  deleteApi: deleteLoginLog
-})
 
 const {
   pagination,
@@ -114,11 +107,13 @@ const {
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleDelete: handleDeleteRow,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getLoginLogList,
   initialSearchForm: loginLogInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteLoginLog,
   normalizeRows: false,
   transformData: transformLoginLogRow,
   tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
@@ -151,7 +146,7 @@ const handleView = async (row) => {
   }
 }
 
-const handleDelete = (row) => handleDeleteCrud(row, loadData)
+const handleDelete = (row) => handleDeleteRow(row, loadData)
 
 const operationActions = computed(() => [
   {
@@ -177,11 +172,6 @@ const translateLoginMessage = (messageKey) => {
   const translation = t(`log.${messageKey}`, null)
   return translation !== `log.${messageKey}` ? translation : messageKey
 }
-
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-})
 </script>
 
 <style scoped>

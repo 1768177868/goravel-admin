@@ -15,16 +15,25 @@ export function useStandardListPage(options = {}) {
     fieldMapping = {},
     tableRef = null,
     deleteApi = null,
+    batchDeleteApi = null,
     normalizeRows = true,
     immediate = true,
     buildParams = null,
-    onLoadSuccess = null
+    onLoadSuccess = null,
+    transformData = null,
+    onSearch = null,
+    onReset = null,
+    beforeDelete = null,
+    ...crudOptions
   } = options
 
   const { getButtonState } = usePermission()
 
   const crud = useCrud({
-    deleteApi: deleteApi || undefined
+    deleteApi: deleteApi || undefined,
+    batchDeleteApi: batchDeleteApi || undefined,
+    beforeDelete,
+    ...crudOptions
   })
 
   const list = useListPage({
@@ -35,7 +44,10 @@ export function useStandardListPage(options = {}) {
     tableRef,
     normalizeRows,
     buildParams,
-    onLoadSuccess
+    onLoadSuccess,
+    transformData,
+    onSearch,
+    onReset
   })
 
   const handleFormSuccess = () => {

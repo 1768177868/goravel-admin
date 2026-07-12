@@ -63,14 +63,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import ListPage from '@/components/ListPage.vue'
-import { useListPage } from '@/composables/useListPage'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useColumnSetting } from '@/composables/useColumnSetting'
-import { usePermission } from '@/composables/usePermission'
 import {
   getOnlineAdminList,
   kickOutOnlineAdmin,
@@ -84,7 +83,6 @@ import {
 } from './onlineAdmin.config'
 
 const { t } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 
 const allTableColumns = computed(() => createOnlineAdminTableColumns(t))
@@ -112,8 +110,8 @@ const {
   handleSortChange,
   selectedRows,
   handleSelectionChange,
-  initDefaultSort
-} = useListPage({
+  getButtonState
+} = useStandardListPage({
   fetchApi: getOnlineAdminList,
   initialSearchForm: onlineAdminInitialSearchForm,
   fieldMapping: { last_active: 'last_used_at' },
@@ -153,10 +151,4 @@ const handleBatchKickOut = async () => {
     // cancelled
   }
 }
-
-onMounted(() => {
-  initDefaultSort()
-  pagination.pageSize = pagination.pageSize || 10
-  loadData()
-})
 </script>

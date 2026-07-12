@@ -67,13 +67,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated } from 'vue'
+import { ref, computed, onActivated } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { getExportList, deleteExport, batchDeleteExports } from '@/api/export'
 import i18n from '@/i18n'
 import Storage from '@/utils/storage'
@@ -92,7 +91,6 @@ import {
 } from './export.config'
 
 const { t, locale } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const downloadingIds = ref(new Set())
 
@@ -107,11 +105,15 @@ const {
   handleReset,
   handleSortChange,
   handleSelectionChange,
-  initDefaultSort
-} = useListPage({
+  handleDelete: handleDeleteRow,
+  handleBatchDelete: handleBatchDeleteRows,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getExportList,
   initialSearchForm: exportInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteExport,
+  batchDeleteApi: batchDeleteExports,
   normalizeRows: false,
   transformData: transformExportRow,
   tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
@@ -213,55 +215,14 @@ const handleDownload = async (row) => {
   }
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(t('common.delete_confirm'), t('form.tip'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-    await deleteExport(row.id)
-    ElMessage.success(t('log.delete_success'))
-    loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Delete export error:', error)
-    }
-  }
-}
+const handleDelete = (row) => handleDeleteRow(row, loadData)
 
-const handleBatchDelete = async () => {
-  if (selectedRows.value.length === 0) {
-    ElMessage.warning(t('common.please_select_items'))
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      t('common.batch_delete_confirm', { count: selectedRows.value.length }),
-      t('form.tip'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
-    const ids = selectedRows.value.map((row) => row.id)
-    await batchDeleteExports(ids)
-    ElMessage.success(t('log.delete_success'))
+const handleBatchDelete = () => {
+  handleBatchDeleteRows(selectedRows.value, () => {
     handleSelectionChange([])
     loadData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Batch delete error:', error)
-    }
-  }
+  })
 }
-
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-})
 
 onActivated(() => {
   loadData()

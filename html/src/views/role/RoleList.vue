@@ -57,16 +57,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
 import RoleForm from './RoleForm.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useColumnSetting } from '@/composables/useColumnSetting'
-import { useCrud } from '@/composables/useCrud'
 import { rowStatus } from '@/utils/listPageHelpers'
 import { getRoleList, deleteRole, updateRole } from '@/api/role'
 import {
@@ -77,14 +75,8 @@ import {
 } from './role.config'
 
 const { t } = useI18n()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const roleFormRef = ref(null)
-
-const { handleDelete: handleDeleteCrud } = useCrud({ deleteApi: deleteRole })
-
-const dialogVisible = ref(false)
-const editId = ref(null)
 
 const allTableColumns = computed(() => createRoleTableColumns(t))
 
@@ -105,17 +97,29 @@ const {
   tableData,
   loading,
   searchForm,
+  dialogVisible,
+  editId,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleEdit,
+  handleFormSuccess,
+  handleDelete: handleDeleteRow,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getRoleList,
   initialSearchForm: roleInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteRole,
   normalizeRows: false,
-  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef),
+  beforeDelete: (row) => {
+    if (isProtectedRole(row)) {
+      ElMessage.warning(t('role.protected_cannot_delete'))
+      return false
+    }
+  }
 })
 
 const handleAdd = () => {
@@ -129,15 +133,6 @@ const handleAdd = () => {
     editId.value = null
     dialogVisible.value = true
   }
-}
-
-const handleEdit = (row) => {
-  editId.value = row.id
-  dialogVisible.value = true
-}
-
-const handleFormSuccess = () => {
-  loadData()
 }
 
 const handleStatusChange = async (row, newStatus) => {
@@ -163,13 +158,7 @@ const handleStatusChange = async (row, newStatus) => {
   }
 }
 
-const handleDelete = (row) => {
-  if (isProtectedRole(row)) {
-    ElMessage.warning(t('role.protected_cannot_delete'))
-    return
-  }
-  handleDeleteCrud(row, loadData)
-}
+const handleDelete = (row) => handleDeleteRow(row, loadData)
 
 const getPrimaryActions = (row) => [
   {
@@ -188,9 +177,4 @@ const getPrimaryActions = (row) => [
     handler: handleDelete
   }
 ]
-
-onMounted(async () => {
-  initDefaultSort()
-  await loadData()
-})
 </script>

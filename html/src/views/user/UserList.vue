@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -85,9 +85,7 @@ import { Download } from '@element-plus/icons-vue'
 import ListPage from '@/components/ListPage.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
 import UserForm from './UserForm.vue'
-import { useListPage } from '@/composables/useListPage'
-import { usePermission } from '@/composables/usePermission'
-import { useCrud } from '@/composables/useCrud'
+import { useStandardListPage } from '@/composables/useStandardListPage'
 import { useColumnSetting } from '@/composables/useColumnSetting'
 import { rowStatus } from '@/utils/listPageHelpers'
 import { getStatusOptions } from '@/utils/fieldOptions'
@@ -110,18 +108,9 @@ import {
 
 const { t } = useI18n()
 const router = useRouter()
-const { getButtonState } = usePermission()
 const listPageRef = ref(null)
 const userFormRef = ref(null)
 const isExporting = ref(false)
-
-const {
-  dialogVisible,
-  editId,
-  handleAdd,
-  handleClose,
-  handleDelete: handleDeleteCrud
-} = useCrud({ deleteApi: deleteUser })
 
 const allTableColumns = computed(() => createUserTableColumns(t))
 
@@ -142,15 +131,22 @@ const {
   tableData,
   loading,
   searchForm,
+  dialogVisible,
+  editId,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleAdd,
+  handleEdit,
+  handleClose,
+  handleDelete: handleDeleteRow,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getUserList,
   initialSearchForm: userInitialSearchForm,
   defaultSort: 'id:desc',
+  deleteApi: deleteUser,
   normalizeRows: false,
   tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
 })
@@ -186,11 +182,6 @@ const handleAction = async (command, row) => {
     default:
       logger.warn('Unknown action command:', command)
   }
-}
-
-const handleEdit = (row) => {
-  editId.value = row.id
-  dialogVisible.value = true
 }
 
 const handleUpdateBalance = async (row) => {
@@ -279,7 +270,7 @@ const handleBalanceLogs = (row) => {
 }
 
 const handleDelete = async (row) => {
-  await handleDeleteCrud(row, loadData)
+  await handleDeleteRow(row, loadData)
 }
 
 const handleStatusChange = async (row, val) => {
@@ -319,9 +310,4 @@ const handleExport = async () => {
     isExporting.value = false
   }
 }
-
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-})
 </script>
