@@ -1,45 +1,14 @@
-import request from '../utils/request'
+import { createCRUDApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 获取黑名单列表
-export function getBlacklistList(params) {
-  return request({
-    url: '/blacklists',
-    method: 'get',
-    params
-  })
+const blacklistApi = createCRUDApi('blacklists')
+
+export async function getBlacklistList(params) {
+  const res = await blacklistApi.list(params)
+  return normalizeListResponse(res)
 }
 
-// 获取黑名单详情
-export function getBlacklistDetail(id) {
-  return request({
-    url: `/blacklists/${id}`,
-    method: 'get'
-  })
-}
-
-// 创建黑名单
-export function createBlacklist(data) {
-  return request({
-    url: '/blacklists',
-    method: 'post',
-    data
-  })
-}
-
-// 更新黑名单
-export function updateBlacklist(id, data) {
-  return request({
-    url: `/blacklists/${id}`,
-    method: 'put',
-    data
-  })
-}
-
-// 删除黑名单
-export function deleteBlacklist(id) {
-  return request({
-    url: `/blacklists/${id}`,
-    method: 'delete'
-  })
-}
-
+export const getBlacklistDetail = blacklistApi.detail
+export const createBlacklist = blacklistApi.create
+export const updateBlacklist = blacklistApi.update
+export const deleteBlacklist = blacklistApi.delete

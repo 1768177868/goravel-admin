@@ -1,47 +1,28 @@
 import request from "../utils/request";
+import { createCRUDApi, extendApi } from "../utils/apiFactory";
+import { normalizeListResponse } from "../utils/normalize";
 
-export function getArticleList(params) {
-  return request({
-    url: "/articles",
-    method: "get",
-    params,
-  });
+const baseArticleApi = createCRUDApi("articles");
+
+const articleApi = baseArticleApi;
+
+export async function getArticleList(params) {
+  const res = await articleApi.list(params);
+  return normalizeListResponse(res);
 }
 
 export function getArticleDetail(id) {
-  return request({
-    url: `/articles/${id}`,
-    method: "get",
-  });
+  return articleApi.detail(id);
 }
 
 export function createArticle(data) {
-  return request({
-    url: "/articles",
-    method: "post",
-    data,
-  });
+  return articleApi.create(data);
 }
 
 export function updateArticle(id, data) {
-  return request({
-    url: `/articles/${id}`,
-    method: "put",
-    data,
-  });
+  return articleApi.update(id, data);
 }
 
 export function deleteArticle(id) {
-  return request({
-    url: `/articles/${id}`,
-    method: "delete",
-  });
-}
-
-export function exportArticle(params) {
-  return request({
-    url: "/articles/export",
-    method: "post",
-    data: params,
-  });
+  return articleApi.delete(id);
 }

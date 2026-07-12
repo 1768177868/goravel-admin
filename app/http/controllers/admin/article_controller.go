@@ -1,20 +1,9 @@
 package admin
 
 import (
-	"encoding/json"
-	appfacades "goravel/app/facades"
-
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
-
-	"github.com/goravel/framework/contracts/queue"
-
-	"github.com/goravel/framework/facades"
-
-	"goravel/app/jobs"
-	"goravel/app/models"
-	"goravel/app/utils"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -23,8 +12,7 @@ import (
 	"goravel/app/services"
 )
 
-type ArticleController struct {}
-
+type ArticleController struct{}
 
 func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
 	if businessErr, ok := apperrors.GetBusinessError(err); ok {
@@ -61,7 +49,6 @@ func NewArticleController() *ArticleController {
 func (c *ArticleController) ArticleService(ctx http.Context) services.ArticleService {
 	return services.NewArticleService(ctx)
 }
-
 
 // Index lists Article records.
 func (c *ArticleController) Index(ctx http.Context) http.Response {
@@ -144,65 +131,6 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 
 // Export exports Article records.
 func (c *ArticleController) Export(ctx http.Context) http.Response {
-	lock := helpers.AcquireExportLock(ctx, "articles")
-	if lock.Unauthorized {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
-	}
-	if lock.Blocked {
-		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
-	}
-	adminID := lock.AdminID
+	return response.Error(ctx, http.StatusForbidden, "forbidden")
 
-	filters := c.buildArticleFilters(ctx)
-	filtersMap := utils.ExportFiltersToMap(filters)
-	lang := utils.GetCurrentLanguage(ctx)
-	timezone := helpers.GetCurrentTimezone(ctx)
-
-	exportRecord := models.Export{
-		AdminID: adminID,
-		Type:    "articles",
-		Status:  models.ExportStatusProcessing,
-		Disk:    helpers.ResolveExportDisk(ctx),
-		Path:    "",
-	}
-	if err := appfacades.OrmQuery(ctx).Create(&exportRecord); err != nil {
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	exportArgsStruct := jobs.ExportArgs{
-		ExportID: exportRecord.ID,
-		AdminID:  adminID,
-		Filters:  filtersMap,
-		Type:     "articles",
-		Language: lang,
-		Timezone: timezone,
-	}
-
-	exportArgsJSON, err := json.Marshal(exportArgsStruct)
-	if err != nil {
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		appfacades.OrmQuery(ctx).Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	exportArgs := []queue.Arg{
-		{
-			Type:  "string",
-			Value: string(exportArgsJSON),
-		},
-	}
-
-	if err := facades.Queue().Job(&jobs.ExportArticles{}, exportArgs).OnQueue("long-running").Dispatch(); err != nil {
-		lock.Release()
-		exportRecord.Status = models.ExportStatusFailed
-		exportRecord.ErrorMsg = err.Error()
-		appfacades.OrmQuery(ctx).Save(&exportRecord)
-		return response.ErrorWithLog(ctx, "export", err)
-	}
-
-	return response.Success(ctx, http.Json{
-		"export_id": exportRecord.ID,
-		"message":   "queued",
-	})
 }

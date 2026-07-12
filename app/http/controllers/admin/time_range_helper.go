@@ -16,24 +16,12 @@ import (
 
 // getTimeInputOrQueryUTC 按 query 优先、input 兜底读取时间并转换为 UTC
 func getTimeInputOrQueryUTC(ctx http.Context, paramName string) string {
-	timeStr := ctx.Request().Query(paramName, "")
-	if timeStr == "" {
-		timeStr = ctx.Request().Input(paramName, "")
-	}
-	if timeStr == "" {
-		return ""
-	}
-
-	return helpers.ConvertTimeToUTC(ctx, timeStr)
+	return helpers.GetTimeInputOrQueryParam(ctx, paramName)
 }
 
-// getTimeQueryUTC 仅从 query 读取时间并转换为 UTC
+// getTimeQueryUTC 读取 query/body 时间参数并转换为 UTC
 func getTimeQueryUTC(ctx http.Context, paramName string) string {
-	timeStr := ctx.Request().Query(paramName, "")
-	if timeStr == "" {
-		return ""
-	}
-	return helpers.ConvertTimeToUTC(ctx, timeStr)
+	return helpers.GetTimeInputOrQueryParam(ctx, paramName)
 }
 
 // parseOptionalTimeFromInputOrQuery 读取并解析可选时间参数，失败返回统一错误响应

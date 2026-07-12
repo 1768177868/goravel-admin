@@ -3,7 +3,9 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ title }}</span>
+          <slot name="header-title">
+            <span>{{ title }}</span>
+          </slot>
           <div class="header-actions">
             <slot name="header-actions">
               <el-button 
@@ -29,65 +31,62 @@
         @search="handleSearch"
         @reset="handleReset"
       >
-        <template v-for="(_, name) in $slots" #[name]="slotData" :key="name">
-          <slot :name="name" v-bind="slotData" />
+        <template v-for="name in searchFieldSlotNames" #[name]="slotProps">
+          <slot :name="name" v-bind="slotProps || {}" />
+        </template>
+        <template #extra-buttons>
+          <slot name="extra-buttons" />
         </template>
       </SearchForm>
 
-      <vxe-table
+      <slot name="before-table" />
+
+      <slot name="toolbar">
+        <TableToolbar
+          v-if="showToolbar"
+          :on-refresh="handleRefresh"
+          :show-column-setting-btn="showColumnSetting"
+          :visible-columns="visibleColumns"
+          :all-columns="allColumns"
+          :default-visible-columns="defaultVisibleColumns"
+          :column-order="columnOrder"
+          :fixed-columns="fixedColumns"
+          :on-column-setting-confirm="onColumnSettingConfirm"
+        >
+          <template #left>
+            <slot name="toolbar-left" />
+          </template>
+          <template #right>
+            <slot name="toolbar-right" />
+          </template>
+        </TableToolbar>
+      </slot>
+
+      <slot v-if="$slots.table" name="table" />
+      <VxeTable
+        v-else
         ref="tableRef"
+        :key="tableKey"
         :data="tableData"
         :loading="loading"
-        border
-        :size="vxeSize"
-        :column-config="optimizedTableConfig"
+        :columns="tableColumns"
         :height="tableHeight"
-        :scroll-y="scrollYConfig"
-        :sort-config="{ multiple: false, trigger: 'default' }"
         @sort-change="handleSortChange"
+        @checkbox-change="handleCheckboxChange"
+        @checkbox-all="handleCheckboxAll"
         v-bind="$attrs"
-        v-on="$attrs"
       >
-        <template v-for="column in tableColumns" :key="column.field || column.title || column.type">
-          <vxe-column
-            v-if="column.type === 'checkbox'"
-            type="checkbox"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-            :tree-node="column.treeNode"
-          >
-            <!-- 默认 slot 处理 -->
-            <template v-if="column.slot" #default="slotProps">
-              <slot 
-                :name="column.slot" 
-                :row="slotProps.row" 
-                :column="slotProps.column"
-                :rowIndex="slotProps.rowIndex"
-                :columnIndex="slotProps.columnIndex"
-              />
-            </template>
-          </vxe-column>
+        <template v-for="column in slottedColumns" #[column.slot]="slotProps">
+          <slot :name="column.slot" v-bind="slotProps || {}" />
         </template>
-        
-        <!-- 额外的表格插槽 -->
-        <template v-for="(_, name) in $slots" #[name]="slotData" :key="name">
-          <slot :name="name" v-bind="slotData" />
-        </template>
-      </vxe-table>
+      </VxeTable>
 
       <Pagination
         :model-value="pagination"
+        :auto-load="autoLoad"
+        :hide-total-threshold="hideTotalThreshold"
+        :on-page-change="handlePageChange"
         @update:model-value="handlePaginationUpdate"
-        @page-change="handlePageChange"
       />
     </el-card>
 
@@ -97,14 +96,26 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, useSlots } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import SearchForm from './SearchForm.vue'
 import Pagination from './Pagination.vue'
-import { useTablePerformance } from '../composables/useTablePerformance'
-import { useVxeTableSize } from '../composables/useVxeTableSize'
+import VxeTable from './VxeTable.vue'
+import TableToolbar from './TableToolbar.vue'
 
-const { vxeSize } = useVxeTableSize()
+const slots = useSlots()
+
+const RESERVED_SLOTS = new Set([
+  'header-title',
+  'header-actions',
+  'extra-buttons',
+  'before-table',
+  'toolbar',
+  'toolbar-left',
+  'toolbar-right',
+  'table',
+  'form'
+])
 
 const props = defineProps({
   // 页面类名
@@ -115,7 +126,7 @@ const props = defineProps({
   // 标题
   title: {
     type: String,
-    required: true
+    default: ''
   },
   // 是否显示添加按钮
   showAddButton: {
@@ -182,6 +193,54 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  // 是否显示工具栏
+  showToolbar: {
+    type: Boolean,
+    default: false
+  },
+  // 是否显示列设置
+  showColumnSetting: {
+    type: Boolean,
+    default: false
+  },
+  visibleColumns: {
+    type: Array,
+    default: () => []
+  },
+  allColumns: {
+    type: Array,
+    default: () => []
+  },
+  defaultVisibleColumns: {
+    type: Array,
+    default: () => []
+  },
+  columnOrder: {
+    type: Array,
+    default: () => []
+  },
+  fixedColumns: {
+    type: Object,
+    default: () => ({})
+  },
+  onColumnSettingConfirm: {
+    type: Function,
+    default: null
+  },
+  tableKey: {
+    type: String,
+    default: ''
+  },
+  // 分页变化后是否自动加载
+  autoLoad: {
+    type: Boolean,
+    default: true
+  },
+  // 总数超过阈值时隐藏分页总数（0 表示不隐藏）
+  hideTotalThreshold: {
+    type: Number,
+    default: 0
+  },
   // 对话框显示状态
   dialogVisible: {
     type: Boolean,
@@ -194,27 +253,38 @@ const props = defineProps({
   }
 })
 
+const searchFieldSlotNames = computed(() => {
+  const columnSlots = new Set(
+    (props.tableColumns || [])
+      .map((column) => column.slot)
+      .filter(Boolean)
+  )
+  return Object.keys(slots).filter(
+    (name) => !RESERVED_SLOTS.has(name) && !columnSlots.has(name)
+  )
+})
+
+const slottedColumns = computed(() =>
+  (props.tableColumns || []).filter((column) => column.slot)
+)
+
 const emit = defineEmits([
   'add',
   'search',
   'reset',
+  'refresh',
   'update:pagination',
   'page-change',
   'sort-change',
+  'selection-change',
   'form-success'
 ])
 
 const tableRef = ref(null)
 
-// 性能优化：虚拟滚动和列渲染优化
-const {
-  scrollYConfig,
-  optimizedTableConfig
-} = useTablePerformance({
-  tableColumns: computed(() => props.tableColumns),
-  tableData: computed(() => props.tableData),
-  tableHeight: props.tableHeight
-})
+const handleRefresh = () => {
+  emit('refresh')
+}
 
 const handleAdd = () => {
   emit('add')
@@ -238,6 +308,14 @@ const handlePageChange = (data) => {
 
 const handleSortChange = (data) => {
   emit('sort-change', data)
+}
+
+const handleCheckboxChange = (payload) => {
+  emit('selection-change', payload?.records || [])
+}
+
+const handleCheckboxAll = (payload) => {
+  emit('selection-change', payload?.records || [])
 }
 
 const handleFormSuccess = () => {

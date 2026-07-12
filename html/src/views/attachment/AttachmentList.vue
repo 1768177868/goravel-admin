@@ -1,91 +1,80 @@
 <template>
-  <div class="list-page">
-    <el-card class="box-card">
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('menu.attachment') }}</span>
-          <div class="header-actions">
-            <el-upload
-              ref="uploadRef"
-              :action="uploadAction"
-              :headers="uploadHeaders"
-              :data="uploadData"
-              :before-upload="beforeUpload"
-              :on-success="handleUploadSuccess"
-              :on-error="handleUploadError"
-              :on-progress="handleUploadProgress"
-              :show-file-list="false"
-              :multiple="false"
-            >
-              <template #trigger>
-                <el-button 
-                  type="primary"
-                  :disabled="getButtonState('attachment.upload').disabled"
-                >
-                  <el-icon><UploadIcon /></el-icon>
-                  {{ $t('attachment.upload') }}
-                </el-button>
-              </template>
-            </el-upload>
-            <el-button 
-              type="warning"
-              :disabled="getButtonState('attachment.upload').disabled"
-              @click="handleCropUpload"
-            >
-              <el-icon><CropIcon /></el-icon>
-              {{ $t('attachment.crop_upload') }}
-            </el-button>
-            <el-button 
-              type="success"
-              :disabled="getButtonState('attachment.chunk').disabled"
-              @click="handleLargeFileUpload"
-            >
+  <div class="attachment-list">
+    <ListPage
+      ref="listPageRef"
+      page-class="attachment"
+      :title="$t('menu.attachment')"
+      :show-add-button="false"
+      :search-form="searchForm"
+      :search-fields="searchFields"
+      :initial-search-values="attachmentInitialSearchForm"
+      :table-data="tableData"
+      :loading="loading"
+      :table-columns="tableColumns"
+      :table-key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
+      :pagination="pagination"
+      show-toolbar
+      show-column-setting
+      :visible-columns="visibleColumns"
+      :all-columns="allColumns"
+      :default-visible-columns="defaultVisibleColumns"
+      :column-order="columnOrder"
+      :fixed-columns="fixedColumns"
+      :on-column-setting-confirm="handleColumnSettingConfirm"
+      @search="handleSearch"
+      @reset="handleReset"
+      @refresh="loadData"
+      @page-change="loadData"
+      @sort-change="handleSortChange"
+      @selection-change="handleSelectionChange"
+    >
+      <template #header-actions>
+        <el-upload
+          ref="uploadRef"
+          :action="uploadAction"
+          :headers="uploadHeaders"
+          :data="uploadData"
+          :before-upload="beforeUpload"
+          :on-success="handleUploadSuccess"
+          :on-error="handleUploadError"
+          :on-progress="handleUploadProgress"
+          :show-file-list="false"
+          :multiple="false"
+        >
+          <template #trigger>
+            <el-button type="primary" :disabled="getButtonState('attachment.upload').disabled">
               <el-icon><UploadIcon /></el-icon>
-              {{ $t('attachment.large_file_upload') }}
+              {{ $t('attachment.upload') }}
             </el-button>
-            <el-button 
-              type="danger" 
-              :disabled="selectedRows.length === 0 || getButtonState('attachment.destroy').disabled"
-              @click="handleBatchDelete"
-            >
-              <el-icon><DeleteIcon /></el-icon>
-              {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
-            </el-button>
-          </div>
-        </div>
+          </template>
+        </el-upload>
+        <el-button
+          type="warning"
+          :disabled="getButtonState('attachment.upload').disabled"
+          @click="handleCropUpload"
+        >
+          <el-icon><CropIcon /></el-icon>
+          {{ $t('attachment.crop_upload') }}
+        </el-button>
+        <el-button
+          type="success"
+          :disabled="getButtonState('attachment.chunk').disabled"
+          @click="handleLargeFileUpload"
+        >
+          <el-icon><UploadIcon /></el-icon>
+          {{ $t('attachment.large_file_upload') }}
+        </el-button>
+        <el-button
+          type="danger"
+          :disabled="selectedRows.length === 0 || getButtonState('attachment.destroy').disabled"
+          @click="handleBatchDelete"
+        >
+          <el-icon><DeleteIcon /></el-icon>
+          {{ $t('common.delete_selected') }} ({{ selectedRows.length }})
+        </el-button>
       </template>
 
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :loading="loading"
-        @search="handleSearch"
-        @reset="handleReset"
-      />
-
-      <!-- 表格工具栏 -->
-      <TableToolbar
-        :on-refresh="handleRefresh"
-        :visible-columns="visibleColumns"
-        :all-columns="allTableColumns"
-        :default-visible-columns="defaultVisibleColumns"
-        :column-order="columnOrder"
-        :fixed-columns="fixedColumns"
-        :on-column-setting-confirm="handleColumnSettingConfirm"
-      />
-
-      <VxeTable
-        ref="tableRef"
-        :key="`table-${tableColumns.length}-${JSON.stringify(columnOrder)}`"
-        :data="tableData"
-        :loading="loading"
-        :columns="tableColumns"
-        :height="600"
-        @sort-change="handleSortChange"
-        @checkbox-change="handleSelectionChange"
-        @checkbox-all="handleSelectionChange"
-      >
-        <template #filename="{ row }">
+      <template #filename="{ row }">
           <div class="filename-cell">
             <el-image
               v-if="row.file_type === 'image' && getImageUrl(row)"
@@ -121,7 +110,7 @@
             >
               <el-icon><Picture /></el-icon>
             </div>
-            <span class="filename-text">{{ row.filename || row.Filename }}</span>
+            <span class="filename-text">{{ row.filename }}</span>
           </div>
         </template>
 
@@ -143,40 +132,30 @@
 
         <template #disk="{ row }">
           <el-tag size="small" type="info">
-            {{ row.disk || row.Disk || '-' }}
+            {{ row.disk || '-' }}
           </el-tag>
         </template>
 
         <template #operation="{ row }">
-          <el-button 
-            type="success" 
-            link 
-            :disabled="downloadingIds.has(row.id || row.ID)"
-            :loading="downloadingIds.has(row.id || row.ID)"
+          <el-button
+            type="success"
+            link
+            :disabled="downloadingIds.has(row.id)"
+            :loading="downloadingIds.has(row.id)"
             @click="handleDownload(row)"
           >
             {{ $t('common.download') }}
           </el-button>
-          <el-button 
-            type="danger" 
-            link 
+          <el-button
+            type="danger"
+            link
             :disabled="getButtonState('attachment.destroy').disabled"
             @click="handleDelete(row)"
           >
             {{ $t('common.delete') }}
           </el-button>
         </template>
-      </VxeTable>
-
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
-        :show-total="true"
-        :show-quick-jumper="true"
-        :align="'right'"
-      />
-    </el-card>
+    </ListPage>
 
     <!-- 大文件上传对话框 -->
     <el-dialog
@@ -280,49 +259,53 @@ import { ref, reactive, computed, onMounted, markRaw, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Delete, Loading, Picture, Crop } from '@element-plus/icons-vue'
-
-// 使用 markRaw 标记图标组件，避免被 Vue 做成响应式对象
-const UploadIcon = markRaw(Upload)
-const DeleteIcon = markRaw(Delete)
-const CropIcon = markRaw(Crop)
-import SearchForm from '../../components/SearchForm.vue'
-import Pagination from '../../components/Pagination.vue'
-import VxeTable from '../../components/VxeTable.vue'
-import TableToolbar from '../../components/TableToolbar.vue'
-import { useListPage } from '../../composables/useListPage'
-import { usePermission } from '../../composables/usePermission'
-import { useCrud } from '../../composables/useCrud'
-import { useColumnSetting } from '../../composables/useColumnSetting'
+import ListPage from '@/components/ListPage.vue'
+import { useListPage } from '@/composables/useListPage'
+import { usePermission } from '@/composables/usePermission'
+import { useCrud } from '@/composables/useCrud'
+import { useColumnSetting } from '@/composables/useColumnSetting'
 import axios from 'axios'
-import { 
-  getAttachmentList, 
-  uploadFile, 
-  deleteAttachment, 
+import {
+  getAttachmentList,
+  deleteAttachment,
   batchDeleteAttachments,
   initChunkUpload,
   uploadChunk,
   mergeChunks,
   getChunkProgress,
   updateDisplayName
-} from '../../api/attachment'
-import i18n from '../../i18n'
-import Storage from '../../utils/storage'
+} from '@/api/attachment'
+import i18n from '@/i18n'
+import Storage from '@/utils/storage'
 import 'vue-cropper/dist/index.css'
 import { VueCropper } from 'vue-cropper'
+import {
+  attachmentInitialSearchForm,
+  transformAttachmentRow,
+  createAttachmentSearchFields,
+  createAttachmentTableColumns,
+  formatAttachmentFileSize,
+  getAttachmentFileTypeTagType,
+  getAttachmentFileTypeLabel,
+  ATTACHMENT_CHUNK_SIZE,
+  ATTACHMENT_LARGE_FILE_THRESHOLD
+} from './attachment.config'
+
+const UploadIcon = markRaw(Upload)
+const DeleteIcon = markRaw(Delete)
+const CropIcon = markRaw(Crop)
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
 
-// 使用 CRUD composable
 const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
   deleteApi: deleteAttachment,
   batchDeleteApi: batchDeleteAttachments
 })
 
-const tableRef = ref(null)
+const listPageRef = ref(null)
 const uploadRef = ref(null)
-const selectedRows = ref([])
-const downloadingIds = ref(new Set()) // 正在下载的文件 ID 集合
+const downloadingIds = ref(new Set())
 const chunkUploadVisible = ref(false)
 const chunkUploadFile = ref(null)
 const chunkUploadProgress = ref(0)
@@ -358,107 +341,41 @@ const cropOption = reactive({
 const imageUrlMap = ref(new Map()) // 存储图片 URL
 const imageLoadingMap = ref(new Map()) // 存储图片加载状态: 'loading' | 'loaded' | 'error'
 
-// 大文件阈值（5MB），超过此大小使用分片上传
-const CHUNK_SIZE = 1 * 1024 * 1024 // 1MB per chunk
-const LARGE_FILE_THRESHOLD = 5 * 1024 * 1024 // 5MB
-
-// 数据转换函数
-const transformAttachmentData = (item) => {
-  return {
-    id: item.id || item.ID,
-    Admin: item.Admin || item.admin || null,
-    filename: item.Filename || item.filename || '',
-    display_name: item.DisplayName || item.display_name || '',
-    file_type: item.FileType || item.file_type || 'other',
-    disk: item.Disk || item.disk || '',
-    extension: item.Extension || item.extension || '',
-    size: item.Size || item.size || 0,
-    mime_type: item.MimeType || item.mime_type || '',
-    created_at: item.CreatedAt || item.created_at || '',
-    file_url: item.FileURL || item.file_url || ''
-  }
-}
-
-// 初始搜索表单
-const initialSearchForm = {
-  filename: '',
-  display_name: '',
-  file_type: '',
-  extension: '',
-  start_time: '',
-  end_time: ''
-}
+// 大文件阈值
+const CHUNK_SIZE = ATTACHMENT_CHUNK_SIZE
+const LARGE_FILE_THRESHOLD = ATTACHMENT_LARGE_FILE_THRESHOLD
 
 const {
   pagination,
   tableData,
   loading,
   searchForm,
+  selectedRows,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
+  handleSelectionChange,
   initDefaultSort
 } = useListPage({
   fetchApi: getAttachmentList,
-  initialSearchForm,
-  fieldMapping: {},
+  initialSearchForm: attachmentInitialSearchForm,
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef),
-  transformData: transformAttachmentData,
+  normalizeRows: false,
+  transformData: transformAttachmentRow,
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef),
   onLoadSuccess: () => {
-    // 加载所有图片的blob URL
-    tableData.value.forEach(row => {
+    tableData.value.forEach((row) => {
       if (row.file_type === 'image') {
-        nextTick(() => {
-          loadImageAsBlob(row)
-        })
+        nextTick(() => loadImageAsBlob(row))
       }
     })
   }
 })
 
-// 格式化函数（需要在 allTableColumns 之前定义）
-const formatSize = ({ cellValue }) => {
-  return formatFileSize(cellValue)
-}
+const searchFields = computed(() => createAttachmentSearchFields(t))
+const allTableColumns = computed(() => createAttachmentTableColumns(t))
 
-const formatFileSize = (size) => {
-  if (!size) return '-'
-  const numSize = Number(size)
-  if (numSize < 1024) return `${numSize} B`
-  if (numSize < 1024 * 1024) return `${(numSize / 1024).toFixed(2)} KB`
-  if (numSize < 1024 * 1024 * 1024) return `${(numSize / 1024 / 1024).toFixed(2)} MB`
-  return `${(numSize / 1024 / 1024 / 1024).toFixed(2)} GB`
-}
-
-const formatAdmin = ({ row }) => {
-  if (row.Admin && (row.Admin.Username || row.Admin.username)) {
-    return row.Admin.Username || row.Admin.username
-  }
-  if (row.admin && row.admin.username) {
-    return row.admin.username
-  }
-  return '-'
-}
-
-// 表格列配置
-const allTableColumns = computed(() => [
-  { type: 'checkbox', width: 60, key: 'checkbox' },
-  { field: 'id', title: t('table.id'), width: 80, sortable: true, key: 'id' },
-  { field: 'filename', title: t('attachment.filename'), minWidth: 200, slot: 'filename', key: 'filename' },
-  { field: 'display_name', title: t('attachment.display_name'), minWidth: 200, slot: 'display_name', key: 'display_name' },
-  { field: 'file_type', title: t('attachment.file_type'), width: 120, slot: 'file_type', key: 'file_type' },
-  { field: 'disk', title: t('attachment.disk'), width: 100, slot: 'disk', key: 'disk' },
-  { field: 'extension', title: t('attachment.extension'), width: 100, key: 'extension' },
-  { field: 'size', title: t('attachment.size'), width: 140, formatter: formatSize, key: 'size' },
-  { field: 'mime_type', title: t('attachment.mime_type'), minWidth: 150, key: 'mime_type' },
-  { field: 'admin', title: t('log.admin'), width: 140, formatter: formatAdmin, key: 'admin' },
-  { field: 'created_at', title: t('table.created_at'), width: 180, sortable: true, key: 'created_at' },
-  { title: t('table.operation'), width: 200, fixed: 'right', slot: 'operation', key: 'operation' }
-])
-
-// 使用列设置 composable
 const {
   tableColumns,
   visibleColumns,
@@ -469,60 +386,9 @@ const {
   handleColumnSettingConfirm
 } = useColumnSetting('attachment', allTableColumns)
 
-// 处理刷新
-const handleRefresh = () => {
-  loadData()
-}
-
-const searchFields = computed(() => [
-  {
-    prop: 'filename',
-    label: t('attachment.filename'),
-    type: 'input',
-    width: '200px'
-  },
-  {
-    prop: 'display_name',
-    label: t('attachment.display_name'),
-    type: 'input',
-    width: '200px'
-  },
-  {
-    prop: 'file_type',
-    label: t('attachment.file_type'),
-    type: 'select',
-    width: '150px',
-    options: [
-      { label: t('attachment.file_type_image'), value: 'image' },
-      { label: t('attachment.file_type_video'), value: 'video' },
-      { label: t('attachment.file_type_document'), value: 'document' },
-      { label: t('attachment.file_type_other'), value: 'other' }
-    ],
-    clearable: true
-  },
-  {
-    prop: 'extension',
-    label: t('attachment.extension'),
-    type: 'input',
-    width: '150px'
-  },
-  {
-    prop: 'start_time',
-    label: t('log.start_time'),
-    type: 'datetime',
-    width: '180px',
-    valueFormat: 'YYYY-MM-DD HH:mm:ss',
-    advanced: true
-  },
-  {
-    prop: 'end_time',
-    label: t('log.end_time'),
-    type: 'datetime',
-    width: '180px',
-    valueFormat: 'YYYY-MM-DD HH:mm:ss',
-    advanced: true
-  }
-])
+const formatFileSize = formatAttachmentFileSize
+const getFileTypeTagType = getAttachmentFileTypeTagType
+const getFileTypeLabel = (fileType) => getAttachmentFileTypeLabel(t, fileType)
 
 const uploadAction = computed(() => {
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL
@@ -554,7 +420,7 @@ const uploadData = computed(() => {
 const loadImageAsBlob = async (row) => {
   if (!row || row.file_type !== 'image') return
   
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (!attachmentId) return
   
   // 如果已经加载过或正在加载，直接返回
@@ -563,7 +429,7 @@ const loadImageAsBlob = async (row) => {
     return
   }
   
-  const fileUrl = row.file_url || row.FileURL
+  const fileUrl = row.file_url
   if (!fileUrl) {
     imageLoadingMap.value.set(attachmentId, 'error')
     return
@@ -621,7 +487,7 @@ const loadImageAsBlob = async (row) => {
 // 获取图片URL（用于缩略图和预览）
 const getImageUrl = (row) => {
   if (!row) return ''
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (!attachmentId) return ''
   
   // 从缓存中获取
@@ -633,7 +499,7 @@ const getImageUrl = (row) => {
 // 获取图片加载状态
 const getImageLoadingState = (row) => {
   if (!row) return ''
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (!attachmentId) return ''
   
   const state = imageLoadingMap.value.get(attachmentId)
@@ -665,7 +531,7 @@ const getImageLoadingState = (row) => {
 
 // 图片加载成功处理
 const handleImageLoad = (row) => {
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (attachmentId) {
     imageLoadingMap.value.set(attachmentId, 'loaded')
   }
@@ -673,35 +539,13 @@ const handleImageLoad = (row) => {
 
 // 图片加载失败处理
 const handleImageError = (row) => {
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (attachmentId) {
     imageLoadingMap.value.set(attachmentId, 'error')
   }
 }
 
-const getFileTypeTagType = (fileType) => {
-  const types = {
-    'image': 'success',
-    'video': 'warning',
-    'document': 'info',
-    'other': null
-  }
-  const result = types[fileType]
-  // 返回 null 而不是 undefined，这样 ElTag 的 type 属性会是 undefined（不传），而不是空字符串
-  return result !== undefined ? result : null
-}
-
-const getFileTypeLabel = (fileType) => {
-  const labels = {
-    'image': t('attachment.file_type_image'),
-    'video': t('attachment.file_type_video'),
-    'document': t('attachment.file_type_document'),
-    'other': t('attachment.file_type_other')
-  }
-  return labels[fileType] || fileType
-}
-
-// loadData, handleSearch, handleReset, handlePageChange 已由 useListPage 提供
+// loadData, handleSearch, handleReset 已由 useListPage 提供
 
 // 大文件上传按钮处理
 const handleLargeFileUpload = () => {
@@ -1098,7 +942,7 @@ const handleCropConfirm = () => {
 }
 
 const handleUpdateDisplayName = async (row) => {
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (!attachmentId) return
   
   const displayName = row.display_name || ''
@@ -1119,7 +963,7 @@ const handleUpdateDisplayName = async (row) => {
 
 const handleDownload = async (row) => {
   // 防止重复点击
-  const attachmentId = row.id || row.ID
+  const attachmentId = row.id
   if (downloadingIds.value.has(attachmentId)) {
     return // 如果正在下载，直接返回
   }
@@ -1225,13 +1069,9 @@ const handleDownload = async (row) => {
 
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
-const handleSelectionChange = () => {
-  selectedRows.value = tableRef.value?.tableRef?.getCheckboxRecords() || []
-}
-
 const handleBatchDelete = () => {
   handleBatchDeleteCrud(selectedRows.value, () => {
-    selectedRows.value = []
+    handleSelectionChange([])
     loadData()
   })
 }

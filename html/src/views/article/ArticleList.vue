@@ -1,202 +1,73 @@
 <template>
-  <div class="article-list">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t("menu.article") }}</span>
+  <ListPage
+    ref="listPageRef"
+    page-class="article"
+    :title="$t('menu.article')"
+    :add-button-text="$t('common.add')"
+    :add-button-disabled="getButtonState('article.store').disabled"
+    :search-form="searchForm"
+    :search-fields="searchFields"
+    :initial-search-values="articleInitialSearchForm"
+    i18n-prefix="article"
+    :table-data="tableData"
+    :loading="loading"
+    :table-columns="tableColumns"
+    :pagination="pagination"
+    :show-toolbar="true"
+    @add="handleAdd"
+    @search="handleSearch"
+    @reset="handleReset"
+    @refresh="loadData"
+    @page-change="loadData"
+    @sort-change="handleSortChange"
+  >
+    <template #admin_id="{ row }">
+      {{ getadminDisplayName(row.admin || row.admin_id) }}
+    </template>
 
-          <el-button
-            type="primary"
-            :disabled="getButtonState('article.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><PlusIcon /></el-icon>
-            {{ $t("common.add") }}
-          </el-button>
-        </div>
-      </template>
-
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="initialSearchForm"
-        i18n-prefix="article"
-        @search="handleSearch"
-        @reset="handleReset"
-      >
-        <template #extra-buttons>
-          <el-button
-            type="success"
-            :disabled="getButtonState('article.export').disabled || isExporting"
-            :loading="isExporting"
-            @click="handleExport"
-          >
-            {{ $t("common.export") }}
-          </el-button>
-        </template>
-      </SearchForm>
-
-      <TableToolbar 
-        :on-refresh="loadData"         
-        :show-column-setting-btn="false"
-        :show-table-style="false"
-      >
-        <template #left>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            type="danger"
-            :disabled="getButtonState('article.destroy').disabled"
-            @click="handleBatchDelete"
-          >
-            {{ `${$t("common.batch_delete")} (${selectedIds.length})` }}
-          </el-button>
-
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            @click="handleClearSelection"
-          >
-            {{ $t("common.reset") }}
-          </el-button>
-        </template>
-      </TableToolbar>
-
-      <VxeTable
-        ref="tableRef"
-        :data="tableData"
-        :loading="loading"
-        :columns="tableColumns"
-        :height="600"
-        @sort-change="handleSortChange"
-        @checkbox-change="handleTableCheckboxChange"
-        @checkbox-all="handleTableCheckboxAll"
-      >
-        <template #admin_id="{ row }">
-          {{ getadminDisplayName(row.admin || row.admin_id) }}
-        </template>
-        <template #status="{ row }">
-          <el-switch
-            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-            :disabled="getButtonState('article.update').disabled"
-            @change="(val) => handleStatusChange(row, val)"
-          />
-        </template>
-        <template #operation="{ row }">
-          <TableActionButtons
-            :row="row"
-            :primary-actions="getPrimaryActions(row)"
-            :more-actions="getMoreActions(row)"
-            :get-button-state="getButtonState"
-            @action="handleAction"
-          />
-        </template>
-      </VxeTable>
-
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
+    <template #operation="{ row }">
+      <TableActionButtons
+        :row="row"
+        :primary-actions="operationActions"
+        :get-button-state="getButtonState"
       />
-    </el-card>
+    </template>
 
-    <ArticleForm
-      ref="formRef"
-      v-model="dialogVisible"
-      :edit-id="editId"
-      @success="handleFormSuccess"
-    />
-  </div>
+    <template #form>
+      <ArticleForm
+        v-model="dialogVisible"
+        :edit-id="editId"
+        @success="handleFormSuccess"
+      />
+    </template>
+  </ListPage>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus } from "@element-plus/icons-vue";
-import SearchForm from "../../components/SearchForm.vue";
-import Pagination from "../../components/Pagination.vue";
-import VxeTable from "../../components/VxeTable.vue";
-
-import TableToolbar from "../../components/TableToolbar.vue";
-
-import TableActionButtons from "../../components/TableActionButtons.vue";
+import ListPage from "@/components/ListPage.vue";
+import TableActionButtons from "@/components/TableActionButtons.vue";
 import ArticleForm from "./ArticleForm.vue";
-import { useTable } from "../../composables/useTable";
-import { usePermission } from "../../composables/usePermission";
-import { useCrud } from "../../composables/useCrud";
-import { buildSearchParams } from "../../utils/buildSearchParams";
+import { useStandardListPage } from "@/composables/useStandardListPage";
+import { createCrudActions } from "@/utils/listPageHelpers";
 
+import { getArticleList, deleteArticle, updateArticle } from "@/api/article";
+import logger from "@/utils/logger";
+import ErrorHandler from "@/utils/errorHandler";
 import {
-  getArticleList,
-  deleteArticle,
-  updateArticle,
-  exportArticle,
-} from "../../api/article";
-import logger from "../../utils/logger";
-import ErrorHandler from "../../utils/errorHandler";
-
-const PlusIcon = markRaw(Plus);
-
-// Permission checks
-const { getButtonState } = usePermission();
+  articleInitialSearchForm,
+  buildArticleListParams,
+  createArticleSearchFields,
+  createArticleTableColumns,
+  getadminDisplayName,
+} from "./article.config";
 
 const { t } = useI18n();
 const router = useRouter();
-const tableRef = ref(null);
-const formRef = ref(null);
-
-const isExporting = ref(false);
-
-const {
-  dialogVisible,
-  editId,
-  handleAdd,
-  handleClose,
-  handleDelete: handleDeleteCrud,
-} = useCrud({
-  deleteApi: deleteArticle,
-});
-
-const initialSearchForm = {
-  admin_id: "",
-  title: "",
-  content: "",
-  status: "",
-  created_at: [],
-  updated_at: [],
-};
-
-const rangeSearchFields = ["created_at", "updated_at"];
-
-const buildListParams = (form, baseParams) => {
-  const params = buildSearchParams(form, baseParams);
-
-  rangeSearchFields.forEach((fieldName) => {
-    const rangeValue = form[fieldName];
-    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
-      delete params[`${fieldName}_start`];
-      delete params[`${fieldName}_end`];
-      return;
-    }
-
-    const [start, end] = rangeValue;
-    if (start) {
-      params[`${fieldName}_start`] = start;
-    } else {
-      delete params[`${fieldName}_start`];
-    }
-    if (end) {
-      params[`${fieldName}_end`] = end;
-    } else {
-      delete params[`${fieldName}_end`];
-    }
-
-    // Avoid submitting raw range arrays as query params directly.
-    delete params[fieldName];
-  });
-
-  return params;
-};
+const listPageRef = ref(null);
 
 const {
   pagination,
@@ -204,321 +75,55 @@ const {
   loading,
   searchForm,
   selectedIds,
+  dialogVisible,
+  editId,
   loadData,
-  refresh,
   handleSearch,
   handleReset,
-  handleSelectionChange,
-  clearSelection,
   handleSortChange,
-  initDefaultSort,
-} = useTable({
+  handleSelectionChange,
+  handleAdd,
+  handleEdit,
+  handleFormSuccess,
+  handleDelete,
+  getButtonState,
+} = useStandardListPage({
   fetchApi: getArticleList,
-  initialSearchForm,
-  buildParams: buildListParams,
-  fieldMapping: {},
+  initialSearchForm: articleInitialSearchForm,
+  buildParams: buildArticleListParams,
   defaultSort: "id:desc",
-  tableRef: computed(() => tableRef.value?.tableRef),
+  deleteApi: deleteArticle,
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef),
+  normalizeRows: false,
 });
 
-const enableBatchActions = true;
 const hasSelection = computed(() => selectedIds.value.length > 0);
+const searchFields = computed(() => createArticleSearchFields(t));
+const tableColumns = computed(() =>
+  createArticleTableColumns(t, { enableBatchActions: false }),
+);
 
-const searchFields = computed(() => [
-  {
-    prop: "admin_id",
-    label: t("admin_id"),
-    type: "input",
-    clearable: true,
-    width: "200px",
-    advanced: false,
-  },
-  {
-    prop: "title",
-    label: t("title"),
-    type: "input",
-    clearable: true,
-    width: "200px",
-    advanced: false,
-  },
-  {
-    prop: "content",
-    label: t("content"),
-    type: "input",
-    clearable: true,
-    width: "200px",
-    advanced: false,
-  },
-  {
-    prop: "status",
-    label: t("status"),
-    type: "select",
-    clearable: true,
-    apiUrl: "/options?type=dictionary&dictionary_type=status",
-    width: "200px",
-    advanced: false,
-  },
-  {
-    prop: "created_at",
-    label: t("common.created_at"),
-    type: "datetimerange",
-    clearable: true,
-    props: {
-      startPlaceholder: t("common.start_time"),
-      endPlaceholder: t("common.end_time"),
-      rangeSeparator: t("common.range_separator"),
-    },
-    width: "360px",
-    advanced: false,
-  },
-  {
-    prop: "updated_at",
-    label: t("common.updated_at"),
-    type: "datetimerange",
-    clearable: true,
-    props: {
-      startPlaceholder: t("common.start_time"),
-      endPlaceholder: t("common.end_time"),
-      rangeSeparator: t("common.range_separator"),
-    },
-    width: "360px",
-    advanced: false,
-  },
-]);
-
-const tableColumns = computed(() => {
-  const baseColumns = [
-    {
-      field: "id",
-      title: t("table.id"),
-      width: 80,
-      sortable: true,
-    },
-    {
-      field: "admin_id",
-      title: t("admin_id"),
-      slot: "admin_id",
-      sortable: false,
-    },
-    {
-      field: "title",
-      title: t("title"),
-      sortable: false,
-    },
-    {
-      field: "content",
-      title: t("content"),
-      sortable: false,
-    },
-    {
-      field: "status",
-      title: t("table.status"),
-      width: 100,
-      sortable: false,
-      slot: "status",
-    },
-    {
-      field: "updated_at",
-      title: t("table.updated_at"),
-      sortable: true,
-    },
-    {
-      field: "created_at",
-      title: t("table.created_at"),
-      width: 180,
-      sortable: true,
-    },
-    {
-      field: "operation",
-      title: t("table.operation"),
-      width: 220,
-      fixed: "right",
-      slot: "operation",
-    },
-  ];
-
-  if (!enableBatchActions) {
-    return baseColumns;
-  }
-
-  return [
-    {
-      type: "checkbox",
-      width: 52,
-      fixed: "left",
-    },
-    ...baseColumns,
-  ];
-});
-
-const getadminDisplayName = (admin_id) => {
-  if (!admin_id) return "-";
-  return admin_id.username || admin_id.admin || "-";
-};
-
-const handleStatusChange = async (row, newStatus) => {
-  try {
-    const statusValue = newStatus ? 1 : 0;
-    await updateArticle(row.id, {
-      status: statusValue,
-    });
-    ElMessage.success(newStatus ? t("common.enabled") : t("common.disabled"));
-    // Update local data.
-    const item = tableData.value.find((a) => a.id === row.id);
-    if (item) {
-      item.status = statusValue;
-      item.Status = statusValue;
-    }
-  } catch (error) {
-    logger.error("Status change error:", error);
-    loadData();
-    if (!error.__handled) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        t("common.operation_failed");
-      ElMessage.error(errorMessage);
-    }
-  }
-};
-
-const handleEdit = (row) => {
-  editId.value = row.id;
-  dialogVisible.value = true;
-};
-
-const handleDelete = (row) => handleDeleteCrud(row, loadData);
-
-const handleFormSuccess = () => {
-  handleClose();
-  clearSelection();
-  refresh();
-};
-
-const handleTableCheckboxChange = ({ records }) => {
-  handleSelectionChange(records);
-};
-
-const handleTableCheckboxAll = ({ records }) => {
-  handleSelectionChange(records);
-};
-
-const handleClearSelection = () => {
-  clearSelection();
-  tableRef.value?.tableRef?.clearCheckboxRow?.();
-};
+const operationActions = computed(() =>
+  createCrudActions(t, "article", {
+    onEdit: handleEdit,
+    onDelete: handleDelete,
+  }),
+);
 
 const handleBatchDelete = async () => {
   if (!selectedIds.value.length) return;
-
   try {
     await ElMessageBox.confirm(
       t("common.batch_delete_confirm", { count: selectedIds.value.length }),
       t("common.warning"),
-      {
-        type: "warning",
-        confirmButtonText: t("common.confirm"),
-        cancelButtonText: t("common.cancel"),
-      },
+      { type: "warning" },
     );
-
     await Promise.all(selectedIds.value.map((id) => deleteArticle(id)));
     ElMessage.success(t("common.operation_success"));
-    handleClearSelection();
-    await refresh();
-  } catch (error) {
-    if (error === "cancel" || error === "close") {
-      return;
-    }
-    logger.error("Batch delete error:", error);
-    if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true });
-    }
-  }
-};
-
-// Get primary action button config.
-const getPrimaryActions = (row) => {
-  return [
-    {
-      key: "edit",
-      label: t("common.edit"),
-      type: "primary",
-      permission: "article.update",
-      handler: handleEdit,
-    },
-    {
-      key: "delete",
-      label: t("common.delete"),
-      type: "danger",
-      permission: "article.destroy",
-      handler: handleDelete,
-    },
-  ];
-};
-
-// Get secondary action button config (extend when needed).
-const getMoreActions = (row) => {
-  return [];
-};
-
-// Handle action events.
-const handleAction = (command, row) => {
-  switch (command) {
-    case "edit":
-      handleEdit(row);
-      break;
-    case "delete":
-      handleDelete(row);
-      break;
-  }
-};
-
-const handleExport = async () => {
-  if (isExporting.value) {
-    return;
-  }
-
-  isExporting.value = true;
-
-  try {
-    const response = await exportArticle(searchForm);
-    const exportId =
-      response?.data?.export_id ||
-      response?.data?.data?.export_id ||
-      response?.export_id ||
-      response?.data?.id;
-
-    if (exportId) {
-      ElMessage.success(t("export.task_submitted"));
-    } else {
-      ElMessage.success(t("common.operation_success"));
-    }
-    router.push("/exports");
-  } catch (error) {
-    logger.error("Export error:", error);
-    if (error.response?.status === 429) {
-      ElMessage.warning(t("common.already_queued"));
-    } else if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true });
-    }
-  } finally {
-    isExporting.value = false;
-  }
-};
-
-onMounted(async () => {
-  try {
-    initDefaultSort();
     await loadData();
   } catch (error) {
-    logger.error("ListPage onMounted error:", error);
-    ErrorHandler.handle(error);
+    if (error === "cancel" || error === "close") return;
+    logger.error("Batch delete error:", error);
   }
-});
+};
 </script>
-
-<style scoped>
-.article-list {
-}
-</style>

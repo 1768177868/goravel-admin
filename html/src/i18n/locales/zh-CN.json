@@ -1545,6 +1545,7 @@
     "file_migration": "Migration",
     "file_api": "API",
     "file_list_page": "列表页面",
+    "file_list_page_config": "列表配置",
     "file_form_page": "表单页面",
     "search_ui_type": "搜索表单类型",
     "search_ui_types": {
@@ -1621,6 +1622,7 @@
     "export_mode_async": "异步导出（生成 Job）",
     "enable_batch_actions": "启用批量操作",
     "show_toolbar": "显示工具栏",
+    "is_tree_list": "树形列表（无分页）",
     "field_types": {
       "string": "字符串",
       "text": "文本",

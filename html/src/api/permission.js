@@ -1,45 +1,14 @@
-import request from '../utils/request'
+import { createCRUDApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 获取权限列表
-export function getPermissionList(params) {
-  return request({
-    url: '/permissions',
-    method: 'get',
-    params
-  })
+const permissionApi = createCRUDApi('permissions')
+
+export async function getPermissionList(params) {
+  const res = await permissionApi.list(params)
+  return normalizeListResponse(res)
 }
 
-// 获取权限详情
-export function getPermissionDetail(id) {
-  return request({
-    url: `/permissions/${id}`,
-    method: 'get'
-  })
-}
-
-// 创建权限
-export function createPermission(data) {
-  return request({
-    url: '/permissions',
-    method: 'post',
-    data
-  })
-}
-
-// 更新权限
-export function updatePermission(id, data) {
-  return request({
-    url: `/permissions/${id}`,
-    method: 'put',
-    data
-  })
-}
-
-// 删除权限
-export function deletePermission(id) {
-  return request({
-    url: `/permissions/${id}`,
-    method: 'delete'
-  })
-}
-
+export const getPermissionDetail = permissionApi.detail
+export const createPermission = permissionApi.create
+export const updatePermission = permissionApi.update
+export const deletePermission = permissionApi.delete

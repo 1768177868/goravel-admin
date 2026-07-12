@@ -1,230 +1,99 @@
 <template>
-  <div class="list-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('menu.dictionary') }}</span>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('dictionary.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><Plus /></el-icon>
-            {{ $t('dictionary.add_dictionary') }}
-          </el-button>
-        </div>
-      </template>
+  <ListPage
+    ref="listPageRef"
+    page-class="dictionary"
+    :title="$t('menu.dictionary')"
+    :add-button-text="$t('dictionary.add_dictionary')"
+    :add-button-disabled="getButtonState('dictionary.store').disabled"
+    :search-form="searchForm"
+    :search-fields="searchFields"
+    :initial-search-values="dictionaryInitialSearchForm"
+    i18n-prefix="dictionary"
+    :table-data="tableData"
+    :loading="loading"
+    :table-columns="tableColumns"
+    :pagination="pagination"
+    show-toolbar
+    @add="handleAdd"
+    @search="handleSearch"
+    @reset="handleReset"
+    @refresh="loadData"
+    @page-change="loadData"
+    @sort-change="handleSortChange"
+  >
+    <template #status="{ row }">
+      <el-tag :type="rowStatus(row) === 1 ? 'success' : 'danger'">
+        {{ rowStatus(row) === 1 ? $t('common.enabled') : $t('common.disabled') }}
+      </el-tag>
+    </template>
 
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="initialSearchForm"
-        i18n-prefix="dictionary"
-        @search="handleSearch"
-        @reset="handleReset"
+    <template #operation="{ row }">
+      <TableActionButtons
+        :row="row"
+        :primary-actions="operationActions"
+        :get-button-state="getButtonState"
       />
+    </template>
 
-      <TableToolbar :on-refresh="loadData" />
-
-      <VxeTable
-        ref="tableRef"
-        :data="tableData"
-        :loading="loading"
-        :columns="tableColumns"
-        :height="600"
-        @sort-change="handleSortChange"
-      >
-        <template #status="{ row }">
-          <el-tag :type="(row.Status ?? row.status ?? 1) === 1 ? 'success' : 'danger'">
-            {{ (row.Status ?? row.status ?? 1) === 1 ? $t('common.enabled') : $t('common.disabled') }}
-          </el-tag>
-        </template>
-
-        <template #operation="{ row }">
-          <TableActionButtons
-            :row="row"
-            :primary-actions="operationActions"
-            :get-button-state="getButtonState"
-          />
-        </template>
-      </VxeTable>
-
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
+    <template #form>
+      <DictionaryForm
+        v-model="dialogVisible"
+        :edit-id="editId"
+        @success="handleFormSuccess"
       />
-    </el-card>
-
-    <DictionaryForm
-      v-model="dialogVisible"
-      :edit-id="editId"
-      @success="handleFormSuccess"
-    />
-  </div>
+    </template>
+  </ListPage>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import SearchForm from '../../components/SearchForm.vue'
-import Pagination from '../../components/Pagination.vue'
-import VxeTable from '../../components/VxeTable.vue'
-import TableToolbar from '../../components/TableToolbar.vue'
-import TableActionButtons from '../../components/TableActionButtons.vue'
+import ListPage from '@/components/ListPage.vue'
+import TableActionButtons from '@/components/TableActionButtons.vue'
 import DictionaryForm from './DictionaryForm.vue'
-import { useListPage } from '../../composables/useListPage'
-import { usePermission } from '../../composables/usePermission'
-import { useCrud } from '../../composables/useCrud'
+import { useStandardListPage } from '@/composables/useStandardListPage'
+import { createCrudActions, rowStatus } from '@/utils/listPageHelpers'
+import { getDictionaryList, deleteDictionary } from '@/api/dictionary'
 import {
-  getDictionaryList,
-  deleteDictionary
-} from '../../api/dictionary'
+  dictionaryInitialSearchForm,
+  createDictionarySearchFields,
+  createDictionaryTableColumns
+} from './dictionary.config'
 
 const { t } = useI18n()
-const { getButtonState } = usePermission()
-const tableRef = ref(null)
-
-const {
-  dialogVisible,
-  editId,
-  handleAdd,
-  handleDelete: handleDeleteCrud
-} = useCrud({
-  deleteApi: deleteDictionary
-})
-
-// 表格列配置
-const tableColumns = computed(() => [
-  {
-    field: 'id',
-    title: t('table.id'),
-    width: 80,
-    sortable: true
-  },
-  {
-    field: 'type',
-    title: t('dictionary.type'),
-    sortable: false,
-    formatter: ({ row }) => row.Type || row.type || '-'
-  },
-  {
-    field: 'label',
-    title: t('dictionary.label'),
-    sortable: false,
-    formatter: ({ row }) => row.Label || row.label || '-'
-  },
-  {
-    field: 'value',
-    title: t('dictionary.value'),
-    sortable: false,
-    formatter: ({ row }) => row.Value || row.value || '-'
-  },
-  {
-    field: 'translation_key',
-    title: t('dictionary.translation_key'),
-    sortable: false,
-    formatter: ({ row }) => row.TranslationKey || row.translation_key || '-'
-  },
-  {
-    field: 'sort',
-    title: t('common.sort'),
-    width: 80,
-    sortable: true,
-    formatter: ({ row }) => row.Sort !== undefined ? row.Sort : (row.sort !== undefined ? row.sort : 0)
-  },
-  {
-    field: 'status',
-    title: t('table.status'),
-    width: 80,
-    sortable: false,
-    slot: 'status'
-  },
-  {
-    field: 'created_at',
-    title: t('table.created_at'),
-    sortable: true
-  },
-  {
-    title: t('table.operation'),
-    width: 150,
-    fixed: 'right',
-    slot: 'operation',
-    sortable: false
-  }
-])
-
-// 搜索表单字段配置
-const searchFields = computed(() => [
-  {
-    prop: 'type',
-    label: t('dictionary.type'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  }
-])
-
-// 初始搜索表单（用于 SearchForm 的 initial-values）
-const initialSearchForm = {
-  type: ''
-}
+const listPageRef = ref(null)
 
 const {
   pagination,
   tableData,
   loading,
   searchForm,
+  dialogVisible,
+  editId,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
-  initDefaultSort
-} = useListPage({
+  handleAdd,
+  handleEdit,
+  handleFormSuccess,
+  handleDelete,
+  getButtonState
+} = useStandardListPage({
   fetchApi: getDictionaryList,
-  initialSearchForm,
-  fieldMapping: {},
+  initialSearchForm: dictionaryInitialSearchForm,
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  deleteApi: deleteDictionary,
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
 })
 
-const handleEdit = (row) => {
-  editId.value = row.id
-  dialogVisible.value = true
-}
+const searchFields = computed(() => createDictionarySearchFields(t))
+const tableColumns = computed(() => createDictionaryTableColumns(t))
 
-const handleFormSuccess = () => {
-  loadData()
-}
-
-const handleDelete = (row) => handleDeleteCrud(row, loadData)
-
-// 操作按钮配置
-const operationActions = computed(() => [
-  {
-    key: 'edit',
-    label: t('common.edit'),
-    type: 'primary',
-    permission: 'dictionary.update',
-    handler: handleEdit
-  },
-  {
-    key: 'delete',
-    label: t('common.delete'),
-    type: 'danger',
-    permission: 'dictionary.destroy',
-    handler: handleDelete
-  }
-])
-
-onMounted(() => {
-  initDefaultSort()
-  loadData()
-})
+const operationActions = computed(() =>
+  createCrudActions(t, 'dictionary', {
+    onEdit: handleEdit,
+    onDelete: handleDelete
+  })
+)
 </script>
-
-<style scoped>
-
-
-</style>
-

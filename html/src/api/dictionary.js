@@ -1,61 +1,32 @@
 import request from '../utils/request'
+import { createCRUDApi, extendApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 获取字典列表
-export function getDictionaryList(params) {
-  return request({
-    url: '/dictionaries',
-    method: 'get',
-    params
-  })
+const baseDictionaryApi = createCRUDApi('dictionaries')
+
+const dictionaryApi = extendApi(baseDictionaryApi, {
+  getByType: (type) => {
+    return request({
+      url: `/dictionaries/type/${type}`,
+      method: 'get'
+    })
+  },
+  getTypes: () => {
+    return request({
+      url: '/dictionaries/types',
+      method: 'get'
+    })
+  }
+})
+
+export async function getDictionaryList(params) {
+  const res = await dictionaryApi.list(params)
+  return normalizeListResponse(res)
 }
 
-// 获取字典详情
-export function getDictionaryDetail(id) {
-  return request({
-    url: `/dictionaries/${id}`,
-    method: 'get'
-  })
-}
-
-// 根据类型获取字典
-export function getDictionaryByType(type) {
-  return request({
-    url: `/dictionaries/type/${type}`,
-    method: 'get'
-  })
-}
-
-// 获取所有字典类型
-export function getDictionaryTypes() {
-  return request({
-    url: '/dictionaries/types',
-    method: 'get'
-  })
-}
-
-// 创建字典
-export function createDictionary(data) {
-  return request({
-    url: '/dictionaries',
-    method: 'post',
-    data
-  })
-}
-
-// 更新字典
-export function updateDictionary(id, data) {
-  return request({
-    url: `/dictionaries/${id}`,
-    method: 'put',
-    data
-  })
-}
-
-// 删除字典
-export function deleteDictionary(id) {
-  return request({
-    url: `/dictionaries/${id}`,
-    method: 'delete'
-  })
-}
-
+export const getDictionaryDetail = dictionaryApi.detail
+export const getDictionaryByType = dictionaryApi.getByType
+export const getDictionaryTypes = dictionaryApi.getTypes
+export const createDictionary = dictionaryApi.create
+export const updateDictionary = dictionaryApi.update
+export const deleteDictionary = dictionaryApi.delete

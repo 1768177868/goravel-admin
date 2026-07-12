@@ -1,20 +1,19 @@
 import request from '../utils/request'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 获取用户余额变动记录列表
-export const getUserBalanceLogList = (params) => {
-  return request({
+export async function getUserBalanceLogList(params) {
+  const res = await request({
     url: '/user-balance-logs',
     method: 'get',
     params
   })
+  return normalizeListResponse(res)
 }
 
-// 获取用户余额统计
-export const getUserBalanceStatistics = (params) => {
+export function getUserBalanceStatistics(params) {
   return request({
     url: '/user-balance-logs/statistics',
     method: 'get',
     params
   })
 }
-

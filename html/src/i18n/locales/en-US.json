@@ -1531,6 +1531,7 @@
     "file_migration": "Migration",
     "file_api": "API",
     "file_list_page": "List Page",
+    "file_list_page_config": "List Config",
     "file_form_page": "Form Page",
     "search_ui_type": "Search UI Type",
     "search_ui_types": {
@@ -1565,6 +1566,7 @@
     "export_mode_async": "Async Export (Generate Job)",
     "enable_batch_actions": "Enable Batch Actions",
     "show_toolbar": "Show Toolbar",
+    "is_tree_list": "Tree List (no pagination)",
     "form_type": "Form Component",
     "form_types": {
       "input": "Input",

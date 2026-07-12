@@ -1,45 +1,15 @@
-import request from '../utils/request'
+import { createCRUDApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 获取部门列表
-export function getDepartmentList(params) {
-  return request({
-    url: '/departments',
-    method: 'get',
-    params
-  })
+const departmentApi = createCRUDApi('departments')
+
+async function listWithNormalize(params) {
+  const res = await departmentApi.list(params)
+  return normalizeListResponse(res)
 }
 
-// 获取部门详情
-export function getDepartmentDetail(id) {
-  return request({
-    url: `/departments/${id}`,
-    method: 'get'
-  })
-}
-
-// 创建部门
-export function createDepartment(data) {
-  return request({
-    url: '/departments',
-    method: 'post',
-    data
-  })
-}
-
-// 更新部门
-export function updateDepartment(id, data) {
-  return request({
-    url: `/departments/${id}`,
-    method: 'put',
-    data
-  })
-}
-
-// 删除部门
-export function deleteDepartment(id) {
-  return request({
-    url: `/departments/${id}`,
-    method: 'delete'
-  })
-}
-
+export const getDepartmentList = listWithNormalize
+export const getDepartmentDetail = departmentApi.detail
+export const createDepartment = departmentApi.create
+export const updateDepartment = departmentApi.update
+export const deleteDepartment = departmentApi.delete

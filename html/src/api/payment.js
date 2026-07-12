@@ -1,35 +1,44 @@
 import request from '../utils/request'
+import { createCRUDApi, extendApi } from '../utils/apiFactory'
+import { normalizeListResponse, normalizeEntity } from '../utils/normalize'
 
-// 获取支付记录列表
-export function getPaymentList(params) {
-  return request({
-    url: '/payments',
-    method: 'get',
-    params
-  })
+const basePaymentApi = createCRUDApi('payments')
+
+const paymentApi = extendApi(basePaymentApi, {
+  export: (params) => {
+    return request({
+      url: '/payments/export',
+      method: 'post',
+      data: params
+    })
+  },
+  exportStatus: (id) => {
+    return request({
+      url: `/payments/export/status/${id}`,
+      method: 'get'
+    })
+  }
+})
+
+export async function getPaymentList(params) {
+  const res = await paymentApi.list(params)
+  return normalizeListResponse(res)
 }
 
-// 获取支付记录详情
-export function getPaymentDetail(id) {
-  return request({
-    url: `/payments/${id}`,
-    method: 'get'
-  })
+export async function getPaymentDetail(id) {
+  const res = await paymentApi.detail(id)
+  if (res?.data) {
+    const payload = res.data.data || res.data
+    if (payload && typeof payload === 'object') {
+      if (res.data.data) {
+        res.data.data = normalizeEntity(payload)
+      } else {
+        Object.assign(res.data, normalizeEntity(payload))
+      }
+    }
+  }
+  return res
 }
 
-// 导出支付记录
-export function exportPayments(params) {
-  return request({
-    url: '/payments/export',
-    method: 'post',
-    data: params
-  })
-}
-
-// 获取导出状态
-export function getExportStatus(id) {
-  return request({
-    url: `/payments/export/status/${id}`,
-    method: 'get'
-  })
-}
+export const exportPayments = paymentApi.export
+export const getExportStatus = paymentApi.exportStatus

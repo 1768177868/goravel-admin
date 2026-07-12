@@ -1,139 +1,114 @@
 <template>
-  <div class="list-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('menu.admin') }}</span>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('admin.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><PlusIcon /></el-icon>
-            {{ $t('admin.add_admin') }}
-          </el-button>
-        </div>
+  <ListPage
+    ref="listPageRef"
+    page-class="admin"
+    :title="$t('menu.admin')"
+    :add-button-text="$t('admin.add_admin')"
+    :add-button-disabled="getButtonState('admin.store').disabled"
+    :search-form="searchForm"
+    :search-fields="searchFields"
+    :initial-search-values="adminInitialSearchForm"
+    i18n-prefix="admin"
+    :table-data="tableData"
+    :loading="loading"
+    :table-columns="tableColumns"
+    :table-key="`table-${tableColumns.length}`"
+    :pagination="pagination"
+    show-toolbar
+    show-column-setting
+    :visible-columns="visibleColumns"
+    :all-columns="allColumns"
+    :default-visible-columns="defaultVisibleColumns"
+    :column-order="columnOrder"
+    :fixed-columns="fixedColumns"
+    :on-column-setting-confirm="handleColumnSettingConfirm"
+    @add="handleAdd"
+    @search="handleSearch"
+    @reset="handleReset"
+    @refresh="loadData"
+    @page-change="loadData"
+    @sort-change="handleSortChange"
+  >
+    <template #extra-buttons>
+      <el-button
+        type="success"
+        :disabled="getButtonState('admin.export').disabled || isExporting"
+        :loading="isExporting"
+        @click="handleExport"
+      >
+        {{ $t('common.export') }}
+      </el-button>
+    </template>
+
+    <template #status="{ row }">
+      <el-switch
+        :model-value="rowStatus(row) === 1"
+        :disabled="isProtectedAdmin(row.id) || getButtonState('admin.update').disabled"
+        @change="(val) => handleStatusChange(row, val)"
+      />
+    </template>
+
+    <template #department="{ row }">
+      {{ getDepartmentDisplayName(row.department) }}
+    </template>
+
+    <template #position="{ row }">
+      {{ getPositionDisplayName(row.position) }}
+    </template>
+
+    <template #roles="{ row }">
+      <template v-if="row.roles?.length">
+        <el-tag
+          v-for="role in getUniqueRoles(row.roles)"
+          :key="role.id"
+          style="margin-right: 5px; margin-bottom: 2px"
+        >
+          {{ role.name || role.Name }}
+        </el-tag>
       </template>
+      <span v-else>-</span>
+    </template>
 
-      <!-- 搜索表单 -->
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="initialSearchForm"
-        i18n-prefix="admin"
-        @search="handleSearch"
-        @reset="handleReset"
-      >
-        <template #extra-buttons>
-          <el-button 
-            type="success" 
-            :disabled="getButtonState('admin.export').disabled || isExporting"
-            :loading="isExporting"
-            @click="handleExport"
-          >
-            {{ $t('common.export') }}
-          </el-button>
-        </template>
-      </SearchForm>
+    <template #is_2fa_bound="{ row }">
+      {{ row.is_2fa_bound ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
+    </template>
 
-      <!-- 表格工具栏 -->
-      <TableToolbar
-        :on-refresh="handleRefresh"
-        :visible-columns="visibleColumns"
-        :all-columns="allTableColumns"
-        :default-visible-columns="defaultVisibleColumns"
-        :column-order="columnOrder"
-        :fixed-columns="fixedColumns"
-        :on-column-setting-confirm="handleColumnSettingConfirm"
+    <template #operation="{ row }">
+      <TableActionButtons
+        :row="row"
+        :primary-actions="getPrimaryActions(row)"
+        :more-actions="getMoreActions(row)"
+        :get-button-state="getButtonState"
+        @action="handleAction"
       />
+    </template>
 
-      <VxeTable
-        ref="tableRef"
-        :key="`table-${tableColumns.length}-${JSON.stringify(tableColumns.map(c => c.field || c.slot || c.key))}`"
-        :data="tableData"
-        :loading="loading"
-        :columns="tableColumns"
-        :height="600"
-        @sort-change="handleSortChange"
-      >
-        <template #status="{ row }">
-          <el-switch
-            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-            :disabled="isProtectedAdmin(row.id) || getButtonState('admin.update').disabled"
-            @change="(val) => handleStatusChange(row, val)"
-          />
-        </template>
-
-        <template #department="{ row }">
-          {{ getDepartmentDisplayName(row.Department || row.department) }}
-        </template>
-
-        <template #position="{ row }">
-          {{ getPositionDisplayName(row.Position || row.position) }}
-        </template>
-
-        <template #roles="{ row }">
-          <template v-if="(row.Roles || row.roles) && (row.Roles || row.roles).length > 0">
-            <el-tag
-              v-for="role in getUniqueRoles(row.Roles || row.roles)"
-              :key="role.id || role.ID"
-              style="margin-right: 5px;margin-bottom:2px"
-            >
-              {{ role.Name || role.name }}
-            </el-tag>
-          </template>
-          <span v-else>-</span>
-        </template>
-
-        <template #is_2fa_bound="{ row }">
-          {{ (row.is_2fa_bound || row.Is2FABound) ? $t('admin.google_auth_bound') : $t('admin.google_auth_not_bound') }}
-        </template>
-
-        <template #operation="{ row }">
-          <TableActionButtons
-            :row="row"
-            :primary-actions="getPrimaryActions(row)"
-            :more-actions="getMoreActions(row)"
-            :get-button-state="getButtonState"
-            @action="handleAction"
-          />
-        </template>
-      </VxeTable>
-
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
+    <template #form>
+      <AdminForm
+        ref="adminFormRef"
+        v-model="dialogVisible"
+        :edit-id="editId"
+        @success="handleFormSuccess"
       />
-    </el-card>
-
-    <!-- 添加/编辑对话框 -->
-    <AdminForm
-      ref="adminFormRef"
-      v-model="dialogVisible"
-      :edit-id="editId"
-      @success="handleFormSuccess"
-    />
-  </div>
+    </template>
+  </ListPage>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import SearchForm from '../../components/SearchForm.vue'
-import Pagination from '../../components/Pagination.vue'
-import VxeTable from '../../components/VxeTable.vue'
-import TableActionButtons from '../../components/TableActionButtons.vue'
-import TableToolbar from '../../components/TableToolbar.vue'
+import ListPage from '@/components/ListPage.vue'
+import TableActionButtons from '@/components/TableActionButtons.vue'
 import AdminForm from './AdminForm.vue'
-import { useListPage } from '../../composables/useListPage'
-import { usePermission } from '../../composables/usePermission'
-import { useCrud } from '../../composables/useCrud'
-import { useColumnSetting } from '../../composables/useColumnSetting'
-import { getStatusOptions } from '../../utils/fieldOptions'
+import { useListPage } from '@/composables/useListPage'
+import { usePermission } from '@/composables/usePermission'
+import { useCrud } from '@/composables/useCrud'
+import { useColumnSetting } from '@/composables/useColumnSetting'
+import { rowStatus } from '@/utils/listPageHelpers'
+import { getField } from '@/utils/normalizeFormData'
+import { getStatusOptions } from '@/utils/fieldOptions'
 import {
   getAdminList,
   deleteAdmin,
@@ -143,27 +118,31 @@ import {
   kickOutUser,
   unbindAdminGoogleAuth,
   resetAdminGoogleAuth
-} from '../../api/admin'
-import logger from '../../utils/logger'
-import ErrorHandler from '../../utils/errorHandler'
-import { uniqBy, compact, map as lodashMap } from 'lodash-es'
-
-const PlusIcon = markRaw(Plus)
-
-// 权限控制
-const { getButtonState } = usePermission()
+} from '@/api/admin'
+import logger from '@/utils/logger'
+import ErrorHandler from '@/utils/errorHandler'
+import { compact, map as lodashMap } from 'lodash-es'
+import {
+  adminInitialSearchForm,
+  createAdminSearchFields,
+  createAdminTableColumns,
+  isProtectedAdmin,
+  getUniqueRoles,
+  getDepartmentDisplayName,
+  getPositionDisplayName
+} from './admin.config'
 
 const { t } = useI18n()
 const router = useRouter()
-const tableRef = ref(null)
+const { getButtonState } = usePermission()
+const listPageRef = ref(null)
 const adminFormRef = ref(null)
-const isExporting = ref(false) // 导出中状态，防止重复点击
+const isExporting = ref(false)
 
 const {
   dialogVisible,
   editId,
   handleAdd,
-  handleClose,
   handleDelete: handleDeleteCrud
 } = useCrud({
   deleteApi: deleteAdmin
@@ -181,117 +160,16 @@ const {
   initDefaultSort
 } = useListPage({
   fetchApi: getAdminList,
-  initialSearchForm: {
-    username: '',
-    status: '',
-    role_id: '',
-    department_id: '',
-    position_id: '',
-    is_2fa_bound: ''
-  },
-  fieldMapping: {},
+  initialSearchForm: adminInitialSearchForm,
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  normalizeRows: false,
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef)
 })
 
-// 初始搜索表单（用于 SearchForm 的 initial-values）
-const initialSearchForm = {
-  username: '',
-  status: '',
-  role_id: '',
-  department_id: '',
-  position_id: '',
-  is_2fa_bound: ''
-}
+const searchFields = computed(() => createAdminSearchFields(t, getStatusOptions))
 
-// 表格列配置（使用 vxe-table columns）
-const allTableColumns = computed(() => [
-  {
-    field: 'id',
-    title: t('table.id'),
-    width: 80,
-    sortable: true,
-    key: 'id'
-  },
-  {
-    field: 'username',
-    title: t('table.username'),
-    sortable: false,
-    key: 'username'
-  },
-  {
-    field: 'nickname',
-    title: t('table.nickname'),
-    sortable: false,
-    key: 'nickname'
-  },
-  {
-    field: 'email',
-    title: t('table.email'),
-    sortable: false,
-    key: 'email'
-  },
-  {
-    field: 'phone',
-    title: t('table.phone'),
-    sortable: false,
-    key: 'phone'
-  },
-  {
-    field: 'status',
-    title: t('table.status'),
-    width: 100,
-    sortable: false,
-    slot: 'status',
-    key: 'status'
-  },
-  {
-    field: 'is_2fa_bound',
-    title: t('admin.google_auth_status'),
-    width: 120,
-    sortable: false,
-    slot: 'is_2fa_bound',
-    key: 'is_2fa_bound'
-  },
-  {
-    field: 'department',
-    title: t('table.department'),
-    slot: 'department',
-    sortable: false,
-    key: 'department'
-  },
-  {
-    field: 'position',
-    title: t('table.position'),
-    slot: 'position',
-    sortable: false,
-    key: 'position',
-    required: true
-  },
-  {
-    field: 'roles',
-    title: t('table.roles'),
-    slot: 'roles',
-    sortable: false,
-    key: 'roles'
-  },
-  {
-    field: 'created_at',
-    title: t('table.created_at'),
-    sortable: true,
-    key: 'created_at',
-    width: 160,
-  },
-  {
-    title: t('table.operation'),
-    width: 220,
-    fixed: 'right',
-    slot: 'operation',
-    key: 'operation'
-  }
-])
+const allTableColumns = computed(() => createAdminTableColumns(t))
 
-// 使用列设置 composable
 const {
   tableColumns,
   visibleColumns,
@@ -304,166 +182,54 @@ const {
   adjacentPairs: [['department', 'position']]
 })
 
-// 处理刷新
-const handleRefresh = () => {
-  loadData()
-}
-
-// 搜索表单字段配置
-const searchFields = computed(() => [
-  {
-    prop: 'username',
-    label: t('table.username'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'status',
-    label: t('table.status'),
-    type: 'select',
-    width: '150px',
-    options: getStatusOptions(t),
-    advanced: false
-  },
-  {
-    prop: 'is_2fa_bound',
-    label: t('admin.google_auth_status'),
-    type: 'select',
-    width: '150px',
-    options: [
-      { label: t('admin.google_auth_bound'), value: '1' },
-      { label: t('admin.google_auth_not_bound'), value: '0' }
-    ],
-    advanced: false
-  },
-  {
-    prop: 'role_id',
-    label: t('menu.role'),
-    type: 'select',
-    width: '150px',
-    filterable: true,
-    apiUrl: '/options?type=role', 
-    //  apiUrl: '/options?type=dictionary&dictionary_type=status', 
-    advanced: false
-  },
-  {
-    prop: 'department_id',
-    label: t('table.department'),
-    type: 'tree-select',
-    width: '200px',
-    filterable: true,
-    apiUrl: '/options?type=department', 
-    treeProps: { label: 'name', children: 'children', value: 'id' },
-    advanced: false
-  },
-  {
-    prop: 'position_id',
-    label: t('table.position'),
-    type: 'select',
-    width: '180px',
-    filterable: true,
-    apiUrl: '/options?type=position',
-    advanced: false
-  }
-])
-
-const protectedAdminIds = ref([1, 2])
-
-// handleSearch, handleReset, handlePageChange 已由 useListPage 提供
-// handleAdd, handleDelete 已由 useCrud 提供
-
-// 获取去重后的角色列表
-const getUniqueRoles = (roles) => {
-  if (!roles || !Array.isArray(roles)) return []
-  return uniqBy(roles.filter(role => {
-    const roleId = role.id || role.ID
-    return roleId
-  }), role => role.id || role.ID)
-}
-
-const getDepartmentDisplayName = (department) => {
-  if (!department) return '-'
-  return department.Name || department.name || '-'
-}
-
-const getPositionDisplayName = (position) => {
-  if (!position) return '-'
-  const name = position.Name || position.name
-  const id = position.ID ?? position.id
-  if (!name && (!id || id === 0)) return '-'
-  return name || '-'
-}
-
 const handleEdit = async (row) => {
-  // 先打开对话框，让表单组件显示loading
   editId.value = row.id
   dialogVisible.value = true
-  
-  // 等待对话框打开后再设置数据
-  await new Promise(resolve => setTimeout(resolve, 100))
-  
-  // 处理字段映射，支持 PascalCase 和 snake_case
-  const adminRoles = row.Roles || row.roles
-  
-  // 去重角色ID
-  const uniqueRoleIds = adminRoles ? [...new Set(compact(lodashMap(adminRoles, r => r.id || r.ID)))] : []
-  
-  // 设置表单数据（setFormData内部会处理loading）
-  if (adminFormRef.value) {
-    adminFormRef.value.setFormData({
-      id: row.id,
-      username: row.Username || row.username || '',
-      password: '',
-      nickname: row.Nickname || row.nickname || '',
-      email: row.Email || row.email || '',
-      phone: row.Phone || row.phone || '',
-      department_id: row.DepartmentID !== undefined ? row.DepartmentID : (row.department_id !== undefined ? row.department_id : null),
-      position_id: row.PositionID !== undefined ? row.PositionID : (row.position_id !== undefined ? row.position_id : 0),
-      role_ids: uniqueRoleIds,
-      status: row.Status !== undefined ? row.Status : (row.status !== undefined ? row.status : 1),
-      is_super_admin: row.is_super_admin === true || row.IsSuperAdmin === true
-    })
-  }
+  await new Promise((resolve) => setTimeout(resolve, 100))
+
+  const uniqueRoleIds = row.roles
+    ? [...new Set(compact(lodashMap(row.roles, (r) => r.id)))]
+    : []
+
+  adminFormRef.value?.setFormData({
+    id: row.id,
+    username: getField(row, 'username', ''),
+    password: '',
+    nickname: getField(row, 'nickname', ''),
+    email: getField(row, 'email', ''),
+    phone: getField(row, 'phone', ''),
+    department_id: getField(row, 'department_id', null),
+    position_id: getField(row, 'position_id', 0),
+    role_ids: uniqueRoleIds,
+    status: getField(row, 'status', 1),
+    is_super_admin: row.is_super_admin === true
+  })
 }
 
 const handleFormSuccess = () => {
   loadData()
 }
 
-const isProtectedAdmin = (adminId) => {
-  return protectedAdminIds.value.includes(adminId)
-}
-
 const handleStatusChange = async (row, newStatus) => {
-  // 检查是否是受保护管理员
   if (isProtectedAdmin(row.id) && !newStatus) {
     ElMessage.warning(t('admin.protected_cannot_disable'))
-    // 恢复开关状态
     loadData()
     return
   }
 
   try {
     const statusValue = newStatus ? 1 : 0
-    await updateAdmin(row.id, {
-      status: statusValue
-    })
+    await updateAdmin(row.id, { status: statusValue })
     ElMessage.success(newStatus ? t('admin.enable_success') : t('admin.disable_success'))
-    // 更新本地数据
-    const admin = tableData.value.find(a => a.id === row.id)
+    const admin = tableData.value.find((a) => a.id === row.id)
     if (admin) {
       admin.status = statusValue
-      admin.Status = statusValue
     }
   } catch (error) {
     logger.error('Status change error:', error)
-    // 恢复开关状态
     loadData()
-    // 如果错误已经在响应拦截器中处理过，就不再重复显示
     if (!error.__handled) {
-      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
-      ElMessage.error(errorMessage)
+      ElMessage.error(error.response?.data?.message || error.message || t('common.operation_failed'))
     }
   }
 }
@@ -472,11 +238,15 @@ const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
 const handleResetPassword = async (row) => {
   try {
-    const { value: password } = await ElMessageBox.prompt(t('admin.new_password'), t('admin.reset_password'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      inputType: 'password'
-    })
+    const { value: password } = await ElMessageBox.prompt(
+      t('admin.new_password'),
+      t('admin.reset_password'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        inputType: 'password'
+      }
+    )
     await resetPassword(row.id, { password })
     ElMessage.success(t('admin.reset_password_success'))
   } catch (error) {
@@ -490,7 +260,7 @@ const handleResetPassword = async (row) => {
 const handleKickOut = async (row) => {
   try {
     await ElMessageBox.confirm(
-      t('admin.kick_out_confirm', { username: row.username || row.Username }),
+      t('admin.kick_out_confirm', { username: row.username }),
       t('form.tip'),
       {
         confirmButtonText: t('common.confirm'),
@@ -508,65 +278,58 @@ const handleKickOut = async (row) => {
   }
 }
 
-// 获取主要操作按钮配置
-const getPrimaryActions = (row) => {
-  return [
-    {
-      key: 'edit',
-      label: t('common.edit'),
-      type: 'primary',
-      permission: 'admin.update',
-      handler: handleEdit
-    },
-    {
-      key: 'delete',
-      label: t('common.delete'),
-      type: 'danger',
-      permission: 'admin.destroy',
-      show: () => !isProtectedAdmin(row.id),
-      handler: handleDelete
-    }
-  ]
-}
+const getPrimaryActions = (row) => [
+  {
+    key: 'edit',
+    label: t('common.edit'),
+    type: 'primary',
+    permission: 'admin.update',
+    handler: handleEdit
+  },
+  {
+    key: 'delete',
+    label: t('common.delete'),
+    type: 'danger',
+    permission: 'admin.destroy',
+    show: () => !isProtectedAdmin(row.id),
+    handler: handleDelete
+  }
+]
 
-// 获取更多操作按钮配置
-const getMoreActions = (row) => {
-  return [
-    {
-      key: 'resetPassword',
-      command: 'resetPassword',
-      label: t('admin.reset_password'),
-      permission: 'admin.password',
-      handler: handleResetPassword
-    },
-    {
-      key: 'kickOut',
-      command: 'kickOut',
-      label: t('admin.kick_out'),
-      permission: 'admin.kick_out',
-      handler: handleKickOut
-    },
-    {
-      key: 'unbindGoogleAuth',
-      command: 'unbindGoogleAuth',
-      label: t('admin.unbind_google_auth'),
-      permission: 'admin.unbind_google_auth',
-      divided: true,
-      show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
-      handler: handleUnbindGoogleAuth
-    },
-    {
-      key: 'resetGoogleAuth',
-      command: 'resetGoogleAuth',
-      label: t('admin.reset_google_auth'),
-      permission: 'admin.reset_google_auth',
-      show: () => (row.is_2fa_bound || row.Is2FABound) && !isProtectedAdmin(row.id),
-      handler: handleResetGoogleAuth
-    }
-  ]
-}
+const getMoreActions = (row) => [
+  {
+    key: 'resetPassword',
+    command: 'resetPassword',
+    label: t('admin.reset_password'),
+    permission: 'admin.password',
+    handler: handleResetPassword
+  },
+  {
+    key: 'kickOut',
+    command: 'kickOut',
+    label: t('admin.kick_out'),
+    permission: 'admin.kick_out',
+    handler: handleKickOut
+  },
+  {
+    key: 'unbindGoogleAuth',
+    command: 'unbindGoogleAuth',
+    label: t('admin.unbind_google_auth'),
+    permission: 'admin.unbind_google_auth',
+    divided: true,
+    show: () => row.is_2fa_bound && !isProtectedAdmin(row.id),
+    handler: handleUnbindGoogleAuth
+  },
+  {
+    key: 'resetGoogleAuth',
+    command: 'resetGoogleAuth',
+    label: t('admin.reset_google_auth'),
+    permission: 'admin.reset_google_auth',
+    show: () => row.is_2fa_bound && !isProtectedAdmin(row.id),
+    handler: handleResetGoogleAuth
+  }
+]
 
-// 处理操作事件
 const handleAction = (command, row) => {
   switch (command) {
     case 'edit':
@@ -593,7 +356,7 @@ const handleAction = (command, row) => {
 const handleUnbindGoogleAuth = async (row) => {
   try {
     const { value: code } = await ElMessageBox.prompt(
-      t('admin.unbind_google_auth_confirm', { username: row.username || row.Username }),
+      t('admin.unbind_google_auth_confirm', { username: row.username }),
       t('admin.unbind_google_auth'),
       {
         confirmButtonText: t('common.confirm'),
@@ -604,7 +367,6 @@ const handleUnbindGoogleAuth = async (row) => {
         inputErrorMessage: t('profile.google_code_format')
       }
     )
-    
     await unbindAdminGoogleAuth(row.id, { code })
     ElMessage.success(t('admin.unbind_google_auth_success'))
     loadData()
@@ -612,8 +374,9 @@ const handleUnbindGoogleAuth = async (row) => {
     if (error !== 'cancel') {
       logger.error('Unbind google auth error:', error)
       if (!error?.__handled) {
-        const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
-        ElMessage.error(errorMessage)
+        ElMessage.error(
+          error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+        )
       }
     }
   }
@@ -622,7 +385,7 @@ const handleUnbindGoogleAuth = async (row) => {
 const handleResetGoogleAuth = async (row) => {
   try {
     await ElMessageBox.confirm(
-      t('admin.reset_google_auth_confirm', { username: row.username || row.Username }),
+      t('admin.reset_google_auth_confirm', { username: row.username }),
       t('admin.reset_google_auth'),
       {
         confirmButtonText: t('common.confirm'),
@@ -637,39 +400,29 @@ const handleResetGoogleAuth = async (row) => {
     if (error !== 'cancel') {
       logger.error('Reset google auth error:', error)
       if (!error?.__handled) {
-        const errorMessage = error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
-        ElMessage.error(errorMessage)
+        ElMessage.error(
+          error.response?.data?.message || error.translatedMessage || error.message || t('common.operation_failed')
+        )
       }
     }
   }
 }
 
 const handleExport = async () => {
-  // 防止重复点击
-  if (isExporting.value) {
-    return
-  }
-
+  if (isExporting.value) return
   isExporting.value = true
-
   try {
     await exportAdmin(searchForm)
-    // 不再直接触发下载，导出记录会写入导出管理列表，由用户在导出管理中查看和下载
     ElMessage.success(t('common.queued'))
-    // 导出完成后跳转到导出管理列表
     router.push('/exports')
   } catch (error) {
     logger.error('Export error:', error)
-    // 检查是否是重复提交错误
     if (error.response?.status === 429) {
-      // 429 错误由业务代码处理，显示友好的提示
       ElMessage.warning(t('common.already_queued'))
     } else if (!error.__handled) {
-      // 其他错误，如果未处理则显示
       ErrorHandler.handle(error, { silent: true })
     }
   } finally {
-    // 无论成功还是失败，都要重置导出状态
     isExporting.value = false
   }
 }
@@ -684,10 +437,3 @@ onMounted(async () => {
   }
 })
 </script>
-
-<style scoped>
-
-
-
-</style>
-

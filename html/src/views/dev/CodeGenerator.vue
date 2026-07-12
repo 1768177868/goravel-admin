@@ -61,6 +61,7 @@
                 <el-checkbox label="has_delete">{{ $t('code_generator.has_delete') }}</el-checkbox>
                 <el-checkbox label="enable_batch_actions">{{ $t('code_generator.enable_batch_actions') }}</el-checkbox>
                 <el-checkbox label="show_toolbar">{{ $t('code_generator.show_toolbar') }}</el-checkbox>
+                <el-checkbox label="is_tree_list">{{ $t('code_generator.is_tree_list') }}</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
 
@@ -469,7 +470,7 @@ const fieldConfigForm = reactive({
 const form = reactive({
   module_name: '',
   table_name: '',
-  files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page', 'form_page'],
+  files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page_config', 'list_page', 'form_page'],
   options: ['has_create', 'has_edit', 'has_delete', 'show_toolbar'],
   export_mode: 'none',
   fields: [
@@ -531,7 +532,8 @@ const buildGeneratorOptions = () => ({
   has_edit: form.options.includes('has_edit'),
   has_delete: form.options.includes('has_delete'),
   enable_batch_actions: form.options.includes('enable_batch_actions'),
-  show_toolbar: form.options.includes('show_toolbar')
+  show_toolbar: form.options.includes('show_toolbar'),
+  is_tree_list: form.options.includes('is_tree_list')
 })
 
 const fileTypes = [
@@ -542,6 +544,7 @@ const fileTypes = [
   { value: 'request_update', label: t('code_generator.file_request_update') },
   { value: 'export_job', label: t('code_generator.file_export_job') },
   { value: 'api', label: t('code_generator.file_api') },
+  { value: 'list_page_config', label: t('code_generator.file_list_page_config') },
   { value: 'list_page', label: t('code_generator.file_list_page') },
   { value: 'form_page', label: t('code_generator.file_form_page') }
 ]

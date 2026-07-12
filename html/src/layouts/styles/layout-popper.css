@@ -1,0 +1,289 @@
+/* 夜间模式：侧栏菜单维持清晰层次（仅侧栏，顶部菜单保持蓝色标题不变） */
+html.dark .sidebar-menu .el-menu-item:hover,
+html.dark .sidebar-menu .el-sub-menu__title:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
+}
+html.dark .drawer-content .sidebar-menu .el-menu-item:hover,
+html.dark .drawer-content .sidebar-menu .el-sub-menu__title:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
+}
+html.dark .sidebar-menu .el-menu-item.is-active,
+html.dark .sidebar-menu .el-sub-menu__title.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 22%, rgba(255, 255, 255, 0.05)) !important;
+}
+html.dark .sidebar-menu .el-menu-item.is-active::before,
+html.dark .sidebar-menu .el-sub-menu__title.is-active::before {
+  box-shadow: none;
+}
+html.dark .logo,
+html.dark .drawer-content .logo {
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  background: var(--card-bg, #1d1e1f) !important;
+}
+/* 布局大小下拉：质感升级 */
+.layout-size-popper.el-popper {
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  padding: 6px !important;
+  backdrop-filter: blur(8px);
+}
+.layout-size-popper .el-dropdown-menu {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.layout-size-popper .el-dropdown-menu__item {
+  border-radius: 9px;
+  padding: 9px 12px;
+  margin: 2px 0;
+  font-size: 13px;
+  color: var(--text-color-regular);
+  transition: all 0.2s ease;
+}
+.layout-size-popper .el-dropdown-menu__item:hover {
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+.layout-size-popper .el-dropdown-menu__item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, var(--card-bg, #fff) 86%);
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+.layout-size-popper .el-dropdown-menu__item .el-icon {
+  font-size: 15px;
+}
+.layout-size-option {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.layout-size-option-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.layout-size-option-check {
+  font-size: 14px;
+  opacity: 0.95;
+}
+.layout-density {
+  width: 16px;
+  height: 14px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0.88;
+}
+.layout-density i {
+  display: block;
+  height: 2px;
+  border-radius: 10px;
+  background: currentColor;
+}
+.layout-density-large i:nth-child(1) { width: 14px; }
+.layout-density-large i:nth-child(2) { width: 11px; }
+.layout-density-large i:nth-child(3) { width: 8px; }
+.layout-density-default i:nth-child(1) { width: 12px; }
+.layout-density-default i:nth-child(2) { width: 9px; }
+.layout-density-default i:nth-child(3) { width: 6px; }
+.layout-density-small i:nth-child(1) { width: 10px; }
+.layout-density-small i:nth-child(2) { width: 7px; }
+.layout-density-small i:nth-child(3) { width: 4px; }
+/* 设置弹窗：更有质感的卡片层次 */
+.settings-popover.el-popover {
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  padding: 12px 12px 10px !important;
+  backdrop-filter: blur(8px);
+}
+html.dark .settings-popover.el-popover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .layout-size-popper.el-popper {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .layout-size-popper .el-dropdown-menu__item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+html.dark .layout-size-popper .el-dropdown-menu__item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 20%, rgba(255, 255, 255, 0.06));
+}
+html.dark .menu-mode-toggle {
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 70%, #000 30%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html.dark .menu-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+html.dark .menu-mode-btn.active {
+  background: color-mix(in srgb, var(--el-color-primary) 18%, rgba(255, 255, 255, 0.06));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+html.dark .header {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+html.dark .top-menu {
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+}
+
+/* 顶部横向菜单：子菜单弹出层（卡片质感，与各下拉统一） */
+.el-popper.top-menu-submenu-popper {
+  padding: 6px !important;
+  border-radius: 12px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.el-popper.top-menu-submenu-popper .el-menu--popup-container {
+  background: transparent !important;
+  padding: 0 !important;
+}
+.el-popper.top-menu-submenu-popper .el-menu--popup {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 4px 2px;
+  min-width: 172px;
+}
+.el-popper.top-menu-submenu-popper .el-menu-item,
+.el-popper.top-menu-submenu-popper .el-sub-menu__title {
+  border-radius: 8px;
+  margin: 2px 6px;
+  height: 36px !important;
+  line-height: 36px !important;
+  padding: 0 12px !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.el-popper.top-menu-submenu-popper .el-menu-item:not(.is-disabled):hover,
+.el-popper.top-menu-submenu-popper .el-sub-menu__title:hover {
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent) !important;
+  color: var(--el-color-primary) !important;
+}
+.el-popper.top-menu-submenu-popper .el-menu-item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent) !important;
+  color: var(--el-color-primary) !important;
+  font-weight: 600;
+}
+.el-popper.top-menu-submenu-popper .el-icon {
+  margin-right: 8px;
+}
+.el-popper.top-menu-submenu-popper .el-sub-menu__icon-arrow {
+  margin-right: 0 !important;
+  margin-left: 6px !important;
+}
+html.dark .el-popper.top-menu-submenu-popper {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .el-popper.top-menu-submenu-popper .el-menu-item:not(.is-disabled):hover,
+html.dark .el-popper.top-menu-submenu-popper .el-sub-menu__title:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
+}
+html.dark .el-popper.top-menu-submenu-popper .el-menu-item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 20%, rgba(255, 255, 255, 0.06)) !important;
+}
+
+/* 左侧收起态：子菜单弹层风格（与全局卡片质感统一） */
+.el-popper.sidebar-collapse-submenu-popper {
+  padding: 6px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.el-popper.sidebar-collapse-submenu-popper .el-menu--popup-container {
+  background: transparent !important;
+  padding: 0 !important;
+}
+.el-popper.sidebar-collapse-submenu-popper .el-menu--popup {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 4px 2px;
+  min-width: 172px;
+}
+.el-popper.sidebar-collapse-submenu-popper .el-menu-item,
+.el-popper.sidebar-collapse-submenu-popper .el-sub-menu__title {
+  border-radius: 8px;
+  margin: 2px 6px;
+  height: 38px !important;
+  line-height: 38px !important;
+  padding: 0 12px !important;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.el-popper.sidebar-collapse-submenu-popper .el-menu-item:not(.is-disabled):hover,
+.el-popper.sidebar-collapse-submenu-popper .el-sub-menu__title:hover {
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent) !important;
+  color: var(--el-color-primary) !important;
+}
+.el-popper.sidebar-collapse-submenu-popper .el-menu-item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent) !important;
+  color: var(--el-color-primary) !important;
+  font-weight: 600;
+}
+.el-popper.sidebar-collapse-submenu-popper .el-icon {
+  margin-right: 8px;
+}
+.el-popper.sidebar-collapse-submenu-popper .el-sub-menu__icon-arrow {
+  margin-right: 0 !important;
+  margin-left: 6px !important;
+}
+html.dark .el-popper.sidebar-collapse-submenu-popper {
+  border: none !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .el-popper.sidebar-collapse-submenu-popper .el-menu-item:not(.is-disabled):hover,
+html.dark .el-popper.sidebar-collapse-submenu-popper .el-sub-menu__title:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--el-color-primary) !important;
+}
+html.dark .el-popper.sidebar-collapse-submenu-popper .el-menu-item.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 20%, rgba(255, 255, 255, 0.06)) !important;
+}
+
+/* 账号下拉外层 popper（与设置/布局一致） */
+.user-account-popper.el-popper {
+  padding: 0 !important;
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color-light) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+html.dark .user-account-popper.el-popper {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: color-mix(in srgb, var(--card-bg, #1d1e1f) 92%, transparent) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .user-account-popper .user-account-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+html.dark .user-account-popper .user-account-avatar--placeholder {
+  background: color-mix(in srgb, var(--el-color-primary) 22%, rgba(255, 255, 255, 0.06));
+}
+html.dark .user-account-popper .user-account-roles-label {
+  color: var(--el-text-color-placeholder, #6c6e72);
+}

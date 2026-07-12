@@ -1,15 +1,15 @@
 import request from '../utils/request'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 获取在线管理员列表
-export function getOnlineAdminList(params) {
-  return request({
+export async function getOnlineAdminList(params) {
+  const res = await request({
     url: '/online-admins',
     method: 'get',
     params
   })
+  return normalizeListResponse(res)
 }
 
-// 踢下线（删除token）
 export function kickOutOnlineAdmin(id) {
   return request({
     url: `/online-admins/${id}`,
@@ -17,7 +17,6 @@ export function kickOutOnlineAdmin(id) {
   })
 }
 
-// 批量踢下线
 export function batchKickOutOnlineAdmins(tokenIds) {
   return request({
     url: '/online-admins/batch-kick-out',
@@ -27,4 +26,3 @@ export function batchKickOutOnlineAdmins(tokenIds) {
     }
   })
 }
-

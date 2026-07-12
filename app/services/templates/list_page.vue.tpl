@@ -1,263 +1,145 @@
 <template>
-  <div class="<<.ModuleName>>-list">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('menu.<<$.ModuleName>>') }}</span>
-          <<if .HasCreate>>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('<<.ModuleName>>.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><PlusIcon /></el-icon>
-            {{ $t('common.add') }}
-          </el-button>
-          <<end>>
-        </div>
-      </template>
-
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="initialSearchForm"
-        i18n-prefix="<<.ModuleName>>"
-        @search="handleSearch"
-        @reset="handleReset"
+  <ListPage
+    ref="listPageRef"
+    page-class="<<.ModuleName>>"
+    :title="$t('menu.<<.ModuleName>>')"
+    <<if .HasCreate>>
+    :add-button-text="$t('common.add')"
+    :add-button-disabled="getButtonState('<<.ModuleName>>.store').disabled"
+    <<else>>
+    :show-add-button="false"
+    <<end>>
+    :search-form="searchForm"
+    :search-fields="searchFields"
+    :initial-search-values="<<.ModuleNameCamel>>InitialSearchForm"
+    i18n-prefix="<<.ModuleName>>"
+    :table-data="tableData"
+    :loading="loading"
+    :table-columns="tableColumns"
+    :pagination="pagination"
+    :show-toolbar="<<.ShowToolbar>>"
+    @add="handleAdd"
+    @search="handleSearch"
+    @reset="handleReset"
+    @refresh="loadData"
+    @page-change="loadData"
+    @sort-change="handleSortChange"
+    <<if .EnableBatchActions>>
+    @selection-change="handleSelectionChange"
+    <<end>>
+  >
+    <<if .EnableBatchActions>>
+    <template #toolbar-left>
+      <<if .HasDelete>>
+      <el-button
+        v-if="hasSelection"
+        type="danger"
+        :disabled="getButtonState('<<.ModuleName>>.destroy').disabled"
+        @click="handleBatchDelete"
       >
-        <template #extra-buttons>
-          <<if not .ShowToolbar>>
-          <<if .HasDelete>>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            type="danger"
-            :disabled="getButtonState('<<.ModuleName>>.destroy').disabled"
-            @click="handleBatchDelete"
-          >
-            {{ `${$t('common.batch_delete')} (${selectedIds.length})` }}
-          </el-button>
-          <<else>>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            type="warning"
-            @click="handleBatchAction"
-          >
-            {{ `${$t('common.batch_action')} (${selectedIds.length})` }}
-          </el-button>
-          <<end>>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            @click="handleClearSelection"
-          >
-            {{ $t('common.reset') }}
-          </el-button>
-          <<end>>
-          <<if .HasExport>>
-          <el-button 
-            type="success" 
-            :disabled="getButtonState('<<.ModuleName>>.export').disabled || isExporting"
-            :loading="isExporting"
-            @click="handleExport"
-          >
-            {{ $t('common.export') }}
-          </el-button>
-          <<end>>
-        </template>
-      </SearchForm>
-
-      <<if .ShowToolbar>>
-      <TableToolbar :on-refresh="loadData">
-        <template #left>
-          <<if .HasDelete>>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            type="danger"
-            :disabled="getButtonState('<<.ModuleName>>.destroy').disabled"
-            @click="handleBatchDelete"
-          >
-            {{ `${$t('common.batch_delete')} (${selectedIds.length})` }}
-          </el-button>
-          <<else>>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            type="warning"
-            @click="handleBatchAction"
-          >
-            {{ `${$t('common.batch_action')} (${selectedIds.length})` }}
-          </el-button>
-          <<end>>
-          <el-button
-            v-if="enableBatchActions && hasSelection"
-            @click="handleClearSelection"
-          >
-            {{ $t('common.reset') }}
-          </el-button>
-        </template>
-      </TableToolbar>
-
+        {{ `${$t('common.batch_delete')} (${selectedIds.length})` }}
+      </el-button>
       <<end>>
-      <VxeTable
-        ref="tableRef"
-        :data="tableData"
-        :loading="loading"
-        :columns="tableColumns"
-        :height="600"
-        @sort-change="handleSortChange"
-        @checkbox-change="handleTableCheckboxChange"
-        @checkbox-all="handleTableCheckboxAll"
+    </template>
+    <<end>>
+
+    <<if .HasExport>>
+    <template #extra-buttons>
+      <el-button
+        type="success"
+        :disabled="getButtonState('<<.ModuleName>>.export').disabled || isExporting"
+        :loading="isExporting"
+        @click="handleExport"
       >
-        <<range .ListFields>>
-        <<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
-        <template #status="{ row }">
-          <el-switch
-            :model-value="Number(row.status ?? row.Status ?? 1) === 1"
-            :disabled="getButtonState('<<$.ModuleName>>.update').disabled"
-            @change="(val) => handleStatusChange(row, val)"
-          />
-        </template>
-        <<- else if and .ShowInList (eq .FormType "image-upload")>>
-        <template #<<.Name>>="{ row }">
-          <el-image
-            v-if="row.<<.Name>>"
-            :src="row.<<.Name>>"
-            :preview-src-list="[row.<<.Name>>]"
-            fit="cover"
-            style="width: 60px; height: 60px; border-radius: 4px; cursor: pointer;"
-            lazy
-          />
-          <span v-else>-</span>
-        </template>
-        <<- else if and .ShowInList .Relation>>
-        <template #<<.Name>>="{ row }">
-          {{ get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>> || row.<<.Name>>) }}
-        </template>
-        <<- end>>
-        <<- end>>
-        <template #operation="{ row }">
-          <TableActionButtons
-            :row="row"
-            :primary-actions="getPrimaryActions(row)"
-            :more-actions="getMoreActions(row)"
-            :get-button-state="getButtonState"
-            @action="handleAction"
-          />
-        </template>
-      </VxeTable>
+        {{ $t('common.export') }}
+      </el-button>
+    </template>
+    <<end>>
 
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
+    <<range .ListFields>>
+    <<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
+    <template #status="{ row }">
+      <el-switch
+        :model-value="Number(row.status ?? 1) === 1"
+        :disabled="getButtonState('<<$.ModuleName>>.update').disabled"
+        @change="(val) => handleStatusChange(row, val)"
       />
-    </el-card>
+    </template>
+    <<- else if and .ShowInList (eq .FormType "image-upload")>>
+    <template #<<.Name>>="{ row }">
+      <el-image
+        v-if="row.<<.Name>>"
+        :src="row.<<.Name>>"
+        :preview-src-list="[row.<<.Name>>]"
+        fit="cover"
+        style="width: 60px; height: 60px; border-radius: 4px; cursor: pointer;"
+        lazy
+      />
+      <span v-else>-</span>
+    </template>
+    <<- else if and .ShowInList .Relation>>
+    <template #<<.Name>>="{ row }">
+      {{ get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>> || row.<<.Name>>) }}
+    </template>
+    <<- end>>
+    <<- end>>
 
-    <<print "<">><<.ModelName>>Form
-      ref="formRef"
-      v-model="dialogVisible"
-      :edit-id="editId"
-      @success="handleFormSuccess"
-    />
-  </div>
+    <template #operation="{ row }">
+      <TableActionButtons
+        :row="row"
+        :primary-actions="operationActions"
+        :get-button-state="getButtonState"
+      />
+    </template>
+
+    <template #form>
+      <<printf "<%s" .ModelName>>Form
+        v-model="dialogVisible"
+        :edit-id="editId"
+        @success="handleFormSuccess"
+      />
+    </template>
+  </ListPage>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import SearchForm from '../../components/SearchForm.vue'
-import Pagination from '../../components/Pagination.vue'
-import VxeTable from '../../components/VxeTable.vue'
-<<if .ShowToolbar>>
-import TableToolbar from '../../components/TableToolbar.vue'
-<<end>>
-import TableActionButtons from '../../components/TableActionButtons.vue'
+import ListPage from '@/components/ListPage.vue'
+import TableActionButtons from '@/components/TableActionButtons.vue'
 import <<.ModelName>>Form from './<<.ModelName>>Form.vue'
-import { useTable } from '../../composables/useTable'
-import { usePermission } from '../../composables/usePermission'
-import { useCrud } from '../../composables/useCrud'
-import { buildSearchParams } from '../../utils/buildSearchParams'
-<<range .ListFields>>
-<<- if and .ShowInList (eq .Name "status") (not .Dictionary)>>
-import { getStatusOptions } from '../../utils/fieldOptions'
-<<- end>>
-<<- end>>
+import { useStandardListPage } from '@/composables/useStandardListPage'
+import { createCrudActions } from '@/utils/listPageHelpers'
+<<if .HasExport>>
+import { export<<.ModelName>> } from '@/api/<<.ModuleName>>'
+<<end>>
 import {
   get<<.ModelName>>List,
-  delete<<.ModelName>>,
+  <<if .HasDelete>>delete<<.ModelName>>,<<end>>
   <<if .HasEdit>>update<<.ModelName>>,<<end>>
-  <<if .HasExport>>export<<.ModelName>>,<<end>>
-} from '../../api/<<.ModuleName>>'
-import logger from '../../utils/logger'
-import ErrorHandler from '../../utils/errorHandler'
-
-const PlusIcon = markRaw(Plus)
-
-// Permission checks
-const { getButtonState } = usePermission()
+} from '@/api/<<.ModuleName>>'
+import logger from '@/utils/logger'
+import ErrorHandler from '@/utils/errorHandler'
+import {
+  <<.ModuleNameCamel>>InitialSearchForm,
+  build<<.ModelName>>ListParams,
+  create<<.ModelName>>SearchFields,
+  create<<.ModelName>>TableColumns,
+<<range .ListFields>>
+<<- if and .ShowInList .Relation>>
+  get<<.Relation.JsonName>>DisplayName,
+<<- end>>
+<<- end>>
+} from './<<.ModuleNameCamel>>.config'
 
 const { t } = useI18n()
 const router = useRouter()
-const tableRef = ref(null)
-const formRef = ref(null)
+const listPageRef = ref(null)
 <<if .HasExport>>
 const isExporting = ref(false)
 <<end>>
-
-const {
-  dialogVisible,
-  editId,
-  handleAdd,
-  handleClose,
-  handleDelete: handleDeleteCrud
-} = useCrud({
-  deleteApi: delete<<.ModelName>>
-})
-
-const initialSearchForm = {
-<<range .SearchableFields>>
-  <<.Name>>: <<if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>[]<<else>>''<<end>>,
-<<- end>>
-}
-
-const rangeSearchFields = [
-<<range .SearchableFields>>
-<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
-  '<<.Name>>',
-<<- end>>
-<<- end>>
-]
-
-const buildListParams = (form, baseParams) => {
-  const params = buildSearchParams(form, baseParams)
-
-  rangeSearchFields.forEach((fieldName) => {
-    const rangeValue = form[fieldName]
-    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
-      delete params[`${fieldName}_start`]
-      delete params[`${fieldName}_end`]
-      return
-    }
-
-    const [start, end] = rangeValue
-    if (start) {
-      params[`${fieldName}_start`] = start
-    } else {
-      delete params[`${fieldName}_start`]
-    }
-    if (end) {
-      params[`${fieldName}_end`] = end
-    } else {
-      delete params[`${fieldName}_end`]
-    }
-
-    // Avoid submitting raw range arrays as query params directly.
-    delete params[fieldName]
-  })
-
-  return params
-}
 
 const {
   pagination,
@@ -265,151 +147,33 @@ const {
   loading,
   searchForm,
   selectedIds,
+  dialogVisible,
+  editId,
   loadData,
-  refresh,
   handleSearch,
   handleReset,
-  handleSelectionChange,
-  clearSelection,
   handleSortChange,
-  initDefaultSort
-} = useTable({
+  handleSelectionChange,
+  handleAdd,
+  handleEdit,
+  handleFormSuccess,
+  handleDelete,
+  getButtonState
+} = useStandardListPage({
   fetchApi: get<<.ModelName>>List,
-  initialSearchForm,
-  buildParams: buildListParams,
-  fieldMapping: {},
+  initialSearchForm: <<.ModuleNameCamel>>InitialSearchForm,
+  buildParams: build<<.ModelName>>ListParams,
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef)
+  <<if .HasDelete>>deleteApi: delete<<.ModelName>>,<<end>>
+  tableRef: computed(() => listPageRef.value?.tableRef?.tableRef),
+  normalizeRows: false
 })
 
-const enableBatchActions = <<.EnableBatchActions>>
 const hasSelection = computed(() => selectedIds.value.length > 0)
-
-const searchFields = computed(() => [
-<<range .SearchableFields>>
-  {
-    prop: '<<.Name>>',
-    label: <<if eq .Name "created_at">>t('common.created_at')<<else if eq .Name "updated_at">>t('common.updated_at')<<else>>t('<<.Name>>')<<end>>,
-    type: <<if and .ApiUrl (or (and .Relation .Relation.IsTree) .IsTree)>>'tree-select'<<else>>'<<.SearchUIType>>'<<end>>,
-    clearable: true,
-<<if or (eq .SearchUIType "select") (eq .SearchUIType "radio") (eq .SearchUIType "checkbox") (and .ApiUrl (and .Relation .Relation.IsTree))>>
-    <<if .Relation>>
-    <<- if .ApiUrl>>
-    <<- if .Relation.IsTree>>
-    apiUrl: '<<.ApiUrl>>',
-    treeProps: { label: '<<.Relation.DisplayField>>', value: 'id', children: 'children' },
-    <<- else>>
-    apiUrl: '<<.ApiUrl>>',
-    optionLabelKey: '<<.Relation.DisplayField>>',
-    optionValueKey: 'id',
-    <<- end>>
-    <<- end>>
-    <<else if .ApiUrl>>
-    <<- if or (eq .SearchUIType "select") (eq .SearchUIType "radio") (eq .SearchUIType "checkbox")>>
-    apiUrl: '<<.ApiUrl>>',
-    <<- if .IsTree>>
-    treeProps: { label: 'label', value: 'value', children: 'children' },
-    <<- end>>
-    <<- end>>
-    <<end>>
-    <<- if and (not .ApiUrl) (not .Relation) .Dictionary>>
-    apiUrl: '/options?type=dictionary&dictionary_type=<<.Dictionary>>',
-    <<- else if and (eq .Name "status") (not .ApiUrl) (not .Dictionary)>>
-    options: getStatusOptions(t),
-    <<- end>>
-<<end>>
-<<if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
-    props: {
-      startPlaceholder: t('common.start_time'),
-      endPlaceholder: t('common.end_time'),
-      rangeSeparator: t('common.range_separator')
-    },
-<<end>>
-    width: <<if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>'360px'<<else>>'200px'<<end>>,
-    advanced: false
-  },
-<<- end>>
-])
-
-const tableColumns = computed(() => {
-  const baseColumns = [
-  {
-    field: 'id',
-    title: t('table.id'),
-    width: 80,
-    sortable: true
-  },
-<<range .ListFields>>
-<<- if and .ShowInList (ne .Name "created_at") (ne .Name "operation")>>
-  <<- if and (eq .Name "status") (eq .FormType "switch")>>
-  {
-    field: 'status',
-    title: t('table.status'),
-    width: 100,
-    sortable: false,
-    slot: 'status'
-  },
-  <<- else if eq .FormType "image-upload">>
-  {
-    field: '<<.Name>>',
-    title: <<if eq .Name "created_at">>t('table.created_at')<<else if eq .Name "updated_at">>t('table.updated_at')<<else>>t('<<.Name>>')<<end>>,
-    slot: '<<.Name>>',
-    sortable: false,
-    width: 120
-  },
-  <<- else if .Relation>>
-  {
-    field: '<<.Name>>',
-    title: <<if eq .Name "created_at">>t('table.created_at')<<else if eq .Name "updated_at">>t('table.updated_at')<<else>>t('<<.Name>>')<<end>>,
-    slot: '<<.Name>>',
-    sortable: false
-  },
-  <<- else>>
-  {
-    field: '<<.Name>>',
-    title: <<if eq .Name "created_at">>t('table.created_at')<<else if eq .Name "updated_at">>t('table.updated_at')<<else>>t('<<.Name>>')<<end>>,
-    sortable: <<.Sortable>>
-  },
-  <<- end>>
-<<- end>>
-<<- end>>
-  {
-    field: 'created_at',
-    title: t('table.created_at'),
-    width: 180,
-    sortable: true
-  },
-  {
-    field: 'operation',
-    title: t('table.operation'),
-    width: 220,
-    fixed: 'right',
-    slot: 'operation'
-  }
-  ]
-
-  if (!enableBatchActions) {
-    return baseColumns
-  }
-
-  return [
-    {
-      type: 'checkbox',
-      width: 52,
-      fixed: 'left'
-    },
-    ...baseColumns
-  ]
-})
-
-<<range .ListFields>>
-<<- if and .ShowInList .Relation>>
-const get<<.Relation.JsonName>>DisplayName = (<<.Name>>) => {
-  if (!<<.Name>>) return '-'
-  return <<.Name>>.<<.Relation.DisplayField>> || <<.Name>>.<<.Relation.JsonName>> || '-'
-}
-<<- end>>
-<<- end>>
+const searchFields = computed(() => create<<.ModelName>>SearchFields(t))
+const tableColumns = computed(() =>
+  create<<.ModelName>>TableColumns(t, { enableBatchActions: <<if .EnableBatchActions>>true<<else>>false<<end>> })
+)
 
 <<if .HasEdit>>
 <<range .ListFields>>
@@ -417,22 +181,15 @@ const get<<.Relation.JsonName>>DisplayName = (<<.Name>>) => {
 const handleStatusChange = async (row, newStatus) => {
   try {
     const statusValue = newStatus ? 1 : 0
-    await update<<$.ModelName>>(row.id, {
-      status: statusValue
-    })
+    await update<<$.ModelName>>(row.id, { status: statusValue })
     ElMessage.success(newStatus ? t('common.enabled') : t('common.disabled'))
-    // Update local data.
-    const item = tableData.value.find(a => a.id === row.id)
-    if (item) {
-      item.status = statusValue
-      item.Status = statusValue
-    }
+    const item = tableData.value.find((item) => item.id === row.id)
+    if (item) item.status = statusValue
   } catch (error) {
     logger.error('Status change error:', error)
     loadData()
     if (!error.__handled) {
-      const errorMessage = error.response?.data?.message || error.message || t('common.operation_failed')
-      ElMessage.error(errorMessage)
+      ElMessage.error(error.message || t('common.operation_failed'))
     }
   }
 }
@@ -440,131 +197,40 @@ const handleStatusChange = async (row, newStatus) => {
 <<- end>>
 <<end>>
 
-const handleEdit = (row) => {
-  editId.value = row.id
-  dialogVisible.value = true
-}
-
-const handleDelete = (row) => handleDeleteCrud(row, loadData)
-
-const handleFormSuccess = () => {
-  handleClose()
-  clearSelection()
-  refresh()
-}
-
-const handleTableCheckboxChange = ({ records }) => {
-  handleSelectionChange(records)
-}
-
-const handleTableCheckboxAll = ({ records }) => {
-  handleSelectionChange(records)
-}
-
-const handleClearSelection = () => {
-  clearSelection()
-  tableRef.value?.tableRef?.clearCheckboxRow?.()
-}
-
-<<if not .HasDelete>>
-const handleBatchAction = () => {
-  ElMessage.info(t('common.batch_action_todo', { count: selectedIds.value.length }))
-}
-<<end>>
+const operationActions = computed(() =>
+  createCrudActions(t, '<<.ModuleName>>', {
+    <<if .HasEdit>>onEdit: handleEdit,<<end>>
+    <<if .HasDelete>>onDelete: handleDelete<<end>>
+  })
+)
 
 <<if .HasDelete>>
 const handleBatchDelete = async () => {
   if (!selectedIds.value.length) return
-
   try {
     await ElMessageBox.confirm(
       t('common.batch_delete_confirm', { count: selectedIds.value.length }),
       t('common.warning'),
-      {
-        type: 'warning',
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel')
-      }
+      { type: 'warning' }
     )
-
     await Promise.all(selectedIds.value.map((id) => delete<<.ModelName>>(id)))
     ElMessage.success(t('common.operation_success'))
-    handleClearSelection()
-    await refresh()
+    await loadData()
   } catch (error) {
-    if (error === 'cancel' || error === 'close') {
-      return
-    }
+    if (error === 'cancel' || error === 'close') return
     logger.error('Batch delete error:', error)
-    if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true })
-    }
   }
 }
 <<end>>
 
-// Get primary action button config.
-const getPrimaryActions = (row) => {
-  return [
-    <<if .HasEdit>>
-    {
-      key: 'edit',
-      label: t('common.edit'),
-      type: 'primary',
-      permission: '<<.ModuleName>>.update',
-      handler: handleEdit
-    },
-    <<end>>
-    <<if .HasDelete>>
-    {
-      key: 'delete',
-      label: t('common.delete'),
-      type: 'danger',
-      permission: '<<.ModuleName>>.destroy',
-      handler: handleDelete
-    }
-    <<end>>
-  ]
-}
-
-// Get secondary action button config (extend when needed).
-const getMoreActions = (row) => {
-  return []
-}
-
-// Handle action events.
-const handleAction = (command, row) => {
-  switch (command) {
-    case 'edit':
-      handleEdit(row)
-      break
-    case 'delete':
-      handleDelete(row)
-      break
-  }
-}
-
 <<if .HasExport>>
 const handleExport = async () => {
-  if (isExporting.value) {
-    return
-  }
-
+  if (isExporting.value) return
   isExporting.value = true
-
   try {
     const response = await export<<.ModelName>>(searchForm)
-    const exportId =
-      response?.data?.export_id ||
-      response?.data?.data?.export_id ||
-      response?.export_id ||
-      response?.data?.id
-
-    if (exportId) {
-      ElMessage.success(t('export.task_submitted'))
-    } else {
-      ElMessage.success(t('common.operation_success'))
-    }
+    const exportId = response?.data?.export_id || response?.data?.id
+    ElMessage.success(exportId ? t('export.task_submitted') : t('common.operation_success'))
     router.push('/exports')
   } catch (error) {
     logger.error('Export error:', error)
@@ -578,20 +244,4 @@ const handleExport = async () => {
   }
 }
 <<end>>
-
-onMounted(async () => {
-  try {
-    initDefaultSort()
-    await loadData()
-  } catch (error) {
-    logger.error('ListPage onMounted error:', error)
-    ErrorHandler.handle(error)
-  }
-})
 </script>
-
-<style scoped>
-.<<.ModuleName>>-list {
-
-}
-</style>

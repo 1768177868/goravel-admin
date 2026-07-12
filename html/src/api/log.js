@@ -1,12 +1,14 @@
 import request from '../utils/request'
+import { normalizeListResponse } from '../utils/normalize'
 
 // 操作日志
-export function getOperationLogList(params) {
-  return request({
+export async function getOperationLogList(params) {
+  const res = await request({
     url: '/operation-logs',
     method: 'get',
     params
   })
+  return normalizeListResponse(res)
 }
 
 export function getOperationLogTitleOptions() {
@@ -47,12 +49,13 @@ export function cleanOperationLogs(params = {}) {
 }
 
 // 登录日志
-export function getLoginLogList(params) {
-  return request({
+export async function getLoginLogList(params) {
+  const res = await request({
     url: '/login-logs',
     method: 'get',
     params
   })
+  return normalizeListResponse(res)
 }
 
 export function getLoginLogDetail(id) {
@@ -86,12 +89,13 @@ export function cleanLoginLogs(params = {}) {
 }
 
 // 系统日志
-export function getSystemLogList(params) {
-  return request({
+export async function getSystemLogList(params) {
+  const res = await request({
     url: '/system-logs',
     method: 'get',
     params
   })
+  return normalizeListResponse(res)
 }
 
 export function getSystemLogModuleOptions() {

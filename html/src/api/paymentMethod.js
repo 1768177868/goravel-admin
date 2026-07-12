@@ -1,15 +1,16 @@
-import request from '../utils/request'
 import { createCRUDApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 创建基础 CRUD API
-const basePaymentMethodApi = createCRUDApi('payment-methods')
+const paymentMethodApi = createCRUDApi('payment-methods')
 
-// 导出所有方法
+export async function getPaymentMethodList(params) {
+  const res = await paymentMethodApi.list(params)
+  return normalizeListResponse(res)
+}
+
 export const {
-  list: getPaymentMethodList,
   detail: getPaymentMethodDetail,
   create: createPaymentMethod,
   update: updatePaymentMethod,
   delete: deletePaymentMethod
-} = basePaymentMethodApi
-
+} = paymentMethodApi

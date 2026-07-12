@@ -5,8 +5,10 @@ import (
 
 	appfacades "goravel/app/facades"
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/contracts/http"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/helpers"
 	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 )
@@ -44,8 +46,8 @@ func Build<<.ModelName>>FiltersFromHTTP(ctx http.Context) <<.ModelName>>Filters 
 <<- range .SearchableFields>>
 		<<.PascalName>>: ctx.Request().Input("<<.Name>>", ctx.Request().Query("<<.Name>>", "")),
 		<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
-		<<.PascalName>>Start: ctx.Request().Input("<<.Name>>_start", ctx.Request().Query("<<.Name>>_start", "")),
-		<<.PascalName>>End: ctx.Request().Input("<<.Name>>_end", ctx.Request().Query("<<.Name>>_end", "")),
+		<<.PascalName>>Start: helpers.GetTimeInputOrQueryParam(ctx, "<<.Name>>_start"),
+		<<.PascalName>>End: helpers.GetTimeInputOrQueryParam(ctx, "<<.Name>>_end"),
 		<<- end>>
 <<- end>>
 	}

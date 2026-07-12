@@ -123,6 +123,44 @@ func ConvertTimeByContext(ctx http.Context, timeStr string) string {
 	return ConvertTimeToTimezone(timeStr, timezone)
 }
 
+// normalizeTimeQueryValue 规范化查询参数中的时间字符串。
+// URL 编码会把空格写成 '+'，需还原后再解析，避免被误判为时区偏移。
+func normalizeTimeQueryValue(timeStr string) string {
+	timeStr = strings.TrimSpace(timeStr)
+	if !strings.Contains(timeStr, "+") || strings.Contains(timeStr, "T") {
+		return timeStr
+	}
+
+	idx := strings.Index(timeStr, "+")
+	if idx <= 0 || idx >= len(timeStr)-1 {
+		return timeStr
+	}
+
+	rest := timeStr[idx+1:]
+	if len(rest) >= 5 && rest[2] == ':' {
+		return timeStr[:idx] + " " + rest
+	}
+
+	return timeStr
+}
+
+func hasExplicitTimezoneOffset(timeStr string) bool {
+	timeStr = strings.TrimSpace(timeStr)
+	upper := strings.ToUpper(timeStr)
+	if strings.HasSuffix(upper, "Z") {
+		return true
+	}
+
+	if len(timeStr) >= 6 {
+		tail := timeStr[len(timeStr)-6:]
+		if (tail[0] == '+' || tail[0] == '-') && tail[3] == ':' {
+			return true
+		}
+	}
+
+	return false
+}
+
 // ConvertTimeToUTC 将本地时区的时间字符串转换为 UTC 时间字符串（用于数据库查询）
 // timeStr: 前端传入的时间字符串（本地时区格式，如 "2025-11-25 14:00:00"）
 // ctx: 请求上下文，用于获取当前时区
@@ -132,9 +170,11 @@ func ConvertTimeToUTC(ctx http.Context, timeStr string) string {
 		return ""
 	}
 
+	timeStr = normalizeTimeQueryValue(timeStr)
+
 	// 如果时间字符串本身带时区信息（如 2026-04-10T12:00:00Z / +08:00），
 	// 则按字符串自身的时区解析，避免再次套用请求头时区导致二次偏移。
-	if strings.HasSuffix(strings.ToUpper(timeStr), "Z") || strings.Contains(timeStr, "+") {
+	if hasExplicitTimezoneOffset(timeStr) {
 		if t, err := time.Parse(time.RFC3339, timeStr); err == nil {
 			return t.UTC().Format(utils.DateTimeFormat)
 		}
@@ -192,15 +232,23 @@ func ConvertTimeToUTC(ctx http.Context, timeStr string) string {
 	return t.In(utcLoc).Format(utils.DateTimeFormat)
 }
 
-// GetTimeQueryParam 获取并转换时间查询参数（统一处理时间查询）
-// 自动将前端传入的本地时区时间转换为 UTC 时间用于数据库查询
-// 支持常见的时间查询参数名称：start_time, end_time, created_at_start, created_at_end, updated_at_start, updated_at_end
-func GetTimeQueryParam(ctx http.Context, paramName string) string {
+// GetTimeInputOrQueryParam 读取 query/body 时间参数并转换为 UTC（用于数据库查询）。
+func GetTimeInputOrQueryParam(ctx http.Context, paramName string) string {
 	timeStr := ctx.Request().Query(paramName, "")
+	if timeStr == "" {
+		timeStr = ctx.Request().Input(paramName, "")
+	}
 	if timeStr == "" {
 		return ""
 	}
 	return ConvertTimeToUTC(ctx, timeStr)
+}
+
+// GetTimeQueryParam 获取并转换时间查询参数（统一处理时间查询）
+// 自动将前端传入的本地时区时间转换为 UTC 时间用于数据库查询
+// 支持常见的时间查询参数名称：start_time, end_time, created_at_start, created_at_end, updated_at_start, updated_at_end
+func GetTimeQueryParam(ctx http.Context, paramName string) string {
+	return GetTimeInputOrQueryParam(ctx, paramName)
 }
 
 // FormatTimeWithTimezone 使用指定时区格式化 time.Time

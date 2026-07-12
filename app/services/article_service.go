@@ -2,12 +2,13 @@ package services
 
 import (
 	"context"
-	appfacades "goravel/app/facades"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/helpers"
 	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 )
@@ -15,8 +16,6 @@ import (
 type ArticleService interface {
 	GetByID(id uint) (*models.Article, error)
 	GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error)
-
-	GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error)
 
 	Create(req *admin.ArticleCreate) (*models.Article, error)
 
@@ -46,11 +45,11 @@ func BuildArticleFiltersFromHTTP(ctx http.Context) ArticleFilters {
 		Content:        ctx.Request().Input("content", ctx.Request().Query("content", "")),
 		Status:         ctx.Request().Input("status", ctx.Request().Query("status", "")),
 		CreatedAt:      ctx.Request().Input("created_at", ctx.Request().Query("created_at", "")),
-		CreatedAtStart: ctx.Request().Input("created_at_start", ctx.Request().Query("created_at_start", "")),
-		CreatedAtEnd:   ctx.Request().Input("created_at_end", ctx.Request().Query("created_at_end", "")),
+		CreatedAtStart: helpers.GetTimeInputOrQueryParam(ctx, "created_at_start"),
+		CreatedAtEnd:   helpers.GetTimeInputOrQueryParam(ctx, "created_at_end"),
 		UpdatedAt:      ctx.Request().Input("updated_at", ctx.Request().Query("updated_at", "")),
-		UpdatedAtStart: ctx.Request().Input("updated_at_start", ctx.Request().Query("updated_at_start", "")),
-		UpdatedAtEnd:   ctx.Request().Input("updated_at_end", ctx.Request().Query("updated_at_end", "")),
+		UpdatedAtStart: helpers.GetTimeInputOrQueryParam(ctx, "updated_at_start"),
+		UpdatedAtEnd:   helpers.GetTimeInputOrQueryParam(ctx, "updated_at_end"),
 	}
 }
 
@@ -123,17 +122,6 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 	}
 
 	return list, total, nil
-}
-
-func (s *ArticleServiceImpl) GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error) {
-	query := s.withRelations(BuildArticleQuery(s.ctx, filters))
-
-	var list []models.Article
-	if err := query.Order("id desc").Find(&list); err != nil {
-		return nil, apperrors.ErrQueryFailed.WithError(err)
-	}
-
-	return list, nil
 }
 
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {

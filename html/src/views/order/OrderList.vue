@@ -1,151 +1,141 @@
 <template>
-  <div class="list-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('menu.order') }}</span>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('order.store').disabled"
-            @click="handleAdd"
-          >
-            <el-icon><Plus /></el-icon>
-            {{ $t('order.add_order') }}
-          </el-button>
-        </div>
+  <div class="order-list">
+    <ListPage
+      ref="listPageRef"
+      page-class="order"
+      :title="$t('menu.order')"
+      :add-button-text="$t('order.add_order')"
+      :add-button-disabled="getButtonState('order.store').disabled"
+      :search-form="searchForm"
+      :search-fields="searchFields"
+      :initial-search-values="orderInitialSearchForm"
+      i18n-prefix="order"
+      :table-data="tableData"
+      :loading="loading"
+      :table-columns="tableColumns"
+      :pagination="pagination"
+      :hide-total-threshold="100000"
+      show-toolbar
+      @add="handleAdd"
+      @search="handleSearch"
+      @reset="handleReset"
+      @refresh="loadData"
+      @page-change="loadData"
+    >
+      <template #user_id="{ model, field }">
+        <el-input v-model="model[field.prop]" :placeholder="t('order.user_id')" />
       </template>
 
-      <!-- 搜索表单 -->
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="initialSearchForm"
-        i18n-prefix="order"
-        @search="handleSearch"
-        @reset="handleReset"
-      >
-        <template #user_id="{ model, field }">
-          <el-input v-model="model[field.prop]" :placeholder="t('order.user_id')" />
-        </template>
-        <template #extra-buttons>
-          <el-button 
-            type="primary" 
-            :disabled="getButtonState('order.import').disabled || isImporting"
-            :loading="isImporting"
-            @click="handleImport"
-          >
-            <el-icon><Upload /></el-icon>
-            {{ $t('common.import') }}
-          </el-button>
-          <el-button 
-            type="success" 
-            :disabled="getButtonState('order.export').disabled || isExporting"
-            :loading="isExporting"
-            @click="handleExport"
-          >
-            {{ $t('common.export') }}
-          </el-button>
-        </template>
-      </SearchForm>
+      <template #extra-buttons>
+        <el-button
+          type="primary"
+          :disabled="getButtonState('order.import').disabled || isImporting"
+          :loading="isImporting"
+          @click="handleImport"
+        >
+          <el-icon><Upload /></el-icon>
+          {{ $t('common.import') }}
+        </el-button>
+        <el-button
+          type="success"
+          :disabled="getButtonState('order.export').disabled || isExporting"
+          :loading="isExporting"
+          @click="handleExport"
+        >
+          {{ $t('common.export') }}
+        </el-button>
+      </template>
 
-      <TableToolbar
-        :on-refresh="loadData"
-        :show-table-style="false"
-        :show-column-setting-btn="false"
-      />
-
-      <!-- vxe-table with expand row -->
-      <vxe-table
-        ref="tableRef"
-        :data="tableData"
-        :loading="loading"
-        border
-        :size="vxeSize"
-        :column-config="{ resizable: true }"
-        height="600"
-        :sort-config="{ multiple: false, trigger: 'default' }"
-        @sort-change="handleSortChange"
-      >
-        <!-- 展开行：显示订单详情 -->
-        <vxe-column type="expand" width="60">
-          <template #content="{ row }">
-            <div class="order-details-expand">
-              <h4 style="margin: 10px 0; font-weight: bold;">{{ t('order.order_details') }}</h4>
-              <vxe-table
-                :data="row.details || row.Details || []"
-                border
-                :size="vxeSize"
-                :show-header="true"
-              >
-                <vxe-column field="product_name" :title="t('order.product_name')" width="200">
-                  <template #default="{ row: detail }">
-                    {{ detail.product_name || detail.ProductName || '-' }}
-                  </template>
-                </vxe-column>
-                <vxe-column field="price" :title="t('order.price')" width="120">
-                  <template #default="{ row: detail }">
-                    {{ formatAmount(detail.price || detail.Price) }}
-                  </template>
-                </vxe-column>
-                <vxe-column field="quantity" :title="t('order.quantity')" width="100">
-                  <template #default="{ row: detail }">
-                    {{ detail.quantity || detail.Quantity || 0 }}
-                  </template>
-                </vxe-column>
-                <vxe-column field="subtotal" :title="t('order.subtotal')" width="120">
-                  <template #default="{ row: detail }">
-                    {{ formatAmount(detail.subtotal || detail.Subtotal) }}
-                  </template>
-                </vxe-column>
-              </vxe-table>
-            </div>
-          </template>
-        </vxe-column>
-        <template v-for="(column, index) in tableColumns" :key="column.field || column.slot || index">
-          <vxe-column
-            v-if="column.type"
-            :type="column.type"
-            :width="column.width"
-            :fixed="column.fixed"
-          />
-          <vxe-column
-            v-else
-            :field="column.field"
-            :title="column.title"
-            :width="column.width"
-            :sortable="column.sortable"
-            :fixed="column.fixed"
-            :formatter="column.formatter"
-          >
-            <template v-if="column.slot === 'status'" #default="{ row }">
-              <el-tag :type="getStatusTagType(row.status || row.Status)">
-                {{ getStatusText(row.status || row.Status) }}
-              </el-tag>
-            </template>
-            <template v-else-if="column.slot === 'amount'" #default="{ row }">
-              {{ formatAmount(row.amount || row.Amount) }}
-            </template>
-            <template v-else-if="column.slot === 'operation'" #default="{ row }">
-              <TableActionButtons
-                :row="row"
-                :primary-actions="getPrimaryActions(row)"
-                :get-button-state="getButtonState"
-                @action="handleAction"
-              />
+      <template #table>
+        <vxe-table
+          ref="tableRef"
+          :data="tableData"
+          :loading="loading"
+          border
+          :size="vxeSize"
+          :column-config="{ resizable: true }"
+          height="600"
+          :sort-config="{ multiple: false, trigger: 'default' }"
+          @sort-change="handleSortChange"
+        >
+          <vxe-column type="expand" width="60">
+            <template #content="{ row }">
+              <div class="order-details-expand">
+                <h4>{{ t('order.order_details') }}</h4>
+                <vxe-table
+                  :data="getOrderDetails(row)"
+                  border
+                  :size="vxeSize"
+                  :show-header="true"
+                >
+                  <vxe-column field="product_name" :title="t('order.product_name')" width="200">
+                    <template #default="{ row: detail }">
+                      {{ detail.product_name || detail.ProductName || '-' }}
+                    </template>
+                  </vxe-column>
+                  <vxe-column field="price" :title="t('order.price')" width="120">
+                    <template #default="{ row: detail }">
+                      {{ formatOrderAmount(detail.price || detail.Price) }}
+                    </template>
+                  </vxe-column>
+                  <vxe-column field="quantity" :title="t('order.quantity')" width="100">
+                    <template #default="{ row: detail }">
+                      {{ detail.quantity || detail.Quantity || 0 }}
+                    </template>
+                  </vxe-column>
+                  <vxe-column field="subtotal" :title="t('order.subtotal')" width="120">
+                    <template #default="{ row: detail }">
+                      {{ formatOrderAmount(detail.subtotal || detail.Subtotal) }}
+                    </template>
+                  </vxe-column>
+                </vxe-table>
+              </div>
             </template>
           </vxe-column>
-        </template>
-      </vxe-table>
+          <template v-for="(column, index) in tableColumns">
+            <vxe-column
+              v-if="column.type"
+              :key="`type-${column.type}-${index}`"
+              :type="column.type"
+              :width="column.width"
+              :fixed="column.fixed"
+            />
+            <vxe-column
+              v-else
+              :key="column.field || column.slot || index"
+              :field="column.field"
+              :title="column.title"
+              :width="column.width"
+              :sortable="column.sortable"
+              :fixed="column.fixed"
+              :formatter="column.formatter"
+            >
+              <template v-if="column.slot === 'status'" #default="{ row }">
+                <el-tag :type="getOrderStatusTagType(row.status)">
+                  {{ getOrderStatusText(t, row.status) }}
+                </el-tag>
+              </template>
+              <template v-else-if="column.slot === 'amount'" #default="{ row }">
+                {{ formatOrderAmount(row.amount) }}
+              </template>
+              <template v-else-if="column.slot === 'operation'" #default="{ row }">
+                <TableActionButtons
+                  :row="row"
+                  :primary-actions="getPrimaryActions(row)"
+                  :get-button-state="getButtonState"
+                  @action="handleAction"
+                />
+              </template>
+            </vxe-column>
+          </template>
+        </vxe-table>
+      </template>
 
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
-        :hide-total-threshold="100000"
-      />
-    </el-card>
+      <template #form>
+        <OrderForm v-model="dialogVisible" @success="handleFormSuccess" />
+      </template>
+    </ListPage>
 
-    <!-- 文件上传输入框（隐藏） -->
     <input
       ref="fileInputRef"
       type="file"
@@ -154,13 +144,6 @@
       @change="handleFileChange"
     />
 
-    <!-- 创建订单对话框 -->
-    <OrderForm
-      v-model="dialogVisible"
-      @success="handleFormSuccess"
-    />
-
-    <!-- 编辑订单对话框 -->
     <el-dialog
       v-model="editDialogVisible"
       :title="$t('order.edit_order')"
@@ -175,23 +158,10 @@
         label-width="120px"
       >
         <el-form-item :label="$t('order.status')" prop="status">
-          <el-select
-            v-model="editFormData.status"
-            :placeholder="$t('order.update_status_tip')"
-            style="width: 100%"
-          >
-            <el-option
-              :label="$t('order.status_pending')"
-              value="pending"
-            />
-            <el-option
-              :label="$t('order.status_paid')"
-              value="paid"
-            />
-            <el-option
-              :label="$t('order.status_cancelled')"
-              value="cancelled"
-            />
+          <el-select v-model="editFormData.status" :placeholder="$t('order.update_status_tip')" style="width: 100%">
+            <el-option :label="$t('order.status_pending')" value="pending" />
+            <el-option :label="$t('order.status_paid')" value="paid" />
+            <el-option :label="$t('order.status_cancelled')" value="cancelled" />
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('order.remark')" prop="remark">
@@ -205,13 +175,12 @@
       </el-form>
       <template #footer>
         <el-button @click="handleEditDialogClose">{{ $t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleEditSubmit" :loading="editSubmitting">
+        <el-button type="primary" :loading="editSubmitting" @click="handleEditSubmit">
           {{ $t('common.confirm') }}
         </el-button>
       </template>
     </el-dialog>
 
-    <!-- 订单详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
       :title="$t('order.detail')"
@@ -221,38 +190,42 @@
       <div v-if="orderDetail" class="order-detail">
         <el-descriptions :column="2" border>
           <el-descriptions-item :label="$t('order.order_no')">
-            {{ orderDetail.order?.order_no || orderDetail.order?.OrderNo }}
+            {{ getOrderDetailField(orderDetail.order, 'order_no') }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('order.user_id')">
-            {{ orderDetail.order?.user_id || orderDetail.order?.UserID }}
+            {{ getOrderDetailField(orderDetail.order, 'user_id') }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('order.amount')">
-            {{ formatAmount(orderDetail.order?.amount || orderDetail.order?.Amount) }}
+            {{ formatOrderAmount(getOrderDetailField(orderDetail.order, 'amount', 0)) }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('order.status')">
-            <el-tag :type="getStatusTagType(orderDetail.order?.status || orderDetail.order?.Status)">
-              {{ getStatusText(orderDetail.order?.status || orderDetail.order?.Status) }}
+            <el-tag :type="getOrderStatusTagType(orderDetail.order?.status)">
+              {{ getOrderStatusText(t, orderDetail.order?.status) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item :label="$t('order.created_at')">
-            {{ formatTime(orderDetail.order?.created_at || orderDetail.order?.CreatedAt) }}
+            {{ formatOrderTime(orderDetail.order?.created_at) }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('order.remark')">
-            {{ orderDetail.order?.remark || orderDetail.order?.Remark || '-' }}
+            {{ getOrderDetailField(orderDetail.order, 'remark') }}
           </el-descriptions-item>
         </el-descriptions>
 
         <el-divider>{{ $t('order.details') }}</el-divider>
 
-        <vxe-table
-          :data="orderDetail.details || []"
-          border
-          :size="vxeSize"
-        >
+        <vxe-table :data="orderDetail.details || []" border :size="vxeSize">
           <vxe-column field="product_name" :title="$t('order.product_name')" />
-          <vxe-column field="price" :title="$t('order.price')" :formatter="({ row }) => formatAmount(row.price || row.Price)" />
+          <vxe-column
+            field="price"
+            :title="$t('order.price')"
+            :formatter="({ row }) => formatOrderAmount(row.price)"
+          />
           <vxe-column field="quantity" :title="$t('order.quantity')" />
-          <vxe-column field="subtotal" :title="$t('order.subtotal')" :formatter="({ row }) => formatAmount(row.subtotal || row.Subtotal)" />
+          <vxe-column
+            field="subtotal"
+            :title="$t('order.subtotal')"
+            :formatter="({ row }) => formatOrderAmount(row.subtotal)"
+          />
         </vxe-table>
       </div>
     </el-dialog>
@@ -264,83 +237,61 @@ import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload } from '@element-plus/icons-vue'
-import SearchForm from '../../components/SearchForm.vue'
-import TableToolbar from '../../components/TableToolbar.vue'
-import Pagination from '../../components/Pagination.vue'
-import TableActionButtons from '../../components/TableActionButtons.vue'
+import { Upload } from '@element-plus/icons-vue'
+import ListPage from '@/components/ListPage.vue'
+import TableActionButtons from '@/components/TableActionButtons.vue'
 import OrderForm from './OrderForm.vue'
-import { useListPage } from '../../composables/useListPage'
-import { usePermission } from '../../composables/usePermission'
-import { useCrud } from '../../composables/useCrud'
-import { useAppStore } from '../../store/app'
-import { useVxeTableSize } from '../../composables/useVxeTableSize'
+import { useListPage } from '@/composables/useListPage'
+import { usePermission } from '@/composables/usePermission'
+import { useCrud } from '@/composables/useCrud'
+import { useVxeTableSize } from '@/composables/useVxeTableSize'
 import {
   getOrderList,
   getOrderDetail,
   updateOrder,
   deleteOrder,
   exportOrder,
-  getExportStatus,
   importOrder
-} from '../../api/order'
-import logger from '../../utils/logger'
-import ErrorHandler from '../../utils/errorHandler'
-import { getSevenDaysAgo } from '../../utils/dateUtils'
-import { validateTimeRange, ORDER_MAX_TIME_RANGE_MONTHS } from '../../utils/timeRangeValidator'
+} from '@/api/order'
+import logger from '@/utils/logger'
+import ErrorHandler from '@/utils/errorHandler'
+import { validateTimeRange, ORDER_MAX_TIME_RANGE_MONTHS } from '@/utils/timeRangeValidator'
+import {
+  createOrderInitialSearchForm,
+  createOrderSearchFields,
+  createOrderTableColumns,
+  formatOrderAmount,
+  formatOrderTime,
+  getOrderStatusText,
+  getOrderStatusTagType,
+  getOrderDetailField,
+  getOrderDetails
+} from './order.config'
 
-// 权限控制
 const { getButtonState } = usePermission()
-const appStore = useAppStore()
-const isDark = computed(() => appStore.darkMode)
 const { vxeSize } = useVxeTableSize()
-
 const { t } = useI18n()
 const router = useRouter()
+const listPageRef = ref(null)
 const tableRef = ref(null)
-const isExporting = ref(false) // 导出中状态，防止重复点击
-const isImporting = ref(false) // 导入中状态，防止重复点击
-const fileInputRef = ref(null) // 文件输入框引用
+const fileInputRef = ref(null)
+const isExporting = ref(false)
+const isImporting = ref(false)
+const orderInitialSearchForm = createOrderInitialSearchForm()
 
-// 使用 CRUD composable（只用于添加功能）
-const {
-  dialogVisible,
-  editId,
-  handleFormSuccess: handleFormSuccessCrud
-} = useCrud()
-
-// 订单详情对话框
+const { dialogVisible, handleFormSuccess: handleFormSuccessCrud } = useCrud()
 const detailDialogVisible = ref(false)
 const orderDetail = ref(null)
-
-// 编辑订单对话框
 const editDialogVisible = ref(false)
 const editFormRef = ref(null)
 const editSubmitting = ref(false)
 const currentEditOrder = ref(null)
-const editFormData = reactive({
-  status: '',
-  remark: ''
-})
+const editFormData = reactive({ status: '', remark: '' })
 
 const editFormRules = computed(() => ({
-  status: [
-    { required: true, message: t('order.status_required'), trigger: 'change' }
-  ]
+  status: [{ required: true, message: t('order.status_required'), trigger: 'change' }]
 }))
 
-// 初始搜索表单数据（开始时间默认为一周前）
-const initialSearchForm = {
-  user_id: '',
-  order_no: '',
-  status: '',
-  min_amount: null,
-  max_amount: null,
-  start_time: getSevenDaysAgo(),
-  end_time: ''
-}
-
-// 使用列表页面 composable
 const {
   pagination,
   tableData,
@@ -353,251 +304,75 @@ const {
   initDefaultSort
 } = useListPage({
   fetchApi: getOrderList,
-  initialSearchForm,
-  fieldMapping: {},
+  initialSearchForm: orderInitialSearchForm,
   defaultSort: 'created_at:desc',
+  normalizeRows: false,
   tableRef: computed(() => tableRef.value)
 })
 
-// 获取当前时间的字符串格式（YYYY-MM-DD HH:mm:ss）
+const searchFields = computed(() => createOrderSearchFields(t))
+const tableColumns = computed(() => createOrderTableColumns(t))
+
 const getCurrentTimeString = () => {
   const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  const seconds = String(now.getSeconds()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
 }
 
-// 验证时间范围的函数
 const validateTimeRangeForSearch = () => {
-  // 如果只填了开始时间，结束时间默认为当前时间
-  if (searchForm.start_time) {
-    const endTime = searchForm.end_time || getCurrentTimeString()
-    const validation = validateTimeRange(searchForm.start_time, endTime, ORDER_MAX_TIME_RANGE_MONTHS)
-    if (!validation.valid) {
-      // 优先使用翻译键
-      let errorMessage = validation.error
-      if (validation.errorKey) {
-        const translationKey = `order.${validation.errorKey}`
-        if (validation.errorParams) {
-          errorMessage = t(translationKey, validation.errorParams)
-        } else {
-          errorMessage = t(translationKey)
-        }
-      }
-      ElMessage.warning(errorMessage)
-      return false
+  if (!searchForm.start_time) return true
+  const endTime = searchForm.end_time || getCurrentTimeString()
+  const validation = validateTimeRange(searchForm.start_time, endTime, ORDER_MAX_TIME_RANGE_MONTHS)
+  if (!validation.valid) {
+    let errorMessage = validation.error
+    if (validation.errorKey) {
+      const translationKey = `order.${validation.errorKey}`
+      errorMessage = validation.errorParams
+        ? t(translationKey, validation.errorParams)
+        : t(translationKey)
     }
+    ElMessage.warning(errorMessage)
+    return false
   }
   return true
 }
 
-// 监听开始时间和结束时间的变化，实时验证
 const isInitialized = ref(false)
 watch(
   () => [searchForm.start_time, searchForm.end_time],
   ([newStartTime, newEndTime], [oldStartTime, oldEndTime]) => {
-    // 跳过初始化时的触发
     if (!isInitialized.value) {
       isInitialized.value = true
       return
     }
-    
-    // 只在开始时间或结束时间发生变化时验证
     if (newStartTime !== oldStartTime || newEndTime !== oldEndTime) {
-      // 如果只填了开始时间，结束时间默认为当前时间
       if (newStartTime) {
         const endTime = newEndTime || getCurrentTimeString()
         const validation = validateTimeRange(newStartTime, endTime, ORDER_MAX_TIME_RANGE_MONTHS)
         if (!validation.valid) {
-          // 优先使用翻译键
           let errorMessage = validation.error
           if (validation.errorKey) {
             const translationKey = `order.${validation.errorKey}`
-            if (validation.errorParams) {
-              errorMessage = t(translationKey, validation.errorParams)
-            } else {
-              errorMessage = t(translationKey)
-            }
+            errorMessage = validation.errorParams
+              ? t(translationKey, validation.errorParams)
+              : t(translationKey)
           }
           ElMessage.warning(errorMessage)
         }
       }
     }
-  },
-  { immediate: false }
+  }
 )
 
-// 包装搜索处理，添加时间范围验证
 const handleSearch = () => {
-  // 验证时间范围
-  if (!validateTimeRangeForSearch()) {
-    return
-  }
-  
+  if (!validateTimeRangeForSearch()) return
   handleSearchBase()
 }
 
-// 表格列配置
-const tableColumns = computed(() => [
-  {
-    field: 'id',
-    title: t('table.id'),
-    width: 80,
-    sortable: true
-  },
-  {
-    field: 'order_no',
-    title: t('order.order_no'),
-    sortable: false
-  },
-  {
-    field: 'user_id',
-    title: t('order.user_id'),
-    width: 100,
-    sortable: false
-  },
-  {
-    field: 'amount',
-    title: t('order.amount'),
-    width: 120,
-    sortable: true,
-    slot: 'amount'
-  },
-  {
-    field: 'status',
-    title: t('order.status'),
-    width: 100,
-    sortable: false,
-    slot: 'status'
-  },
-  {
-    field: 'created_at',
-    title: t('order.created_at'),
-    width: 180,
-    sortable: true
-  },
-  {
-    field: 'remark',
-    title: t('order.remark'),
-    sortable: false,
-    width: 200,
-    formatter: ({ cellValue }) => {
-      return cellValue || '-'
-    }
-  },
-  {
-    title: t('table.operation'),
-    width: 220,
-    fixed: 'right',
-    slot: 'operation'
-  }
-])
-
-// 搜索表单字段配置
-const searchFields = computed(() => [
-  {
-    prop: 'user_id',
-    label: t('order.user_id'),
-    type: 'input',
-    width: '150px',
-    advanced: false
-  },
-  {
-    prop: 'order_no',
-    label: t('order.order_no'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'status',
-    label: t('order.status'),
-    type: 'select',
-    width: '150px',
-    options: [
-      { label: t('order.status_pending'), value: 'pending' },
-      { label: t('order.status_paid'), value: 'paid' },
-      { label: t('order.status_cancelled'), value: 'cancelled' }
-    ],
-    advanced: false
-  },
-  {
-    prop: 'min_amount',
-    label: t('order.min_amount'),
-    type: 'number',
-    width: '150px',
-    advanced: true,
-    min: 0,
-    step: 0.01
-  },
-  {
-    prop: 'max_amount',
-    label: t('order.max_amount'),
-    type: 'number',
-    width: '150px',
-    advanced: true,
-    min: 0,
-    step: 0.01
-  },
-  {
-    prop: 'start_time',
-    label: t('order.start_time'),
-    type: 'datetime',
-    width: '200px',
-    advanced: true
-  },
-  {
-    prop: 'end_time',
-    label: t('order.end_time'),
-    type: 'datetime',
-    width: '200px',
-    advanced: true
-  }
-])
-
-// 格式化金额
-const formatAmount = (amount) => {
-  if (amount === null || amount === undefined) return '-'
-  return `¥${Number(amount).toFixed(2)}`
-}
-
-// 格式化时间
-const formatTime = (time) => {
-  if (!time) return '-'
-  return typeof time === 'string' ? time : new Date(time).toLocaleString('zh-CN')
-}
-
-// 获取状态文本
-const getStatusText = (status) => {
-  const statusMap = {
-    'pending': t('order.status_pending'),
-    'paid': t('order.status_paid'),
-    'cancelled': t('order.status_cancelled')
-  }
-  return statusMap[status] || status || '-'
-}
-
-// 获取状态标签类型
-const getStatusTagType = (status) => {
-  const typeMap = {
-    'pending': 'warning',
-    'paid': 'success',
-    'cancelled': 'danger'
-  }
-  return typeMap[status] || 'info'
-}
-
-// 查看详情
 const handleView = async (row) => {
   try {
-    // 优先使用订单号查询（更高效，可直接定位分表，避免分表中订单ID重复的问题）
-    const orderNo = row.order_no || row.OrderNo
+    const orderNo = row.order_no
     const res = await getOrderDetail(row.id, orderNo ? { order_no: orderNo } : {})
-    
     if (res.data) {
       orderDetail.value = res.data
       detailDialogVisible.value = true
@@ -608,17 +383,14 @@ const handleView = async (row) => {
   }
 }
 
-// 编辑订单（打开编辑对话框）
 const handleEdit = async (row) => {
   try {
-    // 获取订单详情，优先使用订单号查询（更高效，可直接定位分表，避免分表中订单ID重复的问题）
-    const orderNo = row.order_no || row.OrderNo
+    const orderNo = row.order_no
     const res = await getOrderDetail(row.id, orderNo ? { order_no: orderNo } : {})
-    if (res.data && res.data.order) {
+    if (res.data?.order) {
       currentEditOrder.value = res.data.order
-      // 填充表单数据
-      editFormData.status = res.data.order.status || res.data.order.Status || 'pending'
-      editFormData.remark = res.data.order.remark || res.data.order.Remark || ''
+      editFormData.status = res.data.order.status || 'pending'
+      editFormData.remark = res.data.order.remark || ''
       editDialogVisible.value = true
     }
   } catch (error) {
@@ -627,7 +399,6 @@ const handleEdit = async (row) => {
   }
 }
 
-// 编辑对话框关闭
 const handleEditDialogClose = () => {
   editDialogVisible.value = false
   currentEditOrder.value = null
@@ -637,28 +408,23 @@ const handleEditDialogClose = () => {
   editFormRef.value?.clearValidate()
 }
 
-// 提交编辑
 const handleEditSubmit = async () => {
   if (!editFormRef.value) return
-  
   try {
     await editFormRef.value.validate()
-  } catch (error) {
+  } catch {
     return
   }
-  
   if (!currentEditOrder.value) return
-  
+
   editSubmitting.value = true
   try {
-    // 优先使用订单号更新（更高效，可直接定位分表，避免分表中订单ID重复的问题）
-    const orderNo = currentEditOrder.value.order_no || currentEditOrder.value.OrderNo
-    await updateOrder(currentEditOrder.value.id || currentEditOrder.value.ID, {
+    const orderNo = currentEditOrder.value.order_no
+    await updateOrder(currentEditOrder.value.id, {
       status: editFormData.status,
       remark: editFormData.remark || '',
       order_no: orderNo
     })
-    
     ElMessage.success(t('common.update_success'))
     handleEditDialogClose()
     loadData()
@@ -670,23 +436,15 @@ const handleEditSubmit = async () => {
   }
 }
 
-// 删除订单
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(
-      t('common.delete_confirm'),
-      t('form.tip'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
-    
-    // 优先使用订单号删除（更高效，可直接定位分表，避免分表中订单ID重复的问题）
-    const orderNo = row.order_no || row.OrderNo
+    await ElMessageBox.confirm(t('common.delete_confirm'), t('form.tip'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning'
+    })
+    const orderNo = row.order_no
     await deleteOrder(row.id, orderNo ? { order_no: orderNo } : {})
-    
     ElMessage.success(t('common.delete_success'))
     loadData()
   } catch (error) {
@@ -697,173 +455,88 @@ const handleDelete = async (row) => {
   }
 }
 
-// 获取主要操作按钮配置
-const getPrimaryActions = (row) => {
-  return [
-    {
-      key: 'view',
-      label: t('common.view'),
-      type: 'info',
-      permission: 'order.show',
-      handler: handleView
-    },
-    {
-      key: 'edit',
-      label: t('common.edit'),
-      type: 'primary',
-      permission: 'order.update',
-      handler: handleEdit
-    },
-    {
-      key: 'delete',
-      label: t('common.delete'),
-      type: 'danger',
-      permission: 'order.destroy',
-      handler: handleDelete
-    }
-  ]
-}
+const getPrimaryActions = () => [
+  { key: 'view', label: t('common.view'), type: 'info', permission: 'order.show', handler: handleView },
+  { key: 'edit', label: t('common.edit'), type: 'primary', permission: 'order.update', handler: handleEdit },
+  { key: 'delete', label: t('common.delete'), type: 'danger', permission: 'order.destroy', handler: handleDelete }
+]
 
-// 处理操作事件
 const handleAction = (command, row) => {
-  switch (command) {
-    case 'view':
-      handleView(row)
-      break
-    case 'edit':
-      handleEdit(row)
-      break
-    case 'delete':
-      handleDelete(row)
-      break
-  }
+  if (command === 'view') handleView(row)
+  if (command === 'edit') handleEdit(row)
+  if (command === 'delete') handleDelete(row)
 }
 
-// 导出订单（同步）
 const handleExport = async () => {
-  // 防止重复点击
-  if (isExporting.value) {
-    return
-  }
-
+  if (isExporting.value) return
   isExporting.value = true
-  
   try {
-    // 提交导出任务（同步执行）
     const response = await exportOrder(searchForm)
     const exportId = response.data?.export_id || response.data?.data?.export_id
-    
     if (!exportId) {
       ElMessage.error(t('common.output_failed'))
-      isExporting.value = false
       return
     }
-
-    // 显示提交成功消息
     ElMessage.success(t('common.queued') || response.data?.message)
-    
-    // 立即跳转到导出记录页面
     router.push('/exports')
-    
   } catch (error) {
     logger.error('Export order error:', error)
-    
-    // 检查是否是重复提交错误
     if (error.response?.status === 429) {
-      // 429 错误由业务代码处理，显示友好的提示
       ElMessage.warning(t('common.already_queued'))
     } else if (!error.__handled) {
-      // 其他错误，如果未处理则显示
       ErrorHandler.handle(error, { silent: true })
     }
   } finally {
-    // 无论成功还是失败，都要重置导出状态
     isExporting.value = false
   }
 }
 
-// 创建订单（打开创建对话框）
 const handleAdd = () => {
   dialogVisible.value = true
 }
 
-// 导入订单
 const handleImport = () => {
-  // 触发文件选择
-  if (fileInputRef.value) {
-    fileInputRef.value.click()
-  }
+  fileInputRef.value?.click()
 }
 
-// 处理文件选择
 const handleFileChange = async (event) => {
   const file = event.target.files?.[0]
-  if (!file) {
-    return
-  }
-
-  // 验证文件类型
+  if (!file) return
   if (!file.name.toLowerCase().endsWith('.csv')) {
     ElMessage.error(t('common.invalid_file_type') || '文件类型错误，请上传CSV文件')
-    // 清空文件选择
-    if (fileInputRef.value) {
-      fileInputRef.value.value = ''
-    }
+    if (fileInputRef.value) fileInputRef.value.value = ''
     return
   }
-
-  // 防止重复点击
-  if (isImporting.value) {
-    return
-  }
-
+  if (isImporting.value) return
   isImporting.value = true
-
   try {
     const response = await importOrder(file)
     const result = response.data?.data || response.data
-
-    // 显示导入结果
     if (result.success_count > 0) {
       ElMessage.success(
-        t('common.import_success') || 
-        `导入成功：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+        t('common.import_success') ||
+          `导入成功：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
       )
-      
-      // 如果有失败记录，显示详细信息
-      if (result.failed_count > 0 && result.errors && result.errors.length > 0) {
-        const errorMsg = result.errors.slice(0, 10).join('\n') // 最多显示10条错误
-        if (result.errors.length > 10) {
-          ElMessage.warning(`部分导入失败，前10条错误：\n${errorMsg}\n...`)
-        } else {
-          ElMessage.warning(`部分导入失败：\n${errorMsg}`)
-        }
+      if (result.failed_count > 0 && result.errors?.length) {
+        const errorMsg = result.errors.slice(0, 10).join('\n')
+        ElMessage.warning(result.errors.length > 10 ? `部分导入失败，前10条错误：\n${errorMsg}\n...` : `部分导入失败：\n${errorMsg}`)
       }
-
-      // 刷新列表
       await loadData()
     } else {
       ElMessage.warning(t('common.import_no_data') || '没有成功导入任何数据')
-      if (result.errors && result.errors.length > 0) {
-        const errorMsg = result.errors.slice(0, 10).join('\n')
-        ElMessage.error(`导入失败：\n${errorMsg}`)
+      if (result.errors?.length) {
+        ElMessage.error(`导入失败：\n${result.errors.slice(0, 10).join('\n')}`)
       }
     }
   } catch (error) {
     logger.error('Import order error:', error)
-    if (!error.__handled) {
-      ErrorHandler.handle(error, { silent: true })
-    }
+    if (!error.__handled) ErrorHandler.handle(error, { silent: true })
   } finally {
     isImporting.value = false
-    // 清空文件选择
-    if (fileInputRef.value) {
-      fileInputRef.value.value = ''
-    }
+    if (fileInputRef.value) fileInputRef.value.value = ''
   }
 }
 
-// 表单提交成功回调
 const handleFormSuccess = () => {
   handleFormSuccessCrud(loadData)
 }
@@ -871,7 +544,6 @@ const handleFormSuccess = () => {
 onMounted(async () => {
   try {
     await loadData()
-    // 等待表格渲染完成后再初始化排序
     await nextTick()
     initDefaultSort()
   } catch (error) {
@@ -893,7 +565,6 @@ onMounted(async () => {
   color: var(--text-color-primary);
 }
 
-/* 暗黑模式样式 */
 html.dark .order-details-expand {
   background-color: var(--el-bg-color) !important;
 }
@@ -902,9 +573,7 @@ html.dark .order-details-expand h4 {
   color: var(--el-text-color-primary) !important;
 }
 
-
 .order-detail {
   padding: 20px 0;
 }
 </style>
-

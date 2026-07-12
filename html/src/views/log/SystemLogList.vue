@@ -1,93 +1,78 @@
 <template>
-  <div class="list-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('menu.system_log') }}</span>
-        </div>
+  <div class="system-log-list">
+    <ListPage
+      ref="listPageRef"
+      page-class="system-log"
+      :title="$t('menu.system_log')"
+      :show-add-button="false"
+      :search-form="searchForm"
+      :search-fields="searchFields"
+      :initial-search-values="systemLogInitialSearchForm"
+      i18n-prefix="log"
+      :table-data="tableData"
+      :loading="loading"
+      :table-columns="tableColumns"
+      :pagination="pagination"
+      show-toolbar
+      @search="handleSearch"
+      @reset="handleReset"
+      @refresh="loadData"
+      @page-change="loadData"
+      @sort-change="handleSortChange"
+      @selection-change="onTableSelectionChange"
+    >
+      <template #toolbar-left>
+        <el-button
+          type="danger"
+          :disabled="!selectedRows?.length || getButtonState('system_log.batch_delete').disabled"
+          @click="handleBatchDelete"
+        >
+          <el-icon><Delete /></el-icon>
+          {{ $t('common.delete_selected') }} ({{ selectedRows?.length || 0 }})
+        </el-button>
+        <el-button
+          :disabled="!selectedRows?.length"
+          @click="handleClearSelection"
+        >
+          {{ $t('common.reset') }}
+        </el-button>
       </template>
 
-      <!-- 搜索表单 -->
-      <SearchForm
-        :model="searchForm"
-        :fields="searchFields"
-        :initial-values="initialSearchForm"
-        i18n-prefix="log"
-        @search="handleSearch"
-        @reset="handleReset"
-      />
+      <template #level="{ row }">
+        <el-tag :type="getSystemLogLevelType(row.level)">
+          {{ getSystemLogLevelLabel(t, row.level) }}
+        </el-tag>
+      </template>
 
-      <TableToolbar :on-refresh="loadData">
-        <template #left>
-          <el-button 
-            type="danger" 
-            :disabled="!selectedRows || selectedRows.length === 0 || getButtonState('system_log.batch_delete').disabled"
-            @click="handleBatchDelete"
-          >
-            <el-icon><Delete /></el-icon>
-            {{ $t('common.delete_selected') }} ({{ selectedRows?.length || 0 }})
-          </el-button>
-          <el-button
-            :disabled="!selectedRows || selectedRows.length === 0"
-            @click="handleClearSelection"
-          >
-            {{ $t('common.reset') }}
-          </el-button>
-        </template>
-      </TableToolbar>
+      <template #context="{ row }">
+        <el-tooltip
+          v-if="row.context"
+          :content="formatSystemLogContext(row.context)"
+          placement="top"
+          effect="dark"
+        >
+          <div class="context-preview">
+            {{ formatSystemLogContextPreview(row.context) }}
+          </div>
+        </el-tooltip>
+        <span v-else>-</span>
+      </template>
 
-      <VxeTable
-        ref="tableRef"
-        :data="tableData"
-        :loading="loading"
-        :columns="tableColumns"
-        :height="600"
-        @sort-change="handleSortChange"
-        @checkbox-change="handleSelectionChange"
-        @checkbox-all="handleSelectionChange"
-      >
-        <template #level="{ row }">
-          <el-tag :type="getLevelType(row.level)">
-            {{ getLevelLabel(row.level) }}
-          </el-tag>
-        </template>
-
-        <template #context="{ row }">
-          <el-tooltip
-            v-if="row.context"
-            :content="formatContext(row.context)"
-            placement="top"
-            effect="dark"
-          >
-            <div class="context-preview">
-              {{ formatContextPreview(row.context) }}
-            </div>
-          </el-tooltip>
-          <span v-else>-</span>
-        </template>
-
-        <template #operation="{ row }">
-          <TableActionButtons
-            :row="row"
-            :primary-actions="operationActions"
-            :get-button-state="getButtonState"
-          />
-        </template>
-      </VxeTable>
-
-      <Pagination
-        v-model="pagination"
-        :auto-load="true"
-        :on-page-change="loadData"
-      />
-    </el-card>
+      <template #operation="{ row }">
+        <TableActionButtons
+          :row="row"
+          :primary-actions="operationActions"
+          :get-button-state="getButtonState"
+        />
+      </template>
+    </ListPage>
 
     <el-dialog v-model="detailVisible" :title="$t('log.detail')" width="1100px">
-      <el-descriptions :column="2" border v-if="logDetail">
+      <el-descriptions v-if="logDetail" :column="2" border>
         <el-descriptions-item :label="$t('table.id')">{{ logDetail.id }}</el-descriptions-item>
         <el-descriptions-item :label="$t('log.level')">
-          <el-tag :type="getLevelType(logDetail.level)">
-            {{ getLevelLabel(logDetail.level) }}
+          <el-tag :type="getSystemLogLevelType(logDetail.level)">
+            {{ getSystemLogLevelLabel(t, logDetail.level) }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item :label="$t('log.module')">
@@ -96,12 +81,16 @@
         <el-descriptions-item :label="$t('log.trace_id')" :span="2">
           {{ logDetail.trace_id || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item :label="$t('log.message')" :span="2">{{ logDetail.message }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.message')" :span="2">
+          {{ logDetail.message }}
+        </el-descriptions-item>
         <el-descriptions-item :label="$t('log.context')" :span="2">
-          <pre v-if="logDetail.context">{{ formatContext(logDetail.context) }}</pre>
+          <pre v-if="logDetail.context">{{ formatSystemLogContext(logDetail.context) }}</pre>
           <span v-else>-</span>
         </el-descriptions-item>
-        <el-descriptions-item :label="$t('log.time')" :span="2">{{ logDetail.created_at }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('log.time')" :span="2">
+          {{ logDetail.created_at }}
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -110,85 +99,47 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import SearchForm from '../../components/SearchForm.vue'
-import Pagination from '../../components/Pagination.vue'
-import VxeTable from '../../components/VxeTable.vue'
-import TableToolbar from '../../components/TableToolbar.vue'
-import TableActionButtons from '../../components/TableActionButtons.vue'
-import { useListPage } from '../../composables/useListPage'
-import { usePermission } from '../../composables/usePermission'
-import { useCrud } from '../../composables/useCrud'
+import ListPage from '@/components/ListPage.vue'
+import TableActionButtons from '@/components/TableActionButtons.vue'
+import { useListPage } from '@/composables/useListPage'
+import { usePermission } from '@/composables/usePermission'
+import { useCrud } from '@/composables/useCrud'
 import {
   getSystemLogList,
   getSystemLogModuleOptions,
   getSystemLogDetail,
   deleteSystemLog,
-  batchDeleteSystemLogs,
-  cleanSystemLogs
-} from '../../api/log'
+  batchDeleteSystemLogs
+} from '@/api/log'
+import {
+  systemLogInitialSearchForm,
+  transformSystemLogRow,
+  createSystemLogSearchFields,
+  createSystemLogTableColumns,
+  getSystemLogLevelType,
+  getSystemLogLevelLabel,
+  getSystemLogModuleLabel,
+  formatSystemLogContext,
+  formatSystemLogContextPreview
+} from './systemLog.config'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { getButtonState } = usePermission()
+const listPageRef = ref(null)
+const detailVisible = ref(false)
+const logDetail = ref(null)
+const selectedRows = ref([])
+const selectedIds = ref(new Set())
+const moduleOptions = ref([])
 
-// 使用 CRUD composable（删除和批量删除）
 const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
   deleteApi: deleteSystemLog,
   batchDeleteApi: batchDeleteSystemLogs
 })
 
-const tableRef = ref(null)
-const detailVisible = ref(false)
-const logDetail = ref(null)
-const selectedRows = ref([])
-// 维护跨页选中的ID集合
-const selectedIds = ref(new Set())
-const moduleOptions = ref([])
-
-// 初始搜索表单
-const initialSearchForm = {
-  level: '',
-  module: '',
-  trace_id: '',
-  message: '',
-  start_time: '',
-  end_time: ''
-}
-
-// 转换系统日志数据（以 snake_case 为主）
-// 必须在 useListPage 之前定义，因为 useListPage 会使用它
-const transformSystemLogData = (log) => {
-  if (!log) {
-    return {
-      id: 0,
-      level: '',
-      trace_id: '',
-      message: '',
-      context: null,
-      created_at: ''
-    }
-  }
-  
-  let context = null
-  try {
-    if (log.context) {
-      context = typeof log.context === 'string' ? JSON.parse(log.context) : log.context
-    }
-  } catch (e) {
-    context = log.context || null
-  }
-  
-  return {
-    id: log.id || 0,
-    level: log.level || '',
-    module: log.module || '',
-    trace_id: log.trace_id || '',
-    message: log.message || '',
-    context: context,
-    created_at: log.created_at || ''
-  }
-}
+const getTable = () => listPageRef.value?.tableRef?.tableRef
 
 const {
   pagination,
@@ -202,214 +153,41 @@ const {
   initDefaultSort
 } = useListPage({
   fetchApi: getSystemLogList,
-  initialSearchForm,
-  fieldMapping: {},
+  initialSearchForm: systemLogInitialSearchForm,
   defaultSort: 'id:desc',
-  tableRef: computed(() => tableRef.value?.tableRef),
-  transformData: transformSystemLogData,
+  normalizeRows: false,
+  transformData: transformSystemLogRow,
+  tableRef: computed(() => getTable()),
   onSearch: () => {
-    // 搜索前清除选中状态
     selectedRows.value = []
     selectedIds.value.clear()
   },
   onReset: () => {
-    // 重置前清除选中状态
     selectedRows.value = []
     selectedIds.value.clear()
   },
   onLoadSuccess: () => {
-    // 数据加载后，恢复选中状态
     nextTick(() => {
-      if (tableRef.value?.tableRef && selectedIds.value.size > 0) {
-        const rowsToSelect = tableData.value.filter(row => selectedIds.value.has(row.id))
-        rowsToSelect.forEach(row => {
-          tableRef.value.tableRef.setCheckboxRow(row, true)
-        })
-        // 更新 selectedRows
-        selectedRows.value = tableRef.value.tableRef.getCheckboxRecords() || []
+      const table = getTable()
+      if (table && selectedIds.value.size > 0) {
+        tableData.value
+          .filter((row) => selectedIds.value.has(row.id))
+          .forEach((row) => table.setCheckboxRow(row, true))
+        selectedRows.value = table.getCheckboxRecords() || []
       }
     })
   }
 })
 
-// 表格列配置（使用 vxe-table columns）
-const tableColumns = computed(() => [
-  {
-    type: 'checkbox',
-    width: 60
-  },
-  {
-    field: 'id',
-    title: t('table.id'),
-    width: 80,
-    sortable: true
-  },
-  {
-    field: 'level',
-    title: t('log.level'),
-    width: 100,
-    sortable: false,
-    slot: 'level'
-  },
-  {
-    field: 'module',
-    title: t('log.module'),
-    width: 120,
-    sortable: false,
-    formatter: ({ row }) => getModuleLabel(row.module)
-  },
-  {
-    field: 'trace_id',
-    title: t('log.trace_id'),
-    width: 220,
-    sortable: false,
-    formatter: ({ row }) => row.trace_id || '-'
-  },
-  {
-    field: 'message',
-    title: t('log.message'),
-    sortable: false
-  },
-  {
-    field: 'context',
-    title: t('log.context'),
-    width: 200,
-    slot: 'context',
-    sortable: false
-  },
-  {
-    field: 'created_at',
-    title: t('log.time'),
-    width: 180,
-    sortable: true
-  },
-  {
-    title: t('table.operation'),
-    width: 150,
-    fixed: 'right',
-    slot: 'operation',
-    sortable: false
-  }
-])
-
-// 搜索表单字段配置
-const searchFields = computed(() => [
-  {
-    prop: 'level',
-    label: t('log.level'),
-    type: 'select',
-    width: '120px',
-    options: [
-      { label: t('log.level_error'), value: 'error' },
-      { label: t('log.level_warning'), value: 'warning' },
-      { label: t('log.level_info'), value: 'info' },
-      { label: t('log.level_debug'), value: 'debug' }
-    ],
-    advanced: false
-  },
-  {
-    prop: 'module',
-    label: t('log.module'),
-    type: 'select',
-    width: '150px',
-    options: moduleOptions.value,
-    filterable: true,
-    clearable: true,
-    allowCreate: true,
-    advanced: false
-  },
-  {
-    prop: 'trace_id',
-    label: t('log.trace_id'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'message',
-    label: t('log.message'),
-    type: 'input',
-    width: '200px',
-    advanced: false
-  },
-  {
-    prop: 'start_time',
-    label: t('log.start_time'),
-    type: 'datetime',
-    width: '180px',
-    valueFormat: 'YYYY-MM-DD HH:mm:ss',
-    advanced: true
-  },
-  {
-    prop: 'end_time',
-    label: t('log.end_time'),
-    type: 'datetime',
-    width: '180px',
-    valueFormat: 'YYYY-MM-DD HH:mm:ss',
-    advanced: true
-  }
-])
-
-const getLevelType = (level) => {
-  const levelMap = {
-    'error': 'danger',
-    'warning': 'warning',
-    'info': 'success',
-    'debug': 'info'
-  }
-  return levelMap[level?.toLowerCase()] || 'info'
-}
-
-// 获取级别的多语言标签
-const getLevelLabel = (level) => {
-  if (!level) return '-'
-  const levelLower = level.toLowerCase()
-  const levelMap = {
-    'error': t('log.level_error'),
-    'warning': t('log.level_warning'),
-    'info': t('log.level_info'),
-    'debug': t('log.level_debug')
-  }
-  return levelMap[levelLower] || level
-}
-
-// 获取模块的多语言标签：
-// 1) 优先使用少量兼容映射（历史命名差异）
-// 2) 再按规则推导 menu.<slug> 或 log.module_<slug>
-// 3) 最后回退模块原值
-const getModuleLabel = (module) => {
-  if (!module) return '-'
-  const normalized = String(module).trim()
-  if (!normalized) return '-'
-
-  const compatibilityMap = {
-    'operation-log': 'operation_log',
-    'login-log': 'login_log',
-    'system-log': 'system_log',
-    'online-admin': 'online_admin',
-    'background-task': 'module_background_task'
-  }
-  const mapped = compatibilityMap[normalized] || normalized
-  const snake = mapped.replace(/-/g, '_')
-
-  const menuKey = `menu.${snake}`
-  if (typeof te === 'function' && te(menuKey)) {
-    return t(menuKey)
-  }
-
-  const logKey = snake.startsWith('module_') ? `log.${snake}` : `log.module_${snake}`
-  if (typeof te === 'function' && te(logKey)) {
-    return t(logKey)
-  }
-
-  return normalized
-}
+const getModuleLabel = (module) => getSystemLogModuleLabel(t, te, module)
+const searchFields = computed(() => createSystemLogSearchFields(t, moduleOptions.value))
+const tableColumns = computed(() => createSystemLogTableColumns(t, getModuleLabel))
 
 const loadModuleOptions = async () => {
   try {
     const res = await getSystemLogModuleOptions()
     const modules = Array.isArray(res?.data?.modules) ? res.data.modules : []
-    moduleOptions.value = modules.map(module => ({
+    moduleOptions.value = modules.map((module) => ({
       label: getModuleLabel(module),
       value: module
     }))
@@ -419,55 +197,13 @@ const loadModuleOptions = async () => {
   }
 }
 
-// 格式化上下文为可读字符串（用于tooltip）
-const formatContext = (context) => {
-  if (!context) return '-'
-  try {
-    if (typeof context === 'string') {
-      const parsed = JSON.parse(context)
-      return JSON.stringify(parsed, null, 2)
-    }
-    return JSON.stringify(context, null, 2)
-  } catch (e) {
-    return String(context)
-  }
-}
-
-// 格式化上下文预览（用于列表显示）
-const formatContextPreview = (context) => {
-  if (!context) return '-'
-  try {
-    let obj = context
-    if (typeof context === 'string') {
-      obj = JSON.parse(context)
-    }
-    // 如果是对象，显示前几个键值对
-    if (typeof obj === 'object' && obj !== null) {
-      const keys = Object.keys(obj)
-      if (keys.length === 0) return '{}'
-      // 只显示前2个键值对
-      const preview = keys.slice(0, 2).map(key => {
-        const value = obj[key]
-        const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value)
-        return `${key}: ${valueStr.length > 20 ? valueStr.substring(0, 20) + '...' : valueStr}`
-      }).join(', ')
-      return keys.length > 2 ? `${preview}...` : preview
-    }
-    return String(obj)
-  } catch (e) {
-    return String(context)
-  }
-}
-
-// 使用回调清除选中状态，无需重写方法
-
 const handleView = async (row) => {
   try {
     const res = await getSystemLogDetail(row.id)
-    if (res && res.data) {
+    if (res?.data) {
       const log = res.data.system_log || res.data.log || res.data
       if (log) {
-        logDetail.value = transformSystemLogData(log)
+        logDetail.value = transformSystemLogRow(log)
         detailVisible.value = true
       }
     }
@@ -479,7 +215,6 @@ const handleView = async (row) => {
 
 const handleDelete = (row) => handleDeleteCrud(row, loadData)
 
-// 操作按钮配置
 const operationActions = computed(() => [
   {
     key: 'view',
@@ -497,25 +232,19 @@ const operationActions = computed(() => [
   }
 ])
 
-const handleSelectionChange = () => {
-  // 使用 vxe-table 的 getCheckboxRecords 方法获取选中的行
-  if (tableRef.value?.tableRef) {
-    const currentSelected = tableRef.value.tableRef.getCheckboxRecords() || []
-    selectedRows.value = currentSelected
-    
-    // 更新选中ID集合：先移除当前页的所有ID，再添加当前选中的ID
-    tableData.value.forEach(row => {
-      selectedIds.value.delete(row.id)
-    })
-    currentSelected.forEach(row => {
-      selectedIds.value.add(row.id)
-    })
-  }
+const onTableSelectionChange = () => {
+  const table = getTable()
+  if (!table) return
+
+  const currentSelected = table.getCheckboxRecords() || []
+  selectedRows.value = currentSelected
+
+  tableData.value.forEach((row) => selectedIds.value.delete(row.id))
+  currentSelected.forEach((row) => selectedIds.value.add(row.id))
 }
 
 const handleBatchDelete = () => {
   handleBatchDeleteCrud(selectedRows.value, () => {
-    // 清除选中状态
     selectedRows.value = []
     selectedIds.value.clear()
     loadData()
@@ -525,19 +254,13 @@ const handleBatchDelete = () => {
 const handleClearSelection = () => {
   selectedRows.value = []
   selectedIds.value.clear()
-  const table = tableRef.value?.tableRef
+  const table = getTable()
   if (!table) return
 
-  // 与 ArticleList 对齐，并补充保留勾选清理，确保视觉和状态都被重置
   table.clearCheckboxRow?.()
   table.setAllCheckboxRow?.(false)
   table.clearCheckboxReserve?.()
-
-  if (Array.isArray(tableData.value) && tableData.value.length > 0) {
-    tableData.value.forEach((row) => {
-      table.setCheckboxRow?.(row, false)
-    })
-  }
+  tableData.value.forEach((row) => table.setCheckboxRow?.(row, false))
 }
 
 onMounted(() => {
@@ -548,7 +271,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-  
 pre {
   margin: 0;
   padding: var(--space-sm);
@@ -559,7 +281,6 @@ pre {
   overflow-y: auto;
 }
 
-/* 暗黑模式样式 */
 html.dark pre {
   background: var(--el-bg-color) !important;
   color: var(--el-text-color-regular) !important;
@@ -575,4 +296,3 @@ html.dark pre {
   color: var(--el-color-primary);
 }
 </style>
-

@@ -285,6 +285,7 @@ import {
 import logger from '../utils/logger'
 import ErrorHandler from '../utils/errorHandler'
 import { useI18n } from 'vue-i18n'
+import { createOperationTitleTranslator } from '../utils/operationTitle'
 import {
   User,
   View,
@@ -315,6 +316,7 @@ const hexToRgba = (hex, alpha = 1) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 const { t, te, tm } = useI18n()
+const translateOperationTitle = createOperationTitleTranslator({ t, te, tm })
 
 // 获取当前主题
 const isDark = computed(() => appStore.darkMode)
@@ -635,109 +637,12 @@ const loadDashboardData = async () => {
 // 最近活动
 const recentActivities = ref([])
 
-// 复数转单数转换函数
-const pluralToSingular = (word) => {
-  if (!word || word.length <= 1) return word
-  
-  // 特殊映射
-  const specialCases = {
-    'dictionaries': 'dictionary',
-    'notifications': 'notification',
-    'departments': 'department',
-    'admins': 'admin',
-    'roles': 'role',
-    'permissions': 'permission',
-    'menus': 'menu',
-    'operation_logs': 'operation_log',
-    'login_logs': 'login_log',
-    'system_logs': 'system_log'
-  }
-  
-  if (specialCases[word]) {
-    return specialCases[word]
-  }
-  
-  // 以 -s 结尾的单词，去掉 s
-  if (word.endsWith('s')) {
-    // 特殊情况：-ies 结尾的单词（如 dictionaries -> dictionary）
-    if (word.endsWith('ies') && word.length > 3) {
-      return word.slice(0, -3) + 'y'
-    }
-    // 特殊情况：-es 结尾的单词（如 permissions -> permission）
-    if (word.endsWith('es') && word.length > 2) {
-      const beforeEs = word.slice(0, -2)
-      // 如果去掉 es 后以 ch, sh, x, s, z 结尾，保留 e
-      const lastChar = beforeEs[beforeEs.length - 1]
-      if (['c', 's', 'x', 'z'].includes(lastChar)) {
-        return beforeEs
-      }
-      return beforeEs
-    }
-    return word.slice(0, -1)
-  }
-  
-  // 默认返回原值
-  return word
-}
-
-// 获取操作标题的翻译
-const getOperationTitle = (titleKey) => {
-  if (!titleKey) return '-'
-  
-  // 先尝试将复数形式转换为单数形式
-  let slug = titleKey
-  if (slug.includes('.')) {
-    const parts = slug.split('.')
-    if (parts.length >= 2) {
-      const module = pluralToSingular(parts[0])
-      slug = module + '.' + parts.slice(1).join('.')
-    }
-  } else {
-    slug = pluralToSingular(slug)
-  }
-  
-  // 作为权限标识翻译：permission.dictionary.update 这种形式
-  const slugKey = `permission.${slug}`
-  
-  // 使用 te 检测路径是否存在（兼容嵌套路径）
-  if (typeof te === 'function' && te(slugKey)) {
-    return t(slugKey)
-  }
-  
-  // 直接从 permission 命名空间对象里取（兼容平铺的 "dictionary.update" 键）
-  const messages = typeof tm === 'function' ? tm('permission') : null
-  if (messages && Object.prototype.hasOwnProperty.call(messages, slug)) {
-    const value = messages[slug]
-    if (typeof value === 'string') {
-      return value
-    }
-  }
-  
-  // 如果转换后的 slug 和原始 titleKey 不同，再尝试用原始值查找一次（兼容旧数据）
-  if (slug !== titleKey) {
-    const originalSlugKey = `permission.${titleKey}`
-    if (typeof te === 'function' && te(originalSlugKey)) {
-      return t(originalSlugKey)
-    }
-    const originalMessages = typeof tm === 'function' ? tm('permission') : null
-    if (originalMessages && Object.prototype.hasOwnProperty.call(originalMessages, titleKey)) {
-      const value = originalMessages[titleKey]
-      if (typeof value === 'string') {
-        return value
-      }
-    }
-  }
-  
-  // 找不到翻译就原样返回
-  return titleKey
-}
-
 // 更新最近活动
 const updateRecentActivities = (activities) => {
   if (activities && Array.isArray(activities)) {
     recentActivities.value = activities.map(item => ({
       user: item.user || '未知用户',
-      action: getOperationTitle(item.action || ''), // 翻译操作标题
+      action: translateOperationTitle(item.action || ''),
       time: item.time || '',
       status: item.status || '成功',
       type: item.type || 'success',

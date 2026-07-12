@@ -1,39 +1,14 @@
-import request from '../utils/request'
+import { createCRUDApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-export function getPositionList(params) {
-  return request({
-    url: '/positions',
-    method: 'get',
-    params
-  })
+const positionApi = createCRUDApi('positions')
+
+export async function getPositionList(params) {
+  const res = await positionApi.list(params)
+  return normalizeListResponse(res)
 }
 
-export function getPositionDetail(id) {
-  return request({
-    url: `/positions/${id}`,
-    method: 'get'
-  })
-}
-
-export function createPosition(data) {
-  return request({
-    url: '/positions',
-    method: 'post',
-    data
-  })
-}
-
-export function updatePosition(id, data) {
-  return request({
-    url: `/positions/${id}`,
-    method: 'put',
-    data
-  })
-}
-
-export function deletePosition(id) {
-  return request({
-    url: `/positions/${id}`,
-    method: 'delete'
-  })
-}
+export const getPositionDetail = positionApi.detail
+export const createPosition = positionApi.create
+export const updatePosition = positionApi.update
+export const deletePosition = positionApi.delete

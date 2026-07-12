@@ -1,55 +1,52 @@
 import request from '../utils/request'
+import { createCRUDApi, extendApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-export function get<<.ModelName>>List(params) {
-  return request({
-    url: '/<<.ModuleName>>s',
-    method: 'get',
-    params
-  })
+const base<<.ModelName>>Api = createCRUDApi('<<.ModuleName>>s')
+
+<<if .HasExport>>
+const <<.ModuleName>>Api = extendApi(base<<.ModelName>>Api, {
+  export: (params) => {
+    return request({
+      url: '/<<.ModuleName>>s/export',
+      method: 'post',
+      data: params
+    })
+  }
+})
+<<else>>
+const <<.ModuleName>>Api = base<<.ModelName>>Api
+<<end>>
+
+export async function get<<.ModelName>>List(params) {
+  const res = await <<.ModuleName>>Api.list(params)
+  return normalizeListResponse(res)
 }
 
 export function get<<.ModelName>>Detail(id) {
-  return request({
-    url: `/<<.ModuleName>>s/${id}`,
-    method: 'get'
-  })
+  return <<.ModuleName>>Api.detail(id)
 }
 
 <<if .HasCreate>>
 export function create<<.ModelName>>(data) {
-  return request({
-    url: '/<<.ModuleName>>s',
-    method: 'post',
-    data
-  })
+  return <<.ModuleName>>Api.create(data)
 }
 <<end>>
 
 <<if .HasEdit>>
 export function update<<.ModelName>>(id, data) {
-  return request({
-    url: `/<<.ModuleName>>s/${id}`,
-    method: 'put',
-    data
-  })
+  return <<.ModuleName>>Api.update(id, data)
 }
 <<end>>
 
 <<if .HasDelete>>
 export function delete<<.ModelName>>(id) {
-  return request({
-    url: `/<<.ModuleName>>s/${id}`,
-    method: 'delete'
-  })
+  return <<.ModuleName>>Api.delete(id)
 }
 <<end>>
 
 <<if .HasExport>>
 export function export<<.ModelName>>(params) {
-  return request({
-    url: '/<<.ModuleName>>s/export',
-    method: 'post',
-    data: params
-  })
+  return <<.ModuleName>>Api.export(params)
 }
 <<end>>

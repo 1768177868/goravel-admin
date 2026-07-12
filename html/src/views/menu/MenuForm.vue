@@ -418,7 +418,20 @@ const loadDetail = async (id) => {
         parent_id: 'number',
         status: 'string',
         type: 'string',
+        link_type: 'number',
+        open_type: 'number',
+        no_cache: 'number',
+        is_hidden: 'number',
+        sort: 'number'
       })
+
+      // 部署/历史菜单可能 link_type、open_type 为 0，与单选项 1/2 不匹配
+      if (!normalized.link_type) {
+        normalized.link_type = 1
+      }
+      if (!normalized.open_type) {
+        normalized.open_type = 1
+      }
       
       Object.assign(formData, normalized)
       

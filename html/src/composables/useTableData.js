@@ -1,18 +1,18 @@
 import { ref, reactive } from 'vue'
+import { normalizeTreeList } from '../utils/normalize'
 
 /**
- * 表格数据管理 composable
- * 自动处理分页、数据加载、total 更新等通用逻辑
- * 
- * @param {Object} options 配置选项
- * @param {Function} options.fetchApi - 获取数据的 API 函数
- * @param {Function} options.buildParams - 构建请求参数的自定义函数（可选）
- * @param {Function} options.transformData - 数据转换函数（可选）
- * @param {Function} options.onLoadSuccess - 加载成功回调（可选）
- * @returns {Object} 返回分页、数据、加载状态和加载函数
+ * @param {Object} options
+ * @param {boolean} [options.normalizeRows=false] - normalize API rows to snake_case
  */
 export function useTableData(options = {}) {
-  const { fetchApi, buildParams = null, transformData = null, onLoadSuccess = null } = options
+  const {
+    fetchApi,
+    buildParams = null,
+    transformData = null,
+    onLoadSuccess = null,
+    normalizeRows = false
+  } = options
 
   // 分页对象（统一格式）
   const pagination = reactive({
@@ -75,6 +75,8 @@ export function useTableData(options = {}) {
         // 如果提供了数据转换函数，应用它
         if (transformData && typeof transformData === 'function') {
           tableData.value = rawList.map(transformData)
+        } else if (normalizeRows) {
+          tableData.value = normalizeTreeList(rawList)
         } else {
           tableData.value = rawList
         }

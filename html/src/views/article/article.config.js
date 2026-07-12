@@ -1,0 +1,138 @@
+import { buildSearchParams } from "@/utils/buildSearchParams";
+
+export const articleInitialSearchForm = {
+  admin_id: "",
+  title: "",
+  content: "",
+  status: "",
+  created_at: [],
+  updated_at: [],
+};
+
+const rangeSearchFields = ["created_at", "updated_at"];
+
+export function buildArticleListParams(form, baseParams) {
+  const params = buildSearchParams(form, baseParams);
+  rangeSearchFields.forEach((fieldName) => {
+    const rangeValue = form[fieldName];
+    if (!Array.isArray(rangeValue) || rangeValue.length !== 2) {
+      delete params[`${fieldName}_start`];
+      delete params[`${fieldName}_end`];
+      return;
+    }
+    const [start, end] = rangeValue;
+    if (start) params[`${fieldName}_start`] = start;
+    else delete params[`${fieldName}_start`];
+    if (end) params[`${fieldName}_end`] = end;
+    else delete params[`${fieldName}_end`];
+    delete params[fieldName];
+  });
+  return params;
+}
+
+export function createArticleSearchFields(t) {
+  return [
+    {
+      prop: "admin_id",
+      label: t("admin_id"),
+      type: "input",
+      clearable: true,
+      width: "200px",
+      advanced: false,
+    },
+    {
+      prop: "title",
+      label: t("title"),
+      type: "input",
+      clearable: true,
+      width: "200px",
+      advanced: false,
+    },
+    {
+      prop: "content",
+      label: t("content"),
+      type: "input",
+      clearable: true,
+      width: "200px",
+      advanced: false,
+    },
+    {
+      prop: "status",
+      label: t("table.status"),
+      type: "select",
+      clearable: true,
+      width: "200px",
+      advanced: false,
+      apiUrl: "/options?type=dictionary&dictionary_type=status",
+    },
+    {
+      prop: "created_at",
+      label: t("common.created_at"),
+      type: "datetimerange",
+      clearable: true,
+      width: "380px",
+      advanced: false,
+    },
+    {
+      prop: "updated_at",
+      label: t("common.updated_at"),
+      type: "datetimerange",
+      clearable: true,
+      width: "380px",
+      advanced: false,
+    },
+  ];
+}
+
+export function createArticleTableColumns(t, options = {}) {
+  const { enableBatchActions = false } = options;
+  const baseColumns = [
+    { field: "id", title: t("table.id"), width: 80, sortable: true, key: "id" },
+    {
+      field: "admin_id",
+      title: t("admin_id"),
+      slot: "admin_id",
+      sortable: false,
+      key: "admin_id",
+    },
+    { field: "title", title: t("title"), sortable: false, key: "title" },
+    { field: "content", title: t("content"), sortable: false, key: "content" },
+    { field: "status", title: t("status"), sortable: false, key: "status" },
+    {
+      field: "updated_at",
+      title: t("table.updated_at"),
+      width: 180,
+      sortable: true,
+      key: "updated_at",
+    },
+    {
+      field: "created_at",
+      title: t("table.created_at"),
+      width: 180,
+      sortable: true,
+      key: "created_at",
+    },
+    {
+      field: "operation",
+      title: t("table.operation"),
+      width: 220,
+      fixed: "right",
+      slot: "operation",
+      key: "operation",
+    },
+  ];
+
+  if (!enableBatchActions) {
+    return baseColumns;
+  }
+
+  return [
+    { type: "checkbox", width: 52, fixed: "left", key: "checkbox" },
+    ...baseColumns,
+  ];
+}
+
+export function getadminDisplayName(value) {
+  if (!value) return "-";
+  return value.username || value.admin || "-";
+}

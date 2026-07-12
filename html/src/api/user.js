@@ -1,12 +1,10 @@
 import request from '../utils/request'
 import { createCRUDApi, extendApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
-// 创建基础 CRUD API
 const baseUserApi = createCRUDApi('users')
 
-// 扩展 API，添加自定义方法
 const userApi = extendApi(baseUserApi, {
-  // 重置密码
   resetPassword: (id, data) => {
     return request({
       url: `/users/${id}/password`,
@@ -14,7 +12,6 @@ const userApi = extendApi(baseUserApi, {
       data
     })
   },
-  // 更新用户余额
   updateBalance: (id, data) => {
     return request({
       url: `/users/${id}/update-balance`,
@@ -22,7 +19,6 @@ const userApi = extendApi(baseUserApi, {
       data
     })
   },
-  // 导出用户
   export: (params) => {
     return request({
       url: '/users/export',
@@ -32,9 +28,12 @@ const userApi = extendApi(baseUserApi, {
   }
 })
 
-// 导出所有方法
+export async function getUserList(params) {
+  const res = await userApi.list(params)
+  return normalizeListResponse(res)
+}
+
 export const {
-  list: getUserList,
   detail: getUserDetail,
   create: createUser,
   update: updateUser,
@@ -43,6 +42,4 @@ export const {
   updateBalance
 } = userApi
 
-// 单独导出 export 方法（避免与关键字冲突）
 export const exportUsers = userApi.export
-

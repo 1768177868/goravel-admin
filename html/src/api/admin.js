@@ -1,5 +1,6 @@
 import request from '../utils/request'
 import { createCRUDApi, extendApi } from '../utils/apiFactory'
+import { normalizeListResponse } from '../utils/normalize'
 
 // 创建基础 CRUD API
 const baseAdminApi = createCRUDApi('admins')
@@ -50,9 +51,13 @@ const adminApi = extendApi(baseAdminApi, {
   }
 })
 
+export async function getAdminList(params) {
+  const res = await adminApi.list(params)
+  return normalizeListResponse(res)
+}
+
 // 导出所有方法（保持向后兼容）
 export const {
-  list: getAdminList,
   detail: getAdminDetail,
   create: createAdmin,
   update: updateAdmin,

@@ -75,7 +75,7 @@ const getFormInitialValue = () => ({
   admin_id: null,
   title: "",
   content: "",
-  status: 0,
+  status: null,
 });
 
 const dialogVisible = computed({
@@ -123,12 +123,10 @@ const formFields = computed(() => {
   fields.push({
     prop: "status",
     label: t("status"),
-    type: "switch",
+    type: "select",
     disabled: loading.value,
-    props: {
-      activeValue: 1,
-      inactiveValue: 0,
-    },
+    apiUrl: "/options?type=dictionary&dictionary_type=status",
+    clearable: true,
   });
   return fields;
 });
@@ -169,6 +167,7 @@ const loadData = async () => {
       const mapped = mapFields(data, getFormInitialValue());
       const normalizeRules = {};
 
+      normalizeRules["status"] = "string";
       const normalized = normalizeFormData(mapped, normalizeRules);
       Object.assign(formData, normalized);
     }

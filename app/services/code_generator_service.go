@@ -258,6 +258,7 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		{"migration", s.generateMigration, nil},
 		{"export_job", s.generateExportJob, isAsyncExportEnabled},
 		{"api", s.generateFrontendAPI, nil},
+		{"list_page_config", s.generateFrontendListPageConfig, nil},
 		{"list_page", s.generateFrontendListPage, nil},
 		{"form_page", s.generateFrontendFormPage, nil},
 	}
@@ -270,6 +271,10 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		}
 		if isAsyncExportEnabled(options) {
 			selectedMap["export_job"] = true
+		}
+		// list page always pairs with its config module
+		if selectedMap["list_page"] {
+			selectedMap["list_page_config"] = true
 		}
 	}
 
@@ -305,8 +310,22 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 	return files, nil
 }
 
+func (s *CodeGeneratorServiceImpl) getListPageTemplateName(options map[string]bool) string {
+	if options != nil && options["is_tree_list"] {
+		return "templates/tree_list_page.vue.tpl"
+	}
+	return "templates/list_page.vue.tpl"
+}
+
+func (s *CodeGeneratorServiceImpl) getListPageConfigTemplateName(options map[string]bool) string {
+	if options != nil && options["is_tree_list"] {
+		return "templates/tree_list_page.config.js.tpl"
+	}
+	return "templates/list_page.config.js.tpl"
+}
+
 func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) (string, error) {
-	templateName, err := s.getTemplateName(fileType)
+	templateName, err := s.getTemplateName(fileType, options)
 	if err != nil {
 		return "", err
 	}
@@ -852,7 +871,7 @@ func (s *CodeGeneratorServiceImpl) GetFieldTypes() []FieldType {
 	}
 }
 
-func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string) (string, error) {
+func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string, options map[string]bool) (string, error) {
 	switch fileType {
 	case "model":
 		return "templates/model.tpl", nil
@@ -870,8 +889,10 @@ func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string) (string, err
 		return "templates/export_job.tpl", nil
 	case "api":
 		return "templates/api.js.tpl", nil
+	case "list_page_config":
+		return s.getListPageConfigTemplateName(options), nil
 	case "list_page":
-		return "templates/list_page.vue.tpl", nil
+		return s.getListPageTemplateName(options), nil
 	case "form_page":
 		return "templates/form_page.vue.tpl", nil
 	default:
@@ -928,13 +949,9 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 		}
 	case "controller":
 		var searchableFields []TemplateFieldConfig
-		var listFields []TemplateFieldConfig
 		for _, field := range templateFields {
 			if field.Searchable {
 				searchableFields = append(searchableFields, field)
-			}
-			if field.Relation == nil {
-				listFields = append(listFields, field)
 			}
 		}
 		return struct {
@@ -942,6 +959,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ServiceName       string
 			ModelName         string
 			ModuleName        string
+			ListFields        []TemplateFieldConfig
 			SearchableFields  []TemplateFieldConfig
 			RequestCreateName string
 			RequestUpdateName string
@@ -955,6 +973,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ServiceName:       toPascalCase(moduleName) + "Service",
 			ModelName:         toPascalCase(moduleName),
 			ModuleName:        moduleName,
+			ListFields:        templateFields,
 			SearchableFields:  searchableFields,
 			RequestCreateName: toPascalCase(moduleName) + "Create",
 			RequestUpdateName: toPascalCase(moduleName) + "Update",
@@ -1065,44 +1084,8 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ModuleName: moduleName,
 			ListFields: templateFields,
 		}
-	case "list_page":
-		var searchableFields []TemplateFieldConfig
-		var listFields []TemplateFieldConfig
-		for _, field := range templateFields {
-			if field.Searchable {
-				searchableFields = append(searchableFields, field)
-			}
-			if field.Relation == nil {
-				listFields = append(listFields, field)
-			}
-		}
-		return struct {
-			ModelName          string
-			ModuleName         string
-			ModuleNameK        string
-			SearchableFields   []TemplateFieldConfig
-			ListFields         []TemplateFieldConfig
-			FormFields         []TemplateFieldConfig
-			HasCreate          bool
-			HasEdit            bool
-			HasDelete          bool
-			HasExport          bool
-			EnableBatchActions bool
-			ShowToolbar        bool
-		}{
-			ModelName:          toPascalCase(moduleName),
-			ModuleName:         moduleName,
-			ModuleNameK:        toKebabCase(moduleName),
-			SearchableFields:   searchableFields,
-			ListFields:         listFields,
-			FormFields:         templateFields,
-			HasCreate:          hasCreate,
-			HasEdit:            hasEdit,
-			HasDelete:          hasDelete,
-			HasExport:          hasExport,
-			EnableBatchActions: enableBatchActions,
-			ShowToolbar:        showToolbar,
-		}
+	case "list_page", "list_page_config":
+		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
 	case "form_page":
 		// 检查是否有 editor 类型的字段
 		hasEditor := false
@@ -1260,6 +1243,8 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			}
 		}
 
+		dictionary := resolveFieldDictionary(field.Name, field.Dictionary, field.FormType)
+
 		templateFields[i] = TemplateFieldConfig{
 			Name:         field.Name,
 			Label:        field.Label,
@@ -1274,8 +1259,8 @@ func (s *CodeGeneratorServiceImpl) convertFieldsToTemplateFields(fields []FieldC
 			FormType:     field.FormType,
 			SearchType:   getSearchType(field.SearchType),
 			SearchUIType: getSearchUIType(field.SearchUIType, field.DBType, field.Name),
-			Dictionary:   field.Dictionary,
-			ApiUrl:       getApiUrl(field.Dictionary, field.ApiUrl),
+			Dictionary:   dictionary,
+			ApiUrl:       getApiUrl(dictionary, field.ApiUrl),
 			Sortable:     field.Sortable,
 			Searchable:   field.Searchable,
 			ShowInList:   field.ShowInList,
@@ -1647,13 +1632,58 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 	}, nil
 }
 
-func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
-	templateContent, err := templates.ReadFile("templates/list_page.vue.tpl")
-	if err != nil {
-		return GeneratedFile{}, fmt.Errorf("failed to read list_page template: %w", err)
+func (s *CodeGeneratorServiceImpl) buildListPageTemplateData(
+	moduleName string,
+	templateFields []TemplateFieldConfig,
+	hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar bool,
+) any {
+	var searchableFields []TemplateFieldConfig
+	var listFields []TemplateFieldConfig
+	for _, field := range templateFields {
+		if field.Searchable {
+			searchableFields = append(searchableFields, field)
+		}
+		listFields = append(listFields, field)
 	}
 
-	// Default options
+	return struct {
+		ModelName          string
+		ModuleName         string
+		ModuleNameCamel    string
+		ModuleNameK        string
+		SearchableFields   []TemplateFieldConfig
+		ListFields         []TemplateFieldConfig
+		FormFields         []TemplateFieldConfig
+		HasCreate          bool
+		HasEdit            bool
+		HasDelete          bool
+		HasExport          bool
+		EnableBatchActions bool
+		ShowToolbar        bool
+	}{
+		ModelName:          toPascalCase(moduleName),
+		ModuleName:         moduleName,
+		ModuleNameCamel:    toCamelCase(moduleName),
+		ModuleNameK:        toKebabCase(moduleName),
+		SearchableFields:   searchableFields,
+		ListFields:         listFields,
+		FormFields:         templateFields,
+		HasCreate:          hasCreate,
+		HasEdit:            hasEdit,
+		HasDelete:          hasDelete,
+		HasExport:          hasExport,
+		EnableBatchActions: enableBatchActions,
+		ShowToolbar:        showToolbar,
+	}
+}
+
+func (s *CodeGeneratorServiceImpl) generateFrontendListPageConfig(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
+	templateName := s.getListPageConfigTemplateName(options)
+	templateContent, err := templates.ReadFile(templateName)
+	if err != nil {
+		return GeneratedFile{}, fmt.Errorf("failed to read list_page_config template: %w", err)
+	}
+
 	hasCreate := true
 	hasEdit := true
 	hasDelete := true
@@ -1683,33 +1713,56 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	data := struct {
-		ModelName          string
-		ModuleName         string
-		ModuleNameK        string
-		SearchableFields   []TemplateFieldConfig
-		ListFields         []TemplateFieldConfig
-		FormFields         []TemplateFieldConfig
-		HasCreate          bool
-		HasEdit            bool
-		HasDelete          bool
-		HasExport          bool
-		EnableBatchActions bool
-		ShowToolbar        bool
-	}{
-		ModelName:          toPascalCase(moduleName),
-		ModuleName:         moduleName,
-		ModuleNameK:        toKebabCase(moduleName),
-		SearchableFields:   templateFields,
-		ListFields:         templateFields,
-		FormFields:         templateFields,
-		HasCreate:          hasCreate,
-		HasEdit:            hasEdit,
-		HasDelete:          hasDelete,
-		HasExport:          hasExport,
-		EnableBatchActions: enableBatchActions,
-		ShowToolbar:        showToolbar,
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+
+	content, err := s.executeTemplate(string(templateContent), data)
+	if err != nil {
+		return GeneratedFile{}, err
 	}
+
+	return GeneratedFile{
+		Path:    fmt.Sprintf("html/src/views/%s/%s.config.js", toKebabCase(moduleName), toCamelCase(moduleName)),
+		Content: content,
+	}, nil
+}
+
+func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
+	templateName := s.getListPageTemplateName(options)
+	templateContent, err := templates.ReadFile(templateName)
+	if err != nil {
+		return GeneratedFile{}, fmt.Errorf("failed to read list_page template: %w", err)
+	}
+
+	hasCreate := true
+	hasEdit := true
+	hasDelete := true
+	hasExport := false
+	enableBatchActions := false
+	showToolbar := true
+
+	if options != nil {
+		if val, ok := options["has_create"]; ok {
+			hasCreate = val
+		}
+		if val, ok := options["has_edit"]; ok {
+			hasEdit = val
+		}
+		if val, ok := options["has_delete"]; ok {
+			hasDelete = val
+		}
+		if val, ok := options["has_export"]; ok {
+			hasExport = val
+		}
+		if val, ok := options["enable_batch_actions"]; ok {
+			enableBatchActions = val
+		}
+		if val, ok := options["show_toolbar"]; ok {
+			showToolbar = val
+		}
+	}
+
+	templateFields := s.convertFieldsToTemplateFields(fields)
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
 
 	content, err := s.executeTemplate(string(templateContent), data)
 	if err != nil {
@@ -1829,6 +1882,7 @@ func toSnakeCase(s string) string {
 }
 
 func toPascalCase(s string) string {
+	s = strings.ReplaceAll(s, "-", "_")
 	words := strings.Split(s, "_")
 	for i := range words {
 		if len(words[i]) > 0 {
@@ -1838,8 +1892,16 @@ func toPascalCase(s string) string {
 	return strings.Join(words, "")
 }
 
+func toCamelCase(s string) string {
+	pascal := toPascalCase(s)
+	if pascal == "" {
+		return ""
+	}
+	return strings.ToLower(pascal[:1]) + pascal[1:]
+}
+
 func toKebabCase(s string) string {
-	return strings.ReplaceAll(toSnakeCase(s), "_", "-")
+	return strings.ReplaceAll(toSnakeCase(strings.ReplaceAll(s, "-", "_")), "_", "-")
 }
 
 func getMigrationMethod(dbType string) string {
@@ -1936,6 +1998,16 @@ func getApiUrl(dictionary string, apiUrl string) string {
 	}
 	if dictionary != "" {
 		return "/options?type=dictionary&dictionary_type=" + dictionary
+	}
+	return ""
+}
+
+func resolveFieldDictionary(name, dictionary, formType string) string {
+	if dictionary != "" {
+		return dictionary
+	}
+	if name == "status" && (formType == "select" || formType == "radio" || formType == "switch") {
+		return "status"
 	}
 	return ""
 }

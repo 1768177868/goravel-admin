@@ -1,11 +1,30 @@
 import request from '../utils/request'
+import { normalizeListResponse } from '../utils/normalize'
 
-export function fetchNotifications(params = {}) {
-  return request({
+export async function getNotificationList(params = {}) {
+  const res = await request({
     url: '/notifications',
     method: 'get',
     params
   })
+
+  if (!res?.data) {
+    return res
+  }
+
+  return normalizeListResponse({
+    ...res,
+    data: {
+      list: res.data.notifications || [],
+      total: res.data.pagination?.total || 0,
+      unread_count: res.data.unread_count || 0,
+      pagination: res.data.pagination
+    }
+  })
+}
+
+export function fetchNotifications(params = {}) {
+  return getNotificationList(params)
 }
 
 export function fetchUnreadCount() {

@@ -33,7 +33,8 @@ export function useListPage(options = {}) {
     buildParams = null,
     onSearch = null,
     onReset = null,
-    selectionIdKey = 'id'
+    selectionIdKey = 'id',
+    normalizeRows = false
   } = options
 
   // 搜索表单
@@ -47,7 +48,8 @@ export function useListPage(options = {}) {
   const { pagination, tableData, loading, loadData: baseLoadData, resetAndLoad: baseResetAndLoad } = useTableData({
     fetchApi,
     transformData,
-    onLoadSuccess
+    onLoadSuccess,
+    normalizeRows
   })
 
   // 使用排序 composable
