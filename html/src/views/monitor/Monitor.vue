@@ -1200,6 +1200,7 @@ let errorCount = 0 // SSE 错误计数
 let lastErrorTime = 0 // 上次错误时间
 const MAX_ERROR_COUNT = 5 // 最大错误次数，超过后降级到轮询
 const ERROR_WINDOW = 10000 // 错误时间窗口（10秒）
+const POLL_INTERVAL_MS = 30000 // SSE 失败后的 HTTP 轮询间隔
 
 // 刷新节流控制
 let lastRefreshTime = 0 // 上次刷新时间
@@ -1280,19 +1281,15 @@ const startSSEStream = () => {
           // 连接已关闭，无法重连
           console.warn('SSE connection closed, switching to polling mode')
           ElMessage.warning(t('monitor.sse_connection_failed') || '实时推送连接失败，已切换到定时刷新模式')
-          // 关闭 SSE 连接
           closeSSEConnection(eventSource)
           eventSource = null
-          // 启动定时刷新作为降级方案
           startPolling()
         } else if (errorCount >= MAX_ERROR_COUNT) {
           // 错误次数过多，可能网络不稳定，降级到轮询
           console.warn(`SSE connection errors exceeded ${MAX_ERROR_COUNT}, switching to polling mode`)
           ElMessage.warning(t('monitor.sse_connection_failed') || '实时推送连接不稳定，已切换到定时刷新模式')
-          // 关闭 SSE 连接
           closeSSEConnection(eventSource)
           eventSource = null
-          // 启动定时刷新作为降级方案
           startPolling()
         } else {
           // EventSource 会自动重连，这是正常行为，只记录调试信息
@@ -1311,19 +1308,19 @@ const startSSEStream = () => {
   } catch (error) {
     console.error('Failed to start SSE stream:', error)
     ElMessage.warning(t('monitor.sse_init_failed') || '无法启动实时推送，已切换到定时刷新模式')
-    // 降级到定时刷新
     startPolling()
   }
 }
 
-// 定时刷新（降级方案）
+// SSE 失败后的定时刷新降级方案
 const startPolling = () => {
-  // 先立即加载一次
-  loadData()
-  // 每30秒自动刷新
+  if (refreshTimer) {
+    return
+  }
+  loadData({ silent: true })
   refreshTimer = setInterval(() => {
-    loadData()
-  }, 30000)
+    loadData({ silent: true })
+  }, POLL_INTERVAL_MS)
 }
 
 // 更新历史数据
@@ -1711,17 +1708,24 @@ const handleResize = () => {
 }
 
 // 手动刷新（兼容原有功能）
-const loadData = async () => {
+const hasMonitorData = () => {
+  const { cpu, memory } = systemInfo.value
+  return Boolean(cpu?.model || memory?.total)
+}
+
+const loadData = async (options = {}) => {
+  const { silent = false } = options
+
   // 如果正在刷新，直接返回，防止重复点击
   if (refreshing.value) {
     return
   }
   
-  // 节流控制：检查距离上次刷新的时间间隔
+  // 节流控制：检查距离上次刷新的时间间隔（手动刷新才限制）
   const now = Date.now()
   const timeSinceLastRefresh = now - lastRefreshTime
   
-  if (timeSinceLastRefresh < MIN_REFRESH_INTERVAL) {
+  if (!silent && timeSinceLastRefresh < MIN_REFRESH_INTERVAL) {
     // 如果距离上次刷新时间太短，提示用户并忽略本次点击
     const remainingTime = Math.ceil((MIN_REFRESH_INTERVAL - timeSinceLastRefresh) / 1000)
     ElMessage.warning(t('monitor.refresh_too_frequent', { seconds: remainingTime }))
@@ -1731,8 +1735,10 @@ const loadData = async () => {
   // 更新上次刷新时间
   lastRefreshTime = now
   
-  refreshing.value = true
-  loading.value = true
+  refreshing.value = !silent
+  if (!silent) {
+    loading.value = true
+  }
   try {
     const { data } = await getSystemInfo()
     systemInfo.value = data || {}
@@ -1740,7 +1746,7 @@ const loadData = async () => {
     updateCharts()
   } catch (error) {
     console.error('Load system info error:', error)
-    if (!error.__handled) {
+    if (!silent && !error.__handled) {
       const errorMessage = error.response?.data?.message || error.message || t('error.default')
       ElMessage.error(errorMessage)
     }
@@ -1922,14 +1928,12 @@ const getAlertMessage = (alert) => {
   return ''
 }
 
-// 清理函数：关闭SSE连接和定时器
+// 清理函数：关闭 SSE 连接和定时器
 const cleanup = () => {
-  // 关闭 SSE 连接
   if (eventSource) {
     closeSSEConnection(eventSource)
     eventSource = null
   }
-  // 清除定时器
   if (refreshTimer) {
     clearInterval(refreshTimer)
     refreshTimer = null
@@ -1965,9 +1969,11 @@ watch(() => appStore.darkMode, () => {
 })
 
 onMounted(() => {
-  // 初始化图表
   initCharts()
-  // 优先使用 SSE 实时推送
+  window.addEventListener('resize', handleResize)
+  if (!hasMonitorData()) {
+    loadData({ silent: true })
+  }
   startSSEStream()
 })
 
@@ -1979,22 +1985,20 @@ onBeforeRouteLeave(() => {
 // 组件被缓存时清理（keep-alive场景）
 onDeactivated(() => {
   cleanup()
-  // 移除窗口大小监听
   window.removeEventListener('resize', handleResize)
 })
 
-// 组件重新激活时重新启动SSE（keep-alive场景）
+// keep-alive 下重新激活时恢复 SSE（不重复关闭/重建，避免打断连接）
 onActivated(() => {
-  // 重新添加窗口大小监听
   window.addEventListener('resize', handleResize)
-  // 如果图表未初始化，先初始化图表
   if (!cpuChartInstance) {
     initCharts()
   } else {
-    // 图表已存在，只需要调整大小
     handleResize()
   }
-  // 如果SSE连接不存在，重新启动
+  if (!hasMonitorData()) {
+    loadData({ silent: true })
+  }
   if (!eventSource) {
     startSSEStream()
   }

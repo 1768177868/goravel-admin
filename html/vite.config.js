@@ -29,7 +29,13 @@ export default defineConfig(({ mode }) => {
       strictPort: false,
       // API 代理已禁用，使用 VITE_API_BASE_URL 直接连接
       // 但 WebSocket 需要代理，因为浏览器无法直接跨域连接 WebSocket
+      // 公开图片走同源相对路径（通知 Logo 等），避免开发时 localhost:3007 -> :3000 跨域
       proxy: {
+        '/api/admin/public': {
+          target: env.VITE_API_BASE_URL || 'http://127.0.0.1:3000',
+          changeOrigin: true,
+          secure: false
+        },
         '/ws': {
           target: env.VITE_API_BASE_URL || 'http://127.0.0.1:3000',
           changeOrigin: true,

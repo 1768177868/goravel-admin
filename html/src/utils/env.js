@@ -73,6 +73,36 @@ export function getApiPrefix() {
   return getEnv('VITE_API_PREFIX', '/api/admin')
 }
 
+const PUBLIC_IMAGE_PATH_RE = /\/api\/admin\/public\/images\/\d+/
+
+/**
+ * 公开图片（site_logo、通知正文等）使用相对路径，走当前站点同源访问。
+ * 开发：Vite 代理 /api/admin/public；生产：由 Nginx 反代 /api/admin。
+ */
+export function resolvePublicAssetUrl(raw) {
+  if (!raw) return ''
+  const value = String(raw).trim()
+  if (!value) return ''
+
+  let path = value
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      path = new URL(value).pathname
+    } catch {
+      path = value.replace(/^https?:\/\/[^/]+/i, '')
+    }
+  }
+
+  const prefix = getApiPrefix().startsWith('/') ? getApiPrefix() : `/${getApiPrefix()}`
+  if (!path.startsWith('/')) {
+    path = path.startsWith(prefix.replace(/^\//, '')) ? `/${path}` : `${prefix}/${path}`
+  }
+  if (!PUBLIC_IMAGE_PATH_RE.test(path) && !path.includes('/api/admin/public/images/')) {
+    return value
+  }
+  return path
+}
+
 /**
  * 是否为开发环境
  * @returns {boolean} 是否为开发环境
@@ -99,6 +129,7 @@ export default {
   getEnv,
   getApiBaseURL,
   getApiPrefix,
+  resolvePublicAssetUrl,
   isDev,
   isProd
 }

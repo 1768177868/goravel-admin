@@ -153,7 +153,7 @@ func Admin() {
 			router.Get("exports", exportController.Index)
 			router.Get("exports/{id}/download", exportController.Download)
 			router.Get("exports/{id}/progress", exportController.StreamExportProgress).
-				WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
+				WithoutMiddleware(middleware.RequestTimeout(), middleware.OperationLog(), middleware.ApiMetric())
 			router.Delete("exports/{id}", exportController.Destroy)
 			router.Post("exports/batch-delete", exportController.BatchDestroy)
 
@@ -181,14 +181,14 @@ func Admin() {
 			router.Get("dashboard/recent-activities", dashboardController.GetRecentActivities)
 			// SSE 路由：实时推送所有 Dashboard 数据（适合实时 Dashboard 页面，自动更新）
 			router.Get("dashboard/stream", dashboardController.StreamDashboardData).
-				WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
+				WithoutMiddleware(middleware.RequestTimeout(), middleware.OperationLog(), middleware.ApiMetric())
 
 			// 服务监控
 			// 原路由：手动刷新、一次性查询（适合按需查看或定时刷新）
 			router.Get("monitor/system-info", monitorController.GetSystemInfo)
 			// SSE 路由：实时推送系统监控数据（适合实时监控页面，自动更新）
 			router.Get("monitor/system-info/stream", monitorController.StreamSystemInfo).
-				WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
+				WithoutMiddleware(middleware.RequestTimeout(), middleware.OperationLog(), middleware.ApiMetric())
 			router.Get("observability/trace", observabilityController.TraceAggregate)
 			router.Get("observability/slow-sql/top", observabilityController.SlowSQLTopN)
 			router.Get("observability/api-performance/overview", observabilityController.APIPerformanceOverview)

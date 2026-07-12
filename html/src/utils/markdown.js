@@ -24,7 +24,7 @@
 
 import createDOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { getApiBaseURL } from './env'
+import { getApiBaseURL, resolvePublicAssetUrl } from './env'
 
 // 配置 marked 选项
 marked.setOptions({
@@ -194,24 +194,36 @@ export function processImageUrls(html) {
   if (!html) return ''
   
   const baseURL = getApiBaseURL()
-  if (!baseURL) return html
-  
-  const cleanBaseURL = baseURL.replace(/\/+$/, '')
-  
-  // 处理 markdown 图片语法 ![alt](url) 转换后的 <img src="url">
-  // 匹配 src="/api/..." 或 src='/api/...' 的相对路径（不包括 http/https 开头的完整 URL）
+  const cleanBaseURL = baseURL ? baseURL.replace(/\/+$/, '') : ''
+
+  const toImageSrc = (path) => {
+    const publicUrl = resolvePublicAssetUrl(path)
+    if (publicUrl.startsWith('/') && publicUrl.includes('/api/admin/public/images/')) {
+      return publicUrl
+    }
+    const apiPath = publicUrl.startsWith('/') ? publicUrl : path
+    return cleanBaseURL ? `${cleanBaseURL}${apiPath}` : apiPath
+  }
+
+  // 通知/富文本里可能存了带域名的绝对地址，先还原为路径再按规则输出
   html = html.replace(
-    /src=["']((?!https?:\/\/)(\/api\/[^"']+))["']/g,
-    `src="${cleanBaseURL}$1"`
+    /src=["']https?:\/\/[^/]+(\/api\/admin\/[^"']+)["']/gi,
+    (match, path) => `src="${toImageSrc(path)}"`
+  )
+  html = html.replace(
+    /!\[([^\]]*)\]\(https?:\/\/[^/]+(\/api\/admin\/[^)]+)\)/gi,
+    (match, alt, path) => `![${alt}](${toImageSrc(path)})`
   )
   
-  // 也处理 markdown 中直接写的图片链接（如果已经是完整 URL 则跳过）
-  // 匹配 markdown 图片语法中的相对路径
+  // 相对路径：公开图片同源，其余 API 资源拼 baseURL
+  html = html.replace(
+    /src=["']((?!https?:\/\/)(\/api\/[^"']+))["']/g,
+    (match, path) => `src="${toImageSrc(path)}"`
+  )
+  
   html = html.replace(
     /!\[([^\]]*)\]\((?!https?:\/\/)(\/api\/[^)]+)\)/g,
-    (match, alt, url) => {
-      return `![${alt}](${cleanBaseURL}${url})`
-    }
+    (match, alt, path) => `![${alt}](${toImageSrc(path)})`
   )
   
   return html

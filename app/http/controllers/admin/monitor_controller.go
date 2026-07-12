@@ -79,7 +79,7 @@ func cloneJSONSafeForSSE(v any) any {
 }
 
 // writeMonitorSystemInfoSSE 推送一帧 system_info；返回 false 表示应结束 SSE（写入失败，通常客户端已断开）。
-func (r *MonitorController) writeMonitorSystemInfoSSE(ctx http.Context, writer nethttp.ResponseWriter) bool {
+func (r *MonitorController) writeMonitorSystemInfoSSE(ctx http.Context, writer http.StreamWriter) bool {
 	defer func() {
 		if rec := recover(); rec != nil {
 			facades.Log().Debugf("Monitor SSE: panic in write: %v", rec)
@@ -102,12 +102,13 @@ func (r *MonitorController) writeMonitorSystemInfoSSE(ctx http.Context, writer n
 		return true
 	}
 
-	if _, err := fmt.Fprintf(writer, "data: %s\n\n", string(messageData)); err != nil {
+	if _, err := writer.WriteString(fmt.Sprintf("data: %s\n\n", string(messageData))); err != nil {
 		facades.Log().Debugf("Monitor SSE: write failed, client may have disconnected: %v", err)
 		return false
 	}
-	if flusher, ok := writer.(nethttp.Flusher); ok {
-		flusher.Flush()
+	if err := writer.Flush(); err != nil {
+		facades.Log().Debugf("Monitor SSE: flush failed, client may have disconnected: %v", err)
+		return false
 	}
 	return true
 }
@@ -1757,13 +1758,6 @@ func (r *MonitorController) GetSystemInfo(ctx http.Context) http.Response {
 // StreamSystemInfo SSE 实时推送系统监控信息
 // 每 2-3 秒推送一次系统监控数据
 func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
-	// 设置 SSE 响应头
-	writer := ctx.Response().Writer()
-	writer.Header().Set("Content-Type", "text/event-stream")
-	writer.Header().Set("Cache-Control", "no-cache")
-	writer.Header().Set("Connection", "keep-alive")
-	writer.Header().Set("X-Accel-Buffering", "no") // 禁用 Nginx 缓冲
-
 	// 获取推送间隔（秒），默认 2 秒
 	interval := 2
 	if intervalStr := ctx.Request().Query("interval", ""); intervalStr != "" {
@@ -1772,45 +1766,52 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 		}
 	}
 
-	// 发送初始连接消息（返回原始数据，由前端根据当前语言翻译）
-	initMsg := map[string]any{
-		"type":        "connected",
-		"message_key": "monitor_sse_connected",
-		"interval":    interval,
-	}
-	initData, _ := json.Marshal(initMsg)
-	fmt.Fprintf(writer, "data: %s\n\n", string(initData))
-	if flusher, ok := writer.(nethttp.Flusher); ok {
-		flusher.Flush()
-	}
-
-	// 检测客户端断开连接
-	clientGone := ctx.Request().Origin().Context().Done()
-
-	// 立即推送首帧：time.NewTicker 首次在整段 interval 后才触发，否则首屏长时间无业务数据
-	select {
-	case <-clientGone:
-		return nil
-	default:
-		if !r.writeMonitorSystemInfoSSE(ctx, writer) {
-			return nil
-		}
-	}
-
-	// 创建 ticker，定期推送数据
-	ticker := time.NewTicker(time.Duration(interval) * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-clientGone:
-			return nil
-		case <-ticker.C:
-			if !r.writeMonitorSystemInfoSSE(ctx, writer) {
-				return nil
+	// 须使用 Response().Stream()，直接写 Writer() 会被 Goravel/Gin 缓冲，客户端收不到 SSE 数据
+	return ctx.Response().
+		Header("Content-Type", "text/event-stream").
+		Header("Cache-Control", "no-cache").
+		Header("Connection", "keep-alive").
+		Header("X-Accel-Buffering", "no").
+		Stream(nethttp.StatusOK, func(writer http.StreamWriter) error {
+			initMsg := map[string]any{
+				"type":        "connected",
+				"message_key": "monitor_sse_connected",
+				"interval":    interval,
 			}
-		}
-	}
+			initData, _ := json.Marshal(initMsg)
+			if _, err := writer.WriteString(fmt.Sprintf("data: %s\n\n", string(initData))); err != nil {
+				return err
+			}
+			if err := writer.Flush(); err != nil {
+				return err
+			}
+
+			clientGone := ctx.Request().Origin().Context().Done()
+
+			// 立即推送首帧：time.NewTicker 首次在整段 interval 后才触发，否则首屏长时间无业务数据
+			select {
+			case <-clientGone:
+				return nil
+			default:
+				if !r.writeMonitorSystemInfoSSE(ctx, writer) {
+					return nil
+				}
+			}
+
+			ticker := time.NewTicker(time.Duration(interval) * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-clientGone:
+					return nil
+				case <-ticker.C:
+					if !r.writeMonitorSystemInfoSSE(ctx, writer) {
+						return nil
+					}
+				}
+			}
+		})
 }
 
 // generateAlerts 生成系统告警提示（返回原始数据，由前端根据当前语言翻译）

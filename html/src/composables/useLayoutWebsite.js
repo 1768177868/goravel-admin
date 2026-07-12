@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getConfigByGroup } from '@/api/config'
+import { resolvePublicAssetUrl } from '@/utils/env'
 
 export function useLayoutWebsite() {
   const { t } = useI18n()
@@ -17,7 +18,13 @@ export function useLayoutWebsite() {
   const websiteLogoUrl = computed(() => {
     const raw = String(websiteSiteLogo.value || '').trim()
     if (!raw) return ''
-    if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:')) return raw
+    if (raw.startsWith('data:')) return raw
+
+    const publicUrl = resolvePublicAssetUrl(raw)
+    if (publicUrl.startsWith('/')) return publicUrl
+
+    if (/^(https?:)?\/\//i.test(raw)) return raw
+
     const apiBaseURL = import.meta.env.VITE_API_BASE_URL
     const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
     const normalizedPrefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
