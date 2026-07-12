@@ -1,4 +1,4 @@
-import { buildRangeSearchParams } from '@/utils/listPageHelpers'
+import { buildRangeSearchParams } from "@/utils/listPageHelpers";
 
 export const articleInitialSearchForm = {
   admin_id: "",
@@ -82,7 +82,14 @@ export function createArticleTableColumns(t, options = {}) {
     },
     { field: "title", title: t("title"), sortable: false, key: "title" },
     { field: "content", title: t("content"), sortable: false, key: "content" },
-    { field: "status", title: t("status"), sortable: false, key: "status" },
+    {
+      field: "status",
+      title: t("table.status"),
+      width: 100,
+      sortable: false,
+      slot: "status",
+      key: "status",
+    },
     {
       field: "updated_at",
       title: t("table.updated_at"),
@@ -119,5 +126,5 @@ export function createArticleTableColumns(t, options = {}) {
 
 export function getadminDisplayName(value) {
   if (!value) return "-";
-  return value.username || value.admin || "-";
+  return value.nickname || value.admin || "-";
 }

@@ -138,7 +138,11 @@ const formRules = computed(() => {
 <<- if and (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
   <<- if .Required>>
   rules['<<.Name>>'] = [
-    { required: true, message: t('<<.Name>>_required'), trigger: 'blur' }
+    <<- if or (eq .FormType "select") (eq .FormType "radio") (eq .FormType "checkbox") (eq .FormType "switch") (eq .FormType "date-picker") (eq .FormType "datetime-picker")>>
+    { required: true, message: t('common.select_required'), trigger: 'change' }
+    <<- else>>
+    { required: true, message: t('common.required'), trigger: 'blur' }
+    <<- end>>
   ]
   <<- end>>
 <<- end>>

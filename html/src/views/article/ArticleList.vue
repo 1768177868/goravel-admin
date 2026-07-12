@@ -24,6 +24,13 @@
     <template #admin_id="{ row }">
       {{ getadminDisplayName(row.admin || row.admin_id) }}
     </template>
+    <template #status="{ row }">
+      <el-switch
+        :model-value="Number(row.status ?? 1) === 1"
+        :disabled="getButtonState('article.update').disabled"
+        @change="(val) => handleStatusChange(row, val)"
+      />
+    </template>
 
     <template #operation="{ row }">
       <TableActionButtons
@@ -45,13 +52,18 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { ElMessage, ElMessageBox } from "element-plus";
 import ListPage from "@/components/ListPage.vue";
 import TableActionButtons from "@/components/TableActionButtons.vue";
 import ArticleForm from "./ArticleForm.vue";
 import { useStandardListPage } from "@/composables/useStandardListPage";
 import { createCrudActions } from "@/utils/listPageHelpers";
-import { getArticleList, deleteArticle } from "@/api/article";
+
+import { getArticleList, deleteArticle, updateArticle } from "@/api/article";
+import logger from "@/utils/logger";
+import ErrorHandler from "@/utils/errorHandler";
 import {
   articleInitialSearchForm,
   buildArticleListParams,
@@ -61,6 +73,7 @@ import {
 } from "./article.config";
 
 const { t } = useI18n();
+const router = useRouter();
 const listPageRef = ref(null);
 
 const {
@@ -68,12 +81,14 @@ const {
   tableData,
   loading,
   searchForm,
+  selectedIds,
   dialogVisible,
   editId,
   loadData,
   handleSearch,
   handleReset,
   handleSortChange,
+  handleSelectionChange,
   handleAdd,
   handleEdit,
   handleFormSuccess,
@@ -89,10 +104,27 @@ const {
   normalizeRows: false,
 });
 
+const hasSelection = computed(() => selectedIds.value.length > 0);
 const searchFields = computed(() => createArticleSearchFields(t));
 const tableColumns = computed(() =>
   createArticleTableColumns(t, { enableBatchActions: false }),
 );
+
+const handleStatusChange = async (row, newStatus) => {
+  try {
+    const statusValue = newStatus ? 1 : 0;
+    await updateArticle(row.id, { status: statusValue });
+    ElMessage.success(newStatus ? t("common.enabled") : t("common.disabled"));
+    const item = tableData.value.find((item) => item.id === row.id);
+    if (item) item.status = statusValue;
+  } catch (error) {
+    logger.error("Status change error:", error);
+    loadData();
+    if (!error.__handled) {
+      ElMessage.error(error.message || t("common.operation_failed"));
+    }
+  }
+};
 
 const operationActions = computed(() =>
   createCrudActions(t, "article", {
@@ -100,4 +132,21 @@ const operationActions = computed(() =>
     onDelete: handleDelete,
   }),
 );
+
+const handleBatchDelete = async () => {
+  if (!selectedIds.value.length) return;
+  try {
+    await ElMessageBox.confirm(
+      t("common.batch_delete_confirm", { count: selectedIds.value.length }),
+      t("common.warning"),
+      { type: "warning" },
+    );
+    await Promise.all(selectedIds.value.map((id) => deleteArticle(id)));
+    ElMessage.success(t("common.operation_success"));
+    await loadData();
+  } catch (error) {
+    if (error === "cancel" || error === "close") return;
+    logger.error("Batch delete error:", error);
+  }
+};
 </script>

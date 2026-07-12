@@ -75,7 +75,7 @@ const getFormInitialValue = () => ({
   admin_id: null,
   title: "",
   content: "",
-  status: null,
+  status: 0,
 });
 
 const dialogVisible = computed({
@@ -93,13 +93,13 @@ const formRules = computed(() => {
   const rules = {};
 
   rules["admin_id"] = [
-    { required: true, message: t("admin_id_required"), trigger: "blur" },
+    { required: true, message: t("common.required"), trigger: "blur" },
   ];
   rules["title"] = [
-    { required: true, message: t("title_required"), trigger: "blur" },
+    { required: true, message: t("common.required"), trigger: "blur" },
   ];
   rules["status"] = [
-    { required: true, message: t("status_required"), trigger: "blur" },
+    { required: true, message: t("common.select_required"), trigger: "change" },
   ];
   return rules;
 });
@@ -123,10 +123,12 @@ const formFields = computed(() => {
   fields.push({
     prop: "status",
     label: t("status"),
-    type: "select",
+    type: "switch",
     disabled: loading.value,
-    apiUrl: "/options?type=dictionary&dictionary_type=status",
-    clearable: true,
+    props: {
+      activeValue: 1,
+      inactiveValue: 0,
+    },
   });
   return fields;
 });
@@ -167,7 +169,6 @@ const loadData = async () => {
       const mapped = mapFields(data, getFormInitialValue());
       const normalizeRules = {};
 
-      normalizeRules["status"] = "string";
       const normalized = normalizeFormData(mapped, normalizeRules);
       Object.assign(formData, normalized);
     }
