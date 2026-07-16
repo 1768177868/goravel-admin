@@ -257,6 +257,12 @@ const ensureFileUrl = (item) => {
   return ''
 }
 
+/** 配置类长期引用：统一存公开预览路径，避免 S3 临时签名链过期 */
+const toStablePublicUrl = (item) => {
+  if (!item?.id) return ''
+  return `/api/admin/public/images/${item.id}`
+}
+
 const loadList = async () => {
   loading.value = true
   try {
@@ -323,7 +329,7 @@ const handlePageChange = (newPage) => {
 
 const confirmSelect = (item) => {
   if (!item) return
-  const url = toSubmitUrl(ensureFileUrl(item))
+  const url = toSubmitUrl(toStablePublicUrl(item))
   emitValue(url)
   pickerVisible.value = false
 }
