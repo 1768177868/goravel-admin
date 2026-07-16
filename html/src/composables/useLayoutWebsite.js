@@ -1,13 +1,18 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getConfigByGroup } from '@/api/config'
-import { resolvePublicAssetUrl } from '@/utils/env'
+import {
+  resolveImageDisplayUrl,
+  WEBSITE_CONFIG_UPDATED_EVENT
+} from '@/utils/publicImage'
 
 export function useLayoutWebsite() {
   const { t } = useI18n()
   const websiteSiteName = ref('')
   const websiteSiteLogo = ref('')
+  const websiteLogoDisplayUrl = ref('')
   const websiteConfigLoaded = ref(false)
+  let revokeLogoUrl = null
 
   const systemTitle = computed(() => {
     if (!websiteConfigLoaded.value) return ''
@@ -15,28 +20,33 @@ export function useLayoutWebsite() {
     return name || t('header.system')
   })
 
-  const websiteLogoUrl = computed(() => {
-    const raw = String(websiteSiteLogo.value || '').trim()
-    if (!raw) return ''
-    if (raw.startsWith('data:')) return raw
+  const websiteLogoUrl = computed(() => websiteLogoDisplayUrl.value)
 
-    const publicUrl = resolvePublicAssetUrl(raw)
-    if (publicUrl.startsWith('/')) return publicUrl
-
-    if (/^(https?:)?\/\//i.test(raw)) return raw
-
-    const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-    const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
-    const normalizedPrefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-    if (apiBaseURL) {
-      const base = apiBaseURL.replace(/\/+$/, '')
-      if (raw.startsWith(normalizedPrefix)) return `${base}${raw}`
-      if (raw.startsWith('/')) return `${base}${normalizedPrefix}${raw}`
-      return `${base}${normalizedPrefix}/${raw}`
+  const clearLogoDisplay = () => {
+    if (typeof revokeLogoUrl === 'function') {
+      revokeLogoUrl()
+      revokeLogoUrl = null
     }
-    if (raw.startsWith(normalizedPrefix)) return raw
-    if (raw.startsWith('/')) return `${normalizedPrefix}${raw}`
-    return `${normalizedPrefix}/${raw}`
+    websiteLogoDisplayUrl.value = ''
+  }
+
+  const refreshLogoDisplay = async (raw) => {
+    clearLogoDisplay()
+    const value = String(raw || '').trim()
+    if (!value) return
+
+    const result = await resolveImageDisplayUrl(value)
+    // Ignore stale responses if logo changed while fetching
+    if (String(websiteSiteLogo.value || '').trim() !== value) {
+      if (typeof result.revoke === 'function') result.revoke()
+      return
+    }
+    revokeLogoUrl = result.revoke || null
+    websiteLogoDisplayUrl.value = result.url || ''
+  }
+
+  watch(websiteSiteLogo, (val) => {
+    refreshLogoDisplay(val)
   })
 
   const loadWebsiteTitle = async () => {
@@ -67,6 +77,19 @@ export function useLayoutWebsite() {
       websiteConfigLoaded.value = true
     }
   }
+
+  const onWebsiteConfigUpdated = () => {
+    loadWebsiteTitle()
+  }
+
+  onMounted(() => {
+    window.addEventListener(WEBSITE_CONFIG_UPDATED_EVENT, onWebsiteConfigUpdated)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener(WEBSITE_CONFIG_UPDATED_EVENT, onWebsiteConfigUpdated)
+    clearLogoDisplay()
+  })
 
   return {
     systemTitle,

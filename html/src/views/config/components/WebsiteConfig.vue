@@ -75,6 +75,7 @@ import { forOwn } from 'lodash-es'
 import { getConfigByGroup, saveConfig } from '../../../api/config'
 import { usePermission } from '../../../composables/usePermission'
 import AttachmentImageField from '../../../components/AttachmentImageField.vue'
+import { notifyWebsiteConfigUpdated } from '../../../utils/publicImage'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
@@ -128,6 +129,7 @@ const handleSubmit = async () => {
 
         await saveConfig('website', configs)
         ElMessage.success(t('config.update_success'))
+        notifyWebsiteConfigUpdated()
       } catch (error) {
         console.error('Submit error:', error)
       } finally {

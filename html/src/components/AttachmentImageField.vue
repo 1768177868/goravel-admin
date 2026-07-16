@@ -108,12 +108,10 @@
 <script setup>
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { Picture, Loading } from '@element-plus/icons-vue'
-import axios from 'axios'
 import { getAttachmentList } from '@/api/attachment'
 import { transformAttachmentRow } from '@/views/attachment/attachment.config'
 import { useAttachmentImagePreview } from '@/composables/useAttachmentImagePreview'
-import { resolvePublicAssetUrl, getApiPrefix } from '@/utils/env'
-import Storage from '@/utils/storage'
+import { PUBLIC_IMAGE_PATH_RE, resolveImageDisplayUrl } from '@/utils/publicImage'
 
 const props = defineProps({
   modelValue: {
@@ -137,7 +135,7 @@ const pageSize = ref(12)
 const total = ref(0)
 const selectedId = ref(null)
 const displayPreviewUrl = ref('')
-let previewBlobUrl = ''
+let revokePreviewUrl = null
 
 const {
   loadImageAsBlob,
@@ -149,8 +147,6 @@ const {
 
 const selectedItem = computed(() => list.value.find((item) => item.id === selectedId.value) || null)
 
-const PUBLIC_IMAGE_RE = /\/api\/admin\/public\/images\/(\d+)/
-
 const toSubmitUrl = (url) => {
   const value = String(url || '').trim()
   if (!value) return ''
@@ -158,7 +154,7 @@ const toSubmitUrl = (url) => {
   if (value.startsWith('http')) {
     try {
       const parsed = new URL(value)
-      if (PUBLIC_IMAGE_RE.test(parsed.pathname)) {
+      if (PUBLIC_IMAGE_PATH_RE.test(parsed.pathname)) {
         return `${parsed.pathname}${parsed.search || ''}`
       }
       return value
@@ -175,67 +171,26 @@ const emitValue = (value) => {
   emit('change', finalValue)
 }
 
-const buildFetchUrl = (raw) => {
-  const value = String(raw || '').trim()
-  if (!value) return ''
-  if (value.startsWith('data:') || value.startsWith('blob:')) return value
-  if (/^https?:\/\//i.test(value)) return value
-
-  const publicPath = resolvePublicAssetUrl(value)
-  const path = publicPath.startsWith('/') ? publicPath : value
-  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-  if (apiBaseURL) {
-    return `${String(apiBaseURL).replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`
-  }
-  const prefix = getApiPrefix().startsWith('/') ? getApiPrefix() : `/${getApiPrefix()}`
-  if (path.startsWith(prefix) || path.startsWith('/')) return path
-  return `${prefix}/${path}`
-}
-
 const revokePreviewBlob = () => {
-  if (previewBlobUrl) {
-    URL.revokeObjectURL(previewBlobUrl)
-    previewBlobUrl = ''
+  if (typeof revokePreviewUrl === 'function') {
+    revokePreviewUrl()
+    revokePreviewUrl = null
   }
+  displayPreviewUrl.value = ''
 }
 
 const loadPreview = async (raw) => {
   revokePreviewBlob()
-  displayPreviewUrl.value = ''
-
   const value = String(raw || '').trim()
   if (!value) return
 
-  if (value.startsWith('data:') || value.startsWith('blob:')) {
-    displayPreviewUrl.value = value
+  const result = await resolveImageDisplayUrl(value)
+  if (String(props.modelValue || '').trim() !== value) {
+    if (typeof result.revoke === 'function') result.revoke()
     return
   }
-
-  const isPublicImage = PUBLIC_IMAGE_RE.test(value) || PUBLIC_IMAGE_RE.test(resolvePublicAssetUrl(value) || '')
-
-  // 非公开图的外链直接展示
-  if (/^https?:\/\//i.test(value) && !isPublicImage) {
-    displayPreviewUrl.value = value
-    return
-  }
-
-  const fetchUrl = buildFetchUrl(value)
-  if (!fetchUrl) return
-
-  // 与附件列表一致：鉴权拉取为 blob，避免开发环境跨域/代理导致不显示
-  try {
-    const token = Storage.getItem('token', '') || ''
-    const response = await axios.get(fetchUrl, {
-      responseType: 'blob',
-      headers: {
-        Authorization: `Bearer ${typeof token === 'string' ? token.trim() : ''}`
-      }
-    })
-    previewBlobUrl = URL.createObjectURL(new Blob([response.data]))
-    displayPreviewUrl.value = previewBlobUrl
-  } catch {
-    displayPreviewUrl.value = resolvePublicAssetUrl(value) || fetchUrl
-  }
+  revokePreviewUrl = result.revoke || null
+  displayPreviewUrl.value = result.url || ''
 }
 
 watch(
