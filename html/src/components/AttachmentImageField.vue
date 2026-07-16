@@ -14,10 +14,10 @@
       </template>
     </el-input>
 
-    <div v-if="previewUrl" class="logo-preview">
+    <div v-if="displayPreviewUrl" class="logo-preview">
       <el-image
-        :src="previewUrl"
-        :preview-src-list="[previewUrl]"
+        :src="displayPreviewUrl"
+        :preview-src-list="[displayPreviewUrl]"
         fit="contain"
         class="logo-preview-image"
         :preview-teleported="true"
@@ -37,6 +37,7 @@
       append-to-body
       destroy-on-close
       @opened="handlePickerOpened"
+      @closed="handlePickerClosed"
     >
       <div class="picker-toolbar">
         <el-input
@@ -59,13 +60,24 @@
           @click="selectedId = item.id"
           @dblclick="confirmSelect(item)"
         >
-          <el-image :src="getThumbUrl(item)" fit="cover" class="picker-thumb">
+          <el-image
+            v-if="getImageUrl(item)"
+            :src="getImageUrl(item)"
+            fit="cover"
+            class="picker-thumb"
+            @load="handleImageLoad(item)"
+            @error="handleImageError(item)"
+          >
             <template #error>
               <div class="picker-thumb-error">
                 <el-icon><Picture /></el-icon>
               </div>
             </template>
           </el-image>
+          <div v-else class="picker-thumb-error">
+            <el-icon v-if="getImageLoadingState(item) === 'loading'" class="is-loading"><Loading /></el-icon>
+            <el-icon v-else><Picture /></el-icon>
+          </div>
           <div class="picker-name" :title="item.display_name || item.filename">
             {{ item.display_name || item.filename }}
           </div>
@@ -94,11 +106,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { Picture } from '@element-plus/icons-vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
+import { Picture, Loading } from '@element-plus/icons-vue'
+import axios from 'axios'
 import { getAttachmentList } from '@/api/attachment'
 import { transformAttachmentRow } from '@/views/attachment/attachment.config'
-import { resolvePublicAssetUrl } from '@/utils/env'
+import { useAttachmentImagePreview } from '@/composables/useAttachmentImagePreview'
+import { resolvePublicAssetUrl, getApiPrefix } from '@/utils/env'
+import Storage from '@/utils/storage'
 
 const props = defineProps({
   modelValue: {
@@ -121,18 +136,20 @@ const page = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 const selectedId = ref(null)
+const displayPreviewUrl = ref('')
+let previewBlobUrl = ''
+
+const {
+  loadImageAsBlob,
+  getImageUrl,
+  getImageLoadingState,
+  handleImageLoad,
+  handleImageError
+} = useAttachmentImagePreview()
 
 const selectedItem = computed(() => list.value.find((item) => item.id === selectedId.value) || null)
 
-const previewUrl = computed(() => {
-  const raw = String(props.modelValue || '').trim()
-  if (!raw) return ''
-  if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw
-  const publicUrl = resolvePublicAssetUrl(raw)
-  if (publicUrl.startsWith('/')) return publicUrl
-  if (/^(https?:)?\/\//i.test(raw)) return raw
-  return publicUrl || raw
-})
+const PUBLIC_IMAGE_RE = /\/api\/admin\/public\/images\/(\d+)/
 
 const toSubmitUrl = (url) => {
   const value = String(url || '').trim()
@@ -141,7 +158,7 @@ const toSubmitUrl = (url) => {
   if (value.startsWith('http')) {
     try {
       const parsed = new URL(value)
-      if (parsed.pathname.includes('/api/admin/public/images/')) {
+      if (PUBLIC_IMAGE_RE.test(parsed.pathname)) {
         return `${parsed.pathname}${parsed.search || ''}`
       }
       return value
@@ -158,13 +175,86 @@ const emitValue = (value) => {
   emit('change', finalValue)
 }
 
-const getThumbUrl = (item) => {
-  const raw = item?.file_url || ''
-  if (!raw) return ''
-  const publicUrl = resolvePublicAssetUrl(raw)
-  if (publicUrl.startsWith('/')) return publicUrl
-  if (/^(https?:)?\/\//i.test(raw)) return raw
-  return publicUrl || raw
+const buildFetchUrl = (raw) => {
+  const value = String(raw || '').trim()
+  if (!value) return ''
+  if (value.startsWith('data:') || value.startsWith('blob:')) return value
+  if (/^https?:\/\//i.test(value)) return value
+
+  const publicPath = resolvePublicAssetUrl(value)
+  const path = publicPath.startsWith('/') ? publicPath : value
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL
+  if (apiBaseURL) {
+    return `${String(apiBaseURL).replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`
+  }
+  const prefix = getApiPrefix().startsWith('/') ? getApiPrefix() : `/${getApiPrefix()}`
+  if (path.startsWith(prefix) || path.startsWith('/')) return path
+  return `${prefix}/${path}`
+}
+
+const revokePreviewBlob = () => {
+  if (previewBlobUrl) {
+    URL.revokeObjectURL(previewBlobUrl)
+    previewBlobUrl = ''
+  }
+}
+
+const loadPreview = async (raw) => {
+  revokePreviewBlob()
+  displayPreviewUrl.value = ''
+
+  const value = String(raw || '').trim()
+  if (!value) return
+
+  if (value.startsWith('data:') || value.startsWith('blob:')) {
+    displayPreviewUrl.value = value
+    return
+  }
+
+  const isPublicImage = PUBLIC_IMAGE_RE.test(value) || PUBLIC_IMAGE_RE.test(resolvePublicAssetUrl(value) || '')
+
+  // 非公开图的外链直接展示
+  if (/^https?:\/\//i.test(value) && !isPublicImage) {
+    displayPreviewUrl.value = value
+    return
+  }
+
+  const fetchUrl = buildFetchUrl(value)
+  if (!fetchUrl) return
+
+  // 与附件列表一致：鉴权拉取为 blob，避免开发环境跨域/代理导致不显示
+  try {
+    const token = Storage.getItem('token', '') || ''
+    const response = await axios.get(fetchUrl, {
+      responseType: 'blob',
+      headers: {
+        Authorization: `Bearer ${typeof token === 'string' ? token.trim() : ''}`
+      }
+    })
+    previewBlobUrl = URL.createObjectURL(new Blob([response.data]))
+    displayPreviewUrl.value = previewBlobUrl
+  } catch {
+    displayPreviewUrl.value = resolvePublicAssetUrl(value) || fetchUrl
+  }
+}
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    loadPreview(val)
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  revokePreviewBlob()
+})
+
+const ensureFileUrl = (item) => {
+  if (!item) return ''
+  if (item.file_url) return item.file_url
+  if (item.id) return `/api/admin/public/images/${item.id}`
+  return ''
 }
 
 const loadList = async () => {
@@ -177,8 +267,18 @@ const loadList = async () => {
       filename: keyword.value.trim() || undefined
     })
     const rows = res?.data?.list || res?.data?.data || []
-    list.value = rows.map(transformAttachmentRow)
+    list.value = rows.map((row) => {
+      const item = transformAttachmentRow(row)
+      item.file_url = ensureFileUrl(item)
+      return item
+    })
     total.value = Number(res?.data?.total || 0)
+    await nextTick()
+    list.value.forEach((item) => {
+      if (item.file_type === 'image') {
+        loadImageAsBlob(item)
+      }
+    })
   } catch {
     list.value = []
     total.value = 0
@@ -195,6 +295,11 @@ const openPicker = () => {
 const handlePickerOpened = () => {
   page.value = 1
   loadList()
+}
+
+const handlePickerClosed = () => {
+  list.value = []
+  selectedId.value = null
 }
 
 const handleSearch = () => {
@@ -218,7 +323,7 @@ const handlePageChange = (newPage) => {
 
 const confirmSelect = (item) => {
   if (!item) return
-  const url = toSubmitUrl(item.file_url || `/api/admin/public/images/${item.id}`)
+  const url = toSubmitUrl(ensureFileUrl(item))
   emitValue(url)
   pickerVisible.value = false
 }
@@ -227,6 +332,7 @@ const confirmSelect = (item) => {
 <style scoped>
 .attachment-image-field {
   width: 100%;
+  max-width: 480px;
 }
 
 .logo-preview {
@@ -298,6 +404,7 @@ const confirmSelect = (item) => {
   color: var(--el-text-color-placeholder);
   background: var(--el-fill-color);
   border-radius: 4px;
+  font-size: 28px;
 }
 
 .picker-name {
