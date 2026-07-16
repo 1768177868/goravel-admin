@@ -30,18 +30,16 @@
         </el-col>
       </el-row>
 
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-form-item :label="$t('config.site_logo')" prop="site_logo">
-            <el-input v-model="formData.site_logo" :placeholder="$t('config.site_logo_placeholder')" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item :label="$t('config.site_icp')" prop="site_icp">
-            <el-input v-model="formData.site_icp" :placeholder="$t('config.site_icp_placeholder')" />
-          </el-form-item>
-        </el-col>
-      </el-row>
+      <el-form-item :label="$t('config.site_logo')" prop="site_logo">
+        <AttachmentImageField
+          v-model="formData.site_logo"
+          :placeholder="$t('config.site_logo_placeholder')"
+        />
+      </el-form-item>
+
+      <el-form-item :label="$t('config.site_icp')" prop="site_icp">
+        <el-input v-model="formData.site_icp" :placeholder="$t('config.site_icp_placeholder')" style="max-width: 480px" />
+      </el-form-item>
 
       <el-row :gutter="20">
         <el-col :span="12">
@@ -76,6 +74,7 @@ import { ElMessage } from 'element-plus'
 import { forOwn } from 'lodash-es'
 import { getConfigByGroup, saveConfig } from '../../../api/config'
 import { usePermission } from '../../../composables/usePermission'
+import AttachmentImageField from '../../../components/AttachmentImageField.vue'
 
 const { t } = useI18n()
 const { getButtonState } = usePermission()
