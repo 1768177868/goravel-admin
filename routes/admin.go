@@ -254,8 +254,8 @@ func Admin() {
 			router.Resource("articles", articleController)
 			router.Post("articles/export", articleController.Export)
 
-			// 代码生成器（仅在开发环境可用）
-			router.Middleware(middleware.DevelopmentOnly()).Group(func(router route.Router) {
+			// 代码生成器（local/development，或 APP_ENABLE_DEV_TOOL=true；test 默认关闭）
+			router.Middleware(middleware.CodeGeneratorOnly()).Group(func(router route.Router) {
 				router.Get("code-generator/field-types", codeGeneratorController.GetFieldTypes)
 				router.Get("code-generator/tables", codeGeneratorController.GetTables)
 				router.Get("code-generator/table-columns", codeGeneratorController.GetTableColumns)

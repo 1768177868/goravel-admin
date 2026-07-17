@@ -25,6 +25,7 @@ export const useUserStore = defineStore('user', {
         ordersEnabled: true,
         paymentsEnabled: true,
         devToolsEnabled: false,
+        codeGeneratorEnabled: false,
         elasticsearchEnabled: false,
         otelEnabled: false
       }
@@ -137,7 +138,8 @@ export const useUserStore = defineStore('user', {
         aiEnabled: config?.ai_enabled || config?.aiEnabled || false,
         ordersEnabled: config?.orders_enabled ?? config?.ordersEnabled ?? true,
         paymentsEnabled: config?.payments_enabled ?? config?.paymentsEnabled ?? true,
-        devToolsEnabled: config?.dev_tools_enabled || config?.devToolsEnabled || false,
+		devToolsEnabled: config?.dev_tools_enabled || config?.devToolsEnabled || false,
+        codeGeneratorEnabled: config?.code_generator_enabled || config?.codeGeneratorEnabled || false,
         elasticsearchEnabled: config?.elasticsearch_enabled || config?.elasticsearchEnabled || false,
         otelEnabled: config?.otel_enabled || config?.otelEnabled || false
       }
@@ -266,6 +268,7 @@ export const useUserStore = defineStore('user', {
           ordersEnabled: true,
           paymentsEnabled: true,
           devToolsEnabled: false,
+          codeGeneratorEnabled: false,
           elasticsearchEnabled: false,
           otelEnabled: false
         }

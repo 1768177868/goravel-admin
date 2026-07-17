@@ -39,6 +39,7 @@ func TestAdminInfoExposesModuleConfig(t *testing.T) {
 		"orders_enabled",
 		"payments_enabled",
 		"dev_tools_enabled",
+		"code_generator_enabled",
 		"elasticsearch_enabled",
 		"otel_enabled",
 	} {

@@ -395,6 +395,9 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 		menuTree = filterMenuTree(menuTree)
 	}
 
+	// 按模块开关再过滤（避免权限 MenuID 把已关闭模块菜单加回来）
+	menuTree = utils.FilterTreeMenusByModule(menuTree)
+
 	// 转换为前端格式
 	menuTreeData := utils.ConvertMenuTree(menuTree)
 
@@ -425,6 +428,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"orders_enabled":                  utils.OrdersEnabled(),
 			"payments_enabled":                utils.PaymentsEnabled(),
 			"dev_tools_enabled":               utils.DevToolsEnabled(),
+			"code_generator_enabled":          utils.CodeGeneratorEnabled(),
 			"elasticsearch_enabled":           utils.ElasticsearchEnabled(),
 			"otel_enabled":                    utils.OTELEnabled(),
 		},

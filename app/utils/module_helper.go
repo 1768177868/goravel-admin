@@ -18,13 +18,28 @@ func PaymentsEnabled() bool {
 	return facades.Config().GetBool("module.payments_enabled", true)
 }
 
-// DevToolsEnabled reports whether dev tools (code generator, form demo) are available.
+// DevToolsEnabled reports whether general dev tools (e.g. form demo) are available.
+// Enabled in local/development/test, or when APP_ENABLE_DEV_TOOL=true.
 func DevToolsEnabled() bool {
-	env := strings.ToLower(strings.TrimSpace(facades.Config().GetString("app.env", "production")))
+	env := appEnv()
 	if env == "local" || env == "development" || env == "test" {
 		return true
 	}
 	return facades.Config().GetBool("app.enable_dev_tool", false)
+}
+
+// CodeGeneratorEnabled reports whether the code generator is available.
+// Enabled in local/development only (not test), or when APP_ENABLE_DEV_TOOL=true.
+func CodeGeneratorEnabled() bool {
+	env := appEnv()
+	if env == "local" || env == "development" {
+		return true
+	}
+	return facades.Config().GetBool("app.enable_dev_tool", false)
+}
+
+func appEnv() string {
+	return strings.ToLower(strings.TrimSpace(facades.Config().GetString("app.env", "production")))
 }
 
 // ElasticsearchEnabled reports whether Elasticsearch integration is enabled.
@@ -52,10 +67,16 @@ func DisabledModuleMenuSlugs() map[string]bool {
 		disabled["payment-method"] = true
 		disabled["payment-record"] = true
 	}
-	if !DevToolsEnabled() {
-		disabled["dev"] = true
+	codeGenOn := CodeGeneratorEnabled()
+	formDemoOn := DevToolsEnabled()
+	if !codeGenOn {
 		disabled["code-generator"] = true
+	}
+	if !formDemoOn {
 		disabled["form_demo"] = true
+	}
+	if !codeGenOn && !formDemoOn {
+		disabled["dev"] = true
 	}
 	return disabled
 }

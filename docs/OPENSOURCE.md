@@ -60,7 +60,7 @@
 |------|------|------|
 | `MODULE_ORDERS_ENABLED` | `true` | 关闭后隐藏订单菜单并拒绝订单 API |
 | `MODULE_PAYMENTS_ENABLED` | `true` | 关闭后隐藏支付相关菜单并拒绝支付 API |
-| `APP_ENABLE_DEV_TOOL` | `false` | 生产显式 `true` 才开放代码生成器/表单演示；`local/development/test` 默认可见 |
+| `APP_ENABLE_DEV_TOOL` | `false` | 生产显式 `true` 才开放开发工具。表单演示：`local/development/test` 默认可见；代码生成器：仅 `local/development` 默认可见（`test` 默认隐藏） |
 
 登录 `Info` 与 `menus/tree` 会按开关过滤菜单；前端 `userStore.config` 同步 `orders_enabled` 等字段。
 
