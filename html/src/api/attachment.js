@@ -36,6 +36,13 @@ const attachmentApi = extendApi(baseAttachmentApi, {
       method: 'put',
       data: { display_name: displayName }
     })
+  },
+  updateCategory: (id, categoryId) => {
+    return request({
+      url: `/attachments/${id}/category`,
+      method: 'put',
+      data: { category_id: categoryId }
+    })
   }
 })
 
@@ -48,7 +55,8 @@ export const {
   delete: deleteAttachment,
   batchDelete: batchDeleteAttachments,
   upload: uploadFile,
-  updateDisplayName
+  updateDisplayName,
+  updateCategory
 } = attachmentApi
 
 export function chunkUpload(action, data = {}, onProgress) {

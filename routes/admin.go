@@ -32,6 +32,7 @@ func Admin() {
 	optionController := admin.NewOptionController()
 	exportController := admin.NewExportController()
 	attachmentController := admin.NewAttachmentController()
+	attachmentCategoryController := admin.NewAttachmentCategoryController()
 	orderController := admin.NewOrderController()
 	userController := admin.NewUserController()
 	userBalanceLogController := admin.NewUserBalanceLogController()
@@ -214,8 +215,10 @@ func Admin() {
 			router.Get("attachments/{id}/preview", attachmentController.Preview)
 			router.Get("attachments/{id}/download", attachmentController.Download)
 			router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)
+			router.Put("attachments/{id}/category", attachmentController.UpdateCategory)
 			router.Delete("attachments/{id}", attachmentController.Destroy)
 			router.Post("attachments/batch-delete", attachmentController.BatchDestroy)
+			router.Resource("attachment-categories", attachmentCategoryController)
 
 			// 订单管理
 			router.Middleware(middleware.OrdersModule()).Group(func(router route.Router) {

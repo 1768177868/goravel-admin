@@ -25,8 +25,9 @@ func (r *OptionController) provider(ctx http.Context, optionType string) (servic
 	providers := map[string]services.OptionProvider{
 		"role":           option_providers.NewRoleOptionProvider(ctx),
 		"department":     option_providers.NewDepartmentOptionProvider(ctx),
-		"position":       option_providers.NewPositionOptionProvider(ctx),
-		"menu":           option_providers.NewMenuOptionProvider(ctx, tree),
+		"position":              option_providers.NewPositionOptionProvider(ctx),
+		"attachment_category":   option_providers.NewAttachmentCategoryOptionProvider(ctx),
+		"menu":                  option_providers.NewMenuOptionProvider(ctx, tree),
 		"status":         option_providers.NewStatusOptionProvider(ctx),
 		"method":         option_providers.NewMethodOptionProvider(ctx),
 		"yes_no":         option_providers.NewYesNoOptionProvider(ctx),

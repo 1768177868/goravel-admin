@@ -3,6 +3,7 @@ import { getField } from '@/utils/normalizeFormData'
 export const attachmentInitialSearchForm = {
   filename: '',
   display_name: '',
+  category_id: '',
   file_type: '',
   extension: '',
   start_time: '',
@@ -10,9 +11,12 @@ export const attachmentInitialSearchForm = {
 }
 
 export function transformAttachmentRow(item) {
+  const category = item.category || item.Category || null
   return {
     id: getField(item, 'id'),
     admin: item.admin || item.Admin || null,
+    category_id: getField(item, 'category_id', getField(category, 'id', null)),
+    category_name: getField(category, 'name', ''),
     filename: getField(item, 'filename', ''),
     display_name: getField(item, 'display_name', ''),
     file_type: getField(item, 'file_type', 'other'),
@@ -29,6 +33,14 @@ export function createAttachmentSearchFields(t) {
   return [
     { prop: 'filename', label: t('attachment.filename'), type: 'input', width: '200px' },
     { prop: 'display_name', label: t('attachment.display_name'), type: 'input', width: '200px' },
+    {
+      prop: 'category_id',
+      label: t('attachment.category'),
+      type: 'select',
+      width: '160px',
+      apiUrl: '/options?type=attachment_category',
+      clearable: true
+    },
     {
       prop: 'file_type',
       label: t('attachment.file_type'),
@@ -83,6 +95,7 @@ export function createAttachmentTableColumns(t) {
     { field: 'id', title: t('table.id'), width: 80, sortable: true, key: 'id' },
     { field: 'filename', title: t('attachment.filename'), minWidth: 200, slot: 'filename', key: 'filename' },
     { field: 'display_name', title: t('attachment.display_name'), minWidth: 200, slot: 'display_name', key: 'display_name' },
+    { field: 'category_id', title: t('attachment.category'), minWidth: 160, slot: 'category', key: 'category' },
     { field: 'file_type', title: t('attachment.file_type'), width: 120, slot: 'file_type', key: 'file_type' },
     { field: 'disk', title: t('attachment.disk'), width: 100, slot: 'disk', key: 'disk' },
     { field: 'extension', title: t('attachment.extension'), width: 100, key: 'extension' },

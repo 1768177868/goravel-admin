@@ -64,6 +64,8 @@ func (r *AttachmentController) buildFilters(ctx http.Context) services.Attachmen
 	adminID := ctx.Request().Query("admin_id", "")
 	filename := ctx.Request().Query("filename", "")
 	displayName := ctx.Request().Query("display_name", "")
+	keyword := ctx.Request().Query("keyword", "")
+	categoryID := ctx.Request().Query("category_id", "")
 	fileType := ctx.Request().Query("file_type", "")
 	extension := ctx.Request().Query("extension", "")
 	startTime := getTimeQueryUTC(ctx, "start_time")
@@ -74,6 +76,8 @@ func (r *AttachmentController) buildFilters(ctx http.Context) services.Attachmen
 		AdminID:     adminID,
 		Filename:    filename,
 		DisplayName: displayName,
+		Keyword:     keyword,
+		CategoryID:  categoryID,
 		FileType:    fileType,
 		Extension:   extension,
 		StartTime:   startTime,
@@ -611,6 +615,40 @@ func (r *AttachmentController) UpdateDisplayName(ctx http.Context) http.Response
 	}
 
 	// 重新获取更新后的附件
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
+	}
+
+	return response.Success(ctx, http.Json{
+		"attachment": attachment,
+	})
+}
+
+// UpdateCategory 更新附件分类
+func (r *AttachmentController) UpdateCategory(ctx http.Context) http.Response {
+	id := helpers.GetUintRoute(ctx, "id")
+	if id == 0 {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
+	}
+
+	categoryIDStr := ctx.Request().Input("category_id", "")
+	categoryID, _ := strconv.ParseUint(categoryIDStr, 10, 64)
+	if categoryID == 0 {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsError.Code)
+	}
+
+	attachmentService := services.NewAttachmentService(ctx)
+	if err := attachmentService.UpdateCategory(id, uint(categoryID)); err != nil {
+		if businessErr, ok := err.(*apperrors.BusinessError); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr)
+		}
+		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
+			"attachId":    id,
+			"category_id": categoryID,
+		})
+	}
+
 	attachment, err := attachmentService.GetByID(id)
 	if err != nil {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)

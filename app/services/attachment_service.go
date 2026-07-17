@@ -54,6 +54,8 @@ type AttachmentService interface {
 	DeleteFile(attachment *models.Attachment) error
 	// UpdateDisplayName 更新显示名称
 	UpdateDisplayName(id uint, displayName string) error
+	// UpdateCategory 更新附件分类
+	UpdateCategory(id uint, categoryID uint) error
 }
 
 // AttachmentFilters 附件查询过滤器
@@ -61,6 +63,8 @@ type AttachmentFilters struct {
 	AdminID     string
 	Filename    string
 	DisplayName string
+	Keyword     string // filename OR display_name
+	CategoryID  string
 	FileType    string
 	Extension   string
 	StartTime   string
@@ -298,16 +302,17 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 
 	fileType := s.GetFileType(mimeType)
 	attachment := &models.Attachment{
-		AdminID:   adminID,
-		Disk:      s.disk,
-		Path:      finalPath,
-		Filename:  filename,
-		Extension: strings.TrimPrefix(ext, "."),
-		MimeType:  mimeType,
-		Size:      fileSize,
-		Status:    1,
-		FileType:  fileType,
-		ChunkID:   chunkID,
+		AdminID:    adminID,
+		CategoryID: s.resolveDefaultCategoryID(),
+		Disk:       s.disk,
+		Path:       finalPath,
+		Filename:   filename,
+		Extension:  strings.TrimPrefix(ext, "."),
+		MimeType:   mimeType,
+		Size:       fileSize,
+		Status:     1,
+		FileType:   fileType,
+		ChunkID:    chunkID,
 	}
 
 	if err := appfacades.OrmQuery(s.ctx).Create(attachment); err != nil {
@@ -441,15 +446,16 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 
 	fileType := s.GetFileType(mimeType)
 	attachment := &models.Attachment{
-		AdminID:   adminID,
-		Disk:      s.disk,
-		Path:      finalPath,
-		Filename:  filename,
-		Extension: strings.TrimPrefix(ext, "."),
-		MimeType:  mimeType,
-		Size:      fileSize,
-		Status:    1,
-		FileType:  fileType,
+		AdminID:    adminID,
+		CategoryID: s.resolveDefaultCategoryID(),
+		Disk:       s.disk,
+		Path:       finalPath,
+		Filename:   filename,
+		Extension:  strings.TrimPrefix(ext, "."),
+		MimeType:   mimeType,
+		Size:       fileSize,
+		Status:     1,
+		FileType:   fileType,
 	}
 
 	if err := appfacades.OrmQuery(s.ctx).Create(attachment); err != nil {
@@ -557,11 +563,19 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 	if filters.AdminID != "" {
 		query = query.Where("admin_id", filters.AdminID)
 	}
-	if filters.Filename != "" {
-		query = query.Where("filename LIKE ?", "%"+filters.Filename+"%")
+	if filters.Keyword != "" {
+		kw := "%" + filters.Keyword + "%"
+		query = query.Where("(filename LIKE ? OR display_name LIKE ?)", kw, kw)
+	} else {
+		if filters.Filename != "" {
+			query = query.Where("filename LIKE ?", "%"+filters.Filename+"%")
+		}
+		if filters.DisplayName != "" {
+			query = query.Where("display_name LIKE ?", "%"+filters.DisplayName+"%")
+		}
 	}
-	if filters.DisplayName != "" {
-		query = query.Where("display_name LIKE ?", "%"+filters.DisplayName+"%")
+	if filters.CategoryID != "" {
+		query = query.Where("category_id", filters.CategoryID)
 	}
 	if filters.FileType != "" {
 		query = query.Where("file_type = ?", filters.FileType)
@@ -586,7 +600,7 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 	// 分页查询
 	var attachments []models.Attachment
 	var total int64
-	if err := query.With("Admin").Paginate(page, pageSize, &attachments, &total); err != nil {
+	if err := query.With("Admin").With("Category").Paginate(page, pageSize, &attachments, &total); err != nil {
 		return nil, 0, err
 	}
 
@@ -613,6 +627,34 @@ func (s *AttachmentServiceImpl) UpdateDisplayName(id uint, displayName string) e
 	}
 
 	return nil
+}
+
+// UpdateCategory 更新附件分类
+func (s *AttachmentServiceImpl) UpdateCategory(id uint, categoryID uint) error {
+	var attachment models.Attachment
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&attachment); err != nil {
+		return apperrors.ErrAttachmentNotFound.WithError(err)
+	}
+
+	categoryService := NewAttachmentCategoryService(s.ctx)
+	if _, err := categoryService.GetByID(categoryID); err != nil {
+		return err
+	}
+
+	attachment.CategoryID = categoryID
+	if err := appfacades.OrmQuery(s.ctx).Save(&attachment); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// resolveDefaultCategoryID 新上传附件默认归入「未分类」
+func (s *AttachmentServiceImpl) resolveDefaultCategoryID() uint {
+	id, err := NewAttachmentCategoryService(s.ctx).GetUncategorizedID()
+	if err != nil {
+		return 0
+	}
+	return id
 }
 
 // DeleteFile 删除文件

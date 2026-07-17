@@ -64,6 +64,13 @@
           {{ $t('attachment.large_file_upload') }}
         </el-button>
         <el-button
+          type="info"
+          :disabled="getButtonState('attachment_category.index').disabled"
+          @click="categoryDialogVisible = true"
+        >
+          {{ $t('attachment.category_manage') }}
+        </el-button>
+        <el-button
           type="danger"
           :disabled="selectedRows.length === 0 || getButtonState('attachment.destroy').disabled"
           @click="handleBatchDelete"
@@ -123,6 +130,23 @@
           />
         </template>
 
+        <template #category="{ row }">
+          <el-select
+            v-model="row.category_id"
+            size="small"
+            style="width: 140px"
+            :disabled="getButtonState('attachment.update_category').disabled"
+            @change="handleUpdateCategory(row)"
+          >
+            <el-option
+              v-for="opt in categoryOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+        </template>
+
         <template #file_type="{ row }">
           <el-tag :type="getFileTypeTagType(row.file_type)">
             {{ getFileTypeLabel(row.file_type) }}
@@ -155,6 +179,11 @@
           </el-button>
         </template>
     </ListPage>
+
+    <AttachmentCategoryDialog
+      v-model="categoryDialogVisible"
+      @changed="handleCategoryChanged"
+    />
 
     <!-- 大文件上传对话框 -->
     <el-dialog
@@ -270,8 +299,11 @@ import {
   getAttachmentList,
   deleteAttachment,
   batchDeleteAttachments,
-  updateDisplayName
+  updateDisplayName,
+  updateCategory
 } from '@/api/attachment'
+import AttachmentCategoryDialog from './AttachmentCategoryDialog.vue'
+import request from '@/utils/request'
 import i18n from '@/i18n'
 import Storage from '@/utils/storage'
 import 'vue-cropper/dist/index.css'
@@ -292,6 +324,37 @@ const CropIcon = markRaw(Crop)
 
 const { t, locale } = useI18n()
 const { getButtonState } = usePermission()
+const categoryDialogVisible = ref(false)
+const categoryOptions = ref([])
+
+const loadCategoryOptions = async () => {
+  try {
+    const res = await request({ url: '/options', method: 'get', params: { type: 'attachment_category' } })
+    categoryOptions.value = res?.data?.options || []
+  } catch {
+    categoryOptions.value = []
+  }
+}
+
+const handleCategoryChanged = async () => {
+  await loadCategoryOptions()
+  loadData()
+}
+
+const handleUpdateCategory = async (row) => {
+  const attachmentId = row.id
+  if (!attachmentId || !row.category_id) return
+  try {
+    await updateCategory(attachmentId, row.category_id)
+    ElMessage.success(t('attachment.update_success'))
+  } catch (error) {
+    console.error('Update category error:', error)
+    if (!error.__handled) {
+      ElMessage.error(error.response?.data?.message || error.message || t('attachment.update_failed'))
+    }
+    loadData()
+  }
+}
 
 const { handleDelete: handleDeleteCrud, handleBatchDelete: handleBatchDeleteCrud } = useCrud({
   deleteApi: deleteAttachment,
@@ -613,6 +676,7 @@ const handleBatchDelete = () => {
 
 onMounted(() => {
   initDefaultSort()
+  loadCategoryOptions()
   loadData()
 })
 

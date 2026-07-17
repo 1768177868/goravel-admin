@@ -220,6 +220,8 @@
     "balance_update_success": "Balance updated successfully",
     "balance_log_create_success": "Balance log created successfully",
     "attachment_not_found": "Attachment not found",
+    "attachment_category_not_found": "Attachment category not found",
+    "attachment_category_protected_cannot_delete": "System category cannot be deleted",
     "chunk_not_found": "Chunk {chunk_index} not found",
     "chunk_missing": "Missing chunks: {missing_chunks} ({count} chunks missing)",
     "no_chunk_data_to_merge": "No chunk data to merge",

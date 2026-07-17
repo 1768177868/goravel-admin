@@ -40,11 +40,25 @@
       @closed="handlePickerClosed"
     >
       <div class="picker-toolbar">
+        <el-select
+          v-model="categoryId"
+          clearable
+          :placeholder="$t('attachment.category')"
+          style="width: 160px"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="opt in categoryOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
         <el-input
           v-model="keyword"
           clearable
-          :placeholder="$t('attachment.filename')"
-          style="width: 240px"
+          :placeholder="$t('attachment.search_name_placeholder')"
+          style="width: 280px"
           @keyup.enter="handleSearch"
         />
         <el-button type="primary" @click="handleSearch">{{ $t('common.search') }}</el-button>
@@ -78,8 +92,9 @@
             <el-icon v-if="getImageLoadingState(item) === 'loading'" class="is-loading"><Loading /></el-icon>
             <el-icon v-else><Picture /></el-icon>
           </div>
-          <div class="picker-name" :title="item.display_name || item.filename">
-            {{ item.display_name || item.filename }}
+          <div class="picker-name" :title="getPickerNameTitle(item)">
+            <div class="picker-name-main">{{ item.display_name || item.filename }}</div>
+            <div v-if="item.display_name" class="picker-name-sub">{{ item.filename }}</div>
           </div>
         </div>
         <el-empty v-if="!loading && list.length === 0" :description="$t('common.no_data')" />
@@ -112,6 +127,7 @@ import { getAttachmentList } from '@/api/attachment'
 import { transformAttachmentRow } from '@/views/attachment/attachment.config'
 import { useAttachmentImagePreview } from '@/composables/useAttachmentImagePreview'
 import { PUBLIC_IMAGE_PATH_RE, resolveImageDisplayUrl } from '@/utils/publicImage'
+import request from '@/utils/request'
 
 const props = defineProps({
   modelValue: {
@@ -130,6 +146,8 @@ const pickerVisible = ref(false)
 const loading = ref(false)
 const list = ref([])
 const keyword = ref('')
+const categoryId = ref('')
+const categoryOptions = ref([])
 const page = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
@@ -218,6 +236,15 @@ const toStablePublicUrl = (item) => {
   return `/api/admin/public/images/${item.id}`
 }
 
+const loadCategoryOptions = async () => {
+  try {
+    const res = await request({ url: '/options', method: 'get', params: { type: 'attachment_category' } })
+    categoryOptions.value = res?.data?.options || []
+  } catch {
+    categoryOptions.value = []
+  }
+}
+
 const loadList = async () => {
   loading.value = true
   try {
@@ -225,7 +252,8 @@ const loadList = async () => {
       page: page.value,
       page_size: pageSize.value,
       file_type: 'image',
-      filename: keyword.value.trim() || undefined
+      keyword: keyword.value.trim() || undefined,
+      category_id: categoryId.value || undefined
     })
     const rows = res?.data?.list || res?.data?.data || []
     list.value = rows.map((row) => {
@@ -248,6 +276,12 @@ const loadList = async () => {
   }
 }
 
+const getPickerNameTitle = (item) => {
+  if (!item) return ''
+  if (item.display_name) return `${item.display_name}\n${item.filename}`
+  return item.filename || ''
+}
+
 const openPicker = () => {
   selectedId.value = null
   pickerVisible.value = true
@@ -255,6 +289,7 @@ const openPicker = () => {
 
 const handlePickerOpened = () => {
   page.value = 1
+  loadCategoryOptions()
   loadList()
 }
 
@@ -271,6 +306,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   keyword.value = ''
+  categoryId.value = ''
   page.value = 1
   selectedId.value = null
   loadList()
@@ -373,6 +409,18 @@ const confirmSelect = (item) => {
   font-size: 12px;
   line-height: 1.4;
   color: var(--el-text-color-regular);
+}
+
+.picker-name-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-name-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
