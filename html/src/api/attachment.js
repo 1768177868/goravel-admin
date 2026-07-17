@@ -43,6 +43,13 @@ const attachmentApi = extendApi(baseAttachmentApi, {
       method: 'put',
       data: { category_id: categoryId }
     })
+  },
+  updateVisibility: (id, isPublic) => {
+    return request({
+      url: `/attachments/${id}/visibility`,
+      method: 'put',
+      data: { is_public: isPublic ? 1 : 0 }
+    })
   }
 })
 
@@ -56,7 +63,8 @@ export const {
   batchDelete: batchDeleteAttachments,
   upload: uploadFile,
   updateDisplayName,
-  updateCategory
+  updateCategory,
+  updateVisibility
 } = attachmentApi
 
 export function chunkUpload(action, data = {}, onProgress) {

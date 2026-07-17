@@ -1,8 +1,15 @@
 import axios from 'axios'
 import Storage from '@/utils/storage'
 import { getApiPrefix, resolvePublicAssetUrl } from '@/utils/env'
+import {
+  ATTACHMENT_PRIVATE_PREVIEW_PATH_RE,
+  ATTACHMENT_PUBLIC_ALIAS_PATH_RE,
+  ATTACHMENT_PUBLIC_PATH_RE,
+  isPrivateAttachmentPreviewPath,
+  isPublicAttachmentPath
+} from '@/utils/attachmentUrl'
 
-export const PUBLIC_IMAGE_PATH_RE = /\/api\/admin\/public\/images\/(\d+)/
+export const PUBLIC_IMAGE_PATH_RE = ATTACHMENT_PUBLIC_PATH_RE
 
 /**
  * Build a fetchable URL for a stored image path (public preview / relative / absolute).
@@ -38,10 +45,17 @@ export async function resolveImageDisplayUrl(raw) {
   }
 
   const resolvedPublic = resolvePublicAssetUrl(value) || ''
-  const isPublicImage = PUBLIC_IMAGE_PATH_RE.test(value) || PUBLIC_IMAGE_PATH_RE.test(resolvedPublic)
+  const needsAuth =
+    isPrivateAttachmentPreviewPath(value) ||
+    isPrivateAttachmentPreviewPath(resolvedPublic)
+  const isPublicImage =
+    isPublicAttachmentPath(value) ||
+    isPublicAttachmentPath(resolvedPublic) ||
+    ATTACHMENT_PUBLIC_ALIAS_PATH_RE.test(value) ||
+    ATTACHMENT_PUBLIC_ALIAS_PATH_RE.test(resolvedPublic)
 
   // Permanent external URLs (CDN etc.)
-  if (/^https?:\/\//i.test(value) && !isPublicImage) {
+  if (/^https?:\/\//i.test(value) && !isPublicImage && !needsAuth) {
     return { url: value }
   }
 
@@ -50,11 +64,13 @@ export async function resolveImageDisplayUrl(raw) {
 
   try {
     const token = Storage.getItem('token', '') || ''
+    const headers = {}
+    if (needsAuth || token) {
+      headers.Authorization = `Bearer ${typeof token === 'string' ? token.trim() : ''}`
+    }
     const response = await axios.get(fetchUrl, {
       responseType: 'blob',
-      headers: {
-        Authorization: `Bearer ${typeof token === 'string' ? token.trim() : ''}`
-      }
+      headers
     })
     const blobUrl = URL.createObjectURL(new Blob([response.data]))
     return {

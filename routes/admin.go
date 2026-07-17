@@ -50,8 +50,8 @@ func Admin() {
 			router.Middleware(httpmiddleware.Throttle("login")).Post("login", adminAuthController.Login)
 			router.Get("login/captcha", adminAuthController.Captcha)
 
-			// 公开的图片访问接口
-			router.Get("public/images/{id}", attachmentController.Preview)
+			// 公开附件访问（无需登录，仅 is_public=1）
+			router.Get("public/images/{id}", attachmentController.PublicPreview)
 		})
 
 		// 基础功能（需要认证和多语言，但不需要权限验证和操作日志）
@@ -216,6 +216,7 @@ func Admin() {
 			router.Get("attachments/{id}/download", attachmentController.Download)
 			router.Put("attachments/{id}/display-name", attachmentController.UpdateDisplayName)
 			router.Put("attachments/{id}/category", attachmentController.UpdateCategory)
+			router.Put("attachments/{id}/visibility", attachmentController.UpdateVisibility)
 			router.Delete("attachments/{id}", attachmentController.Destroy)
 			router.Post("attachments/batch-delete", attachmentController.BatchDestroy)
 			router.Resource("attachment-categories", attachmentCategoryController)

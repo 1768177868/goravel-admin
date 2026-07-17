@@ -5,6 +5,7 @@ import (
 	"mime"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	apperrors "goravel/app/errors"
@@ -66,6 +67,7 @@ func (r *AttachmentController) buildFilters(ctx http.Context) services.Attachmen
 	displayName := ctx.Request().Query("display_name", "")
 	keyword := ctx.Request().Query("keyword", "")
 	categoryID := ctx.Request().Query("category_id", "")
+	isPublic := ctx.Request().Query("is_public", "")
 	fileType := ctx.Request().Query("file_type", "")
 	extension := ctx.Request().Query("extension", "")
 	startTime := getTimeQueryUTC(ctx, "start_time")
@@ -78,6 +80,7 @@ func (r *AttachmentController) buildFilters(ctx http.Context) services.Attachmen
 		DisplayName: displayName,
 		Keyword:     keyword,
 		CategoryID:  categoryID,
+		IsPublic:    isPublic,
 		FileType:    fileType,
 		Extension:   extension,
 		StartTime:   startTime,
@@ -133,47 +136,15 @@ func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	}
 
 	attachmentService := services.NewAttachmentService(ctx)
-	attachment, err := attachmentService.UploadFile(fileData, filename, mimeType)
+	isPublicRaw := ctx.Request().Input("is_public", "")
+	attachment, err := attachmentService.UploadFile(fileData, filename, mimeType, isPublicRaw)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
 			"filename": filename,
 		})
 	}
 
-	fileURL := attachmentService.GetFileURL(attachment)
-
-	// 生成预览URL（如果 GetFileURL 返回的是相对路径，且需要通过 preview 接口访问）
-	// 注意：GetFileURL 通常返回的是 storage/public 的直接访问地址（如果是 public 驱动），或者是 api/admin/attachments/{id}/preview
-	// 这里我们显式返回一个可直接访问的预览地址，优先使用 GetFileURL 的结果
-	// 如果 GetFileURL 返回的是相对路径（如 /storage/xxx），前端会自动拼接域名
-
-	// 为了确保富文本编辑器能直接显示，我们再返回一个 absolute_url 字段
-	// 如果 fileURL 已经是完整的 http 地址（例如 OSS），则直接使用
-	// 如果是相对地址，则拼接当前服务的域名（在前端做，后端这里只返回 path）
-
-	// 但用户的需求是返回一个“可预览的完整地址”。
-	// 附件管理列表能显示是因为前端拼接了域名。
-	// 这里我们直接返回 file_url，它通常已经是正确的路径（相对或绝对）。
-	// 我们添加一个 preview_url 字段，明确指向 preview 接口（如果是本地存储且未公开 storage）
-	// 注意：这里需要确保返回的是完整的 URL，包含 api/admin 前缀
-	previewURL := fmt.Sprintf("/api/admin/public/images/%d", attachment.ID)
-	// 如果使用的是云存储，GetFileURL 返回的通常是 HTTP 链接，直接用那个更好
-	if attachment.Disk != "local" && attachment.Disk != "public" {
-		previewURL = fileURL
-	}
-
-	// 统一返回 file_url 为 previewURL，与附件列表保持一致
-	fileURL = previewURL
-
-	return response.Success(ctx, "upload_success", http.Json{
-		"id":          attachment.ID,
-		"filename":    attachment.Filename,
-		"size":        attachment.Size,
-		"mime_type":   attachment.MimeType,
-		"file_type":   attachment.FileType,
-		"file_url":    fileURL,
-		"preview_url": previewURL, // 新增字段
-	})
+	return response.Success(ctx, "upload_success", r.buildUploadResponse(attachmentService, attachment))
 }
 
 // ChunkUpload 大文件分片上传统一接口
@@ -341,7 +312,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			mimeType = "application/octet-stream"
 		}
 
-		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType, totalChunks)
+		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType, totalChunks, ctx.Request().Input("is_public", ""))
 		if err != nil {
 			return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
 				"chunk_id":     chunkID,
@@ -353,16 +324,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		// 合并成功后，记录日志（仅 Debug 模式）
 		facades.Log().Debugf("Successfully merged chunks for chunkID %s, filename: %s, total_chunks: %d", chunkID, filename, totalChunks)
 
-		fileURL := attachmentService.GetFileURL(attachment)
-
-		return response.Success(ctx, "merge_chunks_success", http.Json{
-			"id":        attachment.ID,
-			"filename":  attachment.Filename,
-			"size":      attachment.Size,
-			"mime_type": attachment.MimeType,
-			"file_type": attachment.FileType,
-			"file_url":  fileURL,
-		})
+		return response.Success(ctx, "merge_chunks_success", r.buildUploadResponse(attachmentService, attachment))
 
 	case "progress":
 		// 获取分片上传进度
@@ -417,21 +379,11 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 	if attachment.Disk != "local" && attachment.Disk != "public" {
 		storage := facades.Storage().Disk(attachment.Disk)
 
-		// 尝试生成临时URL（24小时有效）
 		if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
 			return ctx.Response().Redirect(http.StatusFound, url)
 		}
-
-		// 如果生成临时URL失败，尝试从配置获取基础URL
-		attachmentService := services.NewAttachmentService(ctx)
-		directURL := attachmentService.GetFileURL(attachment)
-		if directURL != "" && directURL != fmt.Sprintf("/api/admin/attachments/%d/preview", attachment.ID) {
-			return ctx.Response().Redirect(http.StatusFound, directURL)
-		}
-		// 如果都失败，继续使用服务器中转方式
 	}
 
-	// 对于本地存储或临时URL生成失败的情况，使用服务器中转
 	storage := facades.Storage().Disk(attachment.Disk)
 
 	// 读取文件内容
@@ -467,7 +419,27 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 	return response.String(http.StatusOK, content)
 }
 
-// Preview 预览文件（图片、视频、文档）
+// PublicPreview 公开附件预览（无需登录，仅 is_public=1 可访问）
+func (r *AttachmentController) PublicPreview(ctx http.Context) http.Response {
+	id := helpers.GetUintRoute(ctx, "id")
+	if id == 0 {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
+	}
+
+	attachmentService := services.NewAttachmentService(ctx)
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
+	}
+
+	if attachment.IsPublic != 1 {
+		return response.Error(ctx, http.StatusForbidden, apperrors.ErrAttachmentNotPublic.Code)
+	}
+
+	return r.serveAttachmentContent(ctx, attachment, "inline")
+}
+
+// Preview 附件预览（需登录，公开/私有均可）
 func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if id == 0 {
@@ -480,59 +452,7 @@ func (r *AttachmentController) Preview(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
 	}
 
-	if attachment.Path == "" || attachment.Disk == "" {
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
-	}
-
-	// 对于云存储，尝试生成临时URL并重定向，避免通过服务器中转
-	// 这样可以减少服务器带宽和内存占用，提高性能
-	if attachment.Disk != "local" && attachment.Disk != "public" {
-		storage := facades.Storage().Disk(attachment.Disk)
-
-		// 尝试生成临时URL（24小时有效）
-		if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
-			return ctx.Response().Redirect(http.StatusFound, url)
-		}
-
-		// 如果生成临时URL失败，尝试从配置获取基础URL
-		attachmentService := services.NewAttachmentService(ctx)
-		directURL := attachmentService.GetFileURL(attachment)
-		if directURL != "" && directURL != fmt.Sprintf("/api/admin/attachments/%d/preview", attachment.ID) {
-			return ctx.Response().Redirect(http.StatusFound, directURL)
-		}
-		// 如果都失败，继续使用服务器中转方式
-	}
-
-	// 对于本地存储或临时URL生成失败的情况，使用服务器中转
-	storage := facades.Storage().Disk(attachment.Disk)
-
-	// 读取文件内容
-	content, err := storage.Get(attachment.Path)
-	if err != nil {
-		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
-			"disk": attachment.Disk,
-			"path": attachment.Path,
-		})
-	}
-
-	// 设置响应头
-	mimeType := attachment.MimeType
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-
-	// 设置响应头
-	response := ctx.Response().
-		Header("Content-Type", mimeType).
-		Header("Content-Length", fmt.Sprintf("%d", len(content))).
-		Header("Cache-Control", "public, max-age=3600")
-
-	// 对于图片和视频，支持范围请求（Range request）
-	if attachment.FileType == "image" || attachment.FileType == "video" {
-		response = response.Header("Accept-Ranges", "bytes")
-	}
-
-	return response.String(http.StatusOK, content)
+	return r.serveAttachmentContent(ctx, attachment, "inline")
 }
 
 // Destroy 删除附件
@@ -657,4 +577,106 @@ func (r *AttachmentController) UpdateCategory(ctx http.Context) http.Response {
 	return response.Success(ctx, http.Json{
 		"attachment": attachment,
 	})
+}
+
+// UpdateVisibility 更新附件公开/私有状态
+func (r *AttachmentController) UpdateVisibility(ctx http.Context) http.Response {
+	id := helpers.GetUintRoute(ctx, "id")
+	if id == 0 {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrIDRequired.Code)
+	}
+
+	isPublicStr := strings.TrimSpace(ctx.Request().Input("is_public", ""))
+	if isPublicStr == "" {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsError.Code)
+	}
+
+	isPublic := isPublicStr == "1" || strings.EqualFold(isPublicStr, "true")
+	attachmentService := services.NewAttachmentService(ctx)
+	if err := attachmentService.UpdateVisibility(id, isPublic); err != nil {
+		if businessErr, ok := err.(*apperrors.BusinessError); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr)
+		}
+		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
+			"attachId":  id,
+			"is_public": isPublicStr,
+		})
+	}
+
+	attachment, err := attachmentService.GetByID(id)
+	if err != nil {
+		return response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
+	}
+
+	return response.Success(ctx, http.Json{
+		"attachment": attachment,
+		"file_url":   attachmentService.GetFileURL(attachment),
+	})
+}
+
+func (r *AttachmentController) buildUploadResponse(attachmentService services.AttachmentService, attachment *models.Attachment) http.Json {
+	fileURL := attachmentService.GetFileURL(attachment)
+	return http.Json{
+		"id":        attachment.ID,
+		"filename":  attachment.Filename,
+		"size":      attachment.Size,
+		"mime_type": attachment.MimeType,
+		"file_type": attachment.FileType,
+		"is_public": attachment.IsPublic,
+		"file_url":  fileURL,
+	}
+}
+
+func (r *AttachmentController) serveAttachmentContent(ctx http.Context, attachment *models.Attachment, disposition string) http.Response {
+	if attachment.Path == "" || attachment.Disk == "" {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
+	}
+
+	if attachment.Disk != "local" && attachment.Disk != "public" {
+		storage := facades.Storage().Disk(attachment.Disk)
+		if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
+			return ctx.Response().Redirect(http.StatusFound, url)
+		}
+	}
+
+	storage := facades.Storage().Disk(attachment.Disk)
+	content, err := storage.Get(attachment.Path)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
+			"disk": attachment.Disk,
+			"path": attachment.Path,
+		})
+	}
+
+	mimeType := attachment.MimeType
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	cacheControl := "public, max-age=3600"
+	if disposition == "attachment" {
+		cacheControl = "no-cache, no-store, must-revalidate"
+	}
+
+	resp := ctx.Response().
+		Header("Content-Type", mimeType).
+		Header("Content-Length", fmt.Sprintf("%d", len(content))).
+		Header("Cache-Control", cacheControl)
+
+	if disposition == "attachment" {
+		filename := attachment.Filename
+		if filename == "" {
+			filename = attachment.Path
+		}
+		resp = resp.
+			Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
+			Header("Pragma", "no-cache").
+			Header("Expires", "0")
+	}
+
+	if attachment.FileType == "image" || attachment.FileType == "video" {
+		resp = resp.Header("Accept-Ranges", "bytes")
+	}
+
+	return resp.String(http.StatusOK, content)
 }

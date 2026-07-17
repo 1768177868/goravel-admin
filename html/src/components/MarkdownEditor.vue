@@ -21,6 +21,7 @@ import Storage from '../utils/storage'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../store/app'
 import axios from 'axios'
+import { resolveUploadStorageUrl } from '@/utils/attachmentUrl'
 
 const { locale } = useI18n()
 const appStore = useAppStore()
@@ -115,6 +116,7 @@ const handleUploadImg = async (files, callback) => {
   }
 
   formData.append('file', file)
+  formData.append('is_public', '1')
 
   try {
     const response = await axios.post(uploadAction.value, formData, {
@@ -123,31 +125,8 @@ const handleUploadImg = async (files, callback) => {
     })
 
     if (response.data.code === 200 && response.data.data) {
-      const apiBaseURL = import.meta.env.VITE_API_BASE_URL
-      const apiPrefix = import.meta.env.VITE_API_PREFIX || '/api/admin'
-      
-      // 优先使用 preview_url，如果没有则使用 file_url
-      let url = response.data.data.preview_url || response.data.data.file_url
-      
-      // 如果不是完整的 URL，则需要拼接
-      if (url && !url.startsWith('http')) {
-        if (apiBaseURL) {
-          const base = apiBaseURL.replace(/\/+$/, '')
-          const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-          if (url.startsWith(prefix)) {
-            url = `${base}${url}`
-          } else {
-            url = `${base}${prefix}${url.startsWith('/') ? '' : '/'}${url}`
-          }
-        } else {
-          const prefix = apiPrefix.startsWith('/') ? apiPrefix : `/${apiPrefix}`
-          if (!url.startsWith(prefix)) {
-            url = `${prefix}${url.startsWith('/') ? '' : '/'}${url}`
-          }
-        }
-      }
-      
-      callback([url])
+      const url = resolveUploadStorageUrl(response.data.data)
+      callback(url ? [url] : [])
     } else {
       console.error('Upload error', response.data)
       callback([])

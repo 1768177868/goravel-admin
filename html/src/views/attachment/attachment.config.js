@@ -4,6 +4,7 @@ export const attachmentInitialSearchForm = {
   filename: '',
   display_name: '',
   category_id: '',
+  is_public: '',
   file_type: '',
   extension: '',
   start_time: '',
@@ -24,6 +25,7 @@ export function transformAttachmentRow(item) {
     extension: getField(item, 'extension', ''),
     size: getField(item, 'size', 0),
     mime_type: getField(item, 'mime_type', ''),
+    is_public: Number(getField(item, 'is_public', 1)),
     created_at: getField(item, 'created_at', ''),
     file_url: getField(item, 'file_url', '')
   }
@@ -39,6 +41,17 @@ export function createAttachmentSearchFields(t) {
       type: 'select',
       width: '160px',
       apiUrl: '/options?type=attachment_category',
+      clearable: true
+    },
+    {
+      prop: 'is_public',
+      label: t('attachment.visibility'),
+      type: 'select',
+      width: '130px',
+      options: [
+        { label: t('attachment.visibility_public'), value: '1' },
+        { label: t('attachment.visibility_private'), value: '0' }
+      ],
       clearable: true
     },
     {
@@ -96,6 +109,7 @@ export function createAttachmentTableColumns(t) {
     { field: 'filename', title: t('attachment.filename'), minWidth: 200, slot: 'filename', key: 'filename' },
     { field: 'display_name', title: t('attachment.display_name'), minWidth: 200, slot: 'display_name', key: 'display_name' },
     { field: 'category_id', title: t('attachment.category'), minWidth: 160, slot: 'category', key: 'category' },
+    { field: 'is_public', title: t('attachment.visibility'), width: 110, slot: 'is_public', key: 'is_public' },
     { field: 'file_type', title: t('attachment.file_type'), width: 120, slot: 'file_type', key: 'file_type' },
     { field: 'disk', title: t('attachment.disk'), width: 100, slot: 'disk', key: 'disk' },
     { field: 'extension', title: t('attachment.extension'), width: 100, key: 'extension' },

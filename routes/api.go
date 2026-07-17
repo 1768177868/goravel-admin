@@ -5,6 +5,7 @@ import (
 	httpmiddleware "github.com/goravel/framework/http/middleware"
 
 	"goravel/app/facades"
+	"goravel/app/http/controllers/admin"
 	"goravel/app/http/controllers/api"
 	"goravel/app/http/middleware"
 )
@@ -13,6 +14,12 @@ func Api() {
 	authController := api.NewAuthController()
 	orderSearchController := api.NewOrderController()
 	queueTestController := api.NewQueueTestController()
+	attachmentController := admin.NewAttachmentController()
+
+	// 公开附件（C 端文章/站点可直接引用，无需 admin 前缀）
+	facades.Route().Prefix("api").Middleware(middleware.Lang()).Group(func(router route.Router) {
+		router.Get("public/files/{id}", attachmentController.PublicPreview)
+	})
 
 	// C端用户路由组：统一前缀
 	facades.Route().Prefix("api/user").Group(func(router route.Router) {

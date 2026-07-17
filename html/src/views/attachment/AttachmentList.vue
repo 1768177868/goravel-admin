@@ -147,6 +147,19 @@
           </el-select>
         </template>
 
+        <template #is_public="{ row }">
+          <el-switch
+            v-model="row.is_public"
+            :active-value="1"
+            :inactive-value="0"
+            :disabled="getButtonState('attachment.update_visibility').disabled"
+            inline-prompt
+            :active-text="$t('attachment.visibility_public_short')"
+            :inactive-text="$t('attachment.visibility_private_short')"
+            @change="handleUpdateVisibility(row)"
+          />
+        </template>
+
         <template #file_type="{ row }">
           <el-tag :type="getFileTypeTagType(row.file_type)">
             {{ getFileTypeLabel(row.file_type) }}
@@ -300,7 +313,8 @@ import {
   deleteAttachment,
   batchDeleteAttachments,
   updateDisplayName,
-  updateCategory
+  updateCategory,
+  updateVisibility
 } from '@/api/attachment'
 import AttachmentCategoryDialog from './AttachmentCategoryDialog.vue'
 import request from '@/utils/request'
@@ -349,6 +363,24 @@ const handleUpdateCategory = async (row) => {
     ElMessage.success(t('attachment.update_success'))
   } catch (error) {
     console.error('Update category error:', error)
+    if (!error.__handled) {
+      ElMessage.error(error.response?.data?.message || error.message || t('attachment.update_failed'))
+    }
+    loadData()
+  }
+}
+
+const handleUpdateVisibility = async (row) => {
+  const attachmentId = row.id
+  if (!attachmentId) return
+  try {
+    const res = await updateVisibility(attachmentId, Number(row.is_public) === 1)
+    if (res?.data?.file_url) {
+      row.file_url = res.data.file_url
+    }
+    ElMessage.success(t('attachment.update_success'))
+  } catch (error) {
+    console.error('Update visibility error:', error)
     if (!error.__handled) {
       ElMessage.error(error.response?.data?.message || error.message || t('attachment.update_failed'))
     }

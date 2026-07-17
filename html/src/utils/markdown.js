@@ -198,8 +198,14 @@ export function processImageUrls(html) {
 
   const toImageSrc = (path) => {
     const publicUrl = resolvePublicAssetUrl(path)
-    if (publicUrl.startsWith('/') && publicUrl.includes('/api/admin/public/images/')) {
+    if (
+      publicUrl.startsWith('/') &&
+      (publicUrl.includes('/api/admin/public/images/') || publicUrl.includes('/api/public/files/'))
+    ) {
       return publicUrl
+    }
+    if (path.startsWith('/') && path.includes('/api/public/files/')) {
+      return path
     }
     const apiPath = publicUrl.startsWith('/') ? publicUrl : path
     return cleanBaseURL ? `${cleanBaseURL}${apiPath}` : apiPath
@@ -207,11 +213,11 @@ export function processImageUrls(html) {
 
   // 通知/富文本里可能存了带域名的绝对地址，先还原为路径再按规则输出
   html = html.replace(
-    /src=["']https?:\/\/[^/]+(\/api\/admin\/[^"']+)["']/gi,
+    /src=["']https?:\/\/[^/]+(\/(?:api\/admin|api\/public)\/[^"']+)["']/gi,
     (match, path) => `src="${toImageSrc(path)}"`
   )
   html = html.replace(
-    /!\[([^\]]*)\]\(https?:\/\/[^/]+(\/api\/admin\/[^)]+)\)/gi,
+    /!\[([^\]]*)\]\(https?:\/\/[^/]+(\/(?:api\/admin|api\/public)\/[^)]+)\)/gi,
     (match, alt, path) => `![${alt}](${toImageSrc(path)})`
   )
   

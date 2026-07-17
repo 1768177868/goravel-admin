@@ -36,13 +36,13 @@ type AttachmentService interface {
 	UploadChunk(chunkID string, chunkIndex int, chunkData []byte) error
 
 	// MergeChunks 合并分片（不再使用服务端缓存，需要传入 totalChunks）
-	MergeChunks(chunkID string, filename string, mimeType string, totalChunks int) (*models.Attachment, error)
+	MergeChunks(chunkID string, filename string, mimeType string, totalChunks int, isPublicRaw string) (*models.Attachment, error)
 
 	// GetChunkProgress 获取分片上传进度（不再使用服务端缓存，需要传入 totalChunks）
 	GetChunkProgress(chunkID string, totalChunks int) (map[string]any, error)
 
 	// UploadFile 普通文件上传（小文件）
-	UploadFile(fileData []byte, filename string, mimeType string) (*models.Attachment, error)
+	UploadFile(fileData []byte, filename string, mimeType string, isPublicRaw string) (*models.Attachment, error)
 
 	// GetFileURL 获取文件访问URL
 	GetFileURL(attachment *models.Attachment) string
@@ -56,6 +56,8 @@ type AttachmentService interface {
 	UpdateDisplayName(id uint, displayName string) error
 	// UpdateCategory 更新附件分类
 	UpdateCategory(id uint, categoryID uint) error
+	// UpdateVisibility 更新附件公开/私有状态
+	UpdateVisibility(id uint, isPublic bool) error
 }
 
 // AttachmentFilters 附件查询过滤器
@@ -65,6 +67,7 @@ type AttachmentFilters struct {
 	DisplayName string
 	Keyword     string // filename OR display_name
 	CategoryID  string
+	IsPublic    string
 	FileType    string
 	Extension   string
 	StartTime   string
@@ -93,6 +96,45 @@ func NewAttachmentService(ctx http.Context) AttachmentService {
 		ctx:              ctx,
 		disk:             disk,
 		systemLogService: NewSystemLogService(ctx),
+	}
+}
+
+const (
+	AttachmentPublicURLTemplate  = "/api/admin/public/images/%d"
+	AttachmentPrivateURLTemplate = "/api/admin/attachments/%d/preview"
+)
+
+// AttachmentPublicURL 公开附件的稳定访问路径（可写入富文本/配置）
+func AttachmentPublicURL(id uint) string {
+	return fmt.Sprintf(AttachmentPublicURLTemplate, id)
+}
+
+// AttachmentPrivatePreviewURL 私有附件的鉴权预览路径
+func AttachmentPrivatePreviewURL(id uint) string {
+	return fmt.Sprintf(AttachmentPrivateURLTemplate, id)
+}
+
+func defaultAttachmentIsPublic(fileType string) uint8 {
+	switch fileType {
+	case "image", "video":
+		return 1
+	default:
+		return 0
+	}
+}
+
+func parseAttachmentIsPublicInput(raw string, fileType string) uint8 {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultAttachmentIsPublic(fileType)
+	}
+	switch raw {
+	case "1", "true", "yes", "on":
+		return 1
+	case "0", "false", "no", "off":
+		return 0
+	default:
+		return defaultAttachmentIsPublic(fileType)
 	}
 }
 
@@ -142,7 +184,7 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 
 // MergeChunks 合并分片
 // 注意：不再使用服务端缓存，通过检查实际文件系统来验证分片
-func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mimeType string, totalChunks int) (*models.Attachment, error) {
+func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mimeType string, totalChunks int, isPublicRaw string) (*models.Attachment, error) {
 	storage := facades.Storage().Disk(s.disk)
 
 	// 检查所有分片文件是否存在
@@ -312,6 +354,7 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		Size:       fileSize,
 		Status:     1,
 		FileType:   fileType,
+		IsPublic:   parseAttachmentIsPublicInput(isPublicRaw, fileType),
 		ChunkID:    chunkID,
 	}
 
@@ -405,7 +448,7 @@ func (s *AttachmentServiceImpl) GetChunkProgress(chunkID string, totalChunks int
 }
 
 // UploadFile 普通文件上传（小文件）
-func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mimeType string) (*models.Attachment, error) {
+func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mimeType string, isPublicRaw string) (*models.Attachment, error) {
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
@@ -456,6 +499,7 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 		Size:       fileSize,
 		Status:     1,
 		FileType:   fileType,
+		IsPublic:   parseAttachmentIsPublicInput(isPublicRaw, fileType),
 	}
 
 	if err := appfacades.OrmQuery(s.ctx).Create(attachment); err != nil {
@@ -473,45 +517,15 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 	return attachment, nil
 }
 
-// GetFileURL 获取文件访问URL
+// GetFileURL 获取文件稳定访问URL（不返回云存储临时链）
 func (s *AttachmentServiceImpl) GetFileURL(attachment *models.Attachment) string {
-	// 对于本地存储，返回下载接口URL
-	if attachment.Disk == "local" || attachment.Disk == "public" {
-		return fmt.Sprintf("/api/admin/attachments/%d/preview", attachment.ID)
+	if attachment == nil || attachment.ID == 0 {
+		return ""
 	}
-
-	// 对于云存储，生成临时URL或直接URL
-	storage := facades.Storage().Disk(attachment.Disk)
-
-	// 尝试生成临时URL（24小时有效）
-	if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
-		return url
+	if attachment.IsPublic == 1 {
+		return AttachmentPublicURL(attachment.ID)
 	}
-
-	// 如果生成临时URL失败，尝试从配置获取基础URL
-	var configURL string
-	switch attachment.Disk {
-	case "s3":
-		configURL = utils.GetConfigValue(s.ctx, "storage", "s3_url", "")
-	case "oss":
-		configURL = utils.GetConfigValue(s.ctx, "storage", "oss_url", "")
-	case "cos":
-		configURL = utils.GetConfigValue(s.ctx, "storage", "cos_url", "")
-	case "minio":
-		configURL = utils.GetConfigValue(s.ctx, "storage", "minio_url", "")
-	}
-
-	if configURL != "" {
-		if !strings.HasSuffix(configURL, "/") {
-			configURL += "/"
-		}
-		return configURL + attachment.Path
-	}
-
-	// 默认返回下载接口URL
-	// 注意：为了统一，这里也返回 preview 接口（如果需要下载则用 download）
-	// 前端附件列表使用的 file_url 是这里生成的
-	return fmt.Sprintf("/api/admin/public/images/%d", attachment.ID)
+	return AttachmentPrivatePreviewURL(attachment.ID)
 }
 
 // GetFileType 根据MIME类型判断文件类型
@@ -576,6 +590,9 @@ func (s *AttachmentServiceImpl) GetList(filters AttachmentFilters, page, pageSiz
 	}
 	if filters.CategoryID != "" {
 		query = query.Where("category_id", filters.CategoryID)
+	}
+	if filters.IsPublic != "" {
+		query = query.Where("is_public", filters.IsPublic)
 	}
 	if filters.FileType != "" {
 		query = query.Where("file_type = ?", filters.FileType)
@@ -642,6 +659,25 @@ func (s *AttachmentServiceImpl) UpdateCategory(id uint, categoryID uint) error {
 	}
 
 	attachment.CategoryID = categoryID
+	if err := appfacades.OrmQuery(s.ctx).Save(&attachment); err != nil {
+		return apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return nil
+}
+
+// UpdateVisibility 更新附件公开/私有状态
+func (s *AttachmentServiceImpl) UpdateVisibility(id uint, isPublic bool) error {
+	var attachment models.Attachment
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&attachment); err != nil {
+		return apperrors.ErrAttachmentNotFound.WithError(err)
+	}
+
+	if isPublic {
+		attachment.IsPublic = 1
+	} else {
+		attachment.IsPublic = 0
+	}
+
 	if err := appfacades.OrmQuery(s.ctx).Save(&attachment); err != nil {
 		return apperrors.ErrUpdateFailed.WithError(err)
 	}

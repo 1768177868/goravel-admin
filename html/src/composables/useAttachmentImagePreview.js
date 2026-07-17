@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import Storage from '@/utils/storage'
+import { isPrivateAttachmentPreviewPath, isPublicAttachmentPath } from '@/utils/attachmentUrl'
 
 /**
  * Lazy-load attachment thumbnails as blob URLs when preview requires auth.
@@ -30,10 +31,21 @@ export function useAttachmentImagePreview() {
       return
     }
 
+    const requiresAuth =
+      Number(row.is_public) === 0 ||
+      isPrivateAttachmentPreviewPath(fileUrl)
+
     imageLoadingMap.value.set(attachmentId, 'loading')
 
-    if (fileUrl.startsWith('http')) {
+    if (fileUrl.startsWith('http') && !requiresAuth) {
       imageUrlMap.value.set(attachmentId, fileUrl)
+      imageLoadingMap.value.set(attachmentId, 'loaded')
+      return
+    }
+
+    if (isPublicAttachmentPath(fileUrl) && !import.meta.env.VITE_API_BASE_URL) {
+      imageUrlMap.value.set(attachmentId, fileUrl)
+      imageLoadingMap.value.set(attachmentId, 'loaded')
       return
     }
 
@@ -50,15 +62,17 @@ export function useAttachmentImagePreview() {
     try {
       const token = Storage.getItem('token', '') || ''
       const tokenStr = typeof token === 'string' ? token.trim() : ''
+      const headers = {}
+      if (requiresAuth || tokenStr) {
+        headers.Authorization = `Bearer ${tokenStr}`
+      }
       const response = await axios.get(fullUrl, {
         responseType: 'blob',
-        headers: {
-          Authorization: `Bearer ${tokenStr}`
-        }
+        headers
       })
       const blobUrl = URL.createObjectURL(new Blob([response.data]))
       imageUrlMap.value.set(attachmentId, blobUrl)
-      imageLoadingMap.value.set(attachmentId, 'loading')
+      imageLoadingMap.value.set(attachmentId, 'loaded')
     } catch {
       imageLoadingMap.value.set(attachmentId, 'error')
       imageUrlMap.value.set(attachmentId, '')

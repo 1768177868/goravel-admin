@@ -73,7 +73,7 @@ export function getApiPrefix() {
   return getEnv('VITE_API_PREFIX', '/api/admin')
 }
 
-const PUBLIC_IMAGE_PATH_RE = /\/api\/admin\/public\/images\/\d+/
+const PUBLIC_ATTACHMENT_PATH_RE = /\/api\/(?:admin\/public\/images|public\/files)\/\d+/
 
 /**
  * 公开图片（site_logo、通知正文等）使用相对路径，走当前站点同源访问。
@@ -97,7 +97,11 @@ export function resolvePublicAssetUrl(raw) {
   if (!path.startsWith('/')) {
     path = path.startsWith(prefix.replace(/^\//, '')) ? `/${path}` : `${prefix}/${path}`
   }
-  if (!PUBLIC_IMAGE_PATH_RE.test(path) && !path.includes('/api/admin/public/images/')) {
+  if (
+    !PUBLIC_ATTACHMENT_PATH_RE.test(path) &&
+    !path.includes('/api/admin/public/images/') &&
+    !path.includes('/api/public/files/')
+  ) {
     return value
   }
   return path

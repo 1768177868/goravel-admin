@@ -127,6 +127,7 @@ import { getAttachmentList } from '@/api/attachment'
 import { transformAttachmentRow } from '@/views/attachment/attachment.config'
 import { useAttachmentImagePreview } from '@/composables/useAttachmentImagePreview'
 import { PUBLIC_IMAGE_PATH_RE, resolveImageDisplayUrl } from '@/utils/publicImage'
+import { toStablePublicAttachmentUrl } from '@/utils/attachmentUrl'
 import request from '@/utils/request'
 
 const props = defineProps({
@@ -231,10 +232,7 @@ const ensureFileUrl = (item) => {
 }
 
 /** 配置类长期引用：统一存公开预览路径，避免 S3 临时签名链过期 */
-const toStablePublicUrl = (item) => {
-  if (!item?.id) return ''
-  return `/api/admin/public/images/${item.id}`
-}
+const toStablePublicUrl = (item) => toStablePublicAttachmentUrl(item)
 
 const loadCategoryOptions = async () => {
   try {
@@ -252,6 +250,7 @@ const loadList = async () => {
       page: page.value,
       page_size: pageSize.value,
       file_type: 'image',
+      is_public: '1',
       keyword: keyword.value.trim() || undefined,
       category_id: categoryId.value || undefined
     })
