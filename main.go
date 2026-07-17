@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"goravel/app/clients"
 	"goravel/app/facades"
@@ -31,6 +32,10 @@ import (
 // @name                       Authorization
 // @description                JWT 认证，格式：Bearer {token}
 
+// shutdownTimeout 优雅关闭最长等待时间。
+// 监控 SSE / Dashboard SSE 等长连接可能拖住 HTTP Shutdown，超时后强制退出。
+const shutdownTimeout = 10 * time.Second
+
 func main() {
 	// Bootstrap the application
 	app := bootstrap.Boot()
@@ -43,26 +48,40 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Listen for the OS signal
-	<-quit
+	sig := <-quit
+	facades.Log().Infof("Received signal %v, shutting down...", sig)
 	shutdownApplication(app)
 }
 
 // shutdownApplication 优雅关闭应用程序（框架会依次关闭所有 runners：Route、Queue 等）
 func shutdownApplication(app interface{ Shutdown() error }) {
-	// 停止 NotificationHub（关闭所有 WebSocket 连接）
-	notifications.Hub().Stop()
-	facades.Log().Info("NotificationHub stopped")
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
 
-	// 关闭所有 Redis 客户端
-	if err := clients.CloseAllRedisClients(); err != nil {
-		facades.Log().Errorf("Close Redis clients error: %v", err)
-	} else {
-		facades.Log().Info("Redis clients closed")
-	}
+		// 停止 NotificationHub（关闭所有 WebSocket 连接）
+		notifications.Hub().Stop()
+		facades.Log().Info("NotificationHub stopped")
 
-	// 关闭应用程序（框架会依次关闭所有 runners：Route、Queue 等）
-	if err := app.Shutdown(); err != nil {
-		facades.Log().Errorf("Application Shutdown error: %v", err)
+		// 关闭所有 Redis 客户端
+		if err := clients.CloseAllRedisClients(); err != nil {
+			facades.Log().Errorf("Close Redis clients error: %v", err)
+		} else {
+			facades.Log().Info("Redis clients closed")
+		}
+
+		// 关闭应用程序（框架会依次关闭所有 runners：Route、Queue 等）
+		if err := app.Shutdown(); err != nil {
+			facades.Log().Errorf("Application Shutdown error: %v", err)
+			os.Exit(1)
+		}
+	}()
+
+	select {
+	case <-done:
+		facades.Log().Info("Application stopped")
+	case <-time.After(shutdownTimeout):
+		facades.Log().Warningf("Graceful shutdown timed out after %s, forcing exit", shutdownTimeout)
 		os.Exit(1)
 	}
 }
