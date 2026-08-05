@@ -1,0 +1,219 @@
+import { useEffect, useState } from 'react'
+import { App, Button, Form, Input, Space, Typography, theme } from 'antd'
+import { LockOutlined, UserOutlined, ReloadOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { login, getLoginCaptcha } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
+import { useAppStore, THEME_COLORS } from '@/stores/app'
+import { ERROR_CODES, type ApiError } from '@/types'
+import LanguageSwitch from '@/components/LanguageSwitch'
+import DarkModeSwitch from '@/components/DarkModeSwitch'
+import './Login.scss'
+
+interface LoginFormValues {
+  username: string
+  password: string
+  google_code?: string
+  captcha_answer?: string
+}
+
+export default function LoginPage() {
+  const { t } = useTranslation()
+  const { message } = App.useApp()
+  const navigate = useNavigate()
+  const [form] = Form.useForm<LoginFormValues>()
+  const [loading, setLoading] = useState(false)
+  const [needGoogleCode, setNeedGoogleCode] = useState(false)
+  const [captcha, setCaptcha] = useState<{ id: string; image: string; shouldShow: boolean }>({
+    id: '',
+    image: '',
+    shouldShow: false,
+  })
+  const setToken = useUserStore((s) => s.setToken)
+  const fetchUserInfo = useUserStore((s) => s.fetchUserInfo)
+  const themeColor = useAppStore((s) => s.themeColor)
+  const setThemeColor = useAppStore((s) => s.setThemeColor)
+  const { token } = theme.useToken()
+
+  const fetchCaptcha = async () => {
+    try {
+      const res = await getLoginCaptcha()
+      const data = res.data
+      if (data) {
+        setCaptcha({
+          id: data.captcha_id || '',
+          image: data.image || '',
+          shouldShow: !!data.should_show || !!data.image,
+        })
+      }
+    } catch {
+      // captcha endpoint may be optional depending on backend config
+    }
+  }
+
+  useEffect(() => {
+    void fetchCaptcha()
+  }, [])
+
+  const handleSubmit = async (values: LoginFormValues) => {
+    setLoading(true)
+    try {
+      const payload = {
+        username: values.username,
+        password: values.password,
+        ...(needGoogleCode ? { google_code: values.google_code } : {}),
+        ...(captcha.shouldShow && !needGoogleCode
+          ? { captcha_id: captcha.id, captcha_answer: values.captcha_answer }
+          : {}),
+      }
+
+      const res = await login(payload)
+      const tokenValue = (res.data as { token?: string } | undefined)?.token
+      if (tokenValue) {
+        setToken(tokenValue)
+      }
+
+      await fetchUserInfo(true)
+      message.success(t('login.login_success'))
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      const err = error as ApiError
+      const code = err.errorCode || ''
+
+      if (code === ERROR_CODES.GOOGLE_CODE_REQUIRED) {
+        setNeedGoogleCode(true)
+        message.warning(err.message || t('login.google_code_required'))
+        return
+      }
+
+      if (
+        code === ERROR_CODES.CAPTCHA_REQUIRED ||
+        code === ERROR_CODES.CAPTCHA_INVALID ||
+        code === ERROR_CODES.CAPTCHA_EXPIRED
+      ) {
+        setNeedGoogleCode(false)
+        await fetchCaptcha()
+      }
+
+      if (!err.__handled) {
+        message.error(err.translatedMessage || err.message || t('login.login_failed'))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="login-page" style={{ ['--login-primary' as string]: token.colorPrimary }}>
+      <div className="login-page__left">
+        <div className="login-page__brand">
+          <div className="brand-logo">
+            <LockOutlined />
+          </div>
+          <Typography.Title level={2} className="brand-title">
+            {t('login.title')}
+          </Typography.Title>
+          <Typography.Paragraph className="brand-desc">{t('login.page_description')}</Typography.Paragraph>
+        </div>
+        <div className="login-page__deco" aria-hidden>
+          <span className="deco-circle deco-circle--1" />
+          <span className="deco-circle deco-circle--2" />
+          <span className="deco-circle deco-circle--3" />
+        </div>
+      </div>
+
+      <div className="login-page__right">
+        <div className="login-page__toolbar">
+          <div className="login-toolbar__theme">
+            {THEME_COLORS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`login-theme-swatch ${themeColor === item.key ? 'active' : ''}`}
+                style={{ backgroundColor: item.color }}
+                onClick={() => setThemeColor(item.key)}
+                title={item.key}
+              />
+            ))}
+          </div>
+          <DarkModeSwitch />
+          <LanguageSwitch />
+        </div>
+
+        <div className="login-page__form-wrap">
+          <div className="login-form-card">
+            <Typography.Title level={3}>{t('login.login')}</Typography.Title>
+            <Typography.Paragraph type="secondary">{t('login.page_description')}</Typography.Paragraph>
+
+            <Form form={form} layout="vertical" size="large" onFinish={handleSubmit} requiredMark={false}>
+              <Form.Item
+                name="username"
+                rules={[{ required: true, message: t('login.username_required') }]}
+              >
+                <Input prefix={<UserOutlined />} placeholder={t('login.username')} autoComplete="username" />
+              </Form.Item>
+
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: t('login.password_required') }]}
+              >
+                <Input.Password
+                  prefix={<LockOutlined />}
+                  placeholder={t('login.password')}
+                  autoComplete="current-password"
+                />
+              </Form.Item>
+
+              {needGoogleCode && (
+                <Form.Item
+                  name="google_code"
+                  rules={[
+                    { required: true, message: t('login.google_code_required') },
+                    { pattern: /^\d{6}$/, message: t('login.google_code_format') },
+                  ]}
+                >
+                  <Input placeholder={t('login.google_code_placeholder')} maxLength={6} />
+                </Form.Item>
+              )}
+
+              {captcha.shouldShow && !needGoogleCode && (
+                <>
+                  <div className="captcha-row">
+                    {captcha.image ? (
+                      <img
+                        src={captcha.image}
+                        alt={t('login.captcha_alt')}
+                        className="captcha-image"
+                        onClick={() => void fetchCaptcha()}
+                      />
+                    ) : null}
+                    <Button type="link" icon={<ReloadOutlined />} onClick={() => void fetchCaptcha()}>
+                      {t('login.refresh_captcha')}
+                    </Button>
+                  </div>
+                  <Form.Item
+                    name="captcha_answer"
+                    rules={[{ required: true, message: t('login.captcha_required') }]}
+                  >
+                    <Input placeholder={t('login.captcha_placeholder')} />
+                  </Form.Item>
+                </>
+              )}
+
+              <Form.Item>
+                <Button type="primary" htmlType="submit" block loading={loading}>
+                  {t('login.login')}
+                </Button>
+              </Form.Item>
+            </Form>
+
+            <Space className="login-hint" size={4}>
+              <Typography.Text type="secondary">admin / admin123</Typography.Text>
+            </Space>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

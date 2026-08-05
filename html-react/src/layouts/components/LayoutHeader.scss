@@ -1,0 +1,29 @@
+.layout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px !important;
+  height: 56px !important;
+  line-height: 56px !important;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.layout-header__left {
+  display: flex;
+  align-items: center;
+}
+
+.layout-header__trigger {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: inherit;
+  padding: 4px 8px;
+}
+
+.layout-header__user {
+  cursor: pointer;
+}
