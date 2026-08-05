@@ -6,7 +6,7 @@ import { createRole, getRoleDetail, updateRole } from '@/api/role'
 import { getMenuTree } from '@/api/menu'
 import { getPermissionList } from '@/api/permission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
-import { entityField } from '@/utils/normalize'
+import { entityField, normalizeEntity } from '@/utils/normalize'
 import {
   buildCheckedKeysFromIds,
   buildMenuPermissionTree,
@@ -71,7 +71,10 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
 
         const detail = await getRoleDetail(editId)
         if (cancelled) return
-        const data = (detail.data || {}) as Record<string, unknown>
+        const raw = (detail.data || {}) as Record<string, unknown>
+        const data = normalizeEntity(
+          (entityField(raw, 'role', raw) || {}) as Record<string, unknown>,
+        ) as Record<string, unknown>
         const nextSlug = String(entityField(data, 'slug', '') ?? '')
         const menuIds = ((entityField(data, 'menu_ids', []) as number[]) || []).map(Number)
         const permissionIds = ((entityField(data, 'permission_ids', []) as number[]) || []).map(Number)

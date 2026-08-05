@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { App, Form, Input, Modal, Radio, Select } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { createNotification } from '@/api/notification'
-import MarkdownEditor from '@/components/MarkdownEditor'
+import ContentEditor from '@/components/ContentEditor'
 import { useOptions } from '@/hooks/useOptions'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import { useNotificationStore } from '@/stores/notification'
@@ -116,7 +116,7 @@ export default function NotificationFormModal({ open, onClose, onSuccess }: Noti
           label={t('notification.table.content')}
           rules={[{ required: true, message: t('notification.content_required') }]}
         >
-          <MarkdownEditor height={400} placeholder={t('notification.content_placeholder')} />
+          <ContentEditor height={400} placeholder={t('notification.content_placeholder')} />
         </Form.Item>
       </Form>
     </Modal>

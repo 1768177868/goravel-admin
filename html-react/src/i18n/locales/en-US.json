@@ -107,6 +107,10 @@
     "timeout": "Request timed out, please try again later",
     "page_load_failed": "Failed to load page, please refresh"
   },
+  "editor": {
+    "markdown": "Markdown",
+    "rich_text": "Rich Text"
+  },
   "menu": {
     "dashboard": "Dashboard",
     "profile": "Profile",
@@ -196,7 +200,7 @@
     "receiver": "Receiver",
     "select_receiver": "Select receiver",
     "title_placeholder": "Enter title",
-    "content_placeholder": "Enter content (Markdown supported)",
+    "content_placeholder": "Enter content (Markdown or rich text supported)",
     "type_required": "Please select type",
     "receiver_required": "Please select receiver",
     "title_required": "Please enter title",

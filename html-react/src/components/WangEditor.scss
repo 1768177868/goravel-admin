@@ -1,0 +1,111 @@
+.wang-editor-wrapper {
+  border: 1px solid var(--ant-color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.wang-editor-wrapper :global(.w-e-toolbar) {
+  border-bottom: 1px solid var(--ant-color-border);
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.wang-editor-wrapper :global(.w-e-text-container) {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.wang-editor-wrapper.dark-mode {
+  border-color: var(--ant-color-border);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-toolbar) {
+  background-color: var(--ant-color-bg-elevated);
+  border-bottom-color: var(--ant-color-border);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-bar-item button) {
+  color: var(--ant-color-text);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-bar-item button:hover) {
+  background-color: var(--ant-color-fill-secondary);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-bar-item .active) {
+  background-color: var(--ant-color-fill);
+  color: var(--ant-color-text);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-bar-item-menus-container),
+.wang-editor-wrapper.dark-mode :global(.w-e-drop-down-menu),
+.wang-editor-wrapper.dark-mode :global(.w-e-panel-content-color),
+.wang-editor-wrapper.dark-mode :global(.w-e-modal),
+.wang-editor-wrapper.dark-mode :global(.w-e-hover-bar) {
+  background-color: var(--ant-color-bg-elevated);
+  border-color: var(--ant-color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container) {
+  background-color: var(--ant-color-bg-container);
+  color: var(--ant-color-text);
+  border-color: var(--ant-color-border);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor]),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] p),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] div),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] span),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] h1),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] h2),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] h3),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] li),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] td),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container [data-slate-editor] th) {
+  color: var(--ant-color-text);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-placeholder) {
+  color: var(--ant-color-text-placeholder);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container a) {
+  color: var(--ant-color-primary);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container blockquote) {
+  border-left-color: var(--ant-color-border);
+  color: var(--ant-color-text-secondary);
+  background-color: var(--ant-color-fill-secondary);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container code) {
+  background-color: var(--ant-color-fill);
+  color: var(--ant-color-error);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container pre) {
+  background-color: var(--ant-color-fill-tertiary);
+  border-color: var(--ant-color-border);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container table) {
+  border-color: var(--ant-color-border);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container td),
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container th) {
+  border-color: var(--ant-color-border);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-text-container th) {
+  background-color: var(--ant-color-fill);
+}
+
+.wang-editor-wrapper.dark-mode :global(.w-e-modal input),
+.wang-editor-wrapper.dark-mode :global(.w-e-modal textarea),
+.wang-editor-wrapper.dark-mode :global(.w-e-modal select) {
+  background-color: var(--ant-color-bg-container);
+  border-color: var(--ant-color-border);
+  color: var(--ant-color-text);
+}

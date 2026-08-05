@@ -105,6 +105,10 @@
     "timeout": "请求超时，请稍后再试",
     "page_load_failed": "页面加载失败，请刷新重试"
   },
+  "editor": {
+    "markdown": "Markdown",
+    "rich_text": "富文本"
+  },
   "menu": {
     "dashboard": "仪表盘",
     "profile": "个人中心",
@@ -210,7 +214,7 @@
     "receiver": "接收者",
     "select_receiver": "请选择接收者",
     "title_placeholder": "请输入通知标题",
-    "content_placeholder": "请输入通知内容（支持 Markdown）",
+    "content_placeholder": "请输入通知内容（支持 Markdown 或富文本）",
     "type_required": "请选择通知类型",
     "receiver_required": "请选择接收者",
     "title_required": "请输入通知标题",
