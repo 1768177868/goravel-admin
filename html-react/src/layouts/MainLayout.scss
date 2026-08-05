@@ -12,6 +12,11 @@
   min-height: 280px;
 }
 
+.main-layout__watermark {
+  display: block;
+  min-height: 100%;
+}
+
 .main-layout__page {
   background: var(--ant-color-bg-container, #fff);
   border-radius: 8px;

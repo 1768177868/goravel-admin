@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { App, Alert, Button, Card, Form, Input, Space, Tabs, Typography } from 'antd'
+import { App, Alert, Avatar, Button, Card, Form, Input, Modal, Space, Tabs, Typography } from 'antd'
+import { UserOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { updatePassword, updateProfile } from '@/api/profile'
 import {
@@ -11,6 +12,35 @@ import {
 import { useUserStore } from '@/stores/user'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import PageContainer from '@/components/PageContainer'
+
+const DEFAULT_AVATARS = [
+  'https://ui-avatars.com/api/?name=A&background=409EFF&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=B&background=67C23A&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=C&background=E6A23C&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=D&background=F56C6C&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=E&background=9C27B0&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=F&background=00BCD4&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=G&background=FF9800&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=H&background=4CAF50&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=I&background=2196F3&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=J&background=FF5722&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=K&background=795548&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=L&background=607D8B&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=M&background=3F51B5&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=N&background=009688&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=O&background=FFC107&color=333&size=128',
+  'https://ui-avatars.com/api/?name=P&background=E91E63&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=Q&background=8BC34A&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=R&background=CDDC39&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=S&background=FFEB3B&color=333&size=128',
+  'https://ui-avatars.com/api/?name=T&background=FF9800&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=U&background=9E9E9E&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=V&background=673AB7&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=W&background=00ACC1&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=X&background=5C6BC0&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=Y&background=F44336&color=fff&size=128',
+  'https://ui-avatars.com/api/?name=Z&background=26A69A&color=fff&size=128',
+]
 
 export default function ProfilePage() {
   const { t } = useTranslation()
@@ -27,6 +57,9 @@ export default function ProfilePage() {
   const [bound, setBound] = useState(false)
   const [qr, setQr] = useState<{ qrcode?: string; secret?: string }>({})
   const [loading2fa, setLoading2fa] = useState(false)
+  const [avatarOpen, setAvatarOpen] = useState(false)
+  const [selectedAvatar, setSelectedAvatar] = useState('')
+  const [savingAvatar, setSavingAvatar] = useState(false)
 
   useEffect(() => {
     profileForm.setFieldsValue({
@@ -119,6 +152,29 @@ export default function ProfilePage() {
     }
   }
 
+  const openAvatarDialog = () => {
+    setSelectedAvatar(adminInfo?.avatar || '')
+    setAvatarOpen(true)
+  }
+
+  const handleSaveAvatar = async () => {
+    if (!selectedAvatar) {
+      message.warning(t('profile.please_select_avatar'))
+      return
+    }
+    setSavingAvatar(true)
+    try {
+      await updateProfile({ avatar: selectedAvatar })
+      message.success(t('profile.avatar_update_success'))
+      setAvatarOpen(false)
+      await fetchUserInfo(true)
+    } catch (error) {
+      showError(error, t('common.operation_failed'))
+    } finally {
+      setSavingAvatar(false)
+    }
+  }
+
   return (
     <PageContainer title={t('menu.profile')}>
       <Card>
@@ -131,30 +187,39 @@ export default function ProfilePage() {
               key: 'basic',
               label: t('common.basic_info'),
               children: (
-                <Form
-                  form={profileForm}
-                  layout="vertical"
-                  style={{ maxWidth: 480 }}
-                  onFinish={() => void handleProfileSave()}
-                >
-                  <Form.Item label={t('table.username')}>
-                    <Input value={adminInfo?.username || ''} disabled />
-                  </Form.Item>
-                  <Form.Item name="nickname" label={t('table.nickname')}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="email" label={t('table.email')}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="phone" label={t('table.phone')}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item>
-                    <Button type="primary" htmlType="submit" loading={savingProfile}>
-                      {t('common.save')}
-                    </Button>
-                  </Form.Item>
-                </Form>
+                <div style={{ maxWidth: 520 }}>
+                  <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <Avatar size={100} src={adminInfo?.avatar} icon={<UserOutlined />} />
+                    <div style={{ marginTop: 12 }}>
+                      <Button type="link" onClick={openAvatarDialog}>
+                        {t('profile.change_avatar')}
+                      </Button>
+                    </div>
+                  </div>
+                  <Form
+                    form={profileForm}
+                    layout="vertical"
+                    onFinish={() => void handleProfileSave()}
+                  >
+                    <Form.Item label={t('table.username')}>
+                      <Input value={adminInfo?.username || ''} disabled />
+                    </Form.Item>
+                    <Form.Item name="nickname" label={t('table.nickname')}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="email" label={t('table.email')}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="phone" label={t('table.phone')}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit" loading={savingProfile}>
+                        {t('common.save')}
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                </div>
               ),
             },
             {
@@ -266,6 +331,48 @@ export default function ProfilePage() {
           ]}
         />
       </Card>
+
+      <Modal
+        open={avatarOpen}
+        title={t('profile.change_avatar')}
+        onCancel={() => setAvatarOpen(false)}
+        onOk={() => void handleSaveAvatar()}
+        confirmLoading={savingAvatar}
+        okButtonProps={{ disabled: !selectedAvatar }}
+        width={560}
+        destroyOnHidden
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, 1fr)',
+            gap: 12,
+            maxHeight: 400,
+            overflowY: 'auto',
+            padding: '8px 0',
+          }}
+        >
+          {DEFAULT_AVATARS.map((avatar) => {
+            const active = selectedAvatar === avatar
+            return (
+              <button
+                key={avatar}
+                type="button"
+                onClick={() => setSelectedAvatar(avatar)}
+                style={{
+                  padding: 8,
+                  borderRadius: 8,
+                  border: `2px solid ${active ? 'var(--ant-color-primary)' : 'var(--ant-color-border)'}`,
+                  background: active ? 'var(--ant-color-primary-bg)' : 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                <Avatar size={56} src={avatar} icon={<UserOutlined />} />
+              </button>
+            )
+          })}
+        </div>
+      </Modal>
     </PageContainer>
   )
 }

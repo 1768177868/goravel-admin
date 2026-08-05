@@ -1,16 +1,19 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Form, Input, InputNumber, Modal, Radio, Space, Table } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Radio, Space, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { App } from 'antd'
+import { SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
 import SearchForm, { type SearchField } from '@/components/SearchForm'
 import StatusTag from '@/components/StatusTag'
 import PermissionButton from '@/components/PermissionButton'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import { entityField } from '@/utils/normalize'
 import type { ApiResponse, PaginatedData } from '@/types'
 
@@ -40,6 +43,7 @@ interface SimpleCrudPageProps<T extends { id: string | number }> {
   isProtected?: (row: T) => boolean
   extraColumns?: ColumnsType<T>
   renderExtraForm?: (editing: boolean) => ReactNode
+  columnSettingKey?: string
 }
 
 export default function SimpleCrudPage<T extends { id: string | number; name?: string; status?: number }>(
@@ -160,6 +164,18 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
     ]
   }, [props, t, getButtonState, confirmDelete, form])
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting(props.columnSettingKey || '', columns)
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
@@ -182,7 +198,21 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
   }
 
   return (
-    <PageContainer title={props.title} extra={toolbar}>
+    <PageContainer
+      title={props.title}
+      extra={
+        props.columnSettingKey ? (
+          <Space>
+            {toolbar}
+            <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+              {t('common.column_setting')}
+            </Button>
+          </Space>
+        ) : (
+          toolbar
+        )
+      }
+    >
       {props.searchFields && props.searchFields.length > 0 && (
         <SearchForm
           fields={props.searchFields}
@@ -195,7 +225,7 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
       <Table<T>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={props.columnSettingKey ? filteredColumns : columns}
         dataSource={tableData}
         scroll={{ x: 960 }}
         pagination={{
@@ -284,6 +314,18 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
           {props.renderExtraForm?.(!!editId)}
         </Form>
       </Modal>
+
+      {props.columnSettingKey && (
+        <ColumnSettingDialog
+          open={columnSettingOpen}
+          onClose={closeColumnSetting}
+          allColumns={allColumns}
+          visibleColumns={visibleColumns}
+          columnOrder={columnOrder}
+          fixedColumns={fixedColumns}
+          onConfirm={handleColumnSettingConfirm}
+        />
+      )}
     </PageContainer>
   )
 }

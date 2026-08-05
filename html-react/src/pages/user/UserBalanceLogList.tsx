@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Col, Row, Space, Statistic, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, SettingOutlined } from '@ant-design/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getUserBalanceLogList, getUserBalanceStatistics } from '@/api/userBalanceLog'
 import { useListPage } from '@/hooks/useListPage'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import { entityField } from '@/utils/normalize'
 
@@ -129,6 +131,18 @@ export default function UserBalanceLogList() {
     ]
   }, [t])
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('user_balance_log', columns)
+
   return (
     <PageContainer
       title={
@@ -143,14 +157,19 @@ export default function UserBalanceLogList() {
         </Space>
       }
       extra={
-        <Button
-          onClick={() => {
-            void refresh()
-            void loadStats()
-          }}
-        >
-          {t('common.refresh')}
-        </Button>
+        <Space>
+          <Button
+            onClick={() => {
+              void refresh()
+              void loadStats()
+            }}
+          >
+            {t('common.refresh')}
+          </Button>
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
+        </Space>
       }
     >
       {stats && (
@@ -212,7 +231,7 @@ export default function UserBalanceLogList() {
       <Table<LogRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={tableData}
         scroll={{ x: 1000 }}
         pagination={{
@@ -228,6 +247,15 @@ export default function UserBalanceLogList() {
             pageSize: pager.pageSize || pagination.pageSize,
           })
         }}
+      />
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
       />
     </PageContainer>
   )

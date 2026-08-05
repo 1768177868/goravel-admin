@@ -30,6 +30,7 @@ export default function PermissionList() {
         update: 'permission.update',
         destroy: 'permission.destroy',
       }}
+      columnSettingKey="permission"
       fetchApi={getPermissionList}
       createApi={createPermission}
       updateApi={updatePermission}

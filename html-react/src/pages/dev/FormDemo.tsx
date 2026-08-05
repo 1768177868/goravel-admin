@@ -1,66 +1,214 @@
-import { Card, Form, Input, InputNumber, Radio, Select, Space, Button, App } from 'antd'
+import { useState } from 'react'
+import {
+  App,
+  Button,
+  Card,
+  Cascader,
+  Checkbox,
+  ColorPicker,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  Rate,
+  Row,
+  Select,
+  Slider,
+  Space,
+  Switch,
+} from 'antd'
 import { useTranslation } from 'react-i18next'
 import PageContainer from '@/components/PageContainer'
+import WangEditor from '@/components/WangEditor'
+import MarkdownEditor from '@/components/MarkdownEditor'
+import request from '@/utils/request'
 
-/**
- * Lightweight form demo for React admin (parity placeholder for Vue FormDemo).
- */
 export default function FormDemo() {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const [form] = Form.useForm()
+  const [preview, setPreview] = useState<Record<string, unknown>>({})
+  const [loadingApi, setLoadingApi] = useState(false)
+
+  const regionOptions = [
+    {
+      value: 'china',
+      label: t('form_demo.country_china'),
+      children: [
+        {
+          value: 'guangdong',
+          label: t('form_demo.province_guangdong'),
+          children: [{ value: 'guangzhou', label: t('form_demo.city_guangzhou') }],
+        },
+      ],
+    },
+  ]
+
+  const fillSample = () => {
+    form.setFieldsValue({
+      username: 'demo_user',
+      password: '123456',
+      intro: t('form_demo.intro'),
+      gender: 'male',
+      hobbies: ['reading', 'music'],
+      role: 'admin',
+      birthday: undefined,
+      meeting_at: undefined,
+      active_days: undefined,
+      score: 88,
+      satisfaction: 4,
+      volume: 60,
+      enabled: true,
+      color: '#1677ff',
+      region: ['china', 'guangdong', 'guangzhou'],
+      rich_content_wang: '<p>WangEditor demo content</p>',
+      rich_content_markdown: '**Markdown** demo content',
+    })
+    setPreview(form.getFieldsValue(true))
+  }
+
+  const loadApiData = async () => {
+    setLoadingApi(true)
+    try {
+      const res = await request({ url: '/form-demo/data', method: 'get' })
+      const data = (res.data || {}) as Record<string, unknown>
+      form.setFieldsValue(data)
+      setPreview(form.getFieldsValue(true))
+      message.success(t('form_demo.loaded_from_api'))
+    } catch {
+      message.warning(t('common.query_failed'))
+    } finally {
+      setLoadingApi(false)
+    }
+  }
 
   return (
-    <PageContainer title={t('menu.form_demo', { defaultValue: '表单演示' })}>
-      <Card>
-        <Form
-          form={form}
-          layout="vertical"
-          style={{ maxWidth: 560 }}
-          initialValues={{ status: 1, sort: 0 }}
-          onFinish={() => {
-            message.success(t('common.success'))
-            form.resetFields()
-          }}
-        >
-          <Form.Item name="name" label={t('common.name')} rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="slug" label={t('common.slug')}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="type" label={t('common.type')}>
-            <Select
-              options={[
-                { label: 'A', value: 'a' },
-                { label: 'B', value: 'b' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="sort" label={t('common.sort')}>
-            <InputNumber style={{ width: '100%' }} min={0} />
-          </Form.Item>
-          <Form.Item name="status" label={t('common.status')}>
-            <Radio.Group
-              options={[
-                { label: t('common.enabled'), value: 1 },
-                { label: t('common.disabled'), value: 0 },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="description" label={t('common.description')}>
-            <Input.TextArea rows={4} />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                {t('common.submit')}
-              </Button>
-              <Button onClick={() => form.resetFields()}>{t('common.reset')}</Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+    <PageContainer title={t('form_demo.title', { defaultValue: t('menu.form_demo') })}>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card>
+            <Form
+              form={form}
+              layout="vertical"
+              initialValues={{
+                gender: 'male',
+                hobbies: ['reading'],
+                role: 'viewer',
+                score: 60,
+                satisfaction: 3,
+                volume: 40,
+                enabled: true,
+                color: '#1677ff',
+                rich_content_wang: '',
+                rich_content_markdown: '',
+              }}
+              onValuesChange={(_, all) => setPreview(all)}
+              onFinish={(values) => {
+                setPreview(values)
+                message.success(t('common.success'))
+              }}
+            >
+              <Form.Item name="username" label={t('form_demo.username')} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="password" label={t('common.password')}>
+                <Input.Password />
+              </Form.Item>
+              <Form.Item name="intro" label={t('form_demo.intro')}>
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              <Form.Item
+                name="gender"
+                label={t('form_demo.gender')}
+                rules={[{ required: true, message: t('form_demo.gender_required') }]}
+              >
+                <Radio.Group
+                  options={[
+                    { label: t('form_demo.gender_male'), value: 'male' },
+                    { label: t('form_demo.gender_female'), value: 'female' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="hobbies" label={t('form_demo.hobbies')}>
+                <Checkbox.Group
+                  options={[
+                    { label: t('form_demo.hobby_reading'), value: 'reading' },
+                    { label: t('form_demo.hobby_sports'), value: 'sports' },
+                    { label: t('form_demo.hobby_music'), value: 'music' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="role" label={t('form_demo.role')}>
+                <Select
+                  options={[
+                    { label: t('form_demo.role_admin'), value: 'admin' },
+                    { label: t('form_demo.role_editor'), value: 'editor' },
+                    { label: t('form_demo.role_viewer'), value: 'viewer' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="birthday" label={t('form_demo.birthday')}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="meeting_at" label={t('form_demo.meeting_at')}>
+                <DatePicker showTime style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="active_days" label={t('form_demo.active_days')}>
+                <DatePicker.RangePicker style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="score" label={t('form_demo.score_input_number')}>
+                <InputNumber min={0} max={100} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="satisfaction" label={t('form_demo.satisfaction')}>
+                <Rate />
+              </Form.Item>
+              <Form.Item name="volume" label={t('form_demo.volume')}>
+                <Slider />
+              </Form.Item>
+              <Form.Item name="enabled" label={t('common.status')} valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item
+                name="color"
+                label={t('form_demo.color')}
+                getValueFromEvent={(color) => (typeof color === 'string' ? color : color?.toHexString?.())}
+              >
+                <ColorPicker showText />
+              </Form.Item>
+              <Form.Item name="region" label={t('form_demo.region')}>
+                <Cascader options={regionOptions} />
+              </Form.Item>
+              <Form.Item name="rich_content_wang" label={t('form_demo.rich_content_wang')}>
+                <WangEditor height={280} placeholder={t('form_demo.rich_content_wang_placeholder')} />
+              </Form.Item>
+              <Form.Item name="rich_content_markdown" label={t('form_demo.rich_content_markdown')}>
+                <MarkdownEditor height={280} placeholder={t('form_demo.rich_content_markdown_placeholder')} />
+              </Form.Item>
+              <Form.Item>
+                <Space wrap>
+                  <Button type="primary" htmlType="submit">
+                    {t('common.submit')}
+                  </Button>
+                  <Button onClick={() => form.resetFields()}>{t('common.reset')}</Button>
+                  <Button onClick={fillSample}>{t('form_demo.fill_sample')}</Button>
+                  <Button loading={loadingApi} onClick={() => void loadApiData()}>
+                    {t('form_demo.load_api_data')}
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card title={t('form_demo.preview')}>
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {JSON.stringify(preview, null, 2)}
+            </pre>
+          </Card>
+        </Col>
+      </Row>
     </PageContainer>
   )
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { App, Dropdown, Form, Input, InputNumber, Modal, Radio, Select, Space, Switch, Table } from 'antd'
+import { App, Button, Dropdown, Form, Input, InputNumber, Modal, Radio, Select, Space, Switch, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import type { MenuProps } from 'antd'
-import { DownOutlined } from '@ant-design/icons'
+import { DownOutlined, SettingOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -19,7 +19,9 @@ import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
 import { entityField } from '@/utils/normalize'
@@ -319,6 +321,18 @@ export default function UserList() {
     },
   ]
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('user', columns)
+
   return (
     <PageContainer
       title={t('menu.user')}
@@ -328,6 +342,9 @@ export default function UserList() {
           <PermissionButton permission="user.export" loading={exporting} onClick={() => void handleExport()}>
             {t('common.export')}
           </PermissionButton>
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
         </Space>
       }
     >
@@ -352,7 +369,7 @@ export default function UserList() {
       <Table<UserRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={tableData}
         scroll={{ x: 1200 }}
         pagination={{
@@ -446,6 +463,15 @@ export default function UserList() {
           </Form.Item>
         </Form>
       </Modal>
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
+      />
     </PageContainer>
   )
 }

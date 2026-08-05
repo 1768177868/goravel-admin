@@ -10,7 +10,7 @@ import {
   Table,
 } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { CopyOutlined, EyeOutlined } from '@ant-design/icons'
+import { CopyOutlined, EyeOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import {
   batchDeleteOperationLogs,
@@ -24,7 +24,9 @@ import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
 import { getOperationTitle } from '@/utils/operationTitle'
@@ -292,6 +294,18 @@ export default function OperationLogList() {
     },
   ]
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('operation_log', columns)
+
   const detailRequest = logDetail?.params ?? logDetail?.request
   const detailRequestText = formatRequestParamsFull(detailRequest)
 
@@ -311,6 +325,9 @@ export default function OperationLogList() {
             </PermissionButton>
           ) : null}
           {toolbar}
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
         </Space>
       }
     >
@@ -324,7 +341,7 @@ export default function OperationLogList() {
       <Table<OperationLogRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={tableData}
         scroll={{ x: 1400 }}
         rowSelection={
@@ -426,6 +443,15 @@ export default function OperationLogList() {
         loading={cleanLoading}
         onClose={() => setCleanOpen(false)}
         onConfirm={handleClean}
+      />
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
       />
     </PageContainer>
   )

@@ -1,0 +1,56 @@
+.lock-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.lock-screen-card {
+  width: 360px;
+  max-width: 100%;
+  background: var(--ant-color-bg-container, #fff);
+  border-radius: 12px;
+  padding: 24px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.lock-screen-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.lock-screen-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.lock-screen-user {
+  margin-top: 6px;
+  margin-bottom: 16px;
+  opacity: 0.75;
+}
+
+.lock-screen-input {
+  margin-bottom: 8px;
+}
+
+.lock-screen-error {
+  min-height: 20px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #ff4d4f;
+  text-align: left;
+}
+
+.lock-screen-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}

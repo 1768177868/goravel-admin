@@ -1,33 +1,24 @@
 import { useState } from 'react'
-import { Button, Space, Table } from 'antd'
+import { App, Space, Switch, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import { deleteRole, getRoleList } from '@/api/role'
+import { deleteArticle, getArticleList, updateArticle } from '@/api/article'
 import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
-import { useColumnSetting } from '@/hooks/useColumnSetting'
+import { useUnhandledError } from '@/hooks/useUnhandledError'
 import PageContainer from '@/components/PageContainer'
-import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
-import StatusTag from '@/components/StatusTag'
 import PermissionButton from '@/components/PermissionButton'
-import { entityField } from '@/utils/normalize'
-import RoleFormModal from './RoleFormModal'
+import logger from '@/utils/logger'
+import { extractTextFromMarkdown } from '@/utils/markdown'
+import ArticleFormModal from './ArticleFormModal'
+import { articleInitialSearchForm, getAdminDisplayName, transformArticleRow, type ArticleRow } from './article.config'
 
-interface RoleRow {
-  id: number | string
-  name?: string
-  slug?: string
-  description?: string
-  status?: number
-  sort?: number
-  created_at?: string
-}
-
-export default function RoleList() {
+export default function ArticleList() {
   const { t } = useTranslation()
+  const { message } = App.useApp()
+  const showError = useUnhandledError()
   const { getButtonState } = usePermission()
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<string | number | null>(null)
@@ -43,46 +34,62 @@ export default function RoleList() {
     handleReset,
     handleSortChange,
     refresh,
-  } = useListPage<RoleRow>({
-    fetchApi: getRoleList as never,
-    initialSearchForm: { name: '', status: '' },
-    normalizeRows: true,
-    transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
-      return {
-        id: entityField(record, 'id', '')!,
-        name: String(entityField(record, 'name', '') ?? ''),
-        slug: String(entityField(record, 'slug', '') ?? ''),
-        description: String(entityField(record, 'description', '') ?? ''),
-        status: Number(entityField(record, 'status', 0) ?? 0),
-        sort: Number(entityField(record, 'sort', 0) ?? 0),
-        created_at: String(entityField(record, 'created_at', '') ?? ''),
-      }
-    },
+  } = useListPage<ArticleRow>({
+    fetchApi: getArticleList as never,
+    initialSearchForm: articleInitialSearchForm,
+    normalizeRows: false,
+    transformData: (row) => transformArticleRow(row as unknown as Record<string, unknown>),
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
-    createPermission: 'role.store',
+    createPermission: 'article.store',
     onRefresh: refresh,
     onCreate: () => {
       setEditId(null)
       setOpen(true)
     },
-    deleteApi: deleteRole,
+    deleteApi: deleteArticle,
   })
 
-  const columns: ColumnsType<RoleRow> = [
+  const handleStatusChange = async (row: ArticleRow, checked: boolean) => {
+    try {
+      await updateArticle(row.id, { status: checked ? 1 : 0 })
+      message.success(t('common.update_success'))
+      await refresh()
+    } catch (error) {
+      logger.error('Status change error:', error)
+      showError(error, t('common.operation_failed'))
+    }
+  }
+
+  const columns: ColumnsType<ArticleRow> = [
     { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
-    { title: t('role.name'), dataIndex: 'name' },
-    { title: t('role.slug'), dataIndex: 'slug' },
-    { title: t('common.description'), dataIndex: 'description', ellipsis: true },
-    { title: t('common.sort'), dataIndex: 'sort', width: 80, sorter: true },
+    {
+      title: t('admin_id'),
+      dataIndex: 'admin_id',
+      width: 140,
+      render: (_, row) => getAdminDisplayName(row),
+    },
+    { title: t('title'), dataIndex: 'title', ellipsis: true },
+    {
+      title: t('content'),
+      dataIndex: 'content',
+      ellipsis: true,
+      render: (content: string) => extractTextFromMarkdown(content).slice(0, 120),
+    },
     {
       title: t('common.status'),
       dataIndex: 'status',
       width: 100,
-      render: (status: number) => <StatusTag status={status} />,
+      render: (status: number, row) => (
+        <Switch
+          checked={Number(status ?? 1) === 1}
+          disabled={getButtonState('article.update').disabled}
+          onChange={(checked) => void handleStatusChange(row, checked)}
+        />
+      ),
     },
+    { title: t('table.updated_at'), dataIndex: 'updated_at', width: 180, sorter: true },
     { title: t('table.created_at'), dataIndex: 'created_at', width: 180, sorter: true },
     {
       title: t('common.operation'),
@@ -91,9 +98,9 @@ export default function RoleList() {
       fixed: 'right',
       render: (_, row) => (
         <Space>
-          {getButtonState('role.update').show && (
+          {getButtonState('article.update').show && (
             <PermissionButton
-              permission="role.update"
+              permission="article.update"
               type="link"
               onClick={() => {
                 setEditId(row.id)
@@ -103,12 +110,12 @@ export default function RoleList() {
               {t('common.edit')}
             </PermissionButton>
           )}
-          {getButtonState('role.destroy').show && row.slug !== 'super-admin' && (
+          {getButtonState('article.destroy').show && (
             <PermissionButton
-              permission="role.destroy"
+              permission="article.destroy"
               type="link"
               danger
-              onClick={() => confirmDelete(row.id, row.name)}
+              onClick={() => confirmDelete(row.id, row.title)}
             >
               {t('common.delete')}
             </PermissionButton>
@@ -118,33 +125,13 @@ export default function RoleList() {
     },
   ]
 
-  const {
-    filteredColumns,
-    open: columnSettingOpen,
-    openColumnSetting,
-    closeColumnSetting,
-    allColumns,
-    visibleColumns,
-    columnOrder,
-    fixedColumns,
-    handleConfirm: handleColumnSettingConfirm,
-  } = useColumnSetting('role', columns)
-
   return (
-    <PageContainer
-      title={t('menu.role_management')}
-      extra={
-        <Space>
-          {toolbar}
-          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
-            {t('common.column_setting')}
-          </Button>
-        </Space>
-      }
-    >
+    <PageContainer title={t('menu.article')} extra={toolbar}>
       <SearchForm
         fields={[
-          { name: 'name', label: t('role.name') },
+          { name: 'admin_id', label: t('admin_id') },
+          { name: 'title', label: t('title') },
+          { name: 'content', label: t('content') },
           {
             name: 'status',
             label: t('common.status'),
@@ -160,12 +147,12 @@ export default function RoleList() {
         onSearch={handleSearch}
         onReset={handleReset}
       />
-      <Table<RoleRow>
+      <Table<ArticleRow>
         rowKey="id"
         loading={loading}
-        columns={filteredColumns}
+        columns={columns}
         dataSource={tableData}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1200 }}
         pagination={{
           current: pagination.page,
           pageSize: pagination.pageSize,
@@ -186,20 +173,11 @@ export default function RoleList() {
           })
         }}
       />
-      <RoleFormModal
+      <ArticleFormModal
         open={open}
         editId={editId}
         onClose={() => setOpen(false)}
         onSuccess={() => void refresh()}
-      />
-      <ColumnSettingDialog
-        open={columnSettingOpen}
-        onClose={closeColumnSetting}
-        allColumns={allColumns}
-        visibleColumns={visibleColumns}
-        columnOrder={columnOrder}
-        fixedColumns={fixedColumns}
-        onConfirm={handleColumnSettingConfirm}
       />
     </PageContainer>
   )

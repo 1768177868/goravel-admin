@@ -1,0 +1,12 @@
+.layout-top-menu {
+  padding: 0 16px;
+}
+
+.layout-top-menu__menu {
+  border-bottom: none !important;
+  line-height: 46px;
+}
+
+.layout-top-menu__menu.ant-menu-horizontal {
+  border-bottom: none;
+}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { App, Descriptions, Drawer, Space, Spin, Table, Tag } from 'antd'
+import { App, Button, Descriptions, Drawer, Space, Spin, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { EyeOutlined } from '@ant-design/icons'
+import { EyeOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import {
   batchDeleteLoginLogs,
@@ -14,7 +14,9 @@ import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
 import LogCleanModal from './LogCleanModal'
@@ -182,6 +184,18 @@ export default function LoginLogList() {
     },
   ]
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('login_log', columns)
+
   return (
     <PageContainer
       title={t('menu.login_log')}
@@ -198,6 +212,9 @@ export default function LoginLogList() {
             </PermissionButton>
           ) : null}
           {toolbar}
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
         </Space>
       }
     >
@@ -211,7 +228,7 @@ export default function LoginLogList() {
       <Table<LoginLogRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={tableData}
         scroll={{ x: 1300 }}
         rowSelection={
@@ -274,6 +291,15 @@ export default function LoginLogList() {
         loading={cleanLoading}
         onClose={() => setCleanOpen(false)}
         onConfirm={handleClean}
+      />
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
       />
     </PageContainer>
   )

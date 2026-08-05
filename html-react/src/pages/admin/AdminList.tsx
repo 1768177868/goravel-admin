@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { App, Dropdown, Form, Input, Space, Switch, Table, Tag } from 'antd'
+import { App, Button, Dropdown, Form, Input, Space, Switch, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import type { MenuProps } from 'antd'
-import { DownOutlined } from '@ant-design/icons'
+import { DownOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import {
   deleteAdmin,
@@ -18,9 +18,11 @@ import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import { entityField } from '@/utils/normalize'
 import AdminFormModal from './AdminFormModal'
 
@@ -324,6 +326,18 @@ export default function AdminList() {
     }
   }
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('admin', columns)
+
   return (
     <PageContainer
       title={t('menu.admin_management')}
@@ -333,6 +347,9 @@ export default function AdminList() {
           <PermissionButton permission="admin.export" loading={exporting} onClick={() => void handleExport()}>
             {t('common.export', { defaultValue: '导出' })}
           </PermissionButton>
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
         </Space>
       }
     >
@@ -366,7 +383,7 @@ export default function AdminList() {
       <Table<AdminRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={tableData}
         scroll={{ x: 1400 }}
         pagination={{
@@ -394,6 +411,15 @@ export default function AdminList() {
         editId={editId}
         onClose={() => setFormOpen(false)}
         onSuccess={() => void refresh()}
+      />
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
       />
     </PageContainer>
   )

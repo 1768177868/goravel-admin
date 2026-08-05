@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { App, Button, Form, Input, InputNumber, Modal, Radio, Space, Table, TreeSelect } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
+import { SettingOutlined } from '@ant-design/icons'
 import {
   createDepartment,
   deleteDepartment,
@@ -12,7 +13,9 @@ import {
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import StatusTag from '@/components/StatusTag'
 import PermissionButton from '@/components/PermissionButton'
@@ -186,6 +189,18 @@ export default function DepartmentList() {
     },
   ]
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('department', columns)
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
@@ -224,6 +239,9 @@ export default function DepartmentList() {
             {allExpanded ? t('common.collapse') : t('common.expand')}
           </Button>
           {toolbar}
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
         </Space>
       }
     >
@@ -252,7 +270,7 @@ export default function DepartmentList() {
       <Table<DepartmentRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={data}
         pagination={false}
         scroll={{ x: 1000 }}
@@ -297,6 +315,15 @@ export default function DepartmentList() {
           </Form.Item>
         </Form>
       </Modal>
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
+      />
     </PageContainer>
   )
 }

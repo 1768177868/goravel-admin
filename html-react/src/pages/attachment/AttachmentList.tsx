@@ -18,6 +18,7 @@ import {
   DeleteOutlined,
   PictureOutlined,
   ScissorOutlined,
+  SettingOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
@@ -38,7 +39,9 @@ import { useUnhandledError } from '@/hooks/useUnhandledError'
 import { useOptions } from '@/hooks/useOptions'
 import { useAttachmentChunkUpload } from '@/hooks/useAttachmentChunkUpload'
 import { useAttachmentImagePreview } from '@/hooks/useAttachmentImagePreview'
+import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
+import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
 import Storage from '@/utils/storage'
@@ -438,6 +441,18 @@ export default function AttachmentList() {
     },
   ]
 
+  const {
+    filteredColumns,
+    open: columnSettingOpen,
+    openColumnSetting,
+    closeColumnSetting,
+    allColumns,
+    visibleColumns,
+    columnOrder,
+    fixedColumns,
+    handleConfirm: handleColumnSettingConfirm,
+  } = useColumnSetting('attachment', columns)
+
   return (
     <PageContainer
       title={t('menu.attachment')}
@@ -493,6 +508,9 @@ export default function AttachmentList() {
             </Button>
           ) : null}
           {toolbar}
+          <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
+            {t('common.column_setting')}
+          </Button>
         </Space>
       }
     >
@@ -538,7 +556,7 @@ export default function AttachmentList() {
       <Table<AttachmentRow>
         rowKey="id"
         loading={loading}
-        columns={columns}
+        columns={filteredColumns}
         dataSource={tableData}
         scroll={{ x: 1800 }}
         rowSelection={{
@@ -637,6 +655,15 @@ export default function AttachmentList() {
           </div>
         ) : null}
       </Modal>
+      <ColumnSettingDialog
+        open={columnSettingOpen}
+        onClose={closeColumnSetting}
+        allColumns={allColumns}
+        visibleColumns={visibleColumns}
+        columnOrder={columnOrder}
+        fixedColumns={fixedColumns}
+        onConfirm={handleColumnSettingConfirm}
+      />
     </PageContainer>
   )
 }
