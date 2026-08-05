@@ -1,30 +1,38 @@
-import { Table, Tag } from 'antd'
+import { useState } from 'react'
+import { Button, Modal, Space, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import { PlusOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import { getNotificationList } from '@/api/notification'
 import { useListPage } from '@/hooks/useListPage'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { useNotificationStore } from '@/stores/notification'
+import { useUserStore } from '@/stores/user'
 import PageContainer from '@/components/PageContainer'
 import SearchForm from '@/components/SearchForm'
-import { entityField } from '@/utils/normalize'
-import { Button } from 'antd'
-
-interface Row {
-  id: number | string
-  title?: string
-  content?: string
-  type?: string
-  is_read?: boolean
-  created_at?: string
-  name?: string
-}
+import PermissionButton from '@/components/PermissionButton'
+import MarkdownContent from '@/components/MarkdownContent'
+import NotificationFormModal from './NotificationFormModal'
+import {
+  buildNotificationParams,
+  getNotificationTypeLabel,
+  notificationInitialSearchForm,
+  transformNotificationRow,
+  type NotificationRow,
+} from './notification.config'
+import { extractTextFromMarkdown } from '@/utils/markdown'
 
 export default function NotificationList() {
   const { t } = useTranslation()
+  const adminInfo = useUserStore((s) => s.adminInfo)
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
   const markAsRead = useNotificationStore((s) => s.markAsRead)
   const markAllRead = useNotificationStore((s) => s.markAllRead)
   const refreshBell = useNotificationStore((s) => s.refresh)
+  const [formOpen, setFormOpen] = useState(false)
+  const [viewOpen, setViewOpen] = useState(false)
+  const [current, setCurrent] = useState<NotificationRow | null>(null)
 
   const {
     tableData,
@@ -35,21 +43,19 @@ export default function NotificationList() {
     loadData,
     handleSearch,
     handleReset,
+    handleSortChange,
     refresh,
-  } = useListPage<Row>({
+  } = useListPage<NotificationRow, typeof notificationInitialSearchForm>({
     fetchApi: getNotificationList as never,
-    initialSearchForm: { title: '' },
-    normalizeRows: true,
-    transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
-      return {
-        id: entityField(record, 'id', '')!,
-        title: String(entityField(record, 'title', '') ?? ''),
-        content: String(entityField(record, 'content', '') ?? ''),
-        type: String(entityField(record, 'type', '') ?? ''),
-        is_read: !!(entityField(record, 'is_read', false) || entityField(record, 'IsRead', false)),
-        created_at: String(entityField(record, 'created_at', '') ?? ''),
-        name: String(entityField(record, 'title', '') ?? ''),
+    initialSearchForm: notificationInitialSearchForm,
+    defaultSort: 'id:desc',
+    normalizeRows: false,
+    transformData: (row) => transformNotificationRow(row as unknown as Record<string, unknown>),
+    buildParams: buildNotificationParams,
+    onLoadSuccess: (_rows, res) => {
+      const unread = (res?.data as { unread_count?: number } | undefined)?.unread_count
+      if (unread !== undefined) {
+        useNotificationStore.setState({ unreadCount: unread })
       }
     },
   })
@@ -61,66 +67,150 @@ export default function NotificationList() {
     },
   })
 
-  const columns: ColumnsType<Row> = [
+  const senderLabel = (row: NotificationRow) => {
+    if (row.type === 'message' && String(row.sender_id) === String(adminInfo?.id)) {
+      const receiver = row.receiver
+      return (
+        <span>
+          {t('notification.sent_to')}:{' '}
+          {receiver ? receiver.nickname || receiver.username : '-'}
+        </span>
+      )
+    }
+    if (row.sender) return row.sender.nickname || row.sender.username
+    return t('notification.system')
+  }
+
+  const handleView = async (row: NotificationRow) => {
+    setCurrent(row)
+    setViewOpen(true)
+    if (!row.is_read) {
+      await markAsRead(row.id)
+      await refresh()
+    }
+  }
+
+  const columns: ColumnsType<NotificationRow> = [
     { title: t('table.id'), dataIndex: 'id', width: 80 },
-    { title: t('table.title'), dataIndex: 'title' },
-    { title: t('common.description'), dataIndex: 'content', ellipsis: true },
-    { title: t('common.type'), dataIndex: 'type', width: 100 },
+    { title: t('notification.table.title'), dataIndex: 'title', width: 180, ellipsis: true },
     {
-      title: t('common.status'),
-      dataIndex: 'is_read',
+      title: t('notification.table.content'),
+      dataIndex: 'content',
+      ellipsis: true,
+      render: (content: string) => extractTextFromMarkdown(content).slice(0, 120),
+    },
+    {
+      title: t('notification.table.type'),
+      dataIndex: 'type',
       width: 100,
+      render: (type: string) => <Tag>{getNotificationTypeLabel(t, type)}</Tag>,
+    },
+    {
+      title: t('notification.table.sender'),
+      key: 'sender',
+      width: 160,
+      ellipsis: true,
+      render: (_, row) => senderLabel(row),
+    },
+    {
+      title: t('notification.table.status'),
+      dataIndex: 'is_read',
+      width: 90,
       render: (read: boolean) =>
         read ? (
-          <Tag>{t('notification.read', { defaultValue: '已读' })}</Tag>
+          <Tag>{t('notification.read')}</Tag>
         ) : (
-          <Tag color="processing">{t('notification.unread', { defaultValue: '未读' })}</Tag>
+          <Tag color="processing">{t('notification.unread')}</Tag>
         ),
     },
-    { title: t('table.created_at'), dataIndex: 'created_at', width: 180 },
+    {
+      title: t('notification.table.created_at'),
+      dataIndex: 'created_at',
+      width: 170,
+      sorter: true,
+      render: (v: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'),
+    },
     {
       title: t('common.operation'),
       key: 'operation',
-      width: 120,
-      render: (_, row) =>
-        !row.is_read ? (
-          <Button
-            type="link"
-            onClick={async () => {
-              await markAsRead(row.id)
-              await refresh()
-            }}
-          >
-            {t('notification.mark_read', { defaultValue: '标记已读' })}
+      width: 160,
+      fixed: 'right',
+      render: (_, row) => (
+        <Space>
+          <Button type="link" onClick={() => void handleView(row)}>
+            {t('common.view')}
           </Button>
-        ) : null,
+          {!row.is_read && (
+            <Button
+              type="link"
+              onClick={async () => {
+                await markAsRead(row.id)
+                await refresh()
+              }}
+            >
+              {t('notification.mark_read')}
+            </Button>
+          )}
+        </Space>
+      ),
     },
   ]
 
   return (
     <PageContainer
-      title={t('menu.notification')}
+      title={t('notification.center')}
       extra={
-        <>
+        <Space>
           {toolbar}
-          <Button onClick={() => void markAllRead().then(() => refresh())}>
-            {t('notification.mark_all', { defaultValue: '全部已读' })}
+          <PermissionButton
+            permission="notification.store"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setFormOpen(true)}
+          >
+            {t('notification.create')}
+          </PermissionButton>
+          <Button disabled={unreadCount === 0} onClick={() => void markAllRead().then(() => refresh())}>
+            {t('notification.mark_all')}
           </Button>
-        </>
+        </Space>
       }
     >
       <SearchForm
-        fields={[{ name: 'title', label: t('table.title') }]}
+        fields={[
+          {
+            name: 'type',
+            label: t('notification.table.type'),
+            type: 'select',
+            options: [
+              { label: t('common.all'), value: '' },
+              { label: t('notification.types.announcement'), value: 'announcement' },
+              { label: t('notification.types.notice'), value: 'notice' },
+              { label: t('notification.types.message'), value: 'message' },
+            ],
+          },
+          {
+            name: 'is_read',
+            label: t('notification.table.status'),
+            type: 'select',
+            options: [
+              { label: t('common.all'), value: '' },
+              { label: t('notification.unread'), value: 'false' },
+              { label: t('notification.read'), value: 'true' },
+            ],
+          },
+        ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={(values) => setSearchForm(values as typeof searchForm)}
         onSearch={handleSearch}
         onReset={handleReset}
       />
-      <Table<Row>
+      <Table<NotificationRow>
         rowKey="id"
         loading={loading}
         columns={columns}
         dataSource={tableData}
+        scroll={{ x: 1100 }}
         pagination={{
           current: pagination.page,
           pageSize: pagination.pageSize,
@@ -128,13 +218,51 @@ export default function NotificationList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig) => {
+        onChange={(pager: TablePaginationConfig, _f, sorter) => {
+          const sort = Array.isArray(sorter) ? sorter[0] : sorter
+          const sortObj = sort as { field?: string; order?: 'ascend' | 'descend' | null; column?: unknown }
+          if (sortObj?.column && sortObj.field) {
+            handleSortChange(String(sortObj.field), sortObj.order)
+            return
+          }
           void loadData({
             currentPage: pager.current || 1,
             pageSize: pager.pageSize || pagination.pageSize,
           })
         }}
       />
+
+      <NotificationFormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        onSuccess={() => void refresh()}
+      />
+
+      <Modal
+        open={viewOpen}
+        title={t('notification.detail')}
+        width={800}
+        onCancel={() => setViewOpen(false)}
+        footer={
+          <Button onClick={() => setViewOpen(false)}>{t('common.close')}</Button>
+        }
+      >
+        {current && (
+          <>
+            <h3 style={{ marginTop: 0 }}>{current.title}</h3>
+            <Space wrap style={{ marginBottom: 16, color: 'var(--ant-color-text-secondary)' }}>
+              <Tag>{getNotificationTypeLabel(t, current.type)}</Tag>
+              <span>
+                {current.created_at ? dayjs(current.created_at).format('YYYY-MM-DD HH:mm:ss') : ''}
+              </span>
+              <span>
+                {t('notification.table.sender')}: {senderLabel(current)}
+              </span>
+            </Space>
+              <MarkdownContent content={current.content} />
+          </>
+        )}
+      </Modal>
     </PageContainer>
   )
 }

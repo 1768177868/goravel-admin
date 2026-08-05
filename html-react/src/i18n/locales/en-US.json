@@ -183,6 +183,42 @@
     "add": "Add Permission",
     "edit": "Edit Permission"
   },
+  "notification": {
+    "center": "Notification Center",
+    "detail": "Notification Detail",
+    "create": "Create Notification",
+    "mark_all": "Mark All Read",
+    "mark_read": "Mark Read",
+    "unread": "Unread",
+    "read": "Read",
+    "empty": "No notifications",
+    "view_all": "View All",
+    "receiver": "Receiver",
+    "select_receiver": "Select receiver",
+    "title_placeholder": "Enter title",
+    "content_placeholder": "Enter content (Markdown supported)",
+    "type_required": "Please select type",
+    "receiver_required": "Please select receiver",
+    "title_required": "Please enter title",
+    "title_max_length": "Title cannot exceed 150 characters",
+    "content_required": "Please enter content",
+    "create_success": "Created successfully",
+    "system": "System",
+    "sent_to": "Sent to",
+    "types": {
+      "announcement": "Announcement",
+      "notice": "Notice",
+      "message": "Message"
+    },
+    "table": {
+      "title": "Title",
+      "content": "Content",
+      "type": "Type",
+      "sender": "Sender",
+      "status": "Status",
+      "created_at": "Created At"
+    }
+  },
   "menu_page": {
     "add": "Add Menu",
     "edit": "Edit Menu",

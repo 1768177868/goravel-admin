@@ -198,12 +198,40 @@
     "google_auth_not_bound": "尚未绑定谷歌验证器"
   },
   "notification": {
-    "mark_all": "全部已读",
+    "center": "通知中心",
+    "detail": "通知详情",
+    "create": "创建通知",
+    "mark_all": "全部标记已读",
     "mark_read": "标记已读",
     "unread": "未读",
     "read": "已读",
     "empty": "暂无通知",
-    "view_all": "查看全部"
+    "view_all": "查看全部",
+    "receiver": "接收者",
+    "select_receiver": "请选择接收者",
+    "title_placeholder": "请输入通知标题",
+    "content_placeholder": "请输入通知内容（支持 Markdown）",
+    "type_required": "请选择通知类型",
+    "receiver_required": "请选择接收者",
+    "title_required": "请输入通知标题",
+    "title_max_length": "标题不能超过150个字符",
+    "content_required": "请输入通知内容",
+    "create_success": "创建成功",
+    "system": "系统",
+    "sent_to": "发送给",
+    "types": {
+      "announcement": "公告",
+      "notice": "通知",
+      "message": "私信"
+    },
+    "table": {
+      "title": "标题",
+      "content": "内容",
+      "type": "类型",
+      "sender": "发送人",
+      "status": "状态",
+      "created_at": "创建时间"
+    }
   },
   "permission": {
     "name": "权限名称",
