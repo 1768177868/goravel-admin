@@ -1,9 +1,10 @@
-ï»¿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { App, Button, Space, Table, Tag } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { batchDeleteExports, deleteExport, getExportList } from '@/api/export'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
@@ -208,7 +209,7 @@ export default function ExportList() {
     if (!selectedRowKeys.length) return
     modal.confirm({
       title: t('common.delete_confirm'),
-      content: t('log.batch_delete_confirm', { count: selectedRowKeys.length, defaultValue: `ç¡®å®šåˆ é™¤é€‰ä¸­çš„ ${selectedRowKeys.length} æ¡è®°å½•å—ï¼Ÿ` }),
+      content: t('log.batch_delete_confirm', { count: selectedRowKeys.length, defaultValue: `È·¶¨É¾³ýÑ¡ÖÐµÄ ${selectedRowKeys.length} Ìõ¼ÇÂ¼Âð£¿` }),
       okType: 'danger',
       onOk: async () => {
         try {
@@ -292,7 +293,7 @@ export default function ExportList() {
         <Space>
           {selectedRowKeys.length > 0 && getButtonState('export.destroy').show ? (
             <Button danger onClick={handleBatchDelete}>
-              {t('common.delete_selected', { defaultValue: 'åˆ é™¤é€‰ä¸­' })} ({selectedRowKeys.length})
+              {t('common.delete_selected', { defaultValue: 'É¾³ýÑ¡ÖÐ' })} ({selectedRowKeys.length})
             </Button>
           ) : null}
           {toolbar}
@@ -349,18 +350,9 @@ export default function ExportList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _f, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          const sortObj = sort as { field?: string; order?: 'ascend' | 'descend' | null; column?: unknown }
-          if (sortObj?.column && sortObj.field) {
-            handleSortChange(String(sortObj.field), sortObj.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
     </PageContainer>
   )

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   App,
   Button,
@@ -9,7 +9,7 @@ import {
   Spin,
   Table,
 } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { CopyOutlined, EyeOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import {
@@ -21,6 +21,7 @@ import {
   getOperationLogTitleOptions,
 } from '@/api/log'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
@@ -359,18 +360,9 @@ export default function OperationLogList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _filters, sorter) => {
-          const single = Array.isArray(sorter) ? sorter[0] : sorter
-          if (single?.field && single.order) {
-            const field = Array.isArray(single.field) ? single.field[0] : String(single.field)
-            handleSortChange(field, single.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
 
       <Drawer

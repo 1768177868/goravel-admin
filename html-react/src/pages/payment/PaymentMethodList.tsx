@@ -1,9 +1,10 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Space, Table, Tag } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { deletePaymentMethod, getPaymentMethodList } from '@/api/paymentMethod'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import PageContainer from '@/components/PageContainer'
@@ -189,18 +190,9 @@ export default function PaymentMethodList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _f, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          const sortObj = sort as { field?: string; order?: 'ascend' | 'descend' | null; column?: unknown }
-          if (sortObj?.column && sortObj.field) {
-            handleSortChange(String(sortObj.field), sortObj.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
       <PaymentMethodFormModal
         open={open}

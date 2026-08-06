@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Button, Form, Input, InputNumber, Modal, Radio, Space, Table } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { App } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,7 @@ import StatusTag from '@/components/StatusTag'
 import PermissionButton from '@/components/PermissionButton'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import { entityField } from '@/utils/normalize'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import type { ListFetchFn } from '@/types'
 
 export interface SimpleField {
@@ -240,18 +241,9 @@ export default function SimpleCrudPage<T extends SimpleCrudRow>(props: SimpleCru
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _f, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          const sortObj = sort as { field?: string; order?: 'ascend' | 'descend' | null; column?: unknown }
-          if (sortObj?.column && sortObj.field) {
-            handleSortChange(String(sortObj.field), sortObj.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
 
       <Modal

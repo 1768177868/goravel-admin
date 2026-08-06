@@ -1,11 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Col, Row, Space, Statistic, Table, Tag } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { ArrowLeftOutlined, SettingOutlined } from '@ant-design/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getUserBalanceLogList, getUserBalanceStatistics } from '@/api/userBalanceLog'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import { useColumnSetting } from '@/hooks/useColumnSetting'
 import PageContainer from '@/components/PageContainer'
@@ -51,6 +52,7 @@ export default function UserBalanceLogList() {
     handleSearch,
     handleReset,
     refresh,
+    handleSortChange,
   } = useListPage<LogRow, Record<string, unknown>>({
     fetchApi: getUserBalanceLogList,
     initialSearchForm: { user_id: userId, type: '', source: '' },
@@ -108,7 +110,7 @@ export default function UserBalanceLogList() {
       return (source && map[source]) || source || '-'
     }
     return [
-      { title: t('table.id'), dataIndex: 'id', width: 80 },
+      { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
       { title: t('user.type'), dataIndex: 'type', width: 100, render: (v: string) => typeTag(v) },
       {
         title: t('user.amount'),
@@ -128,7 +130,7 @@ export default function UserBalanceLogList() {
       },
       { title: t('user.source'), dataIndex: 'source', width: 100, render: (v: string) => sourceLabel(v) },
       { title: t('user.description'), dataIndex: 'description', ellipsis: true },
-      { title: t('table.created_at'), dataIndex: 'created_at', width: 180 },
+      { title: t('table.created_at'), dataIndex: 'created_at', width: 180, sorter: true },
     ]
   }, [t])
 
@@ -242,12 +244,9 @@ export default function UserBalanceLogList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig) => {
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
       <ColumnSettingDialog
         open={columnSettingOpen}

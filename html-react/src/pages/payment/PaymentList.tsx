@@ -1,9 +1,10 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Descriptions, Drawer, Space, Spin, Table, Tag, Button } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { exportPayments, getPaymentDetail, getPaymentList } from '@/api/payment'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useQueuedExport } from '@/hooks/useQueuedExport'
 import { useOptions } from '@/hooks/useOptions'
 import { usePermission } from '@/hooks/usePermission'
@@ -222,18 +223,9 @@ export default function PaymentList() {
           showSizeChanger: true,
           showTotal: (total) => (total >= 100000 ? t('common.total', { total: '100000+' }) : t('common.total', { total })),
         }}
-        onChange={(pager: TablePaginationConfig, _f, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          const sortObj = sort as { field?: string; order?: 'ascend' | 'descend' | null; column?: unknown }
-          if (sortObj?.column && sortObj.field) {
-            handleSortChange(String(sortObj.field), sortObj.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
       <Drawer
         open={detailOpen}

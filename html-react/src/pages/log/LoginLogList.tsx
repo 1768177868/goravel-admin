@@ -1,6 +1,6 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { App, Button, Descriptions, Drawer, Space, Spin, Table, Tag } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { EyeOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,6 +11,7 @@ import {
   getLoginLogList,
 } from '@/api/log'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
@@ -52,6 +53,7 @@ export default function LoginLogList() {
     handleSearch,
     handleReset,
     refresh,
+    handleSortChange,
   } = useListPage<LoginLogRow>({
     fetchApi: getLoginLogList,
     initialSearchForm: { ...loginLogInitialSearchForm },
@@ -246,12 +248,9 @@ export default function LoginLogList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig) => {
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
 
       <Drawer open={detailOpen} title={t('log.detail')} width={1100} onClose={() => setDetailOpen(false)}>

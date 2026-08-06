@@ -1,6 +1,6 @@
-ï»¿import { useState } from 'react'
+import { useState } from 'react'
 import { App, Button, Dropdown, Form, Input, Space, Switch, Table, Tag } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import type { MenuProps } from 'antd'
 import { DownOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,7 @@ import {
   updateAdmin,
 } from '@/api/admin'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
@@ -74,7 +75,7 @@ export default function AdminList() {
 
   const handleStatusChange = async (row: AdminRow, checked: boolean) => {
     if (adminProtectedIds.has(Number(row.id)) && !checked) {
-      message.warning(t('admin.protected_cannot_disable', { defaultValue: 'å—ä¿æŠ¤è´¦å·ä¸èƒ½ç¦ç”¨' }))
+      message.warning(t('admin.protected_cannot_disable', { defaultValue: 'ÊÜ±£»¤ÕËºÅ²»ÄÜ½ûÓÃ' }))
       return
     }
     try {
@@ -94,7 +95,7 @@ export default function AdminList() {
         <Form form={pwdForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="password"
-            label={t('admin.new_password', { defaultValue: 'æ–°å¯†ç ' })}
+            label={t('admin.new_password', { defaultValue: 'ĞÂÃÜÂë' })}
             rules={[{ required: true, message: t('admin.password_required') }]}
           >
             <Input.Password />
@@ -105,7 +106,7 @@ export default function AdminList() {
         const values = await pwdForm.validateFields()
         try {
           await resetPassword(row.id, { password: values.password })
-          message.success(t('admin.reset_password_success', { defaultValue: 'å¯†ç å·²é‡ç½®' }))
+          message.success(t('admin.reset_password_success', { defaultValue: 'ÃÜÂëÒÑÖØÖÃ' }))
         } catch (error) {
           showError(error, t('common.operation_failed'))
           throw error
@@ -141,17 +142,17 @@ export default function AdminList() {
       getButtonState('admin.kick_out').show
         ? {
             key: 'kickOut',
-            label: t('admin.kick_out', { defaultValue: 'è¸¢å‡ºç™»å½•' }),
+            label: t('admin.kick_out', { defaultValue: 'Ìß³öµÇÂ¼' }),
             onClick: () =>
               runConfirm(
-                t('admin.kick_out', { defaultValue: 'è¸¢å‡ºç™»å½•' }),
+                t('admin.kick_out', { defaultValue: 'Ìß³öµÇÂ¼' }),
                 t('admin.kick_out_confirm', {
                   username: row.username,
-                  defaultValue: `ç¡®å®šè¸¢å‡º ${row.username} çš„å…¨éƒ¨ç™»å½•å—ï¼Ÿ`,
+                  defaultValue: `È·¶¨Ìß³ö ${row.username} µÄÈ«²¿µÇÂ¼Âğ£¿`,
                 }),
                 async () => {
                   await kickOutUser(row.id)
-                  message.success(t('admin.kick_out_success', { defaultValue: 'å·²è¸¢å‡º' }))
+                  message.success(t('admin.kick_out_success', { defaultValue: 'ÒÑÌß³ö' }))
                 },
               ),
           }
@@ -159,12 +160,12 @@ export default function AdminList() {
       row.is_2fa_bound && getButtonState('admin.unbind_google_auth').show
         ? {
             key: 'unbind2fa',
-            label: t('admin.unbind_google_auth', { defaultValue: 'è§£ç»‘è°·æ­ŒéªŒè¯' }),
+            label: t('admin.unbind_google_auth', { defaultValue: '½â°ó¹È¸èÑéÖ¤' }),
             onClick: () =>
               runConfirm(
-                t('admin.unbind_google_auth', { defaultValue: 'è§£ç»‘è°·æ­ŒéªŒè¯' }),
+                t('admin.unbind_google_auth', { defaultValue: '½â°ó¹È¸èÑéÖ¤' }),
                 t('admin.unbind_google_auth_confirm', {
-                  defaultValue: 'ç¡®å®šè§£ç»‘è¯¥ç®¡ç†å‘˜çš„è°·æ­ŒéªŒè¯ç å—ï¼Ÿ',
+                  defaultValue: 'È·¶¨½â°ó¸Ã¹ÜÀíÔ±µÄ¹È¸èÑéÖ¤ÂëÂğ£¿',
                 }),
                 async () => {
                   await unbindAdminGoogleAuth(row.id)
@@ -177,12 +178,12 @@ export default function AdminList() {
       getButtonState('admin.reset_google_auth').show
         ? {
             key: 'reset2fa',
-            label: t('admin.reset_google_auth', { defaultValue: 'é‡ç½®è°·æ­ŒéªŒè¯' }),
+            label: t('admin.reset_google_auth', { defaultValue: 'ÖØÖÃ¹È¸èÑéÖ¤' }),
             onClick: () =>
               runConfirm(
-                t('admin.reset_google_auth', { defaultValue: 'é‡ç½®è°·æ­ŒéªŒè¯' }),
+                t('admin.reset_google_auth', { defaultValue: 'ÖØÖÃ¹È¸èÑéÖ¤' }),
                 t('admin.reset_google_auth_confirm', {
-                  defaultValue: 'ç¡®å®šé‡ç½®è¯¥ç®¡ç†å‘˜çš„è°·æ­ŒéªŒè¯ç å—ï¼Ÿ',
+                  defaultValue: 'È·¶¨ÖØÖÃ¸Ã¹ÜÀíÔ±µÄ¹È¸èÑéÖ¤ÂëÂğ£¿',
                 }),
                 async () => {
                   await resetAdminGoogleAuth(row.id)
@@ -216,13 +217,13 @@ export default function AdminList() {
         ),
     },
     {
-      title: t('admin.google_auth_status', { defaultValue: 'è°·æ­ŒéªŒè¯' }),
+      title: t('admin.google_auth_status', { defaultValue: '¹È¸èÑéÖ¤' }),
       dataIndex: 'is_2fa_bound',
       width: 110,
       render: (bound: boolean) =>
         bound
-          ? t('admin.google_auth_bound', { defaultValue: 'å·²ç»‘å®š' })
-          : t('admin.google_auth_not_bound', { defaultValue: 'æœªç»‘å®š' }),
+          ? t('admin.google_auth_bound', { defaultValue: 'ÒÑ°ó¶¨' })
+          : t('admin.google_auth_not_bound', { defaultValue: 'Î´°ó¶¨' }),
     },
     {
       title: t('table.status'),
@@ -268,7 +269,7 @@ export default function AdminList() {
           )}
           <Dropdown menu={{ items: moreMenu(row) }}>
             <a onClick={(e) => e.preventDefault()}>
-              {t('common.more', { defaultValue: 'æ›´å¤š' })} <DownOutlined />
+              {t('common.more', { defaultValue: '¸ü¶à' })} <DownOutlined />
             </a>
           </Dropdown>
         </Space>
@@ -280,7 +281,7 @@ export default function AdminList() {
     setExporting(true)
     try {
       await exportAdmin(searchForm)
-      message.success(t('common.queued', { defaultValue: 'å¯¼å‡ºä»»åŠ¡å·²æäº¤ï¼Œè¯·ç¨åæŸ¥çœ‹å¯¼å‡ºè®°å½•' }))
+      message.success(t('common.queued', { defaultValue: 'µ¼³öÈÎÎñÒÑÌá½»£¬ÇëÉÔºó²é¿´µ¼³ö¼ÇÂ¼' }))
     } catch (error) {
       showError(error, t('common.operation_failed'))
     } finally {
@@ -307,7 +308,7 @@ export default function AdminList() {
         <Space>
           {toolbar}
           <PermissionButton permission="admin.export" loading={exporting} onClick={() => void handleExport()}>
-            {t('common.export', { defaultValue: 'å¯¼å‡º' })}
+            {t('common.export', { defaultValue: 'µ¼³ö' })}
           </PermissionButton>
           <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
             {t('common.column_setting')}
@@ -329,11 +330,11 @@ export default function AdminList() {
           },
           {
             name: 'is_2fa_bound',
-            label: t('admin.google_auth_status', { defaultValue: 'è°·æ­ŒéªŒè¯' }),
+            label: t('admin.google_auth_status', { defaultValue: '¹È¸èÑéÖ¤' }),
             type: 'select',
             options: [
-              { label: t('admin.google_auth_bound', { defaultValue: 'å·²ç»‘å®š' }), value: '1' },
-              { label: t('admin.google_auth_not_bound', { defaultValue: 'æœªç»‘å®š' }), value: '0' },
+              { label: t('admin.google_auth_bound', { defaultValue: 'ÒÑ°ó¶¨' }), value: '1' },
+              { label: t('admin.google_auth_not_bound', { defaultValue: 'Î´°ó¶¨' }), value: '0' },
             ],
           },
         ]}
@@ -355,18 +356,9 @@ export default function AdminList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _f, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          const sortObj = sort as { field?: string; order?: 'ascend' | 'descend' | null; column?: unknown }
-          if (sortObj?.column && sortObj.field) {
-            handleSortChange(String(sortObj.field), sortObj.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
       <AdminFormModal
         open={formOpen}

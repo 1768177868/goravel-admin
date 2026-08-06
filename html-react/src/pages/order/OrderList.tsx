@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   App,
   Descriptions,
@@ -13,7 +13,7 @@ import {
   Tag,
   Upload,
 } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import type { UploadProps } from 'antd/es/upload'
 import { UploadOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +26,7 @@ import {
   updateOrder,
 } from '@/api/order'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
@@ -406,17 +407,9 @@ export default function OrderList() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _filters, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          if (sort?.field && sort.order) {
-            handleSortChange(String(sort.field), sort.order)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
 
       <OrderFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => void refresh()} />
