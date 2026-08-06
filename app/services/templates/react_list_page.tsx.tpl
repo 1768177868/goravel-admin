@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Space, Switch, Table } from 'antd'
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import {
   <<if .HasDelete>>delete<<.ModelName>>,<<end>>
@@ -8,6 +8,7 @@ import {
   <<if .HasEdit>>update<<.ModelName>>,<<end>>
 } from '@/api/<<.ModuleNameK>>'
 import { useListPage } from '@/hooks/useListPage'
+import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
 import PageContainer from '@/components/PageContainer'
@@ -163,17 +164,9 @@ export default function <<.ModelName>>List() {
           showSizeChanger: true,
           showTotal: (total) => t('common.total', { total }),
         }}
-        onChange={(pager: TablePaginationConfig, _f, sorter) => {
-          const sort = Array.isArray(sorter) ? sorter[0] : sorter
-          if (sort?.field) {
-            handleSortChange(String(sort.field), sort.order ?? null)
-            return
-          }
-          void loadData({
-            currentPage: pager.current || 1,
-            pageSize: pager.pageSize || pagination.pageSize,
-          })
-        }}
+        onChange={(pager, _f, sorter) =>
+          handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
+        }
       />
       <<if or .HasCreate .HasEdit>>
       <<<.ModelName>>FormModal
