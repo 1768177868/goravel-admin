@@ -240,13 +240,15 @@ func (r *DashboardController) StreamDashboardData(ctx http.Context) http.Respons
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
-	// 检测客户端断开连接
+	// 检测客户端断开连接或服务端关闭
 	clientGone := ctx.Request().Origin().Context().Done()
+	appDone := appfacades.App().Context().Done()
 
 	for {
 		select {
 		case <-clientGone:
-			// 客户端断开连接
+			return nil
+		case <-appDone:
 			return nil
 		case <-ticker.C:
 			// 收集所有 Dashboard 数据

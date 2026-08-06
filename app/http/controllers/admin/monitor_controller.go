@@ -1787,10 +1787,13 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 			}
 
 			clientGone := ctx.Request().Origin().Context().Done()
+			appDone := facades.App().Context().Done()
 
 			// 立即推送首帧：time.NewTicker 首次在整段 interval 后才触发，否则首屏长时间无业务数据
 			select {
 			case <-clientGone:
+				return nil
+			case <-appDone:
 				return nil
 			default:
 				if !r.writeMonitorSystemInfoSSE(ctx, writer) {
@@ -1804,6 +1807,8 @@ func (r *MonitorController) StreamSystemInfo(ctx http.Context) http.Response {
 			for {
 				select {
 				case <-clientGone:
+					return nil
+				case <-appDone:
 					return nil
 				case <-ticker.C:
 					if !r.writeMonitorSystemInfoSSE(ctx, writer) {

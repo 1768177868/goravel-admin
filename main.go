@@ -40,14 +40,15 @@ func main() {
 	// Bootstrap the application
 	app := bootstrap.Boot()
 
-	// Start the application (HTTP server, schedule, queue workers via runners)
-	app.Start()
-
-	// Create a channel to listen for OS signals
+	// 须在 Start 之前注册信号：Start() 会阻塞直到所有 runner 退出，
+	// 若放在 Start 之后则 Ctrl+C 永远无法触发自定义的强制退出逻辑。
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Listen for the OS signal
+	go func() {
+		app.Start()
+	}()
+
 	sig := <-quit
 	facades.Log().Infof("Received signal %v, shutting down...", sig)
 	shutdownApplication(app)
