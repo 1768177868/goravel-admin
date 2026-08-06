@@ -5,20 +5,16 @@ import { useTranslation } from 'react-i18next'
 import { DashboardOutlined } from '@ant-design/icons'
 import { useUserStore } from '@/stores/user'
 import { resolveMenuIcon } from '@/utils/menuIcons'
+import { resolveMenuTitle } from '@/utils/menuTitle'
 import type { MenuNode } from '@/types'
 
 type AntdItem = Required<MenuProps>['items'][number]
 
 function menuTitle(node: MenuNode, t: (key: string) => string) {
-  const slug = node.Slug || node.slug
-  if (slug) {
-    const clean = String(slug).replace(/^\//, '')
-    for (const key of [`menu.${clean}`, `menu.${clean}_management`]) {
-      const translated = t(key)
-      if (translated !== key) return translated
-    }
-  }
-  return node.Title || node.title || node.Name || node.name || slug || 'menu'
+  return resolveMenuTitle(t as never, {
+    slug: node.Slug || node.slug,
+    fallback: node.Title || node.title || node.Name || node.name || node.Slug || node.slug || 'menu',
+  })
 }
 
 function toMenuItems(nodes: MenuNode[], t: (key: string) => string): AntdItem[] {

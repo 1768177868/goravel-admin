@@ -2,6 +2,7 @@ import { Dropdown, Tabs, type MenuProps } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTabsStore } from '@/stores/tabs'
+import { resolveMenuTitle } from '@/utils/menuTitle'
 import './TabsView.scss'
 
 export default function TabsView() {
@@ -70,7 +71,13 @@ export default function TabsView() {
           key: tab.path,
           label: (
             <Dropdown menu={contextMenu(tab.path)} trigger={['contextMenu']}>
-              <span>{tab.titleKey ? t(tab.titleKey) : tab.title}</span>
+              <span>
+                {resolveMenuTitle(t, {
+                  titleKey: tab.titleKey,
+                  slug: tab.titleKey?.replace(/^menu\./, ''),
+                  fallback: tab.title,
+                })}
+              </span>
             </Dropdown>
           ),
           closable: tab.path !== '/dashboard',

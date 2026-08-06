@@ -69,7 +69,7 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     const tab: TabItem = {
       name: route.name,
       path: route.path,
-      title: route.titleKey || route.title || route.name || route.path,
+      title: route.title || route.titleKey || route.name || route.path,
       titleKey: route.titleKey,
     }
     const exists = get().tabs.find((t) => t.path === tab.path)

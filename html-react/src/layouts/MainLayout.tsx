@@ -12,6 +12,7 @@ import { useUserStore } from '@/stores/user'
 import { useTabsStore } from '@/stores/tabs'
 import { useLayoutLockScreen } from '@/hooks/useLayoutLockScreen'
 import type { AppRouteMeta } from '@/router/dynamicRoutes'
+import { resolveMenuTitle } from '@/utils/menuTitle'
 import './MainLayout.scss'
 
 const { Content } = Layout
@@ -35,9 +36,14 @@ export default function MainLayout() {
     const match = [...matches].reverse().find((m) => (m.handle as AppRouteMeta | undefined)?.titleKey)
     const handle = match?.handle as AppRouteMeta | undefined
     const titleKey = handle?.titleKey
+    const title = resolveMenuTitle(t, {
+      titleKey,
+      slug: handle?.menuSlug,
+      fallback: location.pathname,
+    })
     addTab({
       path: location.pathname,
-      title: titleKey ? t(titleKey) : location.pathname,
+      title,
       titleKey,
       name: String(match?.id || location.pathname),
     })

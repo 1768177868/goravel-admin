@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router-dom'
 import { lazyLoad } from './lazyLoad'
 import { flattenTree } from '@/utils/tree'
 import logger from '@/utils/logger'
+import { menuTitleKeyFromSlug, normalizeMenuSlug } from '@/utils/menuTitle'
 import type { MenuNode } from '@/types'
 
 /**
@@ -92,11 +93,11 @@ export function convertMenusToRoutes(menus: MenuNode[] | null | undefined): AppR
       .join('')
 
     const slug = menu.Slug || menu.slug || routePath
-    const cleanSlug = slug.startsWith('/') ? slug.slice(1) : slug
+    const cleanSlug = normalizeMenuSlug(slug.startsWith('/') ? slug.slice(1) : slug)
     const noCache = menu.no_cache === 1 || menu.NoCache === 1
 
     const handle: AppRouteMeta = {
-      titleKey: `menu.${cleanSlug}`,
+      titleKey: menuTitleKeyFromSlug(cleanSlug),
       menuId: menu.id || menu.ID,
       menuSlug: cleanSlug,
       noCache: !!noCache,
