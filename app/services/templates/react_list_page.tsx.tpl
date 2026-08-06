@@ -45,7 +45,7 @@ export default function <<.ModelName>>List() {
     handleReset,
     handleSortChange,
     refresh,
-  } = useListPage<<<.ModelName>>Row, typeof <<.ModuleNameCamel>>InitialSearchForm>({
+  } = useListPage<< "<" >><<.ModelName>>Row<< ">" >>({
     fetchApi: get<<.ModelName>>List,
     initialSearchForm: <<.ModuleNameCamel>>InitialSearchForm,
     normalizeRows: true,
@@ -63,7 +63,7 @@ export default function <<.ModelName>>List() {
     <<if .HasDelete>>deleteApi: delete<<.ModelName>>,<<end>>
   })
 
-  const columns: ColumnsType<<<.ModelName>>Row> = [
+  const columns: ColumnsType<< "<" >><<.ModelName>>Row> = [
     { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
 <<range .ListFields>>
 <<- if and .ShowInList (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "operation")>>
@@ -151,7 +151,7 @@ export default function <<.ModelName>>List() {
         onSearch={handleSearch}
         onReset={handleReset}
       />
-      <Table<<<.ModelName>>Row>
+      <Table<< "<" >><<.ModelName>>Row>>
         rowKey="id"
         loading={loading}
         columns={columns}
@@ -169,7 +169,7 @@ export default function <<.ModelName>>List() {
         }
       />
       <<if or .HasCreate .HasEdit>>
-      <<<.ModelName>>FormModal
+      << "<" >><<.ModelName>>FormModal
         open={open}
         editId={editId}
         onClose={() => setOpen(false)}

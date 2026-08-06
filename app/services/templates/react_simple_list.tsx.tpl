@@ -24,7 +24,7 @@ export default function <<.ModelName>>List() {
   const { t } = useTranslation()
 
   return (
-    <SimpleCrudPage<<<.ModelName>>Row>
+    <SimpleCrudPage<< "<" >><<.ModelName>>Row>>
       title={t('menu.<<.ModuleName>>')}
       permissions={{
         <<if .HasCreate>>store: '<<.ModuleName>>.store',<<end>>
