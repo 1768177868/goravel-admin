@@ -25,7 +25,7 @@ git clone https://github.com/1768177868/goravel-admin.git
 
 ### 适用场景
 
-**适合：** 企业内部后台、运营管理端、Goravel + Vue 二次开发底座。
+**适合：** 企业内部后台、运营管理端、Goravel + Vue / React 二次开发底座。
 
 **不适合：** 直接当金融交易核心、超大规模商业 SaaS 中台；分表 / ES / 多队列需额外运维，请按需开启。
 
@@ -116,15 +116,17 @@ git clone https://github.com/1768177868/goravel-admin.git
 - WebSocket 支持
 - 数据库迁移与填充
 
-**前端：**
-- Vue 3
-- Element Plus
-- vxe-table（高级表格组件）
-- Vue Router
-- Pinia（状态管理）
-- Axios
-- ECharts（数据可视化）
-- vue-i18n（国际化）
+**前端（二选一）：**
+
+| | Vue（`html/`） | React（`html-react/`） |
+|---|---|---|
+| UI | Element Plus + vxe-table | Ant Design 6 |
+| 状态 | Pinia | Zustand |
+| 路由 | Vue Router | React Router 7 |
+| 国际化 | vue-i18n | react-i18next |
+| 共用 | Vite、Axios、ECharts，同一套 Admin API | Vite、Axios、ECharts，同一套 Admin API |
+
+两套前端都对接 `/api/admin`。React 已覆盖大部分 Vue 模块；代码生成器页面按约定暂缓（占位）。详情见 [html-react/README.md](./html-react/README.md)。
 
 ### 快速开始
 
@@ -144,7 +146,7 @@ git clone https://github.com/1768177868/goravel-admin.git
    air
    ```
 
-2. **前端配置：**
+2. **前端配置（Vue）：**
    ```bash
    cd html
    
@@ -155,11 +157,20 @@ git clone https://github.com/1768177868/goravel-admin.git
    # VITE_API_BASE_URL=http://127.0.0.1:3000
    # VITE_API_PREFIX=/api/admin
    
-   # 启动开发服务器
+   # 启动开发服务器（默认 http://localhost:3007）
    npm run dev
    ```
 
-3. **默认登录：**
+3. **前端配置（React，可选）：**
+   ```bash
+   cd html-react
+   cp .env.example .env
+   npm install
+   npm run dev
+   ```
+   开发地址默认 `http://localhost:3008`。请在根目录 `.env` 的 CORS 中放行该端口（及 `Accept-Language`），然后**重启 Go 后端**。更多说明见 [html-react/README.md](./html-react/README.md)。
+
+4. **默认登录：**
    - 用户名：`admin`
    - 密码：`admin123`
    - （首次登录后请修改默认密码）
@@ -219,6 +230,12 @@ swag init
 │       ├── components/           # 可复用组件
 │       ├── api/                 # API 客户端
 │       └── store/               # Pinia 状态管理
+├── html-react/                   # 前端 React 应用（与 Vue 对照）
+│   └── src/
+│       ├── pages/                # 页面组件
+│       ├── components/           # 可复用组件
+│       ├── api/                  # API 客户端
+│       └── stores/               # Zustand 状态管理
 ├── config/                       # 配置文件
 ├── docs/                         # 文档目录
 │   ├── API.md                    # API 接口文档
@@ -339,7 +356,8 @@ upx -9 main
 | [BUILD.md](./docs/BUILD.md) | 编译打包与部署 |
 | [TESTING.md](./docs/TESTING.md) | 测试指南（单元测试 & 集成测试） |
 | [OPENSOURCE.md](./docs/OPENSOURCE.md) | 开源定位、核心/进阶模块、最小与进阶生产配置 |
-| [前端开发指南](./html/DEVELOPMENT.md) | 前端开发文档 |
+| [前端开发指南（Vue）](./html/DEVELOPMENT.md) | Vue 前端开发文档 |
+| [前端说明（React）](./html-react/README.md) | React 前端概览与启动说明 |
 
 ### Goravel 框架文档
 

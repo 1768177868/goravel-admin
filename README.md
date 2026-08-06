@@ -25,7 +25,7 @@ password: demo123
 
 ### Intended Use
 
-**Good fit:** internal admin panels, ops backends, Goravel + Vue starter for secondary development.
+**Good fit:** internal admin panels, ops backends, Goravel + Vue / React starter for secondary development.
 
 **Not a drop-in fit:** financial trading cores or large-scale commercial SaaS platforms out of the box. Sharding / Elasticsearch / multi-queue drivers are **optional** and need extra ops.
 
@@ -117,15 +117,17 @@ Enable only when needed (see [OPENSOURCE.md](./docs/OPENSOURCE.md)):
 - WebSocket Support
 - Database Migrations & Seeders
 
-**Frontend:**
-- Vue 3
-- Element Plus
-- vxe-table (Advanced table component)
-- Vue Router
-- Pinia (State management)
-- Axios
-- ECharts (Data visualization)
-- vue-i18n (Internationalization)
+**Frontend (pick one):**
+
+| | Vue (`html/`) | React (`html-react/`) |
+|---|---|---|
+| UI | Element Plus + vxe-table | Ant Design 6 |
+| State | Pinia | Zustand |
+| Router | Vue Router | React Router 7 |
+| i18n | vue-i18n | react-i18next |
+| Shared | Vite, Axios, ECharts, same Admin API | Vite, Axios, ECharts, same Admin API |
+
+Both frontends talk to `/api/admin`. React covers most Vue modules; the code generator page is still deferred (placeholder). Details: [html-react/README.md](./html-react/README.md).
 
 ### Quick Start
 
@@ -145,7 +147,7 @@ Enable only when needed (see [OPENSOURCE.md](./docs/OPENSOURCE.md)):
    air
    ```
 
-2. **Frontend Setup:**
+2. **Frontend Setup (Vue):**
    ```bash
    cd html
    
@@ -156,11 +158,20 @@ Enable only when needed (see [OPENSOURCE.md](./docs/OPENSOURCE.md)):
    # VITE_API_BASE_URL=http://127.0.0.1:3000
    # VITE_API_PREFIX=/api/admin
    
-   # Start development server
+   # Start development server (default http://localhost:3007)
    npm run dev
    ```
 
-3. **Default Login:**
+3. **Frontend Setup (React, optional):**
+   ```bash
+   cd html-react
+   cp .env.example .env
+   npm install
+   npm run dev
+   ```
+   Dev server defaults to `http://localhost:3008`. Allow that origin in root `.env` CORS (and `Accept-Language`), then restart the Go backend. See [html-react/README.md](./html-react/README.md).
+
+4. **Default Login:**
    - Username: `admin`
    - Password: `admin123`
    - (Please change the default password after first login)
@@ -220,6 +231,12 @@ This will regenerate the `docs/docs.go`, `docs/swagger.json`, and `docs/swagger.
 │       ├── components/           # Reusable components
 │       ├── api/                 # API client
 │       └── store/               # Pinia stores
+├── html-react/                   # Frontend React application (Vue parity)
+│   └── src/
+│       ├── pages/                # Page components
+│       ├── components/           # Reusable components
+│       ├── api/                  # API client
+│       └── stores/               # Zustand stores
 ├── config/                       # Configuration files
 ├── docs/                         # Documentation
 │   ├── API.md                    # API documentation
@@ -342,7 +359,8 @@ upx -9 main
 | [BUILD.md](./docs/BUILD.md) | Build and deployment |
 | [TESTING.md](./docs/TESTING.md) | Testing guide (unit & integration) |
 | [OPENSOURCE.md](./docs/OPENSOURCE.md) | Open-source positioning, core vs advanced modules, production configs |
-| [Frontend Guide](./html/DEVELOPMENT.md) | Frontend development guide |
+| [Frontend Guide (Vue)](./html/DEVELOPMENT.md) | Vue frontend development guide |
+| [Frontend Guide (React)](./html-react/README.md) | React frontend overview & setup |
 
 ### Goravel Framework
 
