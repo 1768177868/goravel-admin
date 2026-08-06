@@ -19,11 +19,56 @@ import {
   Space,
   Switch,
 } from 'antd'
+import dayjs, { type Dayjs } from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import PageContainer from '@/components/PageContainer'
 import WangEditor from '@/components/WangEditor'
 import MarkdownEditor from '@/components/MarkdownEditor'
 import request from '@/utils/request'
+
+function toDayjs(value: unknown): Dayjs | undefined {
+  if (value == null || value === '') return undefined
+  if (dayjs.isDayjs(value)) return value.isValid() ? value : undefined
+  const parsed = dayjs(value as string | number | Date)
+  return parsed.isValid() ? parsed : undefined
+}
+
+function toDayjsRange(value: unknown): [Dayjs, Dayjs] | undefined {
+  if (!Array.isArray(value) || value.length < 2) return undefined
+  const start = toDayjs(value[0])
+  const end = toDayjs(value[1])
+  if (!start || !end) return undefined
+  return [start, end]
+}
+
+/** Convert API/sample date strings into dayjs for Ant Design DatePicker. */
+function normalizeFormDemoValues(raw: Record<string, unknown>) {
+  return {
+    ...raw,
+    birthday: toDayjs(raw.birthday),
+    meeting_at: toDayjs(raw.meeting_at),
+    active_days: toDayjsRange(raw.active_days),
+    active_period: toDayjsRange(raw.active_period),
+  }
+}
+
+function serializePreview(values: Record<string, unknown>) {
+  const out: Record<string, unknown> = {}
+  Object.entries(values).forEach(([key, value]) => {
+    if (dayjs.isDayjs(value)) {
+      out[key] = value.format(key === 'birthday' ? 'YYYY-MM-DD' : 'YYYY-MM-DD HH:mm:ss')
+      return
+    }
+    if (Array.isArray(value) && value.every((item) => dayjs.isDayjs(item))) {
+      out[key] = value.map((item) =>
+        (item as Dayjs).format(key === 'active_days' ? 'YYYY-MM-DD' : 'YYYY-MM-DD HH:mm:ss'),
+      )
+      return
+    }
+    out[key] = value
+  })
+  return out
+}
 
 export default function FormDemo() {
   const { t } = useTranslation()
@@ -46,17 +91,23 @@ export default function FormDemo() {
     },
   ]
 
+  const applyValues = (raw: Record<string, unknown>) => {
+    const values = normalizeFormDemoValues(raw)
+    form.setFieldsValue(values)
+    setPreview(serializePreview(form.getFieldsValue(true)))
+  }
+
   const fillSample = () => {
-    form.setFieldsValue({
+    applyValues({
       username: 'demo_user',
       password: '123456',
       intro: t('form_demo.intro'),
       gender: 'male',
       hobbies: ['reading', 'music'],
       role: 'admin',
-      birthday: undefined,
-      meeting_at: undefined,
-      active_days: undefined,
+      birthday: '2026-03-31',
+      meeting_at: '2026-03-31 09:30:00',
+      active_days: ['2026-03-01', '2026-03-31'],
       score: 88,
       satisfaction: 4,
       volume: 60,
@@ -66,7 +117,6 @@ export default function FormDemo() {
       rich_content_wang: '<p>WangEditor demo content</p>',
       rich_content_markdown: '**Markdown** demo content',
     })
-    setPreview(form.getFieldsValue(true))
   }
 
   const loadApiData = async () => {
@@ -74,8 +124,7 @@ export default function FormDemo() {
     try {
       const res = await request({ url: '/form-demo/data', method: 'get' })
       const data = (res.data || {}) as Record<string, unknown>
-      form.setFieldsValue(data)
-      setPreview(form.getFieldsValue(true))
+      applyValues(data)
       message.success(t('form_demo.loaded_from_api'))
     } catch {
       message.warning(t('common.query_failed'))
@@ -104,9 +153,9 @@ export default function FormDemo() {
                 rich_content_wang: '',
                 rich_content_markdown: '',
               }}
-              onValuesChange={(_, all) => setPreview(all)}
+              onValuesChange={(_, all) => setPreview(serializePreview(all))}
               onFinish={(values) => {
-                setPreview(values)
+                setPreview(serializePreview(values))
                 message.success(t('common.success'))
               }}
             >
