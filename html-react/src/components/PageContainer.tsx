@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Space, Typography } from 'antd'
+import './PageContainer.scss'
 
 interface PageContainerProps {
   title?: ReactNode
@@ -10,23 +11,18 @@ interface PageContainerProps {
 
 export default function PageContainer({ title, extra, children, className }: PageContainerProps) {
   return (
-    <div className={className}>
+    <div className={`page-container${className ? ` ${className}` : ''}`}>
       {(title || extra) && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 16,
-          }}
-        >
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            {title}
-          </Typography.Title>
-          {extra ? <Space>{extra}</Space> : null}
+        <div className="page-container__header">
+          <div className="page-container__title-wrap">
+            <Typography.Title level={4} className="page-container__title">
+              {title}
+            </Typography.Title>
+          </div>
+          {extra ? <Space className="page-container__extra" size={8}>{extra}</Space> : null}
         </div>
       )}
-      {children}
+      <div className="page-container__body">{children}</div>
     </div>
   )
 }

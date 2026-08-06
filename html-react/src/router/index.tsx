@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   Navigate,
   Outlet,
@@ -46,50 +46,9 @@ function NavigatorBridge() {
 function AuthGuard() {
   const location = useLocation()
   const token = useUserStore((s) => s.token)
-  const userInfoFetched = useUserStore((s) => s.userInfoFetched)
-  const menus = useUserStore((s) => s.menus)
-  const adminInfo = useUserStore((s) => s.adminInfo)
-  const fetchUserInfo = useUserStore((s) => s.fetchUserInfo)
-  const [ready, setReady] = useState(false)
-  const bootstrapping = useRef(false)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function bootstrap() {
-      if (!token) {
-        setReady(true)
-        return
-      }
-
-      if (bootstrapping.current) return
-      bootstrapping.current = true
-
-      try {
-        const menusEmpty = !menus || menus.length === 0
-        if (!userInfoFetched || menusEmpty) {
-          await fetchUserInfo(!userInfoFetched)
-        }
-      } catch (error) {
-        logger.error('Auth bootstrap failed:', error)
-      } finally {
-        bootstrapping.current = false
-        if (!cancelled) setReady(true)
-      }
-    }
-
-    void bootstrap()
-    return () => {
-      cancelled = true
-    }
-  }, [token, userInfoFetched, menus, fetchUserInfo])
 
   if (!token) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
-  }
-
-  if (!ready && !adminInfo) {
-    return <PageFallback />
   }
 
   return (
@@ -158,10 +117,52 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
   ])
 }
 
+/**
+ * Bootstrap menus before mounting the data router, so hard-refresh never hits
+ * catch-all with empty dynamic routes, and AuthGuard is not remounted mid-fetch.
+ */
 export function AppRouter() {
+  const token = useUserStore((s) => s.token)
   const menus = useUserStore((s) => s.menus)
+  const fetchUserInfo = useUserStore((s) => s.fetchUserInfo)
+  const [bootstrapped, setBootstrapped] = useState(() => !token)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function bootstrap() {
+      if (!token) {
+        if (!cancelled) setBootstrapped(true)
+        return
+      }
+
+      if (!cancelled) setBootstrapped(false)
+
+      try {
+        const state = useUserStore.getState()
+        const menusEmpty = !state.menus || state.menus.length === 0
+        if (!state.userInfoFetched || menusEmpty) {
+          await fetchUserInfo(!state.userInfoFetched)
+        }
+      } catch (error) {
+        logger.error('Auth bootstrap failed:', error)
+      } finally {
+        if (!cancelled) setBootstrapped(true)
+      }
+    }
+
+    void bootstrap()
+    return () => {
+      cancelled = true
+    }
+  }, [token, fetchUserInfo])
+
   const dynamicChildren = useMemo(() => convertMenusToRoutes(menus), [menus])
   const router = useMemo(() => buildRouter(dynamicChildren), [dynamicChildren])
+
+  if (!bootstrapped) {
+    return <PageFallback />
+  }
 
   return <RouterProvider router={router} />
 }

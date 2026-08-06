@@ -1,12 +1,16 @@
 import { Badge, Button, Empty, List, Popover, Space, Typography } from 'antd'
 import { BellOutlined } from '@ant-design/icons'
+
+interface NotificationBellProps {
+  className?: string
+}
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useNotificationStore } from '@/stores/notification'
 import { useUserStore } from '@/stores/user'
 
-export default function NotificationBell() {
+export default function NotificationBell({ className }: NotificationBellProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const token = useUserStore((s) => s.token)
@@ -72,8 +76,14 @@ export default function NotificationBell() {
 
   return (
     <Popover content={content} trigger="click" placement="bottomRight">
-      <Badge count={unreadCount} size="small" offset={[-2, 2]}>
-        <Button type="text" icon={<BellOutlined />} />
+      <Badge count={unreadCount} size="small" offset={[-4, 4]}>
+        <button
+          type="button"
+          className={className || 'layout-header__icon-btn'}
+          title={t('menu.notification')}
+        >
+          <BellOutlined />
+        </button>
       </Badge>
     </Popover>
   )

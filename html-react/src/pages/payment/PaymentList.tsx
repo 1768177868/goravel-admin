@@ -180,6 +180,7 @@ export default function PaymentList() {
             name: 'user_id',
             label: t('payment.user_id'),
             placeholder: t('payment.user_id_placeholder'),
+            advanced: true,
           },
           {
             name: 'status',
@@ -193,12 +194,14 @@ export default function PaymentList() {
             label: t('payment.start_time'),
             type: 'datetime',
             placeholder: t('payment.start_time_placeholder'),
+            advanced: true,
           },
           {
             name: 'end_time',
             label: t('payment.end_time'),
             type: 'datetime',
             placeholder: t('payment.end_time_placeholder'),
+            advanced: true,
           },
         ]}
         values={searchForm}

@@ -178,20 +178,21 @@ export function createOperationLogSearchFields(
       span: 6,
       options: titleSelectOptions,
     },
-    { name: 'ip', label: t('log.ip'), span: 6 },
+    { name: 'ip', label: t('log.ip'), span: 6, advanced: true },
     {
       name: 'status',
       label: t('log.status'),
       type: 'select',
       span: 6,
+      advanced: true,
       options: [
         { label: t('log.success'), value: '1' },
         { label: t('log.failed'), value: '0' },
       ],
     },
-    { name: 'request', label: t('log.request_params'), span: 6 },
-    { name: 'start_time', label: t('log.start_time'), type: 'datetime', span: 6 },
-    { name: 'end_time', label: t('log.end_time'), type: 'datetime', span: 6 },
+    { name: 'request', label: t('log.request_params'), span: 6, advanced: true },
+    { name: 'start_time', label: t('log.start_time'), type: 'datetime', span: 6, advanced: true },
+    { name: 'end_time', label: t('log.end_time'), type: 'datetime', span: 6, advanced: true },
   ]
 }
 

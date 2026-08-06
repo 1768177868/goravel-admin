@@ -1,0 +1,24 @@
+.page-container__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -4px 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.page-container__title {
+  margin: 0 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.01em;
+  line-height: 1.3 !important;
+}
+
+.page-container__extra {
+  flex-shrink: 0;
+}
+
+.page-container__body {
+  min-width: 0;
+}

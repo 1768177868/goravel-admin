@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3008,
+      // History API fallback is enabled by default for Vite SPA apps so deep links
+      // like /admins reload to index.html instead of a bare 404 from the dev server.
       strictPort: false,
       proxy: {
         '/api/admin/public': {

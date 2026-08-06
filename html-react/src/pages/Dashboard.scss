@@ -1,0 +1,46 @@
+.dashboard-welcome {
+  margin: 0 0 4px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-subtitle {
+  margin-bottom: 20px !important;
+}
+
+.dashboard-kpi-card {
+  border-radius: var(--app-radius-md) !important;
+  overflow: hidden;
+}
+
+.dashboard-kpi-card:hover {
+  box-shadow: var(--app-shadow-md);
+  transform: translateY(-2px);
+}
+
+.dashboard-kpi {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dashboard-kpi__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-section {
+  margin-top: 16px;
+}
+
+.dashboard-chart-card .ant-card-head {
+  min-height: 48px;
+  font-weight: 600;
+}

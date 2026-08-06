@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react'
 import {
   App,
-  Col,
-  DatePicker,
   Descriptions,
   Divider,
   Drawer,
   Form,
   Input,
   Modal,
-  Row,
   Select,
   Space,
   Table,
@@ -19,7 +16,6 @@ import {
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import type { UploadProps } from 'antd/es/upload'
 import { UploadOutlined } from '@ant-design/icons'
-import dayjs, { type Dayjs } from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import {
   deleteOrder,
@@ -137,19 +133,6 @@ export default function OrderList() {
       })),
     [t],
   )
-
-  const parseDateValue = (value: string | undefined): Dayjs | null => {
-    if (!value) return null
-    const d = dayjs(value)
-    return d.isValid() ? d : null
-  }
-
-  const setDateField = (field: 'start_time' | 'end_time', value: Dayjs | null) => {
-    setSearchForm({
-      ...searchForm,
-      [field]: value ? value.format('YYYY-MM-DD HH:mm:ss') : '',
-    })
-  }
 
   const openDetail = async (row: OrderRow) => {
     try {
@@ -385,37 +368,16 @@ export default function OrderList() {
             type: 'select',
             options: statusOptions,
           },
-          { name: 'min_amount', label: t('order.min_amount') },
-          { name: 'max_amount', label: t('order.max_amount') },
+          { name: 'min_amount', label: t('order.min_amount'), advanced: true },
+          { name: 'max_amount', label: t('order.max_amount'), advanced: true },
+          { name: 'start_time', label: t('order.start_time'), type: 'datetime', advanced: true },
+          { name: 'end_time', label: t('order.end_time'), type: 'datetime', advanced: true },
         ]}
         values={searchForm}
         onChange={(values) => setSearchForm({ ...searchForm, ...values })}
         onSearch={handleSearch}
         onReset={handleReset}
       />
-
-      <Row gutter={16} style={{ marginBottom: 16, marginTop: -4 }}>
-        <Col xs={24} sm={12} md={6}>
-          <div style={{ marginBottom: 8 }}>{t('order.start_time')}</div>
-          <DatePicker
-            showTime
-            style={{ width: '100%' }}
-            value={parseDateValue(searchForm.start_time)}
-            onChange={(value) => setDateField('start_time', value)}
-            placeholder={t('order.start_time')}
-          />
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <div style={{ marginBottom: 8 }}>{t('order.end_time')}</div>
-          <DatePicker
-            showTime
-            style={{ width: '100%' }}
-            value={parseDateValue(searchForm.end_time)}
-            onChange={(value) => setDateField('end_time', value)}
-            placeholder={t('order.end_time')}
-          />
-        </Col>
-      </Row>
 
       <Table<OrderRow>
         rowKey="id"

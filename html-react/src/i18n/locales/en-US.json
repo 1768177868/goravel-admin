@@ -83,7 +83,10 @@
     "drag_to_sort": "Reorder",
     "freeze_left": "Freeze Left",
     "freeze_right": "Freeze Right",
-    "unfreeze": "Unfreeze"
+    "unfreeze": "Unfreeze",
+    "required": "Required",
+    "close_others": "Close Others",
+    "close_all": "Close All"
   },
   "admin_id": "Admin ID",
   "title": "Title",
@@ -207,13 +210,17 @@
     "phone": "Phone",
     "status": "Status",
     "created_at": "Created At",
+    "updated_at": "Updated At",
+    "sort": "Sort",
+    "description": "Description",
     "department": "Department",
     "position": "Position",
     "roles": "Roles",
     "ip": "IP",
     "title": "Title",
     "module": "Module",
-    "balance": "Balance"
+    "balance": "Balance",
+    "operation": "Actions"
   },
   "admin": {
     "add_admin": "Add Admin",
@@ -221,13 +228,30 @@
     "username_required": "Username is required",
     "password_required": "Password is required",
     "reset_password": "Reset Password",
-    "roles": "Roles"
+    "reset_password_success": "Password reset successfully",
+    "new_password": "New Password",
+    "roles": "Roles",
+    "google_auth_status": "Google Auth",
+    "google_auth_bound": "Bound",
+    "google_auth_not_bound": "Not Bound",
+    "kick_out": "Kick Out",
+    "kick_out_confirm": "Kick out all sessions for {{username}}?",
+    "kick_out_success": "Kicked out successfully",
+    "unbind_google_auth": "Unbind Google Auth",
+    "unbind_google_auth_confirm": "Unbind Google Authenticator for this admin?",
+    "reset_google_auth": "Reset Google Auth",
+    "reset_google_auth_confirm": "Reset Google Authenticator for this admin?",
+    "protected_cannot_disable": "Protected accounts cannot be disabled"
   },
   "role": {
     "name": "Role Name",
     "slug": "Role Slug",
     "add": "Add Role",
-    "edit": "Edit Role"
+    "edit": "Edit Role",
+    "menus_and_permissions": "Menus & Permissions",
+    "other_permissions": "Other Permissions",
+    "super_admin_has_all_permissions": "Super admin has all menus and permissions",
+    "protected_cannot_disable": "The super-admin role cannot be disabled"
   },
   "permission": {
     "name": "Permission Name",

@@ -2,12 +2,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px !important;
+  padding: 0 20px !important;
   height: 56px !important;
   line-height: 56px !important;
   position: sticky;
   top: 0;
   z-index: 90;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 var(--app-border-subtle);
 }
 
 .layout-header__left {
@@ -21,35 +23,50 @@
   cursor: pointer;
   font-size: 18px;
   color: inherit;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.layout-header__trigger:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: var(--ant-color-primary, #1677ff);
+}
+
+html.dark .layout-header__trigger:hover {
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .layout-header__user {
   cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 999px;
+  transition: background-color 0.18s ease;
 }
 
-.layout-header__icon-btn {
+.layout-header__user:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+html.dark .layout-header__user:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.layout-header__right {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font-size: 16px;
-  color: inherit;
-  border-radius: 8px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  gap: 4px;
 }
 
-.layout-header__icon-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--ant-color-primary, #1677ff);
+.layout-header__right .ant-space-item {
+  display: inline-flex;
+  align-items: center;
 }
 
-html.dark .layout-header__icon-btn:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+.layout-header__right .ant-badge {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .layout-size-option {

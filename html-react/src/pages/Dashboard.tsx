@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/stores/user'
 import PageContainer from '@/components/PageContainer'
 import { useDashboard } from './dashboard/useDashboard'
+import './Dashboard.scss'
 
 function hexToRgba(hex: string, alpha = 1) {
   const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i)
@@ -199,30 +200,20 @@ export default function DashboardPage() {
         </Button>
       }
     >
-      <Typography.Title level={3} style={{ marginTop: 0 }}>
+      <Typography.Title level={3} className="dashboard-welcome">
         {t('dashboard.welcome')}
         {adminInfo?.nickname || adminInfo?.username ? `，${adminInfo.nickname || adminInfo.username}` : ''}
       </Typography.Title>
-      <Typography.Paragraph type="secondary">{t('dashboard.subtitle')}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary" className="dashboard-subtitle">
+        {t('dashboard.subtitle')}
+      </Typography.Paragraph>
 
       <Row gutter={[16, 16]}>
         {cards.map((card) => (
           <Col xs={24} sm={12} lg={6} key={card.key}>
-            <Card loading={loading}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    display: 'grid',
-                    placeItems: 'center',
-                    color: '#fff',
-                    background: card.color,
-                    fontSize: 22,
-                    flexShrink: 0,
-                  }}
-                >
+            <Card loading={loading} className="dashboard-kpi-card" bordered={false}>
+              <div className="dashboard-kpi">
+                <div className="dashboard-kpi__icon" style={{ background: card.color }}>
                   {card.icon}
                 </div>
                 <Statistic title={card.title} value={card.value || 0} />
@@ -232,33 +223,33 @@ export default function DashboardPage() {
         ))}
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} className="dashboard-section">
         <Col xs={24} lg={12}>
-          <Card title={t('dashboard.weekly_activity')} loading={loading}>
+          <Card title={t('dashboard.weekly_activity')} loading={loading} className="dashboard-chart-card">
             <ReactECharts option={weeklyActivityOption} style={{ height: 320 }} notMerge lazyUpdate />
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title={t('dashboard.access_source')} loading={loading}>
+          <Card title={t('dashboard.access_source')} loading={loading} className="dashboard-chart-card">
             <ReactECharts option={accessSourceOption} style={{ height: 320 }} notMerge lazyUpdate />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} className="dashboard-section">
         <Col xs={24} lg={12}>
-          <Card title={t('dashboard.device_distribution')} loading={loading}>
+          <Card title={t('dashboard.device_distribution')} loading={loading} className="dashboard-chart-card">
             <ReactECharts option={deviceDistributionOption} style={{ height: 320 }} notMerge lazyUpdate />
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title={t('dashboard.monthly_operations')} loading={loading}>
+          <Card title={t('dashboard.monthly_operations')} loading={loading} className="dashboard-chart-card">
             <ReactECharts option={monthlyOperationsOption} style={{ height: 320 }} notMerge lazyUpdate />
           </Card>
         </Col>
       </Row>
 
-      <Card title={t('dashboard.recent')} style={{ marginTop: 16 }} loading={loading}>
+      <Card title={t('dashboard.recent')} className="dashboard-section" loading={loading}>
         <List
           locale={{ emptyText: t('common.no_data') }}
           dataSource={activities}

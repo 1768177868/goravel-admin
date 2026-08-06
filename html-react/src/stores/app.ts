@@ -138,13 +138,48 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { darkMode, themeColor, layoutSize } = get()
     const preset = THEME_COLORS.find((t) => t.key === themeColor) || THEME_COLORS[0]
     const sizeMap = { large: 16, default: 14, small: 12 } as const
+    const fontFamily =
+      "'Plus Jakarta Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif"
 
     return {
       algorithm: darkMode ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
       token: {
         colorPrimary: preset.color,
         fontSize: sizeMap[layoutSize],
-        borderRadius: 6,
+        borderRadius: 10,
+        fontFamily,
+        colorBgLayout: darkMode ? '#0b1220' : '#f4f6fb',
+        colorBgContainer: darkMode ? '#141c2b' : '#ffffff',
+        colorBorderSecondary: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)',
+        controlHeight: layoutSize === 'large' ? 40 : layoutSize === 'small' ? 28 : 34,
+        boxShadowSecondary: darkMode
+          ? '0 4px 16px rgba(0,0,0,0.28)'
+          : '0 4px 16px rgba(15,23,42,0.06)',
+      },
+      components: {
+        Layout: {
+          headerBg: darkMode ? '#141c2b' : '#ffffff',
+          siderBg: darkMode ? '#0f172a' : '#0f172a',
+          bodyBg: darkMode ? '#0b1220' : '#f4f6fb',
+        },
+        Menu: {
+          darkItemBg: 'transparent',
+          darkSubMenuItemBg: 'transparent',
+          itemBorderRadius: 8,
+          itemMarginInline: 8,
+        },
+        Card: {
+          borderRadiusLG: 12,
+          paddingLG: 20,
+        },
+        Table: {
+          borderRadius: 10,
+          headerBg: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.02)',
+        },
+        Button: {
+          borderRadius: 8,
+          controlHeight: layoutSize === 'large' ? 40 : layoutSize === 'small' ? 28 : 34,
+        },
       },
     }
   },

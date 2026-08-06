@@ -52,8 +52,8 @@ export function createLoginLogSearchFields(t: TFunction): SearchField[] {
         { label: t('log.failed'), value: '0' },
       ],
     },
-    { name: 'start_time', label: t('log.start_time'), type: 'datetime', span: 6 },
-    { name: 'end_time', label: t('log.end_time'), type: 'datetime', span: 6 },
+    { name: 'start_time', label: t('log.start_time'), type: 'datetime', span: 6, advanced: true },
+    { name: 'end_time', label: t('log.end_time'), type: 'datetime', span: 6, advanced: true },
   ]
 }
 

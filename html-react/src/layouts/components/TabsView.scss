@@ -1,8 +1,22 @@
 .tabs-view {
-  padding: 8px 16px 0;
+  padding: 10px 16px 0;
   background: transparent;
 }
 
 .tabs-view .ant-tabs-nav {
   margin: 0 !important;
+}
+
+.tabs-view .ant-tabs-nav::before {
+  border-bottom-color: var(--app-border-subtle) !important;
+}
+
+.tabs-view .ant-tabs-tab {
+  border-radius: 8px 8px 0 0 !important;
+  padding: 6px 14px !important;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.tabs-view .ant-tabs-tab-active {
+  background: color-mix(in srgb, var(--app-color-primary) 8%, transparent);
 }

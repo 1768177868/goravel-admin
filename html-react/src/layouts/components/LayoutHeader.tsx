@@ -134,7 +134,7 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
           </button>
         )}
       </div>
-      <Space size="middle" className="layout-header__right">
+      <Space size={4} className="layout-header__right" align="center">
         <button
           type="button"
           className="layout-header__icon-btn"
@@ -158,9 +158,9 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
             <SettingOutlined />
           </button>
         </Popover>
-        <NotificationBell />
-        <DarkModeSwitch />
-        <LanguageSwitch />
+        <NotificationBell className="layout-header__icon-btn" />
+        <DarkModeSwitch className="layout-header__icon-btn" />
+        <LanguageSwitch className="layout-header__icon-btn" />
         <button
           type="button"
           className="layout-header__icon-btn"
@@ -171,8 +171,8 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
         </button>
         <TimezoneSwitch />
         <Dropdown menu={{ items: userMenu }} placement="bottomRight">
-          <Space className="layout-header__user">
-            <Avatar size="small" src={adminInfo?.avatar} icon={<UserOutlined />} />
+          <Space className="layout-header__user" size={8}>
+            <Avatar size={28} src={adminInfo?.avatar} icon={<UserOutlined />} />
             <span>{adminInfo?.nickname || adminInfo?.username || 'Admin'}</span>
           </Space>
         </Dropdown>

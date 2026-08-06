@@ -528,6 +528,7 @@ export default function AttachmentList() {
             name: 'is_public',
             label: t('attachment.visibility'),
             type: 'select',
+            advanced: true,
             options: [
               { label: t('attachment.visibility_public'), value: '1' },
               { label: t('attachment.visibility_private'), value: '0' },
@@ -537,6 +538,7 @@ export default function AttachmentList() {
             name: 'file_type',
             label: t('attachment.file_type'),
             type: 'select',
+            advanced: true,
             options: [
               { label: t('attachment.file_type_image'), value: 'image' },
               { label: t('attachment.file_type_video'), value: 'video' },
@@ -544,9 +546,9 @@ export default function AttachmentList() {
               { label: t('attachment.file_type_other'), value: 'other' },
             ],
           },
-          { name: 'extension', label: t('attachment.extension') },
-          { name: 'start_time', label: t('log.start_time'), type: 'datetime' },
-          { name: 'end_time', label: t('log.end_time'), type: 'datetime' },
+          { name: 'extension', label: t('attachment.extension'), advanced: true },
+          { name: 'start_time', label: t('log.start_time'), type: 'datetime', advanced: true },
+          { name: 'end_time', label: t('log.end_time'), type: 'datetime', advanced: true },
         ]}
         values={searchForm}
         onChange={(values) => setSearchForm(values as never)}

@@ -1,0 +1,18 @@
+.search-form {
+  margin-bottom: 8px;
+  padding: 4px 4px 0;
+}
+
+.search-form__item {
+  margin-bottom: 12px !important;
+}
+
+.search-form__actions {
+  display: flex;
+  align-items: end;
+}
+
+.search-form__actions .ant-form-item-label > label {
+  opacity: 0;
+  user-select: none;
+}

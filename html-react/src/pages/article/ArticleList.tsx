@@ -131,11 +131,12 @@ export default function ArticleList() {
         fields={[
           { name: 'admin_id', label: t('admin_id') },
           { name: 'title', label: t('title') },
-          { name: 'content', label: t('content') },
+          { name: 'content', label: t('content'), advanced: true },
           {
             name: 'status',
             label: t('common.status'),
             type: 'select',
+            advanced: true,
             options: [
               { label: t('common.enabled'), value: 1 },
               { label: t('common.disabled'), value: 0 },

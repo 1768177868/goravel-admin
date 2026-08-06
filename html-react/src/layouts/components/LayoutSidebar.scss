@@ -4,7 +4,13 @@
   top: 0;
   bottom: 0;
   z-index: 100;
-  overflow: auto;
+  overflow: auto !important;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.12);
+}
+
+.layout-sidebar .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
 }
 
 .layout-sidebar__logo {
@@ -14,8 +20,25 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+  flex-shrink: 0;
+}
+
+.layout-sidebar .ant-menu {
+  flex: 1;
+  border-inline-end: none !important;
+  padding: 8px 0 16px;
+}
+
+.layout-sidebar .ant-menu-item,
+.layout-sidebar .ant-menu-submenu-title {
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.layout-sidebar .ant-menu-item-selected {
+  box-shadow: inset 3px 0 0 var(--app-color-primary);
 }

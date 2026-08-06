@@ -29,7 +29,7 @@ export default function TabsView() {
       },
       {
         key: 'close-others',
-        label: '关闭其他',
+        label: t('common.close_others'),
         onClick: () => {
           removeOtherTabs(path)
           navigate(path)
@@ -37,7 +37,7 @@ export default function TabsView() {
       },
       {
         key: 'close-all',
-        label: '关闭全部',
+        label: t('common.close_all'),
         onClick: () => {
           removeAllTabs()
           navigate('/dashboard')
