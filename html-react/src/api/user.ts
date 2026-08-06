@@ -1,7 +1,6 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 const baseUserApi = createCRUDApi('users')
 
@@ -28,7 +27,7 @@ const userApi = extendApi(baseUserApi, {
 
 export async function getUserList(params?: Record<string, unknown>) {
   const res = await userApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export const {

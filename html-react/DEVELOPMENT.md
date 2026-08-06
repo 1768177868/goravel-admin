@@ -44,30 +44,45 @@
 ## 新增 CRUD 模块
 
 ```ts
-// src/api/role.ts
+// src/api/widget.ts
 import { createCRUDApi } from '@/utils/apiFactory'
+import { normalizeListResponse } from '@/utils/normalize'
 
-const roleApi = createCRUDApi('roles')
+const widgetApi = createCRUDApi('widgets')
 
-export const {
-  list: getRoleList,
-  detail: getRoleDetail,
-  create: createRole,
-  update: updateRole,
-  delete: deleteRole,
-} = roleApi
+export async function getWidgetList(params?: Record<string, unknown>) {
+  return normalizeListResponse(await widgetApi.list(params))
+}
+
+export const getWidgetDetail = widgetApi.detail
+export const createWidget = widgetApi.create
+export const updateWidget = widgetApi.update
+export const deleteWidget = widgetApi.delete
 ```
 
-页面：
+### 选哪种页面写法
+
+| 场景 | 写法 |
+|------|------|
+| 字段简单、单弹窗即可 | `SimpleCrudPage`（见 `pages/position/PositionList.tsx`） |
+| 自定义列 / 导出 / 富文本 / 多弹窗 | `*List.tsx` + `*FormModal.tsx` + `*.config.ts`（见 `pages/article/`、`pages/admin/`） |
+
+复杂列表示例：
 
 ```tsx
-const { tableData, loading, handleSearch, handleReset, loadData } = useListPage({
-  fetchApi: getRoleList,
-  initialSearchForm: { name: '' },
+const { tableData, onSearchFormChange, handleSearch, handleReset, ... } = useListPage<Row, SearchForm>({
+  fetchApi: getWidgetList,
+  initialSearchForm,
+  normalizeRows: true,
+  transformData: transformWidgetRow,
 })
 ```
 
-页面文件放到 `src/pages/**`，菜单 `component` 填 `role/RoleList` 即可被动态路由加载（对标 Vue 的 `views/**`）。
+- 搜索表单用 `onSearchFormChange`，不要 `as never`
+- `*.config.ts` 放 `initialSearchForm`、行类型、`transform*Row`
+- 页面文件放到 `src/pages/**`，菜单 `component` 填 `widget/WidgetList` 即可被动态路由加载
+
+Agent 约定：`.cursor/skills/goravel-admin-frontend-react/`。
 
 ## 权限按钮
 

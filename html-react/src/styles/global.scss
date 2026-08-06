@@ -158,3 +158,16 @@ html.dark .layout-header__icon-btn {
 html.dark .layout-header__icon-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
+
+/* Available before MainLayout mounts (auth bootstrap / Suspense). */
+.page-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  width: 100%;
+}
+
+.page-fallback--fullscreen {
+  min-height: 100vh;
+}

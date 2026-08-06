@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import {
   App,
   Button,
@@ -79,14 +79,14 @@ export default function AttachmentList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<AttachmentRow>({
-    fetchApi: getAttachmentList as never,
+    fetchApi: getAttachmentList,
     initialSearchForm: { ...attachmentInitialSearchForm },
     defaultSort: 'id:desc',
     normalizeRows: false,
@@ -551,7 +551,7 @@ export default function AttachmentList() {
           { name: 'end_time', label: t('log.end_time'), type: 'datetime', advanced: true },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

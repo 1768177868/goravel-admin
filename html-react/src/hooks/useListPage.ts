@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { buildSearchParams } from '@/utils/buildSearchParams'
 import { useTableData } from './useTableData'
-import type { ApiResponse, PaginatedData } from '@/types'
+import type { ApiResponse, ListFetchFn, PaginatedData } from '@/types'
 
 export interface UseListPageOptions<T, S extends Record<string, unknown>> {
-  fetchApi: (params: Record<string, unknown>) => Promise<ApiResponse<PaginatedData<T>>>
+  fetchApi: ListFetchFn
   initialSearchForm?: S
   fieldMapping?: Record<string, string>
   defaultSort?: string
-  transformData?: ((row: T) => T) | null
-  onLoadSuccess?: ((rows: T[], res: ApiResponse<PaginatedData<T>>) => void) | null
+  transformData?: ((row: Record<string, unknown>) => T) | null
+  onLoadSuccess?: ((rows: T[], res: ApiResponse<PaginatedData>) => void) | null
   buildParams?: ((searchForm: S, baseParams: Record<string, unknown>) => Record<string, unknown>) | null
   onSearch?: (() => void) | null
   onReset?: (() => void) | null
@@ -119,6 +119,11 @@ export function useListPage<T = Record<string, unknown>, S extends Record<string
     }, 0)
   }, [onReset, initialSearchForm, defaultSort, setPagination])
 
+  /** Compatible with SearchForm.onChange without page-level casts. */
+  const onSearchFormChange = useCallback((values: Record<string, unknown>) => {
+    setSearchForm(values as S)
+  }, [])
+
   const handleSortChange = useCallback(
     (field?: string, order?: 'ascend' | 'descend' | null) => {
       const next = toOrderBy(field, order, fieldMapping, defaultSort)
@@ -149,6 +154,7 @@ export function useListPage<T = Record<string, unknown>, S extends Record<string
     loading,
     searchForm,
     setSearchForm,
+    onSearchFormChange,
     selectedRows,
     setSelectedRows,
     selectedIds,

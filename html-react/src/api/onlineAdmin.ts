@@ -1,6 +1,5 @@
-import { normalizeListResponse } from '@/utils/normalize'
+﻿import { normalizeListResponse } from '@/utils/normalize'
 import request from '@/utils/request'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 export async function getOnlineAdminList(params?: Record<string, unknown>) {
   const res = await request({
@@ -8,7 +7,7 @@ export async function getOnlineAdminList(params?: Record<string, unknown>) {
     method: 'get',
     params,
   })
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export function kickOutOnlineAdmin(id: string | number) {

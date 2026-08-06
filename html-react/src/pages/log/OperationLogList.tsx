@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   App,
   Button,
@@ -71,14 +71,14 @@ export default function OperationLogList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch: baseHandleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<OperationLogRow>({
-    fetchApi: getOperationLogList as never,
+    fetchApi: getOperationLogList,
     initialSearchForm: createOperationLogInitialSearchForm(),
     defaultSort: 'id:desc',
     normalizeRows: false,
@@ -334,7 +334,7 @@ export default function OperationLogList() {
       <SearchForm
         fields={searchFields}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

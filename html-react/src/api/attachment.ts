@@ -1,9 +1,9 @@
-import { createCRUDApi, extendApi } from '@/utils/apiFactory'
+﻿import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
 import { getApiBaseURL } from '@/utils/env'
 import request from '@/utils/request'
 import Storage from '@/utils/storage'
-import type { ApiResponse, PaginatedData } from '@/types'
+import type { ApiResponse } from '@/types'
 
 const baseAttachmentApi = createCRUDApi('attachments')
 
@@ -51,7 +51,7 @@ const attachmentApi = extendApi(baseAttachmentApi, {
 
 export async function getAttachmentList(params?: Record<string, unknown>) {
   const res = await attachmentApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export const deleteAttachment = attachmentApi.delete

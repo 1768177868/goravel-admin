@@ -76,7 +76,8 @@ export default function AdminFormModal({ open, editId, onClose, onSuccess }: Adm
     setLoading(true)
     getAdminDetail(editId)
       .then((res) => {
-        const data = (res.data || {}) as Record<string, unknown>
+        const raw = (res.data || {}) as Record<string, unknown>
+        const data = (entityField(raw, 'admin', raw) || {}) as Record<string, unknown>
         const roles = (entityField(data, 'roles', []) as Array<Record<string, unknown>>) || []
         const deptId = Number(entityField(data, 'department_id', 0) || 0)
         const posId = Number(entityField(data, 'position_id', 0) || 0)
@@ -93,7 +94,7 @@ export default function AdminFormModal({ open, editId, onClose, onSuccess }: Adm
           status: Number(entityField(data, 'status', 1)),
           department_id: deptId || undefined,
           position_id: posId || undefined,
-          role_ids: roles.map((role) => entityField(role, 'id')),
+          role_ids: roles.map((role) => entityField(role, 'id')).filter((id) => id != null && id !== ''),
         })
       })
       .catch((error) => showError(error, t('common.query_failed')))

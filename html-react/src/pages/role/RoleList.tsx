@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Button, Space, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { SettingOutlined } from '@ant-design/icons'
@@ -13,18 +13,8 @@ import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import StatusTag from '@/components/StatusTag'
 import PermissionButton from '@/components/PermissionButton'
-import { entityField } from '@/utils/normalize'
 import RoleFormModal from './RoleFormModal'
-
-interface RoleRow {
-  id: number | string
-  name?: string
-  slug?: string
-  description?: string
-  status?: number
-  sort?: number
-  created_at?: string
-}
+import { roleInitialSearchForm, transformRoleRow, type RoleRow } from './role.config'
 
 export default function RoleList() {
   const { t } = useTranslation()
@@ -37,28 +27,17 @@ export default function RoleList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
-  } = useListPage<RoleRow>({
-    fetchApi: getRoleList as never,
-    initialSearchForm: { name: '', status: '' },
+  } = useListPage<RoleRow, typeof roleInitialSearchForm>({
+    fetchApi: getRoleList,
+    initialSearchForm: roleInitialSearchForm,
     normalizeRows: true,
-    transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
-      return {
-        id: entityField(record, 'id', '')!,
-        name: String(entityField(record, 'name', '') ?? ''),
-        slug: String(entityField(record, 'slug', '') ?? ''),
-        description: String(entityField(record, 'description', '') ?? ''),
-        status: Number(entityField(record, 'status', 0) ?? 0),
-        sort: Number(entityField(record, 'sort', 0) ?? 0),
-        created_at: String(entityField(record, 'created_at', '') ?? ''),
-      }
-    },
+    transformData: transformRoleRow,
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
@@ -156,7 +135,7 @@ export default function RoleList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

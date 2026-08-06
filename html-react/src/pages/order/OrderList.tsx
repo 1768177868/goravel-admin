@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import {
   App,
   Descriptions,
@@ -86,19 +86,19 @@ export default function OrderList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<OrderRow, OrderSearchForm>({
-    fetchApi: getOrderList as never,
+    fetchApi: getOrderList,
     initialSearchForm: initialSearch,
     defaultSort: 'created_at:desc',
     normalizeRows: true,
     transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
+      const record = row
       return {
         id: entityField(record, 'id', '')!,
         order_no: String(entityField(record, 'order_no', '') ?? ''),
@@ -374,7 +374,7 @@ export default function OrderList() {
           { name: 'end_time', label: t('order.end_time'), type: 'datetime', advanced: true },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm({ ...searchForm, ...values })}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

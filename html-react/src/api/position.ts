@@ -1,12 +1,11 @@
-import { createCRUDApi } from '@/utils/apiFactory'
+﻿import { createCRUDApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 const positionApi = createCRUDApi('positions')
 
 export async function getPositionList(params?: Record<string, unknown>) {
   const res = await positionApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export const getPositionDetail = positionApi.detail

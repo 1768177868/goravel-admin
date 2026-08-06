@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react'
-import type { ApiResponse, PaginatedData, PaginationState } from '@/types'
+import type { ApiResponse, ListFetchFn, PaginatedData, PaginationState } from '@/types'
 import { normalizeEntity } from '@/utils/normalize'
 import logger from '@/utils/logger'
 
 interface UseTableDataOptions<T> {
-  fetchApi: (params: Record<string, unknown>) => Promise<ApiResponse<PaginatedData<T>>>
-  transformData?: ((row: T) => T) | null
-  onLoadSuccess?: ((rows: T[], res: ApiResponse<PaginatedData<T>>) => void) | null
+  fetchApi: ListFetchFn
+  transformData?: ((row: Record<string, unknown>) => T) | null
+  onLoadSuccess?: ((rows: T[], res: ApiResponse<PaginatedData>) => void) | null
   normalizeRows?: boolean
 }
 
@@ -26,14 +26,20 @@ export function useTableData<T = Record<string, unknown>>(options: UseTableDataO
       setLoading(true)
       try {
         const res = await fetchApi(params)
-        const rawList = (res.data?.list ?? res.data?.data ?? []) as T[]
-        let rows = Array.isArray(rawList) ? rawList : []
+        const rawList = (res.data?.list ?? res.data?.data ?? []) as unknown[]
+        let rows: T[] = []
 
-        if (normalizeRows) {
-          rows = rows.map((row) => normalizeEntity(row))
-        }
-        if (transformData) {
-          rows = rows.map((row) => transformData(row))
+        if (Array.isArray(rawList)) {
+          rows = rawList.map((item) => {
+            let row = item as Record<string, unknown>
+            if (normalizeRows) {
+              row = normalizeEntity(row) as Record<string, unknown>
+            }
+            if (transformData) {
+              return transformData(row)
+            }
+            return row as T
+          })
         }
 
         setTableData(rows)

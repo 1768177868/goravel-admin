@@ -11,7 +11,7 @@ import type { MenuNode } from '@/types'
 type AntdItem = Required<MenuProps>['items'][number]
 
 function menuTitle(node: MenuNode, t: (key: string) => string) {
-  return resolveMenuTitle(t as never, {
+  return resolveMenuTitle(t, {
     slug: node.Slug || node.slug,
     fallback: node.Title || node.title || node.Name || node.name || node.Slug || node.slug || 'menu',
   })

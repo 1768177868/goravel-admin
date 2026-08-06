@@ -16,6 +16,14 @@ export interface PaginatedData<T = unknown> {
   page_size?: number
 }
 
+/**
+ * List API accepted by useListPage / useTableData.
+ * Row type is refined by transformData (or cast when omitted).
+ */
+export type ListFetchFn = (
+  params?: Record<string, unknown>,
+) => Promise<ApiResponse<PaginatedData>>
+
 export interface PaginationState {
   page: number
   pageSize: number

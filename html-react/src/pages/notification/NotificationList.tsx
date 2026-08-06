@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Button, Modal, Space, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { PlusOutlined } from '@ant-design/icons'
@@ -39,14 +39,14 @@ export default function NotificationList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<NotificationRow, typeof notificationInitialSearchForm>({
-    fetchApi: getNotificationList as never,
+    fetchApi: getNotificationList,
     initialSearchForm: notificationInitialSearchForm,
     defaultSort: 'id:desc',
     normalizeRows: false,
@@ -201,7 +201,7 @@ export default function NotificationList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as typeof searchForm)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

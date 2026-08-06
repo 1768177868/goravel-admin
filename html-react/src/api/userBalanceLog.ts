@@ -1,6 +1,6 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 import { normalizeListResponse } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
+import type { ApiResponse } from '@/types'
 
 export async function getUserBalanceLogList(params?: Record<string, unknown>) {
   const res = await request({
@@ -8,7 +8,7 @@ export async function getUserBalanceLogList(params?: Record<string, unknown>) {
     method: 'get',
     params,
   })
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export function getUserBalanceStatistics(params?: Record<string, unknown>) {

@@ -15,7 +15,7 @@ import StatusTag from '@/components/StatusTag'
 import PermissionButton from '@/components/PermissionButton'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import { entityField } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
+import type { ListFetchFn } from '@/types'
 
 export interface SimpleField {
   name: string
@@ -26,10 +26,17 @@ export interface SimpleField {
   hideOnCreate?: boolean
 }
 
-interface SimpleCrudPageProps<T extends { id: string | number }> {
+interface SimpleCrudRow {
+  id: string | number
+  name?: string
+  status?: number
+  created_at?: string
+}
+
+interface SimpleCrudPageProps<T extends SimpleCrudRow> {
   title: string
   permissions: { index?: string; store: string; update: string; destroy: string }
-  fetchApi: (params: Record<string, unknown>) => Promise<ApiResponse<PaginatedData>>
+  fetchApi: ListFetchFn
   createApi: (data: unknown) => Promise<unknown>
   updateApi: (id: string | number, data: unknown) => Promise<unknown>
   deleteApi: (id: string | number) => Promise<unknown>
@@ -46,9 +53,7 @@ interface SimpleCrudPageProps<T extends { id: string | number }> {
   columnSettingKey?: string
 }
 
-export default function SimpleCrudPage<T extends { id: string | number; name?: string; status?: number }>(
-  props: SimpleCrudPageProps<T>,
-) {
+export default function SimpleCrudPage<T extends SimpleCrudRow>(props: SimpleCrudPageProps<T>) {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const showError = useUnhandledError()
@@ -77,17 +82,17 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<T>({
-    fetchApi: props.fetchApi as never,
-    initialSearchForm: (props.initialSearchForm || {}) as never,
+    fetchApi: props.fetchApi,
+    initialSearchForm: props.initialSearchForm || {},
     normalizeRows: true,
-    transformData: (row) => transformRow(row as unknown as Record<string, unknown>),
+    transformData: transformRow,
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
@@ -150,15 +155,15 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
     }
 
     return [
-      { title: t('table.id'), dataIndex: 'id' as never, width: 80, sorter: true },
-      { title: t('common.name'), dataIndex: 'name' as never },
+      { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
+      { title: t('common.name'), dataIndex: 'name' },
       {
         title: t('common.status'),
-        dataIndex: 'status' as never,
+        dataIndex: 'status',
         width: 100,
         render: (status: number) => <StatusTag status={status} />,
       },
-      { title: t('table.created_at'), dataIndex: 'created_at' as never, width: 180, sorter: true },
+      { title: t('table.created_at'), dataIndex: 'created_at', width: 180, sorter: true },
       ...(props.extraColumns || []),
       operationColumn,
     ]
@@ -217,7 +222,7 @@ export default function SimpleCrudPage<T extends { id: string | number; name?: s
         <SearchForm
           fields={props.searchFields}
           values={searchForm}
-          onChange={(values) => setSearchForm(values as never)}
+          onChange={onSearchFormChange}
           onSearch={handleSearch}
           onReset={handleReset}
         />

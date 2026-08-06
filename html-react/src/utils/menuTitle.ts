@@ -1,5 +1,3 @@
-import type { TFunction } from 'i18next'
-
 /** Normalize menu slug for i18n keys: operation-log -> operation_log */
 export function normalizeMenuSlug(slug: string): string {
   return String(slug || '')
@@ -17,7 +15,7 @@ export function menuTitleKeyFromSlug(slug: string): string {
  * Tries: exact key, kebab→snake, optional `_management` suffix, then fallbacks.
  */
 export function resolveMenuTitle(
-  t: TFunction,
+  t: (key: string) => string,
   options: {
     titleKey?: string | null
     slug?: string | null

@@ -1,8 +1,8 @@
 import request from './request'
-import type { ApiResponse } from '@/types'
+import type { ApiResponse, PaginatedData } from '@/types'
 
 export interface CrudApi<T = unknown> {
-  list: (params?: Record<string, unknown>) => Promise<ApiResponse<{ list?: T[]; data?: T[]; total?: number }>>
+  list: (params?: Record<string, unknown>) => Promise<ApiResponse<PaginatedData<T>>>
   detail: (id: string | number) => Promise<ApiResponse<T>>
   create: (data: unknown) => Promise<ApiResponse<T>>
   update: (id: string | number, data: unknown) => Promise<ApiResponse<T>>
@@ -13,39 +13,39 @@ export interface CrudApi<T = unknown> {
 export function createCRUDApi<T = unknown>(resource: string): CrudApi<T> {
   return {
     list: (params) =>
-      request({
+      request<PaginatedData<T>>({
         url: `/${resource}`,
         method: 'get',
         params,
-      }) as Promise<ApiResponse<{ list?: T[]; data?: T[]; total?: number }>>,
+      }),
     detail: (id) =>
-      request({
+      request<T>({
         url: `/${resource}/${id}`,
         method: 'get',
-      }) as Promise<ApiResponse<T>>,
+      }),
     create: (data) =>
-      request({
+      request<T>({
         url: `/${resource}`,
         method: 'post',
         data,
-      }) as Promise<ApiResponse<T>>,
+      }),
     update: (id, data) =>
-      request({
+      request<T>({
         url: `/${resource}/${id}`,
         method: 'put',
         data,
-      }) as Promise<ApiResponse<T>>,
+      }),
     delete: (id) =>
       request({
         url: `/${resource}/${id}`,
         method: 'delete',
-      }) as Promise<ApiResponse<unknown>>,
+      }),
     batchDelete: (ids) =>
       request({
         url: `/${resource}/batch`,
         method: 'delete',
         data: { ids },
-      }) as Promise<ApiResponse<unknown>>,
+      }),
   }
 }
 

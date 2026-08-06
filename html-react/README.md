@@ -57,6 +57,20 @@ src/
 
 API 响应约定不变：`{ code, message, data, error_code, trace_id }`。
 
+## 列表页范式
+
+| 场景 | 写法 | 示例 |
+|---|---|---|
+| 字段简单、弹窗表单即可 | `SimpleCrudPage` | `position` / `dictionary` / `permission` / `blacklist` |
+| 自定义列、导出、富文本、多弹窗等 | `*List.tsx` + `*FormModal.tsx` + `*.config.ts` | `article` / `admin` / `role` / `order` |
+
+复杂页约定：
+- `*.config.ts`：`initialSearchForm`、行类型、`transform*Row`、展示辅助函数
+- `useListPage`：`fetchApi` 用 `ListFetchFn`；搜索用 `onSearchFormChange`（勿再 `as never`）
+- 权限 slug 与后端一致（如 `admin.store`）
+
+Agent 约定见 `.cursor/skills/goravel-admin-frontend-react/`。
+
 ## 当前已实现模块
 
 - 登录 / 布局 / 动态菜单 / 多标签 / 权限按钮 / 通知铃铛（WS）

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Avatar, Button, Space, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
@@ -52,20 +52,20 @@ export default function OnlineAdminList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<OnlineAdminRow>({
-    fetchApi: getOnlineAdminList as never,
+    fetchApi: getOnlineAdminList,
     initialSearchForm: { username: '', ip: '', browser: '', os: '' },
     fieldMapping: { last_active: 'last_used_at' },
     defaultSort: 'last_used_at:desc',
     normalizeRows: false,
     transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
+      const record = row
       return {
         id: entityField(record, 'id', '')!,
         username: String(entityField(record, 'username', '') ?? ''),
@@ -196,7 +196,7 @@ export default function OnlineAdminList() {
           { name: 'os', label: t('online_admin.os') },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

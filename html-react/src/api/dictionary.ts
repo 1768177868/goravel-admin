@@ -1,7 +1,6 @@
-import { createCRUDApi, extendApi } from '@/utils/apiFactory'
+﻿import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
 import request from '@/utils/request'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 const baseDictionaryApi = createCRUDApi('dictionaries')
 
@@ -20,7 +19,7 @@ const dictionaryApi = extendApi(baseDictionaryApi, {
 
 export async function getDictionaryList(params?: Record<string, unknown>) {
   const res = await dictionaryApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export const getDictionaryDetail = dictionaryApi.detail

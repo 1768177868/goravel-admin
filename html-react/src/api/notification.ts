@@ -1,6 +1,11 @@
-import request from '@/utils/request'
 import { normalizeListResponse } from '@/utils/normalize'
+import request from '@/utils/request'
 import type { ApiResponse, PaginatedData } from '@/types'
+
+type NotificationListData = PaginatedData & {
+  unread_count?: number
+  pagination?: unknown
+}
 
 export async function getNotificationList(params: Record<string, unknown> = {}) {
   const res = await request({
@@ -9,17 +14,23 @@ export async function getNotificationList(params: Record<string, unknown> = {}) 
     params,
   })
 
-  if (!res?.data) return res as ApiResponse<PaginatedData>
+  if (!res?.data) return res as ApiResponse<NotificationListData>
+
+  const payload = res.data as {
+    notifications?: unknown[]
+    pagination?: { total?: number }
+    unread_count?: number
+  }
 
   return normalizeListResponse({
     ...res,
     data: {
-      list: (res.data as { notifications?: unknown[] }).notifications || [],
-      total: (res.data as { pagination?: { total?: number } }).pagination?.total || 0,
-      unread_count: (res.data as { unread_count?: number }).unread_count || 0,
-      pagination: (res.data as { pagination?: unknown }).pagination,
+      list: payload.notifications || [],
+      total: payload.pagination?.total || 0,
+      unread_count: payload.unread_count || 0,
+      pagination: payload.pagination,
     },
-  }) as ApiResponse<PaginatedData & { unread_count?: number }>
+  }) as ApiResponse<NotificationListData>
 }
 
 export function fetchUnreadCount() {

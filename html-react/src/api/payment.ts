@@ -1,7 +1,6 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeEntity, normalizeListResponse } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 const paymentApi = extendApi(createCRUDApi('payments'), {
   export: (params?: Record<string, unknown>) =>
@@ -19,7 +18,7 @@ const paymentApi = extendApi(createCRUDApi('payments'), {
 
 export async function getPaymentList(params?: Record<string, unknown>) {
   const res = await paymentApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export async function getPaymentDetail(id: string | number) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { App, Button, Descriptions, Drawer, Space, Spin, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { EyeOutlined, SettingOutlined } from '@ant-design/icons'
@@ -47,13 +47,13 @@ export default function LoginLogList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     refresh,
   } = useListPage<LoginLogRow>({
-    fetchApi: getLoginLogList as never,
+    fetchApi: getLoginLogList,
     initialSearchForm: { ...loginLogInitialSearchForm },
     defaultSort: 'id:desc',
     normalizeRows: false,
@@ -221,7 +221,7 @@ export default function LoginLogList() {
       <SearchForm
         fields={searchFields}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

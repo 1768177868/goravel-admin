@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { App, Button, Dropdown, Form, Input, Space, Switch, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import type { MenuProps } from 'antd'
@@ -23,24 +23,15 @@ import PageContainer from '@/components/PageContainer'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
 import ColumnSettingDialog from '@/components/ColumnSettingDialog'
-import { entityField } from '@/utils/normalize'
 import AdminFormModal from './AdminFormModal'
-
-interface AdminRow {
-  id: number | string
-  username: string
-  nickname?: string
-  email?: string
-  phone?: string
-  status?: number
-  created_at?: string
-  is_2fa_bound?: boolean
-  department?: { name?: string } | string
-  position?: { name?: string } | string
-  roles?: Array<{ id?: number | string; name?: string }>
-}
-
-const protectedIds = new Set([1, 2])
+import {
+  adminInitialSearchForm,
+  adminProtectedIds,
+  getAdminDeptName,
+  getAdminPositionName,
+  transformAdminRow,
+  type AdminRow,
+} from './admin.config'
 
 export default function AdminList() {
   const { t } = useTranslation()
@@ -57,35 +48,18 @@ export default function AdminList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
-  } = useListPage<AdminRow, Record<string, unknown>>({
-    fetchApi: getAdminList as never,
-    initialSearchForm: { username: '', status: '', is_2fa_bound: '' },
+  } = useListPage<AdminRow, typeof adminInitialSearchForm>({
+    fetchApi: getAdminList,
+    initialSearchForm: adminInitialSearchForm,
     defaultSort: 'id:desc',
     normalizeRows: true,
-    transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
-      return {
-        id: entityField(record, 'id', '')!,
-        username: String(entityField(record, 'username', '') ?? ''),
-        nickname: String(entityField(record, 'nickname', '') ?? ''),
-        email: String(entityField(record, 'email', '') ?? ''),
-        phone: String(entityField(record, 'phone', '') ?? ''),
-        status: Number(entityField(record, 'status', 0) ?? 0),
-        created_at: String(entityField(record, 'created_at', '') ?? ''),
-        is_2fa_bound: !!(
-          entityField(record, 'is_2fa_bound', false) || entityField(record, 'Is2faBound', false)
-        ),
-        department: (entityField(record, 'department', null) as AdminRow['department']) || undefined,
-        position: (entityField(record, 'position', null) as AdminRow['position']) || undefined,
-        roles: (entityField(record, 'roles', []) as AdminRow['roles']) || [],
-      }
-    },
+    transformData: transformAdminRow,
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
@@ -98,20 +72,8 @@ export default function AdminList() {
     deleteApi: deleteAdmin,
   })
 
-  const deptName = (dept: AdminRow['department']) => {
-    if (!dept) return '-'
-    if (typeof dept === 'string') return dept
-    return dept.name || '-'
-  }
-
-  const posName = (pos: AdminRow['position']) => {
-    if (!pos) return '-'
-    if (typeof pos === 'string') return pos
-    return pos.name || '-'
-  }
-
   const handleStatusChange = async (row: AdminRow, checked: boolean) => {
-    if (protectedIds.has(Number(row.id)) && !checked) {
+    if (adminProtectedIds.has(Number(row.id)) && !checked) {
       message.warning(t('admin.protected_cannot_disable', { defaultValue: '受保护账号不能禁用' }))
       return
     }
@@ -237,8 +199,8 @@ export default function AdminList() {
     { title: t('table.username'), dataIndex: 'username' },
     { title: t('table.nickname'), dataIndex: 'nickname' },
     { title: t('table.email'), dataIndex: 'email' },
-    { title: t('table.department'), dataIndex: 'department', render: (v) => deptName(v) },
-    { title: t('table.position'), dataIndex: 'position', render: (v) => posName(v) },
+    { title: t('table.department'), dataIndex: 'department', render: (_, row) => getAdminDeptName(row) },
+    { title: t('table.position'), dataIndex: 'position', render: (_, row) => getAdminPositionName(row) },
     {
       title: t('table.roles'),
       dataIndex: 'roles',
@@ -269,7 +231,7 @@ export default function AdminList() {
       render: (status: number, row) => (
         <Switch
           checked={status === 1}
-          disabled={protectedIds.has(Number(row.id)) || getButtonState('admin.update').disabled}
+          disabled={adminProtectedIds.has(Number(row.id)) || getButtonState('admin.update').disabled}
           onChange={(checked) => void handleStatusChange(row, checked)}
         />
       ),
@@ -294,7 +256,7 @@ export default function AdminList() {
               {t('common.edit')}
             </PermissionButton>
           )}
-          {getButtonState('admin.destroy').show && !protectedIds.has(Number(row.id)) && (
+          {getButtonState('admin.destroy').show && !adminProtectedIds.has(Number(row.id)) && (
             <PermissionButton
               permission="admin.destroy"
               type="link"
@@ -376,7 +338,7 @@ export default function AdminList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as typeof searchForm)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { App, Button, Dropdown, Form, Input, InputNumber, Modal, Radio, Select, Space, Switch, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import type { MenuProps } from 'antd'
@@ -25,24 +25,12 @@ import ColumnSettingDialog from '@/components/ColumnSettingDialog'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
 import { entityField } from '@/utils/normalize'
-
-interface UserRow {
-  id: number | string
-  username: string
-  nickname?: string
-  email?: string
-  phone?: string
-  status?: number
-  balance?: number | string
-  currency?: string
-  created_at?: string
-  name?: string
-}
-
-function formatBalance(balance: number | string | undefined, currency?: string) {
-  const amount = Number(balance || 0).toFixed(2)
-  return currency ? `${amount} ${currency}` : amount
-}
+import {
+  formatUserBalance,
+  transformUserRow,
+  userInitialSearchForm,
+  type UserRow,
+} from './user.config'
 
 export default function UserList() {
   const { t } = useTranslation()
@@ -66,32 +54,18 @@ export default function UserList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
-  } = useListPage<UserRow, Record<string, unknown>>({
-    fetchApi: getUserList as never,
-    initialSearchForm: { username: '', status: '' },
+  } = useListPage<UserRow, typeof userInitialSearchForm>({
+    fetchApi: getUserList,
+    initialSearchForm: userInitialSearchForm,
     defaultSort: 'id:desc',
     normalizeRows: true,
-    transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
-      return {
-        id: entityField(record, 'id', '')!,
-        username: String(entityField(record, 'username', '') ?? ''),
-        nickname: String(entityField(record, 'nickname', '') ?? ''),
-        email: String(entityField(record, 'email', '') ?? ''),
-        phone: String(entityField(record, 'phone', '') ?? ''),
-        status: Number(entityField(record, 'status', 0) ?? 0),
-        balance: (entityField(record, 'balance', 0) as number | string) ?? 0,
-        currency: String(entityField(record, 'currency', '') ?? ''),
-        created_at: String(entityField(record, 'created_at', '') ?? ''),
-        name: String(entityField(record, 'username', '') ?? ''),
-      }
-    },
+    transformData: transformUserRow,
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
@@ -118,7 +92,8 @@ export default function UserList() {
     setLoadingDetail(true)
     try {
       const res = await getUserDetail(row.id)
-      const data = (res.data || {}) as Record<string, unknown>
+      const raw = (res.data || {}) as Record<string, unknown>
+      const data = (entityField(raw, 'user', raw) || {}) as Record<string, unknown>
       form.setFieldsValue({
         username: entityField(data, 'username', ''),
         nickname: entityField(data, 'nickname', ''),
@@ -277,7 +252,7 @@ export default function UserList() {
       width: 140,
       render: (balance, row) => (
         <span style={{ color: 'var(--ant-color-primary)', fontWeight: 600 }}>
-          {formatBalance(balance, row.currency)}
+          {formatUserBalance(balance, row.currency)}
         </span>
       ),
     },
@@ -362,7 +337,7 @@ export default function UserList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as typeof searchForm)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />
@@ -442,7 +417,7 @@ export default function UserList() {
             <Input value={balanceUser?.username} disabled />
           </Form.Item>
           <Form.Item label={t('table.balance')}>
-            <Input value={formatBalance(balanceUser?.balance, balanceUser?.currency)} disabled />
+            <Input value={formatUserBalance(balanceUser?.balance, balanceUser?.currency)} disabled />
           </Form.Item>
           <Form.Item
             name="amount"

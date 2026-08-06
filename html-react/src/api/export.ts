@@ -1,7 +1,6 @@
-import { createCRUDApi, extendApi } from '@/utils/apiFactory'
+﻿import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
 import request from '@/utils/request'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 const baseExportApi = createCRUDApi('exports')
 
@@ -16,7 +15,7 @@ const exportApi = extendApi(baseExportApi, {
 
 export async function getExportList(params?: Record<string, unknown>) {
   const res = await exportApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export const deleteExport = exportApi.delete

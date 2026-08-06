@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { App, Space, Switch, Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
@@ -28,17 +28,17 @@ export default function ArticleList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<ArticleRow>({
-    fetchApi: getArticleList as never,
+    fetchApi: getArticleList,
     initialSearchForm: articleInitialSearchForm,
     normalizeRows: false,
-    transformData: (row) => transformArticleRow(row as unknown as Record<string, unknown>),
+    transformData: (row) => transformArticleRow(row),
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
@@ -144,7 +144,7 @@ export default function ArticleList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

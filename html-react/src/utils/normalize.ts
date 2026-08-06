@@ -1,3 +1,5 @@
+import type { ApiResponse, PaginatedData } from '@/types'
+
 function toSnakeCase(key: string): string {
   if (!key || key === 'ID') return 'id'
   return key
@@ -40,13 +42,17 @@ export function normalizeTreeList<T>(list: T[] | null | undefined): T[] {
   return list.map((item) => normalizeEntity(item))
 }
 
-export function normalizeListResponse<T extends { data?: unknown }>(res: T): T {
-  if (!res?.data || typeof res.data !== 'object') return res
+export function normalizeListResponse<T = unknown>(
+  res: ApiResponse<PaginatedData<T> | unknown>,
+): ApiResponse<PaginatedData<T>> {
+  if (!res?.data || typeof res.data !== 'object') {
+    return res as ApiResponse<PaginatedData<T>>
+  }
 
-  const data = res.data as Record<string, unknown>
+  const data = res.data as PaginatedData<T> & Record<string, unknown>
   const list = data.list ?? data.data
   if (Array.isArray(list)) {
-    const normalized = normalizeTreeList(list)
+    const normalized = normalizeTreeList(list) as T[]
     if (data.list) {
       data.list = normalized
     } else if (data.data) {
@@ -54,7 +60,7 @@ export function normalizeListResponse<T extends { data?: unknown }>(res: T): T {
     }
   }
 
-  return res
+  return res as ApiResponse<PaginatedData<T>>
 }
 
 /** Read field with snake_case / PascalCase fallback. */

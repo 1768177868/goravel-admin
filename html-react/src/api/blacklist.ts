@@ -1,12 +1,11 @@
-import { createCRUDApi } from '@/utils/apiFactory'
+﻿import { createCRUDApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
 
 const blacklistApi = createCRUDApi('blacklists')
 
 export async function getBlacklistList(params?: Record<string, unknown>) {
   const res = await blacklistApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export const getBlacklistDetail = blacklistApi.detail

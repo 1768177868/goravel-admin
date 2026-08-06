@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Descriptions, Drawer, Space, Spin, Table, Tag, Button } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
@@ -51,19 +51,19 @@ export default function PaymentList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<PaymentRow, PaymentSearchForm>({
-    fetchApi: getPaymentList as never,
+    fetchApi: getPaymentList,
     initialSearchForm,
     defaultSort: 'created_at:desc',
     normalizeRows: true,
     transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
+      const record = row
       return {
         id: entityField(record, 'id', '')!,
         payment_no: String(entityField(record, 'payment_no', '') ?? ''),
@@ -205,7 +205,7 @@ export default function PaymentList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as unknown as PaymentSearchForm)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

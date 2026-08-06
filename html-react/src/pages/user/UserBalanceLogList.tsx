@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Col, Row, Space, Statistic, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { ArrowLeftOutlined, SettingOutlined } from '@ant-design/icons'
@@ -46,17 +46,18 @@ export default function UserBalanceLogList() {
     pagination,
     searchForm,
     setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     refresh,
   } = useListPage<LogRow, Record<string, unknown>>({
-    fetchApi: getUserBalanceLogList as never,
+    fetchApi: getUserBalanceLogList,
     initialSearchForm: { user_id: userId, type: '', source: '' },
     defaultSort: 'id:desc',
     normalizeRows: true,
     transformData: (row) => {
-      const record = row as unknown as Record<string, unknown>
+      const record = row
       return {
         id: entityField(record, 'id', '')!,
         type: String(entityField(record, 'type', '') ?? ''),
@@ -217,7 +218,7 @@ export default function UserBalanceLogList() {
           },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as typeof searchForm)}
+        onChange={onSearchFormChange}
         onSearch={() => {
           handleSearch()
           void loadStats(String(searchForm.user_id || ''))

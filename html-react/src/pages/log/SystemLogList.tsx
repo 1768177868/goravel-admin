@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { App, Descriptions, Drawer, Space, Spin, Table, Tag, Tooltip } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { EyeOutlined } from '@ant-design/icons'
@@ -52,13 +52,13 @@ export default function SystemLogList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     refresh,
   } = useListPage<SystemLogRow>({
-    fetchApi: getSystemLogList as never,
+    fetchApi: getSystemLogList,
     initialSearchForm: { ...systemLogInitialSearchForm },
     defaultSort: 'id:desc',
     normalizeRows: false,
@@ -243,7 +243,7 @@ export default function SystemLogList() {
       <SearchForm
         fields={searchFields}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

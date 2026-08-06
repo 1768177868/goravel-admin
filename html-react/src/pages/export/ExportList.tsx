@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { App, Button, Space, Table, Tag } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
@@ -72,14 +72,14 @@ export default function ExportList() {
     loading,
     pagination,
     searchForm,
-    setSearchForm,
+    onSearchFormChange,
     loadData,
     handleSearch,
     handleReset,
     handleSortChange,
     refresh,
   } = useListPage<ExportRow>({
-    fetchApi: getExportList as never,
+    fetchApi: getExportList,
     initialSearchForm: {
       type: '',
       filename: '',
@@ -328,7 +328,7 @@ export default function ExportList() {
           { name: 'end_time', label: t('log.end_time') },
         ]}
         values={searchForm}
-        onChange={(values) => setSearchForm(values as never)}
+        onChange={onSearchFormChange}
         onSearch={handleSearch}
         onReset={handleReset}
       />

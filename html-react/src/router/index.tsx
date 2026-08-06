@@ -20,9 +20,9 @@ const DashboardPage = lazyLoad(() => import('../pages/Dashboard'))
 const ProfilePage = lazyLoad(() => import('../pages/profile/Profile'))
 const NotFoundPage = lazyLoad(() => import('../pages/NotFound'))
 
-function PageFallback() {
+function PageFallback({ fullscreen = false }: { fullscreen?: boolean }) {
   return (
-    <div className="page-fallback">
+    <div className={`page-fallback${fullscreen ? ' page-fallback--fullscreen' : ''}`}>
       <Spin size="large" />
     </div>
   )
@@ -161,7 +161,7 @@ export function AppRouter() {
   const router = useMemo(() => buildRouter(dynamicChildren), [dynamicChildren])
 
   if (!bootstrapped) {
-    return <PageFallback />
+    return <PageFallback fullscreen />
   }
 
   return <RouterProvider router={router} />

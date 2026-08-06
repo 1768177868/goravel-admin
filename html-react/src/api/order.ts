@@ -1,7 +1,7 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
-import type { ApiResponse, PaginatedData } from '@/types'
+import type { ApiResponse } from '@/types'
 
 const baseOrderApi = createCRUDApi('orders')
 
@@ -33,7 +33,7 @@ const orderApi = extendApi(baseOrderApi, {
 
 export async function getOrderList(params?: Record<string, unknown>) {
   const res = await orderApi.list(params)
-  return normalizeListResponse(res) as ApiResponse<PaginatedData>
+  return normalizeListResponse(res)
 }
 
 export function getOrderDetail(id: string | number, params: Record<string, unknown> = {}) {
