@@ -30,6 +30,41 @@ export function useCodeGenerator() {
   const aiGeneratedConfig = ref(null)
   const aiLastError = ref(null)
   const aiEnabled = ref(false)
+  const enabledFrontends = ref(['vue', 'react'])
+
+  const backendFileTypes = [
+    { value: 'model', labelKey: 'file_model' },
+    { value: 'controller', labelKey: 'file_controller' },
+    { value: 'service', labelKey: 'file_service' },
+    { value: 'request_create', labelKey: 'file_request_create' },
+    { value: 'request_update', labelKey: 'file_request_update' },
+    { value: 'export_job', labelKey: 'file_export_job' },
+  ]
+
+  const vueFileTypes = [
+    { value: 'api', labelKey: 'file_api' },
+    { value: 'list_page_config', labelKey: 'file_list_page_config' },
+    { value: 'list_page', labelKey: 'file_list_page' },
+    { value: 'form_page', labelKey: 'file_form_page' },
+  ]
+
+  const reactFileTypes = [
+    { value: 'react_api', labelKey: 'file_react_api' },
+    { value: 'react_list_page', labelKey: 'file_react_list_page' },
+    { value: 'react_list_page_config', labelKey: 'file_react_list_page_config' },
+    { value: 'react_form_modal', labelKey: 'file_react_form_modal' },
+  ]
+
+  const buildDefaultFiles = (frontends) => {
+    const files = ['model', 'controller', 'service', 'request_create', 'request_update']
+    if (frontends.includes('vue')) {
+      files.push('api', 'list_page_config', 'list_page', 'form_page')
+    }
+    if (frontends.includes('react')) {
+      files.push('react_api', 'react_list_page')
+    }
+    return files
+  }
 
   const aiExamplePrompts = computed(() => [
     t('code_generator.ai_example_product'),
@@ -67,7 +102,7 @@ export function useCodeGenerator() {
   const form = reactive({
     module_name: '',
     table_name: '',
-    files: ['model', 'controller', 'service', 'request_create', 'request_update', 'api', 'list_page_config', 'list_page', 'form_page'],
+    files: buildDefaultFiles(['vue', 'react']),
     options: ['has_create', 'has_edit', 'has_delete', 'show_toolbar'],
     export_mode: 'none',
     fields: [
@@ -132,18 +167,25 @@ export function useCodeGenerator() {
     is_tree_list: form.options.includes('is_tree_list')
   })
 
-  const fileTypes = [
-    { value: 'model', label: t('code_generator.file_model') },
-    { value: 'controller', label: t('code_generator.file_controller') },
-    { value: 'service', label: t('code_generator.file_service') },
-    { value: 'request_create', label: t('code_generator.file_request_create') },
-    { value: 'request_update', label: t('code_generator.file_request_update') },
-    { value: 'export_job', label: t('code_generator.file_export_job') },
-    { value: 'api', label: t('code_generator.file_api') },
-    { value: 'list_page_config', label: t('code_generator.file_list_page_config') },
-    { value: 'list_page', label: t('code_generator.file_list_page') },
-    { value: 'form_page', label: t('code_generator.file_form_page') }
-  ]
+  const fileTypes = computed(() => {
+    const types = backendFileTypes.map((item) => ({
+      value: item.value,
+      label: t(`code_generator.${item.labelKey}`),
+    }))
+    if (enabledFrontends.value.includes('vue')) {
+      types.push(...vueFileTypes.map((item) => ({
+        value: item.value,
+        label: t(`code_generator.${item.labelKey}`),
+      })))
+    }
+    if (enabledFrontends.value.includes('react')) {
+      types.push(...reactFileTypes.map((item) => ({
+        value: item.value,
+        label: t(`code_generator.${item.labelKey}`),
+      })))
+    }
+    return types
+  })
 
   const formTypes = [
     { value: 'input', label: t('code_generator.form_types.input') },
@@ -164,6 +206,9 @@ export function useCodeGenerator() {
     try {
       const response = await getFieldTypes()
       fieldTypesRaw.value = response.data.field_types || []
+      const frontends = response.data.frontends || ['vue', 'react']
+      enabledFrontends.value = frontends
+      form.files = buildDefaultFiles(frontends)
       aiEnabled.value = response.data.ai_enabled === true || userStore.config.aiEnabled
     } catch (error) {
       logger.error('Failed to load field types:', error)

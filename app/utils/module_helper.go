@@ -38,6 +38,61 @@ func CodeGeneratorEnabled() bool {
 	return facades.Config().GetBool("app.enable_dev_tool", false)
 }
 
+// CodeGeneratorFrontends returns enabled codegen targets: vue, react (default both).
+// CODE_GENERATOR_FRONTEND accepts: vue | react | vue,react | both | all
+func CodeGeneratorFrontends() []string {
+	raw := strings.ToLower(strings.TrimSpace(facades.Config().GetString("module.code_generator_frontend", "vue,react")))
+	if raw == "" || raw == "both" || raw == "all" {
+		return []string{"vue", "react"}
+	}
+
+	seen := map[string]bool{}
+	out := make([]string, 0, 2)
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		switch part {
+		case "both", "all":
+			seen["vue"] = true
+			seen["react"] = true
+		case "vue", "react":
+			if !seen[part] {
+				seen[part] = true
+				out = append(out, part)
+			}
+		}
+	}
+
+	if seen["vue"] && !containsString(out, "vue") {
+		out = append(out, "vue")
+	}
+	if seen["react"] && !containsString(out, "react") {
+		out = append(out, "react")
+	}
+	if len(out) == 0 {
+		return []string{"vue", "react"}
+	}
+	return out
+}
+
+func containsString(list []string, target string) bool {
+	for _, item := range list {
+		if item == target {
+			return true
+		}
+	}
+	return false
+}
+
+// CodeGeneratorFrontendVue reports whether Vue (html/) files should be generated.
+func CodeGeneratorFrontendVue() bool {
+	return containsString(CodeGeneratorFrontends(), "vue")
+}
+
+// CodeGeneratorFrontendReact reports whether React (html-react/) files should be generated.
+func CodeGeneratorFrontendReact() bool {
+	return containsString(CodeGeneratorFrontends(), "react")
+}
+
 func appEnv() string {
 	return strings.ToLower(strings.TrimSpace(facades.Config().GetString("app.env", "production")))
 }

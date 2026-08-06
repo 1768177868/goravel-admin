@@ -2,6 +2,11 @@
 
 Vue 版后台（`html/`）的 React 对照实现，对接同一套 Goravel Admin API。
 
+<p align="center">
+  <img src="../images/react.jpg" alt="React 后台管理界面" width="800">
+  <p align="center">React 后台管理界面</p>
+</p>
+
 ## 技术栈
 
 - React 19 + TypeScript + Vite
@@ -81,9 +86,7 @@ Agent 约定见 `.cursor/skills/goravel-admin-frontend-react/`。
 - 通知：创建（Markdown / 富文本）、列表、详情
 - 日志：操作 / 登录 / 系统（详情、批量删除、清理）+ 观测中心
 - 监控：服务监控（SSE + ECharts）
-- 开发：表单演示（含 WangEditor / Markdown）
-
-**未实现（按约定暂缓）：** 代码生成器（`dev/CodeGenerator`）仍走占位页。
+- 开发：表单演示（含 WangEditor / Markdown）、代码生成器（Vue/React 双端，受 `CODE_GENERATOR_FRONTEND` 控制）
 ## 脚本
 
 - `npm run dev` — 开发

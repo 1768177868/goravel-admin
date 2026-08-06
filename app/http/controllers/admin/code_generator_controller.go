@@ -159,6 +159,7 @@ func (c *CodeGeneratorController) GetFieldTypes(ctx http.Context) http.Response 
 	return response.Success(ctx, http.Json{
 		"field_types": fieldTypes,
 		"ai_enabled":  utils.AIEnabled(),
+		"frontends":   utils.CodeGeneratorFrontends(),
 	})
 }
 

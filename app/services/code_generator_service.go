@@ -198,7 +198,8 @@ func normalizeFrontendWhitespace(content string) string {
 }
 
 func isFrontendGeneratedFile(path string) bool {
-	if !strings.HasPrefix(filepath.ToSlash(path), "html/") {
+	slashPath := filepath.ToSlash(path)
+	if !strings.HasPrefix(slashPath, "html/") && !strings.HasPrefix(slashPath, "html-react/") {
 		return false
 	}
 
@@ -210,13 +211,18 @@ func isFrontendGeneratedFile(path string) bool {
 	}
 }
 
-func prettierExecutablePath() string {
+func prettierExecutablePath(forPath string) string {
 	executable := "prettier"
 	if runtime.GOOS == "windows" {
 		executable = "prettier.cmd"
 	}
 
-	return filepath.Join("html", "node_modules", ".bin", executable)
+	projectDir := "html"
+	if strings.HasPrefix(filepath.ToSlash(forPath), "html-react/") {
+		projectDir = "html-react"
+	}
+
+	return filepath.Join(projectDir, "node_modules", ".bin", executable)
 }
 
 func formatFrontendContentWithPrettier(path, content string) string {
@@ -226,7 +232,7 @@ func formatFrontendContentWithPrettier(path, content string) string {
 
 	content = normalizeFrontendWhitespace(content)
 
-	prettierPath := prettierExecutablePath()
+	prettierPath := prettierExecutablePath(path)
 	if _, err := os.Stat(prettierPath); err != nil {
 		return content
 	}
@@ -249,23 +255,33 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		fileType string
 		generate func(string, string, []FieldConfig, map[string]bool) (GeneratedFile, error)
 		enabled  func(map[string]bool) bool
+		skip     func([]FieldConfig, map[string]bool) bool
 	}{
-		{"model", s.generateModel, nil},
-		{"controller", s.generateController, nil},
-		{"service", s.generateService, nil},
-		{"request_create", s.generateRequestCreate, nil},
-		{"request_update", s.generateRequestUpdate, nil},
-		{"migration", s.generateMigration, nil},
-		{"export_job", s.generateExportJob, isAsyncExportEnabled},
-		{"api", s.generateFrontendAPI, nil},
-		{"list_page_config", s.generateFrontendListPageConfig, nil},
-		{"list_page", s.generateFrontendListPage, nil},
-		{"form_page", s.generateFrontendFormPage, nil},
+		{"model", s.generateModel, nil, nil},
+		{"controller", s.generateController, nil, nil},
+		{"service", s.generateService, nil, nil},
+		{"request_create", s.generateRequestCreate, nil, nil},
+		{"request_update", s.generateRequestUpdate, nil, nil},
+		{"migration", s.generateMigration, nil, nil},
+		{"export_job", s.generateExportJob, isAsyncExportEnabled, nil},
+		{"api", s.generateFrontendAPI, nil, func([]FieldConfig, map[string]bool) bool { return !vueGeneratorEnabled() }},
+		{"list_page_config", s.generateFrontendListPageConfig, nil, func([]FieldConfig, map[string]bool) bool { return !vueGeneratorEnabled() }},
+		{"list_page", s.generateFrontendListPage, nil, func([]FieldConfig, map[string]bool) bool { return !vueGeneratorEnabled() }},
+		{"form_page", s.generateFrontendFormPage, nil, func([]FieldConfig, map[string]bool) bool { return !vueGeneratorEnabled() }},
+		{"react_api", s.generateReactAPI, nil, func([]FieldConfig, map[string]bool) bool { return !reactGeneratorEnabled() }},
+		{"react_list_page", s.generateReactListPage, nil, func([]FieldConfig, map[string]bool) bool { return !reactGeneratorEnabled() }},
+		{"react_list_page_config", s.generateReactListPageConfig, nil, func(fields []FieldConfig, options map[string]bool) bool {
+			return !reactGeneratorEnabled() || isSimpleReactModule(fields, options)
+		}},
+		{"react_form_modal", s.generateReactFormModal, nil, func(fields []FieldConfig, options map[string]bool) bool {
+			return !reactGeneratorEnabled() || isSimpleReactModule(fields, options)
+		}},
 	}
 
 	// Create a map for faster lookup of selected files
 	selectedMap := make(map[string]bool)
-	if len(selectedFiles) > 0 {
+	hasSelection := len(selectedFiles) > 0
+	if hasSelection {
 		for _, f := range selectedFiles {
 			selectedMap[f] = true
 		}
@@ -276,14 +292,17 @@ func (s *CodeGeneratorServiceImpl) Generate(moduleName, tableName string, fields
 		if selectedMap["list_page"] {
 			selectedMap["list_page_config"] = true
 		}
+		expandSelectedReactFiles(selectedMap, fields, options)
 	}
 
 	for _, gen := range generators {
-		// If selectedFiles is provided, only generate selected files
-		if len(selectedFiles) > 0 && !selectedMap[gen.fileType] {
+		if hasSelection && !selectedMap[gen.fileType] {
 			continue
 		}
 		if gen.enabled != nil && !gen.enabled(options) {
+			continue
+		}
+		if gen.skip != nil && gen.skip(fields, options) {
 			continue
 		}
 
@@ -325,7 +344,7 @@ func (s *CodeGeneratorServiceImpl) getListPageConfigTemplateName(options map[str
 }
 
 func (s *CodeGeneratorServiceImpl) Preview(moduleName, tableName string, fields []FieldConfig, fileType string, options map[string]bool) (string, error) {
-	templateName, err := s.getTemplateName(fileType, options)
+	templateName, err := s.getTemplateName(fileType, fields, options)
 	if err != nil {
 		return "", err
 	}
@@ -871,7 +890,7 @@ func (s *CodeGeneratorServiceImpl) GetFieldTypes() []FieldType {
 	}
 }
 
-func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string, options map[string]bool) (string, error) {
+func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string, fields []FieldConfig, options map[string]bool) (string, error) {
 	switch fileType {
 	case "model":
 		return "templates/model.tpl", nil
@@ -895,6 +914,17 @@ func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string, options map[
 		return s.getListPageTemplateName(options), nil
 	case "form_page":
 		return "templates/form_page.vue.tpl", nil
+	case "react_api":
+		return "templates/api.ts.tpl", nil
+	case "react_list_page":
+		if isSimpleReactModule(fields, options) {
+			return "templates/react_simple_list.tsx.tpl", nil
+		}
+		return "templates/react_list_page.tsx.tpl", nil
+	case "react_list_page_config":
+		return "templates/react_list.config.ts.tpl", nil
+	case "react_form_modal":
+		return "templates/react_form_modal.tsx.tpl", nil
 	default:
 		return "", fmt.Errorf("unknown file type: %s", fileType)
 	}
@@ -1086,6 +1116,44 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 		}
 	case "list_page", "list_page_config":
 		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+	case "react_api":
+		return struct {
+			ModelName   string
+			ModuleName  string
+			ModuleNameK string
+			FormFields  []TemplateFieldConfig
+			HasCreate   bool
+			HasEdit     bool
+			HasDelete   bool
+			HasExport   bool
+		}{
+			ModelName:   toPascalCase(moduleName),
+			ModuleName:  moduleName,
+			ModuleNameK: toKebabCase(moduleName),
+			FormFields:  templateFields,
+			HasCreate:   hasCreate,
+			HasEdit:     hasEdit,
+			HasDelete:   hasDelete,
+			HasExport:   hasExport,
+		}
+	case "react_list_page", "react_list_page_config":
+		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+	case "react_form_modal":
+		return struct {
+			ModelName   string
+			ModuleName  string
+			ModuleNameK string
+			FormFields  []TemplateFieldConfig
+			HasCreate   bool
+			HasEdit     bool
+		}{
+			ModelName:   toPascalCase(moduleName),
+			ModuleName:  moduleName,
+			ModuleNameK: toKebabCase(moduleName),
+			FormFields:  templateFields,
+			HasCreate:   hasCreate,
+			HasEdit:     hasEdit,
+		}
 	case "form_page":
 		// 检查是否有 editor 类型的字段
 		hasEditor := false

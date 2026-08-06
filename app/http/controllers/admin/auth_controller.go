@@ -429,6 +429,7 @@ func (r *AuthController) Info(ctx http.Context) http.Response {
 			"payments_enabled":                utils.PaymentsEnabled(),
 			"dev_tools_enabled":               utils.DevToolsEnabled(),
 			"code_generator_enabled":          utils.CodeGeneratorEnabled(),
+			"code_generator_frontends":        utils.CodeGeneratorFrontends(),
 			"elasticsearch_enabled":           utils.ElasticsearchEnabled(),
 			"otel_enabled":                    utils.OTELEnabled(),
 		},

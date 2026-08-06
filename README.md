@@ -44,6 +44,11 @@ See module tiers and production configs: [docs/OPENSOURCE.md](./docs/OPENSOURCE.
 </p>
 
 <p align="center">
+  <img src="./images/react.jpg" alt="React Admin Dashboard" width="800">
+  <p align="center">React Admin Dashboard</p>
+</p>
+
+<p align="center">
   <img src="./images/generator.png" alt="Code Generator" width="800">
   <p align="center">Code Generator</p>
 </p>
