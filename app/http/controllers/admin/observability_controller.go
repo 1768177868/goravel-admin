@@ -69,7 +69,7 @@ func (r *ObservabilityController) apiMetricService(ctx ghttp.Context) services.A
 }
 
 
-// TraceAggregate ???????? trace_id ????????SQL?
+// TraceAggregate 请求追踪聚合（按 trace_id 串联请求、异常、SQL）
 func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Response {
 	traceID := strings.TrimSpace(ctx.Request().Query("trace_id", ""))
 	if traceID == "" {
@@ -111,7 +111,7 @@ func (r *ObservabilityController) TraceAggregate(ctx ghttp.Context) ghttp.Respon
 	})
 }
 
-// SlowSQLTopN ? SQL TopN ??
+// SlowSQLTopN 慢 SQL TopN 聚合
 func (r *ObservabilityController) SlowSQLTopN(ctx ghttp.Context) ghttp.Response {
 	minDurationMS := float64(helpers.GetIntQuery(ctx, "min_duration_ms", 200))
 	hours := helpers.GetIntQuery(ctx, "hours", 24)
@@ -135,7 +135,7 @@ func (r *ObservabilityController) SlowSQLTopN(ctx ghttp.Context) ghttp.Response 
 	})
 }
 
-// APIPerformanceOverview ???????????????QPS?P95/P99?
+// APIPerformanceOverview 接口性能总览（慢接口、错误率、QPS、P95/P99）
 func (r *ObservabilityController) APIPerformanceOverview(ctx ghttp.Context) ghttp.Response {
 	hours := helpers.GetIntQuery(ctx, "hours", 24)
 	limit := helpers.GetIntQuery(ctx, "limit", 20)
@@ -149,7 +149,7 @@ func (r *ObservabilityController) APIPerformanceOverview(ctx ghttp.Context) ghtt
 	return response.Success(ctx, overview)
 }
 
-// APIPerformanceTraces ?????????????? trace?
+// APIPerformanceTraces 接口性能下钻（查看某接口最近 trace）
 func (r *ObservabilityController) APIPerformanceTraces(ctx ghttp.Context) ghttp.Response {
 	method := strings.TrimSpace(ctx.Request().Query("method", ""))
 	routeTemplate := strings.TrimSpace(ctx.Request().Query("route_template", ""))
@@ -173,7 +173,7 @@ func (r *ObservabilityController) APIPerformanceTraces(ctx ghttp.Context) ghttp.
 	})
 }
 
-// AuditTimeline ?????????????? + ?????
+// AuditTimeline 审计事件聚合时间线（操作日志 + 系统日志）
 func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Response {
 	traceID := strings.TrimSpace(ctx.Request().Query("trace_id", ""))
 	keyword := strings.TrimSpace(ctx.Request().Query("keyword", ""))
@@ -216,7 +216,7 @@ func (r *ObservabilityController) AuditTimeline(ctx ghttp.Context) ghttp.Respons
 	})
 }
 
-// QueueDashboard ???????database / Redis ?? / Redis Stream ??????????????
+// QueueDashboard 轻量队列看板（database / Redis 列表 / Redis Stream 三类可统计，其余标记不支持）
 func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Response {
 	reader := services.NewQueueStatsReader(ctx)
 	panels, defaultConn := reader.BuildQueueDashboard()
@@ -232,7 +232,7 @@ func (r *ObservabilityController) QueueDashboard(ctx ghttp.Context) ghttp.Respon
 	})
 }
 
-// PprofStatus ?? pprof ????? token ??
+// PprofStatus 返回 pprof 功能开关与 token 要求
 func (r *ObservabilityController) PprofStatus(ctx ghttp.Context) ghttp.Response {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
@@ -273,7 +273,7 @@ func (r *ObservabilityController) PprofStatus(ctx ghttp.Context) ghttp.Response 
 	})
 }
 
-// PprofVerify ?? pprof token ??????????
+// PprofVerify 验证 pprof token 是否可用（仅开发者）
 func (r *ObservabilityController) PprofVerify(ctx ghttp.Context) ghttp.Response {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
@@ -328,7 +328,7 @@ func (r *ObservabilityController) PprofVerify(ctx ghttp.Context) ghttp.Response 
 	})
 }
 
-// PprofCPUHotspots CPU ???? TopN???? CPU ?????
+// PprofCPUHotspots CPU 热点函数 TopN（按自身 CPU 时间排序）
 func (r *ObservabilityController) PprofCPUHotspots(ctx ghttp.Context) ghttp.Response {
 	adminID, resp := r.ensurePprofAccess(ctx, true)
 	if resp != nil {
@@ -405,7 +405,7 @@ func (r *ObservabilityController) PprofCPUHotspots(ctx ghttp.Context) ghttp.Resp
 	})
 }
 
-// PprofMemoryHotspots ?????? TopN????????
+// PprofMemoryHotspots 内存分配热点 TopN（按分配量排序）
 func (r *ObservabilityController) PprofMemoryHotspots(ctx ghttp.Context) ghttp.Response {
 	adminID, resp := r.ensurePprofAccess(ctx, true)
 	if resp != nil {
