@@ -85,7 +85,8 @@
     "unfreeze": "取消冻结",
     "required": "必填项",
     "close_others": "关闭其他",
-    "close_all": "关闭全部"
+    "close_all": "关闭全部",
+    "back": "返回"
   },
   "admin_id": "管理员ID",
   "title": "标题",

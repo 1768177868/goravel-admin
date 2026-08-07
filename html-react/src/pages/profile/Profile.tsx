@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { App, Alert, Avatar, Button, Card, Form, Input, Modal, Space, Tabs, Typography } from 'antd'
-import { UserOutlined } from '@ant-design/icons'
+import { App, Alert, Avatar, Button, Card, Form, Input, Modal, Space, Spin, Steps, Tabs, Typography } from 'antd'
+import { LoadingOutlined, UserOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { updatePassword, updateProfile } from '@/api/profile'
 import {
@@ -12,6 +12,12 @@ import {
 import { useUserStore } from '@/stores/user'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import PageContainer from '@/components/PageContainer'
+import './Profile.scss'
+
+type GoogleAuthQrData = {
+  secret?: string
+  qrCodeImage?: string
+}
 
 const DEFAULT_AVATARS = [
   'https://ui-avatars.com/api/?name=A&background=409EFF&color=fff&size=128',
@@ -55,8 +61,11 @@ export default function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
   const [bound, setBound] = useState(false)
-  const [qr, setQr] = useState<{ qrcode?: string; secret?: string }>({})
+  const [qr, setQr] = useState<GoogleAuthQrData>({})
   const [loading2fa, setLoading2fa] = useState(false)
+  const [bindStep, setBindStep] = useState(0)
+  const [binding, setBinding] = useState(false)
+  const [unbinding, setUnbinding] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
   const [selectedAvatar, setSelectedAvatar] = useState('')
   const [savingAvatar, setSavingAvatar] = useState(false)
@@ -77,13 +86,19 @@ export default function ProfilePage() {
       setBound(isBound)
       if (!isBound) {
         const qrRes = await getGoogleAuthenticatorQRCode()
+        const data = qrRes.data as {
+          secret?: string
+          qr_code_image?: string
+          qr_code_url?: string
+        }
         setQr({
-          qrcode: (qrRes.data as { qrcode?: string; qr_code?: string })?.qrcode ||
-            (qrRes.data as { qr_code?: string })?.qr_code,
-          secret: (qrRes.data as { secret?: string })?.secret,
+          secret: data?.secret,
+          qrCodeImage: data?.qr_code_image,
         })
+        setBindStep(0)
       } else {
         setQr({})
+        setBindStep(0)
       }
     } catch (error) {
       showError(error, t('common.query_failed'))
@@ -127,28 +142,39 @@ export default function ProfilePage() {
   }
 
   const handleBind = async () => {
+    if (!qr.secret) {
+      message.warning(t('profile.save_secret_tip'))
+      return
+    }
     try {
       const values = await bindForm.validateFields()
-      await bindGoogleAuthenticator({ code: values.code })
-      message.success(t('common.update_success'))
+      setBinding(true)
+      await bindGoogleAuthenticator({ secret: qr.secret, code: values.code })
+      message.success(t('profile.bind_success'))
       bindForm.resetFields()
+      setBindStep(0)
       await load2fa()
     } catch (error) {
       if ((error as { errorFields?: unknown })?.errorFields) return
-      showError(error, t('common.operation_failed'))
+      showError(error, t('profile.bind_failed'))
+    } finally {
+      setBinding(false)
     }
   }
 
   const handleUnbind = async () => {
     try {
       const values = await unbindForm.validateFields()
+      setUnbinding(true)
       await unbindGoogleAuthenticator({ code: values.code })
-      message.success(t('common.update_success'))
+      message.success(t('profile.unbind_success'))
       unbindForm.resetFields()
       await load2fa()
     } catch (error) {
       if ((error as { errorFields?: unknown })?.errorFields) return
-      showError(error, t('common.operation_failed'))
+      showError(error, t('profile.unbind_failed'))
+    } finally {
+      setUnbinding(false)
     }
   }
 
@@ -266,7 +292,7 @@ export default function ProfilePage() {
               key: '2fa',
               label: t('profile.google_authenticator', { defaultValue: '谷歌验证器' }),
               children: (
-                <div style={{ maxWidth: 520 }}>
+                <div className="profile-google-auth">
                   {bound ? (
                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
                       <Alert
@@ -274,19 +300,24 @@ export default function ProfilePage() {
                         showIcon
                         message={t('profile.google_auth_bound', { defaultValue: '已绑定谷歌验证器' })}
                       />
-                      <Form form={unbindForm} layout="vertical" onFinish={() => void handleUnbind()}>
+                      <Form
+                        form={unbindForm}
+                        layout="vertical"
+                        className="profile-google-auth__verify-form"
+                        onFinish={() => void handleUnbind()}
+                      >
                         <Form.Item
                           name="code"
-                          label={t('login.google_code_placeholder')}
+                          label={t('profile.verification_code')}
                           rules={[
-                            { required: true },
+                            { required: true, message: t('profile.enter_6_digit_code') },
                             { pattern: /^\d{6}$/, message: t('login.google_code_format') },
                           ]}
                         >
-                          <Input maxLength={6} />
+                          <Input maxLength={6} placeholder={t('profile.enter_6_digit_code')} />
                         </Form.Item>
-                        <Button danger htmlType="submit" loading={loading2fa}>
-                          {t('admin.unbind_google_auth', { defaultValue: '解绑谷歌验证' })}
+                        <Button danger htmlType="submit" loading={unbinding}>
+                          {t('profile.unbind')}
                         </Button>
                       </Form>
                     </Space>
@@ -297,32 +328,83 @@ export default function ProfilePage() {
                         showIcon
                         message={t('profile.google_auth_not_bound', { defaultValue: '尚未绑定谷歌验证器' })}
                       />
-                      {qr.qrcode ? (
-                        <img src={qr.qrcode} alt="qrcode" style={{ width: 180, height: 180 }} />
-                      ) : null}
-                      {qr.secret ? (
-                        <Typography.Text type="secondary">
-                          Secret: <Typography.Text code>{qr.secret}</Typography.Text>
-                        </Typography.Text>
-                      ) : null}
-                      <Form form={bindForm} layout="vertical" onFinish={() => void handleBind()}>
-                        <Form.Item
-                          name="code"
-                          label={t('login.google_code_placeholder')}
-                          rules={[
-                            { required: true },
-                            { pattern: /^\d{6}$/, message: t('login.google_code_format') },
-                          ]}
+                      <Steps
+                        className="profile-google-auth__steps"
+                        current={bindStep}
+                        items={[
+                          { title: t('profile.step1_scan_qr') },
+                          { title: t('profile.step2_verify') },
+                        ]}
+                      />
+                      {bindStep === 0 ? (
+                        <>
+                          <Alert
+                            className="profile-google-auth__tip"
+                            type="warning"
+                            showIcon
+                            message={t('profile.scan_qr_tip')}
+                          />
+                          <div className="profile-google-auth__qr-container">
+                            {loading2fa ? (
+                              <div className="profile-google-auth__loading">
+                                <Spin indicator={<LoadingOutlined spin />} />
+                                <span>{t('common.loading')}</span>
+                              </div>
+                            ) : qr.qrCodeImage ? (
+                              <div className="profile-google-auth__qr-wrapper">
+                                <img
+                                  src={qr.qrCodeImage}
+                                  alt="QR Code"
+                                  className="profile-google-auth__qr-image"
+                                />
+                                <div className="profile-google-auth__qr-info">
+                                  <p>
+                                    <strong>{t('profile.secret_key')}:</strong>{' '}
+                                    <Typography.Text code copyable>
+                                      {qr.secret}
+                                    </Typography.Text>
+                                  </p>
+                                  <p>{t('profile.save_secret_tip')}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <Typography.Text type="secondary">{t('common.no_data')}</Typography.Text>
+                            )}
+                          </div>
+                          <Space>
+                            <Button type="primary" disabled={!qr.secret} onClick={() => setBindStep(1)}>
+                              {t('profile.next_step')}
+                            </Button>
+                            <Button onClick={() => void load2fa()} loading={loading2fa}>
+                              {t('common.refresh')}
+                            </Button>
+                          </Space>
+                        </>
+                      ) : (
+                        <Form
+                          form={bindForm}
+                          layout="vertical"
+                          className="profile-google-auth__verify-form"
+                          onFinish={() => void handleBind()}
                         >
-                          <Input maxLength={6} />
-                        </Form.Item>
-                        <Space>
-                          <Button type="primary" htmlType="submit" loading={loading2fa}>
-                            {t('common.confirm')}
-                          </Button>
-                          <Button onClick={() => void load2fa()}>{t('common.refresh')}</Button>
-                        </Space>
-                      </Form>
+                          <Form.Item
+                            name="code"
+                            label={t('profile.verification_code')}
+                            rules={[
+                              { required: true, message: t('profile.enter_6_digit_code') },
+                              { pattern: /^\d{6}$/, message: t('login.google_code_format') },
+                            ]}
+                          >
+                            <Input maxLength={6} placeholder={t('profile.enter_6_digit_code')} />
+                          </Form.Item>
+                          <Space>
+                            <Button onClick={() => setBindStep(0)}>{t('common.back')}</Button>
+                            <Button type="primary" htmlType="submit" loading={binding}>
+                              {t('profile.bind')}
+                            </Button>
+                          </Space>
+                        </Form>
+                      )}
                     </Space>
                   )}
                 </div>

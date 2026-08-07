@@ -85,7 +85,8 @@
     "unfreeze": "Unfreeze",
     "required": "Required",
     "close_others": "Close Others",
-    "close_all": "Close All"
+    "close_all": "Close All",
+    "back": "Back"
   },
   "admin_id": "Admin ID",
   "title": "Title",

@@ -44,7 +44,7 @@ export function getGoogleAuthenticatorQRCode() {
   })
 }
 
-export function bindGoogleAuthenticator(data: { code: string }) {
+export function bindGoogleAuthenticator(data: { secret: string; code: string }) {
   return request({
     url: '/google-authenticator/bind',
     method: 'post',
