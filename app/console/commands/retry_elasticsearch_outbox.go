@@ -52,12 +52,11 @@ func (r *RetryElasticsearchOutbox) Extend() command.Extend {
 }
 
 func (r *RetryElasticsearchOutbox) Handle(ctx console.Context) error {
+	// 未开启 ES 订单同步或 outbox 时静默跳过（定时任务每小时跑一次，避免刷日志）
 	if !esorders.SyncEnabled() {
-		ctx.Warning("未开启订单 ES 同步。需 ELASTICSEARCH_ENABLED=true 且 ELASTICSEARCH_SYNC_ORDERS=true。")
 		return nil
 	}
 	if !facades.Config().GetBool("elasticsearch.outbox_enabled", true) {
-		ctx.Warning("ELASTICSEARCH_OUTBOX_ENABLED=false，outbox 未启用。")
 		return nil
 	}
 
