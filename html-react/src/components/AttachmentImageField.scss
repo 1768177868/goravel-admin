@@ -1,0 +1,100 @@
+.attachment-image-field {
+  width: 100%;
+  max-width: 480px;
+}
+
+.attachment-image-field__preview {
+  margin-top: 12px;
+}
+
+.attachment-image-field__preview .ant-image {
+  border: 1px solid var(--ant-color-border, #d9d9d9);
+  border-radius: 4px;
+  background: var(--ant-color-fill-quaternary, #fafafa);
+  overflow: hidden;
+}
+
+.attachment-image-field__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.attachment-image-field__grid {
+  min-height: 280px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.attachment-image-field__item {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  background: var(--ant-color-fill-quaternary, #fafafa);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.attachment-image-field__item:hover {
+  border-color: color-mix(in srgb, var(--ant-color-primary, #1677ff) 45%, transparent);
+}
+
+.attachment-image-field__item.is-active {
+  border-color: var(--ant-color-primary, #1677ff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ant-color-primary, #1677ff) 25%, transparent);
+}
+
+.attachment-image-field__thumb {
+  width: 100%;
+  height: 110px;
+  border-radius: 4px;
+  display: block;
+  object-fit: cover;
+}
+
+.attachment-image-field__thumb-empty {
+  width: 100%;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ant-color-text-quaternary, #bfbfbf);
+  background: var(--ant-color-fill-tertiary, #f5f5f5);
+  border-radius: 4px;
+  font-size: 28px;
+}
+
+.attachment-image-field__name {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ant-color-text, rgba(0, 0, 0, 0.88));
+}
+
+.attachment-image-field__name-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-image-field__name-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ant-color-text-secondary, rgba(0, 0, 0, 0.45));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-image-field__empty {
+  grid-column: 1 / -1;
+  padding: 40px 0;
+}
+
+.attachment-image-field__pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

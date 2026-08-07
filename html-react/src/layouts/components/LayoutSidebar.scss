@@ -16,9 +16,11 @@
 .layout-sidebar__logo {
   height: 56px;
   margin: 0;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -26,6 +28,24 @@
   white-space: nowrap;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
   flex-shrink: 0;
+  min-width: 0;
+}
+
+.layout-sidebar__logo--collapsed {
+  padding: 0;
+}
+
+.layout-sidebar__logo-image {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.layout-sidebar__logo-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .layout-sidebar .ant-menu {

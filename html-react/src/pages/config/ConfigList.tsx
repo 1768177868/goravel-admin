@@ -3,8 +3,10 @@ import { App, Card, Form, Input, InputNumber, Select, Switch, Tabs } from 'antd'
 import { useTranslation } from 'react-i18next'
 import PageContainer from '@/components/PageContainer'
 import PermissionButton from '@/components/PermissionButton'
+import AttachmentImageField from '@/components/AttachmentImageField'
 import { getConfigByGroup, saveConfig, testEmail } from '@/api/config'
 import { entityField } from '@/utils/normalize'
+import { notifyWebsiteConfigUpdated } from '@/utils/publicImage'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 
 function configsToForm(
@@ -68,6 +70,7 @@ function WebsiteConfigPanel() {
       const values = await form.validateFields()
       setSubmitting(true)
       await saveConfig('website', values as Record<string, unknown>)
+      notifyWebsiteConfigUpdated()
       message.success(t('config.update_success'))
     } catch (error) {
       if ((error as { errorFields?: unknown })?.errorFields) return
@@ -95,7 +98,7 @@ function WebsiteConfigPanel() {
         <Input placeholder={t('config.site_url_placeholder')} />
       </Form.Item>
       <Form.Item name="site_logo" label={t('config.site_logo')}>
-        <Input placeholder={t('config.site_logo_placeholder')} />
+        <AttachmentImageField placeholder={t('config.site_logo_placeholder')} />
       </Form.Item>
       <Form.Item name="site_icp" label={t('config.site_icp')}>
         <Input placeholder={t('config.site_icp_placeholder')} />
