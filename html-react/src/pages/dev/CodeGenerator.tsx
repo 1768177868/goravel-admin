@@ -159,7 +159,7 @@ export default function CodeGenerator() {
     {
       title: t('table.operation'),
       width: 80,
-      fixed: 'right' as const,
+      fixed: 'end' as const,
       render: (_: unknown, __: CodeGeneratorField, index: number) => (
         <Button danger size="small" icon={<DeleteOutlined />} onClick={() => cg.handleRemoveField(index)} />
       ),

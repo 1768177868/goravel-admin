@@ -195,7 +195,7 @@ export default function SystemLogList() {
       title: t('common.operation'),
       key: 'operation',
       width: 140,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('system_log.show').show ? (

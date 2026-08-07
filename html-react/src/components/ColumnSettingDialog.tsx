@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, Checkbox, Modal, Space, Tooltip } from 'antd'
 import { ArrowDownOutlined, ArrowUpOutlined, VerticalLeftOutlined, VerticalRightOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import type { ColumnSettingItem, ColumnSettingValue } from '@/hooks/useColumnSetting'
+import type { ColumnFixedSide, ColumnSettingItem, ColumnSettingValue } from '@/hooks/useColumnSetting'
 
 interface ColumnSettingDialogProps {
   open: boolean
@@ -10,7 +10,7 @@ interface ColumnSettingDialogProps {
   allColumns: ColumnSettingItem[]
   visibleColumns: string[]
   columnOrder: string[]
-  fixedColumns: Record<string, 'left' | 'right'>
+  fixedColumns: Record<string, ColumnFixedSide>
   onConfirm: (value: ColumnSettingValue) => void
 }
 
@@ -26,7 +26,7 @@ export default function ColumnSettingDialog({
   const { t } = useTranslation()
   const [localVisible, setLocalVisible] = useState<string[]>(visibleColumns)
   const [localOrder, setLocalOrder] = useState<string[]>(columnOrder)
-  const [localFixed, setLocalFixed] = useState<Record<string, 'left' | 'right'>>(fixedColumns)
+  const [localFixed, setLocalFixed] = useState<Record<string, ColumnFixedSide>>(fixedColumns)
 
   useEffect(() => {
     if (!open) return
@@ -63,7 +63,7 @@ export default function ColumnSettingDialog({
     setLocalOrder(next)
   }
 
-  const toggleFixed = (key: string, side: 'left' | 'right') => {
+  const toggleFixed = (key: string, side: ColumnFixedSide) => {
     setLocalFixed((prev) => {
       const next = { ...prev }
       if (next[key] === side) delete next[key]
@@ -157,20 +157,20 @@ export default function ColumnSettingDialog({
                   disabled={index === orderedItems.length - 1}
                   onClick={() => moveItem(index, 1)}
                 />
-                <Tooltip title={fixed === 'left' ? t('common.unfreeze') : t('common.freeze_left')}>
+                <Tooltip title={fixed === 'start' ? t('common.unfreeze') : t('common.freeze_left')}>
                   <Button
                     size="small"
-                    type={fixed === 'left' ? 'primary' : 'text'}
+                    type={fixed === 'start' ? 'primary' : 'text'}
                     icon={<VerticalRightOutlined />}
-                    onClick={() => toggleFixed(item.key, 'left')}
+                    onClick={() => toggleFixed(item.key, 'start')}
                   />
                 </Tooltip>
-                <Tooltip title={fixed === 'right' ? t('common.unfreeze') : t('common.freeze_right')}>
+                <Tooltip title={fixed === 'end' ? t('common.unfreeze') : t('common.freeze_right')}>
                   <Button
                     size="small"
-                    type={fixed === 'right' ? 'primary' : 'text'}
+                    type={fixed === 'end' ? 'primary' : 'text'}
                     icon={<VerticalLeftOutlined />}
-                    onClick={() => toggleFixed(item.key, 'right')}
+                    onClick={() => toggleFixed(item.key, 'end')}
                   />
                 </Tooltip>
               </Space>

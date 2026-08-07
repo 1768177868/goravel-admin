@@ -136,7 +136,7 @@ export default function PaymentList() {
       title: t('common.operation'),
       key: 'operation',
       width: 100,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) =>
         getButtonState('payment.show').show ? (
           <PermissionButton permission="payment.show" type="link" onClick={() => void openDetail(row)}>

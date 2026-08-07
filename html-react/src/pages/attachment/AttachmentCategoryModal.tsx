@@ -145,7 +145,7 @@ export default function AttachmentCategoryModal({
       title: t('common.operation'),
       key: 'operation',
       width: 160,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('attachment_category.update').show ? (

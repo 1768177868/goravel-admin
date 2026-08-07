@@ -158,7 +158,7 @@ export default function LoginLogList() {
       title: t('common.operation'),
       key: 'operation',
       width: 140,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('login_log.show').show ? (

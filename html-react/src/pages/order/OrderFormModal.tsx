@@ -211,7 +211,7 @@ export default function OrderFormModal({ open, onClose, onSuccess }: OrderFormMo
                 {
                   title: t('common.operation'),
                   width: 90,
-                  fixed: 'right',
+                  fixed: 'end',
                   render: (_, row) => (
                     <Button
                       type="link"

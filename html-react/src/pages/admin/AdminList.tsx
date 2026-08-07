@@ -75,7 +75,7 @@ export default function AdminList() {
 
   const handleStatusChange = async (row: AdminRow, checked: boolean) => {
     if (adminProtectedIds.has(Number(row.id)) && !checked) {
-      message.warning(t('admin.protected_cannot_disable', { defaultValue: 'ÊÜ±£»¤ÕËºÅ²»ÄÜ½ûÓÃ' }))
+      message.warning(t('admin.protected_cannot_disable', { defaultValue: 'ï¿½Ü±ï¿½ï¿½ï¿½ï¿½ËºÅ²ï¿½ï¿½Ü½ï¿½ï¿½ï¿½' }))
       return
     }
     try {
@@ -95,7 +95,7 @@ export default function AdminList() {
         <Form form={pwdForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="password"
-            label={t('admin.new_password', { defaultValue: 'ÐÂÃÜÂë' })}
+            label={t('admin.new_password', { defaultValue: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' })}
             rules={[{ required: true, message: t('admin.password_required') }]}
           >
             <Input.Password />
@@ -106,7 +106,7 @@ export default function AdminList() {
         const values = await pwdForm.validateFields()
         try {
           await resetPassword(row.id, { password: values.password })
-          message.success(t('admin.reset_password_success', { defaultValue: 'ÃÜÂëÒÑÖØÖÃ' }))
+          message.success(t('admin.reset_password_success', { defaultValue: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' }))
         } catch (error) {
           showError(error, t('common.operation_failed'))
           throw error
@@ -142,17 +142,17 @@ export default function AdminList() {
       getButtonState('admin.kick_out').show
         ? {
             key: 'kickOut',
-            label: t('admin.kick_out', { defaultValue: 'Ìß³öµÇÂ¼' }),
+            label: t('admin.kick_out', { defaultValue: 'ï¿½ß³ï¿½ï¿½ï¿½Â¼' }),
             onClick: () =>
               runConfirm(
-                t('admin.kick_out', { defaultValue: 'Ìß³öµÇÂ¼' }),
+                t('admin.kick_out', { defaultValue: 'ï¿½ß³ï¿½ï¿½ï¿½Â¼' }),
                 t('admin.kick_out_confirm', {
                   username: row.username,
-                  defaultValue: `È·¶¨Ìß³ö ${row.username} µÄÈ«²¿µÇÂ¼Âð£¿`,
+                  defaultValue: `È·ï¿½ï¿½ï¿½ß³ï¿½ ${row.username} ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½`,
                 }),
                 async () => {
                   await kickOutUser(row.id)
-                  message.success(t('admin.kick_out_success', { defaultValue: 'ÒÑÌß³ö' }))
+                  message.success(t('admin.kick_out_success', { defaultValue: 'ï¿½ï¿½ï¿½ß³ï¿½' }))
                 },
               ),
           }
@@ -160,12 +160,12 @@ export default function AdminList() {
       row.is_2fa_bound && getButtonState('admin.unbind_google_auth').show
         ? {
             key: 'unbind2fa',
-            label: t('admin.unbind_google_auth', { defaultValue: '½â°ó¹È¸èÑéÖ¤' }),
+            label: t('admin.unbind_google_auth', { defaultValue: 'ï¿½ï¿½ï¿½È¸ï¿½ï¿½ï¿½Ö¤' }),
             onClick: () =>
               runConfirm(
-                t('admin.unbind_google_auth', { defaultValue: '½â°ó¹È¸èÑéÖ¤' }),
+                t('admin.unbind_google_auth', { defaultValue: 'ï¿½ï¿½ï¿½È¸ï¿½ï¿½ï¿½Ö¤' }),
                 t('admin.unbind_google_auth_confirm', {
-                  defaultValue: 'È·¶¨½â°ó¸Ã¹ÜÀíÔ±µÄ¹È¸èÑéÖ¤ÂëÂð£¿',
+                  defaultValue: 'È·ï¿½ï¿½ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½Ô±ï¿½Ä¹È¸ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½',
                 }),
                 async () => {
                   await unbindAdminGoogleAuth(row.id)
@@ -178,12 +178,12 @@ export default function AdminList() {
       getButtonState('admin.reset_google_auth').show
         ? {
             key: 'reset2fa',
-            label: t('admin.reset_google_auth', { defaultValue: 'ÖØÖÃ¹È¸èÑéÖ¤' }),
+            label: t('admin.reset_google_auth', { defaultValue: 'ï¿½ï¿½ï¿½Ã¹È¸ï¿½ï¿½ï¿½Ö¤' }),
             onClick: () =>
               runConfirm(
-                t('admin.reset_google_auth', { defaultValue: 'ÖØÖÃ¹È¸èÑéÖ¤' }),
+                t('admin.reset_google_auth', { defaultValue: 'ï¿½ï¿½ï¿½Ã¹È¸ï¿½ï¿½ï¿½Ö¤' }),
                 t('admin.reset_google_auth_confirm', {
-                  defaultValue: 'È·¶¨ÖØÖÃ¸Ã¹ÜÀíÔ±µÄ¹È¸èÑéÖ¤ÂëÂð£¿',
+                  defaultValue: 'È·ï¿½ï¿½ï¿½ï¿½ï¿½Ã¸Ã¹ï¿½ï¿½ï¿½Ô±ï¿½Ä¹È¸ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½',
                 }),
                 async () => {
                   await resetAdminGoogleAuth(row.id)
@@ -217,13 +217,13 @@ export default function AdminList() {
         ),
     },
     {
-      title: t('admin.google_auth_status', { defaultValue: '¹È¸èÑéÖ¤' }),
+      title: t('admin.google_auth_status', { defaultValue: 'ï¿½È¸ï¿½ï¿½ï¿½Ö¤' }),
       dataIndex: 'is_2fa_bound',
       width: 110,
       render: (bound: boolean) =>
         bound
-          ? t('admin.google_auth_bound', { defaultValue: 'ÒÑ°ó¶¨' })
-          : t('admin.google_auth_not_bound', { defaultValue: 'Î´°ó¶¨' }),
+          ? t('admin.google_auth_bound', { defaultValue: 'ï¿½Ñ°ï¿½' })
+          : t('admin.google_auth_not_bound', { defaultValue: 'Î´ï¿½ï¿½' }),
     },
     {
       title: t('table.status'),
@@ -242,7 +242,7 @@ export default function AdminList() {
       title: t('common.operation'),
       key: 'operation',
       width: 220,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('admin.update').show && (
@@ -269,7 +269,7 @@ export default function AdminList() {
           )}
           <Dropdown menu={{ items: moreMenu(row) }}>
             <a onClick={(e) => e.preventDefault()}>
-              {t('common.more', { defaultValue: '¸ü¶à' })} <DownOutlined />
+              {t('common.more', { defaultValue: 'ï¿½ï¿½ï¿½ï¿½' })} <DownOutlined />
             </a>
           </Dropdown>
         </Space>
@@ -281,7 +281,7 @@ export default function AdminList() {
     setExporting(true)
     try {
       await exportAdmin(searchForm)
-      message.success(t('common.queued', { defaultValue: 'µ¼³öÈÎÎñÒÑÌá½»£¬ÇëÉÔºó²é¿´µ¼³ö¼ÇÂ¼' }))
+      message.success(t('common.queued', { defaultValue: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á½»ï¿½ï¿½ï¿½ï¿½ï¿½Ôºï¿½é¿´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼' }))
     } catch (error) {
       showError(error, t('common.operation_failed'))
     } finally {
@@ -308,7 +308,7 @@ export default function AdminList() {
         <Space>
           {toolbar}
           <PermissionButton permission="admin.export" loading={exporting} onClick={() => void handleExport()}>
-            {t('common.export', { defaultValue: 'µ¼³ö' })}
+            {t('common.export', { defaultValue: 'ï¿½ï¿½ï¿½ï¿½' })}
           </PermissionButton>
           <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
             {t('common.column_setting')}
@@ -330,11 +330,11 @@ export default function AdminList() {
           },
           {
             name: 'is_2fa_bound',
-            label: t('admin.google_auth_status', { defaultValue: '¹È¸èÑéÖ¤' }),
+            label: t('admin.google_auth_status', { defaultValue: 'ï¿½È¸ï¿½ï¿½ï¿½Ö¤' }),
             type: 'select',
             options: [
-              { label: t('admin.google_auth_bound', { defaultValue: 'ÒÑ°ó¶¨' }), value: '1' },
-              { label: t('admin.google_auth_not_bound', { defaultValue: 'Î´°ó¶¨' }), value: '0' },
+              { label: t('admin.google_auth_bound', { defaultValue: 'ï¿½Ñ°ï¿½' }), value: '1' },
+              { label: t('admin.google_auth_not_bound', { defaultValue: 'Î´ï¿½ï¿½' }), value: '0' },
             ],
           },
         ]}

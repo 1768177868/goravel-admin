@@ -274,7 +274,7 @@ export default function UserList() {
       title: t('common.operation'),
       key: 'operation',
       width: 220,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('user.update').show && (

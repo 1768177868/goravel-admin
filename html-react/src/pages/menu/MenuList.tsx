@@ -153,7 +153,7 @@ export default function MenuList() {
       title: t('common.operation'),
       key: 'operation',
       width: 160,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('menu.update').show && (

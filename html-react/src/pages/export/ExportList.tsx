@@ -209,7 +209,7 @@ export default function ExportList() {
     if (!selectedRowKeys.length) return
     modal.confirm({
       title: t('common.delete_confirm'),
-      content: t('log.batch_delete_confirm', { count: selectedRowKeys.length, defaultValue: `È·¶¨É¾³ýÑ¡ÖÐµÄ ${selectedRowKeys.length} Ìõ¼ÇÂ¼Âð£¿` }),
+      content: t('log.batch_delete_confirm', { count: selectedRowKeys.length, defaultValue: `È·ï¿½ï¿½É¾ï¿½ï¿½Ñ¡ï¿½Ðµï¿½ ${selectedRowKeys.length} ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½` }),
       okType: 'danger',
       onOk: async () => {
         try {
@@ -258,7 +258,7 @@ export default function ExportList() {
         title: t('common.operation'),
         key: 'operation',
         width: 160,
-        fixed: 'right',
+        fixed: 'end',
         render: (_, row) => (
           <Space>
             <Button
@@ -293,7 +293,7 @@ export default function ExportList() {
         <Space>
           {selectedRowKeys.length > 0 && getButtonState('export.destroy').show ? (
             <Button danger onClick={handleBatchDelete}>
-              {t('common.delete_selected', { defaultValue: 'É¾³ýÑ¡ÖÐ' })} ({selectedRowKeys.length})
+              {t('common.delete_selected', { defaultValue: 'É¾ï¿½ï¿½Ñ¡ï¿½ï¿½' })} ({selectedRowKeys.length})
             </Button>
           ) : null}
           {toolbar}

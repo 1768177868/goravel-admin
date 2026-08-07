@@ -283,7 +283,7 @@ export default function AttachmentList() {
     {
       title: t('attachment.filename'),
       dataIndex: 'filename',
-      minWidth: 200,
+      width: 220,
       render: (_, row) => {
         const previewUrl = getImageUrl(row)
         const loadingState = getImageLoadingState(row)
@@ -340,7 +340,7 @@ export default function AttachmentList() {
     {
       title: t('attachment.display_name'),
       dataIndex: 'display_name',
-      minWidth: 180,
+      width: 180,
       render: (_, row) => (
         <Input
           key={`${row.id}-${row.display_name}`}
@@ -417,7 +417,7 @@ export default function AttachmentList() {
       title: t('common.operation'),
       key: 'operation',
       width: 160,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           <Button
@@ -561,7 +561,7 @@ export default function AttachmentList() {
         loading={loading}
         columns={filteredColumns}
         dataSource={tableData}
-        scroll={{ x: 1800 }}
+        scroll={{ x: 2000 }}
         rowSelection={{
           selectedRowKeys,
           onChange: (keys) => setSelectedRowKeys(keys as Array<string | number>),

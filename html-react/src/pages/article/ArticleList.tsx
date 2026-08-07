@@ -96,7 +96,7 @@ export default function ArticleList() {
       title: t('common.operation'),
       key: 'operation',
       width: 160,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('article.update').show && (

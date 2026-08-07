@@ -312,7 +312,7 @@ export default function OrderList() {
       title: t('common.operation'),
       key: 'operation',
       width: 220,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('order.show').show && (

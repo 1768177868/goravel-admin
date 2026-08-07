@@ -267,7 +267,7 @@ export default function OperationLogList() {
       title: t('common.operation'),
       key: 'operation',
       width: 140,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('operation_log.show').show ? (

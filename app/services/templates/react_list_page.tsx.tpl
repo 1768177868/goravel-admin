@@ -97,7 +97,7 @@ export default function <<.ModelName>>List() {
       title: t('common.operation'),
       key: 'operation',
       width: 160,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           <<if .HasEdit>>

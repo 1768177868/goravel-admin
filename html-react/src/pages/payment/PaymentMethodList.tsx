@@ -105,7 +105,7 @@ export default function PaymentMethodList() {
       title: t('common.operation'),
       key: 'operation',
       width: 150,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => (
         <Space>
           {getButtonState('payment_method.update').show && (

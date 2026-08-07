@@ -150,7 +150,7 @@ export default function OnlineAdminList() {
       title: t('common.operation'),
       key: 'operation',
       width: 120,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) =>
         getButtonState('admin.kick_out').show ? (
           <PermissionButton permission="admin.kick_out" type="link" danger onClick={() => handleKickOut(row)}>

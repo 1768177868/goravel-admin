@@ -118,7 +118,7 @@ export default function SimpleCrudPage<T extends SimpleCrudRow>(props: SimpleCru
       title: t('common.operation'),
       key: 'operation',
       width: 160,
-      fixed: 'right',
+      fixed: 'end',
       render: (_, row) => {
         const protectedRow = props.isProtected?.(row)
         return (
