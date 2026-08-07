@@ -371,7 +371,10 @@ func (s *ExportServiceImpl) ExportToCSV(headers []string, data [][]string, filen
 	}
 
 	// 获取存储驱动
-	storage := facades.Storage().Disk(s.disk)
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return "", err
+	}
 
 	// 写入文件
 	if err := storage.Put(filePath, buf.String()); err != nil {
@@ -490,7 +493,10 @@ func (s *ExportServiceImpl) ExportToXLSXAt(headers []string, data [][]string, fi
 		return "", err
 	}
 
-	storage := facades.Storage().Disk(s.disk)
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return "", err
+	}
 	if err := storage.Put(filePath, buf.String()); err != nil {
 		return "", apperrors.ErrSaveFileFailed.WithError(err)
 	}
@@ -748,7 +754,10 @@ func (s *ExportServiceImpl) GetExportURL(filePath string) string {
 		return ""
 	}
 
-	storage := facades.Storage().Disk(s.disk)
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return ""
+	}
 	if url, err := storage.TemporaryUrl(filePath, time.Now().Add(24*time.Hour)); err == nil {
 		return url
 	}

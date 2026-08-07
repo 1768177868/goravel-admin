@@ -5,6 +5,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	"goravel/app/models"
+	"goravel/app/utils"
 )
 
 type AppServiceProvider struct {
@@ -54,8 +55,12 @@ func (receiver *AppServiceProvider) syncStorageDiskFromDatabase() {
 		}
 	}
 
-	// 如果数据库中有配置，更新框架的默认磁盘
+	// 如果数据库中有配置，更新框架的默认磁盘（云盘密钥未配齐时不切换，避免运行时 panic）
 	if disk != "" {
+		if err := utils.ValidateFilesystemDisk(disk); err != nil {
+			facades.Log().Warningf("Skip syncing storage disk %q: %v", disk, err)
+			return
+		}
 		facades.Config().Add("filesystems.default", disk)
 		facades.Log().Debugf("Storage disk synced from database: %s", disk)
 	}

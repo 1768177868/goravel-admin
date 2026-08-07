@@ -374,8 +374,9 @@ func (e *BaseExporter) finalizeExport(exportID uint, filePath string) error {
 	}
 
 	if exportRecord.Disk != "" {
-		storage := facades.Storage().Disk(exportRecord.Disk)
-		if fileInfo, err := storage.Size(filePath); err == nil {
+		if storage, err := utils.StorageDisk(exportRecord.Disk); err != nil {
+			facades.Log().Warningf("Skip export file size: %v", err)
+		} else if fileInfo, err := storage.Size(filePath); err == nil {
 			exportRecord.Size = fileInfo
 		}
 	}

@@ -165,7 +165,10 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 	}
 
 	// 保存分片到临时目录
-	storage := facades.Storage().Disk(s.disk)
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return err
+	}
 	chunkPath := fmt.Sprintf("chunks/%s/%d", chunkID, chunkIndex)
 
 	if err := storage.Put(chunkPath, string(chunkData)); err != nil {
@@ -185,7 +188,10 @@ func (s *AttachmentServiceImpl) UploadChunk(chunkID string, chunkIndex int, chun
 // MergeChunks 合并分片
 // 注意：不再使用服务端缓存，通过检查实际文件系统来验证分片
 func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mimeType string, totalChunks int, isPublicRaw string) (*models.Attachment, error) {
-	storage := facades.Storage().Disk(s.disk)
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return nil, err
+	}
 
 	// 检查所有分片文件是否存在
 	indices := make([]int, totalChunks)
@@ -411,7 +417,10 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 // 注意：不再使用服务端缓存，通过检查实际文件系统来获取进度
 // 优化：如果分片数量很大，可以考虑限制返回的索引数量或使用并发检查
 func (s *AttachmentServiceImpl) GetChunkProgress(chunkID string, totalChunks int) (map[string]any, error) {
-	storage := facades.Storage().Disk(s.disk)
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return nil, err
+	}
 
 	uploadedCount := 0
 	uploadedIndices := []int{} // 已上传的分片索引数组
@@ -460,8 +469,11 @@ func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mim
 	datePath := time.Now().Format("2006/01/02")
 	finalPath := fmt.Sprintf("attachments/%s/%s", datePath, uniqueName)
 
-	// 保存文件
-	storage := facades.Storage().Disk(s.disk)
+	// 保存文件（云盘未配置时返回业务错误，避免 Storage().Disk panic）
+	storage, err := utils.StorageDisk(s.disk)
+	if err != nil {
+		return nil, err
+	}
 	if err := storage.Put(finalPath, string(fileData)); err != nil {
 		if s.ctx != nil {
 			errorlog.RecordHTTP(s.ctx, "attachment", "保存文件失败", map[string]any{
@@ -697,7 +709,10 @@ func (s *AttachmentServiceImpl) resolveDefaultCategoryID() uint {
 func (s *AttachmentServiceImpl) DeleteFile(attachment *models.Attachment) error {
 	// 删除文件
 	if attachment.Path != "" && attachment.Disk != "" {
-		storage := facades.Storage().Disk(attachment.Disk)
+		storage, err := utils.StorageDisk(attachment.Disk)
+		if err != nil {
+			return err
+		}
 		if err := storage.Delete(attachment.Path); err != nil {
 			if s.ctx != nil {
 				errorlog.RecordHTTP(s.ctx, "attachment", "删除文件失败", map[string]any{

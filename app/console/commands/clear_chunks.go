@@ -10,7 +10,6 @@ import (
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
-	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/path"
 
 	"goravel/app/utils"
@@ -48,7 +47,11 @@ func (r *ClearChunks) Handle(ctx console.Context) error {
 		return nil
 	}
 
-	storage := facades.Storage().Disk(disk)
+	storage, err := utils.StorageDisk(disk)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("打开存储驱动失败: %v", err))
+		return err
+	}
 
 	// 计算3天前的时间
 	threeDaysAgo := time.Now().AddDate(0, 0, -3)
@@ -75,7 +78,7 @@ func (r *ClearChunks) Handle(ctx console.Context) error {
 	errorCount := 0
 
 	// 遍历 chunks 目录下的所有文件
-	err := filepath.Walk(chunksDir, func(path string, info os.FileInfo, err error) error {
+	walkErr := filepath.Walk(chunksDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// 如果无法访问某个文件/目录，记录错误但继续
 			ctx.Info(fmt.Sprintf("无法访问路径 %s: %v", path, err))
@@ -114,9 +117,9 @@ func (r *ClearChunks) Handle(ctx console.Context) error {
 		return nil
 	})
 
-	if err != nil {
-		ctx.Error(fmt.Sprintf("遍历分片目录失败: %v", err))
-		return err
+	if walkErr != nil {
+		ctx.Error(fmt.Sprintf("遍历分片目录失败: %v", walkErr))
+		return walkErr
 	}
 
 	// 清理空目录（避免留下大量空目录）

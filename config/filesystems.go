@@ -43,12 +43,14 @@ func init() {
 				"url":    config.Env("APP_URL", "").(string) + "/storage",
 			},
 			"s3": map[string]any{
-				"driver": "custom",
-				"key":    config.Env("AWS_ACCESS_KEY_ID"),
-				"secret": config.Env("AWS_ACCESS_KEY_SECRET"),
-				"region": config.Env("AWS_REGION"),
-				"bucket": config.Env("AWS_BUCKET"),
-				"url":    config.Env("AWS_URL"),
+				"driver":         "custom",
+				"key":            config.Env("AWS_ACCESS_KEY_ID"),
+				"secret":         config.Env("AWS_ACCESS_KEY_SECRET"),
+				"region":         config.Env("AWS_REGION"),
+				"bucket":         config.Env("AWS_BUCKET"),
+				"url":            config.Env("AWS_URL"),
+				"endpoint":       config.Env("AWS_ENDPOINT"),
+				"use_path_style": config.Env("AWS_USE_PATH_STYLE_ENDPOINT", false),
 				"via": func() (filesystem.Driver, error) {
 					return s3facades.S3("s3") // The `s3` value is the `disks` key
 				},

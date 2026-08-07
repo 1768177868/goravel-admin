@@ -102,7 +102,10 @@ func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	}
 
 	// 读取文件内容：先将文件保存到临时位置，然后读取
-	storage := facades.Storage().Disk("local")
+	storage, resp, ok := response.OpenStorageDisk(ctx, "attachment", "local", map[string]any{"filename": filename})
+	if !ok {
+		return resp
+	}
 
 	// 保存文件到临时位置，PutFile 返回保存后的路径
 	savedPath, err := storage.PutFile("", file)
@@ -139,6 +142,9 @@ func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	isPublicRaw := ctx.Request().Input("is_public", "")
 	attachment, err := attachmentService.UploadFile(fileData, filename, mimeType, isPublicRaw)
 	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusBadRequest, businessErr)
+		}
 		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
 			"filename": filename,
 		})
@@ -242,7 +248,13 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		}
 
 		// 读取分片数据：先将文件保存到临时位置，然后读取
-		storage := facades.Storage().Disk("local")
+		storage, resp, ok := response.OpenStorageDisk(ctx, "attachment", "local", map[string]any{
+			"chunk_id":    chunkID,
+			"chunk_index": chunkIndex,
+		})
+		if !ok {
+			return resp
+		}
 
 		// 保存文件到临时位置
 		savedPath, err := storage.PutFile("", file)
@@ -271,7 +283,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 		chunkData := []byte(chunkDataStr)
 
 		if err := attachmentService.UploadChunk(chunkID, chunkIndex, chunkData); err != nil {
-			return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
+			return r.attachmentServiceError(ctx, err, map[string]any{
 				"chunk_id":    chunkID,
 				"chunk_index": chunkIndex,
 			})
@@ -314,7 +326,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 
 		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType, totalChunks, ctx.Request().Input("is_public", ""))
 		if err != nil {
-			return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
+			return r.attachmentServiceError(ctx, err, map[string]any{
 				"chunk_id":     chunkID,
 				"filename":     filename,
 				"total_chunks": totalChunks,
@@ -346,7 +358,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 
 		progress, err := attachmentService.GetChunkProgress(chunkID, totalChunks)
 		if err != nil {
-			return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
+			return r.attachmentServiceError(ctx, err, map[string]any{
 				"chunk_id": chunkID,
 			})
 		}
@@ -375,16 +387,19 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
 	}
 
+	storage, errResp, ok := response.OpenStorageDisk(ctx, "attachment", attachment.Disk, map[string]any{
+		"path": attachment.Path,
+	})
+	if !ok {
+		return errResp
+	}
+
 	// 对于云存储，尝试生成临时URL并重定向，避免通过服务器中转
 	if attachment.Disk != "local" && attachment.Disk != "public" {
-		storage := facades.Storage().Disk(attachment.Disk)
-
 		if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
 			return ctx.Response().Redirect(http.StatusFound, url)
 		}
 	}
-
-	storage := facades.Storage().Disk(attachment.Disk)
 
 	// 读取文件内容
 	content, err := storage.Get(attachment.Path)
@@ -408,7 +423,7 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 	}
 
 	// 设置响应头，使用链式调用确保顺序正确
-	response := ctx.Response().
+	httpResp := ctx.Response().
 		Header("Content-Type", contentType).
 		Header("Content-Length", fmt.Sprintf("%d", len(content))).
 		Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
@@ -416,7 +431,7 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 		Header("Pragma", "no-cache").
 		Header("Expires", "0")
 
-	return response.String(http.StatusOK, content)
+	return httpResp.String(http.StatusOK, content)
 }
 
 // PublicPreview 公开附件预览（无需登录，仅 is_public=1 可访问）
@@ -632,14 +647,19 @@ func (r *AttachmentController) serveAttachmentContent(ctx http.Context, attachme
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrFilePathRequired.Code)
 	}
 
+	storage, errResp, ok := response.OpenStorageDisk(ctx, "attachment", attachment.Disk, map[string]any{
+		"path": attachment.Path,
+	})
+	if !ok {
+		return errResp
+	}
+
 	if attachment.Disk != "local" && attachment.Disk != "public" {
-		storage := facades.Storage().Disk(attachment.Disk)
 		if url, err := storage.TemporaryUrl(attachment.Path, time.Now().Add(24*time.Hour)); err == nil {
 			return ctx.Response().Redirect(http.StatusFound, url)
 		}
 	}
 
-	storage := facades.Storage().Disk(attachment.Disk)
 	content, err := storage.Get(attachment.Path)
 	if err != nil {
 		return response.ErrorWithLog(ctx, "attachment", err, map[string]any{
@@ -658,7 +678,7 @@ func (r *AttachmentController) serveAttachmentContent(ctx http.Context, attachme
 		cacheControl = "no-cache, no-store, must-revalidate"
 	}
 
-	resp := ctx.Response().
+	httpResp := ctx.Response().
 		Header("Content-Type", mimeType).
 		Header("Content-Length", fmt.Sprintf("%d", len(content))).
 		Header("Cache-Control", cacheControl)
@@ -668,15 +688,22 @@ func (r *AttachmentController) serveAttachmentContent(ctx http.Context, attachme
 		if filename == "" {
 			filename = attachment.Path
 		}
-		resp = resp.
+		httpResp = httpResp.
 			Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
 			Header("Pragma", "no-cache").
 			Header("Expires", "0")
 	}
 
 	if attachment.FileType == "image" || attachment.FileType == "video" {
-		resp = resp.Header("Accept-Ranges", "bytes")
+		httpResp = httpResp.Header("Accept-Ranges", "bytes")
 	}
 
-	return resp.String(http.StatusOK, content)
+	return httpResp.String(http.StatusOK, content)
+}
+
+func (r *AttachmentController) attachmentServiceError(ctx http.Context, err error, attrs map[string]any) http.Response {
+	if businessErr, ok := apperrors.GetBusinessError(err); ok {
+		return response.Error(ctx, http.StatusBadRequest, businessErr)
+	}
+	return response.ErrorWithLog(ctx, "attachment", err, attrs)
 }

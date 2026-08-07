@@ -80,6 +80,7 @@ var (
 	ErrCloseFileFailed             = NewBusinessError("close_file_failed", "关闭目标文件失败")
 	ErrSaveFileFailed              = NewBusinessError("save_file_failed", "保存文件失败")
 	ErrDeleteFileFailed            = NewBusinessError("delete_file_failed", "删除文件失败")
+	ErrStorageDiskNotConfigured    = NewBusinessError("storage_disk_not_configured", "文件存储驱动 {disk} 未配置，请在 .env 填写对应密钥，或将后台文件存储改回 local")
 
 	// 数据存在性错误
 	ErrUsernameExists                = NewBusinessError("username_exists", "用户名已存在")

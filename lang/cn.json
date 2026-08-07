@@ -189,6 +189,7 @@
     "close_file_failed": "关闭目标文件失败",
     "save_file_failed": "保存文件失败",
     "delete_file_failed": "删除文件失败",
+    "storage_disk_not_configured": "文件存储驱动 {disk} 未配置，请在 .env 填写对应密钥，或将后台文件存储改回 local",
     "order_not_found": "订单不存在",
     "order_id_required": "订单ID不能为空",
     "get_lock_failed": "获取锁失败",

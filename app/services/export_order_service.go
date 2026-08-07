@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cast"
 
 	"goravel/app/models"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
@@ -191,8 +192,10 @@ func (s *ExportOrderService) ExportOrders(exportID uint, filters OrderFilters) e
 	}
 
 	// 获取文件大小
-	storage := facades.Storage().Disk(exportRecord.Disk)
-	if fileInfo, err := storage.Size(filePath); err == nil {
+	if storage, err := utils.StorageDisk(exportRecord.Disk); err != nil {
+		facades.Log().Warningf("获取文件大小失败: export_id=%d, error=%v", exportID, err)
+		exportRecord.Size = 0
+	} else if fileInfo, err := storage.Size(filePath); err == nil {
 		exportRecord.Size = fileInfo
 		facades.Log().Infof("文件大小: export_id=%d, size=%d", exportID, fileInfo)
 	} else {

@@ -233,6 +233,7 @@
     "close_file_failed": "Failed to close target file",
     "save_file_failed": "Failed to save file",
     "delete_file_failed": "Failed to delete file",
+    "storage_disk_not_configured": "Storage disk {disk} is not configured. Set the related keys in .env, or switch file_disk back to local in admin settings",
     "order_not_found": "Order not found",
     "order_id_required": "Order ID is required",
     "get_lock_failed": "Failed to acquire lock",

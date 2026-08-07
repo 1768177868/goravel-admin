@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
@@ -105,8 +105,13 @@ func (r *ExportController) Destroy(ctx http.Context) http.Response {
 
 	// 尝试删除源文件（忽略失败，仅记录日志）
 	if export.Path != "" && export.Disk != "" {
-		storage := facades.Storage().Disk(export.Disk)
-		if err := storage.Delete(export.Path); err != nil {
+		if storage, err := utils.StorageDisk(export.Disk); err != nil {
+			errorlog.RecordHTTP(ctx, "export", "Failed to open storage for delete", map[string]any{
+				"error": err.Error(),
+				"disk":  export.Disk,
+				"path":  export.Path,
+			}, "Open storage error: %v", err)
+		} else if err := storage.Delete(export.Path); err != nil {
 			// 删除源文件失败只记录日志，不影响主流程
 			errorlog.RecordHTTP(ctx, "export", "Failed to delete export source file", map[string]any{
 				"error": err.Error(),
@@ -142,7 +147,12 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 	}
 
 	// 获取存储驱动
-	storage := facades.Storage().Disk(export.Disk)
+	storage, resp, ok := response.OpenStorageDisk(ctx, "export", export.Disk, map[string]any{
+		"path": export.Path,
+	})
+	if !ok {
+		return resp
+	}
 
 	// 读取文件内容
 	content, err := storage.Get(export.Path)
@@ -169,7 +179,7 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 	}
 
 	// 设置响应头，使用链式调用确保顺序正确
-	response := ctx.Response().
+	httpResp := ctx.Response().
 		Header("Content-Type", contentType).
 		Header("Content-Length", fmt.Sprintf("%d", len(content))).
 		Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
@@ -177,7 +187,7 @@ func (r *ExportController) Download(ctx http.Context) http.Response {
 		Header("Pragma", "no-cache").
 		Header("Expires", "0")
 
-	return response.String(http.StatusOK, content)
+	return httpResp.String(http.StatusOK, content)
 }
 
 type ExportBatchDestroyRequest struct {
@@ -205,8 +215,13 @@ func (r *ExportController) BatchDestroy(ctx http.Context) http.Response {
 		// 尝试删除源文件（忽略失败，仅记录日志）
 		for _, export := range exports {
 			if export.Path != "" && export.Disk != "" {
-				storage := facades.Storage().Disk(export.Disk)
-				if err := storage.Delete(export.Path); err != nil {
+				if storage, err := utils.StorageDisk(export.Disk); err != nil {
+					errorlog.RecordHTTP(ctx, "export", "Failed to open storage for batch delete", map[string]any{
+						"error": err.Error(),
+						"disk":  export.Disk,
+						"path":  export.Path,
+					}, "Open storage error: %v", err)
+				} else if err := storage.Delete(export.Path); err != nil {
 					errorlog.RecordHTTP(ctx, "export", "Failed to delete export source file in batch delete", map[string]any{
 						"error": err.Error(),
 						"disk":  export.Disk,
@@ -366,15 +381,16 @@ func (r *ExportController) StreamExportProgress(ctx http.Context) http.Response 
 				message["message"] = "正在生成导出文件"
 				// 可以尝试检查文件大小来判断进度（如果存储驱动支持）
 				if export.Disk != "" {
-					storage := facades.Storage().Disk(export.Disk)
-					if size, err := storage.Size(export.Path); err == nil {
-						message["file_size"] = size
-						if export.Size > 0 {
-							progress := float64(size) / float64(export.Size) * 100
-							if progress > 100 {
-								progress = 100
+					if storage, err := utils.StorageDisk(export.Disk); err == nil {
+						if size, err := storage.Size(export.Path); err == nil {
+							message["file_size"] = size
+							if export.Size > 0 {
+								progress := float64(size) / float64(export.Size) * 100
+								if progress > 100 {
+									progress = 100
+								}
+								message["progress"] = progress
 							}
-							message["progress"] = progress
 						}
 					}
 				}
