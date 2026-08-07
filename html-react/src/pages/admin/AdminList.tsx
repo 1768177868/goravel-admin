@@ -75,7 +75,7 @@ export default function AdminList() {
 
   const handleStatusChange = async (row: AdminRow, checked: boolean) => {
     if (adminProtectedIds.has(Number(row.id)) && !checked) {
-      message.warning(t('admin.protected_cannot_disable', { defaultValue: '�ܱ����˺Ų��ܽ���' }))
+      message.warning(t('admin.protected_cannot_disable', { defaultValue: '受保护账号不能禁用' }))
       return
     }
     try {
@@ -95,7 +95,7 @@ export default function AdminList() {
         <Form form={pwdForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="password"
-            label={t('admin.new_password', { defaultValue: '������' })}
+            label={t('admin.new_password', { defaultValue: '新密码' })}
             rules={[{ required: true, message: t('admin.password_required') }]}
           >
             <Input.Password />
@@ -106,7 +106,7 @@ export default function AdminList() {
         const values = await pwdForm.validateFields()
         try {
           await resetPassword(row.id, { password: values.password })
-          message.success(t('admin.reset_password_success', { defaultValue: '����������' }))
+          message.success(t('admin.reset_password_success', { defaultValue: '密码已重置' }))
         } catch (error) {
           showError(error, t('common.operation_failed'))
           throw error
@@ -142,17 +142,17 @@ export default function AdminList() {
       getButtonState('admin.kick_out').show
         ? {
             key: 'kickOut',
-            label: t('admin.kick_out', { defaultValue: '�߳���¼' }),
+            label: t('admin.kick_out', { defaultValue: '踢出登录' }),
             onClick: () =>
               runConfirm(
-                t('admin.kick_out', { defaultValue: '�߳���¼' }),
+                t('admin.kick_out', { defaultValue: '踢出登录' }),
                 t('admin.kick_out_confirm', {
                   username: row.username,
-                  defaultValue: `ȷ���߳� ${row.username} ��ȫ����¼��`,
+                  defaultValue: `确定踢出 ${row.username} 的全部登录吗？`,
                 }),
                 async () => {
                   await kickOutUser(row.id)
-                  message.success(t('admin.kick_out_success', { defaultValue: '���߳�' }))
+                  message.success(t('admin.kick_out_success', { defaultValue: '已踢出' }))
                 },
               ),
           }
@@ -160,12 +160,12 @@ export default function AdminList() {
       row.is_2fa_bound && getButtonState('admin.unbind_google_auth').show
         ? {
             key: 'unbind2fa',
-            label: t('admin.unbind_google_auth', { defaultValue: '���ȸ���֤' }),
+            label: t('admin.unbind_google_auth', { defaultValue: '解绑谷歌验证' }),
             onClick: () =>
               runConfirm(
-                t('admin.unbind_google_auth', { defaultValue: '���ȸ���֤' }),
+                t('admin.unbind_google_auth', { defaultValue: '解绑谷歌验证' }),
                 t('admin.unbind_google_auth_confirm', {
-                  defaultValue: 'ȷ�����ù���Ա�Ĺȸ���֤����',
+                  defaultValue: '确定解绑该管理员的谷歌验证码吗？',
                 }),
                 async () => {
                   await unbindAdminGoogleAuth(row.id)
@@ -178,12 +178,12 @@ export default function AdminList() {
       getButtonState('admin.reset_google_auth').show
         ? {
             key: 'reset2fa',
-            label: t('admin.reset_google_auth', { defaultValue: '���ùȸ���֤' }),
+            label: t('admin.reset_google_auth', { defaultValue: '重置谷歌验证' }),
             onClick: () =>
               runConfirm(
-                t('admin.reset_google_auth', { defaultValue: '���ùȸ���֤' }),
+                t('admin.reset_google_auth', { defaultValue: '重置谷歌验证' }),
                 t('admin.reset_google_auth_confirm', {
-                  defaultValue: 'ȷ�����øù���Ա�Ĺȸ���֤����',
+                  defaultValue: '确定重置该管理员的谷歌验证码吗？',
                 }),
                 async () => {
                   await resetAdminGoogleAuth(row.id)
@@ -217,13 +217,13 @@ export default function AdminList() {
         ),
     },
     {
-      title: t('admin.google_auth_status', { defaultValue: '�ȸ���֤' }),
+      title: t('admin.google_auth_status', { defaultValue: '谷歌验证' }),
       dataIndex: 'is_2fa_bound',
       width: 110,
       render: (bound: boolean) =>
         bound
-          ? t('admin.google_auth_bound', { defaultValue: '�Ѱ�' })
-          : t('admin.google_auth_not_bound', { defaultValue: 'δ��' }),
+          ? t('admin.google_auth_bound', { defaultValue: '已绑定' })
+          : t('admin.google_auth_not_bound', { defaultValue: '未绑定' }),
     },
     {
       title: t('table.status'),
@@ -269,7 +269,7 @@ export default function AdminList() {
           )}
           <Dropdown menu={{ items: moreMenu(row) }}>
             <a onClick={(e) => e.preventDefault()}>
-              {t('common.more', { defaultValue: '����' })} <DownOutlined />
+              {t('common.more', { defaultValue: '更多' })} <DownOutlined />
             </a>
           </Dropdown>
         </Space>
@@ -281,7 +281,7 @@ export default function AdminList() {
     setExporting(true)
     try {
       await exportAdmin(searchForm)
-      message.success(t('common.queued', { defaultValue: '�����������ύ�����Ժ�鿴������¼' }))
+      message.success(t('common.queued', { defaultValue: '导出任务已提交，请稍后查看导出记录' }))
     } catch (error) {
       showError(error, t('common.operation_failed'))
     } finally {
@@ -308,7 +308,7 @@ export default function AdminList() {
         <Space>
           {toolbar}
           <PermissionButton permission="admin.export" loading={exporting} onClick={() => void handleExport()}>
-            {t('common.export', { defaultValue: '����' })}
+            {t('common.export', { defaultValue: '导出' })}
           </PermissionButton>
           <Button icon={<SettingOutlined />} onClick={openColumnSetting}>
             {t('common.column_setting')}
@@ -330,11 +330,11 @@ export default function AdminList() {
           },
           {
             name: 'is_2fa_bound',
-            label: t('admin.google_auth_status', { defaultValue: '�ȸ���֤' }),
+            label: t('admin.google_auth_status', { defaultValue: '谷歌验证' }),
             type: 'select',
             options: [
-              { label: t('admin.google_auth_bound', { defaultValue: '�Ѱ�' }), value: '1' },
-              { label: t('admin.google_auth_not_bound', { defaultValue: 'δ��' }), value: '0' },
+              { label: t('admin.google_auth_bound', { defaultValue: '已绑定' }), value: '1' },
+              { label: t('admin.google_auth_not_bound', { defaultValue: '未绑定' }), value: '0' },
             ],
           },
         ]}

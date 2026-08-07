@@ -209,7 +209,7 @@ export default function ExportList() {
     if (!selectedRowKeys.length) return
     modal.confirm({
       title: t('common.delete_confirm'),
-      content: t('log.batch_delete_confirm', { count: selectedRowKeys.length, defaultValue: `ȷ��ɾ��ѡ�е� ${selectedRowKeys.length} ����¼��` }),
+      content: t('log.batch_delete_confirm', { count: selectedRowKeys.length, defaultValue: `确定删除选中的 ${selectedRowKeys.length} 条记录吗？` }),
       okType: 'danger',
       onOk: async () => {
         try {
@@ -293,7 +293,7 @@ export default function ExportList() {
         <Space>
           {selectedRowKeys.length > 0 && getButtonState('export.destroy').show ? (
             <Button danger onClick={handleBatchDelete}>
-              {t('common.delete_selected', { defaultValue: 'ɾ��ѡ��' })} ({selectedRowKeys.length})
+              {t('common.delete_selected', { defaultValue: '删除选中' })} ({selectedRowKeys.length})
             </Button>
           ) : null}
           {toolbar}
