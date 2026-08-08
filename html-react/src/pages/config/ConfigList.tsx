@@ -289,8 +289,19 @@ function CaptchaConfigPanel() {
       <Form.Item name="captcha_enabled" label={t('config.captcha_enabled')} valuePropName="checked">
         <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
       </Form.Item>
-      <Form.Item name="captcha_expire" label={t('config.captcha_expire')}>
-        <InputNumber min={60} max={600} style={{ width: '100%' }} addonAfter={t('config.captcha_expire_unit')} />
+      <Form.Item
+        name="captcha_expire"
+        label={t('config.captcha_expire')}
+        rules={[
+          { required: true, message: t('config.captcha_expire_required') },
+          {
+            type: 'number',
+            min: 30,
+            message: t('config.captcha_expire_min', { seconds: 30 }),
+          },
+        ]}
+      >
+        <InputNumber min={30} max={600} style={{ width: '100%' }} addonAfter={t('config.captcha_expire_unit')} />
       </Form.Item>
       <PermissionButton permission="config.save" type="primary" loading={submitting} onClick={() => void handleSubmit()}>
         {t('common.save')}

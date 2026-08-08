@@ -32,7 +32,7 @@ var (
 
 func sharedCaptchaStore(expireSeconds int) base64Captcha.Store {
 	captchaStoreOnce.Do(func() {
-		if expireSeconds <= 0 {
+		if expireSeconds < 30 {
 			expireSeconds = 120
 		}
 		captchaStore = base64Captcha.NewMemoryStore(1024, time.Duration(expireSeconds)*time.Second)
@@ -54,7 +54,7 @@ func (s *CaptchaServiceImpl) initDriver() {
 	}
 
 	expireSeconds := utils.GetConfigValueInt(s.ctx, "captcha", "captcha_expire", 120)
-	if expireSeconds <= 0 {
+	if expireSeconds < 30 {
 		expireSeconds = 120
 	}
 

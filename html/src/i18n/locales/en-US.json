@@ -822,6 +822,7 @@
     "captcha_expire": "Captcha Expire Time",
     "captcha_expire_placeholder": "Please enter captcha expire time",
     "captcha_expire_required": "Please enter captcha expire time",
+    "captcha_expire_min": "Captcha expire time cannot be less than {{seconds}} seconds",
     "captcha_expire_unit": "seconds",
     "storage_disk": "Default Storage Disk",
     "storage_disk_placeholder": "Please select default storage disk",

@@ -830,6 +830,7 @@
     "captcha_expire": "验证码有效期",
     "captcha_expire_placeholder": "请输入验证码有效期",
     "captcha_expire_required": "请输入验证码有效期",
+    "captcha_expire_min": "验证码有效期不能小于 {{seconds}} 秒",
     "captcha_expire_unit": "秒",
     "storage_config": "文件存储配置",
     "storage_disk": "默认存储磁盘",

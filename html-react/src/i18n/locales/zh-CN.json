@@ -597,6 +597,8 @@
     "captcha_enabled": "启用验证码",
     "captcha_expire": "验证码有效期",
     "captcha_expire_unit": "秒",
+    "captcha_expire_required": "请输入验证码有效期",
+    "captcha_expire_min": "验证码有效期不能小于 {{seconds}} 秒",
     "file_disk": "文件存储磁盘",
     "export_format": "导出格式",
     "update_success": "更新成功"

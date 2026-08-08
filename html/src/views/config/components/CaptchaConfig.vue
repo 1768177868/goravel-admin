@@ -19,7 +19,7 @@
       <el-form-item :label="$t('config.captcha_expire')" prop="captcha_expire">
         <el-input-number
           v-model="formData.captcha_expire"
-          :min="60"
+          :min="30"
           :max="600"
           :placeholder="$t('config.captcha_expire_placeholder')"
         />
@@ -54,7 +54,13 @@ const formData = reactive({
 
 const formRules = {
   captcha_expire: [
-    { required: true, message: t('config.captcha_expire_required'), trigger: 'blur' }
+    { required: true, message: t('config.captcha_expire_required'), trigger: 'blur' },
+    {
+      type: 'number',
+      min: 30,
+      message: t('config.captcha_expire_min', { seconds: 30 }),
+      trigger: 'blur'
+    }
   ]
 }
 

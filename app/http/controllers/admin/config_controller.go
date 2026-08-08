@@ -59,6 +59,17 @@ func (r *ConfigController) Save(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrConfigsRequired.Code)
 	}
 
+	if group == "captcha" {
+		if raw, ok := configsMap["captcha_expire"]; ok {
+			expire := cast.ToInt(raw)
+			if expire < 30 {
+				return response.Error(ctx, http.StatusBadRequest, apperrors.ErrCaptchaExpireMin.WithParams(map[string]any{
+					"seconds": 30,
+				}))
+			}
+		}
+	}
+
 	// 获取该分组下的所有配置（即使查询失败也继续，使用空数组）
 	var existingConfigs []models.Config
 	_ = appfacades.OrmQuery(ctx).Where("group", group).Get(&existingConfigs)

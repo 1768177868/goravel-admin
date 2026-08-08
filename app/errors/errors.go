@@ -109,6 +109,7 @@ var (
 	ErrDictionaryTypeRequired          = NewBusinessError("dictionary_type_required", "字典类型不能为空")
 	ErrConfigGroupRequired             = NewBusinessError("config_group_required", "配置组不能为空")
 	ErrConfigsRequired                 = NewBusinessError("configs_required", "配置不能为空")
+	ErrCaptchaExpireMin                = NewBusinessError("captcha_expire_min", "验证码有效期不能小于 {seconds} 秒")
 	ErrEmailConfigRequired             = NewBusinessError("email_config_required", "邮箱配置不能为空")
 	ErrOptionTypeRequired              = NewBusinessError("option_type_required", "选项类型不能为空")
 	ErrInvalidOptionType               = NewBusinessError("invalid_option_type", "无效的选项类型")

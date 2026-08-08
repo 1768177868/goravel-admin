@@ -593,6 +593,8 @@
     "captcha_enabled": "Enable Captcha",
     "captcha_expire": "Captcha Expiry",
     "captcha_expire_unit": "seconds",
+    "captcha_expire_required": "Please enter captcha expiry",
+    "captcha_expire_min": "Captcha expiry cannot be less than {{seconds}} seconds",
     "file_disk": "File Disk",
     "export_format": "Export Format",
     "update_success": "Updated successfully"
