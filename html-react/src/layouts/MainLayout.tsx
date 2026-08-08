@@ -1,6 +1,6 @@
 import { Layout, theme, Watermark } from 'antd'
 import { Outlet, useLocation, useMatches } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import LayoutHeader from './components/LayoutHeader'
 import LayoutSidebar from './components/LayoutSidebar'
@@ -11,6 +11,7 @@ import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import { useTabsStore } from '@/stores/tabs'
 import { useLayoutLockScreen } from '@/hooks/useLayoutLockScreen'
+import { useResponsive } from '@/hooks/useResponsive'
 import type { AppRouteMeta } from '@/router/dynamicRoutes'
 import { resolveMenuTitle } from '@/utils/menuTitle'
 import './MainLayout.scss'
@@ -29,8 +30,12 @@ export default function MainLayout() {
   const addTab = useTabsStore((s) => s.addTab)
   const { token } = theme.useToken()
   const lockScreen = useLayoutLockScreen()
+  const { isMobile, isXs } = useResponsive()
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const isTopMenu = menuMode === 'top'
+  const isTopMenu = menuMode === 'top' && !isMobile
+  const showFixedSidebar = !isMobile && menuMode === 'sidebar'
+  const bodyMarginLeft = showFixedSidebar ? (collapsed ? 64 : 220) : 0
 
   useEffect(() => {
     const match = [...matches].reverse().find((m) => (m.handle as AppRouteMeta | undefined)?.titleKey)
@@ -48,6 +53,14 @@ export default function MainLayout() {
       name: String(match?.id || location.pathname),
     })
   }, [location.pathname, matches, addTab, t])
+
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!isMobile) setDrawerOpen(false)
+  }, [isMobile])
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -68,12 +81,23 @@ export default function MainLayout() {
   )
 
   return (
-    <Layout className={`main-layout ${darkMode ? 'main-layout--dark' : ''}`}>
-      {!isTopMenu && <LayoutSidebar />}
-      <Layout className="main-layout__body" style={{ marginLeft: isTopMenu ? 0 : collapsed ? 64 : 220 }}>
-        <LayoutHeader onLockScreen={lockScreen.handleLockScreen} />
-        {isTopMenu && <LayoutTopMenu />}
-        <TabsView />
+    <Layout
+      className={`main-layout${darkMode ? ' main-layout--dark' : ''}${isMobile ? ' main-layout--mobile' : ''}${isXs ? ' main-layout--xs' : ''}`}
+    >
+      <LayoutSidebar
+        isMobile={isMobile}
+        drawerOpen={drawerOpen}
+        onDrawerClose={() => setDrawerOpen(false)}
+      />
+      <Layout className="main-layout__body" style={{ marginLeft: bodyMarginLeft }}>
+        <LayoutHeader
+          onLockScreen={lockScreen.handleLockScreen}
+          isMobile={isMobile}
+          isXs={isXs}
+          onOpenDrawer={() => setDrawerOpen(true)}
+        />
+        {isTopMenu ? <LayoutTopMenu /> : null}
+        {!isMobile ? <TabsView /> : null}
         {watermarkEnabled ? (
           <Watermark
             className="main-layout__watermark"

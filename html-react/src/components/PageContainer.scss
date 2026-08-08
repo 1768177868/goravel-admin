@@ -22,3 +22,20 @@
 .page-container__body {
   min-width: 0;
 }
+
+@media (max-width: 768px) {
+  .page-container__header {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+  }
+
+  .page-container__extra {
+    width: 100%;
+  }
+
+  .page-container__extra .ant-space {
+    flex-wrap: wrap;
+  }
+}

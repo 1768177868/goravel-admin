@@ -7,6 +7,7 @@ import {
   LockOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
+  MenuOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
   UnorderedListOutlined,
@@ -28,9 +29,17 @@ const { Header } = Layout
 
 interface LayoutHeaderProps {
   onLockScreen: () => void
+  isMobile?: boolean
+  isXs?: boolean
+  onOpenDrawer?: () => void
 }
 
-export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
+export default function LayoutHeader({
+  onLockScreen,
+  isMobile = false,
+  isXs = false,
+  onOpenDrawer,
+}: LayoutHeaderProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { token } = theme.useToken()
@@ -85,18 +94,20 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
   const settingsContent = (
     <div className="header-settings">
       <div className="header-settings__title">{t('header.settings')}</div>
-      <div className="header-settings__item header-settings__item--column">
-        <span className="header-settings__label">{t('header.menu_mode')}</span>
-        <Segmented
-          block
-          value={menuMode}
-          onChange={(value) => setMenuMode(value as MenuMode)}
-          options={[
-            { label: t('header.menu_mode_sidebar'), value: 'sidebar', icon: <MenuFoldOutlined /> },
-            { label: t('header.menu_mode_top'), value: 'top', icon: <UnorderedListOutlined /> },
-          ]}
-        />
-      </div>
+      {!isMobile ? (
+        <div className="header-settings__item header-settings__item--column">
+          <span className="header-settings__label">{t('header.menu_mode')}</span>
+          <Segmented
+            block
+            value={menuMode}
+            onChange={(value) => setMenuMode(value as MenuMode)}
+            options={[
+              { label: t('header.menu_mode_sidebar'), value: 'sidebar', icon: <MenuFoldOutlined /> },
+              { label: t('header.menu_mode_top'), value: 'top', icon: <UnorderedListOutlined /> },
+            ]}
+          />
+        </div>
+      ) : null}
       <div className="header-settings__item">
         <span className="header-settings__label">{t('header.watermark')}</span>
         <Switch checked={watermarkEnabled} onChange={setWatermarkEnabled} />
@@ -121,33 +132,46 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
 
   return (
     <Header
-      className="layout-header"
+      className={`layout-header${isMobile ? ' layout-header--mobile' : ''}${isXs ? ' layout-header--xs' : ''}`}
       style={{
         background: token.colorBgContainer,
         borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}
     >
       <div className="layout-header__left">
-        {menuMode === 'sidebar' && (
+        {isMobile ? (
+          <button
+            type="button"
+            className="layout-header__trigger layout-header__trigger--touch"
+            onClick={onOpenDrawer}
+            aria-label="menu"
+          >
+            <MenuOutlined />
+          </button>
+        ) : menuMode === 'sidebar' ? (
           <button type="button" className="layout-header__trigger" onClick={toggleSidebar}>
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </button>
-        )}
+        ) : null}
       </div>
       <Space size={4} className="layout-header__right" align="center">
-        <button
-          type="button"
-          className="layout-header__icon-btn"
-          title={t('header.fullscreen')}
-          onClick={toggleFullscreen}
-        >
-          {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-        </button>
-        <Dropdown menu={{ items: layoutSizeMenu, onClick: ({ key }) => setLayoutSize(key as LayoutSize) }}>
-          <button type="button" className="layout-header__icon-btn" title={t('header.layout_size')}>
-            <ColumnHeightOutlined />
+        {!isMobile ? (
+          <button
+            type="button"
+            className="layout-header__icon-btn"
+            title={t('header.fullscreen')}
+            onClick={toggleFullscreen}
+          >
+            {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
           </button>
-        </Dropdown>
+        ) : null}
+        {!isMobile ? (
+          <Dropdown menu={{ items: layoutSizeMenu, onClick: ({ key }) => setLayoutSize(key as LayoutSize) }}>
+            <button type="button" className="layout-header__icon-btn" title={t('header.layout_size')}>
+              <ColumnHeightOutlined />
+            </button>
+          </Dropdown>
+        ) : null}
         <Popover
           content={settingsContent}
           trigger="click"
@@ -160,7 +184,7 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
         </Popover>
         <NotificationBell className="layout-header__icon-btn" />
         <DarkModeSwitch className="layout-header__icon-btn" />
-        <LanguageSwitch className="layout-header__icon-btn" />
+        {!isXs ? <LanguageSwitch className="layout-header__icon-btn" /> : null}
         <button
           type="button"
           className="layout-header__icon-btn"
@@ -169,11 +193,11 @@ export default function LayoutHeader({ onLockScreen }: LayoutHeaderProps) {
         >
           <LockOutlined />
         </button>
-        <TimezoneSwitch />
+        {!isMobile ? <TimezoneSwitch /> : null}
         <Dropdown menu={{ items: userMenu }} placement="bottomRight">
           <Space className="layout-header__user" size={8}>
             <Avatar size={28} src={adminInfo?.avatar} icon={<UserOutlined />} />
-            <span>{adminInfo?.nickname || adminInfo?.username || 'Admin'}</span>
+            {!isXs ? <span>{adminInfo?.nickname || adminInfo?.username || 'Admin'}</span> : null}
           </Space>
         </Dropdown>
       </Space>

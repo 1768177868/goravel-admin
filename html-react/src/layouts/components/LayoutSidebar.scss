@@ -62,3 +62,34 @@
 .layout-sidebar .ant-menu-item-selected {
   box-shadow: inset 3px 0 0 var(--app-color-primary);
 }
+
+.layout-sidebar-drawer .ant-drawer-content {
+  background: #001529;
+}
+
+.layout-sidebar-drawer__content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #001529;
+}
+
+.layout-sidebar-drawer__content .layout-sidebar__logo {
+  color: #fff;
+}
+
+.layout-sidebar-drawer__content .ant-menu {
+  flex: 1;
+  overflow-y: auto;
+  border-inline-end: none !important;
+  padding: 8px 0 16px;
+}
+
+.layout-sidebar-drawer__content .ant-menu-item,
+.layout-sidebar-drawer__content .ant-menu-submenu-title {
+  min-height: 48px;
+}
+
+.layout-sidebar-drawer__content .ant-menu-item-selected {
+  box-shadow: inset 3px 0 0 var(--app-color-primary);
+}
