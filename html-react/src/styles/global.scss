@@ -123,6 +123,10 @@ html.dark *::-webkit-scrollbar-thumb:hover {
     background: var(--ant-color-bg-container, var(--app-surface)) !important;
   }
 
+  .ant-table-cell-fix-end {
+    overflow: visible;
+  }
+
   .ant-table-thead > tr > th.ant-table-cell-fix,
   .ant-table-thead > tr > th.ant-table-cell-fix-start,
   .ant-table-thead > tr > th.ant-table-cell-fix-end {

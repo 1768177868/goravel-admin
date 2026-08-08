@@ -72,14 +72,6 @@ export default function MainLayout() {
 
   const watermarkText = adminInfo?.nickname || adminInfo?.username || 'Admin'
 
-  const pageContent = (
-    <Content className="main-layout__content" style={{ background: token.colorBgLayout }}>
-      <div className="main-layout__page">
-        <Outlet />
-      </div>
-    </Content>
-  )
-
   return (
     <Layout
       className={`main-layout${darkMode ? ' main-layout--dark' : ''}${isMobile ? ' main-layout--mobile' : ''}${isXs ? ' main-layout--xs' : ''}`}
@@ -98,19 +90,33 @@ export default function MainLayout() {
         />
         {isTopMenu ? <LayoutTopMenu /> : null}
         {!isMobile ? <TabsView /> : null}
-        {watermarkEnabled ? (
-          <Watermark
-            className="main-layout__watermark"
-            content={watermarkText}
-            font={{ fontSize: 14, color: darkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)' }}
-            gap={[80, 80]}
-            rotate={-22}
-          >
-            {pageContent}
-          </Watermark>
-        ) : (
-          pageContent
-        )}
+        {/*
+          Watermark must NOT wrap page content: its root uses overflow:hidden,
+          which breaks Ant Design Table sticky fixed columns.
+        */}
+        <div className="main-layout__main">
+          {watermarkEnabled ? (
+            <div className="main-layout__watermark-overlay" aria-hidden>
+              <Watermark
+                className="main-layout__watermark"
+                content={watermarkText}
+                font={{
+                  fontSize: 14,
+                  color: darkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+                }}
+                gap={[80, 80]}
+                rotate={-22}
+              >
+                <div className="main-layout__watermark-fill" />
+              </Watermark>
+            </div>
+          ) : null}
+          <Content className="main-layout__content" style={{ background: token.colorBgLayout }}>
+            <div className="main-layout__page">
+              <Outlet />
+            </div>
+          </Content>
+        </div>
       </Layout>
       <LayoutLockScreen lockScreen={lockScreen} />
     </Layout>

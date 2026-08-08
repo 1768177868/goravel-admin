@@ -266,10 +266,11 @@ export default function OperationLogList() {
     {
       title: t('common.operation'),
       key: 'operation',
-      width: 140,
+      width: 160,
       fixed: 'end',
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } }),
       render: (_, row) => (
-        <Space>
+        <Space size={4} wrap={false}>
           {getButtonState('operation_log.show').show ? (
             <PermissionButton
               permission="operation_log.show"

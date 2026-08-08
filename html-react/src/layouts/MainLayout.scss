@@ -9,14 +9,34 @@
   min-width: 0;
 }
 
-.main-layout__content {
-  margin: 12px 16px 20px;
-  min-height: 280px;
+.main-layout__main {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+
+.main-layout__watermark-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .main-layout__watermark {
-  display: block;
+  height: 100%;
+}
+
+.main-layout__watermark-fill {
+  height: 100%;
   min-height: 100%;
+}
+
+.main-layout__content {
+  margin: 12px 16px 20px;
+  min-height: 280px;
+  position: relative;
+  z-index: 1;
 }
 
 .main-layout__page {
@@ -30,9 +50,8 @@
   animation: page-enter 0.22s ease;
 }
 
-.main-layout__page .ant-table-wrapper {
-  overflow-x: auto;
-}
+/* Do not set overflow-x on .ant-table-wrapper — it breaks antd fixed columns.
+   Horizontal scroll belongs on Table scroll={{ x }} instead. */
 
 @keyframes page-enter {
   from {
@@ -62,9 +81,5 @@
     padding: 12px 14px 16px;
     border-radius: var(--app-radius-md, 10px);
     min-height: calc(100vh - 120px);
-  }
-
-  .main-layout__page .ant-table-wrapper {
-    margin-inline: -4px;
   }
 }
