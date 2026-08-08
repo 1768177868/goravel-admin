@@ -93,22 +93,20 @@ func (h *NotificationHub) dispatch(notification *models.Notification) {
 		return
 	}
 
-	if notification.ReceiverID == nil {
-		h.mu.RLock()
-		defer h.mu.RUnlock()
-		for _, adminClients := range h.clients {
-			for client := range adminClients {
-				client.send <- data
-			}
-		}
-		return
-	}
-
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if adminClients, ok := h.clients[*notification.ReceiverID]; ok {
+
+	sendAll := notification.ReceiverID == nil
+	for adminID, adminClients := range h.clients {
+		if !sendAll && *notification.ReceiverID != adminID {
+			continue
+		}
 		for client := range adminClients {
-			client.send <- data
+			select {
+			case client.send <- data:
+			default:
+				// Slow or stuck client: drop this frame rather than blocking the hub.
+			}
 		}
 	}
 }
@@ -149,6 +147,28 @@ func (h *NotificationHub) Broadcast(notification *models.Notification) {
 		// 成功发送
 	case <-h.stop:
 		// Hub 已停止，忽略广播
+	}
+}
+
+// SendToAdmin pushes an arbitrary JSON payload to one admin's connections (all tabs/windows).
+func (h *NotificationHub) SendToAdmin(adminID uint, payload map[string]any) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	adminClients, ok := h.clients[adminID]
+	if !ok {
+		return
+	}
+	for client := range adminClients {
+		select {
+		case client.send <- data:
+		default:
+		}
 	}
 }
 

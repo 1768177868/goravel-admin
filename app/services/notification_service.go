@@ -179,8 +179,15 @@ func (s *NotificationServiceImpl) MarkRead(adminID uint, notificationID uint) er
 			"is_read": true,
 			"read_at": now,
 		})
+	if err != nil {
+		return err
+	}
 
-	return err
+	notification.IsRead = true
+	notification.ReadAt = &now
+	wsnotifications.Hub().Broadcast(&notification)
+
+	return nil
 }
 
 func (s *NotificationServiceImpl) MarkAllRead(adminID uint) error {
@@ -193,7 +200,17 @@ func (s *NotificationServiceImpl) MarkAllRead(adminID uint) error {
 			"is_read": true,
 			"read_at": now,
 		})
-	return err
+	if err != nil {
+		return err
+	}
+
+	wsnotifications.Hub().SendToAdmin(adminID, map[string]any{
+		"type":        "read_all",
+		"receiver_id": adminID,
+		"read_at":     now.Format(time.RFC3339),
+	})
+
+	return nil
 }
 
 func (s *NotificationServiceImpl) UnreadCount(adminID uint) (int64, error) {

@@ -218,10 +218,26 @@ export const useNotificationStore = defineStore('notification', {
       }
       this.retryCount = 0
     },
-    handleIncoming(notification) {
+    handleIncoming(payload) {
+      if (payload?.type === 'read_all') {
+        const readAt = payload.read_at || new Date().toISOString()
+        this.items = this.items.map(item => ({
+          ...item,
+          is_read: true,
+          read_at: item.read_at || readAt
+        }))
+        this.unreadCount = 0
+        return
+      }
+
+      const notification = payload
+      if (notification?.id == null) {
+        return
+      }
+
       const exists = this.items.find(item => item.id === notification.id)
       const isNewNotification = !exists
-      
+
       if (isNewNotification) {
         this.items.unshift(notification)
         if (!notification.is_read) {
@@ -234,7 +250,11 @@ export const useNotificationStore = defineStore('notification', {
           this.items = this.items.slice(0, 20)
         }
       } else {
-        this.items = this.items.map(item => item.id === notification.id ? notification : item)
+        const wasUnread = !exists.is_read
+        this.items = this.items.map(item => item.id === notification.id ? { ...item, ...notification } : item)
+        if (wasUnread && notification.is_read && this.unreadCount > 0) {
+          this.unreadCount -= 1
+        }
       }
     },
     /**

@@ -1,9 +1,10 @@
 package notifications
 
 import (
+	"context"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 )
 
 type notificationClient struct {
@@ -22,46 +23,31 @@ func newNotificationClient(hub *NotificationHub, conn *websocket.Conn, adminID u
 	}
 }
 
-func (c *notificationClient) readPump() {
+// serve pushes notifications until the peer disconnects or the send channel closes.
+// CloseRead handles control frames (ping/pong/close); do not call Read/Ping concurrently.
+func (c *notificationClient) serve() {
 	defer func() {
 		c.hub.unregister <- c
-		_ = c.conn.Close()
+		_ = c.conn.CloseNow()
 	}()
-	c.conn.SetReadLimit(512)
-	_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.conn.SetPongHandler(func(string) error {
-		_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil
-	})
-	for {
-		if _, _, err := c.conn.ReadMessage(); err != nil {
-			break
-		}
-	}
-}
 
-func (c *notificationClient) writePump() {
-	ticker := time.NewTicker(25 * time.Second)
-	defer func() {
-		ticker.Stop()
-		_ = c.conn.Close()
-	}()
+	ctx := c.conn.CloseRead(context.Background())
+
 	for {
 		select {
 		case message, ok := <-c.send:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.conn.Close(websocket.StatusNormalClosure, "")
 				return
 			}
-			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+			wctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			err := c.conn.Write(wctx, websocket.MessageText, message)
+			cancel()
+			if err != nil {
 				return
 			}
-		case <-ticker.C:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -69,6 +55,5 @@ func (c *notificationClient) writePump() {
 func (h *NotificationHub) RegisterConnection(conn *websocket.Conn, adminID uint) {
 	client := newNotificationClient(h, conn, adminID)
 	h.register <- client
-	go client.writePump()
-	go client.readPump()
+	go client.serve()
 }

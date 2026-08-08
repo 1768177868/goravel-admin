@@ -271,7 +271,7 @@ func Admin() {
 
 	// 通知 WebSocket（不在域名限制范围内；长连接排除操作日志与 API 指标中间件）
 	facades.Route().Get("/ws/admin/notifications", notificationWsController.Server).
-		WithoutMiddleware(middleware.OperationLog(), middleware.ApiMetric())
+		WithoutMiddleware(middleware.RequestTimeout(), middleware.OperationLog(), middleware.ApiMetric())
 
 	registerRouteFallback()
 }

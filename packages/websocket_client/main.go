@@ -2,21 +2,22 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 )
 
 var done chan any
 var interrupt chan os.Signal
 
-func receiveHandler(connection *websocket.Conn) {
+func receiveHandler(ctx context.Context, connection *websocket.Conn) {
 	defer close(done)
 	for {
-		_, msg, err := connection.ReadMessage()
+		_, msg, err := connection.Read(ctx)
 		if err != nil {
 			log.Println("Error in receive:", err)
 			return
@@ -31,15 +32,16 @@ func main() {
 
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
 
+	ctx := context.Background()
 	socketUrl := "ws://localhost:3000" + "/ws"
-	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, nil)
+	conn, _, err := websocket.Dial(ctx, socketUrl, nil)
 	if err != nil {
 		log.Fatal("Error connecting to Websocket Server:", err)
 	}
 	defer func() {
-		_ = conn.Close()
+		_ = conn.Close(websocket.StatusNormalClosure, "")
 	}()
-	go receiveHandler(conn)
+	go receiveHandler(ctx, conn)
 
 	// Our main loop for the client
 	// We send our relevant packets here
@@ -47,7 +49,7 @@ func main() {
 		select {
 		case <-time.After(time.Duration(1) * time.Millisecond * 1000):
 			// Send an echo packet every second
-			err := conn.WriteMessage(websocket.TextMessage, []byte("ping"))
+			err := conn.Write(ctx, websocket.MessageText, []byte("ping"))
 			if err != nil {
 				log.Println("Error during writing to websocket:", err)
 				return
@@ -57,8 +59,7 @@ func main() {
 			// We received a SIGINT (Ctrl + C). Terminate gracefully...
 			log.Println("Received SIGINT interrupt signal. Closing all pending connections")
 
-			// Close our websocket connection
-			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			err := conn.Close(websocket.StatusNormalClosure, "")
 			if err != nil {
 				log.Println("Error during closing websocket:", err)
 				return

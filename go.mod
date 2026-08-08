@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
+	github.com/coder/websocket v1.8.15
 	github.com/dromara/carbon/v2 v2.6.11
 	github.com/elastic/go-elasticsearch/v8 v8.19.0
 	github.com/gin-gonic/gin v1.12.0
@@ -26,7 +27,6 @@ require (
 	github.com/goravel/postgres v1.18.0
 	github.com/goravel/redis v1.18.0
 	github.com/goravel/s3 v1.18.0
-	github.com/gorilla/websocket v1.5.0
 	github.com/minio/minio-go/v7 v7.2.1
 	github.com/mojocn/base64Captcha v1.3.6
 	github.com/oklog/ulid/v2 v2.1.1

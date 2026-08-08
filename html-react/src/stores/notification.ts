@@ -159,17 +159,55 @@ async function connectWs(
   }
   ws.onmessage = (event) => {
     try {
-      const payload = JSON.parse(event.data as string) as {
+      const payload = JSON.parse(event.data as string) as NotificationItem & {
         type?: string
         notification?: NotificationItem
+        data?: NotificationItem
+        read_at?: string
       }
-      if (payload.notification) {
+
+      if (payload.type === 'read_all') {
+        const readAt = payload.read_at || new Date().toISOString()
         set({
-          items: [payload.notification, ...get().items].slice(0, 20),
-          unreadCount: get().unreadCount + (payload.notification.is_read ? 0 : 1),
+          items: get().items.map((item) => ({
+            ...item,
+            is_read: true,
+            read_at: item.read_at || readAt,
+          })),
+          unreadCount: 0,
         })
-      } else if (payload.type === 'refresh') {
-        void get().refresh()
+        return
+      }
+
+      const notification =
+        payload.notification ||
+        payload.data ||
+        (payload.id != null ? (payload as NotificationItem) : null)
+
+      if (notification?.id == null) {
+        if (payload.type === 'refresh') {
+          void get().refresh()
+        }
+        return
+      }
+
+      const existing = get().items.find((item) => item.id === notification.id)
+      if (existing) {
+        const wasUnread = !existing.is_read
+        set({
+          items: get().items.map((item) =>
+            item.id === notification.id ? { ...item, ...notification } : item,
+          ),
+          unreadCount:
+            wasUnread && notification.is_read
+              ? Math.max(0, get().unreadCount - 1)
+              : get().unreadCount,
+        })
+      } else {
+        set({
+          items: [notification, ...get().items].slice(0, 20),
+          unreadCount: get().unreadCount + (notification.is_read ? 0 : 1),
+        })
       }
     } catch (error) {
       logger.error('Invalid notification payload:', error)

@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coder/websocket"
 	apphttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
-	"github.com/gorilla/websocket"
 	"github.com/oklog/ulid/v2"
 
 	"goravel/app/http/response"
@@ -97,19 +97,23 @@ func (r *NotificationWsController) Server(ctx apphttp.Context) apphttp.Response 
 	}
 	_ = r.tokenService(ctx).UpdateLastUsedAt(token)
 
-	upgrader := websocket.Upgrader{
-		CheckOrigin:     r.isOriginAllowed,
-		ReadBufferSize:  1024, // 读缓冲区大小
-		WriteBufferSize: 1024, // 写缓冲区大小
+	req := ctx.Request().Origin()
+	if !r.isOriginAllowed(req) {
+		logger.WarnfHTTP(ctx, "WebSocket connection rejected: origin not allowed")
+		response.Error(ctx, http.StatusForbidden, "origin_not_allowed")
+		ctx.Request().Abort()
+		return nil
 	}
 
-	conn, err := upgrader.Upgrade(ctx.Response().Writer(), ctx.Request().Origin(), nil)
+	// Origin already verified above; skip library check.
+	conn, err := websocket.Accept(ctx.Response().Writer(), req, &websocket.AcceptOptions{
+		InsecureSkipVerify: true,
+	})
 	if err != nil {
 		logger.ErrorfHTTP(ctx, "notification ws upgrade error: %v", err)
 		return ctx.Response().String(http.StatusInternalServerError, "upgrade_failed")
 	}
 
-	// logger.InfofHTTP(ctx, "WebSocket connection established for admin ID: %d", admin.ID)
 	wsnotifications.Hub().RegisterConnection(conn, admin.ID)
 
 	return nil
