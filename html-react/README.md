@@ -28,8 +28,9 @@ npm run dev
 > 若登录出现「网络连接失败」，多半是后端 CORS 未放行 React 端口。确认根目录 `.env` 含：
 > `http://localhost:3008`，以及请求头 `Accept-Language`，然后**重启 Go 后端**。
 
-> 生产环境托管 `dist` 时需做 SPA fallback（否则刷新子路由 404），Nginx 示例：
-> `try_files $uri $uri/ /index.html;`
+> 生产环境托管 `dist` 时需做 SPA fallback（否则刷新子路由 404）。
+> - Nginx：`try_files $uri $uri/ /index.html;`
+> - Cloudflare Workers：使用本目录 `wrangler.toml` + `worker.js`，执行 `npx wrangler deploy`
 
 默认账号与 Vue 版相同：`admin` / `admin123`
 

@@ -283,11 +283,11 @@ swag init
 
 ### Cloudflare Workers 部署
 
-将前端应用部署到 Cloudflare Workers：
+将前端应用部署到 Cloudflare Workers（Vue：`html/`，React：`html-react/`，配置相同）：
 
 ```bash
-# 构建前端应用
-cd html
+# 构建前端应用（React 示例；Vue 则 cd html）
+cd html-react
 # 注意：Cloudflare Workers 构建环境会自动运行 npm ci
 # 如果遇到 Rollup 可选依赖问题，请使用以下构建命令：
 npm install --include=optional @rollup/rollup-linux-x64-gnu && npm run build
@@ -295,19 +295,19 @@ npm install --include=optional @rollup/rollup-linux-x64-gnu && npm run build
 # 或者使用项目提供的 CI 构建脚本：
 npm run build:ci
 
-# 部署到 Cloudflare Workers
-npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
+# 部署到 Cloudflare Workers（需使用本目录的 wrangler.toml + worker.js，否则刷新子路由会 404）
+npx wrangler deploy
 ```
 
 **配置说明：**
 
-- **根目录：** `html`
+- **根目录：** `html-react`（Vue 为 `html`）
 - **环境变量（变量和机密）：**
   - `VITE_API_BASE_URL`: `https://api.xuancheng888.top`
   - `VITE_API_PREFIX`: `/api/admin`
 - **自定义域名：** `admin.xuancheng888.top`
 
-**注意：** `worker.js` 文件会自动处理 SPA 路由，当文件不存在时返回 `index.html`。
+**注意：** `worker.js` 会处理 SPA 路由，当路径不是静态资源时回退到 `index.html`。仅上传 `dist`、不带 Worker 时，刷新 `/admins` 等路径会 404。
 
 ### 性能分析
 

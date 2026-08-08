@@ -285,11 +285,11 @@ See [docs/SHARDING_MIGRATION.md](./docs/SHARDING_MIGRATION.md) and [docs/OPENSOU
 
 ### Cloudflare Workers Deployment
 
-Deploy the frontend application to Cloudflare Workers:
+Deploy the frontend to Cloudflare Workers (Vue: `html/`, React: `html-react/`, same setup):
 
 ```bash
-# Build the frontend application
-cd html
+# Build the frontend (React example; use cd html for Vue)
+cd html-react
 # Note: Cloudflare Workers build environment automatically runs npm ci
 # If you encounter Rollup optional dependency issues, use the following build command:
 npm install --include=optional @rollup/rollup-linux-x64-gnu && npm run build
@@ -297,19 +297,20 @@ npm install --include=optional @rollup/rollup-linux-x64-gnu && npm run build
 # Or use the project's CI build script:
 npm run build:ci
 
-# Deploy to Cloudflare Workers
-npx wrangler deploy --assets ./dist --compatibility-date 2025-11-29 --name admin
+# Deploy to Cloudflare Workers (requires wrangler.toml + worker.js in this directory;
+# otherwise refreshing nested routes returns 404)
+npx wrangler deploy
 ```
 
 **Configuration:**
 
-- **Root directory:** `html`
+- **Root directory:** `html-react` (Vue: `html`)
 - **Environment variables (Variables & Secrets):**
   - `VITE_API_BASE_URL`: `https://api.xuancheng888.top`
   - `VITE_API_PREFIX`: `/api/admin`
 - **Custom domain:** `admin.xuancheng888.top`
 
-**Note:** The `worker.js` file automatically handles SPA routing by returning `index.html` when a file doesn't exist.
+**Note:** `worker.js` handles SPA routing by falling back to `index.html` for non-asset paths. Uploading only `dist` without the Worker will 404 on refresh of routes like `/admins`.
 
 ### Performance Profiling
 
