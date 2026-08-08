@@ -49,9 +49,11 @@ export interface LoginPayload {
 }
 
 export interface CaptchaInfo {
-  captcha_id: string
-  image: string
-  should_show?: boolean
+  captcha?: {
+    enabled?: boolean
+    captcha_id?: string
+    captcha_image?: string
+  }
 }
 
 export interface MenuNode {

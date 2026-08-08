@@ -25,7 +25,13 @@ export default function LoginPage() {
   const [form] = Form.useForm<LoginFormValues>()
   const [loading, setLoading] = useState(false)
   const [needGoogleCode, setNeedGoogleCode] = useState(false)
-  const [captcha, setCaptcha] = useState<{ id: string; image: string; shouldShow: boolean }>({
+  const [captcha, setCaptcha] = useState<{
+    enabled: boolean
+    id: string
+    image: string
+    shouldShow: boolean
+  }>({
+    enabled: false,
     id: '',
     image: '',
     shouldShow: false,
@@ -36,24 +42,42 @@ export default function LoginPage() {
   const setThemeColor = useAppStore((s) => s.setThemeColor)
   const { token } = theme.useToken()
 
+  /** Check whether captcha is enabled (do not show image yet). */
+  const checkCaptchaEnabled = async () => {
+    try {
+      const res = await getLoginCaptcha()
+      const info = res.data?.captcha
+      setCaptcha((prev) => ({
+        ...prev,
+        enabled: !!info?.enabled,
+        shouldShow: false,
+        id: '',
+        image: '',
+      }))
+    } catch {
+      setCaptcha({ enabled: false, id: '', image: '', shouldShow: false })
+    }
+  }
+
+  /** Fetch captcha image and show the field. */
   const fetchCaptcha = async () => {
     try {
       const res = await getLoginCaptcha()
-      const data = res.data
-      if (data) {
-        setCaptcha({
-          id: data.captcha_id || '',
-          image: data.image || '',
-          shouldShow: !!data.should_show || !!data.image,
-        })
-      }
+      const info = res.data?.captcha
+      setCaptcha({
+        enabled: !!info?.enabled,
+        id: info?.captcha_id || '',
+        image: info?.captcha_image || '',
+        shouldShow: true,
+      })
+      form.setFieldValue('captcha_answer', undefined)
     } catch {
-      // captcha endpoint may be optional depending on backend config
+      setCaptcha({ enabled: false, id: '', image: '', shouldShow: false })
     }
   }
 
   useEffect(() => {
-    void fetchCaptcha()
+    void checkCaptchaEnabled()
   }, [])
 
   const handleSubmit = async (values: LoginFormValues) => {
@@ -63,7 +87,7 @@ export default function LoginPage() {
         username: values.username,
         password: values.password,
         ...(needGoogleCode ? { google_code: values.google_code } : {}),
-        ...(captcha.shouldShow && !needGoogleCode
+        ...(!needGoogleCode && captcha.shouldShow
           ? { captcha_id: captcha.id, captcha_answer: values.captcha_answer }
           : {}),
       }
@@ -83,16 +107,30 @@ export default function LoginPage() {
 
       if (code === ERROR_CODES.GOOGLE_CODE_REQUIRED) {
         setNeedGoogleCode(true)
+        setCaptcha((prev) => ({ ...prev, shouldShow: false, id: '', image: '' }))
+        form.setFieldValue('captcha_answer', undefined)
+        form.setFieldValue('google_code', undefined)
         message.warning(err.message || t('login.google_code_required'))
         return
       }
 
-      if (
+      if (code === ERROR_CODES.GOOGLE_CODE_INVALID) {
+        form.setFieldValue('google_code', undefined)
+        if (!err.__handled) {
+          message.error(err.translatedMessage || err.message || t('login.login_failed'))
+        }
+        return
+      }
+
+      // Show captcha after captcha errors or other login failures when captcha is enabled
+      const captchaError =
         code === ERROR_CODES.CAPTCHA_REQUIRED ||
         code === ERROR_CODES.CAPTCHA_INVALID ||
         code === ERROR_CODES.CAPTCHA_EXPIRED
-      ) {
-        setNeedGoogleCode(false)
+
+      if (captcha.enabled && !needGoogleCode && (!captcha.shouldShow || captchaError)) {
+        await fetchCaptcha()
+      } else if (captcha.shouldShow && !needGoogleCode) {
         await fetchCaptcha()
       }
 
