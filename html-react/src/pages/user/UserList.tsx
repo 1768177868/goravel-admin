@@ -273,10 +273,10 @@ export default function UserList() {
     {
       title: t('common.operation'),
       key: 'operation',
-      width: 220,
+      width: 280,
       fixed: 'end',
       render: (_, row) => (
-        <Space>
+        <Space size={0} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {getButtonState('user.update').show && (
             <PermissionButton permission="user.update" type="link" onClick={() => void openEdit(row)}>
               {t('common.edit')}
@@ -288,7 +288,7 @@ export default function UserList() {
             </PermissionButton>
           )}
           <Dropdown menu={{ items: moreMenu(row) }}>
-            <a onClick={(e) => e.preventDefault()}>
+            <a onClick={(e) => e.preventDefault()} style={{ whiteSpace: 'nowrap' }}>
               {t('common.more')} <DownOutlined />
             </a>
           </Dropdown>
