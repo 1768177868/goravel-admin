@@ -23,10 +23,11 @@ export function logout() {
   }) as Promise<ApiResponse<unknown>>
 }
 
-export function getLoginCaptcha() {
+export function getLoginCaptcha(params?: { check?: boolean }) {
   return request({
     url: '/login/captcha',
     method: 'get',
+    params: params?.check ? { check: 1 } : undefined,
   }) as Promise<ApiResponse<CaptchaInfo>>
 }
 

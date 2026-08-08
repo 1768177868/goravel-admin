@@ -45,7 +45,7 @@ export default function LoginPage() {
   /** Check whether captcha is enabled (do not show image yet). */
   const checkCaptchaEnabled = async () => {
     try {
-      const res = await getLoginCaptcha()
+      const res = await getLoginCaptcha({ check: true })
       const info = res.data?.captcha
       setCaptcha((prev) => ({
         ...prev,

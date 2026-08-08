@@ -26,10 +26,11 @@ export function logout() {
 }
 
 // 获取登录验证码
-export function getLoginCaptcha() {
+export function getLoginCaptcha(params) {
   return request({
     url: '/login/captcha',
-    method: 'get'
+    method: 'get',
+    params: params?.check ? { check: 1 } : undefined
   })
 }
 

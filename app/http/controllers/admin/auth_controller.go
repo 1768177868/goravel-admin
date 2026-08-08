@@ -310,20 +310,21 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 }
 
 // Captcha 获取登录验证码
+// Query check=1：仅返回是否开启，不生成图片（避免登录页探测时产生无用 captcha）
 func (r *AuthController) Captcha(ctx http.Context) http.Response {
 	enabled := r.captchaService(ctx).Enabled()
 	captchaData := http.Json{
 		"enabled": enabled,
 	}
 
-	if enabled {
+	checkOnly := ctx.Request().Query("check", "") == "1"
+	if enabled && !checkOnly {
 		captchaID, image, err := r.captchaService(ctx).Generate()
 		if err != nil {
 			return response.ErrorWithLog(ctx, "captcha", err)
 		}
 		captchaData["captcha_id"] = captchaID
 		captchaData["captcha_image"] = image
-		// captchaData["captcha_image"] = "data:image/png;base64," + image
 	}
 
 	return response.Success(ctx, http.Json{

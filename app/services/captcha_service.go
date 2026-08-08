@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mojocn/base64Captcha"
@@ -17,35 +18,45 @@ type CaptchaService interface {
 }
 
 type CaptchaServiceImpl struct {
-	ctx           context.Context
-	driver        base64Captcha.Driver
-	store         base64Captcha.Store
-	expireSeconds int
-	initialized   bool
+	ctx         context.Context
+	driver      base64Captcha.Driver
+	initialized bool
+}
+
+// Shared in-process store so Generate and Verify across HTTP requests see the same captcha.
+// Per-request NewMemoryStore made every login return captcha_expired.
+var (
+	captchaStoreOnce sync.Once
+	captchaStore     base64Captcha.Store
+)
+
+func sharedCaptchaStore(expireSeconds int) base64Captcha.Store {
+	captchaStoreOnce.Do(func() {
+		if expireSeconds <= 0 {
+			expireSeconds = 120
+		}
+		captchaStore = base64Captcha.NewMemoryStore(1024, time.Duration(expireSeconds)*time.Second)
+	})
+	return captchaStore
 }
 
 func NewCaptchaServiceImpl(ctx context.Context) CaptchaService {
-	// 延迟初始化，不在构造函数中查询数据库
-	// 这样可以避免在构建时访问数据库
+	// Delay driver init so constructing the service does not hit the database.
 	return &CaptchaServiceImpl{
-		ctx:           ctx,
-		expireSeconds: 120,
-		initialized:   false,
+		ctx:         ctx,
+		initialized: false,
 	}
 }
 
-// initDriver 延迟初始化 driver 和 store
 func (s *CaptchaServiceImpl) initDriver() {
 	if s.initialized {
 		return
 	}
 
-	// 从数据库读取验证码配置，如果不存在则使用默认值
 	expireSeconds := utils.GetConfigValueInt(s.ctx, "captcha", "captcha_expire", 120)
 	if expireSeconds <= 0 {
 		expireSeconds = 120
 	}
-	s.expireSeconds = expireSeconds
 
 	s.driver = base64Captcha.NewDriverString(
 		50,  // height
@@ -58,19 +69,17 @@ func (s *CaptchaServiceImpl) initDriver() {
 		nil,
 		nil,
 	)
-
-	s.store = base64Captcha.NewMemoryStore(1024, time.Duration(expireSeconds)*time.Second)
+	_ = sharedCaptchaStore(expireSeconds)
 	s.initialized = true
 }
 
 func (s *CaptchaServiceImpl) Enabled() bool {
-	// 从数据库读取验证码配置，如果不存在则使用默认值
 	return utils.GetConfigValueBool(s.ctx, "captcha", "captcha_enabled", false)
 }
 
 func (s *CaptchaServiceImpl) Generate() (string, string, error) {
 	s.initDriver()
-	c := base64Captcha.NewCaptcha(s.driver, s.store)
+	c := base64Captcha.NewCaptcha(s.driver, sharedCaptchaStore(120))
 	id, b64s, _, err := c.Generate()
 	if err != nil {
 		return "", "", err
@@ -84,7 +93,7 @@ func (s *CaptchaServiceImpl) Verify(id, answer string) (bool, string) {
 	}
 
 	s.initDriver()
-	expected := s.store.Get(id, true)
+	expected := sharedCaptchaStore(120).Get(id, true)
 	if expected == "" {
 		return false, "captcha_expired"
 	}

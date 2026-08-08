@@ -183,7 +183,7 @@ const loginRules = computed(() => ({
 // 获取图形验证码配置（不自动获取图片）
 const checkCaptchaEnabled = async () => {
   try {
-    const res = await getLoginCaptcha()
+    const res = await getLoginCaptcha({ check: true })
     const captcha = res.data?.captcha || {}
     captchaInfo.enabled = !!captcha.enabled
     // 不自动显示图形验证码，需要先验证账号密码
