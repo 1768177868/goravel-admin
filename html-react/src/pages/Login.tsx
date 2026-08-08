@@ -247,7 +247,7 @@ export default function LoginPage() {
             </Form>
 
             <Space className="login-hint" size={4}>
-              <Typography.Text type="secondary">admin / admin123</Typography.Text>
+              <Typography.Text type="secondary">demo / demo123</Typography.Text>
             </Space>
           </div>
         </div>
