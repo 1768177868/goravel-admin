@@ -11,40 +11,53 @@ export interface TreeNodeData {
   rawId?: number
   method?: string
   path?: string
+  slug?: string
 }
 
 type MenuLike = Record<string, unknown>
 type PermLike = Record<string, unknown>
 
-function menuTitle(menu: MenuLike): string {
+export interface RolePermissionTranslate {
+  menuTitle: (menu: MenuLike) => string
+  permissionTitle: (perm: PermLike) => string
+  otherLabel: string
+}
+
+function fallbackMenuTitle(menu: MenuLike): string {
   return String(menu.Title || menu.title || menu.Name || menu.name || menu.Slug || menu.slug || '')
 }
 
-function permissionTitle(perm: PermLike): string {
+function fallbackPermissionTitle(perm: PermLike): string {
   return String(
     perm.Description || perm.description || perm.Name || perm.name || perm.Slug || perm.slug || '',
   )
 }
 
-function transformMenuToTree(menus: MenuLike[]): TreeNodeData[] {
+function transformMenuToTree(menus: MenuLike[], translate: RolePermissionTranslate): TreeNodeData[] {
   if (!Array.isArray(menus)) return []
 
   return menus.map((node) => {
     const id = Number(node.id ?? node.ID)
     const children = (node.children || node.Children || []) as MenuLike[]
+    const slug = String(node.Slug || node.slug || '')
     return {
       key: `menu_${id}`,
-      title: menuTitle(node),
+      title: translate.menuTitle(node),
       rawId: id,
       isMenu: true,
       isPermission: false,
+      slug,
       path: String(node.Path || node.path || ''),
-      children: children.length ? transformMenuToTree(children) : undefined,
+      children: children.length ? transformMenuToTree(children, translate) : undefined,
     }
   })
 }
 
-function attachPermissionsToMenus(menuTree: TreeNodeData[], permissions: PermLike[]): TreeNodeData[] {
+function attachPermissionsToMenus(
+  menuTree: TreeNodeData[],
+  permissions: PermLike[],
+  translate: RolePermissionTranslate,
+): TreeNodeData[] {
   const permissionMap = groupBy(permissions, (perm) => Number(perm.MenuID || perm.menu_id || 0))
 
   const walk = (nodes: TreeNodeData[]): TreeNodeData[] =>
@@ -60,7 +73,8 @@ function attachPermissionsToMenus(menuTree: TreeNodeData[], permissions: PermLik
           const permChildren: TreeNodeData[] = matched.map((perm) => {
             const id = Number(perm.id || perm.ID)
             const method = String(perm.Method || perm.method || '')
-            const title = permissionTitle(perm)
+            const slug = String(perm.Slug || perm.slug || '')
+            const title = translate.permissionTitle(perm)
             return {
               key: `perm_${id}`,
               title: method ? `[${method}] ${title}` : title,
@@ -68,6 +82,7 @@ function attachPermissionsToMenus(menuTree: TreeNodeData[], permissions: PermLik
               isMenu: false,
               isPermission: true,
               method,
+              slug,
               path: String(perm.Path || perm.path || ''),
             }
           })
@@ -88,9 +103,18 @@ function attachPermissionsToMenus(menuTree: TreeNodeData[], permissions: PermLik
 export function buildMenuPermissionTree(
   menus: MenuLike[],
   permissions: PermLike[],
-  otherLabel = '其他权限',
+  translate: RolePermissionTranslate | string = '其他权限',
 ): TreeNodeData[] {
-  const tree = attachPermissionsToMenus(transformMenuToTree(menus), permissions)
+  const resolved: RolePermissionTranslate =
+    typeof translate === 'string'
+      ? {
+          menuTitle: fallbackMenuTitle,
+          permissionTitle: fallbackPermissionTitle,
+          otherLabel: translate,
+        }
+      : translate
+
+  const tree = attachPermissionsToMenus(transformMenuToTree(menus, resolved), permissions, resolved)
 
   const matched = new Set<number>()
   const collect = (nodes: TreeNodeData[]) => {
@@ -105,12 +129,13 @@ export function buildMenuPermissionTree(
   if (unmatched.length > 0) {
     tree.push({
       key: 'other_permissions',
-      title: otherLabel,
+      title: resolved.otherLabel,
       isMenu: true,
       children: unmatched.map((perm) => {
         const id = Number(perm.id || perm.ID)
         const method = String(perm.Method || perm.method || '')
-        const title = permissionTitle(perm)
+        const slug = String(perm.Slug || perm.slug || '')
+        const title = resolved.permissionTitle(perm)
         return {
           key: `perm_${id}`,
           title: method ? `[${method}] ${title}` : title,
@@ -118,6 +143,7 @@ export function buildMenuPermissionTree(
           isMenu: false,
           isPermission: true,
           method,
+          slug,
           path: String(perm.Path || perm.path || ''),
         }
       }),
