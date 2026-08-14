@@ -35,13 +35,25 @@ marked.setOptions({
 
 const sanitizeOptions = {
   USE_PROFILES: { html: true },
-  FORBID_TAGS: ['iframe', 'object', 'embed', 'script', 'style'],
+  FORBID_TAGS: ['iframe', 'object', 'embed', 'script', 'style', 'svg', 'form', 'input', 'meta', 'link', 'base'],
   FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover']
 }
 
 const purifier = typeof window !== 'undefined'
   ? createDOMPurify(window)
   : createDOMPurify
+
+let domPurifyHooksInstalled = false
+
+function ensureDomPurifyHooks() {
+  if (domPurifyHooksInstalled || typeof window === 'undefined' || !purifier?.addHook) return
+  purifier.addHook('afterSanitizeAttributes', (node) => {
+    if (node?.tagName === 'A' && node.getAttribute('target') === '_blank') {
+      node.setAttribute('rel', 'noopener noreferrer')
+    }
+  })
+  domPurifyHooksInstalled = true
+}
 
 const fallbackForbiddenTags = new Set(sanitizeOptions.FORBID_TAGS)
 const dangerousUrlPattern = /^(?:javascript|data|vbscript):/i
@@ -85,6 +97,7 @@ function fallbackSanitizeHtml(html) {
  */
 export function sanitizeHtml(html) {
   if (!html) return ''
+  ensureDomPurifyHooks()
   if (purifier?.isSupported === false) {
     return fallbackSanitizeHtml(html)
   }

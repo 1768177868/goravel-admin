@@ -4,6 +4,7 @@ import '@uiw/react-md-editor/markdown-editor.css'
 import request from '@/utils/request'
 import { useAppStore } from '@/stores/app'
 import { resolveUploadStorageUrl } from '@/utils/attachmentUrl'
+import { markdownToHtml } from '@/utils/markdown'
 import './MarkdownEditor.scss'
 
 interface MarkdownEditorProps {
@@ -87,6 +88,14 @@ export default function MarkdownEditor({
         preview="live"
         visibleDragbar
         commandsFilter={(command) => (command.name === 'image' ? imageUploadCommand : command)}
+        components={{
+          preview: (source) => (
+            <div
+              className="wmde-markdown wmde-markdown-color"
+              dangerouslySetInnerHTML={{ __html: markdownToHtml(source) }}
+            />
+          ),
+        }}
       />
     </div>
   )

@@ -7,6 +7,7 @@
       :toolbars="toolbars"
       :language="editorLanguage"
       :theme="isDark ? 'dark' : 'light'"
+      :sanitize="sanitizeHtml"
       @onUploadImg="handleUploadImg"
       @onChange="handleChange"
     />
@@ -22,6 +23,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../store/app'
 import axios from 'axios'
 import { resolveUploadStorageUrl } from '@/utils/attachmentUrl'
+import { sanitizeHtml } from '@/utils/markdown'
 
 const { locale } = useI18n()
 const appStore = useAppStore()

@@ -8,6 +8,8 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
+
+	"goravel/app/utils"
 )
 
 var richTextTagRegexp = regexp.MustCompile(`<[^>]+>`)
@@ -110,6 +112,7 @@ func PrepareRichTextFieldForValidation(data validation.Data, fieldName string) e
 	}
 
 	raw := cast.ToString(val)
+	raw = utils.SanitizeRichTextContent(raw)
 	normalized := strings.ReplaceAll(raw, "&nbsp;", " ")
 	normalized = richTextTagRegexp.ReplaceAllString(normalized, "")
 	normalized = strings.TrimSpace(normalized)

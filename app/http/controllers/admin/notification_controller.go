@@ -13,6 +13,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 	"goravel/app/utils/logger"
 )
 
@@ -192,6 +193,11 @@ func (r *NotificationController) Store(ctx http.Context) http.Response {
 		// 2. 替换 http(s)://Host (无结尾斜杠)
 		currentBaseURLNoSlash := scheme + "://" + host
 		content = strings.ReplaceAll(content, currentBaseURLNoSlash, "")
+	}
+
+	content = utils.SanitizeRichTextContent(content)
+	if content == "" {
+		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrParamsRequired.Code)
 	}
 
 	var receiverID *uint

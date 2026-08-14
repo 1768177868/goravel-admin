@@ -9,8 +9,22 @@ marked.setOptions({
 
 const sanitizeOptions = {
   USE_PROFILES: { html: true },
-  FORBID_TAGS: ['iframe', 'object', 'embed', 'script', 'style'],
+  FORBID_TAGS: ['iframe', 'object', 'embed', 'script', 'style', 'svg', 'form', 'input', 'meta', 'link', 'base'],
   FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover'],
+  ADD_ATTR: ['target'],
+}
+
+let domPurifyHooksInstalled = false
+
+function ensureDomPurifyHooks() {
+  if (domPurifyHooksInstalled || typeof window === 'undefined') return
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (!(node instanceof Element)) return
+    if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+      node.setAttribute('rel', 'noopener noreferrer')
+    }
+  })
+  domPurifyHooksInstalled = true
 }
 
 const fallbackForbiddenTags = new Set(sanitizeOptions.FORBID_TAGS)
@@ -42,6 +56,7 @@ function fallbackSanitizeHtml(html: string) {
 
 export function sanitizeHtml(html: string) {
   if (!html) return ''
+  ensureDomPurifyHooks()
   const sanitized = DOMPurify.sanitize(html, sanitizeOptions)
   if (sanitized === '' && html.trim() !== '') {
     return fallbackSanitizeHtml(html)
