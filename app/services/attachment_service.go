@@ -153,6 +153,10 @@ func (s *AttachmentServiceImpl) InitChunkUpload(filename string, totalSize int64
 	hash := md5.Sum(fmt.Appendf(nil, "%s_%d_%d", filename, totalSize, time.Now().UnixNano()))
 	chunkID := hex.EncodeToString(hash[:])
 
+	if err := utils.ValidateAttachmentExtension(filename); err != nil {
+		return "", err
+	}
+
 	// 不再使用服务端缓存，分片信息由客户端管理
 	return chunkID, nil
 }
@@ -335,6 +339,28 @@ func (s *AttachmentServiceImpl) MergeChunks(chunkID string, filename string, mim
 		return nil, apperrors.ErrNoChunkDataToMerge
 	}
 
+	// magic bytes / 白名单校验（合并完成后读取文件头）
+	header := make([]byte, 512)
+	if headerFile, err := os.Open(finalFullPath); err == nil {
+		if n, readErr := headerFile.Read(header); readErr == nil && n > 0 {
+			validatedMIME, validateErr := utils.ValidateAttachmentFile(filename, header[:n])
+			if validateErr != nil {
+				_ = headerFile.Close()
+				_ = os.Remove(finalFullPath)
+				return nil, validateErr
+			}
+			mimeType = validatedMIME
+		} else {
+			_ = headerFile.Close()
+			_ = os.Remove(finalFullPath)
+			return nil, apperrors.ErrAttachmentFileContentMismatch
+		}
+		_ = headerFile.Close()
+	} else {
+		_ = os.Remove(finalFullPath)
+		return nil, apperrors.ErrAttachmentFileContentMismatch
+	}
+
 	// 验证文件大小（从文件系统获取实际大小）
 	if fileInfo, err := os.Stat(finalFullPath); err == nil {
 		fileSize = fileInfo.Size()
@@ -458,9 +484,11 @@ func (s *AttachmentServiceImpl) GetChunkProgress(chunkID string, totalChunks int
 
 // UploadFile 普通文件上传（小文件）
 func (s *AttachmentServiceImpl) UploadFile(fileData []byte, filename string, mimeType string, isPublicRaw string) (*models.Attachment, error) {
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
+	validatedMIME, err := utils.ValidateAttachmentFile(filename, fileData)
+	if err != nil {
+		return nil, err
 	}
+	mimeType = validatedMIME
 
 	// 生成文件路径
 	ext := filepath.Ext(filename)

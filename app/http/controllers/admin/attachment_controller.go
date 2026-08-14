@@ -2,8 +2,6 @@ package admin
 
 import (
 	"fmt"
-	"mime"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +11,7 @@ import (
 	"goravel/app/http/response"
 	"goravel/app/models"
 	"goravel/app/services"
+	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 
 	"github.com/goravel/framework/contracts/http"
@@ -131,16 +130,9 @@ func (r *AttachmentController) Upload(ctx http.Context) http.Response {
 	// 转换为字节数组
 	fileData := []byte(fileDataStr)
 
-	// 获取MIME类型：直接根据文件扩展名推断（multipart/form-data 的 Content-Type 不是文件本身的 MIME 类型）
-	ext := filepath.Ext(filename)
-	mimeType := mime.TypeByExtension(ext)
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-
 	attachmentService := services.NewAttachmentService(ctx)
 	isPublicRaw := ctx.Request().Input("is_public", "")
-	attachment, err := attachmentService.UploadFile(fileData, filename, mimeType, isPublicRaw)
+	attachment, err := attachmentService.UploadFile(fileData, filename, "", isPublicRaw)
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr)
@@ -317,14 +309,7 @@ func (r *AttachmentController) ChunkUpload(ctx http.Context) http.Response {
 			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidTotalChunks.Code)
 		}
 
-		// 获取MIME类型：直接根据文件扩展名推断（前端传递的 mime_type 可能不准确）
-		ext := filepath.Ext(filename)
-		mimeType := mime.TypeByExtension(ext)
-		if mimeType == "" {
-			mimeType = "application/octet-stream"
-		}
-
-		attachment, err := attachmentService.MergeChunks(chunkID, filename, mimeType, totalChunks, ctx.Request().Input("is_public", ""))
+		attachment, err := attachmentService.MergeChunks(chunkID, filename, "", totalChunks, ctx.Request().Input("is_public", ""))
 		if err != nil {
 			return r.attachmentServiceError(ctx, err, map[string]any{
 				"chunk_id":     chunkID,
@@ -427,6 +412,7 @@ func (r *AttachmentController) Download(ctx http.Context) http.Response {
 		Header("Content-Type", contentType).
 		Header("Content-Length", fmt.Sprintf("%d", len(content))).
 		Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
+		Header("X-Content-Type-Options", "nosniff").
 		Header("Cache-Control", "no-cache, no-store, must-revalidate").
 		Header("Pragma", "no-cache").
 		Header("Expires", "0")
@@ -673,17 +659,19 @@ func (r *AttachmentController) serveAttachmentContent(ctx http.Context, attachme
 		mimeType = "application/octet-stream"
 	}
 
+	effectiveDisposition := utils.AttachmentPreviewDisposition(mimeType, attachment.FileType, disposition)
 	cacheControl := "public, max-age=3600"
-	if disposition == "attachment" {
+	if effectiveDisposition == "attachment" {
 		cacheControl = "no-cache, no-store, must-revalidate"
 	}
 
 	httpResp := ctx.Response().
 		Header("Content-Type", mimeType).
 		Header("Content-Length", fmt.Sprintf("%d", len(content))).
+		Header("X-Content-Type-Options", "nosniff").
 		Header("Cache-Control", cacheControl)
 
-	if disposition == "attachment" {
+	if effectiveDisposition == "attachment" {
 		filename := attachment.Filename
 		if filename == "" {
 			filename = attachment.Path
@@ -692,10 +680,14 @@ func (r *AttachmentController) serveAttachmentContent(ctx http.Context, attachme
 			Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename)).
 			Header("Pragma", "no-cache").
 			Header("Expires", "0")
+	} else if utils.AttachmentInlinePreviewSafe(mimeType, attachment.FileType) {
+		httpResp = httpResp.Header("Content-Disposition", "inline")
 	}
 
 	if attachment.FileType == "image" || attachment.FileType == "video" {
-		httpResp = httpResp.Header("Accept-Ranges", "bytes")
+		if utils.AttachmentInlinePreviewSafe(mimeType, attachment.FileType) {
+			httpResp = httpResp.Header("Accept-Ranges", "bytes")
+		}
 	}
 
 	return httpResp.String(http.StatusOK, content)

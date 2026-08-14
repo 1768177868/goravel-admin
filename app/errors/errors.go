@@ -70,6 +70,8 @@ var (
 	ErrAttachmentCategoryNotFound  = NewBusinessError("attachment_category_not_found", "附件分类不存在")
 	ErrAttachmentCategoryProtectedCannotDelete = NewBusinessError("attachment_category_protected_cannot_delete", "系统分类不可删除")
 	ErrAttachmentNotPublic                     = NewBusinessError("attachment_not_public", "附件未公开，无法匿名访问")
+	ErrAttachmentFileTypeNotAllowed              = NewBusinessError("attachment_file_type_not_allowed", "不允许上传该类型的文件")
+	ErrAttachmentFileContentMismatch             = NewBusinessError("attachment_file_content_mismatch", "文件内容与扩展名不匹配")
 	ErrChunkNotFound               = NewBusinessError("chunk_not_found", "分片 {chunk_index} 不存在")
 	ErrChunkMissing                = NewBusinessError("chunk_missing", "分片缺失: {missing_chunks} (共 {count} 个分片缺失)")
 	ErrNoChunkDataToMerge          = NewBusinessError("no_chunk_data_to_merge", "没有可合并的分片数据")
