@@ -1627,6 +1627,8 @@
     "import_failed": "Import failed",
     "manual_mode": "Manual Configuration",
     "ai_mode": "AI Assistant",
+    "ai_not_configured_title": "AI feature is not enabled",
+    "ai_not_configured_tip": "Set AI_API_KEY (or OPENAI_API_KEY) in the project .env file. AI_BASE_URL and AI_MODEL are optional. Restart the backend and refresh the page after configuration.",
     "ai_mode_tip": "Describe your module requirements in natural language, and AI will automatically generate field configuration",
     "ai_example_title": "Example prompts (click to fill)",
     "ai_example_product": "Create a product module: name, category, price, stock, listing status, cover image, rich-text description",

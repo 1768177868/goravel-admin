@@ -202,9 +202,19 @@
           </el-form>
       </el-tab-pane>
 
-        <!-- AI 辅助标签页（未配置 API Key 时隐藏） -->
-        <el-tab-pane v-if="aiEnabled" :label="$t('code_generator.ai_mode')" name="ai">
+        <!-- AI 辅助标签页（未配置 API Key 时显示配置说明） -->
+        <el-tab-pane :label="$t('code_generator.ai_mode')" name="ai">
           <div class="ai-assistant">
+            <el-alert
+              v-if="!aiEnabled"
+              :title="$t('code_generator.ai_not_configured_title')"
+              type="warning"
+              :closable="false"
+              style="margin-bottom: 20px"
+            >
+              <p>{{ $t('code_generator.ai_not_configured_tip') }}</p>
+            </el-alert>
+            <template v-else>
             <el-alert
               :title="$t('code_generator.ai_mode_tip')"
               type="info"
@@ -296,6 +306,7 @@
                 </el-table-column>
               </el-table>
             </div>
+            </template>
           </div>
         </el-tab-pane>
       </el-tabs>

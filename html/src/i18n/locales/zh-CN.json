@@ -1609,6 +1609,8 @@
     "import_failed": "导入失败",
     "manual_mode": "手动配置",
     "ai_mode": "AI 辅助",
+    "ai_not_configured_title": "AI 功能未启用",
+    "ai_not_configured_tip": "请在项目 .env 中配置 AI_API_KEY（或 OPENAI_API_KEY），可选 AI_BASE_URL、AI_MODEL。配置后重启后端并刷新页面。",
     "ai_mode_tip": "使用自然语言描述你的模块需求，AI 将自动生成字段配置",
     "ai_example_title": "示例描述（点击填入）",
     "ai_example_product": "创建商品管理模块：商品名称、分类、价格、库存、上架状态、封面图、详情富文本",

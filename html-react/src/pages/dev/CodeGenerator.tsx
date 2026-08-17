@@ -305,15 +305,23 @@ export default function CodeGenerator() {
                 </Form>
               ),
             },
-            ...(cg.aiEnabled
-              ? [
-                  {
-                    key: 'ai',
-                    label: t('code_generator.ai_mode'),
-                    children: (
-                      <div>
-                        <Alert type="info" showIcon message={t('code_generator.ai_mode_tip')} style={{ marginBottom: 20 }} />
-                        <Form layout="vertical">
+            {
+              key: 'ai',
+              label: t('code_generator.ai_mode'),
+              children: (
+                <div>
+                  {!cg.aiEnabled ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message={t('code_generator.ai_not_configured_title')}
+                      description={t('code_generator.ai_not_configured_tip')}
+                      style={{ marginBottom: 20 }}
+                    />
+                  ) : (
+                    <>
+                      <Alert type="info" showIcon message={t('code_generator.ai_mode_tip')} style={{ marginBottom: 20 }} />
+                      <Form layout="vertical">
                           <Form.Item label={t('code_generator.ai_example_title')}>
                             <Space wrap>
                               {cg.aiExamplePrompts.map((prompt) => (
@@ -388,11 +396,11 @@ export default function CodeGenerator() {
                             />
                           </>
                         ) : null}
-                      </div>
-                    ),
-                  },
-                ]
-              : []),
+                    </>
+                  )}
+                </div>
+              ),
+            },
           ]}
         />
       </Card>
