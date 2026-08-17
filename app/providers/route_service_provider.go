@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -27,13 +28,52 @@ func (receiver *RouteServiceProvider) Boot(app foundation.Application) {
 	// Add HTTP middleware
 	facades.Route().GlobalMiddleware(http.Kernel{}.Middleware()...)
 	facades.Route().Recover(func(ctx contractshttp.Context, err any) {
+		msg := fmt.Sprintf("%v", err)
+		// Malformed client bodies / scanners (goravel/gin getHttpBody): do not flood system_logs.
+		if isBadRequestBodyPanic(err) {
+			facades.Log().Warning(msg)
+			_ = ctx.Response().Json(contractshttp.StatusBadRequest, contractshttp.Json{
+				"code":       contractshttp.StatusBadRequest,
+				"message":    trans.Get(ctx, "params_error"),
+				"error_code": "params_error",
+			}).Abort()
+			return
+		}
+
 		systemLogService := services.NewSystemLogService(ctx)
-		_ = systemLogService.RecordHTTP(ctx, "error", "recover", fmt.Sprintf("%v", err), nil)
+		_ = systemLogService.RecordHTTP(ctx, "error", "recover", msg, nil)
 		facades.Log().Error(err)
-		_ = ctx.Response().String(contractshttp.StatusInternalServerError, "recover").Abort()
+		_ = ctx.Response().Json(contractshttp.StatusInternalServerError, contractshttp.Json{
+			"code":    contractshttp.StatusInternalServerError,
+			"message": "recover",
+		}).Abort()
 	})
 
 	receiver.configureRateLimiting()
+}
+
+// isBadRequestBodyPanic reports recover payloads that typically come from
+// malformed client request bodies (scanners / truncated multipart).
+// Generic nil-pointer panics are only treated as client errors when the stack
+// points at goravel/gin getHttpBody (upstream MultipartForm nil bug).
+func isBadRequestBodyPanic(err any) bool {
+	return isBadRequestBodyPanicWithStack(fmt.Sprintf("%v", err), string(debug.Stack()))
+}
+
+func isBadRequestBodyPanicWithStack(msg, stack string) bool {
+	msg = strings.ToLower(msg)
+	if strings.Contains(msg, "parse multipart form error") ||
+		strings.Contains(msg, "malformed mime header") ||
+		strings.Contains(msg, "multipart: nextpart") ||
+		strings.Contains(msg, "request body too large") {
+		return true
+	}
+	if strings.Contains(msg, "nil pointer") || strings.Contains(msg, "invalid memory address") {
+		stack = strings.ToLower(stack)
+		return strings.Contains(stack, "gethttpbody") ||
+			strings.Contains(stack, "parsemultipartform")
+	}
+	return false
 }
 
 func (receiver *RouteServiceProvider) configureRateLimiting() {
