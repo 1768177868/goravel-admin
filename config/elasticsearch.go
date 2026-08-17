@@ -28,6 +28,10 @@ func init() {
 		"sync_orders_enabled": config.Env("ELASTICSEARCH_SYNC_ORDERS", false),
 		// 订单索引短名（完整 = index_prefix + orders_index）
 		"orders_index": config.Env("ELASTICSEARCH_ORDERS_INDEX", "orders"),
+		// 订单文本字段分词：auto=检测 IK，有则用 ik_max_word，无则 standard | standard | ik_max_word 等
+		"orders_analyzer": config.Env("ELASTICSEARCH_ORDERS_ANALYZER", "auto"),
+		// 搜索分词（可选）；auto+IK 时默认 ik_smart
+		"orders_search_analyzer": config.Env("ELASTICSEARCH_ORDERS_SEARCH_ANALYZER", ""),
 		// 订单等 ES 同步任务使用的队列逻辑名（需 bootstrap 中注册对应 Worker）
 		"sync_queue": config.Env("ELASTICSEARCH_QUEUE", "elasticsearch"),
 		// 同步队列 Worker：auto=任一副开关开启则启动 | true | false

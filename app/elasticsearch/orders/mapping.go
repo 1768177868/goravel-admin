@@ -24,16 +24,18 @@ func OrdersIndexName() string {
 	return clients.ElasticsearchIndexName(facades.Config(), short)
 }
 
-func ordersIndexBody() map[string]any {
+func ordersIndexBody(indexAnalyzer, searchAnalyzer string) map[string]any {
+	textMapping := textFieldMapping(indexAnalyzer, searchAnalyzer)
 	return map[string]any{
 		"mappings": map[string]any{
 			"properties": map[string]any{
-				"id":       map[string]any{"type": "long"},
-				"order_no": map[string]any{"type": "keyword"},
-				"user_id":  map[string]any{"type": "long"},
-				"amount":   map[string]any{"type": "double"},
-				"status":   map[string]any{"type": "keyword"},
-				"remark":   map[string]any{"type": "text"},
+				"id":            map[string]any{"type": "long"},
+				"order_no":      map[string]any{"type": "keyword"},
+				"user_id":       map[string]any{"type": "long"},
+				"amount":        map[string]any{"type": "double"},
+				"status":        map[string]any{"type": "keyword"},
+				"remark":        textMapping,
+				"product_names": textMapping,
 				"created_at": map[string]any{
 					"type":   "date",
 					"format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis",
@@ -42,7 +44,6 @@ func ordersIndexBody() map[string]any {
 					"type":   "date",
 					"format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis",
 				},
-				"product_names": map[string]any{"type": "text"},
 			},
 		},
 	}
@@ -86,7 +87,8 @@ func initOrdersIndex(ctx context.Context) error {
 		}
 	}
 
-	body, err := json.Marshal(ordersIndexBody())
+	indexAnalyzer, searchAnalyzer := ResolveOrdersTextAnalyzers(ctx, es)
+	body, err := json.Marshal(ordersIndexBody(indexAnalyzer, searchAnalyzer))
 	if err != nil {
 		return err
 	}
