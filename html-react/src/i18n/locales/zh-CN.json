@@ -983,6 +983,7 @@
   "monitor": {
     "cpu": "CPU",
     "cpu_usage": "使用率",
+    "cpu_usage_system": "整机（{{cores}} 核合计）",
     "cpu_model": "型号",
     "cpu_logical_cores": "逻辑核心数",
     "cpu_physical_cores": "物理核心数",
@@ -1054,7 +1055,9 @@
     "process_connections": "连接数",
     "process_name": "进程名",
     "process_ranking": "进程占用排行",
+    "process_ranking_hint": "进程 CPU 按单核计算，与顶部整机 CPU（多核合计）口径不同",
     "process_top_by_cpu": "CPU 占用 Top",
+    "process_top_cpu_hint": "按单核计算，100% 表示占满 1 个核心；多线程进程可能超过 100%",
     "process_top_by_memory": "内存占用 Top",
     "process_top_user": "用户",
     "process_status": "状态",

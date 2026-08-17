@@ -1349,6 +1349,7 @@
   "monitor": {
     "cpu": "CPU",
     "cpu_usage": "Usage",
+    "cpu_usage_system": "System ({{cores}} cores total)",
     "cpu_model": "Model",
     "cpu_cores": "Cores",
     "cpu_logical_cores": "Logical Cores",
@@ -1446,8 +1447,9 @@
     "process_connections": "Connections",
     "process_name": "Process Name",
     "process_ranking": "Process Usage Ranking",
-    "process_ranking_hint": "CPU % uses delta sampling; matches top/htop better after one refresh or SSE tick",
+    "process_ranking_hint": "Process CPU is per-core; top card shows system-wide usage across all cores",
     "process_top_by_cpu": "Top CPU",
+    "process_top_cpu_hint": "Per-core basis. 100% = one full core; multi-threaded processes may exceed 100%.",
     "process_top_by_memory": "Top Memory",
     "process_top_user": "User",
     "process_status": "Status",

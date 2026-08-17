@@ -29,7 +29,12 @@
           <div class="monitor-content">
             <div class="monitor-item usage-item">
               <div class="usage-header">
-                <span class="label">{{ $t('monitor.cpu_usage') }}</span>
+                <span class="label">
+                  {{ $t('monitor.cpu_usage') }}
+                  <span class="usage-scope-hint">
+                    · {{ $t('monitor.cpu_usage_system', { cores: systemInfo.cpu?.cores || 0 }) }}
+                  </span>
+                </span>
                 <span class="percent-value">{{ formatPercent(systemInfo.cpu?.percent || 0) }}</span>
               </div>
               <el-progress
@@ -740,13 +745,14 @@
                 <el-icon class="card-icon"><TrendCharts /></el-icon>
                 <span>{{ $t('monitor.process_ranking') }}</span>
               </div>
-              <span class="process-top-hint"></span>
+              <span class="process-top-hint">{{ $t('monitor.process_ranking_hint') }}</span>
             </div>
           </template>
           <div class="monitor-content process-top-body">
             <el-row :gutter="16">
               <el-col :xs="24" :sm="24" :md="12">
                 <div class="process-top-subtitle">{{ $t('monitor.process_top_by_cpu') }}</div>
+                <div class="process-top-cpu-hint">{{ $t('monitor.process_top_cpu_hint') }}</div>
                 <el-table
                   :data="systemInfo.process_top.by_cpu"
                   stripe
@@ -2111,6 +2117,24 @@ html.dark .monitor-card :deep(.el-card__body) {
   max-width: 58%;
   text-align: right;
   line-height: 1.45;
+}
+
+.usage-scope-hint {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.process-top-cpu-hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-color-secondary);
+  margin: -4px 0 8px;
+  line-height: 1.5;
+}
+
+html.dark .process-top-cpu-hint {
+  color: var(--el-text-color-secondary) !important;
 }
 
 .process-top-subtitle {

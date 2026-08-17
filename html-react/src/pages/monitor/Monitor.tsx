@@ -750,7 +750,7 @@ export default function Monitor() {
             t('monitor.cpu'),
             <DesktopOutlined />,
             Number(systemInfo.cpu?.percent || 0),
-            t('monitor.cpu_usage'),
+            `${t('monitor.cpu_usage')} · ${t('monitor.cpu_usage_system', { cores: Number(systemInfo.cpu?.cores || 0) })}`,
             [
               { label: t('monitor.cpu_model'), value: String(systemInfo.cpu?.model || '-'), highlight: false },
               {
@@ -1026,10 +1026,20 @@ export default function Monitor() {
         {systemInfo.process_top &&
         ((systemInfo.process_top.by_cpu?.length || 0) > 0 ||
           (systemInfo.process_top.by_memory?.length || 0) > 0) ? (
-          <Card className="monitor-card" title={t('monitor.process_ranking')} style={{ marginTop: 20 }}>
+          <Card
+            className="monitor-card"
+            title={
+              <div className="process-ranking-header">
+                <span>{t('monitor.process_ranking')}</span>
+                <span className="process-ranking-hint">{t('monitor.process_ranking_hint')}</span>
+              </div>
+            }
+            style={{ marginTop: 20 }}
+          >
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <div className="process-top-subtitle">{t('monitor.process_top_by_cpu')}</div>
+                <div className="process-top-cpu-hint">{t('monitor.process_top_cpu_hint')}</div>
                 <Table
                   size="small"
                   bordered
