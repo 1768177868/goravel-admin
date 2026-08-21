@@ -119,7 +119,8 @@
     "tooManyRequests": "Too many requests, please try again later",
     "network": "Network error, please check your connection",
     "timeout": "Request timed out, please try again later",
-    "page_load_failed": "Failed to load page, please refresh"
+    "page_load_failed": "Failed to load page, please refresh",
+    "route_nav_failed": "Navigation failed, please refresh the page"
   },
   "editor": {
     "markdown": "Markdown",

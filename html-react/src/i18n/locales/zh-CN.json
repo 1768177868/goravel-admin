@@ -119,7 +119,8 @@
     "tooManyRequests": "请求过于频繁，请稍后再试",
     "network": "网络错误，请检查网络连接",
     "timeout": "请求超时，请稍后再试",
-    "page_load_failed": "页面加载失败，请刷新重试"
+    "page_load_failed": "页面加载失败，请刷新重试",
+    "route_nav_failed": "路由导航失败，请刷新页面"
   },
   "editor": {
     "markdown": "Markdown",

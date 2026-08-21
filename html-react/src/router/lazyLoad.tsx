@@ -1,12 +1,14 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 import { message } from 'antd'
 import i18n from '@/i18n'
+import { handleChunkLoadFailure } from '@/utils/chunkLoadRecovery'
 import logger from '@/utils/logger'
 
 type ModuleDefault = { default: ComponentType<object> }
 
 /**
  * Lazy import with retry + timeout (mirrors Vue router lazyLoad).
+ * On chunk-load failure after retries: toast + auto-reload (mirrors Vue router.onError).
  */
 export function lazyLoad(
   importFn: () => Promise<ModuleDefault>,
@@ -32,10 +34,12 @@ export function lazyLoad(
               setTimeout(attemptLoad, delay)
             } else {
               logger.error('模块加载失败，已达到最大重试次数:', error)
-              message.error({
-                content: i18n.t('error.page_load_failed'),
-                duration: 5,
-              })
+              if (!handleChunkLoadFailure(error)) {
+                message.error({
+                  content: i18n.t('error.page_load_failed'),
+                  duration: 5,
+                })
+              }
               reject(error)
             }
           })

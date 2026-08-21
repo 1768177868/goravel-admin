@@ -12,6 +12,7 @@ import { useUserStore } from '@/stores/user'
 import { setNavigator } from '@/utils/navigation'
 import { convertMenusToRoutes } from './dynamicRoutes'
 import { lazyLoad } from './lazyLoad'
+import { RouteErrorFallback } from './RouteErrorFallback'
 import logger from '@/utils/logger'
 
 const LoginPage = lazyLoad(() => import('../pages/Login'))
@@ -75,6 +76,7 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
     {
       path: '/login',
       element: <GuestGuard />,
+      errorElement: <RouteErrorFallback />,
       children: [
         {
           index: true,
@@ -86,9 +88,11 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
     {
       path: '/',
       element: <AuthGuard />,
+      errorElement: <RouteErrorFallback />,
       children: [
         {
           element: withSuspense(<MainLayout />),
+          errorElement: <RouteErrorFallback />,
           children: [
             { index: true, element: <Navigate to="/dashboard" replace /> },
             {
@@ -104,6 +108,7 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
             ...dynamicChildren.map((route) => ({
               ...route,
               element: withSuspense(route.element),
+              errorElement: <RouteErrorFallback />,
             })),
             {
               path: '*',
