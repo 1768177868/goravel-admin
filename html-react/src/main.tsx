@@ -4,6 +4,9 @@ import App from './App'
 import '@/i18n'
 import '@/utils/request'
 import '@/styles/global.scss'
+import { installChunkLoadRecovery } from '@/utils/chunkLoadRecovery'
+
+installChunkLoadRecovery()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

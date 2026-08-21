@@ -17,6 +17,17 @@ export default defineConfig(({ mode }) => {
       // History API fallback is enabled by default for Vite SPA apps so deep links
       // like /admins reload to index.html instead of a bare 404 from the dev server.
       strictPort: false,
+      warmup: {
+        clientFiles: [
+          './src/main.tsx',
+          './src/App.tsx',
+          './src/layouts/MainLayout.tsx',
+          './src/pages/Login.tsx',
+          './src/pages/Dashboard.tsx',
+          './src/pages/profile/Profile.tsx',
+          './src/router/index.tsx',
+        ],
+      },
       proxy: {
         '/api/admin/public': {
           target: env.VITE_API_BASE_URL || 'http://127.0.0.1:3000',
@@ -30,6 +41,21 @@ export default defineConfig(({ mode }) => {
           secure: false,
         },
       },
+    },
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'antd',
+        '@ant-design/icons',
+        'axios',
+        'dayjs',
+        'zustand',
+        'i18next',
+        'react-i18next',
+        'lodash-es',
+      ],
     },
     build: {
       outDir: './dist',

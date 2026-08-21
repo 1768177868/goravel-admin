@@ -1,4 +1,4 @@
-import type { ComponentType, LazyExoticComponent } from 'react'
+import type { ComponentType, LazyExoticComponent, ReactElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
 import { lazyLoad } from './lazyLoad'
 import { flattenTree } from '@/utils/tree'
@@ -11,6 +11,9 @@ import type { MenuNode } from '@/types'
  * - `admin/AdminList` -> `../pages/admin/AdminList.tsx`
  */
 const pageModules = import.meta.glob('../pages/**/*.{tsx,jsx}')
+
+/** Reuse the same React.lazy instance across router rebuilds (menus refresh / HMR). */
+const lazyElementCache = new Map<string, ReactElement>()
 
 export interface AppRouteMeta {
   titleKey?: string
@@ -26,7 +29,9 @@ export type AppRouteObject = RouteObject & {
   children?: AppRouteObject[]
 }
 
-function resolvePageModule(component: string): (() => Promise<{ default: ComponentType<object> }>) | null {
+function resolvePageModule(
+  component: string,
+): { key: string; importFn: () => Promise<{ default: ComponentType<object> }> } | null {
   if (!component || component === 'Layout') return null
 
   const modulePath = component.replace(/^(\.\.\/)?(pages|views)\//, '').replace(/\.(tsx|jsx|vue)$/, '')
@@ -41,7 +46,10 @@ function resolvePageModule(component: string): (() => Promise<{ default: Compone
   for (const path of possiblePaths) {
     const mod = pageModules[path]
     if (mod) {
-      return mod as () => Promise<{ default: ComponentType<object> }>
+      return {
+        key: path,
+        importFn: mod as () => Promise<{ default: ComponentType<object> }>,
+      }
     }
   }
 
@@ -50,9 +58,17 @@ function resolvePageModule(component: string): (() => Promise<{ default: Compone
   return null
 }
 
-function createLazyElement(importFn: () => Promise<{ default: ComponentType<object> }>) {
+function createLazyElement(
+  cacheKey: string,
+  importFn: () => Promise<{ default: ComponentType<object> }>,
+) {
+  const cached = lazyElementCache.get(cacheKey)
+  if (cached) return cached
+
   const LazyComp: LazyExoticComponent<ComponentType<object>> = lazyLoad(importFn)
-  return <LazyComp />
+  const element = <LazyComp />
+  lazyElementCache.set(cacheKey, element)
+  return element
 }
 
 /**
@@ -108,7 +124,7 @@ export function convertMenusToRoutes(menus: MenuNode[] | null | undefined): AppR
         path: routePath,
         id: routeName,
         handle: { ...handle, externalUrl: path },
-        element: createLazyElement(() => import('../pages/iframe/IframeView')),
+        element: createLazyElement('iframe/IframeView', () => import('../pages/iframe/IframeView')),
       })
       return
     }
@@ -121,7 +137,7 @@ export function convertMenusToRoutes(menus: MenuNode[] | null | undefined): AppR
         path: routePath,
         id: routeName,
         handle,
-        element: createLazyElement(() => import('../pages/Placeholder')),
+        element: createLazyElement('Placeholder', () => import('../pages/Placeholder')),
       })
       return
     }
@@ -130,7 +146,7 @@ export function convertMenusToRoutes(menus: MenuNode[] | null | undefined): AppR
       path: routePath,
       id: routeName,
       handle,
-      element: createLazyElement(pageImport),
+      element: createLazyElement(pageImport.key, pageImport.importFn),
     })
   })
 

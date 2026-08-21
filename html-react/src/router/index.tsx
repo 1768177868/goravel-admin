@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Navigate,
   Outlet,
@@ -11,15 +11,16 @@ import { Spin } from 'antd'
 import { useUserStore } from '@/stores/user'
 import { setNavigator } from '@/utils/navigation'
 import { convertMenusToRoutes } from './dynamicRoutes'
-import { lazyLoad } from './lazyLoad'
 import { RouteErrorFallback } from './RouteErrorFallback'
 import logger from '@/utils/logger'
 
-const LoginPage = lazyLoad(() => import('../pages/Login'))
-const MainLayout = lazyLoad(() => import('../layouts/MainLayout'))
-const DashboardPage = lazyLoad(() => import('../pages/Dashboard'))
-const ProfilePage = lazyLoad(() => import('../pages/profile/Profile'))
-const NotFoundPage = lazyLoad(() => import('../pages/NotFound'))
+// Shell routes are eager: Vite HMR often breaks lazy MainLayout with
+// "Failed to fetch dynamically imported module ...?t=...".
+import LoginPage from '../pages/Login'
+import MainLayout from '../layouts/MainLayout'
+import DashboardPage from '../pages/Dashboard'
+import ProfilePage from '../pages/profile/Profile'
+import NotFoundPage from '../pages/NotFound'
 
 function PageFallback({ fullscreen = false }: { fullscreen?: boolean }) {
   return (
@@ -71,6 +72,25 @@ function GuestGuard() {
   )
 }
 
+function menusSignature(menus: ReturnType<typeof useUserStore.getState>['menus']): string {
+  if (!menus?.length) return ''
+  try {
+    return JSON.stringify(
+      menus.map((m) => ({
+        id: m.id ?? m.ID,
+        path: m.Path ?? m.path,
+        component: m.Component ?? m.component,
+        type: m.Type ?? m.type,
+        status: m.Status ?? m.status,
+        link: m.LinkType ?? m.link_type,
+        children: m.children ?? m.Children,
+      })),
+    )
+  } catch {
+    return String(menus.length)
+  }
+}
+
 function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
   return createBrowserRouter([
     {
@@ -80,7 +100,7 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
       children: [
         {
           index: true,
-          element: withSuspense(<LoginPage />),
+          element: <LoginPage />,
           handle: { requiresAuth: false },
         },
       ],
@@ -91,18 +111,18 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
       errorElement: <RouteErrorFallback />,
       children: [
         {
-          element: withSuspense(<MainLayout />),
+          element: <MainLayout />,
           errorElement: <RouteErrorFallback />,
           children: [
             { index: true, element: <Navigate to="/dashboard" replace /> },
             {
               path: 'dashboard',
-              element: withSuspense(<DashboardPage />),
+              element: <DashboardPage />,
               handle: { titleKey: 'menu.dashboard' },
             },
             {
               path: 'profile',
-              element: withSuspense(<ProfilePage />),
+              element: <ProfilePage />,
               handle: { titleKey: 'menu.profile' },
             },
             ...dynamicChildren.map((route) => ({
@@ -112,7 +132,7 @@ function buildRouter(dynamicChildren: ReturnType<typeof convertMenusToRoutes>) {
             })),
             {
               path: '*',
-              element: withSuspense(<NotFoundPage />),
+              element: <NotFoundPage />,
               handle: { titleKey: 'notFound.title' },
             },
           ],
@@ -131,6 +151,8 @@ export function AppRouter() {
   const menus = useUserStore((s) => s.menus)
   const fetchUserInfo = useUserStore((s) => s.fetchUserInfo)
   const [bootstrapped, setBootstrapped] = useState(() => !token)
+  const routerRef = useRef<ReturnType<typeof createBrowserRouter> | null>(null)
+  const menusKeyRef = useRef<string>('')
 
   useEffect(() => {
     let cancelled = false
@@ -162,8 +184,15 @@ export function AppRouter() {
     }
   }, [token, fetchUserInfo])
 
-  const dynamicChildren = useMemo(() => convertMenusToRoutes(menus), [menus])
-  const router = useMemo(() => buildRouter(dynamicChildren), [dynamicChildren])
+  const menuKey = useMemo(() => menusSignature(menus), [menus])
+  const dynamicChildren = useMemo(() => convertMenusToRoutes(menus), [menuKey, menus])
+
+  // Keep one router instance unless menu tree actually changed (avoids remount storms).
+  if (!routerRef.current || menusKeyRef.current !== menuKey) {
+    menusKeyRef.current = menuKey
+    routerRef.current = buildRouter(dynamicChildren)
+  }
+  const router = routerRef.current
 
   if (!bootstrapped) {
     return <PageFallback fullscreen />

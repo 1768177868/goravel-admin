@@ -1,19 +1,20 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 import { message } from 'antd'
 import i18n from '@/i18n'
-import { handleChunkLoadFailure } from '@/utils/chunkLoadRecovery'
+import { handleChunkLoadFailure, isChunkLoadError } from '@/utils/chunkLoadRecovery'
 import logger from '@/utils/logger'
 
 type ModuleDefault = { default: ComponentType<object> }
 
 /**
- * Lazy import with retry + timeout (mirrors Vue router lazyLoad).
- * On chunk-load failure after retries: toast + auto-reload (mirrors Vue router.onError).
+ * Lazy import with retry + timeout.
+ * Vite HMR often invalidates module URLs (`?t=...`); retries of the same import
+ * rarely help in DEV, so we fail fast and trigger a recovery reload.
  */
 export function lazyLoad(
   importFn: () => Promise<ModuleDefault>,
-  maxRetries = 3,
-  timeout = 10000,
+  maxRetries = import.meta.env.DEV ? 2 : 3,
+  timeout = import.meta.env.DEV ? 5000 : 10000,
 ): LazyExoticComponent<ComponentType<object>> {
   const loadWithRetry = () =>
     new Promise<ModuleDefault>((resolve, reject) => {
@@ -28,20 +29,30 @@ export function lazyLoad(
           .then((mod) => resolve(mod))
           .catch((error: Error) => {
             retryCount += 1
-            if (retryCount < maxRetries) {
+            const canRetry = retryCount < maxRetries && !isChunkLoadError(error)
+
+            if (canRetry) {
               logger.warn(`模块加载失败，正在重试 (${retryCount}/${maxRetries}):`, error.message)
               const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000)
               setTimeout(attemptLoad, delay)
-            } else {
-              logger.error('模块加载失败，已达到最大重试次数:', error)
-              if (!handleChunkLoadFailure(error)) {
-                message.error({
-                  content: i18n.t('error.page_load_failed'),
-                  duration: 5,
-                })
-              }
-              reject(error)
+              return
             }
+
+            // Chunk/HMR failures: one quick retry then recover via reload.
+            if (isChunkLoadError(error) && retryCount < maxRetries) {
+              logger.warn(`Chunk load failed, quick retry (${retryCount}/${maxRetries}):`, error.message)
+              setTimeout(attemptLoad, 200)
+              return
+            }
+
+            logger.error('模块加载失败，已达到最大重试次数:', error)
+            if (!handleChunkLoadFailure(error)) {
+              message.error({
+                content: i18n.t('error.page_load_failed'),
+                duration: 5,
+              })
+            }
+            reject(error)
           })
       }
 
