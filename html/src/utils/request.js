@@ -95,6 +95,22 @@ let last403ErrorTime = 0
 let isShowing403Error = false
 const FORBIDDEN_ERROR_COOLDOWN = 3000 // 3秒内的403错误只提示一次
 
+/**
+ * 登录/登出接口跳过全局 401→logout（由登录页自行处理）
+ * 注意：不能用 includes('/login')，否则会误匹配 /login-logs
+ */
+function isAuthEndpointUrl(url = '') {
+  const path = String(url).split('?')[0].replace(/\/+$/, '')
+  return (
+    path === 'login' ||
+    path === 'login/captcha' ||
+    path === 'logout' ||
+    path.endsWith('/login') ||
+    path.endsWith('/login/captcha') ||
+    path.endsWith('/logout')
+  )
+}
+
 // 处理401错误的统一函数
 const handle401Error = (message) => {
   if (isRedirecting) {
@@ -176,36 +192,39 @@ request.interceptors.response.use(
   response => {
     const res = response.data
     const url = response.config?.url || ''
-    const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+    const isAuthEndpoint = isAuthEndpointUrl(url)
     
-    // 更新 token
-    const newToken = response.headers.authorization || response.headers.Authorization
-    if (newToken) {
-      const token = newToken.replace('Bearer ', '').trim()
-      if (token) {
-        Storage.setItem('token', token)
-        const userStore = useUserStore()
-        userStore.setToken(token)
+    // 更新 token（401 跳转进行中时不再写回，避免并发响应把过期 token 设回来）
+    if (!isRedirecting) {
+      const newToken = response.headers.authorization || response.headers.Authorization
+      if (newToken) {
+        const token = newToken.replace('Bearer ', '').trim()
+        if (token) {
+          Storage.setItem('token', token)
+          const userStore = useUserStore()
+          userStore.setToken(token)
+        }
       }
-    }
-    
-    if (res.data && res.data.token) {
-      const token = res.data.token
-      if (token) {
-        Storage.setItem('token', token)
-        const userStore = useUserStore()
-        userStore.setToken(token)
+      
+      if (res.data && res.data.token) {
+        const token = res.data.token
+        if (token) {
+          Storage.setItem('token', token)
+          const userStore = useUserStore()
+          userStore.setToken(token)
+        }
       }
     }
     
     // 处理业务错误（HTTP 200 但 code 不是 200）
     if (res.code !== 200) {
       const { message, errorCode } = extractErrorInfo(res)
+      const businessCode = Number(res.code)
       
       if (!isAuthEndpoint) {
-        if (res.code === 401) {
+        if (businessCode === 401) {
           handle401Error(message || t('error.unauthorized'))
-        } else if (res.code === 403) {
+        } else if (businessCode === 403) {
           handle403Error(message || t('error.forbidden'))
         } else {
           // 显示后端返回的实际错误消息
@@ -239,7 +258,7 @@ request.interceptors.response.use(
     if (error.response) {
       const { status, data, config } = error.response
       const url = config?.url || ''
-      const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+      const isAuthEndpoint = isAuthEndpointUrl(url)
       const { message, errorCode } = extractErrorInfo(data)
       const shouldSkipErrorMessage = !!config?.skipErrorMessage
 
@@ -317,10 +336,8 @@ request.interceptors.response.use(
 
     // 如果还没有标记为已处理，且不是登录接口的错误，则标记为已处理
     if (typeof error === 'object' && error.__handled !== false && error.__handled !== true) {
-      // 检查是否是登录接口
       const url = error.config?.url || ''
-      const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
-      if (!isAuthEndpoint) {
+      if (!isAuthEndpointUrl(url)) {
         error.__handled = true
       }
     }

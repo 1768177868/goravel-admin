@@ -16,6 +16,22 @@ let last403ErrorTime = 0
 let isShowing403Error = false
 const FORBIDDEN_ERROR_COOLDOWN = 3000
 
+/**
+ * Auth endpoints skip global 401→logout (Login page handles errors).
+ * Must NOT match /login-logs (substring of /login).
+ */
+function isAuthEndpointUrl(url = ''): boolean {
+  const path = url.split('?')[0].replace(/\/+$/, '')
+  return (
+    path === 'login' ||
+    path === 'login/captcha' ||
+    path === 'logout' ||
+    path.endsWith('/login') ||
+    path.endsWith('/login/captcha') ||
+    path.endsWith('/logout')
+  )
+}
+
 function translateErrorCode(errorCode: string, fallbackMessage: string): string {
   if (!errorCode) return fallbackMessage
 
@@ -54,6 +70,13 @@ function handle401Error(msg?: string) {
   if (getCurrentPath() !== '/login') {
     antdMessage.error(msg || i18n.t('error.unauthorized'))
     navigateTo('/login', { replace: true })
+    // Hard fallback: AppRouter rebuilds when menus clear; soft navigate can no-op.
+    setTimeout(() => {
+      if (getCurrentPath() !== '/login') {
+        const base = import.meta.env.BASE_URL || '/'
+        window.location.replace(new URL('login', `${window.location.origin}${base}`).href)
+      }
+    }, 50)
   }
 
   setTimeout(() => {
@@ -107,30 +130,34 @@ http.interceptors.response.use(
   (response) => {
     const res = response.data as ApiResponse
     const url = response.config?.url || ''
-    const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+    const isAuthEndpoint = isAuthEndpointUrl(url)
 
-    const headerToken = response.headers.authorization || response.headers.Authorization
-    if (headerToken) {
-      const token = String(headerToken).replace(/^Bearer\s+/i, '').trim()
-      if (token) {
-        Storage.setItem('token', token)
-        useUserStore.getState().setToken(token)
+    // Never restore token after logout/401 redirect has started.
+    if (!isRedirecting) {
+      const headerToken = response.headers.authorization || response.headers.Authorization
+      if (headerToken) {
+        const token = String(headerToken).replace(/^Bearer\s+/i, '').trim()
+        if (token) {
+          Storage.setItem('token', token)
+          useUserStore.getState().setToken(token)
+        }
       }
-    }
 
-    const payloadToken = (res.data as { token?: string } | undefined)?.token
-    if (payloadToken) {
-      Storage.setItem('token', payloadToken)
-      useUserStore.getState().setToken(payloadToken)
+      const payloadToken = (res.data as { token?: string } | undefined)?.token
+      if (payloadToken) {
+        Storage.setItem('token', payloadToken)
+        useUserStore.getState().setToken(payloadToken)
+      }
     }
 
     if (res.code !== 200) {
       const { message: msg, errorCode } = extractErrorInfo(res)
+      const businessCode = Number(res.code)
 
       if (!isAuthEndpoint) {
-        if (res.code === 401) {
+        if (businessCode === 401) {
           handle401Error(msg || i18n.t('error.unauthorized'))
-        } else if (res.code === 403) {
+        } else if (businessCode === 403) {
           handle403Error(msg || i18n.t('error.forbidden'))
         } else {
           antdMessage.error(msg || i18n.t('error.default'))
@@ -157,7 +184,7 @@ http.interceptors.response.use(
     if (error.response) {
       const { status, data, config } = error.response
       const url = config?.url || ''
-      const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
+      const isAuthEndpoint = isAuthEndpointUrl(url)
       const { message: msg, errorCode } = extractErrorInfo(data)
       const skipErrorMessage = !!(config as RequestConfig)?.skipErrorMessage
 
@@ -223,8 +250,7 @@ http.interceptors.response.use(
 
     if (typeof error === 'object' && error.__handled !== false && error.__handled !== true) {
       const url = error.config?.url || ''
-      const isAuthEndpoint = url.includes('/login') || url.includes('/logout')
-      if (!isAuthEndpoint) error.__handled = true
+      if (!isAuthEndpointUrl(url)) error.__handled = true
     }
 
     return Promise.reject(error)
