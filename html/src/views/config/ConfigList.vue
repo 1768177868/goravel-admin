@@ -11,6 +11,9 @@
         <el-tab-pane :label="$t('config.website_config')" name="website">
           <WebsiteConfig ref="websiteConfigRef" />
         </el-tab-pane>
+        <el-tab-pane :label="$t('config.customer_service_config')" name="customer_service">
+          <CustomerServiceConfig ref="customerServiceConfigRef" />
+        </el-tab-pane>
         <el-tab-pane :label="$t('config.email_config')" name="email">
           <EmailConfig ref="emailConfigRef" />
         </el-tab-pane>
@@ -28,12 +31,14 @@
 <script setup>
 import { ref } from 'vue'
 import WebsiteConfig from './components/WebsiteConfig.vue'
+import CustomerServiceConfig from './components/CustomerServiceConfig.vue'
 import EmailConfig from './components/EmailConfig.vue'
 import CaptchaConfig from './components/CaptchaConfig.vue'
 import StorageConfig from './components/StorageConfig.vue'
 
 const activeTab = ref('website')
 const websiteConfigRef = ref(null)
+const customerServiceConfigRef = ref(null)
 const emailConfigRef = ref(null)
 const captchaConfigRef = ref(null)
 const storageConfigRef = ref(null)
@@ -42,6 +47,8 @@ const handleTabChange = (tabName) => {
   // 切换tab时可以重新加载数据
   if (tabName === 'website' && websiteConfigRef.value) {
     websiteConfigRef.value.loadData()
+  } else if (tabName === 'customer_service' && customerServiceConfigRef.value) {
+    customerServiceConfigRef.value.loadData()
   } else if (tabName === 'email' && emailConfigRef.value) {
     emailConfigRef.value.loadData()
   } else if (tabName === 'captcha' && captchaConfigRef.value) {

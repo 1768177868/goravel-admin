@@ -15,10 +15,12 @@ func Api() {
 	orderSearchController := api.NewOrderController()
 	queueTestController := api.NewQueueTestController()
 	attachmentController := admin.NewAttachmentController()
+	publicConfigController := api.NewPublicConfigController()
 
 	// 公开附件（C 端文章/站点可直接引用，无需 admin 前缀）
 	facades.Route().Prefix("api").Middleware(middleware.Lang()).Group(func(router route.Router) {
 		router.Get("public/files/{id}", attachmentController.PublicPreview)
+		router.Get("public/customer-service", publicConfigController.CustomerService)
 	})
 
 	// C端用户路由组：统一前缀

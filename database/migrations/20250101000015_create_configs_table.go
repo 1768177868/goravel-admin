@@ -16,7 +16,7 @@ func (r *M20250101000015CreateConfigsTable) Up() error {
 	if !facades.Schema().HasTable("configs") {
 		return facades.Schema().Create("configs", func(table schema.Blueprint) {
 			table.BigIncrements("id")
-			table.String("group").Default("").Comment("配置分组 website:网站配置 email:邮箱配置")
+			table.String("group").Default("").Comment("配置分组 website:网站配置 email:邮箱配置 customer_service:客服配置")
 			table.String("key").Default("").Comment("配置键")
 			table.Text("value").Nullable().Comment("配置值")
 			table.String("label").Nullable().Comment("配置标签")

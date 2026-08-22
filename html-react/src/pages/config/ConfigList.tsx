@@ -380,6 +380,110 @@ function StorageConfigPanel() {
   )
 }
 
+function CustomerServiceConfigPanel() {
+  const { t } = useTranslation()
+  const { message } = App.useApp()
+  const showError = useUnhandledError()
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await getConfigByGroup('customer_service')
+      const values = configsToForm(res.data?.configs, [
+        'cs_enabled',
+        'cs_work_time',
+        'cs_phone',
+        'cs_email',
+        'cs_wechat',
+        'cs_wechat_qr',
+        'cs_qq',
+        'cs_telegram',
+        'cs_whatsapp',
+        'cs_online_url',
+        'cs_custom_link',
+        'cs_remark',
+      ])
+      if (values.cs_enabled === '') values.cs_enabled = '1'
+      form.setFieldsValue(values)
+    } catch (error) {
+      showError(error, t('common.query_failed'))
+    } finally {
+      setLoading(false)
+    }
+  }, [form, showError, t])
+
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields()
+      setSubmitting(true)
+      await saveConfig('customer_service', values as Record<string, unknown>)
+      message.success(t('config.update_success'))
+    } catch (error) {
+      if ((error as { errorFields?: unknown })?.errorFields) return
+      showError(error, t('common.operation_failed'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Form form={form} layout="vertical" disabled={loading}>
+      <Form.Item
+        name="cs_enabled"
+        label={t('config.cs_enabled')}
+        valuePropName="checked"
+        getValueProps={(value) => ({ checked: value === '1' || value === true })}
+        getValueFromEvent={(checked: boolean) => (checked ? '1' : '0')}
+      >
+        <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
+      </Form.Item>
+      <Form.Item name="cs_work_time" label={t('config.cs_work_time')}>
+        <Input placeholder={t('config.cs_work_time_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_phone" label={t('config.cs_phone')}>
+        <Input placeholder={t('config.cs_phone_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_email" label={t('config.cs_email')}>
+        <Input placeholder={t('config.cs_email_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_wechat" label={t('config.cs_wechat')}>
+        <Input placeholder={t('config.cs_wechat_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_wechat_qr" label={t('config.cs_wechat_qr')}>
+        <AttachmentImageField placeholder={t('config.cs_wechat_qr_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_qq" label={t('config.cs_qq')}>
+        <Input placeholder={t('config.cs_qq_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_telegram" label={t('config.cs_telegram')}>
+        <Input placeholder={t('config.cs_telegram_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_whatsapp" label={t('config.cs_whatsapp')}>
+        <Input placeholder={t('config.cs_whatsapp_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_online_url" label={t('config.cs_online_url')}>
+        <Input placeholder={t('config.cs_online_url_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_custom_link" label={t('config.cs_custom_link')}>
+        <Input placeholder={t('config.cs_custom_link_placeholder')} />
+      </Form.Item>
+      <Form.Item name="cs_remark" label={t('config.cs_remark')}>
+        <Input.TextArea rows={3} placeholder={t('config.cs_remark_placeholder')} />
+      </Form.Item>
+      <PermissionButton permission="config.save" type="primary" loading={submitting} onClick={() => void handleSubmit()}>
+        {t('common.save')}
+      </PermissionButton>
+    </Form>
+  )
+}
+
 export default function ConfigList() {
   const { t } = useTranslation()
 
@@ -389,6 +493,7 @@ export default function ConfigList() {
         <Tabs
           items={[
             { key: 'website', label: t('config.website_config'), children: <WebsiteConfigPanel /> },
+            { key: 'customer_service', label: t('config.customer_service_config'), children: <CustomerServiceConfigPanel /> },
             { key: 'email', label: t('config.email_config'), children: <EmailConfigPanel /> },
             { key: 'captcha', label: t('config.captcha_config'), children: <CaptchaConfigPanel /> },
             { key: 'storage', label: t('config.storage_config'), children: <StorageConfigPanel /> },
