@@ -79,12 +79,12 @@ export default function PaymentMethodList() {
 
   const columns: ColumnsType<PaymentMethodRow> = [
     { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
-    { title: t('payment_method.name'), dataIndex: 'name', minWidth: 150, sorter: true },
-    { title: t('payment_method.code'), dataIndex: 'code', width: 120, sorter: true },
+    { title: t('payment_method.name'), dataIndex: 'name', width: 120, ellipsis: true, sorter: true },
+    { title: t('payment_method.code'), dataIndex: 'code', width: 160, sorter: true },
     {
       title: t('payment_method.type'),
       dataIndex: 'type',
-      width: 120,
+      width: 140,
       sorter: true,
       render: (type: string) => getPaymentMethodTypeLabel(t, type),
     },
