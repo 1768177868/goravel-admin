@@ -63,6 +63,11 @@ See module tiers and production configs: [docs/OPENSOURCE.md](./docs/OPENSOURCE.
   <p align="center">AI code generation</p>
 </p>
 
+<p align="center">
+  <img src="./images/ai-lab.png" alt="AI Lab" width="800">
+  <p align="center">AI Lab (text, vision, image, audio; demo-ready with per-admin rate limits)</p>
+</p>
+
 
 <p align="center">
   <img src="./images/pages.png" alt="cloudflare" width="800">
@@ -102,6 +107,7 @@ See module tiers and production configs: [docs/OPENSOURCE.md](./docs/OPENSOURCE.
   - Dashboard with statistics
   - Notification center (WebSocket real-time notifications)
   - Data export management
+  - **AI Lab** (top-level menu; Goravel AI SDK demos: text chat, vision, image gen, TTS, STT; enabled when `AI_API_KEY` is set, per-admin rate limits)
   - Multi-language support (Chinese/English)
   - Responsive UI design
 

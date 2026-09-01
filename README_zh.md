@@ -59,8 +59,13 @@ git clone https://github.com/1768177868/goravel-admin.git
 </p>
 
 <p align="center">
-  <img src="./images/ai.png" alt="系统监控" width="800">
-  <p align="center">AI代码生成器</p>
+  <img src="./images/ai.png" alt="AI 代码生成器" width="800">
+  <p align="center">AI 代码生成器</p>
+</p>
+
+<p align="center">
+  <img src="./images/ai-lab.png" alt="AI 实验室" width="800">
+  <p align="center">AI 实验室（文本 / 视觉 / 图片 / 语音，演示站可用，按账号限流）</p>
 </p>
 
 <p align="center">
@@ -100,6 +105,7 @@ git clone https://github.com/1768177868/goravel-admin.git
   - 数据统计仪表盘
   - 通知中心（WebSocket 实时通知）
   - 数据导出管理
+  - **AI 实验室**（顶级菜单，演示 Goravel AI SDK：文本对话、图片理解、图片生成、语音合成、语音转写；配置 `AI_API_KEY` 后可用，按管理员账号限流）
   - 多语言支持（中文/英文）
   - 响应式 UI 设计
 

@@ -7,6 +7,11 @@ Vue 版后台（`html/`）的 React 对照实现，对接同一套 Goravel Admin
   <p align="center">React 后台管理界面</p>
 </p>
 
+<p align="center">
+  <img src="../images/ai-lab.png" alt="AI 实验室" width="800">
+  <p align="center">AI 实验室（React）</p>
+</p>
+
 ## 技术栈
 
 - React 19 + TypeScript + Vite
@@ -88,6 +93,7 @@ Agent 约定见 `.cursor/skills/goravel-admin-frontend-react/`。
 - 日志：操作 / 登录 / 系统（详情、批量删除、清理）+ 观测中心
 - 监控：服务监控（SSE + ECharts）
 - 开发：表单演示（含 WangEditor / Markdown）、代码生成器（Vue/React 双端，受 `CODE_GENERATOR_FRONTEND` 控制；菜单/权限安装见 [../docs/CODE_GENERATOR.md](../docs/CODE_GENERATOR.md)）
+- **AI 实验室**（React）：文本对话、图片理解、图片生成、语音合成、语音转写；顶级菜单，配置 `AI_API_KEY` 后可用，按管理员账号限流（见 `.env.example`）
 ## 脚本
 
 - `npm run dev` — 开发
