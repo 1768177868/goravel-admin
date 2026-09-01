@@ -151,6 +151,33 @@ func (receiver *RouteServiceProvider) configureRateLimiting() {
 			}).Abort()
 		}).By(ip + ":pprof_memory:" + identifier)
 	})
+
+	// AI 实验室限流（按管理员账号：分钟 + 日配额）
+	facades.RateLimiter().ForWithLimits("aiLab", func(ctx contractshttp.Context) []contractshttp.Limit {
+		adminID := resolveAdminIdentifier(ctx)
+		perMinute := facades.Config().GetInt("ai.lab_rate_limit_per_minute", 10)
+		perDay := facades.Config().GetInt("ai.lab_rate_limit_per_day", 200)
+		if perMinute < 1 {
+			perMinute = 1
+		}
+		if perDay < 1 {
+			perDay = 1
+		}
+
+		rateLimited := func(ctx contractshttp.Context) {
+			_ = ctx.Response().Json(contractshttp.StatusTooManyRequests, contractshttp.Json{
+				"code":       contractshttp.StatusTooManyRequests,
+				"message":    trans.Get(ctx, "ai_lab_rate_limited"),
+				"error_code": "ai_lab_rate_limited",
+			}).Abort()
+		}
+
+		key := "ai_lab:admin:" + adminID
+		return []contractshttp.Limit{
+			limit.PerMinute(perMinute).Response(rateLimited).By(key + ":minute"),
+			limit.PerDay(perDay).Response(rateLimited).By(key + ":day"),
+		}
+	})
 }
 
 // resolveLoginIdentifier 从请求中提取登录标识（username > email > X-Username > IP fallback）。
@@ -168,6 +195,15 @@ func resolveLoginIdentifier(ctx contractshttp.Context, fallbackIP string) string
 
 // resolvePprofVerifyIdentifier 从上下文提取管理员 ID，找不到则回退到 IP
 func resolvePprofVerifyIdentifier(ctx contractshttp.Context, fallbackIP string) string {
+	return resolveAdminIdentifierWithFallback(ctx, fallbackIP)
+}
+
+// resolveAdminIdentifier 从上下文提取管理员 ID，找不到则回退到 IP（用于 AI 实验室限流等）
+func resolveAdminIdentifier(ctx contractshttp.Context) string {
+	return resolveAdminIdentifierWithFallback(ctx, helpers.GetRealIP(ctx))
+}
+
+func resolveAdminIdentifierWithFallback(ctx contractshttp.Context, fallbackIP string) string {
 	adminValue := ctx.Value("admin")
 	if adminValue == nil {
 		return fallbackIP

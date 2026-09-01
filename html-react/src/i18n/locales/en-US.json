@@ -87,7 +87,10 @@
     "required": "Required",
     "close_others": "Close Others",
     "close_all": "Close All",
-    "back": "Back"
+    "back": "Back",
+    "ai_lab_rate_limited": "AI Lab rate limit exceeded. Please try again later",
+    "ai_not_configured": "AI is not configured. Set AI_API_KEY in .env and restart the server",
+    "file_required": "Please select a file"
   },
   "admin_id": "Admin ID",
   "title": "Title",
@@ -200,6 +203,7 @@
     "observability": "Observability",
     "notification": "Notifications",
     "article": "Articles",
+    "ai_lab": "AI Lab",
     "dev": "Dev Tools",
     "code_generator": "Code Generator",
     "form_demo": "Form Demo"
@@ -1294,5 +1298,40 @@
       "timestamp": "Timestamp",
       "json": "JSON"
     }
+  },
+  "ai_lab": {
+    "title": "AI Lab",
+    "subtitle": "Goravel AI SDK demos: text, vision, image, audio",
+    "not_configured": "AI is not configured. Set AI_API_KEY in server .env and restart.",
+    "rate_limit_hint": "Per admin: {{perMinute}}/min, {{perDay}}/day",
+    "models": "Models",
+    "tab_text": "Text Chat",
+    "tab_vision": "Vision",
+    "tab_image": "Image Gen",
+    "tab_audio": "Text-to-Speech",
+    "tab_transcription": "Speech-to-Text",
+    "prompt": "Prompt",
+    "prompt_placeholder": "Enter your prompt…",
+    "system_prompt": "System prompt (optional)",
+    "system_prompt_placeholder": "Set role or style…",
+    "submit": "Send",
+    "generate": "Generate",
+    "transcribe": "Transcribe",
+    "result": "Result",
+    "upload_image": "Upload image",
+    "upload_image_hint": "JPG / PNG / WebP supported",
+    "upload_audio": "Upload audio",
+    "upload_audio_hint": "MP3 / WAV / M4A supported",
+    "voice": "Voice",
+    "voice_female": "Female",
+    "voice_male": "Male",
+    "size": "Size",
+    "size_square": "Square",
+    "size_portrait": "Portrait",
+    "size_landscape": "Landscape",
+    "language": "Language (optional)",
+    "language_placeholder": "e.g. zh, en; leave empty to auto-detect",
+    "preview_image": "Generated image",
+    "preview_audio": "Generated audio"
   }
 }

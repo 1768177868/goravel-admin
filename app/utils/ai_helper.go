@@ -22,3 +22,21 @@ func AIEnabled() bool {
 	}
 	return AIProviderAPIKey() != ""
 }
+
+// AILabRateLimitPerMinute returns per-admin AI lab requests allowed per minute.
+func AILabRateLimitPerMinute() int {
+	limit := facades.Config().GetInt("ai.lab_rate_limit_per_minute", 10)
+	if limit < 1 {
+		return 1
+	}
+	return limit
+}
+
+// AILabRateLimitPerDay returns per-admin AI lab requests allowed per day.
+func AILabRateLimitPerDay() int {
+	limit := facades.Config().GetInt("ai.lab_rate_limit_per_day", 200)
+	if limit < 1 {
+		return 1
+	}
+	return limit
+}

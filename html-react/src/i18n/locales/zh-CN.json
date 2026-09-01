@@ -87,7 +87,10 @@
     "required": "必填项",
     "close_others": "关闭其他",
     "close_all": "关闭全部",
-    "back": "返回"
+    "back": "返回",
+    "ai_lab_rate_limited": "AI 实验室请求过于频繁，请稍后再试",
+    "ai_not_configured": "AI 未配置，请在 .env 中设置 AI_API_KEY 后重启服务",
+    "file_required": "请选择文件"
   },
   "admin_id": "管理员ID",
   "title": "标题",
@@ -200,6 +203,7 @@
     "observability": "日志与观测",
     "notification": "通知中心",
     "article": "文章管理",
+    "ai_lab": "AI 实验室",
     "dev": "开发工具",
     "code_generator": "代码生成器",
     "form_demo": "表单示例"
@@ -1298,5 +1302,40 @@
       "timestamp": "时间戳",
       "json": "JSON"
     }
+  },
+  "ai_lab": {
+    "title": "AI 实验室",
+    "subtitle": "演示 Goravel AI SDK 能力（文本、视觉、图片、语音）",
+    "not_configured": "AI 功能未配置。请在服务端 .env 设置 AI_API_KEY 并重启后使用。",
+    "rate_limit_hint": "每位管理员限流：{{perMinute}} 次/分钟，{{perDay}} 次/天",
+    "models": "当前模型",
+    "tab_text": "文本对话",
+    "tab_vision": "图片理解",
+    "tab_image": "图片生成",
+    "tab_audio": "语音合成",
+    "tab_transcription": "语音转写",
+    "prompt": "提示词",
+    "prompt_placeholder": "请输入提示词…",
+    "system_prompt": "系统提示（可选）",
+    "system_prompt_placeholder": "设定 AI 角色或回答风格…",
+    "submit": "发送",
+    "generate": "生成",
+    "transcribe": "转写",
+    "result": "结果",
+    "upload_image": "上传图片",
+    "upload_image_hint": "支持 JPG / PNG / WebP 等常见图片格式",
+    "upload_audio": "上传音频",
+    "upload_audio_hint": "支持 MP3 / WAV / M4A 等常见音频格式",
+    "voice": "音色",
+    "voice_female": "女声",
+    "voice_male": "男声",
+    "size": "尺寸",
+    "size_square": "方形",
+    "size_portrait": "竖版",
+    "size_landscape": "横版",
+    "language": "语言（可选）",
+    "language_placeholder": "如 zh、en，留空自动识别",
+    "preview_image": "生成图片",
+    "preview_audio": "生成音频"
   }
 }

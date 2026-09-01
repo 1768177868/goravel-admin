@@ -130,6 +130,9 @@ func DisabledModuleMenuSlugs() map[string]bool {
 	if !formDemoOn {
 		disabled["form_demo"] = true
 	}
+	if !AIEnabled() {
+		disabled["ai_lab"] = true
+	}
 	if !codeGenOn && !formDemoOn {
 		disabled["dev"] = true
 	}

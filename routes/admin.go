@@ -41,6 +41,7 @@ func Admin() {
 	codeGeneratorController := admin.NewCodeGeneratorController()
 	articleController := admin.NewArticleController()
 	formDemoController := admin.NewFormDemoController()
+	aiLabController := admin.NewAiLabController()
 
 	// Admin 路由组：统一前缀和域名限制
 	facades.Route().Prefix("api/admin").Middleware(middleware.Domain(facades.Config().Get("domains.admin"))).Group(func(router route.Router) {
@@ -79,6 +80,16 @@ func Admin() {
 			// 统一的下拉选项接口（不需要权限验证）
 			router.Get("options", optionController.Index)
 			router.Middleware(middleware.DevelopmentOnly()).Get("form-demo/data", formDemoController.GetData)
+
+			// AI 实验室（登录即可；按管理员账号限流；演示站可用）
+			router.Middleware(httpmiddleware.Throttle("aiLab")).Group(func(router route.Router) {
+				router.Get("ai-lab/status", aiLabController.Status)
+				router.Post("ai-lab/text", aiLabController.Text)
+				router.Post("ai-lab/vision", aiLabController.Vision)
+				router.Post("ai-lab/image", aiLabController.Image)
+				router.Post("ai-lab/audio", aiLabController.Audio)
+				router.Post("ai-lab/transcription", aiLabController.Transcription)
+			})
 
 			// 菜单树（仅登录即可，不校验菜单权限；用于角色/权限表单、刷新后展示等）
 			router.Get("menus/tree", menuController.Tree)

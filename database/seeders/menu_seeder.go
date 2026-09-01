@@ -497,6 +497,20 @@ func (s *MenuSeeder) Run() error {
 		IsHidden:  0,
 	})
 
+	// 创建 AI 实验室菜单（顶级；未配置 AI 时由运行时过滤隐藏）
+	createOrUpdateMenu(models.Menu{
+		ParentID:  0,
+		Title:     "AI 实验室",
+		Slug:      "ai_lab",
+		Icon:      "Cpu",
+		Path:      "/ai-lab",
+		Component: "dev/AiLab",
+		Type:      2,
+		Status:    1,
+		Sort:      98,
+		IsHidden:  0,
+	})
+
 	// 创建开发工具菜单（是否展示由运行时过滤控制：开发模式/开发者管理员）
 	devMenu := createOrUpdateMenu(models.Menu{
 		ParentID:  0,
