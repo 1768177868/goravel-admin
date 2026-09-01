@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { App, Form, Input, InputNumber, Modal, Radio, Spin, Tree } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import { useTranslation } from 'react-i18next'
@@ -37,19 +37,17 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
   const [permissions, setPermissions] = useState<Record<string, unknown>[]>([])
   const [checkedKeys, setCheckedKeys] = useState<string[]>([])
   const [slug, setSlug] = useState('')
-  const pendingIdsRef = useRef<{ menuIds: number[]; permissionIds: number[] } | null>(null)
 
   const isProtected = slug === PROTECTED
 
-  const tree = useMemo<TreeNodeData[]>(() => {
-    if (!menus.length && !permissions.length) return []
-    return buildMenuPermissionTree(menus, permissions, {
-      menuTitle: (menu) =>
+  const treeTranslate = useMemo(
+    () => ({
+      menuTitle: (menu: Record<string, unknown>) =>
         resolveMenuTitle(t, {
           slug: String(menu.Slug || menu.slug || ''),
           fallback: String(menu.Title || menu.title || menu.Name || menu.name || menu.Slug || menu.slug || ''),
         }),
-      permissionTitle: (perm) =>
+      permissionTitle: (perm: Record<string, unknown>) =>
         resolvePermissionTitle(i18n, {
           slug: String(perm.Slug || perm.slug || ''),
           fallback: String(
@@ -57,8 +55,14 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
           ),
         }),
       otherLabel: t('role.other_permissions', { defaultValue: '其他权限' }),
-    })
-  }, [menus, permissions, t, i18n, i18n.language])
+    }),
+    [t, i18n, i18n.language],
+  )
+
+  const tree = useMemo<TreeNodeData[]>(() => {
+    if (!menus.length && !permissions.length) return []
+    return buildMenuPermissionTree(menus, permissions, treeTranslate)
+  }, [menus, permissions, treeTranslate])
 
   useEffect(() => {
     if (!open) return
@@ -66,7 +70,6 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
     let cancelled = false
     const boot = async () => {
       setLoading(true)
-      pendingIdsRef.current = null
       try {
         const [menuRes, permRes] = await Promise.all([
           getMenuTree(),
@@ -74,8 +77,10 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
         ])
         if (cancelled) return
 
-        setMenus(flattenMenuList(menuRes.data))
-        setPermissions(flattenPermissionList(permRes.data))
+        const flatMenus = flattenMenuList(menuRes.data)
+        const flatPerms = flattenPermissionList(permRes.data)
+        setMenus(flatMenus)
+        setPermissions(flatPerms)
 
         if (!editId) {
           form.setFieldsValue({
@@ -118,7 +123,8 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
           sort: Number(entityField(data, 'sort', 0)),
         })
         setSlug(nextSlug)
-        pendingIdsRef.current = { menuIds: resolvedMenuIds, permissionIds: resolvedPermIds }
+        const builtTree = buildMenuPermissionTree(flatMenus, flatPerms, treeTranslate)
+        setCheckedKeys(buildCheckedKeysFromIds(builtTree, resolvedMenuIds, resolvedPermIds))
       } catch (error) {
         showError(error, i18n.t('common.query_failed'))
       } finally {
@@ -130,14 +136,7 @@ export default function RoleFormModal({ open, editId, onClose, onSuccess }: Role
     return () => {
       cancelled = true
     }
-  }, [open, editId, form, showError, i18n])
-
-  useEffect(() => {
-    const pending = pendingIdsRef.current
-    if (!pending || tree.length === 0) return
-    setCheckedKeys(buildCheckedKeysFromIds(tree, pending.menuIds, pending.permissionIds))
-    pendingIdsRef.current = null
-  }, [tree])
+  }, [open, editId, form, showError, i18n, treeTranslate])
 
   const antdTreeData = useMemo<DataNode[]>(() => {
     const convert = (nodes: TreeNodeData[]): DataNode[] =>
