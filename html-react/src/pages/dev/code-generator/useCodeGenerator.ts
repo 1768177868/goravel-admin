@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, createElement } from 'react'
 import { App, Form } from 'antd'
 import { useTranslation } from 'react-i18next'
 import {
@@ -473,6 +473,19 @@ export function useCodeGenerator() {
     message.success(t('code_generator.save_success', { count: savedFiles.length }))
   }
 
+  const formatExistingFilesHtml = (files: string[]) =>
+    files.map((file) => `<div style="padding-left:12px;font-family:monospace;font-size:12px;line-height:1.8;word-break:break-all">${file}</div>`).join('')
+
+  const buildFilesExistConfirmContent = (existingFiles: string[]) =>
+    createElement('div', {
+      dangerouslySetInnerHTML: {
+        __html: t('code_generator.files_exist_confirm', {
+          count: existingFiles.length,
+          files: formatExistingFilesHtml(existingFiles),
+        }),
+      },
+    })
+
   const handleGenerate = async () => {
     try {
       await form.validateFields()
@@ -497,7 +510,7 @@ export function useCodeGenerator() {
             const existingFiles = err.response.data.files || []
             modal.confirm({
               title: t('common.warning'),
-              content: `${t('code_generator.files_exist_confirm', { count: existingFiles.length, files: '' })}\n${existingFiles.join('\n')}`,
+              content: buildFilesExistConfirmContent(existingFiles),
               okText: t('code_generator.overwrite'),
               cancelText: t('common.cancel'),
               onOk: async () => {

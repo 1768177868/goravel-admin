@@ -20,55 +20,43 @@ import (
 	"goravel/app/utils"
 )
 
-type UserController struct {}
-
+type UserController struct{}
 
 func NewUserController() *UserController {
 	return &UserController{}
 }
 
-func (r *UserController) userService(ctx http.Context) services.UserService {
+func (c *UserController) buildUserFilters(ctx http.Context) services.UserFilters {
+	return services.BuildUserFiltersFromHTTP(ctx)
+}
+
+func (c *UserController) UserService(ctx http.Context) services.UserService {
 	return services.NewUserService(ctx)
 }
 
-
-// Index 用户列表
-func (r *UserController) Index(ctx http.Context) http.Response {
+func (c *UserController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
+	filters := c.buildUserFilters(ctx)
 
-	filters := services.UserFilters{
-		Username: ctx.Request().Query("username", ""),
-		Email:    ctx.Request().Query("email", ""),
-		Phone:    ctx.Request().Query("phone", ""),
-		Status:   ctx.Request().Query("status", ""),
-	}
-
-	users, total, err := r.userService(ctx).GetList(filters, page, pageSize)
+	list, total, err := c.UserService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "user", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
-		"list":      users,
+		"list":      list,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
 	})
 }
 
-// Show 用户详情
-func (r *UserController) Show(ctx http.Context) http.Response {
+func (c *UserController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	user, err := r.userService(ctx).GetByID(id)
+	user, err := c.UserService(ctx).GetByID(id)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusNotFound, err.Error())
+		return HandleGeneratedServiceError(ctx, "user", http.StatusNotFound, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -76,33 +64,16 @@ func (r *UserController) Show(ctx http.Context) http.Response {
 	})
 }
 
-// Store 创建用户
-func (r *UserController) Store(ctx http.Context) http.Response {
-	// 使用请求验证
-	var userCreate adminrequests.UserCreate
-	errors, err := ctx.Request().ValidateRequest(&userCreate)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+func (c *UserController) Store(ctx http.Context) http.Response {
+	var req adminrequests.UserCreate
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
+		return resp
 	}
 
-	// 使用服务方法创建用户（包含验证、密码加密、默认货币设置）
-	user, err := r.userService(ctx).CreateWithValidation(
-		userCreate.Username,
-		userCreate.Password,
-		userCreate.Nickname,
-		userCreate.Email,
-		userCreate.Phone,
-		userCreate.Status,
-	)
+	user, err := c.UserService(ctx).Create(&req)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.ErrorWithLog(ctx, "user", err, map[string]any{
-			"username": userCreate.Username,
+		return HandleGeneratedServiceError(ctx, "user", http.StatusInternalServerError, err, map[string]any{
+			"username": req.Username,
 		})
 	}
 
@@ -111,49 +82,17 @@ func (r *UserController) Store(ctx http.Context) http.Response {
 	})
 }
 
-// Update 更新用户
-func (r *UserController) Update(ctx http.Context) http.Response {
+func (c *UserController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
-	// 使用请求验证
-	var userUpdate adminrequests.UserUpdate
-	errors, err := ctx.Request().ValidateRequest(&userUpdate)
+	var req adminrequests.UserUpdate
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
+		return resp
+	}
+
+	user, err := c.UserService(ctx).Update(id, &req)
 	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
-	}
-
-	// 使用服务方法验证用户是否存在（排除当前用户）
-	if err := r.userService(ctx).ValidateUserExists("", userUpdate.Email, userUpdate.Phone, id); err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, apperrors.ErrUpdateFailed.Code)
-	}
-
-	user := models.User{
-		Nickname: userUpdate.Nickname,
-		Email:    userUpdate.Email,
-		Phone:    userUpdate.Phone,
-		Status:   userUpdate.Status,
-	}
-
-	// 如果提供了密码，则加密
-	if userUpdate.Password != "" {
-		hashedPassword, err := facades.Hash().Make(userUpdate.Password)
-		if err != nil {
-			return response.Error(ctx, http.StatusInternalServerError, "password_encrypt_failed")
-		}
-		user.Password = hashedPassword
-	}
-
-	if err := r.userService(ctx).Update(id, &user); err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "user", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -161,22 +100,17 @@ func (r *UserController) Update(ctx http.Context) http.Response {
 	})
 }
 
-// Destroy 删除用户
-func (r *UserController) Destroy(ctx http.Context) http.Response {
+func (c *UserController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	if err := r.userService(ctx).Delete(id); err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	if err := c.UserService(ctx).Delete(id); err != nil {
+		return HandleGeneratedServiceError(ctx, "user", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})
 }
 
 // UpdateBalance 更新用户余额
-func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
-	// 从路由参数获取 user_id
+func (c *UserController) UpdateBalance(ctx http.Context) http.Response {
 	userID := helpers.GetUintRoute(ctx, "id")
 	amount := cast.ToFloat64(ctx.Request().Input("amount", "0"))
 	logType := ctx.Request().Input("type", "")
@@ -206,8 +140,7 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusBadRequest, "balance_type_required")
 	}
 
-	if err := r.userService(ctx).UpdateBalance(userID, amount, logType, source, sourceID, description, operatorID, remark); err != nil {
-		// response.Error 会自动检测 BusinessError 并处理占位符替换
+	if err := c.UserService(ctx).UpdateBalance(userID, amount, logType, source, sourceID, description, operatorID, remark); err != nil {
 		return response.Error(ctx, http.StatusBadRequest, err)
 	}
 
@@ -215,10 +148,9 @@ func (r *UserController) UpdateBalance(ctx http.Context) http.Response {
 }
 
 // ResetPassword 重置用户密码（管理员操作）
-func (r *UserController) ResetPassword(ctx http.Context) http.Response {
+func (c *UserController) ResetPassword(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
-	// 使用请求验证
 	var resetPasswordRequest adminrequests.ResetPassword
 	errors, err := ctx.Request().ValidateRequest(&resetPasswordRequest)
 	if err != nil {
@@ -228,8 +160,7 @@ func (r *UserController) ResetPassword(ctx http.Context) http.Response {
 		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
 	}
 
-	// 使用服务方法重置密码
-	if err := r.userService(ctx).ResetPassword(id, resetPasswordRequest.Password); err != nil {
+	if err := c.UserService(ctx).ResetPassword(id, resetPasswordRequest.Password); err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
 		}
@@ -242,7 +173,7 @@ func (r *UserController) ResetPassword(ctx http.Context) http.Response {
 }
 
 // Export 导出用户列表
-func (r *UserController) Export(ctx http.Context) http.Response {
+func (c *UserController) Export(ctx http.Context) http.Response {
 	lock := helpers.AcquireExportLock(ctx, "users")
 	if lock.Unauthorized {
 		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
@@ -265,7 +196,6 @@ func (r *UserController) Export(ctx http.Context) http.Response {
 		return response.ErrorWithLog(ctx, "export", err)
 	}
 
-	// 构建筛选条件（POST 请求，从 body 获取参数）
 	filtersMap := map[string]any{
 		"username": ctx.Request().Input("username", ""),
 		"nickname": ctx.Request().Input("nickname", ""),

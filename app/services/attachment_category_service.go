@@ -6,9 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goravel/framework/contracts/http"
+
 	appfacades "goravel/app/facades"
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
+	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 )
 
@@ -17,15 +20,24 @@ type AttachmentCategoryService interface {
 	GetUncategorized() (*models.AttachmentCategory, error)
 	GetUncategorizedID() (uint, error)
 	GetList(filters AttachmentCategoryFilters, page, pageSize int) ([]models.AttachmentCategory, int64, error)
-	Create(name, remark string, status uint8, sort int) (*models.AttachmentCategory, error)
-	Update(category *models.AttachmentCategory) error
-	Delete(category *models.AttachmentCategory) error
+	Create(req *admin.AttachmentCategoryCreate) (*models.AttachmentCategory, error)
+	Update(id uint, req *admin.AttachmentCategoryUpdate) (*models.AttachmentCategory, error)
+	Delete(id uint) error
 }
 
 type AttachmentCategoryFilters struct {
-	Name      string
-	Status    string
-	OrderBy   string
+	Name    string
+	Status  string
+	OrderBy string
+}
+
+// BuildAttachmentCategoryFiltersFromHTTP reads list filters from query or body.
+func BuildAttachmentCategoryFiltersFromHTTP(ctx http.Context) AttachmentCategoryFilters {
+	return AttachmentCategoryFilters{
+		Name:    ctx.Request().Input("name", ctx.Request().Query("name", "")),
+		Status:  ctx.Request().Input("status", ctx.Request().Query("status", "")),
+		OrderBy: ctx.Request().Input("order_by", ctx.Request().Query("order_by", "")),
+	}
 }
 
 type AttachmentCategoryServiceImpl struct {
@@ -81,16 +93,16 @@ func (s *AttachmentCategoryServiceImpl) GetList(filters AttachmentCategoryFilter
 	return list, total, nil
 }
 
-func (s *AttachmentCategoryServiceImpl) Create(name, remark string, status uint8, sort int) (*models.AttachmentCategory, error) {
-	name = strings.TrimSpace(name)
+func (s *AttachmentCategoryServiceImpl) Create(req *admin.AttachmentCategoryCreate) (*models.AttachmentCategory, error) {
+	name := strings.TrimSpace(req.Name)
 	slug := fmt.Sprintf("custom_%d", time.Now().UnixNano())
 	category := &models.AttachmentCategory{
 		Name:     name,
 		Slug:     slug,
-		Status:   status,
+		Status:   req.Status,
 		IsSystem: 0,
-		Sort:     sort,
-		Remark:   remark,
+		Sort:     req.Sort,
+		Remark:   req.Remark,
 	}
 	if err := appfacades.OrmQuery(s.ctx).Create(category); err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
@@ -98,20 +110,39 @@ func (s *AttachmentCategoryServiceImpl) Create(name, remark string, status uint8
 	return category, nil
 }
 
-func (s *AttachmentCategoryServiceImpl) Update(category *models.AttachmentCategory) error {
+func (s *AttachmentCategoryServiceImpl) Update(id uint, req *admin.AttachmentCategoryUpdate) (*models.AttachmentCategory, error) {
+	category, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != nil {
+		category.Name = *req.Name
+	}
+	if req.Status != nil {
+		category.Status = *req.Status
+	}
+	if req.Sort != nil {
+		category.Sort = *req.Sort
+	}
+	if req.Remark != nil {
+		category.Remark = *req.Remark
+	}
 	if category.IsSystem == 1 {
-		// 系统分类允许改备注/排序，不允许改标识与禁用
 		category.Slug = models.AttachmentCategorySlugUncategorized
 		category.Status = 1
 		category.IsSystem = 1
 	}
 	if err := appfacades.OrmQuery(s.ctx).Save(category); err != nil {
-		return apperrors.ErrUpdateFailed.WithError(err)
+		return nil, apperrors.ErrUpdateFailed.WithError(err)
 	}
-	return nil
+	return category, nil
 }
 
-func (s *AttachmentCategoryServiceImpl) Delete(category *models.AttachmentCategory) error {
+func (s *AttachmentCategoryServiceImpl) Delete(id uint) error {
+	category, err := s.GetByID(id)
+	if err != nil {
+		return err
+	}
 	if category.IsSystem == 1 {
 		return apperrors.ErrAttachmentCategoryProtectedCannotDelete
 	}

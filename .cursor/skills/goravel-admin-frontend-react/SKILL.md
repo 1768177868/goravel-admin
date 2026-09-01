@@ -17,6 +17,11 @@ description: Implements the React 19 + Vite admin frontend in html-react/ using 
 
 Do not invent new response shapes. Use the existing request wrapper.
 
+### Paginated list responses
+Backend returns rows under `data.list` for **all new code-generated CRUD** (e.g. article).
+Legacy payment/order modules use `data.data` instead.
+Always use `normalizeListResponse()` in API modules — it handles both keys.
+
 ## HTTP client
 Use `html-react/src/utils/request.ts` for all API calls.
 
@@ -66,7 +71,7 @@ pages/<module>/
   <module>.config.ts        # initialSearchForm, Row type, transformRow, helpers
 ```
 
-Examples: `pages/article/`, `pages/admin/`, `pages/role/`, `pages/order/`, `pages/payment/`.
+Examples: `pages/article/`, `pages/admin/`, `pages/role/`, `pages/order/`, `pages/payment/` (PaymentList, PaymentMethodList).
 
 Wire the list with:
 

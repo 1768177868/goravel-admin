@@ -1,9 +1,9 @@
 package admin
 
 import (
-	"strings"
-
 	"github.com/goravel/framework/contracts/http"
+
+	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
@@ -13,30 +13,6 @@ import (
 )
 
 type ArticleController struct{}
-
-func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
-	if businessErr, ok := apperrors.GetBusinessError(err); ok {
-		if businessErr.Code == "params_error" || businessErr.Code == "invalid_argument" {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		if businessErr.Code == "record_not_found" || strings.HasSuffix(businessErr.Code, "_not_found") {
-			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
-		}
-		return response.Error(ctx, status, businessErr.Code)
-	}
-	return response.Error(ctx, status, err.Error())
-}
-
-func validateGeneratedRequest(ctx http.Context, req http.FormRequest) http.Response {
-	validationErrors, err := ctx.Request().ValidateRequest(req)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if validationErrors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", validationErrors.All())
-	}
-	return nil
-}
 
 func (c *ArticleController) buildArticleFilters(ctx http.Context) services.ArticleFilters {
 	return services.BuildArticleFiltersFromHTTP(ctx)
@@ -59,7 +35,7 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 
 	list, total, err := c.ArticleService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "article", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -75,7 +51,7 @@ func (c *ArticleController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	item, err := c.ArticleService(ctx).GetByID(id)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusNotFound, err)
+		return HandleGeneratedServiceError(ctx, "article", http.StatusNotFound, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -86,13 +62,13 @@ func (c *ArticleController) Show(ctx http.Context) http.Response {
 // Store creates a new Article.
 func (c *ArticleController) Store(ctx http.Context) http.Response {
 	var req adminrequests.ArticleCreate
-	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
 		return resp
 	}
 
 	item, err := c.ArticleService(ctx).Create(&req)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "article", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -105,13 +81,13 @@ func (c *ArticleController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
 	var req adminrequests.ArticleUpdate
-	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
 		return resp
 	}
 
 	item, err := c.ArticleService(ctx).Update(id, &req)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "article", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -123,7 +99,7 @@ func (c *ArticleController) Update(ctx http.Context) http.Response {
 func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	if err := c.ArticleService(ctx).Delete(id); err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "article", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})
@@ -131,6 +107,49 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 
 // Export exports Article records.
 func (c *ArticleController) Export(ctx http.Context) http.Response {
-	return response.Error(ctx, http.StatusForbidden, "forbidden")
+	lock := helpers.AcquireExportLock(ctx, "articles")
+	if lock.Unauthorized {
+		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
+	}
+	if lock.Blocked {
+		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
+	}
+	adminID := lock.AdminID
 
+	filters := c.buildArticleFilters(ctx)
+
+	list, err := c.ArticleService(ctx).GetAllArticleForExport(filters)
+	if err != nil {
+		return response.ErrorWithLog(ctx, "article", err, map[string]any{
+			"action":   "export_articles",
+			"admin_id": adminID,
+		})
+	}
+
+	headers := []string{
+		"admin_id",
+		"title",
+		"content",
+		"status",
+		"created_at",
+		"updated_at",
+	}
+
+	timezone := helpers.GetCurrentTimezone(ctx)
+	var data [][]string
+	for _, row := range list {
+		r := []string{
+			cast.ToString(row.AdminId),
+			row.Title,
+			row.Content,
+			cast.ToString(row.Status),
+			helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone),
+			helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone),
+		}
+		data = append(data, r)
+	}
+
+	ctx.WithValue("export_type", "articles")
+
+	return response.Export(ctx, "exported", headers, data, "articles")
 }

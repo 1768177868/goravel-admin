@@ -8,33 +8,24 @@ import (
 
 	"github.com/dromara/carbon/v2"
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
+	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 	"goravel/app/utils"
 	"goravel/app/utils/errorlog"
 )
 
 type UserService interface {
-	// GetByID 根据ID获取用户
 	GetByID(id uint) (*models.User, error)
-	// GetList 获取用户列表
 	GetList(filters UserFilters, page, pageSize int) ([]models.User, int64, error)
-	// Create 创建用户
-	Create(user *models.User) error
-	// CreateWithValidation 创建用户（包含验证、密码加密、默认货币设置）
-	CreateWithValidation(username, password, nickname, email, phone string, status uint8) (*models.User, error)
-	// Update 更新用户
-	Update(id uint, user *models.User) error
-	// Delete 删除用户（软删除）
+	Create(req *admin.UserCreate) (*models.User, error)
+	Update(id uint, req *admin.UserUpdate) (*models.User, error)
 	Delete(id uint) error
-	// UpdateBalance 更新用户余额（同时创建余额变动记录）
 	UpdateBalance(userID uint, amount float64, logType string, source string, sourceID *uint, description string, operatorID *uint, remark string) error
-	// ResetPassword 重置用户密码
 	ResetPassword(userID uint, newPassword string) error
-	// ValidateUserExists 校验用户名/邮箱/手机号是否与活跃用户冲突（用户业务：软删后可复用，见 migration users.username+deleted_at 联合唯一）。
-	ValidateUserExists(username, email, phone string, excludeID uint) error
 }
 
 type UserFilters struct {
@@ -43,6 +34,17 @@ type UserFilters struct {
 	Phone    string
 	Nickname string
 	Status   string
+}
+
+// BuildUserFiltersFromHTTP reads list filters from query or body.
+func BuildUserFiltersFromHTTP(ctx http.Context) UserFilters {
+	return UserFilters{
+		Username: ctx.Request().Input("username", ctx.Request().Query("username", "")),
+		Nickname: ctx.Request().Input("nickname", ctx.Request().Query("nickname", "")),
+		Email:    ctx.Request().Input("email", ctx.Request().Query("email", "")),
+		Phone:    ctx.Request().Input("phone", ctx.Request().Query("phone", "")),
+		Status:   ctx.Request().Input("status", ctx.Request().Query("status", "")),
+	}
 }
 
 // BuildUserQuery 构建用户查询（通用查询构建，供列表和导出复用）
@@ -144,8 +146,8 @@ func (s *UserServiceImpl) GetList(filters UserFilters, page, pageSize int) ([]mo
 	return users, total, nil
 }
 
-// Create 创建用户
-func (s *UserServiceImpl) Create(user *models.User) error {
+// createRecord persists a user row (internal helper).
+func (s *UserServiceImpl) createRecord(user *models.User) error {
 	// 如果未设置货币ID，默认使用人民币
 	if user.CurrencyID == 0 {
 		var cnyCurrency models.Currency
@@ -187,36 +189,99 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 	return nil
 }
 
-// Update 更新用户
-func (s *UserServiceImpl) Update(id uint, user *models.User) error {
-	// 如果密码为空，则不更新密码字段
-	updateData := map[string]any{
-		"nickname":    user.Nickname,
-		"avatar":      user.Avatar,
-		"email":       user.Email,
-		"phone":       user.Phone,
-		"status":      user.Status,
-		"currency_id": user.CurrencyID,
+func (s *UserServiceImpl) Create(req *admin.UserCreate) (*models.User, error) {
+	if err := s.validateUserExists(req.Username, req.Email, req.Phone, 0); err != nil {
+		return nil, err
 	}
 
-	// 只有用户名不为空时才更新用户名（通常用户名不允许修改，但保留此逻辑以防需要）
-	if user.Username != "" {
-		updateData["username"] = user.Username
+	hashedPassword, err := facades.Hash().Make(req.Password)
+	if err != nil {
+		return nil, apperrors.NewBusinessError("password_encrypt_failed", "密码加密失败").WithError(err)
 	}
 
-	// 只有密码不为空时才更新密码
-	if user.Password != "" {
-		updateData["password"] = user.Password
+	var currencyID uint
+	var cnyCurrency models.Currency
+	if err := appfacades.OrmQuery(s.ctx).Where("code", "CNY").First(&cnyCurrency); err == nil {
+		currencyID = cnyCurrency.ID
 	}
 
-	_, err := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("id", id).Update(updateData)
-	return err
+	user := &models.User{
+		Username:   req.Username,
+		Password:   hashedPassword,
+		Nickname:   req.Nickname,
+		Email:      req.Email,
+		Phone:      req.Phone,
+		Balance:    0,
+		CurrencyID: currencyID,
+		Status:     req.Status,
+	}
+
+	if err := s.createRecord(user); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
+
+	return s.GetByID(user.ID)
+}
+
+func (s *UserServiceImpl) Update(id uint, req *admin.UserUpdate) (*models.User, error) {
+	user, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	email := user.Email
+	if req.Email != nil {
+		email = *req.Email
+	}
+	phone := user.Phone
+	if req.Phone != nil {
+		phone = *req.Phone
+	}
+	if err := s.validateUserExists("", email, phone, id); err != nil {
+		return nil, err
+	}
+
+	updateData := map[string]any{}
+	if req.Nickname != nil {
+		updateData["nickname"] = *req.Nickname
+	}
+	if req.Email != nil {
+		updateData["email"] = *req.Email
+	}
+	if req.Phone != nil {
+		updateData["phone"] = *req.Phone
+	}
+	if req.Status != nil {
+		updateData["status"] = *req.Status
+	}
+	if req.Password != nil && *req.Password != "" {
+		hashedPassword, err := facades.Hash().Make(*req.Password)
+		if err != nil {
+			return nil, apperrors.NewBusinessError("password_encrypt_failed", "密码加密失败").WithError(err)
+		}
+		updateData["password"] = hashedPassword
+	}
+
+	if len(updateData) == 0 {
+		return user, nil
+	}
+
+	if _, err := appfacades.OrmQuery(s.ctx).Model(&models.User{}).Where("id", id).Update(updateData); err != nil {
+		return nil, apperrors.ErrUpdateFailed.WithError(err)
+	}
+
+	return s.GetByID(id)
 }
 
 // Delete 删除用户（软删除）
 func (s *UserServiceImpl) Delete(id uint) error {
-	_, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.User{})
-	return err
+	if _, err := s.GetByID(id); err != nil {
+		return err
+	}
+	if _, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.User{}); err != nil {
+		return apperrors.ErrDeleteFailed.WithError(err)
+	}
+	return nil
 }
 
 // UpdateBalance 更新用户余额（同时创建余额变动记录）
@@ -303,8 +368,8 @@ func (s *UserServiceImpl) rollbackBalance(userID uint, balance float64) error {
 	return err
 }
 
-// ValidateUserExists 校验用户名/邮箱/手机号是否与活跃用户冲突（用户：软删后可复用）。
-func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excludeID uint) error {
+// validateUserExists 校验用户名/邮箱/手机号是否与活跃用户冲突（用户：软删后可复用）。
+func (s *UserServiceImpl) validateUserExists(username, email, phone string, excludeID uint) error {
 	checks := []struct {
 		column string
 		value  string
@@ -329,52 +394,6 @@ func (s *UserServiceImpl) ValidateUserExists(username, email, phone string, excl
 	}
 
 	return nil
-}
-
-// CreateWithValidation 创建用户（包含验证、密码加密、默认货币设置）
-func (s *UserServiceImpl) CreateWithValidation(username, password, nickname, email, phone string, status uint8) (*models.User, error) {
-	// 验证用户是否存在
-	if err := s.ValidateUserExists(username, email, phone, 0); err != nil {
-		return nil, err
-	}
-
-	// 密码加密
-	hashedPassword, err := facades.Hash().Make(password)
-	if err != nil {
-		return nil, apperrors.NewBusinessError("password_encrypt_failed", "密码加密失败").WithError(err)
-	}
-
-	// 如果未设置货币ID，默认使用人民币
-	var currencyID uint
-	var cnyCurrency models.Currency
-	if err := appfacades.OrmQuery(s.ctx).Where("code", "CNY").First(&cnyCurrency); err == nil {
-		currencyID = cnyCurrency.ID
-	}
-
-	// 创建用户
-	user := &models.User{
-		Username:   username,
-		Password:   hashedPassword,
-		Nickname:   nickname,
-		Avatar:     "",
-		Email:      email,
-		Phone:      phone,
-		Balance:    0,
-		CurrencyID: currencyID,
-		Status:     status,
-	}
-
-	if err := s.Create(user); err != nil {
-		return nil, apperrors.ErrCreateFailed.WithError(err)
-	}
-
-	// 查询创建后的用户（确保获取完整信息）
-	createdUser, err := s.GetByID(user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return createdUser, nil
 }
 
 // ResetPassword 重置用户密码

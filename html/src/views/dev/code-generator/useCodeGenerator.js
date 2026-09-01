@@ -449,7 +449,12 @@ export function useCodeGenerator() {
             await ElMessageBox.confirm(
               t('code_generator.files_exist_confirm', {
                 count: existingFiles.length,
-                files: existingFiles.map(f => `<br/>${f}`).join('')
+                files: existingFiles
+                  .map(
+                    (f) =>
+                      `<div style="padding-left:12px;font-family:monospace;font-size:12px;line-height:1.8;word-break:break-all">${f}</div>`
+                  )
+                  .join(''),
               }),
               t('common.warning'),
               {

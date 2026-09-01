@@ -2,32 +2,28 @@ package services
 
 import (
 	"context"
+
+	"github.com/goravel/framework/contracts/http"
+
 	appfacades "goravel/app/facades"
 
 	"github.com/spf13/cast"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
+	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 	"goravel/app/utils"
 )
 
 type PermissionService interface {
-	// GetByID 根据ID获取权限
-	GetByID(id uint, withMenu bool) (*models.Permission, error)
-	// GetList 获取权限列表
+	GetByID(id uint) (*models.Permission, error)
 	GetList(filters PermissionFilters, page, pageSize int) ([]models.Permission, int64, error)
-	// Create 创建权限
-	Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error)
-	// ValidateUnique 校验权限名称/标识唯一性（硬删后可复用）。
-	ValidateUnique(name, slug string, excludeID uint) error
-	// Update 更新权限
-	Update(permission *models.Permission) error
-	// Delete 删除权限
-	Delete(permission *models.Permission) error
+	Create(req *admin.PermissionCreate) (*models.Permission, error)
+	Update(id uint, req *admin.PermissionUpdate) (*models.Permission, error)
+	Delete(id uint) error
 }
 
-// PermissionFilters 权限查询过滤器
 type PermissionFilters struct {
 	Name      string
 	Slug      string
@@ -38,6 +34,21 @@ type PermissionFilters struct {
 	StartTime string
 	EndTime   string
 	OrderBy   string
+}
+
+// BuildPermissionFiltersFromHTTP reads list filters from query or body.
+func BuildPermissionFiltersFromHTTP(ctx http.Context) PermissionFilters {
+	return PermissionFilters{
+		Name:      ctx.Request().Input("name", ctx.Request().Query("name", "")),
+		Slug:      ctx.Request().Input("slug", ctx.Request().Query("slug", "")),
+		Method:    ctx.Request().Input("method", ctx.Request().Query("method", "")),
+		Path:      ctx.Request().Input("path", ctx.Request().Query("path", "")),
+		Status:    ctx.Request().Input("status", ctx.Request().Query("status", "")),
+		MenuID:    ctx.Request().Input("menu_id", ctx.Request().Query("menu_id", "")),
+		StartTime: helpers.GetTimeInputOrQueryParam(ctx, "start_time"),
+		EndTime:   helpers.GetTimeInputOrQueryParam(ctx, "end_time"),
+		OrderBy:   ctx.Request().Input("order_by", ctx.Request().Query("order_by", "")),
+	}
 }
 
 type PermissionServiceImpl struct {
@@ -52,28 +63,17 @@ func NewPermissionService(ctx context.Context) PermissionService {
 	}
 }
 
-// GetByID 根据ID获取权限
-func (s *PermissionServiceImpl) GetByID(id uint, withMenu bool) (*models.Permission, error) {
+func (s *PermissionServiceImpl) GetByID(id uint) (*models.Permission, error) {
 	var permission models.Permission
-	query := appfacades.OrmQuery(s.ctx).Where("id", id)
-
-	// 预加载关联
-	if withMenu {
-		query = query.With("Menu")
-	}
-
-	if err := query.FirstOrFail(&permission); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).With("Menu").FirstOrFail(&permission); err != nil {
 		return nil, apperrors.ErrPermissionNotFound.WithError(err)
 	}
-
 	return &permission, nil
 }
 
-// GetList 获取权限列表
 func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSize int) ([]models.Permission, int64, error) {
 	query := appfacades.OrmQuery(s.ctx).Model(&models.Permission{})
 
-	// 应用筛选条件
 	if filters.Name != "" {
 		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
 	}
@@ -90,7 +90,6 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 		query = query.Where("status", filters.Status)
 	}
 	if filters.MenuID != "" {
-		// 获取菜单及其所有子菜单的ID列表
 		menuIDUint := cast.ToUint(filters.MenuID)
 		if menuIDUint > 0 {
 			menuIDs, err := s.treeService.GetMenuChildrenIDs(menuIDUint)
@@ -98,7 +97,6 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 				idsAny := helpers.ConvertUintSliceToAny(menuIDs)
 				query = query.WhereIn("menu_id", idsAny)
 			} else {
-				// 如果获取菜单ID失败，返回空查询
 				query = query.Where("1 = 0")
 			}
 		}
@@ -110,14 +108,12 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 		query = query.Where("created_at <= ?", filters.EndTime)
 	}
 
-	// 应用排序
 	orderBy := filters.OrderBy
 	if orderBy == "" {
 		orderBy = "sort:asc,id:desc"
 	}
 	query = helpers.ApplySort(query, orderBy, "sort:asc,id:desc")
 
-	// 分页查询
 	var permissions []models.Permission
 	var total int64
 	if err := query.With("Menu").Paginate(page, pageSize, &permissions, &total); err != nil {
@@ -127,8 +123,7 @@ func (s *PermissionServiceImpl) GetList(filters PermissionFilters, page, pageSiz
 	return permissions, total, nil
 }
 
-// ValidateUnique 校验权限名称/标识唯一性（硬删后可复用）。
-func (s *PermissionServiceImpl) ValidateUnique(name, slug string, excludeID uint) error {
+func (s *PermissionServiceImpl) validateUnique(name, slug string, excludeID uint) error {
 	if name != "" {
 		exists, err := utils.ExistsColumnValue(s.ctx, "permissions", &models.Permission{}, utils.UniqueReuseAllow, "name", name, excludeID)
 		if err != nil {
@@ -150,11 +145,27 @@ func (s *PermissionServiceImpl) ValidateUnique(name, slug string, excludeID uint
 	return nil
 }
 
-// Create 创建权限
-func (s *PermissionServiceImpl) Create(name, slug, method, path, description string, status uint8, sort int, menuID uint) (*models.Permission, error) {
+func resolveMethod(method, httpMethod string) string {
+	if method != "" {
+		return method
+	}
+	return httpMethod
+}
+
+func resolvePath(path, httpPath string) string {
+	if path != "" {
+		return path
+	}
+	return httpPath
+}
+
+func (s *PermissionServiceImpl) Create(req *admin.PermissionCreate) (*models.Permission, error) {
+	method := resolveMethod(req.Method, req.HTTPMethod)
+	path := resolvePath(req.Path, req.HTTPPath)
+
 	exists, err := utils.ExistsColumnValueAny(s.ctx, "permissions", &models.Permission{}, utils.UniqueReuseAllow, 0, map[string]any{
-		"name": name,
-		"slug": slug,
+		"name": req.Name,
+		"slug": req.Slug,
 	})
 	if err != nil {
 		return nil, apperrors.ErrCreateFailed.WithError(err)
@@ -164,14 +175,14 @@ func (s *PermissionServiceImpl) Create(name, slug, method, path, description str
 	}
 
 	permission := &models.Permission{
-		Name:        name,
-		Slug:        slug,
+		Name:        req.Name,
+		Slug:        req.Slug,
 		Method:      method,
 		Path:        path,
-		Description: description,
-		Status:      status,
-		Sort:        sort,
-		MenuID:      menuID,
+		Description: req.Description,
+		Status:      req.Status,
+		Sort:        req.Sort,
+		MenuID:      req.MenuID,
 	}
 
 	if err := appfacades.OrmQuery(s.ctx).Create(permission); err != nil {
@@ -185,20 +196,57 @@ func (s *PermissionServiceImpl) Create(name, slug, method, path, description str
 	return permission, nil
 }
 
-// Update 更新权限
-func (s *PermissionServiceImpl) Update(permission *models.Permission) error {
-	if err := s.ValidateUnique(permission.Name, permission.Slug, permission.ID); err != nil {
-		return err
+func (s *PermissionServiceImpl) Update(id uint, req *admin.PermissionUpdate) (*models.Permission, error) {
+	permission, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != nil {
+		permission.Name = *req.Name
+	}
+	if req.Slug != nil {
+		permission.Slug = *req.Slug
+	}
+	if req.Method != nil {
+		permission.Method = *req.Method
+	} else if req.HTTPMethod != nil {
+		permission.Method = *req.HTTPMethod
+	}
+	if req.Path != nil {
+		permission.Path = *req.Path
+	} else if req.HTTPPath != nil {
+		permission.Path = *req.HTTPPath
+	}
+	if req.Description != nil {
+		permission.Description = *req.Description
+	}
+	if req.Status != nil {
+		permission.Status = *req.Status
+	}
+	if req.Sort != nil {
+		permission.Sort = *req.Sort
+	}
+	if req.MenuID != nil {
+		permission.MenuID = *req.MenuID
+	}
+
+	if err := s.validateUnique(permission.Name, permission.Slug, permission.ID); err != nil {
+		return nil, err
 	}
 	if err := appfacades.OrmQuery(s.ctx).Save(permission); err != nil {
-		return apperrors.ErrUpdateFailed.WithError(err)
+		return nil, apperrors.ErrUpdateFailed.WithError(err)
 	}
-	return nil
+	if err := appfacades.OrmQuery(s.ctx).Model(&models.Permission{}).Where("id", permission.ID).With("Menu").First(permission); err != nil {
+		return nil, apperrors.ErrUpdateFailed.WithError(err)
+	}
+	return permission, nil
 }
 
-// Delete 删除权限
-func (s *PermissionServiceImpl) Delete(permission *models.Permission) error {
-	if _, err := appfacades.OrmQuery(s.ctx).Delete(permission); err != nil {
+func (s *PermissionServiceImpl) Delete(id uint) error {
+	if _, err := s.GetByID(id); err != nil {
+		return err
+	}
+	if _, err := appfacades.OrmQuery(s.ctx).Where("id", id).Delete(&models.Permission{}); err != nil {
 		return apperrors.ErrDeleteFailed.WithError(err)
 	}
 	return nil

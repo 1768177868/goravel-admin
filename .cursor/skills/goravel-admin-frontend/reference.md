@@ -66,7 +66,10 @@ Do not manually set Authorization headers in individual API modules unless requi
 
 ## List page data expectations (observed)
 The shared list-page composables assume backend list responses look like:
-`res.data.list` (or `res.data.data` as fallback) and `res.data.total`.
+`res.data.list` (default) or `res.data.data` (payment, payment_method, order) plus `res.data.total`.
+
+Both Vue composables and React `normalizeListResponse` handle either rows key.
+New backend modules should prefer `list`; match `data` only when editing payment/order modules.
 
 Pagination component expects a model like:
 `{ page, pageSize, total }` (note: `pageSize` in state maps to request param `page_size`).

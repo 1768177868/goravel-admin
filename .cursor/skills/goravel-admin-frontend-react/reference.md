@@ -25,10 +25,14 @@ Prefer `common.<error_code>`, then `messages.<error_code>`.
 - `ListFetchFn` returns `ApiResponse<PaginatedData>` (row unknown)
 - `useListPage<T>` refines rows via `transformData?: (row: Record<string, unknown>) => T`
 - Avoid `as never` on `fetchApi` / SearchForm `onChange`
+- **Rows key**: backend may use `data.list` or `data.data`; `normalizeListResponse` in `utils/normalize.ts` handles both — always call it in list API wrappers
 
 ## When to choose which page pattern
 | Situation | Pattern |
 |---|---|
 | Flat fields, single modal | `SimpleCrudPage` |
 | Custom columns, export, 2FA, rich editor, tree, multi-modal | List + FormModal + `*.config.ts` |
-| Code generator (future) | Prefer generating SimpleCrud or config+List templates matching above |
+## New admin CRUD modules
+- **Backend:** use Dev → Code Generator or match `article_controller.go` / `controller.tpl`
+- **Frontend:** generator produces `SimpleCrudPage` or List+FormModal+config — match output paradigm
+- Do not hand-write legacy controller patterns (FindByID in controller, partial menu-style update) for new modules

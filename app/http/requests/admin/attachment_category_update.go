@@ -9,10 +9,10 @@ import (
 )
 
 type AttachmentCategoryUpdate struct {
-	Name   string `form:"name" json:"name"`
-	Status uint8  `form:"status" json:"status"`
-	Sort   int    `form:"sort" json:"sort"`
-	Remark string `form:"remark" json:"remark"`
+	Name   *string `form:"name" json:"name"`
+	Status *uint8  `form:"status" json:"status"`
+	Sort   *int    `form:"sort" json:"sort"`
+	Remark *string `form:"remark" json:"remark"`
 }
 
 func (r *AttachmentCategoryUpdate) Authorize(ctx http.Context) error {
@@ -21,7 +21,7 @@ func (r *AttachmentCategoryUpdate) Authorize(ctx http.Context) error {
 
 func (r *AttachmentCategoryUpdate) Rules(ctx http.Context) map[string]any {
 	return map[string]any{
-		"name":   "required|max:50",
+		"name":   "max:50",
 		"status": "in:0,1",
 		"remark": "max:500",
 	}

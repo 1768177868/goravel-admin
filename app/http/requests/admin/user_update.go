@@ -9,11 +9,11 @@ import (
 )
 
 type UserUpdate struct {
-	Nickname string `form:"nickname" json:"nickname"`
-	Email    string `form:"email" json:"email"`
-	Phone    string `form:"phone" json:"phone"`
-	Password string `form:"password" json:"password"`
-	Status   uint8  `form:"status" json:"status"`
+	Nickname *string `form:"nickname" json:"nickname"`
+	Email    *string `form:"email" json:"email"`
+	Phone    *string `form:"phone" json:"phone"`
+	Password *string `form:"password" json:"password"`
+	Status   *uint8  `form:"status" json:"status"`
 }
 
 func (r *UserUpdate) Authorize(ctx http.Context) error {

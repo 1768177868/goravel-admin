@@ -46,6 +46,11 @@ Therefore:
 - Do not duplicate global toasts in pages when `err.__handled === true`.
 - For login/logout pages, expect errors to be unhandled and display them locally.
 
+### Paginated list responses
+Backend returns rows under `res.data.list` for code-generated CRUD (e.g. article).
+Legacy payment/order modules use `res.data.data`.
+`useStandardListPage` handles both keys.
+
 ## API layer conventions
 Prefer following the existing pattern used by modules like `html/src/api/user.js`:
 - build a base CRUD API with `createCRUDApi(resource)`

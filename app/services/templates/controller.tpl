@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 <<end>>
 <<end>>
-	"strings"
-
 	"github.com/goravel/framework/contracts/http"
 <<if .HasExport>>
 <<if .ExportAsync>>
@@ -32,30 +30,6 @@ import (
 
 type <<.ControllerName>> struct {}
 
-func handleGeneratedServiceError(ctx http.Context, status int, err error) http.Response {
-	if businessErr, ok := apperrors.GetBusinessError(err); ok {
-		if businessErr.Code == "params_error" || businessErr.Code == "invalid_argument" {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		if businessErr.Code == "record_not_found" || strings.HasSuffix(businessErr.Code, "_not_found") {
-			return response.Error(ctx, http.StatusNotFound, businessErr.Code)
-		}
-		return response.Error(ctx, status, businessErr.Code)
-	}
-	return response.Error(ctx, status, err.Error())
-}
-
-func validateGeneratedRequest(ctx http.Context, req http.FormRequest) http.Response {
-	validationErrors, err := ctx.Request().ValidateRequest(req)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if validationErrors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", validationErrors.All())
-	}
-	return nil
-}
-
 func (c *<<.ControllerName>>) build<<.ModelName>>Filters(ctx http.Context) services.<<.ModelName>>Filters {
 	return services.Build<<.ModelName>>FiltersFromHTTP(ctx)
 }
@@ -77,7 +51,7 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 
 	list, total, err := c.<<.ServiceName>>(ctx).GetList(filters, page, pageSize)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -93,7 +67,7 @@ func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 	item, err := c.<<.ServiceName>>(ctx).GetByID(id)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusNotFound, err)
+		return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusNotFound, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -105,13 +79,13 @@ func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {
 func (c *<<.ControllerName>>) Store(ctx http.Context) http.Response {
 <<- if .HasCreate>>
 	var req adminrequests.<<.RequestCreateName>>
-	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
 		return resp
 	}
 
 	item, err := c.<<.ServiceName>>(ctx).Create(&req)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
@@ -128,13 +102,13 @@ func (c *<<.ControllerName>>) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
 
 	var req adminrequests.<<.RequestUpdateName>>
-	if resp := validateGeneratedRequest(ctx, &req); resp != nil {
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
 		return resp
 	}
 
 	item, err := c.<<.ServiceName>>(ctx).Update(id, &req)
 	if err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -150,7 +124,7 @@ func (c *<<.ControllerName>>) Destroy(ctx http.Context) http.Response {
 <<- if .HasDelete>>
 	id := helpers.GetUintRoute(ctx, "id")
 	if err := c.<<.ServiceName>>(ctx).Delete(id); err != nil {
-		return handleGeneratedServiceError(ctx, http.StatusInternalServerError, err)
+		return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, "delete_success", http.Json{})

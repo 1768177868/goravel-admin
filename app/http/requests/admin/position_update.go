@@ -9,11 +9,11 @@ import (
 )
 
 type PositionUpdate struct {
-	Name   string `form:"name" json:"name"`
-	Code   string `form:"code" json:"code"`
-	Status uint8  `form:"status" json:"status"`
-	Sort   int    `form:"sort" json:"sort"`
-	Remark string `form:"remark" json:"remark"`
+	Name   *string `form:"name" json:"name"`
+	Code   *string `form:"code" json:"code"`
+	Status *uint8  `form:"status" json:"status"`
+	Sort   *int    `form:"sort" json:"sort"`
+	Remark *string `form:"remark" json:"remark"`
 }
 
 func (r *PositionUpdate) Authorize(ctx http.Context) error {

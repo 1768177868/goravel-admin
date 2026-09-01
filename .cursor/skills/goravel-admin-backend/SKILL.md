@@ -1,6 +1,6 @@
 ---
 name: goravel-admin-backend
-description: Implements backend features in this Goravel admin project using the existing HTTP response helpers (response.Success/Error/ValidationError/ErrorWithLog/Paginate/FindByID/PaginateQuery), BusinessError codes with i18n (trans.Get), and consistent HTTP status mapping. Use when adding or modifying controllers, requests validation, services, repositories/ORM queries, auth/permission middleware, exports/imports, uploads, or when fixing bugs around API responses and error codes.
+description: Implements backend features in this Goravel admin project using code-generator CRUD patterns (article_controller), HTTP response helpers (response.Success/Error/ValidationError/ErrorWithLog), BusinessError with i18n, and service-layer logic. Use when adding or modifying controllers, requests, services, auth/permissions, exports, uploads, or fixing API response/error handling.
 ---
 
 # Goravel Admin Backend
@@ -9,8 +9,8 @@ description: Implements backend features in this Goravel admin project using the
 All API responses are JSON and use the helpers in `app/http/response/response.go`.
 
 ## Additional resources
-- For module names, logging attrs conventions, and copy-paste examples, see [reference.md](reference.md).
-- For controller/service skeletons (CRUD, pagination, error handling), see [examples.md](examples.md).
+- For module names, logging attrs, and legacy notes, see [reference.md](reference.md).
+- For controller/service skeletons, see [examples.md](examples.md) — **code generator output is the source of truth**.
 
 ### Success JSON
 - `code`: `200`
@@ -21,7 +21,7 @@ All API responses are JSON and use the helpers in `app/http/response/response.go
 Use:
 - `response.Success(ctx)` / `response.Success(ctx, data)` / `response.Success(ctx, "message_key", data)`
 - `response.SuccessWithHeader(ctx, "message_key", headerKey, headerValue, data)`
-- `response.Paginate(ctx, ...)` or `response.PaginateQuery(ctx, query, &list, options)`
+- Manual paginated `response.Success` with `list` + `total`/`page`/`page_size` (code generator default)
 
 ### Error JSON
 - `code`: HTTP status code (and also the JSON `code` field)
@@ -31,101 +31,107 @@ Use:
 
 Use:
 - `response.Error(ctx, httpStatus, messageKeyOrErr)`
-  - if `messageKeyOrErr` is `error` and it’s a `*errors.BusinessError`, it will use `GetFormattedMessage(ctx)` and set `error_code = BusinessError.Code`.
-  - if `messageKeyOrErr` is a string, it is treated as a **translation key** (aka error_code).
-- `response.ErrorWithLog(ctx, ...)` / `response.ErrorWithLogAuto(ctx, module, ...)` for 500+ errors with automatic error logging.
+- `response.ErrorWithLog(ctx, ...)` for unexpected infra failures in **hand-written** modules (auth, export, config, …)
+- Generated CRUD controllers use `handleGeneratedServiceError` instead (see below)
 
 ### Validation error JSON
-- same as Error JSON plus:
-  - `errors`: field-level map (from `errors.All()`)
-  - `message`: first field error message if available (otherwise translated base message)
+- same as Error JSON plus `errors` field map and first-field message when available
 
 Use:
 - `response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())`
+- Generated CRUD: `validateGeneratedRequest(ctx, &req)`
 
 ## Error model (BusinessError + i18n)
-The project’s business error type is `*errors.BusinessError` in `app/errors/errors.go`.
+Business errors live in `app/errors/errors.go`. Services return `*errors.BusinessError` for expected failures; controllers map them via `handleGeneratedServiceError` (generated) or `response.Error` (hand-written).
 
-### Rules
-- Prefer returning `*errors.BusinessError` for expected, user-facing failures (validation-like, not-found, conflicts, forbidden, business rules).
-- Error “code” is the contract: use stable snake_case keys.
-- User-facing message must be i18n-friendly:
-  - prefer `trans.Get(ctx, code)` resolution via `BusinessError.GetFormattedMessage(ctx)`
-  - if translation missing, it must fall back to the default `BusinessError.Message`
-- For dynamic content in messages, use `WithParams(...)` so placeholders are replaced.
-  - Supported placeholders: `{key}` and `${key}`
-  - Numeric formatting: float32/float64 -> 2 decimals; ints -> integer string
+Rules:
+- Stable snake_case codes; reuse existing codes before adding new ones
+- Use `WithParams(...)` for dynamic message placeholders (`{key}` / `${key}`)
+- Service layer owns business rules; controller stays thin
 
-### Don’t duplicate codes
-Before adding a new business error, search existing codes in `app/errors/errors.go` and reuse when semantics match.
+## New CRUD modules — follow the code generator (canonical)
 
-## Controller workflow (match existing style)
+**Source of truth:** `app/services/templates/controller.tpl` → e.g. `app/http/controllers/admin/article_controller.go`.
 
-### Request validation pattern (standard)
-For create/update endpoints, follow this pattern:
-1. `errors, err := ctx.Request().ValidateRequest(&req)`
-2. If `err != nil`: return `response.Error(ctx, http.StatusBadRequest, err.Error())`
-3. If `errors != nil`: return `response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())`
+When adding a new admin CRUD module, **match the generator output** (or use Dev → Code Generator). Do **not** copy legacy patterns from menu/role/position unless you are fixing those files in place.
 
-This is used in controllers like:
-- `app/http/controllers/api/auth_controller.go`
-- `app/http/controllers/admin/menu_controller.go`
+### Generated controller helpers (shared in admin package)
+All generated / migrated CRUD controllers use helpers in `app/http/controllers/admin/generated_helpers.go`:
 
-### HTTP status mapping (default choices)
-Use these defaults unless an existing controller in the same module does otherwise:
-- **400 Bad Request**
-  - request validation failures (`response.ValidationError`)
-  - invalid/required params (e.g., `id_required`, `params_error`)
-  - “already exists” conflicts handled as business rule (e.g., `*_exists`, `menu_slug_exists`)
-- **401 Unauthorized**
-  - not logged in / invalid credentials (e.g., `not_logged_in`, `username_or_password_error`)
-- **403 Forbidden**
-  - disabled account / permission forbidden / protected actions (e.g., `account_disabled`, `protected_*`)
-- **404 Not Found**
-  - resource not found (use `response.FindByID` or `response.Error(ctx, http.StatusNotFound, "<resource>_not_found")`)
-- **500 Internal Server Error**
-  - unexpected DB/IO/infra failures; prefer `response.ErrorWithLog(ctx, module, err, attrs)` so it’s logged
+```go
+ValidateGeneratedRequest(ctx, &req)
+HandleGeneratedServiceError(ctx, "module_name", http.StatusInternalServerError, err, attrs)
+```
 
-### Use response helpers instead of hand-rolled JSON
-Do not craft response JSON manually in controllers. Use:
-- `response.Success`, `response.SuccessWithHeader`
-- `response.Error`, `response.ErrorWithLog`, `response.ErrorWithLogAuto`
-- `response.ValidationError`
-- `response.FindByID` (preferred for show/update/destroy)
-- `response.PaginateQuery` (preferred for index lists)
+`HandleGeneratedServiceError`:
+- maps BusinessError codes to appropriate HTTP status (`*_not_found` → 404, `*_exists` / `*_already_exists` → 400, `role_protected_*` → 403, …)
+- logs unexpected failures (500+) via `ErrorWithLog`
 
-## Common patterns to follow
+Do **not** duplicate these per controller file.
 
-### Find by ID (preferred)
-For show/update/destroy, prefer:
-- `model, resp := response.FindByID[models.X](ctx, id, options)`
-- If `resp != nil` return it
+### Migrated modules (canonical CRUD pattern)
+These admin modules follow the code generator pattern end-to-end:
 
-Notes:
-- id==0 -> `400` with `id_required`
-- not found -> `404` with `record_not_found` or `options.NotFoundMessageKey`
+| Module | Notes |
+|--------|-------|
+| `article` | Reference implementation |
+| `position`, `attachment_category`, `blacklist`, `dictionary`, `permission`, `role` | Full CRUD |
+| `user` | CRUD migrated; `UpdateBalance`, `ResetPassword`, `Export` remain hand-written |
+| `user_balance_log` | List/statistics use shared error helper; `Store` remains hand-written (sharding) |
 
-### System errors should be logged (500+)
-If an operation can fail due to DB/IO/remote calls, prefer:
-- `response.ErrorWithLog(ctx, "<module>", err, map[string]any{...context...})`
-so `response.Error` will include a user-safe message and log details server-side.
+**Do not migrate** (edit in place only): `menu`, `department`, `admin`, `auth`, `payment`, `order`, `attachment`, logs, `config`, `export`, `notification`, …
 
-Keep attrs small and safe (no secrets, passwords, tokens).
+### Generated controller structure
+```go
+func (c *XController) buildXFilters(ctx http.Context) services.XFilters {
+    return services.BuildXFiltersFromHTTP(ctx)  // filters live in service package
+}
+func (c *XController) XService(ctx http.Context) services.XService {
+    return services.NewXService(ctx)
+}
+```
 
-### Business errors should be returned as codes
-If a service returns a `*errors.BusinessError`, bubble it up and respond using its code:
-- Recommended: `return response.Error(ctx, http.StatusBadRequest, err)` (lets `Error` detect BusinessError and format message/params)
-- Acceptable (existing style in some controllers): `return response.Error(ctx, http.StatusBadRequest, businessErr.Code)`
+| Action | Pattern |
+|--------|---------|
+| Index | `GetList(filters, page, pageSize)` → `{ list, total, page, page_size }` |
+| Show | `GetByID(id)` → `{ "<module>": item }` |
+| Store | `validateGeneratedRequest` → `Create(&req)` → `{ "<module>": item }` |
+| Update | `validateGeneratedRequest` → `Update(id, &req)` → `{ "<module>": item }` |
+| Destroy | `Delete(id)` → `Success(ctx, "delete_success", http.Json{})` |
+| Export | async queue or sync `response.Export` (when enabled in generator) |
 
-Prefer passing the `error` (not only the code) when you rely on `WithParams` formatting.
+Service interface (generated): `GetByID`, `GetList`, `Create`, `Update`, `Delete` — business logic and ORM queries stay in service.
 
-## Deliverable expectations (how the agent should report work)
-When implementing changes, always include:
-- **Changed files**: list + 1-line purpose each
-- **API behavior**: success payload keys + relevant error cases (`error_code`, status codes)
-- **New/updated error codes**: only if added; explain why not reusable
-- **Test plan**: commands + at least 2-3 manual request examples (happy path + failure path)
+### Pagination
+New generated modules always use `"list"` for the rows array. Legacy payment/order modules use `"data"` — only match that when editing those files.
+
+## Hand-written modules (auth, menu, export, config, …)
+
+Older/system modules may still use:
+- `response.FindByID` directly in controller
+- `response.ErrorWithLog` per action
+- Partial update via `ctx.Request().All()` in controller (menu)
+- `response.Paginate` shortcut (export list, online admins)
+
+**When editing an existing file:** follow that file's style. **When creating new CRUD:** use code generator pattern only.
+
+## HTTP status mapping (default)
+- **400** — validation, params_error, business conflicts
+- **401** — not logged in, bad credentials
+- **403** — forbidden, disabled account
+- **404** — not found (`*_not_found`, `record_not_found`)
+- **500** — unexpected failures (ErrorWithLog in hand-written modules; handleGeneratedServiceError in generated)
+
+## Deliverable expectations
+When implementing changes, include:
+- Changed files + purpose
+- API success/error shapes and status codes
+- New error codes (if any) and why not reused
+- Test plan (targeted `go test` + manual requests)
 
 ## References
-- `app/http/response/response.go`: canonical response helpers, logging behavior, validation error payload
-- `app/errors/errors.go`: `BusinessError`, `GetFormattedMessage(ctx)`, placeholder replacement via `WithParams`
+- `app/services/templates/controller.tpl` — generator template (canonical)
+- `app/http/controllers/admin/generated_helpers.go` — shared Validate/HandleGeneratedServiceError
+- `app/http/controllers/admin/article_controller.go` — latest generated example
+- `app/http/response/response.go` — response helpers
+- `app/errors/errors.go` — BusinessError

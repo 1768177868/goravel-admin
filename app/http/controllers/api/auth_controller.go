@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/facades"
 
 	apperrors "goravel/app/errors"
+	adminrequests "goravel/app/http/requests/admin"
 	apirequests "goravel/app/http/requests/api"
 	"goravel/app/http/response"
 	"goravel/app/models"
@@ -36,14 +37,14 @@ func (r *AuthController) Register(ctx http.Context) http.Response {
 	}
 
 	// 使用服务方法创建用户（包含验证、密码加密、默认货币设置）
-	user, err := r.userService(ctx).CreateWithValidation(
-		registerRequest.Username,
-		registerRequest.Password,
-		registerRequest.Nickname,
-		registerRequest.Email,
-		registerRequest.Phone,
-		1, // C端注册默认启用
-	)
+	user, err := r.userService(ctx).Create(&adminrequests.UserCreate{
+		Username: registerRequest.Username,
+		Password: registerRequest.Password,
+		Nickname: registerRequest.Nickname,
+		Email:    registerRequest.Email,
+		Phone:    registerRequest.Phone,
+		Status:   1, // C端注册默认启用
+	})
 	if err != nil {
 		if businessErr, ok := apperrors.GetBusinessError(err); ok {
 			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)

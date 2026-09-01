@@ -9,9 +9,9 @@ import (
 )
 
 type BlacklistUpdate struct {
-	IP     string `form:"ip" json:"ip" example:"192.168.1.1"`           // IP地址/IP段（支持单IP、CIDR、范围）
-	Remark string `form:"remark" json:"remark" example:"测试IP"`          // 备注说明（可选）
-	Status uint8  `form:"status" json:"status" enums:"0,1" example:"1"` // 状态（1-启用，0-禁用）
+	IP     *string `form:"ip" json:"ip" example:"192.168.1.1"`
+	Remark *string `form:"remark" json:"remark" example:"测试IP"`
+	Status *uint8  `form:"status" json:"status" enums:"0,1" example:"1"`
 }
 
 func (r *BlacklistUpdate) Authorize(ctx http.Context) error {

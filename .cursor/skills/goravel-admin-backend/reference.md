@@ -1,36 +1,25 @@
 ## Module names for `ErrorWithLog` (reuse these)
 Prefer reusing existing module strings so logs are grouped consistently.
 
-Observed in controllers:
-- `auth`
-- `captcha`
-- `admin`
-- `online_admin`
-- `user`
-- `password`
-- `menu`
-- `role`
-- `permission`
-- `department`
-- `dictionary`
-- `blacklist`
-- `order`
-- `payment`
-- `payment_method`
-- `attachment`
-- `export`
-- `import`
-- `config`
-- `login-log`
-- `operation-log`
-- `system-log`
+Observed in admin controllers:
+- `auth`, `captcha`
+- `admin`, `online_admin`
+- `user`, `password`
+- `menu`, `role`, `permission`, `department`, `position`
+- `dictionary`, `blacklist`
+- `article`, `notification`
+- `order`, `payment`, `payment_method`
+- `attachment`, `attachment_category`
+- `export`, `import`
+- `config`, `observability`
+- `login-log`, `operation-log`, `system-log`
 - `menu-test` (debug/test)
 
 Guideline:
 - If a module already exists for the domain, **do not invent a new one**.
 - If adding a new domain, prefer **kebab-case** for new module names and keep it stable:
-  - ✅ kebab-case: `payment-method`, `online-admin`, `login-log`
-  - ⚠️ existing snake_case modules exist (`payment_method`, `online_admin`) — keep them as-is, but don’t introduce more snake_case.
+  - ✅ kebab-case: `login-log`, `operation-log`, `system-log`, `online-admin`
+  - ⚠️ existing snake_case modules exist (`payment_method`, `online_admin`, `attachment_category`) — keep them as-is, but don’t introduce more snake_case.
   - Rule of thumb: use the same word separator style as the closest existing module; otherwise default to kebab-case.
 
 ## What to put in `attrs` (safe, useful, consistent)
@@ -38,30 +27,76 @@ Guideline:
 
 Good attrs:
 - identifiers: `id`, `<resource>_id`, `user_id`, `admin_id`, `role_id`, `menu_id`, `order_id`
-- lookup keys: `username`, `slug`, `email`, `phone`
-- action context: `action`, `status`, `type`
+- lookup keys: `username`, `slug`, `email`, `phone`, `trace_id`
+- action context: `action`, `status`, `type`, `filters`
 - pagination: `page`, `page_size`
 
 Avoid attrs:
 - passwords, tokens, Authorization headers
 - full request bodies (too big + may contain secrets)
-- personal data beyond what’s required to debug (minimize)
+- payment gateway secrets / API keys in config maps
 
 ## Decision table (which response helper to use)
-- Request validation failed (`errors != nil`): `response.ValidationError(ctx, 400, "validation_failed", errors.All())`
-- Business rule failure (expected): `response.Error(ctx, 400/401/403/404, businessErrOrCode)`
-  - Prefer passing the **error** when using `WithParams` so formatting is preserved:
-    - ✅ `response.Error(ctx, http.StatusBadRequest, err)`
-    - ⚠️ `response.Error(ctx, http.StatusBadRequest, businessErr.Code)` (loses params formatting)
-- Unexpected infra failure (DB/IO/remote): `response.ErrorWithLog(ctx, module, err, attrs)` (usually 500)
+
+### Generated CRUD (canonical)
+- Validation: `validateGeneratedRequest(ctx, &req)`
+- Service errors: `handleGeneratedServiceError(ctx, status, err)` — maps BusinessError codes to HTTP status
+- Success list: `response.Success` with `list`, `total`, `page`, `page_size`
+- Delete success: `response.Success(ctx, "delete_success", http.Json{})`
+
+### Hand-written / legacy modules
+- Validation: inline `ValidateRequest` → `ValidationError`
+- Business failure: `response.Error(ctx, 4xx, err)` or `businessErr.Code`
+- Unexpected infra: `response.ErrorWithLog(ctx, module, err, attrs)`
+- Paginated list: manual Success, or `response.Paginate` (export, online admins)
+- ORM load in controller: `response.FindByID` (legacy modules only)
 
 ## Response payload key conventions (observed)
-- Paginated lists (most controllers): `list`, `total`, `page`, `page_size`
-- Detail endpoints: singular key, e.g. `user`, `role`, `permission`, `dictionary`, `department`, `menu`
-- Tree endpoints:
-  - Menu: returns `menus` and `list` with the same value (compat)
-  - Department: returns `list` only (tree or flat search results)
-- “lookup” endpoints may use plural nouns, e.g. `dictionaries`, `types`
+
+### Paginated lists
+Always include: `total`, `page`, `page_size`.
+
+Rows array key — **match the module**:
+
+| Rows key | Modules |
+|----------|---------|
+| `list` (default — **all new generated CRUD**) | article, position, admin, user, role, … |
+| `data` (legacy only) | payment, payment_method, order |
+
+Frontends accept both (`list` for new generated modules; `data` only in legacy payment/order).
+
+### Detail endpoints
+Singular resource key: `user`, `role`, `position`, `payment_method`, `order`, etc.
+
+### Tree endpoints
+- Menu: returns both `menus` and `list` (compat)
+- Department: returns `list` only (tree or flat search results)
+
+### Lookup endpoints
+May use plural nouns, e.g. `dictionaries`, `types`
+
+## Controller structure
+
+### Canonical (new CRUD — code generator)
+- Template: `app/services/templates/controller.tpl`
+- Example: `app/http/controllers/admin/article_controller.go`
+- Migrated: `article`, `position`, `attachment_category`, `blacklist`, `dictionary`, `permission`, `role`, `user` (CRUD only; `UpdateBalance`, `ResetPassword`, `Export` remain hand-written)
+- Helpers: `ValidateGeneratedRequest`, `HandleGeneratedServiceError` in `app/http/controllers/admin/generated_helpers.go`
+- Service: `BuildXFiltersFromHTTP`, `GetByID`, `GetList`, `Create`, `Update`, `Delete`
+- Pagination: always `list` + `total` + `page` + `page_size`
+- Destroy: `Success(ctx, "delete_success", http.Json{})`
+
+### Legacy (hand-written older modules — edit in place only)
+| Pattern | Where |
+|---------|-------|
+| `response.FindByID` in controller | menu, … |
+| Partial update `Request().All()` | menu |
+| `findXByID` + per-action `ErrorWithLog` | position |
+| `"data"` pagination key | payment, payment_method, order |
+| `response.Paginate` | export list, online admins |
+| apidoc/swag annotations | payment_method (optional for hand-written APIs) |
+
+Do **not** apply legacy patterns to new modules — use code generator output instead.
 
 ## Copy/paste examples
 
@@ -97,4 +132,3 @@ if err != nil {
     return response.Error(ctx, http.StatusBadRequest, err)
 }
 ```
-

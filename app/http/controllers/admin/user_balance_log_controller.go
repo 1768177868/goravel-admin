@@ -6,25 +6,22 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/spf13/cast"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	"goravel/app/http/response"
 	"goravel/app/services"
 )
 
-type UserBalanceLogController struct {}
-
+type UserBalanceLogController struct{}
 
 func NewUserBalanceLogController() *UserBalanceLogController {
 	return &UserBalanceLogController{}
 }
 
-func (r *UserBalanceLogController) balanceLogService(ctx http.Context) services.UserBalanceLogService {
+func (c *UserBalanceLogController) UserBalanceLogService(ctx http.Context) services.UserBalanceLogService {
 	return services.NewUserBalanceLogService(ctx)
 }
 
-
-func (r *UserBalanceLogController) parseTimeRangeFromQuery(ctx http.Context) (time.Time, time.Time, http.Response) {
+func (c *UserBalanceLogController) parseTimeRangeFromQuery(ctx http.Context) (time.Time, time.Time, http.Response) {
 	startTime, resp := parseOptionalTimeFromQuery(ctx, "start_time", "invalid_start_time")
 	if resp != nil {
 		return time.Time{}, time.Time{}, resp
@@ -38,71 +35,74 @@ func (r *UserBalanceLogController) parseTimeRangeFromQuery(ctx http.Context) (ti
 	return startTime, endTime, nil
 }
 
-// Index 余额变动记录列表
-func (r *UserBalanceLogController) Index(ctx http.Context) http.Response {
-	userID := cast.ToUint(ctx.Request().Query("user_id", "0"))
+func (c *UserBalanceLogController) buildUserBalanceLogFilters(ctx http.Context) (services.UserBalanceLogFilters, http.Response) {
+	userID := cast.ToUint(ctx.Request().Input("user_id", ctx.Request().Query("user_id", "0")))
 	if userID == 0 {
-		return response.Error(ctx, http.StatusBadRequest, "user_id_required_for_sharding")
+		return services.UserBalanceLogFilters{}, response.Error(ctx, http.StatusBadRequest, "user_id_required_for_sharding")
 	}
 
-	page := helpers.GetIntQuery(ctx, "page", 1)
-	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
-
-	startTime, endTime, resp := r.parseTimeRangeFromQuery(ctx)
+	startTime, endTime, resp := c.parseTimeRangeFromQuery(ctx)
 	if resp != nil {
-		return resp
+		return services.UserBalanceLogFilters{}, resp
 	}
 
 	var operatorID *uint
-	if operatorIDStr := ctx.Request().Query("operator_id", ""); operatorIDStr != "" {
+	if operatorIDStr := ctx.Request().Input("operator_id", ctx.Request().Query("operator_id", "")); operatorIDStr != "" {
 		id := cast.ToUint(operatorIDStr)
 		operatorID = &id
 	}
 
-	filters := services.UserBalanceLogFilters{
+	return services.UserBalanceLogFilters{
 		UserID:     userID,
-		Type:       ctx.Request().Query("type", ""),
-		Source:     ctx.Request().Query("source", ""),
-		Status:     ctx.Request().Query("status", ""),
+		Type:       ctx.Request().Input("type", ctx.Request().Query("type", "")),
+		Source:     ctx.Request().Input("source", ctx.Request().Query("source", "")),
+		Status:     ctx.Request().Input("status", ctx.Request().Query("status", "")),
 		StartTime:  startTime,
 		EndTime:    endTime,
 		OperatorID: operatorID,
+	}, nil
+}
+
+func (c *UserBalanceLogController) Index(ctx http.Context) http.Response {
+	page := helpers.GetIntQuery(ctx, "page", 1)
+	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
+
+	filters, resp := c.buildUserBalanceLogFilters(ctx)
+	if resp != nil {
+		return resp
 	}
 
-	logs, total, err := r.balanceLogService(ctx).GetLogs(filters, page, pageSize)
+	list, total, err := c.UserBalanceLogService(ctx).GetLogs(filters, page, pageSize)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "user-balance-log", http.StatusBadRequest, err, map[string]any{
+			"user_id": filters.UserID,
+		})
 	}
 
 	return response.Success(ctx, http.Json{
-		"list":      logs,
+		"list":      list,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
 	})
 }
 
-// Statistics 用户余额统计
-func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
-	userID := cast.ToUint(ctx.Request().Query("user_id", "0"))
+func (c *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
+	userID := cast.ToUint(ctx.Request().Input("user_id", ctx.Request().Query("user_id", "0")))
 	if userID == 0 {
 		return response.Error(ctx, http.StatusBadRequest, "user_id_required")
 	}
 
-	startTime, endTime, resp := r.parseTimeRangeFromQuery(ctx)
+	startTime, endTime, resp := c.parseTimeRangeFromQuery(ctx)
 	if resp != nil {
 		return resp
 	}
 
-	stats, err := r.balanceLogService(ctx).GetUserStatistics(userID, startTime, endTime)
+	stats, err := c.UserBalanceLogService(ctx).GetUserStatistics(userID, startTime, endTime)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "user-balance-log", http.StatusBadRequest, err, map[string]any{
+			"user_id": userID,
+		})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -110,8 +110,8 @@ func (r *UserBalanceLogController) Statistics(ctx http.Context) http.Response {
 	})
 }
 
-// Store 创建余额变动记录
-func (r *UserBalanceLogController) Store(ctx http.Context) http.Response {
+// Store 创建余额变动记录（手写：分表 + 可选余额回填）
+func (c *UserBalanceLogController) Store(ctx http.Context) http.Response {
 	userID := cast.ToUint(ctx.Request().Input("user_id", "0"))
 	if userID == 0 {
 		return response.Error(ctx, http.StatusBadRequest, "user_id_required_for_sharding")
@@ -145,25 +145,22 @@ func (r *UserBalanceLogController) Store(ctx http.Context) http.Response {
 		operatorID = &adminID
 	}
 
-	// 如果未提供 balance，从用户表获取当前余额
+	svc := c.UserBalanceLogService(ctx)
 	if balance == 0 {
-		currentBalance, err := r.balanceLogService(ctx).GetUserBalance(userID)
+		currentBalance, err := svc.GetUserBalance(userID)
 		if err != nil {
-			// 检查是否是业务错误
-			if businessErr, ok := apperrors.GetBusinessError(err); ok {
-				return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
-			}
-			return response.Error(ctx, http.StatusInternalServerError, "get_user_balance_failed")
+			return HandleGeneratedServiceError(ctx, "user-balance-log", http.StatusInternalServerError, err, map[string]any{
+				"user_id": userID,
+			})
 		}
 		balance = currentBalance
 	}
 
-	log, err := r.balanceLogService(ctx).CreateLog(userID, logType, amount, balance, source, sourceID, description, operatorID, status, remark)
+	log, err := svc.CreateLog(userID, logType, amount, balance, source, sourceID, description, operatorID, status, remark)
 	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "user-balance-log", http.StatusBadRequest, err, map[string]any{
+			"user_id": userID,
+		})
 	}
 
 	return response.Success(ctx, "balance_log_create_success", http.Json{

@@ -9,11 +9,11 @@ import (
 )
 
 type RoleUpdate struct {
-	Name        string `form:"name" json:"name"`
-	Slug        string `form:"slug" json:"slug"`
-	Description string `form:"description" json:"description"`
-	Status      uint8  `form:"status" json:"status"`
-	Sort        int    `form:"sort" json:"sort"`
+	Name        *string `form:"name" json:"name"`
+	Slug        *string `form:"slug" json:"slug"`
+	Description *string `form:"description" json:"description"`
+	Status      *uint8  `form:"status" json:"status"`
+	Sort        *int    `form:"sort" json:"sort"`
 }
 
 func (r *RoleUpdate) Authorize(ctx http.Context) error {

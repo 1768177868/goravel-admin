@@ -13,6 +13,7 @@ const api = extendApi(base, {
 })
 
 export async function getWidgetList(params?: Record<string, unknown>) {
+  // Required: normalizes both data.list and data.data from backend
   return normalizeListResponse(await api.list(params))
 }
 

@@ -1,29 +1,24 @@
 package admin
 
 import (
-
 	"github.com/goravel/framework/contracts/http"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/http/apidoc"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-	"goravel/app/models"
 	"goravel/app/services"
-	"goravel/app/utils"
 )
 
-type BlacklistController struct {}
-
+type BlacklistController struct{}
 
 type BlacklistResponse struct {
-	ID        uint   `json:"id" example:"1"`                           // 黑名单ID
-	IP        string `json:"ip" example:"192.168.1.1"`                 // IP地址/IP段
-	Remark    string `json:"remark" example:"测试IP"`                    // 备注说明
-	Status    uint8  `json:"status" enums:"0,1" example:"1"`           // 状态（1-启用，0-禁用）
-	CreatedAt string `json:"created_at" example:"2024-01-01 00:00:00"` // 创建时间
-	UpdatedAt string `json:"updated_at" example:"2024-01-01 00:00:00"` // 更新时间
+	ID        uint   `json:"id" example:"1"`
+	IP        string `json:"ip" example:"192.168.1.1"`
+	Remark    string `json:"remark" example:"测试IP"`
+	Status    uint8  `json:"status" enums:"0,1" example:"1"`
+	CreatedAt string `json:"created_at" example:"2024-01-01 00:00:00"`
+	UpdatedAt string `json:"updated_at" example:"2024-01-01 00:00:00"`
 }
 
 type BlacklistListData struct {
@@ -49,35 +44,12 @@ func NewBlacklistController() *BlacklistController {
 	return &BlacklistController{}
 }
 
-func (r *BlacklistController) blacklistService(ctx http.Context) services.BlacklistService {
+func (c *BlacklistController) buildBlacklistFilters(ctx http.Context) services.BlacklistFilters {
+	return services.BuildBlacklistFiltersFromHTTP(ctx)
+}
+
+func (c *BlacklistController) BlacklistService(ctx http.Context) services.BlacklistService {
 	return services.NewBlacklistService(ctx)
-}
-
-
-// findBlacklistByID 根据ID查找黑名单，如果不存在则返回错误响应
-func (r *BlacklistController) findBlacklistByID(ctx http.Context, id uint) (*models.Blacklist, http.Response) {
-	blacklist, err := r.blacklistService(ctx).GetByID(id)
-	if err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrRecordNotFound.Code)
-	}
-	return blacklist, nil
-}
-
-// buildFilters 构建查询过滤器
-func (r *BlacklistController) buildFilters(ctx http.Context) services.BlacklistFilters {
-	ip := ctx.Request().Query("ip", "")
-	status := ctx.Request().Query("status", "")
-	startTime := getTimeQueryUTC(ctx, "start_time")
-	endTime := getTimeQueryUTC(ctx, "end_time")
-	orderBy := ctx.Request().Query("order_by", "")
-
-	return services.BlacklistFilters{
-		IP:        ip,
-		Status:    status,
-		StartTime: startTime,
-		EndTime:   endTime,
-		OrderBy:   orderBy,
-	}
 }
 
 // Index 黑名单列表
@@ -97,18 +69,17 @@ func (r *BlacklistController) buildFilters(ctx http.Context) services.BlacklistF
 // @Failure      500         {object}  apidoc.Error "服务器错误"
 // @Router       /api/admin/blacklists [get]
 // @Security     BearerAuth
-func (r *BlacklistController) Index(ctx http.Context) http.Response {
+func (c *BlacklistController) Index(ctx http.Context) http.Response {
 	page, pageSize := helpers.PaginationFromQuery(ctx, helpers.PaginationLimits{})
+	filters := c.buildBlacklistFilters(ctx)
 
-	filters := r.buildFilters(ctx)
-
-	blacklists, total, err := r.blacklistService(ctx).GetList(filters, page, pageSize)
+	list, total, err := c.BlacklistService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "blacklist", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
-		"list":      blacklists,
+		"list":      list,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
@@ -126,22 +97,21 @@ func (r *BlacklistController) Index(ctx http.Context) http.Response {
 // @Failure      404   {object}  apidoc.Error "黑名单不存在"
 // @Router       /api/admin/blacklists/{id} [get]
 // @Security     BearerAuth
-func (r *BlacklistController) Show(ctx http.Context) http.Response {
+func (c *BlacklistController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	blacklist, resp := r.findBlacklistByID(ctx, id)
-	if resp != nil {
-		return resp
+	blacklist, err := c.BlacklistService(ctx).GetByID(id)
+	if err != nil {
+		return HandleGeneratedServiceError(ctx, "blacklist", http.StatusNotFound, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
-		"blacklist": *blacklist,
+		"blacklist": blacklist,
 	})
 }
 
 // Store 创建黑名单
 // @Summary      创建黑名单
 // @Description  创建黑名单记录，支持单个IP、CIDR、IP范围等格式
-// @Description  字段说明：ip-IP地址/IP段（必填）；remark-备注；status-状态（1启用/0禁用）
 // @Tags         风控管理
 // @Accept       json
 // @Produce      json
@@ -151,36 +121,15 @@ func (r *BlacklistController) Show(ctx http.Context) http.Response {
 // @Failure      500      {object}  apidoc.Error "服务器错误"
 // @Router       /api/admin/blacklists [post]
 // @Security     BearerAuth
-func (r *BlacklistController) Store(ctx http.Context) http.Response {
-	// 使用请求验证
-	var blacklistCreate adminrequests.BlacklistCreate
-	errors, err := ctx.Request().ValidateRequest(&blacklistCreate)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
+func (c *BlacklistController) Store(ctx http.Context) http.Response {
+	var req adminrequests.BlacklistCreate
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
+		return resp
 	}
 
-	// 验证IP格式（使用自定义验证函数）
-	if err := utils.ValidateBlacklistIP(blacklistCreate.IP); err != nil {
-		// 使用业务错误类型，直接提取错误码
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		// 如果不是业务错误，返回通用错误
-		return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidIPFormat.Code)
-	}
-
-	blacklist, err := r.blacklistService(ctx).Create(
-		blacklistCreate.IP,
-		blacklistCreate.Remark,
-		blacklistCreate.Status,
-	)
+	blacklist, err := c.BlacklistService(ctx).Create(&req)
 	if err != nil {
-		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
-			"ip": blacklistCreate.IP,
-		})
+		return HandleGeneratedServiceError(ctx, "blacklist", http.StatusInternalServerError, err, map[string]any{"ip": req.IP})
 	}
 
 	return response.Success(ctx, http.Json{
@@ -191,7 +140,6 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 // Update 更新黑名单
 // @Summary      更新黑名单
 // @Description  根据ID更新黑名单信息
-// @Description  字段说明：ip-IP地址/IP段；remark-备注；status-状态（1启用/0禁用）（均可选）
 // @Tags         风控管理
 // @Accept       json
 // @Produce      json
@@ -203,53 +151,21 @@ func (r *BlacklistController) Store(ctx http.Context) http.Response {
 // @Failure      500      {object}  apidoc.Error "服务器错误"
 // @Router       /api/admin/blacklists/{id} [put]
 // @Security     BearerAuth
-func (r *BlacklistController) Update(ctx http.Context) http.Response {
+func (c *BlacklistController) Update(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	blacklist, resp := r.findBlacklistByID(ctx, id)
-	if resp != nil {
+
+	var req adminrequests.BlacklistUpdate
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
 		return resp
 	}
 
-	// 使用请求验证
-	var blacklistUpdate adminrequests.BlacklistUpdate
-	errors, err := ctx.Request().ValidateRequest(&blacklistUpdate)
+	blacklist, err := c.BlacklistService(ctx).Update(id, &req)
 	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
-	}
-
-	// 使用 All() 方法检查字段是否存在
-	allInputs := ctx.Request().All()
-
-	if _, exists := allInputs["ip"]; exists {
-		// 验证IP格式（使用自定义验证函数）
-		if err := utils.ValidateBlacklistIP(blacklistUpdate.IP); err != nil {
-			// 使用业务错误类型，直接提取错误码
-			if businessErr, ok := apperrors.GetBusinessError(err); ok {
-				return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-			}
-			// 如果不是业务错误，返回通用错误
-			return response.Error(ctx, http.StatusBadRequest, apperrors.ErrInvalidIPFormat.Code)
-		}
-		blacklist.IP = blacklistUpdate.IP
-	}
-	if _, exists := allInputs["remark"]; exists {
-		blacklist.Remark = blacklistUpdate.Remark
-	}
-	if _, exists := allInputs["status"]; exists {
-		blacklist.Status = blacklistUpdate.Status
-	}
-
-	if err := r.blacklistService(ctx).Update(blacklist); err != nil {
-		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
-			"blacklist_id": blacklist.ID,
-		})
+		return HandleGeneratedServiceError(ctx, "blacklist", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
-		"blacklist": *blacklist,
+		"blacklist": blacklist,
 	})
 }
 
@@ -265,18 +181,11 @@ func (r *BlacklistController) Update(ctx http.Context) http.Response {
 // @Failure      500   {object}  apidoc.Error "服务器错误"
 // @Router       /api/admin/blacklists/{id} [delete]
 // @Security     BearerAuth
-func (r *BlacklistController) Destroy(ctx http.Context) http.Response {
+func (c *BlacklistController) Destroy(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	blacklist, resp := r.findBlacklistByID(ctx, id)
-	if resp != nil {
-		return resp
+	if err := c.BlacklistService(ctx).Delete(id); err != nil {
+		return HandleGeneratedServiceError(ctx, "blacklist", http.StatusInternalServerError, err, map[string]any{"id": id})
 	}
 
-	if err := r.blacklistService(ctx).Delete(blacklist); err != nil {
-		return response.ErrorWithLog(ctx, "blacklist", err, map[string]any{
-			"blacklist_id": blacklist.ID,
-		})
-	}
-
-	return response.Success(ctx)
+	return response.Success(ctx, "delete_success", http.Json{})
 }

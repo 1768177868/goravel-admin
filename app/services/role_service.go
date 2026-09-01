@@ -2,41 +2,30 @@ package services
 
 import (
 	"context"
-	appfacades "goravel/app/facades"
 	"strconv"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
+
+	appfacades "goravel/app/facades"
 
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
+	"goravel/app/http/requests/admin"
 	"goravel/app/models"
 	"goravel/app/utils"
 )
 
 type RoleService interface {
-	// GetByID 根据ID获取角色
-	GetByID(id uint, withRelations bool) (*models.Role, error)
-	// GetList 获取角色列表
+	GetByID(id uint) (*models.Role, error)
+	GetDetail(id uint) (*models.Role, error)
 	GetList(filters RoleFilters, page, pageSize int) ([]models.Role, int64, error)
-	// LoadRelations 加载角色的关联数据（权限、菜单）
-	LoadRelations(role *models.Role) error
-	// SyncPermissions 同步角色权限关联
-	SyncPermissions(role *models.Role, permissionIDs []uint) error
-	// SyncMenus 同步角色菜单关联
-	SyncMenus(role *models.Role, menuIDs []uint) error
-	// ParseIDsFromRequest 从请求中解析ID数组
-	ParseIDsFromRequest(ctx http.Context, key string) []uint
-	// Create 创建角色
-	Create(name, slug, description string, status uint8, sort int) (*models.Role, error)
-	// ValidateUnique 校验角色名称/标识唯一性（硬删后可复用）。
-	ValidateUnique(name, slug string, excludeID uint) error
-	// Update 更新角色
-	Update(role *models.Role) error
-	// Delete 删除角色
-	Delete(role *models.Role) error
+	Create(httpCtx http.Context, req *admin.RoleCreate) (*models.Role, error)
+	Update(httpCtx http.Context, id uint, req *admin.RoleUpdate) (*models.Role, error)
+	Delete(id uint) error
 }
 
-// RoleFilters 角色查询过滤器
 type RoleFilters struct {
 	Name      string
 	Status    string
@@ -45,37 +34,44 @@ type RoleFilters struct {
 	OrderBy   string
 }
 
+// BuildRoleFiltersFromHTTP reads list filters from query or body.
+func BuildRoleFiltersFromHTTP(ctx http.Context) RoleFilters {
+	return RoleFilters{
+		Name:      ctx.Request().Input("name", ctx.Request().Query("name", "")),
+		Status:    ctx.Request().Input("status", ctx.Request().Query("status", "")),
+		StartTime: helpers.GetTimeInputOrQueryParam(ctx, "start_time"),
+		EndTime:   helpers.GetTimeInputOrQueryParam(ctx, "end_time"),
+		OrderBy:   ctx.Request().Input("order_by", ctx.Request().Query("order_by", "")),
+	}
+}
+
 type RoleServiceImpl struct {
 	ctx context.Context
 }
 
-func NewRoleServiceImpl(ctx context.Context) *RoleServiceImpl {
-	return &RoleServiceImpl{
-		ctx: ctx}
+func NewRoleService(ctx context.Context) RoleService {
+	return &RoleServiceImpl{ctx: ctx}
 }
 
-// GetByID 根据ID获取角色
-func (s *RoleServiceImpl) GetByID(id uint, withRelations bool) (*models.Role, error) {
+func (s *RoleServiceImpl) GetByID(id uint) (*models.Role, error) {
 	var role models.Role
-	query := appfacades.OrmQuery(s.ctx).Where("id", id)
-
-	// 预加载关联
-	if withRelations {
-		query = query.With("Permissions").With("Menus")
-	}
-
-	if err := query.FirstOrFail(&role); err != nil {
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).FirstOrFail(&role); err != nil {
 		return nil, apperrors.ErrRoleNotFound.WithError(err)
 	}
-
 	return &role, nil
 }
 
-// GetList 获取角色列表
+func (s *RoleServiceImpl) GetDetail(id uint) (*models.Role, error) {
+	var role models.Role
+	if err := appfacades.OrmQuery(s.ctx).Where("id", id).With("Permissions").With("Menus").FirstOrFail(&role); err != nil {
+		return nil, apperrors.ErrRoleNotFound.WithError(err)
+	}
+	return &role, nil
+}
+
 func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]models.Role, int64, error) {
 	query := appfacades.OrmQuery(s.ctx).Model(&models.Role{})
 
-	// 应用筛选条件
 	if filters.Name != "" {
 		query = query.Where("name LIKE ?", "%"+filters.Name+"%")
 	}
@@ -89,14 +85,12 @@ func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]mo
 		query = query.Where("created_at <= ?", filters.EndTime)
 	}
 
-	// 应用排序
 	orderBy := filters.OrderBy
 	if orderBy == "" {
 		orderBy = "sort:asc,created_at:desc"
 	}
 	query = helpers.ApplySort(query, orderBy, "sort:asc,created_at:desc")
 
-	// 分页查询
 	var roles []models.Role
 	var total int64
 	if err := query.Paginate(page, pageSize, &roles, &total); err != nil {
@@ -106,58 +100,113 @@ func (s *RoleServiceImpl) GetList(filters RoleFilters, page, pageSize int) ([]mo
 	return roles, total, nil
 }
 
-// LoadRelations 加载角色的关联数据（权限、菜单）
-func (s *RoleServiceImpl) LoadRelations(role *models.Role) error {
-	// 加载权限
-	if err := appfacades.OrmQuery(s.ctx).Model(role).Association("Permissions").Find(&role.Permissions); err != nil {
-		return err
+func (s *RoleServiceImpl) Create(httpCtx http.Context, req *admin.RoleCreate) (*models.Role, error) {
+	if err := s.validateUnique(req.Name, req.Slug, 0); err != nil {
+		return nil, err
 	}
 
-	// 加载菜单
-	if err := appfacades.OrmQuery(s.ctx).Model(role).Association("Menus").Find(&role.Menus); err != nil {
-		return err
+	role := &models.Role{
+		Name:        req.Name,
+		Slug:        req.Slug,
+		Description: req.Description,
+		Status:      req.Status,
+		Sort:        req.Sort,
 	}
 
-	return nil
-}
+	if err := appfacades.OrmQuery(s.ctx).Create(role); err != nil {
+		return nil, apperrors.ErrCreateFailed.WithError(err)
+	}
 
-// SyncPermissions 同步角色权限关联
-func (s *RoleServiceImpl) SyncPermissions(role *models.Role, permissionIDs []uint) error {
-	var permissions []models.Permission
+	permissionIDs := s.parseIDsFromRequest(httpCtx, "permission_ids")
 	if len(permissionIDs) > 0 {
-		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", permissionIDs).Find(&permissions); err != nil {
-			return err
+		if err := s.syncPermissions(role, permissionIDs); err != nil {
+			return nil, apperrors.ErrUpdateFailed.WithError(err)
 		}
 	}
-	return appfacades.OrmQuery(s.ctx).Model(role).Association("Permissions").Replace(permissions)
-}
 
-// SyncMenus 同步角色菜单关联
-func (s *RoleServiceImpl) SyncMenus(role *models.Role, menuIDs []uint) error {
-	var menus []models.Menu
+	menuIDs := s.parseIDsFromRequest(httpCtx, "menu_ids")
 	if len(menuIDs) > 0 {
-		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", menuIDs).Find(&menus); err != nil {
-			return err
+		if err := s.syncMenus(role, menuIDs); err != nil {
+			return nil, apperrors.ErrUpdateFailed.WithError(err)
 		}
 	}
-	return appfacades.OrmQuery(s.ctx).Model(role).Association("Menus").Replace(menus)
+
+	return role, nil
 }
 
-// ParseIDsFromRequest 从请求中解析ID数组
-func (s *RoleServiceImpl) ParseIDsFromRequest(ctx http.Context, key string) []uint {
-	var ids []uint
-	if idsStr := ctx.Request().Input(key); idsStr != "" {
-		for _, idStr := range ctx.Request().InputArray(key) {
-			if id, err := strconv.ParseUint(idStr, 10, 32); err == nil {
-				ids = append(ids, uint(id))
+func (s *RoleServiceImpl) Update(httpCtx http.Context, id uint, req *admin.RoleUpdate) (*models.Role, error) {
+	role, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	isProtected := s.isProtectedRole(role.Slug)
+	allInputs := httpCtx.Request().All()
+
+	if req.Name != nil {
+		role.Name = *req.Name
+	}
+	if req.Slug != nil {
+		if *req.Slug != role.Slug {
+			if isProtected {
+				return nil, apperrors.ErrRoleProtectedCannotModifySlug
+			}
+			role.Slug = *req.Slug
+		}
+	}
+	if req.Description != nil {
+		role.Description = *req.Description
+	}
+	if req.Status != nil {
+		if isProtected && *req.Status == 0 {
+			return nil, apperrors.ErrRoleProtectedCannotDisable
+		}
+		role.Status = *req.Status
+	}
+	if req.Sort != nil {
+		role.Sort = *req.Sort
+	}
+
+	if err := s.validateUnique(role.Name, role.Slug, role.ID); err != nil {
+		return nil, err
+	}
+	if err := appfacades.OrmQuery(s.ctx).Save(role); err != nil {
+		return nil, apperrors.ErrUpdateFailed.WithError(err)
+	}
+
+	if !isProtected {
+		if _, exists := allInputs["permission_ids"]; exists {
+			permissionIDs := s.parseIDsFromRequest(httpCtx, "permission_ids")
+			if err := s.syncPermissions(role, permissionIDs); err != nil {
+				return nil, apperrors.ErrUpdateFailed.WithError(err)
+			}
+		}
+		if _, exists := allInputs["menu_ids"]; exists {
+			menuIDs := s.parseIDsFromRequest(httpCtx, "menu_ids")
+			if err := s.syncMenus(role, menuIDs); err != nil {
+				return nil, apperrors.ErrUpdateFailed.WithError(err)
 			}
 		}
 	}
-	return ids
+
+	return role, nil
 }
 
-// ValidateUnique 校验角色名称/标识唯一性（硬删后可复用）。
-func (s *RoleServiceImpl) ValidateUnique(name, slug string, excludeID uint) error {
+func (s *RoleServiceImpl) Delete(id uint) error {
+	role, err := s.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if s.isProtectedRole(role.Slug) {
+		return apperrors.ErrRoleProtectedCannotDelete
+	}
+	if _, err := appfacades.OrmQuery(s.ctx).Delete(role); err != nil {
+		return apperrors.ErrDeleteFailed.WithError(err)
+	}
+	return nil
+}
+
+func (s *RoleServiceImpl) validateUnique(name, slug string, excludeID uint) error {
 	if name != "" {
 		exists, err := utils.ExistsColumnValue(s.ctx, "roles", &models.Role{}, utils.UniqueReuseAllow, "name", name, excludeID)
 		if err != nil {
@@ -179,43 +228,61 @@ func (s *RoleServiceImpl) ValidateUnique(name, slug string, excludeID uint) erro
 	return nil
 }
 
-// Create 创建角色
-func (s *RoleServiceImpl) Create(name, slug, description string, status uint8, sort int) (*models.Role, error) {
-	if err := s.ValidateUnique(name, slug, 0); err != nil {
-		return nil, err
+func (s *RoleServiceImpl) syncPermissions(role *models.Role, permissionIDs []uint) error {
+	var permissions []models.Permission
+	if len(permissionIDs) > 0 {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", permissionIDs).Find(&permissions); err != nil {
+			return err
+		}
 	}
-
-	// 使用结构体创建，这样数据库生成的主键 ID 会回填到 role 上
-	role := &models.Role{
-		Name:        name,
-		Slug:        slug,
-		Description: description,
-		Status:      status,
-		Sort:        sort,
-	}
-
-	if err := appfacades.OrmQuery(s.ctx).Create(role); err != nil {
-		return nil, apperrors.ErrCreateFailed.WithError(err)
-	}
-
-	return role, nil
+	return appfacades.OrmQuery(s.ctx).Model(role).Association("Permissions").Replace(permissions)
 }
 
-// Update 更新角色
-func (s *RoleServiceImpl) Update(role *models.Role) error {
-	if err := s.ValidateUnique(role.Name, role.Slug, role.ID); err != nil {
-		return err
+func (s *RoleServiceImpl) syncMenus(role *models.Role, menuIDs []uint) error {
+	var menus []models.Menu
+	if len(menuIDs) > 0 {
+		if err := appfacades.OrmQuery(s.ctx).Where("id IN ?", menuIDs).Find(&menus); err != nil {
+			return err
+		}
 	}
-	if err := appfacades.OrmQuery(s.ctx).Save(role); err != nil {
-		return apperrors.ErrUpdateFailed.WithError(err)
-	}
-	return nil
+	return appfacades.OrmQuery(s.ctx).Model(role).Association("Menus").Replace(menus)
 }
 
-// Delete 删除角色
-func (s *RoleServiceImpl) Delete(role *models.Role) error {
-	if _, err := appfacades.OrmQuery(s.ctx).Delete(role); err != nil {
-		return apperrors.ErrDeleteFailed.WithError(err)
+func (s *RoleServiceImpl) parseIDsFromRequest(ctx http.Context, key string) []uint {
+	var ids []uint
+	if idsStr := ctx.Request().Input(key); idsStr != "" {
+		for _, idStr := range ctx.Request().InputArray(key) {
+			if id, err := strconv.ParseUint(idStr, 10, 32); err == nil {
+				ids = append(ids, uint(id))
+			}
+		}
 	}
-	return nil
+	return ids
+}
+
+func (s *RoleServiceImpl) isProtectedRole(roleSlug string) bool {
+	protectedSlugsStr := facades.Config().GetString("role.protected_slugs", "super-admin")
+	for _, protectedSlug := range parseProtectedRoleSlugs(protectedSlugsStr) {
+		if roleSlug == protectedSlug {
+			return true
+		}
+	}
+	return false
+}
+
+func parseProtectedRoleSlugs(slugsStr string) []string {
+	var slugs []string
+	if slugsStr == "" {
+		return slugs
+	}
+
+	parts := str.Of(slugsStr).Split(",")
+	for _, part := range parts {
+		part = str.Of(part).Trim().String()
+		if !str.Of(part).IsEmpty() {
+			slugs = append(slugs, part)
+		}
+	}
+
+	return slugs
 }

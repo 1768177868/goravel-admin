@@ -2,285 +2,99 @@ package admin
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support/str"
 
-	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
 	"goravel/app/http/response"
-	"goravel/app/models"
 	"goravel/app/services"
 )
 
-type RoleController struct {}
-
+type RoleController struct{}
 
 func NewRoleController() *RoleController {
 	return &RoleController{}
 }
 
-func (r *RoleController) roleService(ctx http.Context) services.RoleService {
-	return services.NewRoleServiceImpl(ctx)
+func (c *RoleController) buildRoleFilters(ctx http.Context) services.RoleFilters {
+	return services.BuildRoleFiltersFromHTTP(ctx)
 }
 
-
-// findRoleByID 根据ID查找角色，如果不存在则返回错误响应
-// withRelations 为 true 时会预加载 Permissions 和 Menus 关联
-func (r *RoleController) findRoleByID(ctx http.Context, id uint, withRelations bool) (*models.Role, http.Response) {
-	role, err := r.roleService(ctx).GetByID(id, withRelations)
-	if err != nil {
-		return nil, response.Error(ctx, http.StatusNotFound, apperrors.ErrRoleNotFound.Code)
-	}
-	return role, nil
+func (c *RoleController) RoleService(ctx http.Context) services.RoleService {
+	return services.NewRoleService(ctx)
 }
 
-// buildFilters 构建查询过滤器
-func (r *RoleController) buildFilters(ctx http.Context) services.RoleFilters {
-	name := ctx.Request().Query("name", "")
-	status := ctx.Request().Query("status", "")
-	// 使用辅助函数自动转换时区
-	startTime := getTimeQueryUTC(ctx, "start_time")
-	endTime := getTimeQueryUTC(ctx, "end_time")
-	orderBy := ctx.Request().Query("order_by", "")
-
-	return services.RoleFilters{
-		Name:      name,
-		Status:    status,
-		StartTime: startTime,
-		EndTime:   endTime,
-		OrderBy:   orderBy,
-	}
-}
-
-// Index 角色列表
-func (r *RoleController) Index(ctx http.Context) http.Response {
+func (c *RoleController) Index(ctx http.Context) http.Response {
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
+	filters := c.buildRoleFilters(ctx)
 
-	filters := r.buildFilters(ctx)
-
-	roles, total, err := r.roleService(ctx).GetList(filters, page, pageSize)
+	list, total, err := c.RoleService(ctx).GetList(filters, page, pageSize)
 	if err != nil {
-		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return HandleGeneratedServiceError(ctx, "role", http.StatusInternalServerError, err, nil)
 	}
 
 	return response.Success(ctx, http.Json{
-		"list":      roles,
+		"list":      list,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
 	})
 }
 
-// Show 角色详情
-func (r *RoleController) Show(ctx http.Context) http.Response {
+func (c *RoleController) Show(ctx http.Context) http.Response {
 	id := helpers.GetUintRoute(ctx, "id")
-	role, resp := r.findRoleByID(ctx, id, true) // 预加载关联
-	if resp != nil {
-		return resp
+	role, err := c.RoleService(ctx).GetDetail(id)
+	if err != nil {
+		return HandleGeneratedServiceError(ctx, "role", http.StatusNotFound, err, map[string]any{"id": id})
 	}
 
 	return response.Success(ctx, http.Json{
-		"role": *role,
+		"role": role,
 	})
 }
 
-// Store 创建角色
-func (r *RoleController) Store(ctx http.Context) http.Response {
-	// 使用请求验证
-	var roleCreate adminrequests.RoleCreate
-	errors, err := ctx.Request().ValidateRequest(&roleCreate)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
-	}
-
-	role, err := r.roleService(ctx).Create(
-		roleCreate.Name,
-		roleCreate.Slug,
-		roleCreate.Description,
-		roleCreate.Status,
-		roleCreate.Sort,
-	)
-	if err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.ErrorWithLog(ctx, "role", err, map[string]any{
-			"name": roleCreate.Name,
-			"slug": roleCreate.Slug,
-		})
-	}
-
-	// 处理权限关联
-	permissionIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "permission_ids")
-	if len(permissionIDs) > 0 {
-		if err := r.roleService(ctx).SyncPermissions(role, permissionIDs); err != nil {
-			return response.ErrorWithLog(ctx, "role", err, map[string]any{
-				"role_id":        role.ID,
-				"permission_ids": permissionIDs,
-			})
-		}
-	}
-
-	// 处理菜单关联
-	menuIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "menu_ids")
-	if len(menuIDs) > 0 {
-		if err := r.roleService(ctx).SyncMenus(role, menuIDs); err != nil {
-			return response.ErrorWithLog(ctx, "role", err, map[string]any{
-				"role_id":  role.ID,
-				"menu_ids": menuIDs,
-			})
-		}
-	}
-
-	return response.Success(ctx, http.Json{
-		"role": *role,
-	})
-}
-
-// parseProtectedRoleSlugs 解析受保护的角色标识字符串（支持逗号分隔）
-func (r *RoleController) parseProtectedRoleSlugs(slugsStr string) []string {
-	var slugs []string
-	if slugsStr == "" {
-		return slugs
-	}
-
-	parts := str.Of(slugsStr).Split(",")
-	for _, part := range parts {
-		part = str.Of(part).Trim().String()
-		if !str.Of(part).IsEmpty() {
-			slugs = append(slugs, part)
-		}
-	}
-
-	return slugs
-}
-
-// isProtectedRole 检查角色是否是受保护的（通过slug判断）
-func (r *RoleController) isProtectedRole(roleSlug string) bool {
-	protectedSlugsStr := facades.Config().GetString("role.protected_slugs", "super-admin")
-	protectedSlugs := r.parseProtectedRoleSlugs(protectedSlugsStr)
-	for _, protectedSlug := range protectedSlugs {
-		if roleSlug == protectedSlug {
-			return true
-		}
-	}
-	return false
-}
-
-// Update 更新角色
-func (r *RoleController) Update(ctx http.Context) http.Response {
-	id := helpers.GetUintRoute(ctx, "id")
-	role, resp := r.findRoleByID(ctx, id, false)
-	if resp != nil {
-		return resp
-	}
-	// 检查是否是受保护的角色（通过slug判断）
-	isProtected := r.isProtectedRole(role.Slug)
-
-	// 使用请求验证
-	var roleUpdate adminrequests.RoleUpdate
-	errors, err := ctx.Request().ValidateRequest(&roleUpdate)
-	if err != nil {
-		return response.Error(ctx, http.StatusBadRequest, err.Error())
-	}
-	if errors != nil {
-		return response.ValidationError(ctx, http.StatusBadRequest, "validation_failed", errors.All())
-	}
-
-	// 使用 All() 方法检查字段是否存在
-	allInputs := ctx.Request().All()
-
-	if _, exists := allInputs["name"]; exists {
-		role.Name = roleUpdate.Name
-	}
-	if _, exists := allInputs["slug"]; exists {
-		if roleUpdate.Slug != role.Slug {
-			if isProtected {
-				return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotModifySlug.Code)
-			}
-			role.Slug = roleUpdate.Slug
-		}
-	}
-	if _, exists := allInputs["description"]; exists {
-		// 描述字段允许修改，包括受保护角色（如 super-admin）也可以修改描述
-		role.Description = roleUpdate.Description
-	}
-	if _, exists := allInputs["status"]; exists {
-		// 受保护角色不能禁用
-		if isProtected && roleUpdate.Status == 0 {
-			return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDisable.Code)
-		}
-		role.Status = roleUpdate.Status
-	}
-	if _, exists := allInputs["sort"]; exists {
-		role.Sort = roleUpdate.Sort
-	}
-
-	if err := r.roleService(ctx).Update(role); err != nil {
-		if businessErr, ok := apperrors.GetBusinessError(err); ok {
-			return response.Error(ctx, http.StatusBadRequest, businessErr.Code)
-		}
-		return response.ErrorWithLog(ctx, "role", err, map[string]any{
-			"role_id": role.ID,
-		})
-	}
-
-	// super-admin 角色拥有所有权限，不需要设置菜单和权限
-	// 处理权限关联
-	// 检查字段是否存在（即使值为空数组，也应该同步以清空关联）
-	if !isProtected {
-		if _, exists := allInputs["permission_ids"]; exists {
-			permissionIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "permission_ids")
-			if err := r.roleService(ctx).SyncPermissions(role, permissionIDs); err != nil {
-				return response.ErrorWithLog(ctx, "role", err, map[string]any{
-					"role_id":        role.ID,
-					"permission_ids": permissionIDs,
-				})
-			}
-		}
-	}
-
-	// 处理菜单关联
-	// 检查字段是否存在（即使值为空数组，也应该同步以清空关联）
-	if !isProtected {
-		if _, exists := allInputs["menu_ids"]; exists {
-			menuIDs := r.roleService(ctx).ParseIDsFromRequest(ctx, "menu_ids")
-			if err := r.roleService(ctx).SyncMenus(role, menuIDs); err != nil {
-				return response.ErrorWithLog(ctx, "role", err, map[string]any{
-					"role_id":  role.ID,
-					"menu_ids": menuIDs,
-				})
-			}
-		}
-	}
-
-	return response.Success(ctx, http.Json{
-		"role": *role,
-	})
-}
-
-// Destroy 删除角色
-func (r *RoleController) Destroy(ctx http.Context) http.Response {
-	id := helpers.GetUintRoute(ctx, "id")
-	role, resp := r.findRoleByID(ctx, id, false)
-	if resp != nil {
+func (c *RoleController) Store(ctx http.Context) http.Response {
+	var req adminrequests.RoleCreate
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
 		return resp
 	}
 
-	// 检查是否是受保护的角色（通过slug判断）
-	if r.isProtectedRole(role.Slug) {
-		return response.Error(ctx, http.StatusForbidden, apperrors.ErrRoleProtectedCannotDelete.Code)
-	}
-	if err := r.roleService(ctx).Delete(role); err != nil {
-		return response.ErrorWithLog(ctx, "role", err, map[string]any{
-			"role_id": role.ID,
+	role, err := c.RoleService(ctx).Create(ctx, &req)
+	if err != nil {
+		return HandleGeneratedServiceError(ctx, "role", http.StatusInternalServerError, err, map[string]any{
+			"name": req.Name,
+			"slug": req.Slug,
 		})
 	}
 
-	return response.Success(ctx)
+	return response.Success(ctx, http.Json{
+		"role": role,
+	})
+}
+
+func (c *RoleController) Update(ctx http.Context) http.Response {
+	id := helpers.GetUintRoute(ctx, "id")
+
+	var req adminrequests.RoleUpdate
+	if resp := ValidateGeneratedRequest(ctx, &req); resp != nil {
+		return resp
+	}
+
+	role, err := c.RoleService(ctx).Update(ctx, id, &req)
+	if err != nil {
+		return HandleGeneratedServiceError(ctx, "role", http.StatusInternalServerError, err, map[string]any{"id": id})
+	}
+
+	return response.Success(ctx, http.Json{
+		"role": role,
+	})
+}
+
+func (c *RoleController) Destroy(ctx http.Context) http.Response {
+	id := helpers.GetUintRoute(ctx, "id")
+	if err := c.RoleService(ctx).Delete(id); err != nil {
+		return HandleGeneratedServiceError(ctx, "role", http.StatusInternalServerError, err, map[string]any{"id": id})
+	}
+
+	return response.Success(ctx, "delete_success", http.Json{})
 }
