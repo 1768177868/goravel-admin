@@ -77,6 +77,12 @@
       />
       <span v-else>-</span>
     </template>
+    <<- else if and .ShowInList (or (eq .FormType "editor") (eq .FormType "markdown"))>>
+    <template #<<.Name>>="{ row }">
+      <div class="text-truncate" :title="extractTextFromMarkdown(row.<<.Name>>)">
+        {{ extractTextFromMarkdown(row.<<.Name>>).slice(0, 120) || '-' }}
+      </div>
+    </template>
     <<- else if and .ShowInList .Relation>>
     <template #<<.Name>>="{ row }">
       {{ get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>> || row.<<.Name>>) }}
@@ -112,6 +118,9 @@ import TableActionButtons from '@/components/TableActionButtons.vue'
 import <<.ModelName>>Form from './<<.ModelName>>Form.vue'
 import { useStandardListPage } from '@/composables/useStandardListPage'
 import { createCrudActions } from '@/utils/listPageHelpers'
+<<if .HasRichTextInList>>
+import { extractTextFromMarkdown } from '@/utils/markdown'
+<<end>>
 <<if .HasExport>>
 import { export<<.ModelName>> } from '@/api/<<.ModuleName>>'
 <<end>>
@@ -245,3 +254,13 @@ const handleExport = async () => {
 }
 <<end>>
 </script>
+<<if .HasRichTextInList>>
+<style scoped>
+.text-truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>
+<<end>>

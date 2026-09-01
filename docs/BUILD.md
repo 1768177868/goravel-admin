@@ -108,9 +108,14 @@ cd /www/goravel-admin
 # 数据库迁移
 ./main artisan migrate
 
-# 数据库填充（可选）
+# 数据库填充（可选，仅首次初始化建议完整 seed）
 ./main artisan db:seed
+
+# 增量部署：仅同步代码生成器模块的菜单与权限（幂等）
+# ./main artisan db:seed --seeder=GeneratedModulesSeeder
 ```
+
+详见 [CODE_GENERATOR.md](./CODE_GENERATOR.md)。
 
 ### 步骤 5：启动和管理服务
 
@@ -309,9 +314,14 @@ cd /www/goravel-admin/v1
 # 数据库迁移
 ./main artisan migrate
 
-# 数据库填充（可选）
+# 数据库填充（可选，仅首次初始化建议完整 seed）
 ./main artisan db:seed
+
+# 增量部署：仅同步代码生成器模块的菜单与权限（幂等）
+# ./main artisan db:seed --seeder=GeneratedModulesSeeder
 ```
+
+详见 [CODE_GENERATOR.md](./CODE_GENERATOR.md)。
 
 ```bash
 # 试运行

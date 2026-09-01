@@ -81,6 +81,7 @@ type CodeGeneratorService interface {
 	GetTableColumns(tableName string) ([]FieldConfig, error)
 	Generate(moduleName, tableName string, fields []FieldConfig, selectedFiles []string, options map[string]bool) ([]GeneratedFile, error)
 	GenerateWithAI(ctx context.Context, userDescription string) (*AIGeneratedConfig, error)
+	InstallModule(moduleName, tableName string, options map[string]bool, install *ModuleInstallConfig) (*ModuleInstallResult, error)
 }
 
 type AIGeneratedConfig struct {
@@ -529,6 +530,15 @@ func (s *CodeGeneratorServiceImpl) syncAdminRoute(moduleName string, options map
 	return true, nil
 }
 
+func (s *CodeGeneratorServiceImpl) InstallModule(moduleName, tableName string, options map[string]bool, install *ModuleInstallConfig) (*ModuleInstallResult, error) {
+	manifest, err := BuildModuleManifest(moduleName, tableName, options, install)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewModuleInstaller(s.ctx).Install(manifest)
+}
+
 func (s *CodeGeneratorServiceImpl) getGormDB() (*gorm.DB, error) {
 	orm := facades.Orm()
 	if orm == nil {
@@ -917,14 +927,11 @@ func (s *CodeGeneratorServiceImpl) getTemplateName(fileType string, fields []Fie
 	case "react_api":
 		return "templates/api.ts.tpl", nil
 	case "react_list_page":
-		if isSimpleReactModule(fields, options) {
-			return "templates/react_simple_list.tsx.tpl", nil
-		}
-		return "templates/react_list_page.tsx.tpl", nil
+		return s.getReactListPageTemplateName(fields, options), nil
 	case "react_list_page_config":
-		return "templates/react_list.config.ts.tpl", nil
+		return s.getReactListPageConfigTemplateName(options), nil
 	case "react_form_modal":
-		return "templates/react_form_modal.tsx.tpl", nil
+		return s.getReactFormModalTemplateName(options), nil
 	default:
 		return "", fmt.Errorf("unknown file type: %s", fileType)
 	}
@@ -972,10 +979,12 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ModelName string
 			TableName string
 			Fields    []TemplateFieldConfig
+			IsTreeList bool
 		}{
-			ModelName: toPascalCase(moduleName),
-			TableName: tableName,
-			Fields:    templateFields,
+			ModelName:  toPascalCase(moduleName),
+			TableName:  tableName,
+			Fields:     templateFields,
+			IsTreeList: optionEnabled(options, "is_tree_list", false),
 		}
 	case "controller":
 		var searchableFields []TemplateFieldConfig
@@ -998,6 +1007,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete         bool
 			HasExport         bool
 			ExportAsync       bool
+			IsTreeList        bool
 		}{
 			ControllerName:    toPascalCase(moduleName) + "Controller",
 			ServiceName:       toPascalCase(moduleName) + "Service",
@@ -1012,6 +1022,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete:         hasDelete,
 			HasExport:         hasExport,
 			ExportAsync:       exportAsync,
+			IsTreeList:        optionEnabled(options, "is_tree_list", false),
 		}
 	case "service":
 		var searchableFields []TemplateFieldConfig
@@ -1033,6 +1044,8 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete         bool
 			HasExport         bool
 			ExportAsync       bool
+			IsTreeList        bool
+			ParentIDFieldName string
 		}{
 			ServiceName:       toPascalCase(moduleName) + "Service",
 			ModelName:         toPascalCase(moduleName),
@@ -1046,6 +1059,8 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete:         hasDelete,
 			HasExport:         hasExport,
 			ExportAsync:       exportAsync,
+			IsTreeList:        optionEnabled(options, "is_tree_list", false),
+			ParentIDFieldName: resolveParentIDFieldName(templateFields),
 		}
 	case "request_create":
 		return struct {
@@ -1115,7 +1130,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ListFields: templateFields,
 		}
 	case "list_page", "list_page_config":
-		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, optionEnabled(options, "is_tree_list", false))
 	case "react_api":
 		return struct {
 			ModelName   string
@@ -1136,28 +1151,13 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			HasDelete:   hasDelete,
 			HasExport:   hasExport,
 		}
-	case "react_list_page", "react_list_page_config":
-		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
-	case "react_form_modal":
-		return struct {
-			ModelName   string
-			ModuleName  string
-			ModuleNameK string
-			FormFields  []TemplateFieldConfig
-			HasCreate   bool
-			HasEdit     bool
-		}{
-			ModelName:   toPascalCase(moduleName),
-			ModuleName:  moduleName,
-			ModuleNameK: toKebabCase(moduleName),
-			FormFields:  templateFields,
-			HasCreate:   hasCreate,
-			HasEdit:     hasEdit,
-		}
+	case "react_list_page", "react_list_page_config", "react_form_modal":
+		return s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, optionEnabled(options, "is_tree_list", false))
 	case "form_page":
+		formFields := applyTreeListFieldFlags(templateFields, optionEnabled(options, "is_tree_list", false))
 		// 检查是否有 editor 类型的字段
 		hasEditor := false
-		for _, field := range templateFields {
+		for _, field := range formFields {
 			if field.FormType == "editor" && field.ShowInForm {
 				hasEditor = true
 				break
@@ -1166,7 +1166,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 
 		// 检查是否有 markdown 类型的字段
 		hasMarkdown := false
-		for _, field := range templateFields {
+		for _, field := range formFields {
 			if field.FormType == "markdown" && field.ShowInForm {
 				hasMarkdown = true
 				break
@@ -1175,7 +1175,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 
 		// 检查是否有 image-upload 类型的字段
 		hasImageUpload := false
-		for _, field := range templateFields {
+		for _, field := range formFields {
 			if field.FormType == "image-upload" && field.ShowInForm {
 				hasImageUpload = true
 				break
@@ -1196,7 +1196,7 @@ func (s *CodeGeneratorServiceImpl) buildTemplateData(moduleName, tableName strin
 			ModelName:      toPascalCase(moduleName),
 			ModuleName:     moduleName,
 			ModuleNameK:    toKebabCase(moduleName),
-			FormFields:     templateFields,
+			FormFields:     formFields,
 			HasCreate:      hasCreate,
 			HasEdit:        hasEdit,
 			HasEditor:      hasEditor,
@@ -1352,13 +1352,15 @@ func (s *CodeGeneratorServiceImpl) generateModel(moduleName, tableName string, f
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
 	data := struct {
-		ModelName string
-		TableName string
-		Fields    []TemplateFieldConfig
+		ModelName  string
+		TableName  string
+		Fields     []TemplateFieldConfig
+		IsTreeList bool
 	}{
-		ModelName: toPascalCase(moduleName),
-		TableName: tableName,
-		Fields:    templateFields,
+		ModelName:  toPascalCase(moduleName),
+		TableName:  tableName,
+		Fields:     templateFields,
+		IsTreeList: optionEnabled(options, "is_tree_list", false),
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1404,6 +1406,12 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
+	var searchableFields []TemplateFieldConfig
+	for _, field := range templateFields {
+		if field.Searchable {
+			searchableFields = append(searchableFields, field)
+		}
+	}
 	data := struct {
 		ControllerName    string
 		ServiceName       string
@@ -1419,6 +1427,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		HasDelete         bool
 		HasExport         bool
 		ExportAsync       bool
+		IsTreeList        bool
 	}{
 		ControllerName:    toPascalCase(moduleName) + "Controller",
 		ServiceName:       toPascalCase(moduleName) + "Service",
@@ -1426,7 +1435,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		ModuleName:        moduleName,
 		TableName:         tableName,
 		ListFields:        templateFields,
-		SearchableFields:  templateFields,
+		SearchableFields:  searchableFields,
 		RequestCreateName: toPascalCase(moduleName) + "Create",
 		RequestUpdateName: toPascalCase(moduleName) + "Update",
 		HasCreate:         hasCreate,
@@ -1434,6 +1443,7 @@ func (s *CodeGeneratorServiceImpl) generateController(moduleName, tableName stri
 		HasDelete:         hasDelete,
 		HasExport:         hasExport,
 		ExportAsync:       exportAsync,
+		IsTreeList:        optionEnabled(options, "is_tree_list", false),
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1479,6 +1489,12 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
+	var searchableFields []TemplateFieldConfig
+	for _, field := range templateFields {
+		if field.Searchable {
+			searchableFields = append(searchableFields, field)
+		}
+	}
 	data := struct {
 		ServiceName       string
 		ModelName         string
@@ -1492,11 +1508,13 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		HasDelete         bool
 		HasExport         bool
 		ExportAsync       bool
+		IsTreeList        bool
+		ParentIDFieldName string
 	}{
 		ServiceName:       toPascalCase(moduleName) + "Service",
 		ModelName:         toPascalCase(moduleName),
 		ModuleName:        moduleName,
-		SearchableFields:  templateFields,
+		SearchableFields:  searchableFields,
 		RequestCreateName: toPascalCase(moduleName) + "Create",
 		RequestUpdateName: toPascalCase(moduleName) + "Update",
 		FormFields:        templateFields,
@@ -1505,6 +1523,8 @@ func (s *CodeGeneratorServiceImpl) generateService(moduleName, tableName string,
 		HasDelete:         hasDelete,
 		HasExport:         hasExport,
 		ExportAsync:       exportAsync,
+		IsTreeList:        optionEnabled(options, "is_tree_list", false),
+		ParentIDFieldName: resolveParentIDFieldName(templateFields),
 	}
 
 	content, err := s.executeTemplate(string(templateContent), data)
@@ -1703,11 +1723,13 @@ func (s *CodeGeneratorServiceImpl) generateFrontendAPI(moduleName, tableName str
 func (s *CodeGeneratorServiceImpl) buildListPageTemplateData(
 	moduleName string,
 	templateFields []TemplateFieldConfig,
-	hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar bool,
+	hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, isTreeList bool,
 ) any {
+	formFields := applyTreeListFieldFlags(templateFields, isTreeList)
+
 	var searchableFields []TemplateFieldConfig
 	var listFields []TemplateFieldConfig
-	for _, field := range templateFields {
+	for _, field := range formFields {
 		if field.Searchable {
 			searchableFields = append(searchableFields, field)
 		}
@@ -1728,6 +1750,12 @@ func (s *CodeGeneratorServiceImpl) buildListPageTemplateData(
 		HasExport          bool
 		EnableBatchActions bool
 		ShowToolbar        bool
+		IsTreeList         bool
+		TreeLabelField     string
+		HasEditor          bool
+		HasMarkdown        bool
+		HasImageUpload     bool
+		HasRichTextInList  bool
 	}{
 		ModelName:          toPascalCase(moduleName),
 		ModuleName:         moduleName,
@@ -1735,14 +1763,95 @@ func (s *CodeGeneratorServiceImpl) buildListPageTemplateData(
 		ModuleNameK:        toKebabCase(moduleName),
 		SearchableFields:   searchableFields,
 		ListFields:         listFields,
-		FormFields:         templateFields,
+		FormFields:         formFields,
 		HasCreate:          hasCreate,
 		HasEdit:            hasEdit,
 		HasDelete:          hasDelete,
 		HasExport:          hasExport,
 		EnableBatchActions: enableBatchActions,
 		ShowToolbar:        showToolbar,
+		IsTreeList:         isTreeList,
+		TreeLabelField:     resolveTreeLabelField(listFields),
+		HasEditor:          hasFieldFormType(formFields, "editor"),
+		HasMarkdown:        hasFieldFormType(formFields, "markdown"),
+		HasImageUpload:     hasFieldFormType(formFields, "image-upload"),
+		HasRichTextInList:  hasListFieldFormType(listFields, "editor", "markdown"),
 	}
+}
+
+func hasFieldFormType(fields []TemplateFieldConfig, formType string) bool {
+	for _, field := range fields {
+		if field.ShowInForm && field.FormType == formType {
+			return true
+		}
+	}
+	return false
+}
+
+func hasListFieldFormType(fields []TemplateFieldConfig, formTypes ...string) bool {
+	typeSet := map[string]bool{}
+	for _, formType := range formTypes {
+		typeSet[formType] = true
+	}
+	for _, field := range fields {
+		if field.ShowInList && typeSet[field.FormType] {
+			return true
+		}
+	}
+	return false
+}
+
+func applyTreeListFieldFlags(fields []TemplateFieldConfig, isTreeList bool) []TemplateFieldConfig {
+	if !isTreeList {
+		return fields
+	}
+
+	result := make([]TemplateFieldConfig, len(fields))
+	copy(result, fields)
+	for i := range result {
+		if result[i].Name != "parent_id" {
+			continue
+		}
+		result[i].IsTree = true
+		if result[i].FormType == "input" || result[i].FormType == "number" {
+			result[i].FormType = "select"
+		}
+	}
+	return result
+}
+
+func resolveTreeLabelField(fields []TemplateFieldConfig) string {
+	priority := []string{"name", "title", "label"}
+	for _, name := range priority {
+		for _, field := range fields {
+			if field.ShowInList && field.Name == name {
+				return name
+			}
+		}
+	}
+	for _, field := range fields {
+		if !field.ShowInList {
+			continue
+		}
+		switch field.Name {
+		case "id", "parent_id", "status", "sort", "created_at", "updated_at":
+			continue
+		}
+		return field.Name
+	}
+	return "name"
+}
+
+func resolveParentIDFieldName(fields []TemplateFieldConfig) string {
+	for _, field := range fields {
+		if field.Name == "parent_id" {
+			if field.FieldName != "" {
+				return field.FieldName
+			}
+			return "ParentID"
+		}
+	}
+	return "ParentID"
 }
 
 func (s *CodeGeneratorServiceImpl) generateFrontendListPageConfig(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
@@ -1781,7 +1890,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPageConfig(moduleName, ta
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, optionEnabled(options, "is_tree_list", false))
 
 	content, err := s.executeTemplate(string(templateContent), data)
 	if err != nil {
@@ -1830,7 +1939,7 @@ func (s *CodeGeneratorServiceImpl) generateFrontendListPage(moduleName, tableNam
 	}
 
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, optionEnabled(options, "is_tree_list", false))
 
 	content, err := s.executeTemplate(string(templateContent), data)
 	if err != nil {

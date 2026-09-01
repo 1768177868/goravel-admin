@@ -24,12 +24,10 @@
     <template #admin_id="{ row }">
       {{ getadminDisplayName(row.admin || row.admin_id) }}
     </template>
-    <template #status="{ row }">
-      <el-switch
-        :model-value="Number(row.status ?? 1) === 1"
-        :disabled="getButtonState('article.update').disabled"
-        @change="(val) => handleStatusChange(row, val)"
-      />
+    <template #content="{ row }">
+      <div class="text-truncate" :title="extractTextFromMarkdown(row.content)">
+        {{ extractTextFromMarkdown(row.content).slice(0, 120) || "-" }}
+      </div>
     </template>
 
     <template #operation="{ row }">
@@ -60,6 +58,8 @@ import TableActionButtons from "@/components/TableActionButtons.vue";
 import ArticleForm from "./ArticleForm.vue";
 import { useStandardListPage } from "@/composables/useStandardListPage";
 import { createCrudActions } from "@/utils/listPageHelpers";
+
+import { extractTextFromMarkdown } from "@/utils/markdown";
 
 import { getArticleList, deleteArticle, updateArticle } from "@/api/article";
 import logger from "@/utils/logger";
@@ -110,22 +110,6 @@ const tableColumns = computed(() =>
   createArticleTableColumns(t, { enableBatchActions: false }),
 );
 
-const handleStatusChange = async (row, newStatus) => {
-  try {
-    const statusValue = newStatus ? 1 : 0;
-    await updateArticle(row.id, { status: statusValue });
-    ElMessage.success(newStatus ? t("common.enabled") : t("common.disabled"));
-    const item = tableData.value.find((item) => item.id === row.id);
-    if (item) item.status = statusValue;
-  } catch (error) {
-    logger.error("Status change error:", error);
-    loadData();
-    if (!error.__handled) {
-      ElMessage.error(error.message || t("common.operation_failed"));
-    }
-  }
-};
-
 const operationActions = computed(() =>
   createCrudActions(t, "article", {
     onEdit: handleEdit,
@@ -150,3 +134,12 @@ const handleBatchDelete = async () => {
   }
 };
 </script>
+
+<style scoped>
+.text-truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

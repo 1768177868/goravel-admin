@@ -28,6 +28,30 @@ func isSimpleReactModule(fields []FieldConfig, options map[string]bool) bool {
 	return true
 }
 
+func (s *CodeGeneratorServiceImpl) getReactListPageTemplateName(fields []FieldConfig, options map[string]bool) string {
+	if options != nil && options["is_tree_list"] {
+		return "templates/react_tree_list_page.tsx.tpl"
+	}
+	if isSimpleReactModule(fields, options) {
+		return "templates/react_simple_list.tsx.tpl"
+	}
+	return "templates/react_list_page.tsx.tpl"
+}
+
+func (s *CodeGeneratorServiceImpl) getReactListPageConfigTemplateName(options map[string]bool) string {
+	if options != nil && options["is_tree_list"] {
+		return "templates/react_tree_list.config.ts.tpl"
+	}
+	return "templates/react_list.config.ts.tpl"
+}
+
+func (s *CodeGeneratorServiceImpl) getReactFormModalTemplateName(options map[string]bool) string {
+	if options != nil && options["is_tree_list"] {
+		return "templates/react_tree_form_modal.tsx.tpl"
+	}
+	return "templates/react_form_modal.tsx.tpl"
+}
+
 func (s *CodeGeneratorServiceImpl) generateReactAPI(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
 	templateContent, err := templates.ReadFile("templates/api.ts.tpl")
 	if err != nil {
@@ -37,14 +61,14 @@ func (s *CodeGeneratorServiceImpl) generateReactAPI(moduleName, tableName string
 	hasCreate, hasEdit, hasDelete, hasExport := frontendCrudOptions(options)
 	templateFields := s.convertFieldsToTemplateFields(fields)
 	data := struct {
-		ModelName  string
-		ModuleName string
+		ModelName   string
+		ModuleName  string
 		ModuleNameK string
-		FormFields []TemplateFieldConfig
-		HasCreate  bool
-		HasEdit    bool
-		HasDelete  bool
-		HasExport  bool
+		FormFields  []TemplateFieldConfig
+		HasCreate   bool
+		HasEdit     bool
+		HasDelete   bool
+		HasExport   bool
 	}{
 		ModelName:   toPascalCase(moduleName),
 		ModuleName:  moduleName,
@@ -68,10 +92,7 @@ func (s *CodeGeneratorServiceImpl) generateReactAPI(moduleName, tableName string
 }
 
 func (s *CodeGeneratorServiceImpl) generateReactListPage(moduleName, tableName string, fields []FieldConfig, options map[string]bool) (GeneratedFile, error) {
-	templateName := "templates/react_list_page.tsx.tpl"
-	if isSimpleReactModule(fields, options) {
-		templateName = "templates/react_simple_list.tsx.tpl"
-	}
+	templateName := s.getReactListPageTemplateName(fields, options)
 
 	templateContent, err := templates.ReadFile(templateName)
 	if err != nil {
@@ -81,7 +102,8 @@ func (s *CodeGeneratorServiceImpl) generateReactListPage(moduleName, tableName s
 	hasCreate, hasEdit, hasDelete, hasExport := frontendCrudOptions(options)
 	enableBatchActions, showToolbar := frontendListOptions(options)
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+	isTreeList := options != nil && options["is_tree_list"]
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, isTreeList)
 
 	content, err := s.executeTemplate(string(templateContent), data)
 	if err != nil {
@@ -89,7 +111,7 @@ func (s *CodeGeneratorServiceImpl) generateReactListPage(moduleName, tableName s
 	}
 
 	return GeneratedFile{
-		Path: fmt.Sprintf("html-react/src/pages/%s/%sList.tsx", toKebabCase(moduleName), toPascalCase(moduleName)),
+		Path:    fmt.Sprintf("html-react/src/pages/%s/%sList.tsx", toKebabCase(moduleName), toPascalCase(moduleName)),
 		Content: content,
 	}, nil
 }
@@ -99,7 +121,8 @@ func (s *CodeGeneratorServiceImpl) generateReactListPageConfig(moduleName, table
 		return GeneratedFile{}, fmt.Errorf("react_list_page_config skipped for simple module")
 	}
 
-	templateContent, err := templates.ReadFile("templates/react_list.config.ts.tpl")
+	templateName := s.getReactListPageConfigTemplateName(options)
+	templateContent, err := templates.ReadFile(templateName)
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read react list config template: %w", err)
 	}
@@ -107,7 +130,8 @@ func (s *CodeGeneratorServiceImpl) generateReactListPageConfig(moduleName, table
 	hasCreate, hasEdit, hasDelete, hasExport := frontendCrudOptions(options)
 	enableBatchActions, showToolbar := frontendListOptions(options)
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar)
+	isTreeList := options != nil && options["is_tree_list"]
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, hasDelete, hasExport, enableBatchActions, showToolbar, isTreeList)
 
 	content, err := s.executeTemplate(string(templateContent), data)
 	if err != nil {
@@ -125,28 +149,17 @@ func (s *CodeGeneratorServiceImpl) generateReactFormModal(moduleName, tableName 
 		return GeneratedFile{}, fmt.Errorf("react_form_modal skipped for simple module")
 	}
 
-	templateContent, err := templates.ReadFile("templates/react_form_modal.tsx.tpl")
+	templateName := s.getReactFormModalTemplateName(options)
+	templateContent, err := templates.ReadFile(templateName)
 	if err != nil {
 		return GeneratedFile{}, fmt.Errorf("failed to read react form template: %w", err)
 	}
 
 	hasCreate, hasEdit, _, _ := frontendCrudOptions(options)
+	enableBatchActions, showToolbar := frontendListOptions(options)
 	templateFields := s.convertFieldsToTemplateFields(fields)
-	data := struct {
-		ModelName   string
-		ModuleName  string
-		ModuleNameK string
-		FormFields  []TemplateFieldConfig
-		HasCreate   bool
-		HasEdit     bool
-	}{
-		ModelName:   toPascalCase(moduleName),
-		ModuleName:  moduleName,
-		ModuleNameK: toKebabCase(moduleName),
-		FormFields:  templateFields,
-		HasCreate:   hasCreate,
-		HasEdit:     hasEdit,
-	}
+	isTreeList := options != nil && options["is_tree_list"]
+	data := s.buildListPageTemplateData(moduleName, templateFields, hasCreate, hasEdit, false, false, enableBatchActions, showToolbar, isTreeList)
 
 	content, err := s.executeTemplate(string(templateContent), data)
 	if err != nil {

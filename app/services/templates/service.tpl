@@ -16,6 +16,9 @@ import (
 type <<.ServiceName>> interface {
 	GetByID(id uint) (*models.<<.ModelName>>, error)
 	GetList(filters <<.ModelName>>Filters, page, pageSize int) ([]models.<<.ModelName>>, int64, error)
+<<if .IsTreeList>>
+	GetTree() ([]models.<<.ModelName>>, error)
+<<end>>
 <<if .HasExport>>
 	GetAll<<.ModelName>>ForExport(filters <<.ModelName>>Filters) ([]models.<<.ModelName>>, error)
 <<end>>
@@ -128,6 +131,32 @@ func (s *<<.ServiceName>>Impl) GetList(filters <<.ModelName>>Filters, page, page
 
 	return list, total, nil
 }
+
+<<if .IsTreeList>>
+func (s *<<.ServiceName>>Impl) GetTree() ([]models.<<.ModelName>>, error) {
+	var all []models.<<.ModelName>>
+	query := s.withRelations(appfacades.OrmQuery(s.ctx).Model(&models.<<.ModelName>>{}))
+	if err := query.Order("sort asc, id asc").Get(&all); err != nil {
+		return nil, apperrors.ErrQueryFailed.WithError(err)
+	}
+
+	byParent := make(map[uint][]models.<<.ModelName>>)
+	for _, item := range all {
+		byParent[item.<<.ParentIDFieldName>>] = append(byParent[item.<<.ParentIDFieldName>>], item)
+	}
+
+	return s.build<<.ModelName>>Tree(byParent, 0), nil
+}
+
+func (s *<<.ServiceName>>Impl) build<<.ModelName>>Tree(byParent map[uint][]models.<<.ModelName>>, parentID uint) []models.<<.ModelName>> {
+	children := byParent[parentID]
+	for i := range children {
+		children[i].Children = s.build<<.ModelName>>Tree(byParent, children[i].ID)
+	}
+	return children
+}
+
+<<end>>
 
 <<if .HasExport>>
 func (s *<<.ServiceName>>Impl) GetAll<<.ModelName>>ForExport(filters <<.ModelName>>Filters) ([]models.<<.ModelName>>, error) {

@@ -2,8 +2,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, Delete, Setting } from '@element-plus/icons-vue'
-import { getFieldTypes, getTables, getTableColumns, previewCode as previewCodeApi, generateCode, saveCode, generateWithAI } from '../../../api/codeGenerator'
+import { getFieldTypes, getTables, getTableColumns, previewCode as previewCodeApi, generateCode, saveCode, installGeneratedModule, generateWithAI } from '../../../api/codeGenerator'
 import { getDictionaryTypes } from '../../../api/dictionary'
+import { getMenuTree } from '../../../api/menu'
 import { isDev } from '../../../utils/env'
 import { useUserStore } from '../../../store/user'
 import logger from '../../../utils/logger'
@@ -31,6 +32,8 @@ export function useCodeGenerator() {
   const aiLastError = ref(null)
   const aiEnabled = ref(false)
   const enabledFrontends = ref(['vue', 'react'])
+  const installing = ref(false)
+  const parentMenuOptions = ref([])
 
   const backendFileTypes = [
     { value: 'model', labelKey: 'file_model' },
@@ -102,6 +105,10 @@ export function useCodeGenerator() {
   const form = reactive({
     module_name: '',
     table_name: '',
+    menu_title: '',
+    parent_menu_slug: '',
+    menu_sort: 0,
+    install_enabled: true,
     files: buildDefaultFiles(['vue', 'react']),
     options: ['has_create', 'has_edit', 'has_delete', 'show_toolbar'],
     export_mode: 'none',
@@ -154,6 +161,88 @@ export function useCodeGenerator() {
     table_name: [
       { required: true, message: t('code_generator.table_name_required'), trigger: 'blur' }
     ]
+  }
+
+  const buildInstallConfig = () => ({
+    enabled: form.install_enabled,
+    menu_title: (form.menu_title || form.module_name || '').trim(),
+    parent_menu_slug: form.parent_menu_slug || '',
+    menu_sort: Number(form.menu_sort) || 0,
+    frontend: enabledFrontends.value.includes('vue') ? 'vue' : 'react',
+  })
+
+  const flattenMenuOptions = (nodes, depth = 0) => {
+    const result = []
+    ;(nodes || []).forEach((node) => {
+      const slug = String(node.slug || node.Slug || '')
+      const title = String(node.title || node.Title || slug)
+      if (slug) {
+        result.push({ value: slug, label: `${'—'.repeat(depth)} ${title}`.trim() })
+      }
+      const children = node.children || node.Children
+      if (Array.isArray(children) && children.length > 0) {
+        result.push(...flattenMenuOptions(children, depth + 1))
+      }
+    })
+    return result
+  }
+
+  const loadParentMenus = async () => {
+    try {
+      const response = await getMenuTree()
+      const tree = Array.isArray(response.data) ? response.data : []
+      parentMenuOptions.value = [
+        { value: '', label: t('code_generator.parent_menu_top') },
+        ...flattenMenuOptions(tree),
+      ]
+    } catch (error) {
+      logger.error('Failed to load parent menus:', error)
+    }
+  }
+
+  const buildSavePayload = (force = false) => ({
+    module_name: form.module_name,
+    table_name: form.table_name,
+    fields: form.fields,
+    files: form.files,
+    force,
+    options: buildGeneratorOptions(),
+    install: buildInstallConfig(),
+  })
+
+  const saveGeneratedCode = async (force = false) => {
+    const response = await saveCode(buildSavePayload(force))
+    const savedFiles = response.data?.saved_files || []
+    if (response.data?.install) {
+      ElMessage.success(t('code_generator.save_and_install_success', { count: savedFiles.length }))
+    } else {
+      ElMessage.success(t('code_generator.save_success', { count: savedFiles.length }))
+    }
+  }
+
+  const handleInstallModule = async () => {
+    if (!formRef.value) return
+    try {
+      await formRef.value.validate()
+    } catch {
+      return
+    }
+
+    try {
+      installing.value = true
+      await installGeneratedModule({
+        module_name: form.module_name,
+        table_name: form.table_name,
+        options: buildGeneratorOptions(),
+        install: { ...buildInstallConfig(), enabled: true },
+      })
+      ElMessage.success(t('code_generator.install_success'))
+    } catch (error) {
+      logger.error('Failed to install module:', error)
+      ElMessage.error(t('code_generator.install_failed'))
+    } finally {
+      installing.value = false
+    }
   }
 
   const buildGeneratorOptions = () => ({
@@ -247,6 +336,9 @@ export function useCodeGenerator() {
       moduleName = moduleName.slice(0, -1)
     }
     form.module_name = moduleName
+    if (!form.menu_title) {
+      form.menu_title = moduleName
+    }
 
     try {
       const response = await getTableColumns(val)
@@ -430,17 +522,7 @@ export function useCodeGenerator() {
       )
 
       generating.value = true
-      const response = await saveCode({
-        module_name: form.module_name,
-        table_name: form.table_name,
-        fields: form.fields,
-        files: form.files,
-        force: false,
-        options: buildGeneratorOptions()
-      })
-
-      const savedFiles = response.data.saved_files || []
-      ElMessage.success(t('code_generator.save_success', { count: savedFiles.length }))
+      await saveGeneratedCode(false)
     } catch (error) {
       if (error !== 'cancel' && error !== 'close') {
         if (error.response && error.response.status === 409 && error.response.data && error.response.data.error_code === 'files_exist') {
@@ -465,17 +547,7 @@ export function useCodeGenerator() {
               }
             )
 
-            const response = await saveCode({
-              module_name: form.module_name,
-              table_name: form.table_name,
-              fields: form.fields,
-              files: form.files,
-              force: true,
-              options: buildGeneratorOptions()
-            })
-
-            const savedFiles = response.data.saved_files || []
-            ElMessage.success(t('code_generator.save_success', { count: savedFiles.length }))
+            await saveGeneratedCode(true)
           } catch (innerError) {
             if (innerError !== 'cancel' && innerError !== 'close') {
               logger.error('Failed to overwrite code:', innerError)
@@ -529,6 +601,9 @@ export function useCodeGenerator() {
 
     form.module_name = aiGeneratedConfig.value.module_name || ''
     form.table_name = aiGeneratedConfig.value.table_name || ''
+    if (!form.menu_title) {
+      form.menu_title = form.module_name
+    }
 
     const fields = (aiGeneratedConfig.value.fields || []).map(field => {
       const dbType = field.db_type || field.type || 'string'
@@ -647,6 +722,7 @@ export function useCodeGenerator() {
   onMounted(() => {
     loadFieldTypes()
     loadTables()
+    loadParentMenus()
   })
 
   return {
@@ -688,6 +764,9 @@ export function useCodeGenerator() {
     handleSaveFieldConfig,
     handlePreview,
     handleGenerate,
+    handleInstallModule,
+    installing,
+    parentMenuOptions,
     applyAIExample,
     handleGenerateWithAI,
     handleApplyAIConfig,

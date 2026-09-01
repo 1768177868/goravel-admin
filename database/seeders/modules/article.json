@@ -1,0 +1,57 @@
+{
+  "module_name": "article",
+  "table_name": "articles",
+  "menu_title": "article",
+  "menu_slug": "article",
+  "parent_menu_slug": "",
+  "path": "/articles",
+  "component": "article/ArticleList",
+  "icon": "Document",
+  "menu_sort": 0,
+  "has_create": true,
+  "has_edit": true,
+  "has_delete": true,
+  "has_export": false,
+  "permissions": [
+    {
+      "name": "article列表",
+      "slug": "article.index",
+      "method": "GET",
+      "path": "/api/admin/articles",
+      "description": "查看article列表",
+      "sort": 1
+    },
+    {
+      "name": "article详情",
+      "slug": "article.show",
+      "method": "GET",
+      "path": "/api/admin/articles/*",
+      "description": "查看article详情",
+      "sort": 2
+    },
+    {
+      "name": "article创建",
+      "slug": "article.store",
+      "method": "POST",
+      "path": "/api/admin/articles",
+      "description": "创建article",
+      "sort": 3
+    },
+    {
+      "name": "article更新",
+      "slug": "article.update",
+      "method": "PUT",
+      "path": "/api/admin/articles/*",
+      "description": "更新article",
+      "sort": 4
+    },
+    {
+      "name": "article删除",
+      "slug": "article.destroy",
+      "method": "DELETE",
+      "path": "/api/admin/articles/*",
+      "description": "删除article",
+      "sort": 5
+    }
+  ]
+}

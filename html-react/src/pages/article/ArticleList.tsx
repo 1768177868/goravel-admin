@@ -1,25 +1,35 @@
 import { useState } from 'react'
-import { App, Space, Switch, Table } from 'antd'
+import { Space, Switch, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
-import { deleteArticle, getArticleList, updateArticle } from '@/api/article'
+import {
+  deleteArticle,
+  getArticleList,
+  updateArticle,
+} from '@/api/article'
 import { useListPage } from '@/hooks/useListPage'
 import { handlePaginatedTableChange } from '@/utils/tableChange'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
-import { useUnhandledError } from '@/hooks/useUnhandledError'
 import PageContainer from '@/components/PageContainer'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
-import logger from '@/utils/logger'
+
 import { extractTextFromMarkdown } from '@/utils/markdown'
+
 import ArticleFormModal from './ArticleFormModal'
-import { articleInitialSearchForm, getAdminDisplayName, transformArticleRow, type ArticleRow } from './article.config'
+import {
+  articleInitialSearchForm,
+  buildArticleListParams,
+  createArticleSearchFields,
+  transformArticleRow,
+  type ArticleRow,
+
+  getadminDisplayName,
+} from './article.config'
 
 export default function ArticleList() {
   const { t } = useTranslation()
-  const { message } = App.useApp()
-  const showError = useUnhandledError()
   const { getButtonState } = usePermission()
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<string | number | null>(null)
@@ -38,8 +48,9 @@ export default function ArticleList() {
   } = useListPage<ArticleRow>({
     fetchApi: getArticleList,
     initialSearchForm: articleInitialSearchForm,
-    normalizeRows: false,
-    transformData: (row) => transformArticleRow(row),
+    normalizeRows: true,
+    transformData: transformArticleRow,
+    buildParams: buildArticleListParams,
   })
 
   const { toolbar, confirmDelete } = useCrudActions({
@@ -52,44 +63,27 @@ export default function ArticleList() {
     deleteApi: deleteArticle,
   })
 
-  const handleStatusChange = async (row: ArticleRow, checked: boolean) => {
-    try {
-      await updateArticle(row.id, { status: checked ? 1 : 0 })
-      message.success(t('common.update_success'))
-      await refresh()
-    } catch (error) {
-      logger.error('Status change error:', error)
-      showError(error, t('common.operation_failed'))
-    }
-  }
-
   const columns: ColumnsType<ArticleRow> = [
     { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
+
     {
-      title: t('admin_id'),
+      title: t('admin_id', { defaultValue: '管理员ID' }),
       dataIndex: 'admin_id',
-      width: 140,
-      render: (_, row) => getAdminDisplayName(row),
+      render: (_, row) => getadminDisplayName((row as Record<string, unknown>)['admin']),
     },
-    { title: t('title'), dataIndex: 'title', ellipsis: true },
+    
+    { title: t('title', { defaultValue: '标题' }), dataIndex: 'title' },
+    
     {
-      title: t('content'),
+      title: t('content', { defaultValue: '内容' }),
       dataIndex: 'content',
       ellipsis: true,
-      render: (content: string) => extractTextFromMarkdown(content).slice(0, 120),
+      width: 220,
+      render: (value: unknown) => extractTextFromMarkdown(String(value ?? '')).slice(0, 120) || '-',
     },
-    {
-      title: t('common.status'),
-      dataIndex: 'status',
-      width: 100,
-      render: (status: number, row) => (
-        <Switch
-          checked={Number(status ?? 1) === 1}
-          disabled={getButtonState('article.update').disabled}
-          onChange={(checked) => void handleStatusChange(row, checked)}
-        />
-      ),
-    },
+    
+    { title: t('status', { defaultValue: '0:未发布 1:发布' }), dataIndex: 'status' },
+    
     { title: t('table.updated_at'), dataIndex: 'updated_at', width: 180, sorter: true },
     { title: t('table.created_at'), dataIndex: 'created_at', width: 180, sorter: true },
     {
@@ -99,6 +93,7 @@ export default function ArticleList() {
       fixed: 'end',
       render: (_, row) => (
         <Space>
+          
           {getButtonState('article.update').show && (
             <PermissionButton
               permission="article.update"
@@ -111,16 +106,18 @@ export default function ArticleList() {
               {t('common.edit')}
             </PermissionButton>
           )}
+          
           {getButtonState('article.destroy').show && (
             <PermissionButton
               permission="article.destroy"
               type="link"
               danger
-              onClick={() => confirmDelete(row.id, row.title)}
+              onClick={() => confirmDelete(row.id)}
             >
               {t('common.delete')}
             </PermissionButton>
           )}
+          
         </Space>
       ),
     },
@@ -129,21 +126,7 @@ export default function ArticleList() {
   return (
     <PageContainer title={t('menu.article')} extra={toolbar}>
       <SearchForm
-        fields={[
-          { name: 'admin_id', label: t('admin_id') },
-          { name: 'title', label: t('title') },
-          { name: 'content', label: t('content'), advanced: true },
-          {
-            name: 'status',
-            label: t('common.status'),
-            type: 'select',
-            advanced: true,
-            options: [
-              { label: t('common.enabled'), value: 1 },
-              { label: t('common.disabled'), value: 0 },
-            ],
-          },
-        ]}
+        fields={createArticleSearchFields(t)}
         values={searchForm}
         onChange={onSearchFormChange}
         onSearch={handleSearch}
@@ -154,7 +137,7 @@ export default function ArticleList() {
         loading={loading}
         columns={columns}
         dataSource={tableData}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 960 }}
         pagination={{
           current: pagination.page,
           pageSize: pagination.pageSize,
@@ -166,12 +149,14 @@ export default function ArticleList() {
           handlePaginatedTableChange({ pager, sorter, pagination, loadData, handleSortChange })
         }
       />
+      
       <ArticleFormModal
         open={open}
         editId={editId}
         onClose={() => setOpen(false)}
         onSuccess={() => void refresh()}
       />
+      
     </PageContainer>
   )
 }

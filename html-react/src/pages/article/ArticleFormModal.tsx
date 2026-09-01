@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
-import { App, Form, Input, InputNumber, Modal, Spin, Switch } from 'antd'
+import { App, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Radio, Select, Switch } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { createArticle, getArticleDetail, updateArticle } from '@/api/article'
-import WangEditor from '@/components/WangEditor'
+import {
+  createArticle,
+  getArticleDetail,
+  updateArticle,
+} from '@/api/article'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import { entityField } from '@/utils/normalize'
+
+import MarkdownEditor from '@/components/MarkdownEditor'
 
 interface ArticleFormModalProps {
   open: boolean
@@ -20,61 +25,56 @@ export default function ArticleFormModal({ open, editId, onClose, onSuccess }: A
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [content, setContent] = useState('')
 
   useEffect(() => {
     if (!open) return
 
-    let cancelled = false
-    const boot = async () => {
-      if (!editId) {
-        form.setFieldsValue({ admin_id: undefined, title: '', status: 1 })
-        setContent('')
-        return
-      }
+    if (!editId) {
+      form.setFieldsValue({
 
-      setLoading(true)
-      try {
-        const res = await getArticleDetail(editId)
-        if (cancelled) return
+        admin_id: '',
+        title: '',
+        content: '',
+        status: '',
+      })
+      return
+    }
+
+    setLoading(true)
+    getArticleDetail(editId)
+      .then((res) => {
         const raw = (res.data || {}) as Record<string, unknown>
         const data = (entityField(raw, 'article', raw) || {}) as Record<string, unknown>
         form.setFieldsValue({
-          admin_id: entityField(data, 'admin_id', undefined),
-          title: entityField(data, 'title', ''),
-          status: Number(entityField(data, 'status', 1)),
-        })
-        setContent(String(entityField(data, 'content', '') ?? ''))
-      } catch (error) {
-        showError(error, t('common.query_failed'))
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
 
-    void boot()
-    return () => {
-      cancelled = true
-    }
+          admin_id: entityField(data, 'admin_id', ''),
+          title: entityField(data, 'title', ''),
+          content: entityField(data, 'content', ''),
+          status: entityField(data, 'status', ''),
+        })
+      })
+      .catch((error) => showError(error, t('common.query_failed')))
+      .finally(() => setLoading(false))
   }, [open, editId, form, showError, t])
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields()
       setSubmitting(true)
-      const payload: Record<string, unknown> = {
-        admin_id: values.admin_id,
-        title: values.title,
-        content,
-        status: Number(values.status),
-      }
+      const payload = {
+        ...values,
 
+      }
       if (editId) {
+        
         await updateArticle(editId, payload)
         message.success(t('common.update_success'))
+        
       } else {
+        
         await createArticle(payload)
         message.success(t('common.create_success'))
+        
       }
       onSuccess()
       onClose()
@@ -89,35 +89,32 @@ export default function ArticleFormModal({ open, editId, onClose, onSuccess }: A
   return (
     <Modal
       open={open}
-      title={editId ? t('article.edit_article') : t('article.add_article')}
+      title={editId ? t('article.edit', { defaultValue: t('common.edit') }) : t('article.add', { defaultValue: t('common.add') })}
       onCancel={onClose}
       onOk={() => void handleOk()}
       confirmLoading={submitting}
-      width={900}
       destroyOnHidden
-      styles={{ body: { maxHeight: '75vh', overflow: 'auto' } }}
+      width={800}
     >
-      <Spin spinning={loading}>
-        <Form form={form} layout="vertical">
-          <Form.Item name="admin_id" label={t('admin_id')} rules={[{ required: true }]}>
-            <InputNumber min={1} style={{ width: '100%' }} placeholder={t('admin_id')} />
-          </Form.Item>
-          <Form.Item name="title" label={t('title')} rules={[{ required: true }]}>
-            <Input placeholder={t('title')} />
-          </Form.Item>
-          <Form.Item label={t('content')}>
-            <WangEditor value={content} onChange={setContent} placeholder={t('content_placeholder')} height={400} />
-          </Form.Item>
-          <Form.Item
-            name="status"
-            label={t('common.status')}
-            getValueProps={(value) => ({ checked: Number(value) === 1 })}
-            getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-          >
-            <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
-          </Form.Item>
-        </Form>
-      </Spin>
+      <Form form={form} layout="vertical" disabled={loading}>
+
+        <Form.Item name="admin_id" label={t('admin_id', { defaultValue: '管理员ID' })} rules={[{ required: true }]}>
+          <Input />
+        </Form.Item>
+        
+        <Form.Item name="title" label={t('title', { defaultValue: '标题' })} rules={[{ required: true }]}>
+          <Input />
+        </Form.Item>
+        
+        <Form.Item name="content" label={t('content', { defaultValue: '内容' })}>
+          <MarkdownEditor height={400} placeholder={t('content', { defaultValue: '内容' })} />
+        </Form.Item>
+        
+        <Form.Item name="status" label={t('status', { defaultValue: '0:未发布 1:发布' })} rules={[{ required: true }]}>
+          <Select allowClear />
+        </Form.Item>
+        
+      </Form>
     </Modal>
   )
 }

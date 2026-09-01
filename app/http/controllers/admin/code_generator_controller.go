@@ -38,6 +38,14 @@ type SaveRequest struct {
 	Force      bool                   `json:"force"`
 	Files      []string               `json:"files"`
 	Options    map[string]bool        `json:"options"`
+	Install    *services.ModuleInstallConfig `json:"install"`
+}
+
+type InstallModuleRequest struct {
+	ModuleName string                        `json:"module_name"`
+	TableName  string                        `json:"table_name"`
+	Options    map[string]bool               `json:"options"`
+	Install    *services.ModuleInstallConfig `json:"install"`
 }
 
 type GenerateWithAIRequest struct {
@@ -148,8 +156,53 @@ func (c *CodeGeneratorController) Save(ctx http.Context) http.Response {
 		return response.Error(ctx, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.Success(ctx, http.Json{
+	payload := http.Json{
 		"saved_files": savedFiles,
+	}
+	if req.Install != nil && req.Install.Enabled {
+		installResult, installErr := c.codeGeneratorService(ctx).InstallModule(req.ModuleName, req.TableName, req.Options, req.Install)
+		if installErr != nil {
+			if businessErr, ok := apperrors.GetBusinessError(installErr); ok {
+				return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
+			}
+			return response.Error(ctx, http.StatusInternalServerError, installErr.Error())
+		}
+		payload["install"] = installResult
+	}
+
+	return response.Success(ctx, payload)
+}
+
+// InstallModule registers menu and permissions for a generated module.
+func (c *CodeGeneratorController) InstallModule(ctx http.Context) http.Response {
+	var req InstallModuleRequest
+	if err := ctx.Request().Bind(&req); err != nil {
+		return response.Error(ctx, http.StatusBadRequest, "invalid_fields")
+	}
+
+	if req.ModuleName == "" {
+		return response.Error(ctx, http.StatusBadRequest, "module_name_required")
+	}
+	if req.TableName == "" {
+		return response.Error(ctx, http.StatusBadRequest, "table_name_required")
+	}
+
+	install := req.Install
+	if install == nil {
+		install = &services.ModuleInstallConfig{Enabled: true}
+	}
+	install.Enabled = true
+
+	result, err := c.codeGeneratorService(ctx).InstallModule(req.ModuleName, req.TableName, req.Options, install)
+	if err != nil {
+		if businessErr, ok := apperrors.GetBusinessError(err); ok {
+			return response.Error(ctx, http.StatusInternalServerError, businessErr.Code)
+		}
+		return response.Error(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.Success(ctx, http.Json{
+		"install": result,
 	})
 }
 

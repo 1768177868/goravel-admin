@@ -47,6 +47,8 @@ export function create<<.ModelName>>TableColumns(t, options = {}) {
     { field: 'status', title: t('table.status'), width: 100, sortable: false, slot: 'status', key: 'status' },
     <<- else if eq .FormType "image-upload">>
     { field: '<<.Name>>', title: t('<<.Name>>'), slot: '<<.Name>>', sortable: false, width: 120, key: '<<.Name>>' },
+    <<- else if or (eq .FormType "editor") (eq .FormType "markdown")>>
+    { field: '<<.Name>>', title: t('<<.Name>>'), slot: '<<.Name>>', sortable: false, width: 220, key: '<<.Name>>' },
     <<- else if .Relation>>
     { field: '<<.Name>>', title: t('<<.Name>>'), slot: '<<.Name>>', sortable: false, key: '<<.Name>>' },
     <<- else>>

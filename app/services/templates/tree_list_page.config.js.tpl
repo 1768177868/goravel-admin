@@ -52,6 +52,8 @@ export function create<<.ModelName>>TableColumns(t) {
     { field: 'updated_at', title: t('table.updated_at'), width: 180, sortable: true, key: 'updated_at' },
     <<- else if eq .FormType "image-upload">>
     { field: '<<.Name>>', title: t('<<.Name>>'), slot: '<<.Name>>', width: 120, key: '<<.Name>>' },
+    <<- else if or (eq .FormType "editor") (eq .FormType "markdown")>>
+    { field: '<<.Name>>', title: t('<<.Name>>'), slot: '<<.Name>>', width: 220, key: '<<.Name>>' },
     <<- else if .Relation>>
     { field: '<<.Name>>', title: t('<<.Name>>'), slot: '<<.Name>>', minWidth: 150, key: '<<.Name>>' },
     <<- else>>

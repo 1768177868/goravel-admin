@@ -3,8 +3,6 @@ package admin
 import (
 	"github.com/goravel/framework/contracts/http"
 
-	"github.com/spf13/cast"
-
 	apperrors "goravel/app/errors"
 	"goravel/app/http/helpers"
 	adminrequests "goravel/app/http/requests/admin"
@@ -28,6 +26,7 @@ func (c *ArticleController) ArticleService(ctx http.Context) services.ArticleSer
 
 // Index lists Article records.
 func (c *ArticleController) Index(ctx http.Context) http.Response {
+
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
@@ -44,6 +43,7 @@ func (c *ArticleController) Index(ctx http.Context) http.Response {
 		"page":      page,
 		"page_size": pageSize,
 	})
+
 }
 
 // Show returns Article details.
@@ -107,49 +107,6 @@ func (c *ArticleController) Destroy(ctx http.Context) http.Response {
 
 // Export exports Article records.
 func (c *ArticleController) Export(ctx http.Context) http.Response {
-	lock := helpers.AcquireExportLock(ctx, "articles")
-	if lock.Unauthorized {
-		return response.Error(ctx, http.StatusUnauthorized, apperrors.ErrUnauthorized.Code)
-	}
-	if lock.Blocked {
-		return response.Error(ctx, http.StatusTooManyRequests, apperrors.ErrGetLockFailed.Code)
-	}
-	adminID := lock.AdminID
+	return response.Error(ctx, http.StatusForbidden, "forbidden")
 
-	filters := c.buildArticleFilters(ctx)
-
-	list, err := c.ArticleService(ctx).GetAllArticleForExport(filters)
-	if err != nil {
-		return response.ErrorWithLog(ctx, "article", err, map[string]any{
-			"action":   "export_articles",
-			"admin_id": adminID,
-		})
-	}
-
-	headers := []string{
-		"admin_id",
-		"title",
-		"content",
-		"status",
-		"created_at",
-		"updated_at",
-	}
-
-	timezone := helpers.GetCurrentTimezone(ctx)
-	var data [][]string
-	for _, row := range list {
-		r := []string{
-			cast.ToString(row.AdminId),
-			row.Title,
-			row.Content,
-			cast.ToString(row.Status),
-			helpers.FormatCarbonWithTimezone(row.CreatedAt, timezone),
-			helpers.FormatCarbonWithTimezone(row.UpdatedAt, timezone),
-		}
-		data = append(data, r)
-	}
-
-	ctx.WithValue("export_type", "articles")
-
-	return response.Export(ctx, "exported", headers, data, "articles")
 }

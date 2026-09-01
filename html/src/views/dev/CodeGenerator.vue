@@ -4,10 +4,15 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('code_generator.title') }}</span>
-          <el-button v-if="activeMode === 'manual'" type="primary" :loading="generating" @click="handleGenerate">
-            <el-icon><Document /></el-icon>
-            {{ $t('code_generator.generate') }}
-          </el-button>
+          <div v-if="activeMode === 'manual'" class="card-header-actions">
+            <el-button :loading="installing" @click="handleInstallModule">
+              {{ $t('code_generator.install_module') }}
+            </el-button>
+            <el-button type="primary" :loading="generating" @click="handleGenerate">
+              <el-icon><Document /></el-icon>
+              {{ $t('code_generator.generate') }}
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -40,6 +45,45 @@
               <el-col :span="12">
                 <el-form-item :label="$t('code_generator.table_name')" prop="table_name">
                   <el-input v-model="form.table_name" :placeholder="$t('code_generator.table_name_placeholder')" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.menu_title')">
+                  <el-input v-model="form.menu_title" :placeholder="$t('code_generator.menu_title_placeholder')" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.parent_menu')">
+                  <el-select
+                    v-model="form.parent_menu_slug"
+                    filterable
+                    clearable
+                    :placeholder="$t('code_generator.parent_menu_placeholder')"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="item in parentMenuOptions"
+                      :key="item.value || 'top'"
+                      :label="item.label"
+                      :value="item.value"
+                    />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.menu_sort')">
+                  <el-input-number v-model="form.menu_sort" :min="0" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item :label="$t('code_generator.install_options')">
+                  <el-checkbox v-model="form.install_enabled">{{ $t('code_generator.install_on_save') }}</el-checkbox>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -453,6 +497,9 @@ const {
   handleSaveFieldConfig,
   handlePreview,
   handleGenerate,
+  handleInstallModule,
+  installing,
+  parentMenuOptions,
   applyAIExample,
   handleGenerateWithAI,
   handleApplyAIConfig,
@@ -468,6 +515,11 @@ const {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .code-preview {

@@ -41,6 +41,21 @@ export interface CodeGeneratorOptions {
   is_tree_list?: boolean
 }
 
+export interface ModuleInstallConfig {
+  enabled?: boolean
+  menu_title?: string
+  parent_menu_slug?: string
+  menu_sort?: number
+  frontend?: string
+}
+
+export interface ModuleInstallResult {
+  menu_id: number
+  menu_slug: string
+  permission_ids: number[]
+  manifest_path?: string
+}
+
 export interface CodeGeneratorPayload {
   module_name: string
   table_name: string
@@ -49,6 +64,7 @@ export interface CodeGeneratorPayload {
   file_type?: string
   force?: boolean
   options?: CodeGeneratorOptions
+  install?: ModuleInstallConfig
 }
 
 export function getFieldTypes() {
@@ -86,8 +102,16 @@ export function previewCode(data: CodeGeneratorPayload) {
 }
 
 export function saveCode(data: CodeGeneratorPayload) {
-  return request<{ saved_files: string[] }>({
+  return request<{ saved_files: string[]; install?: ModuleInstallResult }>({
     url: '/code-generator/save',
+    method: 'post',
+    data,
+  })
+}
+
+export function installGeneratedModule(data: Pick<CodeGeneratorPayload, 'module_name' | 'table_name' | 'options' | 'install'>) {
+  return request<{ install: ModuleInstallResult }>({
+    url: '/code-generator/install-module',
     method: 'post',
     data,
   })

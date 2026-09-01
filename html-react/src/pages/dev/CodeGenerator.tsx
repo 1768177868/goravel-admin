@@ -173,9 +173,14 @@ export default function CodeGenerator() {
       <Card
         extra={
           cg.activeMode === 'manual' ? (
-            <Button type="primary" loading={cg.generating} icon={<FileTextOutlined />} onClick={() => void cg.handleGenerate()}>
-              {t('code_generator.generate')}
-            </Button>
+            <Space>
+              <Button loading={cg.installing} onClick={() => void cg.handleInstallModule()}>
+                {t('code_generator.install_module')}
+              </Button>
+              <Button type="primary" loading={cg.generating} icon={<FileTextOutlined />} onClick={() => void cg.handleGenerate()}>
+                {t('code_generator.generate')}
+              </Button>
+            </Space>
           ) : null
         }
       >
@@ -220,6 +225,59 @@ export default function CodeGenerator() {
                         rules={[{ required: true, message: t('code_generator.table_name_required') }]}
                       >
                         <Input placeholder={t('code_generator.table_name_placeholder')} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Row gutter={20}>
+                    <Col span={12}>
+                      <Form.Item
+                        name="menu_title"
+                        label={t('code_generator.menu_title')}
+                      >
+                        <Input
+                          placeholder={t('code_generator.menu_title_placeholder')}
+                          value={cg.menuTitle}
+                          onChange={(e) => {
+                            cg.setMenuTitle(e.target.value)
+                            cg.form.setFieldValue('menu_title', e.target.value)
+                          }}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item label={t('code_generator.parent_menu')}>
+                        <Select
+                          allowClear
+                          showSearch
+                          optionFilterProp="label"
+                          value={cg.parentMenuSlug}
+                          options={cg.parentMenuOptions}
+                          placeholder={t('code_generator.parent_menu_placeholder')}
+                          onChange={(value) => cg.setParentMenuSlug(value || '')}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Row gutter={20}>
+                    <Col span={12}>
+                      <Form.Item label={t('code_generator.menu_sort')}>
+                        <InputNumber
+                          min={0}
+                          style={{ width: '100%' }}
+                          value={cg.menuSort}
+                          onChange={(value) => cg.setMenuSort(Number(value) || 0)}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item label={t('code_generator.install_options')}>
+                        <Space wrap>
+                          <Checkbox checked={cg.installEnabled} onChange={(e) => cg.setInstallEnabled(e.target.checked)}>
+                            {t('code_generator.install_on_save')}
+                          </Checkbox>
+                        </Space>
                       </Form.Item>
                     </Col>
                   </Row>

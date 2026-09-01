@@ -6,12 +6,15 @@ import {
   getFieldTypes,
   getTableColumns,
   getTables,
+  installGeneratedModule,
   previewCode,
   saveCode,
   type CodeGeneratorField,
   type CodeGeneratorOptions,
+  type ModuleInstallConfig,
 } from '@/api/codeGenerator'
 import { getDictionaryTypes } from '@/api/dictionary'
+import { getMenuTree } from '@/api/menu'
 import { useUserStore } from '@/stores/user'
 import logger from '@/utils/logger'
 
@@ -110,6 +113,14 @@ export function useCodeGenerator() {
   const [files, setFiles] = useState<string[]>(buildDefaultFiles(['vue', 'react']))
   const [options, setOptions] = useState<string[]>(['has_create', 'has_edit', 'has_delete', 'show_toolbar'])
   const [exportMode, setExportMode] = useState<'none' | 'sync' | 'async'>('none')
+  const [installEnabled, setInstallEnabled] = useState(true)
+  const [parentMenuSlug, setParentMenuSlug] = useState('')
+  const [menuSort, setMenuSort] = useState(0)
+  const [menuTitle, setMenuTitle] = useState('')
+  const [parentMenuOptions, setParentMenuOptions] = useState<Array<{ value: string; label: string }>>([
+    { value: '', label: '' },
+  ])
+  const [installing, setInstalling] = useState(false)
   const [previewCodeMap, setPreviewCodeMap] = useState<Record<string, string>>({})
   const [aiDescription, setAiDescription] = useState('')
   const [aiGenerating, setAiGenerating] = useState(false)
@@ -214,6 +225,57 @@ export function useCodeGenerator() {
     [exportMode, options],
   )
 
+  const buildInstallConfig = useCallback((): ModuleInstallConfig => {
+    const values = form.getFieldsValue(['module_name', 'menu_title'])
+    const resolvedTitle =
+      menuTitle.trim() ||
+      String(values.menu_title || '').trim() ||
+      String(values.module_name || '').trim()
+    return {
+      enabled: installEnabled,
+      menu_title: resolvedTitle,
+      parent_menu_slug: parentMenuSlug,
+      menu_sort: menuSort,
+      frontend: enabledFrontends.includes('react') ? 'react' : 'vue',
+    }
+  }, [
+    enabledFrontends,
+    form,
+    installEnabled,
+    menuSort,
+    menuTitle,
+    parentMenuSlug,
+  ])
+
+  const flattenMenuOptions = useCallback((nodes: Array<Record<string, unknown>>, depth = 0): Array<{ value: string; label: string }> => {
+    const result: Array<{ value: string; label: string }> = []
+    nodes.forEach((node) => {
+      const slug = String(node.slug || node.Slug || '')
+      const title = String(node.title || node.Title || slug)
+      if (slug) {
+        result.push({ value: slug, label: `${'—'.repeat(depth)} ${title}`.trim() })
+      }
+      const children = (node.children || node.Children) as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(children) && children.length > 0) {
+        result.push(...flattenMenuOptions(children, depth + 1))
+      }
+    })
+    return result
+  }, [])
+
+  const loadParentMenus = useCallback(async () => {
+    try {
+      const response = await getMenuTree()
+      const tree = Array.isArray(response.data) ? response.data : []
+      setParentMenuOptions([
+        { value: '', label: t('code_generator.parent_menu_top') },
+        ...flattenMenuOptions(tree as Array<Record<string, unknown>>),
+      ])
+    } catch (error) {
+      logger.error('Failed to load parent menus:', error)
+    }
+  }, [flattenMenuOptions, t])
+
   const loadFieldTypes = useCallback(async () => {
     try {
       const response = await getFieldTypes()
@@ -251,7 +313,8 @@ export function useCodeGenerator() {
   useEffect(() => {
     void loadFieldTypes()
     void loadTables()
-  }, [loadFieldTypes, loadTables])
+    void loadParentMenus()
+  }, [loadFieldTypes, loadTables, loadParentMenus])
 
   const handleTableChange = async (val: string) => {
     if (!val) return
@@ -262,6 +325,10 @@ export function useCodeGenerator() {
       nextModuleName = nextModuleName.slice(0, -1)
     }
     form.setFieldValue('module_name', nextModuleName)
+    if (!menuTitle.trim()) {
+      setMenuTitle(nextModuleName)
+      form.setFieldValue('menu_title', nextModuleName)
+    }
 
     try {
       const response = await getTableColumns(val)
@@ -468,9 +535,33 @@ export function useCodeGenerator() {
       files,
       force,
       options: buildGeneratorOptions(),
+      install: buildInstallConfig(),
     })
     const savedFiles = response.data?.saved_files || []
-    message.success(t('code_generator.save_success', { count: savedFiles.length }))
+    if (response.data?.install) {
+      message.success(t('code_generator.save_and_install_success', { count: savedFiles.length }))
+    } else {
+      message.success(t('code_generator.save_success', { count: savedFiles.length }))
+    }
+  }
+
+  const handleInstallModule = async () => {
+    try {
+      const values = await form.validateFields()
+      setInstalling(true)
+      await installGeneratedModule({
+        module_name: values.module_name,
+        table_name: values.table_name,
+        options: buildGeneratorOptions(),
+        install: { ...buildInstallConfig(), enabled: true },
+      })
+      message.success(t('code_generator.install_success'))
+    } catch (error) {
+      logger.error('Failed to install module:', error)
+      message.error(t('code_generator.install_failed'))
+    } finally {
+      setInstalling(false)
+    }
   }
 
   const formatExistingFilesHtml = (files: string[]) =>
@@ -649,6 +740,17 @@ export function useCodeGenerator() {
     setOptions,
     exportMode,
     setExportMode,
+    installEnabled,
+    setInstallEnabled,
+    parentMenuSlug,
+    setParentMenuSlug,
+    parentMenuOptions,
+    menuSort,
+    setMenuSort,
+    menuTitle,
+    setMenuTitle,
+    installing,
+    handleInstallModule,
     fileTypes,
     formTypes,
     handleTableChange,

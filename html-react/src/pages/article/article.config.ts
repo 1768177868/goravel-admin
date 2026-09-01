@@ -1,37 +1,94 @@
+import type { SearchField } from '@/components/SearchForm'
+import { buildSearchParams } from '@/utils/buildSearchParams'
 import { entityField } from '@/utils/normalize'
 
-export const articleInitialSearchForm = {
+export const articleInitialSearchForm: Record<string, unknown> = {
+
   admin_id: '',
   title: '',
   content: '',
   status: '',
+  created_at: [],
+  updated_at: [],
 }
+
+export type ArticleSearchForm = typeof articleInitialSearchForm
 
 export interface ArticleRow {
   id: number | string
-  admin_id?: number | string
-  admin?: { nickname?: string; username?: string } | null
-  title?: string
-  content?: string
-  status?: number
-  created_at?: string
-  updated_at?: string
+
+  admin_id?: unknown
+  title?: unknown
+  content?: unknown
+  status?: unknown
+  created_at?: unknown
+  updated_at?: unknown
+}
+
+export function buildArticleListParams(
+  form: ArticleSearchForm,
+  baseParams: Record<string, unknown>,
+) {
+  return buildSearchParams(form, baseParams)
+}
+
+export function createArticleSearchFields(t: (key: string) => string): SearchField[] {
+  return [
+
+    {
+      name: 'admin_id',
+      label: t('admin_id', { defaultValue: '管理员ID' }),
+      
+    },
+    {
+      name: 'title',
+      label: t('title', { defaultValue: '标题' }),
+      
+    },
+    {
+      name: 'content',
+      label: t('content', { defaultValue: '内容' }),
+      
+    },
+    {
+      name: 'status',
+      label: t('common.status'),
+      
+      type: 'select',
+      options: [
+        { label: t('common.enabled'), value: 1 },
+        { label: t('common.disabled'), value: 0 },
+      ],
+      
+    },
+    {
+      name: 'created_at',
+      label: t('common.created_at'),
+      
+    },
+    {
+      name: 'updated_at',
+      label: t('common.updated_at'),
+      
+    },
+  ]
 }
 
 export function transformArticleRow(row: Record<string, unknown>): ArticleRow {
   return {
     id: entityField(row, 'id', '')!,
-    admin_id: entityField(row, 'admin_id', '') as number | string,
-    admin: (entityField(row, 'admin', null) as ArticleRow['admin']) || null,
-    title: String(entityField(row, 'title', '') ?? ''),
-    content: String(entityField(row, 'content', '') ?? ''),
-    status: Number(entityField(row, 'status', 0) ?? 0),
-    created_at: String(entityField(row, 'created_at', '') ?? ''),
-    updated_at: String(entityField(row, 'updated_at', '') ?? ''),
-  }
+
+    admin_id: entityField(row, 'admin_id', ''),
+    title: entityField(row, 'title', ''),
+    content: entityField(row, 'content', ''),
+    status: entityField(row, 'status', ''),
+    created_at: entityField(row, 'created_at', ''),
+    updated_at: entityField(row, 'updated_at', ''),
+  } as ArticleRow
 }
 
-export function getAdminDisplayName(row: ArticleRow) {
-  if (row.admin) return row.admin.nickname || row.admin.username || '-'
-  return row.admin_id ? String(row.admin_id) : '-'
+export function getadminDisplayName(value: unknown) {
+  if (!value || typeof value !== 'object') return '-'
+  const record = value as Record<string, unknown>
+  return String(record['nickname'] ?? record['admin'] ?? '-')
 }

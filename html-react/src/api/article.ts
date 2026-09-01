@@ -1,14 +1,20 @@
-﻿import { createCRUDApi } from '@/utils/apiFactory'
+import { createCRUDApi, extendApi } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
+import request from '@/utils/request'
 
-const articleApi = createCRUDApi('articles')
+const baseArticleApi = createCRUDApi('articles')
+
+const articleApi = baseArticleApi
 
 export async function getArticleList(params?: Record<string, unknown>) {
-  const res = await articleApi.list(params)
-  return normalizeListResponse(res)
+  return normalizeListResponse(await articleApi.list(params))
 }
 
 export const getArticleDetail = articleApi.detail
+
 export const createArticle = articleApi.create
+
 export const updateArticle = articleApi.update
+
 export const deleteArticle = articleApi.delete
+

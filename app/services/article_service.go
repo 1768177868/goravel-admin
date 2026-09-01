@@ -17,8 +17,6 @@ type ArticleService interface {
 	GetByID(id uint) (*models.Article, error)
 	GetList(filters ArticleFilters, page, pageSize int) ([]models.Article, int64, error)
 
-	GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error)
-
 	Create(req *admin.ArticleCreate) (*models.Article, error)
 
 	Update(id uint, req *admin.ArticleUpdate) (*models.Article, error)
@@ -124,17 +122,6 @@ func (s *ArticleServiceImpl) GetList(filters ArticleFilters, page, pageSize int)
 	}
 
 	return list, total, nil
-}
-
-func (s *ArticleServiceImpl) GetAllArticleForExport(filters ArticleFilters) ([]models.Article, error) {
-	query := s.withRelations(BuildArticleQuery(s.ctx, filters))
-
-	var list []models.Article
-	if err := query.Order("id desc").Find(&list); err != nil {
-		return nil, apperrors.ErrQueryFailed.WithError(err)
-	}
-
-	return list, nil
 }
 
 func (s *ArticleServiceImpl) Create(req *admin.ArticleCreate) (*models.Article, error) {

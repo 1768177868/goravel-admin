@@ -175,9 +175,14 @@ export RUN_SEED=false
 # 执行数据库迁移
 ./scripts/deploy/migrate.sh
 
-# 执行数据填充
+# 执行数据填充（默认完整 db:seed，仅适合首次初始化）
 ./scripts/deploy/seed.sh
+
+# 仅同步代码生成器模块菜单/权限（生产增量部署推荐）
+# docker exec <container> /www/main artisan db:seed --seeder=GeneratedModulesSeeder
 ```
+
+详见 [CODE_GENERATOR.md](./CODE_GENERATOR.md)。
 
 ## 🔍 查看状态
 

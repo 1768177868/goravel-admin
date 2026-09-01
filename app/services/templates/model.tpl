@@ -18,6 +18,9 @@ type <<.ModelName>> struct {
 	<<.Relation.Name>> *<<.Relation.ModelName>> `gorm:"foreignKey:<<.FieldName>>" json:"<<.Relation.JsonName>>"`
 <<end>>
 <<- end>>
+<<if .IsTreeList>>
+	Children []<<.ModelName>> `gorm:"-" json:"children,omitempty"`
+<<end>>
 	orm.SoftDeletes
 }
 

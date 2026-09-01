@@ -14,6 +14,9 @@ import { usePermission } from '@/hooks/usePermission'
 import PageContainer from '@/components/PageContainer'
 import SearchForm from '@/components/SearchForm'
 import PermissionButton from '@/components/PermissionButton'
+<<if .HasRichTextInList>>
+import { extractTextFromMarkdown } from '@/utils/markdown'
+<<end>>
 import <<.ModelName>>FormModal from './<<.ModelName>>FormModal'
 import {
   <<.ModuleNameCamel>>InitialSearchForm,
@@ -86,6 +89,22 @@ export default function <<.ModelName>>List() {
       dataIndex: '<<.Name>>',
       render: (_, row) => get<<.Relation.JsonName>>DisplayName((row as Record<string, unknown>)['<<.Relation.JsonName>>']),
     },
+    <<else if or (eq .FormType "editor") (eq .FormType "markdown")>>
+    {
+      title: t('<<.Name>>', { defaultValue: '<<.Label>>' }),
+      dataIndex: '<<.Name>>',
+      ellipsis: true,
+      width: 220,
+      render: (value: unknown) => extractTextFromMarkdown(String(value ?? '')).slice(0, 120) || '-',
+    },
+    <<else if eq .FormType "image-upload">>
+    {
+      title: t('<<.Name>>', { defaultValue: '<<.Label>>' }),
+      dataIndex: '<<.Name>>',
+      width: 100,
+      render: (value: unknown) =>
+        value ? <img src={String(value)} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} /> : '-',
+    },
     <<else>>
     { title: t('<<.Name>>', { defaultValue: '<<.Label>>' }), dataIndex: '<<.Name>>'<<if .Sortable>>, sorter: true<<end>> },
     <<end>>
@@ -151,7 +170,7 @@ export default function <<.ModelName>>List() {
         onSearch={handleSearch}
         onReset={handleReset}
       />
-      <Table<< "<" >><<.ModelName>>Row>>
+      <Table<< "<" >><<.ModelName>>Row<< ">" >>
         rowKey="id"
         loading={loading}
         columns={columns}

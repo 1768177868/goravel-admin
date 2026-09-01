@@ -44,6 +44,27 @@ func (c *<<.ControllerName>>) <<.ServiceName>>(ctx http.Context) services.<<.Ser
 
 // Index lists <<.ModelName>> records.
 func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
+<<if .IsTreeList>>
+	if c.has<<.ModelName>>TreeSearchFilters(ctx) {
+		filters := c.build<<.ModelName>>Filters(ctx)
+		list, _, err := c.<<.ServiceName>>(ctx).GetList(filters, 1, 10000)
+		if err != nil {
+			return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusInternalServerError, err, nil)
+		}
+		return response.Success(ctx, http.Json{
+			"list": list,
+		})
+	}
+
+	tree, err := c.<<.ServiceName>>(ctx).GetTree()
+	if err != nil {
+		return HandleGeneratedServiceError(ctx, "<<.ModuleName>>", http.StatusInternalServerError, err, nil)
+	}
+
+	return response.Success(ctx, http.Json{
+		"list": tree,
+	})
+<<else>>
 	page := helpers.GetIntQuery(ctx, "page", 1)
 	pageSize := helpers.GetIntQuery(ctx, "page_size", 10)
 
@@ -60,7 +81,26 @@ func (c *<<.ControllerName>>) Index(ctx http.Context) http.Response {
 		"page":      page,
 		"page_size": pageSize,
 	})
+<<end>>
 }
+
+<<if .IsTreeList>>
+func (c *<<.ControllerName>>) has<<.ModelName>>TreeSearchFilters(ctx http.Context) bool {
+<<range .SearchableFields>>
+	<<- if or (eq .SearchUIType "daterange") (eq .SearchUIType "datetimerange")>>
+	if helpers.GetTimeInputOrQueryParam(ctx, "<<.Name>>_start") != "" || helpers.GetTimeInputOrQueryParam(ctx, "<<.Name>>_end") != "" {
+		return true
+	}
+	<<- else>>
+	if ctx.Request().Input("<<.Name>>", ctx.Request().Query("<<.Name>>", "")) != "" {
+		return true
+	}
+	<<- end>>
+<<- end>>
+	return false
+}
+
+<<end>>
 
 // Show returns <<.ModelName>> details.
 func (c *<<.ControllerName>>) Show(ctx http.Context) http.Response {

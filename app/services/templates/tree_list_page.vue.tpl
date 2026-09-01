@@ -51,6 +51,12 @@
       />
       <span v-else>-</span>
     </template>
+    <<- else if and .ShowInList (or (eq .FormType "editor") (eq .FormType "markdown"))>>
+    <template #<<.Name>>="{ row }">
+      <div class="text-truncate" :title="extractTextFromMarkdown(row.<<.Name>>)">
+        {{ extractTextFromMarkdown(row.<<.Name>>).slice(0, 120) || '-' }}
+      </div>
+    </template>
     <<- else if and .ShowInList .Relation>>
     <template #<<.Name>>="{ row }">
       {{ get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>> || row.<<.Name>>) }}
@@ -102,6 +108,9 @@ import { usePermission } from '@/composables/usePermission'
 import { useCrud } from '@/composables/useCrud'
 import { useElTableColumns } from '@/composables/useElTableColumns'
 import { useColumnSetting } from '@/composables/useColumnSetting'
+<<if .HasRichTextInList>>
+import { extractTextFromMarkdown } from '@/utils/markdown'
+<<end>>
 import {
   get<<.ModelName>>List
   <<if .HasDelete>>, delete<<.ModelName>><<end>>
@@ -212,3 +221,13 @@ onMounted(() => {
   loadData()
 })
 </script>
+<<if .HasRichTextInList>>
+<style scoped>
+.text-truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>
+<<end>>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { App, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Radio, Select, Switch } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
+import { App, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Radio, Select, Switch, TreeSelect } from 'antd'
 import { useTranslation } from 'react-i18next'
 import {
   <<if .HasCreate>>create<<.ModelName>>,<<end>>
@@ -8,27 +8,47 @@ import {
 } from '@/api/<<.ModuleNameK>>'
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import { entityField } from '@/utils/normalize'
+import { excludeNodeAndChildren } from '@/utils/tree'
 <<if .HasEditor>>
 import WangEditor from '@/components/WangEditor'
 <<end>>
 <<if .HasMarkdown>>
 import MarkdownEditor from '@/components/MarkdownEditor'
 <<end>>
+import {
+  to<<.ModelName>>TreeSelect,
+  type <<.ModelName>>Row,
+} from './<<.ModuleNameCamel>>.config'
 
 interface <<.ModelName>>FormModalProps {
   open: boolean
   editId?: string | number | null
+  treeData: <<.ModelName>>Row[]
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function <<.ModelName>>FormModal({ open, editId, onClose, onSuccess }: <<.ModelName>>FormModalProps) {
+export default function <<.ModelName>>FormModal({
+  open,
+  editId,
+  treeData,
+  onClose,
+  onSuccess,
+}: <<.ModelName>>FormModalProps) {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const showError = useUnhandledError()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  const parentTreeData = useMemo(() => {
+    const filtered = editId ? excludeNodeAndChildren(treeData, editId) : treeData
+    return [
+      { title: t('<<.ModuleName>>.top_parent', { defaultValue: t('common.top_level', { defaultValue: 'Top Level' }) }), value: 0 },
+      ...to<<.ModelName>>TreeSelect(filtered),
+    ]
+  }, [editId, treeData, t])
 
   useEffect(() => {
     if (!open) return
@@ -37,7 +57,7 @@ export default function <<.ModelName>>FormModal({ open, editId, onClose, onSucce
       form.setFieldsValue({
 <<range .FormFields>>
 <<- if and .ShowInForm (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-        <<.Name>>: <<if eq .FormType "switch">>true<<else if eq .FormType "number">>0<<else if eq .FormType "checkbox">>[]<<else>>''<<end>>,
+        <<.Name>>: <<if eq .Name "parent_id">>0<<else if eq .FormType "switch">>true<<else if eq .FormType "number">>0<<else if eq .FormType "checkbox">>[]<<else>>''<<end>>,
 <<- end>>
 <<- end>>
       })
@@ -52,7 +72,7 @@ export default function <<.ModelName>>FormModal({ open, editId, onClose, onSucce
         form.setFieldsValue({
 <<range .FormFields>>
 <<- if and .ShowInForm (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-          <<.Name>>: <<if eq .FormType "switch">>(Number(entityField(data, '<<.Name>>', 1)) === 1)<<else if eq .FormType "number">>Number(entityField(data, '<<.Name>>', 0))<<else>>entityField(data, '<<.Name>>', '')<<end>>,
+          <<.Name>>: <<if eq .Name "parent_id">>Number(entityField(data, '<<.Name>>', 0))<<else if eq .FormType "switch">>(Number(entityField(data, '<<.Name>>', 1)) === 1)<<else if eq .FormType "number">>Number(entityField(data, '<<.Name>>', 0))<<else>>entityField(data, '<<.Name>>', '')<<end>>,
 <<- end>>
 <<- end>>
         })
@@ -68,6 +88,9 @@ export default function <<.ModelName>>FormModal({ open, editId, onClose, onSucce
       const payload = {
         ...values,
 <<range .FormFields>>
+<<- if and .ShowInForm (eq .Name "parent_id")>>
+        parent_id: Number(values.parent_id ?? 0),
+<<- end>>
 <<- if and .ShowInForm (eq .FormType "switch")>>
         <<.Name>>: values.<<.Name>> ? 1 : 0,
 <<- end>>
@@ -107,7 +130,16 @@ export default function <<.ModelName>>FormModal({ open, editId, onClose, onSucce
       <Form form={form} layout="vertical" disabled={loading}>
 <<range .FormFields>>
 <<- if and .ShowInForm (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
-        <<if eq .FormType "editor">>
+        <<if eq .Name "parent_id">>
+        <Form.Item name="parent_id" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}>
+          <TreeSelect
+            allowClear
+            treeDefaultExpandAll
+            treeData={parentTreeData}
+            placeholder={t('<<.Name>>', { defaultValue: '<<.Label>>' })}
+          />
+        </Form.Item>
+        <<else if eq .FormType "editor">>
         <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
           <WangEditor height={400} placeholder={t('<<.Name>>', { defaultValue: '<<.Label>>' })} />
         </Form.Item>
@@ -130,26 +162,6 @@ export default function <<.ModelName>>FormModal({ open, editId, onClose, onSucce
         <<else if eq .FormType "select">>
         <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
           <Select allowClear />
-        </Form.Item>
-        <<else if eq .FormType "radio">>
-        <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
-          <Radio.Group />
-        </Form.Item>
-        <<else if eq .FormType "checkbox">>
-        <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
-          <Checkbox.Group />
-        </Form.Item>
-        <<else if eq .FormType "date-picker">>
-        <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
-          <DatePicker style={{ width: '100%' }} />
-        </Form.Item>
-        <<else if eq .FormType "datetime-picker">>
-        <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
-          <DatePicker showTime style={{ width: '100%' }} />
-        </Form.Item>
-        <<else if eq .FormType "image-upload">>
-        <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>
-          <Input placeholder={t('common.image_url', { defaultValue: 'Image URL' })} />
         </Form.Item>
         <<else>>
         <Form.Item name="<<.Name>>" label={t('<<.Name>>', { defaultValue: '<<.Label>>' })}<<if .Required>> rules={[{ required: true }]}<<end>>>

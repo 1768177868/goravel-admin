@@ -46,6 +46,14 @@ export function saveCode(data) {
   })
 }
 
+export function installGeneratedModule(data) {
+  return request({
+    url: '/code-generator/install-module',
+    method: 'post',
+    data
+  })
+}
+
 export function generateWithAI(data) {
   return request({
     url: '/code-generator/generate-with-ai',
