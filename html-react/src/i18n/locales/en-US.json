@@ -90,7 +90,8 @@
     "back": "Back",
     "ai_lab_rate_limited": "AI Lab rate limit exceeded. Please try again later",
     "ai_not_configured": "AI is not configured. Set AI_API_KEY in .env and restart the server",
-    "file_required": "Please select a file"
+    "file_required": "Please select a file",
+    "ai_lab_file_too_large": "Upload file is too large, please use a smaller file"
   },
   "admin_id": "Admin ID",
   "title": "Title",
@@ -1303,7 +1304,7 @@
     "title": "AI Lab",
     "subtitle": "Goravel AI SDK demos: text, vision, image, audio",
     "not_configured": "AI is not configured. Set AI_API_KEY in server .env and restart.",
-    "rate_limit_hint": "Per admin: {{perMinute}}/min, {{perDay}}/day",
+    "rate_limit_hint": "Per admin: {{perMinute}}/min, {{perDay}}/day; max upload {{maxUpload}}MB",
     "models": "Models",
     "tab_text": "Text Chat",
     "tab_vision": "Vision",

@@ -122,6 +122,7 @@
     "ai_not_configured": "AI is not configured. Set AI_API_KEY in .env and restart the server",
     "ai_lab_rate_limited": "AI Lab rate limit exceeded. Please try again later",
     "prompt_required": "Prompt is required",
+    "ai_lab_file_too_large": "Upload file is too large, please use a smaller file",
     "description_required": "Please enter module description",
     "parse_success": "Parse successful",
     "ulid_required": "ULID cannot be empty",

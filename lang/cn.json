@@ -78,6 +78,7 @@
     "ai_not_configured": "AI 功能未配置，请在 .env 中设置 AI_API_KEY 后重启服务",
     "ai_lab_rate_limited": "AI 实验室请求过于频繁，请稍后再试",
     "prompt_required": "请输入提示词",
+    "ai_lab_file_too_large": "上传文件过大，请缩小后重试",
     "description_required": "请输入模块描述",
     "parse_success": "解析成功",
     "ulid_required": "ULID 不能为空",

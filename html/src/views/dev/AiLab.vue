@@ -36,6 +36,7 @@
           {{ t('ai_lab.rate_limit_hint', {
             perMinute: status.rate_limit_per_minute,
             perDay: status.rate_limit_per_day,
+            maxUpload: status.max_upload_mb ?? 10,
           }) }}
         </div>
       </el-card>

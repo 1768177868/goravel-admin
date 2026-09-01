@@ -92,7 +92,8 @@
     "range_separator": "至",
     "ai_lab_rate_limited": "AI 实验室请求过于频繁，请稍后再试",
     "ai_not_configured": "AI 未配置，请在 .env 中设置 AI_API_KEY 后重启服务",
-    "file_required": "请选择文件"
+    "file_required": "请选择文件",
+    "ai_lab_file_too_large": "上传文件过大，请缩小后重试"
   },
   "login": {
     "title": "后台管理系统",
@@ -1741,7 +1742,7 @@
     "title": "AI 实验室",
     "subtitle": "演示 Goravel AI SDK 能力（文本、视觉、图片、语音）",
     "not_configured": "AI 功能未配置。请在服务端 .env 设置 AI_API_KEY 并重启后使用。",
-    "rate_limit_hint": "每位管理员限流：{perMinute} 次/分钟，{perDay} 次/天",
+    "rate_limit_hint": "每位管理员限流：{perMinute} 次/分钟，{perDay} 次/天；上传上限 {maxUpload}MB",
     "models": "当前模型",
     "tab_text": "文本对话",
     "tab_vision": "图片理解",

@@ -8,6 +8,7 @@ export interface AiLabStatus {
   transcription_model: string
   rate_limit_per_minute: number
   rate_limit_per_day: number
+  max_upload_mb?: number
 }
 
 export interface AiLabTextResult {

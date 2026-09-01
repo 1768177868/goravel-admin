@@ -41,6 +41,7 @@ func init() {
 		// AI 实验室：按管理员账号限流（演示站防滥用）
 		"lab_rate_limit_per_minute": config.Env("AI_LAB_RATE_LIMIT_PER_MINUTE", 10),
 		"lab_rate_limit_per_day":    config.Env("AI_LAB_RATE_LIMIT_PER_DAY", 200),
+		"lab_max_upload_mb":       config.Env("AI_LAB_MAX_UPLOAD_MB", 10),
 
 		"providers": map[string]any{
 			"openai": map[string]any{

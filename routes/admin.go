@@ -81,9 +81,9 @@ func Admin() {
 			router.Get("options", optionController.Index)
 			router.Middleware(middleware.DevelopmentOnly()).Get("form-demo/data", formDemoController.GetData)
 
-			// AI 实验室（登录即可；按管理员账号限流；演示站可用）
+			// AI 实验室（登录即可；演示站可用；status 不计入限流）
+			router.Get("ai-lab/status", aiLabController.Status)
 			router.Middleware(httpmiddleware.Throttle("aiLab")).Group(func(router route.Router) {
-				router.Get("ai-lab/status", aiLabController.Status)
 				router.Post("ai-lab/text", aiLabController.Text)
 				router.Post("ai-lab/vision", aiLabController.Vision)
 				router.Post("ai-lab/image", aiLabController.Image)

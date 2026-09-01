@@ -40,3 +40,12 @@ func AILabRateLimitPerDay() int {
 	}
 	return limit
 }
+
+// AILabMaxUploadBytes returns max upload size for AI lab vision/transcription files.
+func AILabMaxUploadBytes() int64 {
+	mb := facades.Config().GetInt("ai.lab_max_upload_mb", 10)
+	if mb < 1 {
+		mb = 1
+	}
+	return int64(mb) * 1024 * 1024
+}

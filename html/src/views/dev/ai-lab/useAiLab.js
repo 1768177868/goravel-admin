@@ -87,6 +87,7 @@ export function useAiLab() {
   }
 
   function showActionError(err) {
+    if (err?.__handled) return
     const code = err?.errorCode || err?.response?.data?.error_code
     if (code === 'ai_lab_rate_limited') {
       ElMessage.error(t('common.ai_lab_rate_limited'))

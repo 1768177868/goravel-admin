@@ -19,6 +19,7 @@ import type { UploadFile } from 'antd/es/upload/interface'
 import { InboxOutlined, SendOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import PageContainer from '@/components/PageContainer'
+import type { ApiError, ApiResponse } from '@/types'
 import {
   aiLabAudio,
   aiLabImage,
@@ -87,13 +88,14 @@ export default function AiLab() {
     try {
       await action()
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { error_code?: string; message?: string } } }
-      const code = apiErr.response?.data?.error_code
+      const apiErr = err as ApiError
+      if (apiErr.__handled) return
+      const code = apiErr.errorCode || (apiErr.response?.data as ApiResponse | undefined)?.error_code
       if (code === 'ai_lab_rate_limited') {
         message.error(t('common.ai_lab_rate_limited'))
         return
       }
-      message.error(apiErr.response?.data?.message || t('common.operation_failed'))
+      message.error(apiErr.translatedMessage || apiErr.message || t('common.operation_failed'))
     }
   }
 
@@ -207,6 +209,7 @@ export default function AiLab() {
               {t('ai_lab.rate_limit_hint', {
                 perMinute: status.rate_limit_per_minute,
                 perDay: status.rate_limit_per_day,
+                maxUpload: status.max_upload_mb ?? 10,
               })}
             </div>
           </Card>
