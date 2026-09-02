@@ -1,4 +1,4 @@
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import {
@@ -33,6 +33,7 @@ export function useAiLab() {
 
   const visionPrompt = ref('请描述这张图片的内容。')
   const visionFile = ref(null)
+  const visionPreviewUrl = ref('')
   const visionResult = ref('')
   const visionLoading = ref(false)
 
@@ -47,6 +48,7 @@ export function useAiLab() {
   const audioLoading = ref(false)
 
   const transcriptionFile = ref(null)
+  const transcriptionFileName = ref('')
   const transcriptionLanguage = ref('')
   const transcriptionResult = ref('')
   const transcriptionLoading = ref(false)
@@ -112,14 +114,32 @@ export function useAiLab() {
     }
   }
 
+  const visionUploadRef = ref(null)
+
+  function revokeVisionPreviewUrl() {
+    if (visionPreviewUrl.value) {
+      URL.revokeObjectURL(visionPreviewUrl.value)
+      visionPreviewUrl.value = ''
+    }
+  }
+
   function onVisionFileChange(uploadFile) {
     if (uploadFile?.status === 'ready' && uploadFile.raw) {
       visionFile.value = uploadFile.raw
+      revokeVisionPreviewUrl()
+      visionPreviewUrl.value = URL.createObjectURL(uploadFile.raw)
     }
   }
 
   function onVisionFileRemove() {
     visionFile.value = null
+    revokeVisionPreviewUrl()
+  }
+
+  function clearVisionUpload() {
+    visionFile.value = null
+    revokeVisionPreviewUrl()
+    visionUploadRef.value?.clearFiles()
   }
 
   async function handleVision() {
@@ -171,14 +191,24 @@ export function useAiLab() {
     }
   }
 
+  const transcriptionUploadRef = ref(null)
+
   function onTranscriptionFileChange(uploadFile) {
     if (uploadFile?.status === 'ready' && uploadFile.raw) {
       transcriptionFile.value = uploadFile.raw
+      transcriptionFileName.value = uploadFile.name || uploadFile.raw.name || ''
     }
   }
 
   function onTranscriptionFileRemove() {
     transcriptionFile.value = null
+    transcriptionFileName.value = ''
+  }
+
+  function clearTranscriptionUpload() {
+    transcriptionFile.value = null
+    transcriptionFileName.value = ''
+    transcriptionUploadRef.value?.clearFiles()
   }
 
   async function handleTranscription() {
@@ -206,6 +236,10 @@ export function useAiLab() {
     loadStatus()
   })
 
+  onUnmounted(() => {
+    revokeVisionPreviewUrl()
+  })
+
   return {
     status,
     loadingStatus,
@@ -219,6 +253,8 @@ export function useAiLab() {
     textResult,
     textLoading,
     visionPrompt,
+    visionPreviewUrl,
+    visionUploadRef,
     visionResult,
     visionLoading,
     imagePrompt,
@@ -229,6 +265,8 @@ export function useAiLab() {
     audioVoice,
     audioPreview,
     audioLoading,
+    transcriptionFileName,
+    transcriptionUploadRef,
     transcriptionLanguage,
     transcriptionResult,
     transcriptionLoading,
@@ -239,7 +277,9 @@ export function useAiLab() {
     handleTranscription,
     onVisionFileChange,
     onVisionFileRemove,
+    clearVisionUpload,
     onTranscriptionFileChange,
     onTranscriptionFileRemove,
+    clearTranscriptionUpload,
   }
 }

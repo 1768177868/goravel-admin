@@ -43,170 +43,215 @@
 
       <el-tabs v-model="activeTab" type="border-card">
         <el-tab-pane :label="t('ai_lab.tab_text')" name="text">
-          <el-form label-width="120px">
-            <el-form-item :label="t('ai_lab.prompt')">
-              <el-input
-                v-model="textPrompt"
-                type="textarea"
-                :rows="4"
-                :placeholder="t('ai_lab.prompt_placeholder')"
-              />
-            </el-form-item>
-            <el-form-item :label="t('ai_lab.system_prompt')">
-              <el-input
-                v-model="systemPrompt"
-                type="textarea"
-                :rows="2"
-                :placeholder="t('ai_lab.system_prompt_placeholder')"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="textLoading" :disabled="!aiEnabled" @click="handleText">
-                {{ t('ai_lab.submit') }}
-              </el-button>
-            </el-form-item>
-            <el-form-item v-if="textResult" :label="t('ai_lab.result')">
+          <div class="ai-lab-tab-body">
+            <el-form label-position="top">
+              <el-form-item :label="t('ai_lab.prompt')">
+                <el-input
+                  v-model="textPrompt"
+                  type="textarea"
+                  :rows="4"
+                  :placeholder="t('ai_lab.prompt_placeholder')"
+                />
+              </el-form-item>
+              <el-form-item :label="t('ai_lab.system_prompt')">
+                <el-input
+                  v-model="systemPrompt"
+                  type="textarea"
+                  :rows="2"
+                  :placeholder="t('ai_lab.system_prompt_placeholder')"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="textLoading" :disabled="!aiEnabled" @click="handleText">
+                  {{ t('ai_lab.submit') }}
+                </el-button>
+              </el-form-item>
+            </el-form>
+            <div v-if="textResult" class="lab-result">
+              <div class="lab-result__label">{{ t('ai_lab.result') }}</div>
               <el-input v-model="textResult" type="textarea" :rows="8" readonly />
-            </el-form-item>
-          </el-form>
+            </div>
+          </div>
         </el-tab-pane>
 
         <el-tab-pane :label="t('ai_lab.tab_vision')" name="vision">
-          <el-row :gutter="16">
-            <el-col :xs="24" :md="10">
-              <el-upload
-                drag
-                :auto-upload="false"
-                :limit="1"
-                accept="image/*"
-                :on-change="onVisionFileChange"
-                :on-remove="onVisionFileRemove"
-              >
-                <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-                <div class="el-upload__text">{{ t('ai_lab.upload_image') }}</div>
-                <template #tip>
-                  <div class="el-upload__tip">{{ t('ai_lab.upload_image_hint') }}</div>
-                </template>
-              </el-upload>
-            </el-col>
-            <el-col :xs="24" :md="14">
-              <el-form label-width="80px">
-                <el-form-item :label="t('ai_lab.prompt')">
-                  <el-input v-model="visionPrompt" type="textarea" :rows="4" />
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" :loading="visionLoading" :disabled="!aiEnabled" @click="handleVision">
-                    {{ t('ai_lab.submit') }}
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </el-col>
-          </el-row>
-          <el-form v-if="visionResult" label-width="80px" class="mt-16">
-            <el-form-item :label="t('ai_lab.result')">
+          <div class="ai-lab-tab-body">
+            <div class="ai-lab-workspace">
+              <div class="ai-lab-media">
+                <div
+                  class="ai-lab-media-box"
+                  :class="{ 'ai-lab-media-box--filled': visionPreviewUrl }"
+                >
+                  <el-upload
+                    v-if="!visionPreviewUrl"
+                    ref="visionUploadRef"
+                    drag
+                    class="ai-lab-upload"
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :limit="1"
+                    accept="image/*"
+                    :on-change="onVisionFileChange"
+                    :on-remove="onVisionFileRemove"
+                  >
+                    <el-icon class="ai-lab-upload__icon"><UploadFilled /></el-icon>
+                    <div class="ai-lab-upload__text">{{ t('ai_lab.upload_image') }}</div>
+                    <template #tip>
+                      <div class="ai-lab-upload__tip">{{ t('ai_lab.upload_image_hint') }}</div>
+                    </template>
+                  </el-upload>
+                  <div v-else class="ai-lab-media-preview">
+                    <img :src="visionPreviewUrl" alt="preview" class="preview-image preview-image--upload" />
+                    <el-button
+                      class="ai-lab-media-preview__remove"
+                      circle
+                      size="small"
+                      :icon="CircleCloseFilled"
+                      @click="clearVisionUpload"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="ai-lab-form-panel">
+                <el-form label-position="top">
+                  <el-form-item :label="t('ai_lab.prompt')">
+                    <el-input v-model="visionPrompt" type="textarea" :rows="5" />
+                  </el-form-item>
+                  <el-form-item>
+                    <el-button type="primary" :loading="visionLoading" :disabled="!aiEnabled" @click="handleVision">
+                      {{ t('ai_lab.submit') }}
+                    </el-button>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+            <div v-if="visionResult" class="lab-result">
+              <div class="lab-result__label">{{ t('ai_lab.result') }}</div>
               <el-input v-model="visionResult" type="textarea" :rows="8" readonly />
-            </el-form-item>
-          </el-form>
+            </div>
+          </div>
         </el-tab-pane>
 
         <el-tab-pane :label="t('ai_lab.tab_image')" name="image">
-          <el-form label-width="80px">
-            <el-form-item :label="t('ai_lab.prompt')">
-              <el-input v-model="imagePrompt" type="textarea" :rows="3" />
-            </el-form-item>
-            <el-form-item :label="t('ai_lab.size')">
-              <el-select v-model="imageSize" style="width: 200px">
-                <el-option
-                  v-for="opt in sizeOptions"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="imageLoading" :disabled="!aiEnabled" @click="handleImage">
-                {{ t('ai_lab.generate') }}
-              </el-button>
-            </el-form-item>
-          </el-form>
-          <div v-if="imagePreview" class="media-preview">
-            <div class="media-preview__label">{{ t('ai_lab.preview_image') }}</div>
-            <img :src="imagePreview" alt="generated" class="preview-image" />
+          <div class="ai-lab-tab-body">
+            <el-form label-position="top">
+              <el-form-item :label="t('ai_lab.prompt')">
+                <el-input v-model="imagePrompt" type="textarea" :rows="3" />
+              </el-form-item>
+              <el-form-item :label="t('ai_lab.size')">
+                <el-select v-model="imageSize" style="width: 200px">
+                  <el-option
+                    v-for="opt in sizeOptions"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="imageLoading" :disabled="!aiEnabled" @click="handleImage">
+                  {{ t('ai_lab.generate') }}
+                </el-button>
+              </el-form-item>
+            </el-form>
+            <div v-if="imagePreview" class="media-preview-block">
+              <div class="media-preview-block__label">{{ t('ai_lab.preview_image') }}</div>
+              <img :src="imagePreview" alt="generated" class="preview-image" />
+            </div>
           </div>
         </el-tab-pane>
 
         <el-tab-pane :label="t('ai_lab.tab_audio')" name="audio">
-          <el-form label-width="80px">
-            <el-form-item :label="t('ai_lab.prompt')">
-              <el-input v-model="audioPrompt" type="textarea" :rows="3" />
-            </el-form-item>
-            <el-form-item :label="t('ai_lab.voice')">
-              <el-select v-model="audioVoice" style="width: 200px">
-                <el-option
-                  v-for="opt in voiceOptions"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="audioLoading" :disabled="!aiEnabled" @click="handleAudio">
-                {{ t('ai_lab.generate') }}
-              </el-button>
-            </el-form-item>
-          </el-form>
-          <div v-if="audioPreview" class="media-preview">
-            <div class="media-preview__label">{{ t('ai_lab.preview_audio') }}</div>
-            <audio controls :src="audioPreview" class="preview-audio" />
+          <div class="ai-lab-tab-body">
+            <el-form label-position="top">
+              <el-form-item :label="t('ai_lab.prompt')">
+                <el-input v-model="audioPrompt" type="textarea" :rows="3" />
+              </el-form-item>
+              <el-form-item :label="t('ai_lab.voice')">
+                <el-select v-model="audioVoice" style="width: 200px">
+                  <el-option
+                    v-for="opt in voiceOptions"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="audioLoading" :disabled="!aiEnabled" @click="handleAudio">
+                  {{ t('ai_lab.generate') }}
+                </el-button>
+              </el-form-item>
+            </el-form>
+            <div v-if="audioPreview" class="media-preview-block">
+              <div class="media-preview-block__label">{{ t('ai_lab.preview_audio') }}</div>
+              <audio controls :src="audioPreview" class="preview-audio" />
+            </div>
           </div>
         </el-tab-pane>
 
         <el-tab-pane :label="t('ai_lab.tab_transcription')" name="transcription">
-          <el-row :gutter="16">
-            <el-col :xs="24" :md="10">
-              <el-upload
-                drag
-                :auto-upload="false"
-                :limit="1"
-                accept="audio/*"
-                :on-change="onTranscriptionFileChange"
-                :on-remove="onTranscriptionFileRemove"
-              >
-                <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-                <div class="el-upload__text">{{ t('ai_lab.upload_audio') }}</div>
-                <template #tip>
-                  <div class="el-upload__tip">{{ t('ai_lab.upload_audio_hint') }}</div>
-                </template>
-              </el-upload>
-            </el-col>
-            <el-col :xs="24" :md="14">
-              <el-form label-width="100px">
-                <el-form-item :label="t('ai_lab.language')">
-                  <el-input
-                    v-model="transcriptionLanguage"
-                    :placeholder="t('ai_lab.language_placeholder')"
-                  />
-                </el-form-item>
-                <el-form-item>
-                  <el-button
-                    type="primary"
-                    :loading="transcriptionLoading"
-                    :disabled="!aiEnabled"
-                    @click="handleTranscription"
+          <div class="ai-lab-tab-body">
+            <div class="ai-lab-workspace">
+              <div class="ai-lab-media">
+                <div
+                  class="ai-lab-media-box"
+                  :class="{ 'ai-lab-media-box--filled': transcriptionFileName }"
+                >
+                  <el-upload
+                    v-if="!transcriptionFileName"
+                    ref="transcriptionUploadRef"
+                    drag
+                    class="ai-lab-upload"
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :limit="1"
+                    accept="audio/*"
+                    :on-change="onTranscriptionFileChange"
+                    :on-remove="onTranscriptionFileRemove"
                   >
-                    {{ t('ai_lab.transcribe') }}
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </el-col>
-          </el-row>
-          <el-form v-if="transcriptionResult" label-width="80px" class="mt-16">
-            <el-form-item :label="t('ai_lab.result')">
+                    <el-icon class="ai-lab-upload__icon"><UploadFilled /></el-icon>
+                    <div class="ai-lab-upload__text">{{ t('ai_lab.upload_audio') }}</div>
+                    <template #tip>
+                      <div class="ai-lab-upload__tip">{{ t('ai_lab.upload_audio_hint') }}</div>
+                    </template>
+                  </el-upload>
+                  <div v-else class="ai-lab-file-chip">
+                    <span class="ai-lab-file-chip__name" :title="transcriptionFileName">
+                      {{ transcriptionFileName }}
+                    </span>
+                    <el-button link type="danger" @click="clearTranscriptionUpload">
+                      {{ t('common.delete') }}
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+              <div class="ai-lab-form-panel">
+                <el-form label-position="top">
+                  <el-form-item :label="t('ai_lab.language')">
+                    <el-input
+                      v-model="transcriptionLanguage"
+                      :placeholder="t('ai_lab.language_placeholder')"
+                    />
+                  </el-form-item>
+                  <el-form-item>
+                    <el-button
+                      type="primary"
+                      :loading="transcriptionLoading"
+                      :disabled="!aiEnabled"
+                      @click="handleTranscription"
+                    >
+                      {{ t('ai_lab.transcribe') }}
+                    </el-button>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+            <div v-if="transcriptionResult" class="lab-result">
+              <div class="lab-result__label">{{ t('ai_lab.result') }}</div>
               <el-input v-model="transcriptionResult" type="textarea" :rows="8" readonly />
-            </el-form-item>
-          </el-form>
+            </div>
+          </div>
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -214,7 +259,7 @@
 </template>
 
 <script setup>
-import { UploadFilled } from '@element-plus/icons-vue'
+import { CircleCloseFilled, UploadFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useAiLab } from './ai-lab/useAiLab'
 
@@ -233,6 +278,8 @@ const {
   textResult,
   textLoading,
   visionPrompt,
+  visionPreviewUrl,
+  visionUploadRef,
   visionResult,
   visionLoading,
   imagePrompt,
@@ -243,6 +290,8 @@ const {
   audioVoice,
   audioPreview,
   audioLoading,
+  transcriptionFileName,
+  transcriptionUploadRef,
   transcriptionLanguage,
   transcriptionResult,
   transcriptionLoading,
@@ -253,8 +302,10 @@ const {
   handleTranscription,
   onVisionFileChange,
   onVisionFileRemove,
+  clearVisionUpload,
   onTranscriptionFileChange,
   onTranscriptionFileRemove,
+  clearTranscriptionUpload,
 } = useAiLab()
 </script>
 
@@ -284,10 +335,6 @@ const {
   margin-bottom: 16px;
 }
 
-.mt-16 {
-  margin-top: 16px;
-}
-
 .status-card :deep(.el-card__body) {
   padding-top: 12px;
 }
@@ -298,22 +345,145 @@ const {
   color: var(--el-text-color-secondary);
 }
 
-.media-preview {
-  margin-top: 16px;
+.ai-lab-tab-body {
+  padding: 4px 0;
 }
 
-.media-preview__label {
+.ai-lab-workspace {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.ai-lab-media {
+  flex: 0 0 260px;
+  max-width: 100%;
+}
+
+.ai-lab-form-panel {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.ai-lab-media-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 168px;
+  padding: 16px;
+  background: var(--el-fill-color-light);
+  border: 1px dashed var(--el-border-color);
+  border-radius: 10px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ai-lab-media-box--filled {
+  background: var(--el-bg-color);
+  border-style: solid;
+}
+
+.ai-lab-upload {
+  width: 100%;
+}
+
+.ai-lab-upload :deep(.el-upload) {
+  width: 100%;
+}
+
+.ai-lab-upload :deep(.el-upload-dragger) {
+  padding: 20px 16px;
+  background: transparent;
+  border: none;
+}
+
+.ai-lab-upload__icon {
   margin-bottom: 8px;
+  font-size: 40px;
+  color: var(--el-color-primary);
+}
+
+.ai-lab-upload__text {
+  font-size: 14px;
   color: var(--el-text-color-regular);
 }
 
+.ai-lab-upload__tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.ai-lab-media-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.ai-lab-media-preview__remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+}
+
 .preview-image {
+  display: block;
   max-width: 100%;
-  max-height: 480px;
+  max-height: 360px;
+  margin: 0 auto;
   border-radius: 8px;
+  object-fit: contain;
+}
+
+.preview-image--upload {
+  max-height: 140px;
+}
+
+.ai-lab-file-chip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
+}
+
+.ai-lab-file-chip__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lab-result,
+.media-preview-block {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--el-fill-color-light);
+  border-radius: 10px;
+}
+
+.lab-result__label,
+.media-preview-block__label {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
 }
 
 .preview-audio {
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .ai-lab-media {
+    flex-basis: 100%;
+  }
 }
 </style>

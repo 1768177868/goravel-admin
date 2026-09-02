@@ -4,11 +4,9 @@ import {
   App,
   Button,
   Card,
-  Col,
   Descriptions,
   Form,
   Input,
-  Row,
   Select,
   Space,
   Tabs,
@@ -16,7 +14,7 @@ import {
   Upload,
 } from 'antd'
 import type { UploadFile } from 'antd/es/upload/interface'
-import { InboxOutlined, SendOutlined } from '@ant-design/icons'
+import { CloseCircleFilled, InboxOutlined, SendOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import PageContainer from '@/components/PageContainer'
 import type { ApiError, ApiResponse } from '@/types'
@@ -29,9 +27,20 @@ import {
   getAiLabStatus,
   type AiLabStatus,
 } from '@/api/aiLab'
+import './AiLab.css'
 
 function toDataUrl(mimeType: string, base64: string) {
   return `data:${mimeType};base64,${base64}`
+}
+
+function ResultBlock({ title, value }: { title: string; value: string }) {
+  if (!value) return null
+  return (
+    <div className="ai-lab-result">
+      <div className="ai-lab-result__title">{title}</div>
+      <Input.TextArea rows={8} value={value} readOnly />
+    </div>
+  )
 }
 
 export default function AiLab() {
@@ -48,6 +57,7 @@ export default function AiLab() {
 
   const [visionPrompt, setVisionPrompt] = useState('请描述这张图片的内容。')
   const [visionFile, setVisionFile] = useState<UploadFile | null>(null)
+  const [visionPreviewUrl, setVisionPreviewUrl] = useState('')
   const [visionResult, setVisionResult] = useState('')
   const [visionLoading, setVisionLoading] = useState(false)
 
@@ -81,6 +91,16 @@ export default function AiLab() {
   useEffect(() => {
     void loadStatus()
   }, [loadStatus])
+
+  useEffect(() => {
+    if (!visionFile?.originFileObj) {
+      setVisionPreviewUrl('')
+      return
+    }
+    const url = URL.createObjectURL(visionFile.originFileObj)
+    setVisionPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [visionFile])
 
   const aiEnabled = status?.ai_enabled ?? false
 
@@ -127,6 +147,8 @@ export default function AiLab() {
         setVisionLoading(false)
       }
     })
+
+  const clearVisionFile = () => setVisionFile(null)
 
   const handleImage = () =>
     runAction(async () => {
@@ -176,6 +198,8 @@ export default function AiLab() {
       }
     })
 
+  const clearTranscriptionFile = () => setTranscriptionFile(null)
+
   const modelItems = useMemo(() => {
     if (!status) return []
     return [
@@ -185,6 +209,69 @@ export default function AiLab() {
       { label: 'STT', value: status.transcription_model || '—' },
     ]
   }, [status])
+
+  const visionMediaBox = (
+    <div className={`ai-lab-media-box${visionFile ? ' ai-lab-media-box--filled' : ''}`}>
+      {!visionFile ? (
+        <Upload.Dragger
+          className="ai-lab-upload-dragger"
+          maxCount={1}
+          accept="image/*"
+          showUploadList={false}
+          beforeUpload={() => false}
+          onChange={({ fileList }) => setVisionFile(fileList[0] ?? null)}
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">{t('ai_lab.upload_image')}</p>
+          <p className="ant-upload-hint">{t('ai_lab.upload_image_hint')}</p>
+        </Upload.Dragger>
+      ) : (
+        <div className="ai-lab-media-preview">
+          {visionPreviewUrl && <img src={visionPreviewUrl} alt="preview" />}
+          <Button
+            type="text"
+            size="small"
+            className="ai-lab-media-preview__remove"
+            icon={<CloseCircleFilled />}
+            aria-label={t('common.delete')}
+            onClick={clearVisionFile}
+          />
+        </div>
+      )}
+    </div>
+  )
+
+  const transcriptionMediaBox = (
+    <div className={`ai-lab-media-box${transcriptionFile ? ' ai-lab-media-box--filled' : ''}`}>
+      {!transcriptionFile ? (
+        <Upload.Dragger
+          className="ai-lab-upload-dragger"
+          maxCount={1}
+          accept="audio/*"
+          showUploadList={false}
+          beforeUpload={() => false}
+          onChange={({ fileList }) => setTranscriptionFile(fileList[0] ?? null)}
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">{t('ai_lab.upload_audio')}</p>
+          <p className="ant-upload-hint">{t('ai_lab.upload_audio_hint')}</p>
+        </Upload.Dragger>
+      ) : (
+        <div className="ai-lab-file-chip">
+          <span className="ai-lab-file-chip__name" title={transcriptionFile.name}>
+            {transcriptionFile.name}
+          </span>
+          <Button type="link" danger size="small" onClick={clearTranscriptionFile}>
+            {t('common.delete')}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <PageContainer title={t('ai_lab.title')}>
@@ -205,7 +292,7 @@ export default function AiLab() {
                 </Descriptions.Item>
               ))}
             </Descriptions>
-            <div style={{ marginTop: 8, color: 'var(--ant-color-text-secondary)', fontSize: 13 }}>
+            <div className="ai-lab-status-hint">
               {t('ai_lab.rate_limit_hint', {
                 perMinute: status.rate_limit_per_minute,
                 perDay: status.rate_limit_per_day,
@@ -221,7 +308,7 @@ export default function AiLab() {
               key: 'text',
               label: t('ai_lab.tab_text'),
               children: (
-                <Card>
+                <Card bordered={false} className="ai-lab-tab-body">
                   <Form layout="vertical">
                     <Form.Item label={t('ai_lab.prompt')}>
                       <Input.TextArea
@@ -249,11 +336,7 @@ export default function AiLab() {
                       {t('ai_lab.submit')}
                     </Button>
                   </Form>
-                  {textResult && (
-                    <Form.Item label={t('ai_lab.result')} style={{ marginTop: 16 }}>
-                      <Input.TextArea rows={8} value={textResult} readOnly />
-                    </Form.Item>
-                  )}
+                  <ResultBlock title={t('ai_lab.result')} value={textResult} />
                 </Card>
               ),
             },
@@ -261,28 +344,14 @@ export default function AiLab() {
               key: 'vision',
               label: t('ai_lab.tab_vision'),
               children: (
-                <Card>
-                  <Row gutter={16}>
-                    <Col xs={24} md={10}>
-                      <Upload.Dragger
-                        maxCount={1}
-                        accept="image/*"
-                        beforeUpload={() => false}
-                        fileList={visionFile ? [visionFile] : []}
-                        onChange={({ fileList }) => setVisionFile(fileList[0] ?? null)}
-                      >
-                        <p className="ant-upload-drag-icon">
-                          <InboxOutlined />
-                        </p>
-                        <p className="ant-upload-text">{t('ai_lab.upload_image')}</p>
-                        <p className="ant-upload-hint">{t('ai_lab.upload_image_hint')}</p>
-                      </Upload.Dragger>
-                    </Col>
-                    <Col xs={24} md={14}>
+                <Card bordered={false} className="ai-lab-tab-body">
+                  <div className="ai-lab-workspace">
+                    <div className="ai-lab-media">{visionMediaBox}</div>
+                    <div className="ai-lab-form-panel">
                       <Form layout="vertical">
                         <Form.Item label={t('ai_lab.prompt')}>
                           <Input.TextArea
-                            rows={4}
+                            rows={5}
                             value={visionPrompt}
                             onChange={(e) => setVisionPrompt(e.target.value)}
                           />
@@ -296,13 +365,9 @@ export default function AiLab() {
                           {t('ai_lab.submit')}
                         </Button>
                       </Form>
-                    </Col>
-                  </Row>
-                  {visionResult && (
-                    <Form.Item label={t('ai_lab.result')} style={{ marginTop: 16 }}>
-                      <Input.TextArea rows={8} value={visionResult} readOnly />
-                    </Form.Item>
-                  )}
+                    </div>
+                  </div>
+                  <ResultBlock title={t('ai_lab.result')} value={visionResult} />
                 </Card>
               ),
             },
@@ -310,7 +375,7 @@ export default function AiLab() {
               key: 'image',
               label: t('ai_lab.tab_image'),
               children: (
-                <Card>
+                <Card bordered={false} className="ai-lab-tab-body">
                   <Form layout="vertical">
                     <Form.Item label={t('ai_lab.prompt')}>
                       <Input.TextArea
@@ -341,13 +406,9 @@ export default function AiLab() {
                     </Button>
                   </Form>
                   {imagePreview && (
-                    <div style={{ marginTop: 16 }}>
-                      <div style={{ marginBottom: 8 }}>{t('ai_lab.preview_image')}</div>
-                      <img
-                        src={imagePreview}
-                        alt="generated"
-                        style={{ maxWidth: '100%', maxHeight: 480, borderRadius: 8 }}
-                      />
+                    <div className="ai-lab-media-preview-block">
+                      <div className="ai-lab-media-preview-block__title">{t('ai_lab.preview_image')}</div>
+                      <img src={imagePreview} alt="generated" />
                     </div>
                   )}
                 </Card>
@@ -357,7 +418,7 @@ export default function AiLab() {
               key: 'audio',
               label: t('ai_lab.tab_audio'),
               children: (
-                <Card>
+                <Card bordered={false} className="ai-lab-tab-body">
                   <Form layout="vertical">
                     <Form.Item label={t('ai_lab.prompt')}>
                       <Input.TextArea
@@ -387,9 +448,9 @@ export default function AiLab() {
                     </Button>
                   </Form>
                   {audioPreview && (
-                    <div style={{ marginTop: 16 }}>
-                      <div style={{ marginBottom: 8 }}>{t('ai_lab.preview_audio')}</div>
-                      <audio controls src={audioPreview} style={{ width: '100%' }} />
+                    <div className="ai-lab-media-preview-block">
+                      <div className="ai-lab-media-preview-block__title">{t('ai_lab.preview_audio')}</div>
+                      <audio controls src={audioPreview} />
                     </div>
                   )}
                 </Card>
@@ -399,24 +460,10 @@ export default function AiLab() {
               key: 'transcription',
               label: t('ai_lab.tab_transcription'),
               children: (
-                <Card>
-                  <Row gutter={16}>
-                    <Col xs={24} md={10}>
-                      <Upload.Dragger
-                        maxCount={1}
-                        accept="audio/*"
-                        beforeUpload={() => false}
-                        fileList={transcriptionFile ? [transcriptionFile] : []}
-                        onChange={({ fileList }) => setTranscriptionFile(fileList[0] ?? null)}
-                      >
-                        <p className="ant-upload-drag-icon">
-                          <InboxOutlined />
-                        </p>
-                        <p className="ant-upload-text">{t('ai_lab.upload_audio')}</p>
-                        <p className="ant-upload-hint">{t('ai_lab.upload_audio_hint')}</p>
-                      </Upload.Dragger>
-                    </Col>
-                    <Col xs={24} md={14}>
+                <Card bordered={false} className="ai-lab-tab-body">
+                  <div className="ai-lab-workspace">
+                    <div className="ai-lab-media">{transcriptionMediaBox}</div>
+                    <div className="ai-lab-form-panel">
                       <Form layout="vertical">
                         <Form.Item label={t('ai_lab.language')}>
                           <Input
@@ -434,13 +481,9 @@ export default function AiLab() {
                           {t('ai_lab.transcribe')}
                         </Button>
                       </Form>
-                    </Col>
-                  </Row>
-                  {transcriptionResult && (
-                    <Form.Item label={t('ai_lab.result')} style={{ marginTop: 16 }}>
-                      <Input.TextArea rows={8} value={transcriptionResult} readOnly />
-                    </Form.Item>
-                  )}
+                    </div>
+                  </div>
+                  <ResultBlock title={t('ai_lab.result')} value={transcriptionResult} />
                 </Card>
               ),
             },
