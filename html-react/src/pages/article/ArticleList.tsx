@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { Space, Switch, Table } from 'antd'
+import { Space, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import {
   deleteArticle,
   getArticleList,
-  updateArticle,
 } from '@/api/article'
 import { useListPage } from '@/hooks/useListPage'
 import { handlePaginatedTableChange } from '@/utils/tableChange'
@@ -69,7 +68,7 @@ export default function ArticleList() {
     {
       title: t('admin_id', { defaultValue: '管理员ID' }),
       dataIndex: 'admin_id',
-      render: (_, row) => getadminDisplayName((row as Record<string, unknown>)['admin']),
+      render: (_, row) => getadminDisplayName(row.admin),
     },
     
     { title: t('title', { defaultValue: '标题' }), dataIndex: 'title' },

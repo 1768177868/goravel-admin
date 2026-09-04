@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { SearchField } from '@/components/SearchForm'
 import { buildSearchParams } from '@/utils/buildSearchParams'
 import { entityField } from '@/utils/normalize'
@@ -15,6 +16,9 @@ export interface <<.ModelName>>Row {
 <<range .ListFields>>
 <<- if and .ShowInList (ne .Name "id") (ne .Name "operation")>>
   <<.Name>>?: unknown
+<<- if .Relation>>
+  <<.Relation.JsonName>>?: unknown
+<<- end>>
 <<- end>>
 <<- end>>
 }
@@ -26,7 +30,7 @@ export function build<<.ModelName>>ListParams(
   return buildSearchParams(form, baseParams)
 }
 
-export function create<<.ModelName>>SearchFields(t: (key: string) => string): SearchField[] {
+export function create<<.ModelName>>SearchFields(t: TFunction): SearchField[] {
   return [
 <<range .SearchableFields>>
     {
@@ -52,9 +56,12 @@ export function transform<<.ModelName>>Row(row: Record<string, unknown>): <<.Mod
 <<range .ListFields>>
 <<- if and .ShowInList (ne .Name "id") (ne .Name "operation")>>
     <<.Name>>: entityField(row, '<<.Name>>', <<if eq .FormType "number">>0<<else if eq .FormType "switch">>0<<else>>''<<end>>),
+<<- if .Relation>>
+    <<.Relation.JsonName>>: entityField(row, '<<.Relation.JsonName>>', null),
 <<- end>>
 <<- end>>
-  } as <<.ModelName>>Row
+<<- end>>
+  }
 }
 
 <<range .ListFields>>

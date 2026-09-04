@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import SimpleCrudPage from '@/components/SimpleCrudPage'
 import StatusTag from '@/components/StatusTag'
 import {
@@ -58,7 +59,7 @@ export const <<.ModuleNameCamel>>InitialSearchForm = {
 <<- end>>
 }
 
-export function <<.ModuleNameCamel>>SearchFields(t: (key: string) => string) {
+export function <<.ModuleNameCamel>>SearchFields(t: TFunction) {
   return [
 <<range .SearchableFields>>
     {
@@ -76,7 +77,7 @@ export function <<.ModuleNameCamel>>SearchFields(t: (key: string) => string) {
   ]
 }
 
-export function <<.ModuleNameCamel>>FormFields(t: (key: string) => string) {
+export function <<.ModuleNameCamel>>FormFields(t: TFunction) {
   return [
 <<range .FormFields>>
 <<- if and .ShowInForm (ne .Name "id") (ne .Name "created_at") (ne .Name "updated_at") (ne .Name "deleted_at")>>
@@ -91,7 +92,7 @@ export function <<.ModuleNameCamel>>FormFields(t: (key: string) => string) {
   ]
 }
 
-export function <<.ModuleNameCamel>>Columns(t: (key: string) => string) {
+export function <<.ModuleNameCamel>>Columns(t: TFunction) {
   return [
     { title: t('table.id'), dataIndex: 'id', width: 80, sorter: true },
 <<range .ListFields>>

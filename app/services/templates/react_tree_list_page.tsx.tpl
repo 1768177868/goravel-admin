@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Button, Space, Switch, Table } from 'antd'
+import { Button, Space<<if .HasListStatusSwitch>>, Switch<<end>>, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import {
   <<if .HasDelete>>delete<<.ModelName>>,<<end>>
   get<<.ModelName>>List,
-  <<if .HasEdit>>update<<.ModelName>>,<<end>>
+  <<if and .HasEdit .HasListStatusSwitch>>update<<.ModelName>>,<<end>>
 } from '@/api/<<.ModuleNameK>>'
 import { useCrudActions } from '@/hooks/useCrudActions'
 import { usePermission } from '@/hooks/usePermission'
@@ -76,15 +76,11 @@ export default function <<.ModelName>>List() {
 
   const allExpanded = expandedKeys.length > 0
 
-  <<if .HasEdit>>
-  <<range .ListFields>>
-  <<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
+  <<if and .HasEdit .HasListStatusSwitch>>
   const handleStatusChange = async (row: <<.ModelName>>Row, checked: boolean) => {
-    await update<<$.ModelName>>(row.id, { status: checked ? 1 : 0 })
+    await update<<.ModelName>>(row.id, { status: checked ? 1 : 0 })
     await load()
   }
-  <<- end>>
-  <<- end>>
   <<end>>
 
   const columns: ColumnsType<< "<" >><<.ModelName>>Row> = [
@@ -114,7 +110,7 @@ export default function <<.ModelName>>List() {
       {
         title: t('<<.Name>>', { defaultValue: '<<.Label>>' }),
         dataIndex: '<<.Name>>',
-        render: (_, row) => get<<.Relation.JsonName>>DisplayName((row as Record<string, unknown>)['<<.Relation.JsonName>>']),
+        render: (_, row) => get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>>),
       },
       <<else>>
       { title: t('<<.Name>>', { defaultValue: '<<.Label>>' }), dataIndex: '<<.Name>>'<<if .Sortable>>, sorter: true<<end>> },

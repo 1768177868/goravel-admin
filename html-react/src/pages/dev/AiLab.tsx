@@ -110,7 +110,8 @@ export default function AiLab() {
     } catch (err: unknown) {
       const apiErr = err as ApiError
       if (apiErr.__handled) return
-      const code = apiErr.errorCode || (apiErr.response?.data as ApiResponse | undefined)?.error_code
+      const responseData = (apiErr.response as { data?: ApiResponse } | undefined)?.data
+      const code = apiErr.errorCode || responseData?.error_code
       if (code === 'ai_lab_rate_limited') {
         message.error(t('common.ai_lab_rate_limited'))
         return

@@ -1752,31 +1752,54 @@ func (s *CodeGeneratorServiceImpl) buildListPageTemplateData(
 		ShowToolbar        bool
 		IsTreeList         bool
 		TreeLabelField     string
-		HasEditor          bool
-		HasMarkdown        bool
-		HasImageUpload     bool
-		HasRichTextInList  bool
+		HasEditor           bool
+		HasMarkdown         bool
+		HasImageUpload      bool
+		HasRichTextInList   bool
+		HasListStatusSwitch bool
+		HasFormSwitch       bool
+		HasFormSelect       bool
+		HasFormRadio        bool
+		HasFormCheckbox     bool
+		HasFormNumber       bool
+		HasFormDatePicker   bool
 	}{
-		ModelName:          toPascalCase(moduleName),
-		ModuleName:         moduleName,
-		ModuleNameCamel:    toCamelCase(moduleName),
-		ModuleNameK:        toKebabCase(moduleName),
-		SearchableFields:   searchableFields,
-		ListFields:         listFields,
-		FormFields:         formFields,
-		HasCreate:          hasCreate,
-		HasEdit:            hasEdit,
-		HasDelete:          hasDelete,
-		HasExport:          hasExport,
-		EnableBatchActions: enableBatchActions,
-		ShowToolbar:        showToolbar,
-		IsTreeList:         isTreeList,
-		TreeLabelField:     resolveTreeLabelField(listFields),
-		HasEditor:          hasFieldFormType(formFields, "editor"),
-		HasMarkdown:        hasFieldFormType(formFields, "markdown"),
-		HasImageUpload:     hasFieldFormType(formFields, "image-upload"),
-		HasRichTextInList:  hasListFieldFormType(listFields, "editor", "markdown"),
+		ModelName:           toPascalCase(moduleName),
+		ModuleName:          moduleName,
+		ModuleNameCamel:     toCamelCase(moduleName),
+		ModuleNameK:         toKebabCase(moduleName),
+		SearchableFields:    searchableFields,
+		ListFields:          listFields,
+		FormFields:          formFields,
+		HasCreate:           hasCreate,
+		HasEdit:             hasEdit,
+		HasDelete:           hasDelete,
+		HasExport:           hasExport,
+		EnableBatchActions:  enableBatchActions,
+		ShowToolbar:         showToolbar,
+		IsTreeList:          isTreeList,
+		TreeLabelField:      resolveTreeLabelField(listFields),
+		HasEditor:           hasFieldFormType(formFields, "editor"),
+		HasMarkdown:         hasFieldFormType(formFields, "markdown"),
+		HasImageUpload:      hasFieldFormType(formFields, "image-upload"),
+		HasRichTextInList:   hasListFieldFormType(listFields, "editor", "markdown"),
+		HasListStatusSwitch: hasListStatusSwitch(listFields),
+		HasFormSwitch:       hasFieldFormType(formFields, "switch"),
+		HasFormSelect:       hasFieldFormType(formFields, "select"),
+		HasFormRadio:        hasFieldFormType(formFields, "radio"),
+		HasFormCheckbox:     hasFieldFormType(formFields, "checkbox"),
+		HasFormNumber:       hasFieldFormType(formFields, "number"),
+		HasFormDatePicker:   hasFieldFormType(formFields, "date-picker") || hasFieldFormType(formFields, "datetime-picker"),
 	}
+}
+
+func hasListStatusSwitch(fields []TemplateFieldConfig) bool {
+	for _, field := range fields {
+		if field.ShowInList && field.Name == "status" && field.FormType == "switch" {
+			return true
+		}
+	}
+	return false
 }
 
 func hasFieldFormType(fields []TemplateFieldConfig, formType string) bool {

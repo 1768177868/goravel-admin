@@ -1,6 +1,8 @@
-import { createCRUDApi, extendApi } from '@/utils/apiFactory'
+import { createCRUDApi<<if .HasExport>>, extendApi<<end>> } from '@/utils/apiFactory'
 import { normalizeListResponse } from '@/utils/normalize'
+<<if .HasExport>>
 import request from '@/utils/request'
+<<end>>
 
 const base<<.ModelName>>Api = createCRUDApi('<<.ModuleName>>s')
 

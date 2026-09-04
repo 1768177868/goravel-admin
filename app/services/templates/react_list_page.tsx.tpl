@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Space, Switch, Table } from 'antd'
+import { Space<<if .HasListStatusSwitch>>, Switch<<end>>, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import {
   <<if .HasDelete>>delete<<.ModelName>>,<<end>>
   get<<.ModelName>>List,
-  <<if .HasEdit>>update<<.ModelName>>,<<end>>
+  <<if and .HasEdit .HasListStatusSwitch>>update<<.ModelName>>,<<end>>
 } from '@/api/<<.ModuleNameK>>'
 import { useListPage } from '@/hooks/useListPage'
 import { handlePaginatedTableChange } from '@/utils/tableChange'
@@ -87,7 +87,7 @@ export default function <<.ModelName>>List() {
     {
       title: t('<<.Name>>', { defaultValue: '<<.Label>>' }),
       dataIndex: '<<.Name>>',
-      render: (_, row) => get<<.Relation.JsonName>>DisplayName((row as Record<string, unknown>)['<<.Relation.JsonName>>']),
+      render: (_, row) => get<<.Relation.JsonName>>DisplayName(row.<<.Relation.JsonName>>),
     },
     <<else if or (eq .FormType "editor") (eq .FormType "markdown")>>
     {
@@ -150,15 +150,11 @@ export default function <<.ModelName>>List() {
     },
   ]
 
-  <<if .HasEdit>>
-  <<range .ListFields>>
-  <<- if and .ShowInList (eq .Name "status") (eq .FormType "switch")>>
+  <<if and .HasEdit .HasListStatusSwitch>>
   const handleStatusChange = async (row: <<.ModelName>>Row, checked: boolean) => {
-    await update<<$.ModelName>>(row.id, { status: checked ? 1 : 0 })
+    await update<<.ModelName>>(row.id, { status: checked ? 1 : 0 })
     await refresh()
   }
-  <<- end>>
-  <<- end>>
   <<end>>
 
   return (

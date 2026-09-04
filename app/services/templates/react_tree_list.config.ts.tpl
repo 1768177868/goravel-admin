@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { SearchField } from '@/components/SearchForm'
 import { buildSearchParams } from '@/utils/buildSearchParams'
 import { entityField, normalizeTreeList } from '@/utils/normalize'
@@ -17,6 +18,9 @@ export interface <<.ModelName>>Row {
 <<range .ListFields>>
 <<- if and .ShowInList (ne .Name "id") (ne .Name "operation") (ne .Name "parent_id")>>
   <<.Name>>?: unknown
+<<- if .Relation>>
+  <<.Relation.JsonName>>?: unknown
+<<- end>>
 <<- end>>
 <<- end>>
   children?: <<.ModelName>>Row[]
@@ -35,7 +39,7 @@ export function build<<.ModelName>>ListParams(
   return { ...buildSearchParams(form, baseParams), page_size: 1000 }
 }
 
-export function create<<.ModelName>>SearchFields(t: (key: string) => string): SearchField[] {
+export function create<<.ModelName>>SearchFields(t: TFunction): SearchField[] {
   return [
 <<range .SearchableFields>>
     {
@@ -67,6 +71,9 @@ export function map<<.ModelName>>Rows(list: unknown[]): <<.ModelName>>Row[] {
 <<range .ListFields>>
 <<- if and .ShowInList (ne .Name "id") (ne .Name "operation") (ne .Name "parent_id")>>
       <<.Name>>: entityField(row, '<<.Name>>', <<if eq .FormType "number">>0<<else if eq .FormType "switch">>0<<else>>''<<end>>),
+<<- if .Relation>>
+      <<.Relation.JsonName>>: row['<<.Relation.JsonName>>'],
+<<- end>>
 <<- end>>
 <<- end>>
       children: children?.length ? children : undefined,
