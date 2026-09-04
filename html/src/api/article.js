@@ -4,7 +4,15 @@ import { normalizeListResponse } from "../utils/normalize";
 
 const baseArticleApi = createCRUDApi("articles");
 
-const articleApi = baseArticleApi;
+const articleApi = extendApi(baseArticleApi, {
+  export: (params) => {
+    return request({
+      url: "/articles/export",
+      method: "post",
+      data: params,
+    });
+  },
+});
 
 export async function getArticleList(params) {
   const res = await articleApi.list(params);
@@ -25,4 +33,8 @@ export function updateArticle(id, data) {
 
 export function deleteArticle(id) {
   return articleApi.delete(id);
+}
+
+export function exportArticle(params) {
+  return articleApi.export(params);
 }

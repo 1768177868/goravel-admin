@@ -4,6 +4,7 @@ import { buildSearchParams } from '@/utils/buildSearchParams'
 import { entityField } from '@/utils/normalize'
 
 export const articleInitialSearchForm: Record<string, unknown> = {
+
   admin_id: '',
   title: '',
   content: '',
@@ -16,6 +17,7 @@ export type ArticleSearchForm = typeof articleInitialSearchForm
 
 export interface ArticleRow {
   id: number | string
+
   admin_id?: unknown
   admin?: unknown
   title?: unknown
@@ -34,34 +36,42 @@ export function buildArticleListParams(
 
 export function createArticleSearchFields(t: TFunction): SearchField[] {
   return [
+
     {
       name: 'admin_id',
       label: t('admin_id', { defaultValue: '管理员ID' }),
+      
     },
     {
       name: 'title',
       label: t('title', { defaultValue: '标题' }),
+      
     },
     {
       name: 'content',
       label: t('content', { defaultValue: '内容' }),
+      
     },
     {
       name: 'status',
       label: t('common.status'),
+      
       type: 'select',
       options: [
         { label: t('common.enabled'), value: 1 },
         { label: t('common.disabled'), value: 0 },
       ],
+      
     },
     {
       name: 'created_at',
       label: t('common.created_at'),
+      
     },
     {
       name: 'updated_at',
       label: t('common.updated_at'),
+      
     },
   ]
 }
@@ -69,6 +79,7 @@ export function createArticleSearchFields(t: TFunction): SearchField[] {
 export function transformArticleRow(row: Record<string, unknown>): ArticleRow {
   return {
     id: entityField(row, 'id', '')!,
+
     admin_id: entityField(row, 'admin_id', ''),
     admin: entityField(row, 'admin', null),
     title: entityField(row, 'title', ''),

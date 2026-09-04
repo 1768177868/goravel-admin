@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App, Form, Input, Modal, Select } from 'antd'
+import { App, Form, Input, Modal, Radio } from 'antd'
 import { useTranslation } from 'react-i18next'
 import {
   createArticle,
@@ -9,7 +9,7 @@ import {
 import { useUnhandledError } from '@/hooks/useUnhandledError'
 import { entityField } from '@/utils/normalize'
 
-import MarkdownEditor from '@/components/MarkdownEditor'
+import WangEditor from '@/components/WangEditor'
 
 interface ArticleFormModalProps {
   open: boolean
@@ -107,11 +107,11 @@ export default function ArticleFormModal({ open, editId, onClose, onSuccess }: A
         </Form.Item>
         
         <Form.Item name="content" label={t('content', { defaultValue: '内容' })}>
-          <MarkdownEditor height={400} placeholder={t('content', { defaultValue: '内容' })} />
+          <WangEditor height={400} placeholder={t('content', { defaultValue: '内容' })} />
         </Form.Item>
         
         <Form.Item name="status" label={t('status', { defaultValue: '0:未发布 1:发布' })} rules={[{ required: true }]}>
-          <Select allowClear />
+          <Radio.Group />
         </Form.Item>
         
       </Form>

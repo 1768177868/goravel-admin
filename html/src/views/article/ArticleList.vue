@@ -21,6 +21,17 @@
     @page-change="loadData"
     @sort-change="handleSortChange"
   >
+    <template #extra-buttons>
+      <el-button
+        type="success"
+        :disabled="getButtonState('article.export').disabled || isExporting"
+        :loading="isExporting"
+        @click="handleExport"
+      >
+        {{ $t("common.export") }}
+      </el-button>
+    </template>
+
     <template #admin_id="{ row }">
       {{ getadminDisplayName(row.admin || row.admin_id) }}
     </template>
@@ -61,6 +72,8 @@ import { createCrudActions } from "@/utils/listPageHelpers";
 
 import { extractTextFromMarkdown } from "@/utils/markdown";
 
+import { exportArticle } from "@/api/article";
+
 import { getArticleList, deleteArticle, updateArticle } from "@/api/article";
 import logger from "@/utils/logger";
 import ErrorHandler from "@/utils/errorHandler";
@@ -75,6 +88,8 @@ import {
 const { t } = useI18n();
 const router = useRouter();
 const listPageRef = ref(null);
+
+const isExporting = ref(false);
 
 const {
   pagination,
@@ -131,6 +146,28 @@ const handleBatchDelete = async () => {
   } catch (error) {
     if (error === "cancel" || error === "close") return;
     logger.error("Batch delete error:", error);
+  }
+};
+
+const handleExport = async () => {
+  if (isExporting.value) return;
+  isExporting.value = true;
+  try {
+    const response = await exportArticle(searchForm);
+    const exportId = response?.data?.export_id || response?.data?.id;
+    ElMessage.success(
+      exportId ? t("export.task_submitted") : t("common.operation_success"),
+    );
+    router.push("/exports");
+  } catch (error) {
+    logger.error("Export error:", error);
+    if (error.response?.status === 429) {
+      ElMessage.warning(t("common.already_queued"));
+    } else if (!error.__handled) {
+      ErrorHandler.handle(error, { silent: true });
+    }
+  } finally {
+    isExporting.value = false;
   }
 };
 </script>

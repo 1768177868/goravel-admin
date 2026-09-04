@@ -11,7 +11,7 @@
   "has_create": true,
   "has_edit": true,
   "has_delete": true,
-  "has_export": false,
+  "has_export": true,
   "permissions": [
     {
       "name": "article列表",
@@ -52,6 +52,14 @@
       "path": "/api/admin/articles/*",
       "description": "删除article",
       "sort": 5
+    },
+    {
+      "name": "article导出",
+      "slug": "article.export",
+      "method": "POST",
+      "path": "/api/admin/articles/export",
+      "description": "导出article列表",
+      "sort": 6
     }
   ]
 }

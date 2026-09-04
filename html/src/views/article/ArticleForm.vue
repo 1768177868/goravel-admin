@@ -13,7 +13,7 @@
         label-width="120px"
       >
         <el-form-item :label="$t('content')" prop="content">
-          <MarkdownEditor
+          <WangEditor
             v-model="formData.content"
             :placeholder="$t('content_placeholder')"
             :height="400"
@@ -42,7 +42,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import FormField from "../../components/Form/FormField.vue";
 
-import MarkdownEditor from "../../components/MarkdownEditor.vue";
+import WangEditor from "../../components/WangEditor.vue";
 
 import {
   createArticle,
@@ -123,7 +123,7 @@ const formFields = computed(() => {
   fields.push({
     prop: "status",
     label: t("status"),
-    type: "select",
+    type: "radio",
     disabled: loading.value,
     apiUrl: "/options?type=dictionary&dictionary_type=status",
     clearable: true,
